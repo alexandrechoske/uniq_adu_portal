@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Portal Unique Aduaneira{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <h1 class="display-4 mb-4">Bem-vindo ao Portal Unique Aduaneira</h1>
+        <p class="lead mb-5">
+            Sistema integrado para gestão de operações aduaneiras.
+            Acesse o dashboard para visualizar suas operações e relatórios.
+        </p>
+        
+        {% if not session.get('user') %}
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                    Acessar o Sistema
+                </a>
+            </div>
+        {% else %}
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Dashboard</h5>
+                            <p class="card-text">Visualize suas operações e estatísticas.</p>
+                            <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+                                Acessar Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Relatórios</h5>
+                            <p class="card-text">Gere relatórios personalizados.</p>
+                            <a href="{{ url_for('relatorios.index') }}" class="btn btn-primary">
+                                Ver Relatórios
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% if session['user']['role'] in ['admin', 'interno_unique'] %}
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Usuários</h5>
+                                <p class="card-text">Gerencie usuários do sistema.</p>
+                                <a href="{{ url_for('usuarios.index') }}" class="btn btn-primary">
+                                    Gerenciar Usuários
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

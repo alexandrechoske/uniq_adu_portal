@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Agente Unique - Portal Unique Aduaneira{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">Aderência ao Agente Unique</h2>
+                    
+                    {% if existing %}
+                        <div class="alert alert-success">
+                            <h4 class="alert-heading">Você já está cadastrado!</h4>
+                            <p>Seu número de WhatsApp: {{ existing.numero_whatsapp }}</p>
+                            <p>Você já aceitou os termos de uso do Agente Unique.</p>
+                        </div>
+                    {% else %}
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="numero_whatsapp" class="form-label">Número do WhatsApp</label>
+                                <input type="tel" class="form-control" id="numero_whatsapp" name="numero_whatsapp" 
+                                       placeholder="(00) 00000-0000" required>
+                                <div class="form-text">Informe o número com DDD e código do país (ex: 5511999999999)</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="aceite_terms" name="aceite_terms" required>
+                                <label class="form-check-label" for="aceite_terms">
+                                    Li e aceito os <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">termos de uso</a> do Agente Unique
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Cadastrar</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">O que é o Agente Unique?</h3>
+                    <p>O Agente Unique é um assistente virtual inteligente que:</p>
+                    <ul>
+                        <li>Fornece atualizações em tempo real sobre seus processos</li>
+                        <li>Responde dúvidas sobre suas operações</li>
+                        <li>Envia relatórios personalizados via WhatsApp</li>
+                        <li>Oferece suporte 24/7 para suas necessidades</li>
+                    </ul>
+                    <p>Para começar a usar, basta cadastrar seu número de WhatsApp e aceitar os termos de uso.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Termos -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Termos de Uso do Agente Unique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Serviço</h6>
+                <p>O Agente Unique é um serviço de assistência virtual que utiliza inteligência artificial para fornecer informações e suporte sobre suas operações aduaneiras.</p>
+                
+                <h6>2. Dados e Privacidade</h6>
+                <p>Seus dados são tratados com total confidencialidade e segurança, seguindo as diretrizes da LGPD.</p>
+                
+                <h6>3. Comunicação</h6>
+                <p>O Agente Unique se comunicará com você exclusivamente através do número de WhatsApp cadastrado.</p>
+                
+                <h6>4. Disponibilidade</h6>
+                <p>O serviço está disponível 24 horas por dia, 7 dias por semana, exceto em casos de manutenção programada.</p>
+                
+                <h6>5. Responsabilidades</h6>
+                <p>A Unique Aduaneira se compromete a fornecer informações precisas e atualizadas, mas não se responsabiliza por decisões tomadas com base nas informações fornecidas pelo Agente.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

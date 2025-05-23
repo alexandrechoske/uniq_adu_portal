@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if user %}Editar{% else %}Novo{% endif %} Usuário - Portal Unique Aduaneira
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">{% if user %}Editar{% else %}Novo{% endif %} Usuário</h2>
+                    
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ user.nome if user else '' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ user.email if user else '' }}" 
+                                   {% if user %}readonly{% endif %} required>
+                        </div>
+                        
+                        {% if not user %}
+                        <div class="mb-3">
+                            <label for="senha" class="form-label">Senha</label>
+                            <input type="password" class="form-control" id="senha" name="senha" required>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Perfil</label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="cliente_unique" {% if user and user.role == 'cliente_unique' %}selected{% endif %}>Cliente Unique</option>
+                                <option value="interno_unique" {% if user and user.role == 'interno_unique' %}selected{% endif %}>Interno Unique</option>
+                                <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Administrador</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            {% if user %}Salvar{% else %}Criar{% endif %}
+                        </button>
+                        <a href="{{ url_for('usuarios.index') }}" class="btn btn-secondary">Cancelar</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title mb-4">Perfis de Usuário</h3>
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <strong>Cliente</strong>
+                            <p class="text-muted mb-0">Acesso aos seus próprios processos e relatórios.</p>
+                        </li>
+                        <li class="mb-3">
+                            <strong>Interno Unique</strong>
+                            <p class="text-muted mb-0">Acesso a todos os processos e relatórios.</p>
+                        </li>
+                        <li>
+                            <strong>Administrador</strong>
+                            <p class="text-muted mb-0">Acesso total ao sistema, incluindo gestão de usuários.</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

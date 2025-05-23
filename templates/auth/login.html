@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Portal Unique Aduaneira{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Login</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Status da Conexão -->
+                    <div id="connection-status" class="alert alert-info mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <span>Verificando conexão com o Supabase...</span>
+                        </div>
+                    </div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="senha" class="form-label">Senha</label>
+                            <input type="password" class="form-control" id="senha" name="senha" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Entrar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusDiv = document.getElementById('connection-status');
+    
+    // Testar conexão com o Supabase
+    fetch('/test-connection')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                statusDiv.className = 'alert alert-success mb-3';
+                statusDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <span>${data.message}</span>
+                    </div>
+                `;
+            } else {
+                statusDiv.className = 'alert alert-danger mb-3';
+                statusDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                        <span>${data.message}</span>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            statusDiv.className = 'alert alert-danger mb-3';
+            statusDiv.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                    <span>Erro ao verificar conexão: ${error.message}</span>
+                </div>
+            `;
+        });
+});
+</script>
+{% endblock %} 

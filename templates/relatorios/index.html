@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Portal Unique Aduaneira{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Relatórios</h2>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Filtros</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('relatorios.index') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="start_date" class="form-label">Data Inicial</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end_date" class="form-label">Data Final</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">Filtrar</button>
+                        <a href="{{ url_for('relatorios.generate_pdf', start_date=start_date, end_date=end_date) }}" 
+                           class="btn btn-success" target="_blank">
+                            Gerar PDF
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Operations Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Operações</h5>
+            </div>
+            <div class="card-body">
+                {% if operations %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Cliente</th>
+                                    <th>Detalhes</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for op in operations %}
+                                <tr>
+                                    <td>{{ op.data }}</td>
+                                    <td>{{ op.tipo }}</td>
+                                    <td>{{ op.cliente_nome }}</td>
+                                    <td>{{ op.detalhes }}</td>
+                                    <td>
+                                        <a href="{{ url_for('relatorios.generate_pdf', operacao_id=op.id) }}" 
+                                           class="btn btn-sm btn-outline-primary" target="_blank">
+                                            PDF
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Nenhuma operação encontrada para os filtros selecionados.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

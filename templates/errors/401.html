@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Acesso Não Autorizado - Portal Unique Aduaneira{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <h1 class="display-1 text-danger">401</h1>
+        <h2 class="mb-4">Acesso Não Autorizado</h2>
+        <p class="lead mb-4">
+            Você não tem permissão para acessar esta página.
+            Por favor, faça login com uma conta que tenha as permissões necessárias.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Fazer Login</a>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar ao Início</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

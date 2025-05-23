@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Portal Unique Aduaneira{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Dashboard</h2>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total de Operações</h5>
+                <h2 class="card-text">{{ total_operations }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Importações</h5>
+                <h2 class="card-text">{{ imports }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Exportações</h5>
+                <h2 class="card-text">{{ exports }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Operações por Tipo</h5>
+            </div>
+            <div class="card-body">
+                {% if operations_chart %}
+                    {{ operations_chart|safe }}
+                {% else %}
+                    <p class="text-muted">Nenhum dado disponível para exibição.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Últimas Operações</h5>
+            </div>
+            <div class="card-body">
+                {% if operations %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for op in operations[:5] %}
+                                <tr>
+                                    <td>{{ op.data }}</td>
+                                    <td>{{ op.tipo }}</td>
+                                    <td>{{ op.detalhes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Nenhuma operação encontrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('relatorios.index') }}" class="btn btn-primary">
+                        Gerar Relatório
+                    </a>
+                    {% if user_role in ['admin', 'interno_unique'] %}
+                        <a href="{{ url_for('usuarios.index') }}" class="btn btn-secondary">
+                            Gerenciar Usuários
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

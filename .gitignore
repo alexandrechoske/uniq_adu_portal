@@ -1,0 +1,53 @@
+Python byte-compiled files
+pycache/
+
+*.py[cod]
+
+*.pyc
+
+Virtual environment (incluindo sua pasta 'unique')
+unique/
+
+env/
+
+venv/
+
+.venv/
+
+pyvenv.cfg
+
+Environment variables
+.env
+
+IDE and editor files
+.idea/
+
+.vscode/
+
+.DS_Store
+
+Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+Temporary files and directories
+*.swp
+
+*.swo
+
+Build and distribution files
+build/
+
+dist/
+
+*.egg-info/
+
+Flask specific
+instance/
+
+*.log
+
+Project-specific directories and files
+sql/
+
+OS generated files
+Thumbs.db
