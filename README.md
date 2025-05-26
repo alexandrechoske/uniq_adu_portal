@@ -40,7 +40,6 @@ FLASK_DEBUG=True
 5. Configure o banco de dados Supabase:
 - Crie as tabelas necessárias no Supabase:
   - users (id, nome, email, role)
-  - operacoes (id, cliente_id, tipo, data, detalhes)
 - Configure as políticas de Row Level Security (RLS) para cada tabela
 
 6. Execute a aplicação:

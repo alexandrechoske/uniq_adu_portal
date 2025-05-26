@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, session
 from config import Config
 import os
 from extensions import init_supabase
@@ -48,7 +48,9 @@ def not_found_error(error):
 
 @app.route('/')
 def index():
+    if 'user' in session:
+        return redirect(url_for('dashboard.index'))
     return redirect(url_for('auth.login'))
 
 if __name__ == '__main__':
-    app.run(debug=True)  # Forçando debug para true 
+    app.run(debug=True)  # Forçando debug para true

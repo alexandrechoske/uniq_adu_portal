@@ -15,7 +15,7 @@ def index():
     end_date = request.form.get('end_date')
     
     # Buscar operações baseado no perfil
-    query = supabase.table('operacoes').select('*')
+    query = supabase.table('operacoes_aduaneiras').select('*')
     
     if user['role'] not in ['admin', 'interno_unique']:
         query = query.eq('cliente_id', user['id'])
@@ -52,7 +52,7 @@ def generate_pdf():
     cliente_id = request.args.get('cliente_id')
     
     # Build query
-    query = supabase.table('operacoes').select('*')
+    query = supabase.table('operacoes_aduaneiras').select('*')
     
     if user_role not in ['admin', 'interno_unique']:
         query = query.eq('cliente_id', user_id)

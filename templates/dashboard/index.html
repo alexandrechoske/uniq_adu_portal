@@ -2,112 +2,225 @@
 
 {% block title %}Dashboard - Portal Unique Aduaneira{% endblock %}
 
+{% block extra_css %}
+<style>
+    .metric-card {
+        border-radius: 1rem;
+        transition: all 0.2s;
+        border: none;
+        height: 100%;
+    }
+    
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .chart-card {
+        border-radius: 1rem;
+        height: 100%;
+    }
+    
+    .table-card {
+        border-radius: 1rem;
+    }
+    
+    .dashboard-table {
+        margin: 0;
+    }
+    
+    .dashboard-table th {
+        border-top: none;
+        background: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .dashboard-table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+    
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 50rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h2>Dashboard</h2>
+<div class="p-4">
+    <!-- Header Section -->
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Dashboard Operacional</h1>
+            <div class="flex items-center mt-2 text-sm text-gray-600">
+                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z"></path>
+                    <path d="M10 4a1 1 0 011 1v4.382l2.553 1.276a1 1 0 01-.894 1.788l-3-1.5A1 1 0 019 10V5a1 1 0 011-1z"></path>
+                </svg>
+                <span>Última atualização: {{ last_update }}</span>
+                <div class="ml-4 flex items-center">
+                    <div class="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+                    <span>Sistema Online</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="relative">
+                <button class="flex items-center space-x-2 bg-white p-2 rounded-lg shadow hover:shadow-md transition-shadow">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Filtros</span>
+                </button>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Total de Operações</h5>
-                <h2 class="card-text">{{ total_operations }}</h2>
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Total de Operações</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_operations }}</p>
+                </div>
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Importações</h5>
-                <h2 class="card-text">{{ imports }}</h2>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Processos Abertos</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ processos_abertos }}</p>
+                </div>
+                <div class="p-3 bg-yellow-100 rounded-lg">
+                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Exportações</h5>
-                <h2 class="card-text">{{ exports }}</h2>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Novos (7 dias)</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ novos_semana }}</p>
+                </div>
+                <div class="p-3 bg-green-100 rounded-lg">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Charts -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Operações por Tipo</h5>
-            </div>
-            <div class="card-body">
-                {% if operations_chart %}
-                    {{ operations_chart|safe }}
-                {% else %}
-                    <p class="text-muted">Nenhum dado disponível para exibição.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Últimas Operações</h5>
-            </div>
-            <div class="card-body">
-                {% if operations %}
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Tipo</th>
-                                    <th>Detalhes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for op in operations[:5] %}
-                                <tr>
-                                    <td>{{ op.data }}</td>
-                                    <td>{{ op.tipo }}</td>
-                                    <td>{{ op.detalhes }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted">Nenhuma operação encontrada.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Actions -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Ações Rápidas</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('relatorios.index') }}" class="btn btn-primary">
-                        Gerar Relatório
-                    </a>
-                    {% if user_role in ['admin', 'interno_unique'] %}
-                        <a href="{{ url_for('usuarios.index') }}" class="btn btn-secondary">
-                            Gerenciar Usuários
-                        </a>
-                    {% endif %}
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Em Trânsito</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ em_transito }}</p>
+                </div>
+                <div class="p-3 bg-purple-100 rounded-lg">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Evolução Temporal -->
+        <div class="bg-white rounded-lg shadow p-4" id="chart-container-temporal">
+            <div class="mb-4">
+                {{ chart_data | safe if chart_data }}
+            </div>
+        </div>
+
+        <!-- Distribuição por Cliente -->
+        <div class="bg-white rounded-lg shadow p-4" id="chart-container-cliente">
+            <div class="mb-4">
+                {{ chart_cliente | safe if chart_cliente }}
+            </div>
+        </div>
+
+        <!-- Modal de Transporte -->
+        <div class="bg-white rounded-lg shadow p-4" id="chart-container-tipo">
+            <div class="mb-4">
+                {{ chart_tipo | safe if chart_tipo }}
+            </div>
+        </div>
+
+        <!-- Status por Canal -->
+        <div class="bg-white rounded-lg shadow p-4" id="chart-container-canal">
+            <div class="mb-4">
+                {{ chart_canal | safe if chart_canal }}
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %} 
+
+<!-- Loading overlay -->
+<div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-4 rounded-lg shadow-lg flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+        <span class="text-gray-700">Carregando...</span>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add loading state for graphs
+    function showLoading() {
+        document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+    
+    function hideLoading() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
+    // Add micro-animations for graph containers
+    const chartContainers = document.querySelectorAll('[id^="chart-container-"]');
+    chartContainers.forEach(container => {
+        container.classList.add('transition-all', 'duration-300', 'hover:shadow-lg', 'transform', 'hover:scale-[1.01]');
+    });
+
+    // Make graphs responsive
+    window.addEventListener('resize', function() {
+        const graphs = document.querySelectorAll('.js-plotly-plot');
+        graphs.forEach(graph => {
+            if (graph && graph._context) {
+                Plotly.Plots.resize(graph);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}
