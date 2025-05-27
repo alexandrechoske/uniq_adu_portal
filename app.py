@@ -28,7 +28,7 @@ except Exception as e:
     raise
 
 # Import routes after app initialization to avoid circular imports
-from routes import auth, dashboard, relatorios, usuarios, agente
+from routes import auth, dashboard, relatorios, usuarios, agente, api
 
 # Register blueprints
 app.register_blueprint(auth.bp)
@@ -36,6 +36,7 @@ app.register_blueprint(dashboard.bp)
 app.register_blueprint(relatorios.bp)
 app.register_blueprint(usuarios.bp)
 app.register_blueprint(agente.bp)
+app.register_blueprint(api.bp)  # Registrando o blueprint da API
 
 # Error handlers
 @app.errorhandler(401)
