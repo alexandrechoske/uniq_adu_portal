@@ -108,45 +108,52 @@ def editar(user_id):
     except Exception as e:
         flash(f'Erro ao carregar usuário: {str(e)}', 'error')
         return redirect(url_for('usuarios.index'))
-
+    
 @bp.route('/usuarios/novo', methods=['POST'])
 @bp.route('/usuarios/<user_id>/editar', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin']) # Apenas admins podem criar/editar usuários
 def salvar(user_id=None):
     try:
         # Coletar dados do formulário
-        nome = request.form.get('nome')
+        name = request.form.get('name')
         email = request.form.get('email')
         role = request.form.get('role')
         senha = request.form.get('senha')
         
         # Validação básica
-        if not all([nome, email, role]) or role not in VALID_ROLES:
-            flash('Todos os campos são obrigatórios e o perfil deve ser válido', 'error')
+        if not all([name, email, role]):
+            flash('Nome, Email e Perfil são obrigatórios.', 'error')
+            return redirect(request.url)
+
+        if role not in VALID_ROLES:
+            flash(f'Perfil inválido. Perfis permitidos: {", ".join(VALID_ROLES)}', 'error')
             return redirect(request.url)
         
         if user_id:  # Editar usuário existente
             try:
-                # Atualizar informações do usuário
+                # Atualizar informações do usuário na tabela public.users
                 update_data = {
-                    'nome': nome,
+                    'name': name,
                     'email': email,
                     'role': role,
                     'updated_at': datetime.datetime.utcnow().isoformat()
                 }
                 
+                # Executa a atualização na tabela 'users'
+                # O trigger de 'updated_at' cuidará do campo updated_at no DB
                 supabase.table('users').update(update_data).eq('id', user_id).execute()
                 
-                # Atualizar metadados do usuário no Auth
+                # Atualizar metadados do usuário no Supabase Auth
+                # Isso é importante para manter os metadados em auth.users sincronizados
                 try:
                     supabase_admin.auth.admin.update_user_by_id(
                         user_id,
-                        {'email': email, 'user_metadata': {'nome': nome, 'role': role}}
+                        {'email': email, 'user_metadata': {'name': name, 'role': role}}
                     )
                 except Exception as auth_error:
-                    print(f"Erro ao atualizar autenticação: {str(auth_error)}")
-                    # Continua mesmo se falhar a atualização do auth
+                    print(f"Erro ao atualizar autenticação para {user_id}: {str(auth_error)}")
+                    # Continua mesmo se falhar a atualização do auth, pois a tabela 'users' já foi atualizada
                 
                 flash('Usuário atualizado com sucesso!', 'success')
                 return redirect(url_for('usuarios.index'))
@@ -161,62 +168,56 @@ def salvar(user_id=None):
                     flash('A senha é obrigatória para novos usuários', 'error')
                     return redirect(request.url)
                 
+                # Gerar um UUID para o novo usuário.
+                # A lógica para 'system@uniqueaduaneira.com.br' é mantida se for um caso especial.
+                new_user_uuid = '669c13f5-f8ec-4030-be59-e5b563fa88c3' if email == 'system@uniqueaduaneira.com.br' else str(uuid.uuid4())
+                
                 # Criar usuário no Supabase Auth primeiro
-                try:
-                    new_user_id = '669c13f5-f8ec-4030-be59-e5b563fa88c3' if email == 'system@uniqueaduaneira.com.br' else str(uuid.uuid4())
-                    
-                    auth_user = supabase_admin.auth.admin.create_user({
-                        'uid': new_user_id,
-                        'email': email,
-                        'password': senha,
-                        'email_confirm': True,
-                        'user_metadata': {
-                            'nome': nome,
-                            'role': role
-                        }
-                    })
-                    
-                    # Se a criação do auth falhar, auth_user será None
-                    if not auth_user:
-                        raise Exception("Falha ao criar usuário na autenticação")
-                        
-                    current_time = datetime.datetime.utcnow().isoformat()
-                    
-                    # Criar usuário na tabela users
-                    user_data = {
-                        'id': new_user_id,
-                        'nome': nome,
-                        'email': email,
-                        'role': role,
-                        'created_at': current_time,
-                        'updated_at': current_time
+                # O trigger no banco de dados cuidará da inserção na tabela public.users
+                auth_user_response = supabase_admin.auth.admin.create_user({
+                    'uid': new_user_uuid, # Passa o UUID gerado
+                    'email': email,
+                    'password': senha,
+                    'email_confirm': True, # Define como True para confirmar o email automaticamente
+                    'user_metadata': { # Metadados que serão lidos pelo trigger
+                        'name': name,
+                        'role': role
                     }
-                    
-                    supabase.table('users').insert(user_data).execute()
-                    
-                    # Se for cliente_unique, criar registro em clientes_agentes
-                    if role == 'cliente_unique':
-                        agent_data = {
-                            'user_id': new_user_id,
-                            'empresa': []
-                        }
-                        supabase.table('clientes_agentes').insert(agent_data).execute()
-                    
-                    flash('Usuário criado com sucesso!', 'success')
-                    return redirect(url_for('usuarios.index'))
-                    
-                except Exception as auth_error:
-                    # Se houver erro na criação do auth, tentar limpar
-                    try:
-                        supabase_admin.auth.admin.delete_user(new_user_id)
-                    except:
-                        pass
-                    raise Exception(f"Erro na autenticação: {str(auth_error)}")
-            
-            except Exception as e:
-                flash(f'Erro ao criar usuário: {str(e)}', 'error')
+                })
+                
+                # 'auth_user_response' será um objeto com 'data' e 'error'
+                if auth_user_response.get('error'):
+                    raise Exception(f"Falha ao criar usuário na autenticação: {auth_user_response['error'].get('message', 'Erro desconhecido')}")
+                
+                # Não é mais necessário inserir explicitamente na tabela 'users' aqui.
+                # O trigger 'on_auth_user_created' fará isso automaticamente.
+
+                # Se for cliente_unique, criar registro em clientes_agentes
+                if role == 'cliente_unique':
+                    agent_data = {
+                        'user_id': new_user_uuid, # Usa o UUID do usuário recém-criado
+                        'empresa': [] # Supondo que 'empresa' é um array JSONB vazio inicialmente
+                    }
+                    supabase.table('clientes_agentes').insert(agent_data).execute()
+                
+                flash('Usuário criado com sucesso!', 'success')
+                return redirect(url_for('usuarios.index'))
+                
+            except Exception as auth_error:
+                # Se houver erro na criação do auth, tentar limpar o usuário recém-criado no Auth
+                # Apenas se o erro ocorreu APÓS a criação do usuário no auth, mas ANTES de outras operações
+                try:
+                    # new_user_uuid deve estar definido aqui se o erro foi na criação do Auth
+                    if 'new_user_uuid' in locals() and new_user_uuid:
+                        supabase_admin.auth.admin.delete_user(new_user_uuid)
+                        print(f"Usuário {new_user_uuid} excluído após erro na criação.")
+                except Exception as cleanup_error:
+                    print(f"Erro ao tentar limpar usuário após falha: {str(cleanup_error)}")
+                    pass # Ignora erros na limpeza para não mascarar o erro original
+                
+                flash(f'Erro ao criar usuário: {str(auth_error)}', 'error')
                 return redirect(request.url)
-    
+                
     except Exception as e:
         print(f"Erro geral ao salvar usuário: {str(e)}")
         flash(f'Erro ao salvar usuário: {str(e)}', 'error')
@@ -575,7 +576,7 @@ def criar():
             'id': user_id,
             'email': data['email'],
             'role': data['role'],
-            'nome': data['nome'],
+            'name': data['name'],
             'created_at': datetime.datetime.utcnow().isoformat()
         }
         
@@ -589,7 +590,7 @@ def criar():
                 'user_id': user_id,
                 'empresa': empresas_cnpjs,
                 'created_at': datetime.datetime.utcnow().isoformat(),
-                'nome': data['nome'],
+                'name': data['name'],
                 'numero': data.get('numero', ''),
                 'aceite_termos': data.get('aceite_termos', False)
             }

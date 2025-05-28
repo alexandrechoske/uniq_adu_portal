@@ -20,11 +20,11 @@
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">{% if user %}Editar{% else %}Novo{% endif %} Usuário</h2>
                 <form method="POST" class="space-y-6" id="userForm">
-                    <!-- Campo Nome -->
+                    <!-- Campo name -->
                     <div>
-                        <label for="nome" class="block text-sm font-medium text-gray-700">Nome</label>
-                        <input type="text" name="nome" id="nome" 
-                               value="{{ user.nome if user else '' }}"
+                        <label for="name" class="block text-sm font-medium text-gray-700">Nome</label>
+                        <input type="text" name="name" id="name" 
+                               value="{{ user.name if user else '' }}"
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                required>
                     </div>
