@@ -15,36 +15,27 @@ VALID_ROLES = ['admin', 'interno_unique', 'cliente_unique']
 @role_required(['admin'])
 def index():
     try:
-        # Debug log para verificar a chamada
         print("[DEBUG] Iniciando busca de usuários")
         
-        # Verificar se o cliente Supabase está inicializado
         if not supabase:
             raise Exception("Cliente Supabase não está inicializado")
         
-        # Buscar usuários da tabela users sem nenhum filtro
         users_response = supabase.table('users').select('*').execute()
         
-        # Debug log para verificar a resposta
         print(f"[DEBUG] Resposta da busca: {users_response}")
         print(f"[DEBUG] Tipo da resposta: {type(users_response)}")
         
-        # Verificar se temos dados na resposta
         if not hasattr(users_response, 'data'):
             raise Exception("Resposta do Supabase não contém dados")
             
         users = users_response.data
         
-        # Debug log para os usuários encontrados
         print(f"[DEBUG] Usuários encontrados: {len(users) if users else 0}")
-        print(f"[DEBUG] Dados dos usuários: {users}")
         
-        # Se não houver usuários, retornar lista vazia
         if not users:
             print("[DEBUG] Nenhum usuário encontrado")
             return render_template('usuarios/index.html', users=[])
         
-        # Para cada usuário, buscar informações de empresas se for cliente_unique
         for user in users:
             if not isinstance(user, dict):
                 print(f"[DEBUG] Usuário em formato inválido: {user}")
@@ -52,7 +43,6 @@ def index():
                 
             if user.get('role') == 'cliente_unique':
                 try:
-                    # Buscar empresas do usuário
                     agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
                     user['agent_info'] = {'empresas': []}
                     
@@ -66,22 +56,21 @@ def index():
                         elif not isinstance(empresas, list):
                             empresas = []
                         
-                        # Buscar detalhes de cada empresa
                         empresas_detalhadas = []
                         for cnpj in empresas:
                             if isinstance(cnpj, str):
-                                empresa_info = supabase.table('empresas').select('*').eq('cliente_cpf_cnpj', cnpj).execute()
+                                empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                                 if empresa_info.data:
+                                    empresa_data = empresa_info.data[0]
                                     empresas_detalhadas.append({
-                                        'cnpj': cnpj,
-                                        'razao_social': empresa_info.data[0].get('cliente_razao_social', 'Não informado')
+                                        'cnpj': empresa_data.get('cnpj'),
+                                        'razao_social': empresa_data.get('razao_social', 'Não informado')
                                     })
                                 else:
                                     empresas_detalhadas.append({
                                         'cnpj': cnpj,
                                         'razao_social': 'Empresa não encontrada'
                                     })
-                        
                         user['agent_info']['empresas'] = empresas_detalhadas
                 except Exception as e:
                     print(f"[DEBUG] Erro ao buscar empresas para usuário {user.get('id')}: {str(e)}")
@@ -89,7 +78,6 @@ def index():
             else:
                 user['agent_info'] = {'empresas': []}
         
-        print(f"[DEBUG] Renderizando template com {len(users)} usuários")
         return render_template('usuarios/index.html', users=users)
     except Exception as e:
         print(f"[DEBUG] Erro ao carregar usuários: {str(e)}\nTipo do erro: {type(e)}")
@@ -268,8 +256,7 @@ def pesquisar_empresa():
         if not cnpj:
             return jsonify({'success': False, 'message': 'CNPJ não informado'})
         
-        # Buscar empresa na tabela operacoes_aduaneiras usando o CNPJ exatamente como fornecido
-        empresa_info = supabase.table('operacoes_aduaneiras').select('cliente_cpf_cnpj, cliente_razao_social').eq('cliente_cpf_cnpj', cnpj).execute()
+        empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
         
         print(f"[DEBUG] Resultado da busca de empresa: {empresa_info.data}")
         
@@ -278,8 +265,8 @@ def pesquisar_empresa():
             return jsonify({
                 'success': True,
                 'empresa': {
-                    'cnpj': empresa['cliente_cpf_cnpj'],
-                    'razao_social': empresa['cliente_razao_social']
+                    'cnpj': empresa['cnpj'],
+                    'razao_social': empresa['razao_social']
                 }
             })
         else:
@@ -372,17 +359,18 @@ def get_empresas_detalhadas(user_id):
             # Buscar detalhes de cada empresa
             for cnpj in empresas_array:
                 if isinstance(cnpj, str):
-                    # Buscar razão social na tabela empresas
-                    empresa_info = supabase.table('empresas').select('cliente_razao_social').eq('cliente_cpf_cnpj', cnpj).execute()
+                    empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                     
-                    razao_social = "Empresa não encontrada"
                     if empresa_info.data:
-                        razao_social = empresa_info.data[0].get('cliente_razao_social', 'Não informado')
-                    
-                    empresas_detalhadas.append({
-                        'cnpj': cnpj,
-                        'razao_social': razao_social
-                    })
+                        empresas_detalhadas.append({
+                            'cnpj': empresa_info.data[0].get('cnpj'),
+                            'razao_social': empresa_info.data[0].get('razao_social', 'Não informado')
+                        })
+                    else:
+                        empresas_detalhadas.append({
+                            'cnpj': cnpj,
+                            'razao_social': 'Empresa não encontrada'
+                        })
         
         print(f"[DEBUG] Empresas detalhadas: {empresas_detalhadas}")
         return jsonify({'empresas': empresas_detalhadas})
@@ -497,11 +485,11 @@ def listar_empresas(user_id):
         # Buscar detalhes de cada empresa
         empresas_detalhadas = []
         for cnpj in empresas:
-            empresa_info = supabase.table('empresas').select('*').eq('cliente_cpf_cnpj', cnpj).execute()
+            empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
             if empresa_info.data:
                 empresas_detalhadas.append({
                     'cnpj': cnpj,
-                    'razao_social': empresa_info.data[0].get('cliente_razao_social', 'Não informado')
+                    'razao_social': empresa_info.data[0].get('razao_social', 'Não informado')
                 })
         
         return jsonify({'empresas': empresas_detalhadas})

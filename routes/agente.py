@@ -4,53 +4,6 @@ from routes.auth import login_required, role_required
 
 bp = Blueprint('agente', __name__)
 
-def get_company_info(cnpj):
-    """Get company information from operacoes_aduaneiras table."""
-    try:
-        result = supabase.table('operacoes_aduaneiras') \
-            .select('cliente_cpf_cnpj, cliente_razao_social') \
-            .eq('cliente_cpf_cnpj', cnpj) \
-            .limit(1) \
-            .execute()
-        return result.data[0] if result.data else None
-    except Exception as e:
-        print(f"Error getting company info: {str(e)}")
-        return None
-
-def get_user_companies(user_id):
-    """Get all companies associated with a user from clientes_agentes."""
-    try:
-        result = supabase.table('clientes_agentes') \
-            .select('empresas') \
-            .eq('user_id', user_id) \
-            .execute()
-        
-        if result.data and result.data[0]['empresas']:
-            # Ensure proper string handling
-            empresas = result.data[0]['empresas']
-            if isinstance(empresas, str):
-                # Remove any unwanted characters and split
-                empresas = empresas.replace('[', '').replace(']', '').replace('"', '')
-                cnpjs = [cnpj.strip() for cnpj in empresas.split(',') if cnpj.strip()]
-            elif isinstance(empresas, list):
-                cnpjs = empresas
-            else:
-                cnpjs = []
-                
-            companies = []
-            for cnpj in cnpjs:
-                company_info = get_company_info(cnpj.strip())
-                if company_info:
-                    companies.append({
-                        'cnpj': company_info['cliente_cpf_cnpj'],
-                        'razao_social': company_info['cliente_razao_social']
-                    })
-            return companies
-        return []
-    except Exception as e:
-        print(f"Error getting user companies: {str(e)}")
-        return []
-
 @bp.route('/agente', methods=['GET', 'POST'])
 @login_required
 @role_required(['cliente_unique'])
@@ -62,7 +15,6 @@ def index():
     if request.method == 'POST':
         numero = request.form.get('numero_whatsapp')
         aceite_terms = request.form.get('aceite_terms') == 'on'
-        selected_empresas = request.form.get('selected_empresas', '').strip()
 
         if not numero:
             flash('Por favor, informe seu número de WhatsApp.', 'error')
@@ -71,21 +23,12 @@ def index():
         if not aceite_terms:
             flash('Você precisa aceitar os termos para continuar.', 'error')
             return redirect(url_for('agente.index'))
-            
-        if not selected_empresas:
-            flash('Por favor, selecione pelo menos uma empresa.', 'error')
-            return redirect(url_for('agente.index'))
         
         try:
-            # Clean up selected_empresas
-            empresas = selected_empresas.split(',')
-            empresas = [empresa.strip() for empresa in empresas if empresa.strip()]
-            
             data = {
                 'user_id': user_id,
                 'numero': numero,
-                'aceite_termos': True,
-                'empresas': empresas  # Store as array in Supabase
+                'aceite_termos': True
             }
             
             if not existing.data:
@@ -104,15 +47,13 @@ def index():
             flash('Erro ao processar sua adesão. Tente novamente.', 'error')
             return redirect(url_for('agente.index'))
     
-    # Get existing record with company information
+    # Get existing record
     context = {
-        'existing': None,
-        'empresas_info': []
+        'existing': None
     }
     
     if existing.data:
         context['existing'] = existing.data[0]
-        context['empresas_info'] = get_user_companies(user_id)
     
     return render_template('agente/index.html', **context)
 
