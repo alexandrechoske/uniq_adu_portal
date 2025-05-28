@@ -75,40 +75,43 @@ def index():
             paper_bgcolor='white',
             plot_bgcolor='white'
         )
-
         # Temporal Evolution (area chart with gradient and moving average)
-        df['data_abertura_dia'] = df['data_abertura'].dt.date
-        df_date = df.groupby('data_abertura_dia').size().reset_index(name='Quantidade')
-        df_date.columns = ['Data', 'Quantidade']
+        df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
+        df_week = df.groupby('week_year').size().reset_index(name='Quantidade')
+        df_week.columns = ['Semana', 'Quantidade']
         
-        df_date['Media_Movel'] = df_date['Quantidade'].rolling(window=7).mean()
+        # Convert week_year back to datetime for better x-axis display
+        df_week['Semana'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_week['Semana']], format='%Y-W%W-%w')
+        
+        # Calculate 4-week moving average (monthly trend)
+        df_week['Media_Movel'] = df_week['Quantidade'].rolling(window=4).mean()
         
         chart_data = go.Figure()
         
         # Area with gradient
         chart_data.add_trace(go.Scatter(
-            x=df_date['Data'],
-            y=df_date['Quantidade'],
+            x=df_week['Semana'],
+            y=df_week['Quantidade'],
             fill='tozeroy',
             mode='lines',
             line=dict(width=0.5, color='#007BFF'),
             fillcolor='rgba(0, 123, 255, 0.2)',
-            name='Volume Diário',
-            hovertemplate='Data: %{x}<br>Processos: %{y}<extra></extra>'
+            name='Volume Semanal',
+            hovertemplate='Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
         ))
         
         # Moving average line
         chart_data.add_trace(go.Scatter(
-            x=df_date['Data'],
-            y=df_date['Media_Movel'],
+            x=df_week['Semana'],
+            y=df_week['Media_Movel'],
             mode='lines',
             line=dict(color='#0056b3', width=2, dash='dot'),
-            name='Média 7 dias',
-            hovertemplate='Data: %{x}<br>Média: %{y:.1f}<extra></extra>'
+            name='Média 4 semanas',
+            hovertemplate='Semana: %{x|%d/%m/%Y}<br>Média: %{y:.1f}<extra></extra>'
         ))
         
         chart_data.update_layout(
-            title_text='Evolução Temporal',
+            title_text='Evolução Temporal (Semanal)',
             title_x=0.5,
             title_font={'family': 'Roboto, sans-serif'},
             xaxis_title='',
@@ -120,11 +123,11 @@ def index():
             paper_bgcolor='white',
             plot_bgcolor='white',
             legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
             )
         )
 

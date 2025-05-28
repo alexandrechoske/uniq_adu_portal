@@ -61,7 +61,15 @@
                         </svg>
                         <span>Dashboard</span>
                     </a>
-    
+
+                    {% if session['user']['role'] in ['cliente_unique', 'interno_unique'] %}
+                    <a href="{{ url_for('onepage.index') }}" class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
+                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"></path>
+                        </svg>
+                        <span>One Page</span>
+                    </a>
+                    {% endif %}
                     
                     {% if session['user']['role'] == 'cliente_unique' %}
                     <a href="{{ url_for('agente.index') }}" class="sidebar-item {% if request.endpoint == 'agente.index' %}active{% endif %}">
@@ -71,7 +79,8 @@
                         <span>Agente Unique</span>
                     </a>
                     {% endif %}
-                      {% if session['user']['role'] == 'admin' %}
+                    
+                    {% if session['user']['role'] == 'admin' %}
                     <a href="{{ url_for('usuarios.index') }}" class="sidebar-item {% if request.endpoint == 'usuarios.index' %}active{% endif %}">
                         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>

@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}IMPORTAÇÕES - Portal Unique Aduaneira{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #007BFF;
+        --color-primary-dark: #0056b3;
+        --color-success: #28a745;
+        --color-neutral: #6c757d;
+        --color-bg: #FFFFFF;
+        --color-text: #000000;
+    }
+
+    body {
+        font-family: 'Open Sans', Arial, sans-serif;
+    }
+
+    .kpi-card {
+        background: var(--color-bg);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        background: var(--color-bg);
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .data-table th {
+        background: var(--color-bg);
+        position: sticky;
+        top: 0;
+        padding: 1rem;
+        text-align: left;
+        color: var(--color-primary-dark);
+        font-weight: 600;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .data-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .data-table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    .data-table tr:hover {
+        background-color: #f3f4f6;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 0.5; }
+        50% { opacity: 1; }
+        100% { opacity: 0.5; }
+    }
+
+    .loading {
+        animation: pulse 1.5s infinite;
+    }
+
+    @media (max-width: 640px) {
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .data-table {
+            font-size: 0.875rem;
+        }
+        
+        .mobile-hidden {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 bg-gray-50 min-h-screen" x-data="dashboard()">
+    <!-- Header Section -->
+    <div class="mb-6">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Logo" class="h-12">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">IMPORTAÇÕES</h1>
+                    <p class="text-sm text-gray-600">Visão consolidada</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                {% if companies %}
+                <select id="company-filter" 
+                        class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        onchange="filterByCompany(this.value)">
+                    <option value="">Todas as empresas</option>
+                    {% for company in companies %}
+                    <option value="{{ company.cpfcnpj }}" {% if selected_company == company.cpfcnpj %}selected{% endif %}>
+                        {{ company.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+
+                <button 
+                    onclick="refreshData()"
+                    class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors duration-200"
+                    aria-label="Atualizar dados">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transport KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Total de Processos</h3>
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-blue-600">{{ kpis.total }}</p>
+        </div>
+
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Total Aéreo</h3>
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-blue-600">{{ kpis.aereo }}</p>
+        </div>
+
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Total Terrestre</h3>
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-blue-600">{{ kpis.terrestre }}</p>
+        </div>
+
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Total Marítimo</h3>
+                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-blue-600">{{ kpis.maritimo }}</p>
+        </div>
+    </div>
+
+    <!-- Status KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Aguardando Chegada</h3>
+                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-yellow-600">{{ kpis.aguardando_chegada }}</p>
+        </div>
+
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">Aguardando Embarque</h3>
+                <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-orange-600">{{ kpis.aguardando_embarque }}</p>
+        </div>
+
+        <div class="kpi-card">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-700">DI Registrada</h3>
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <p class="text-3xl font-bold text-green-600">{{ kpis.di_registrada }}</p>
+        </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">Processos Detalhados</h2>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nº DI</th>
+                        <th>Embarque</th>
+                        <th>Registro</th>
+                        <th>Ref. Unique</th>
+                        <th>Canal</th>
+                        <th>Chegada</th>
+                        <th class="mobile-hidden">Observações</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_data %}
+                    <tr>
+                        <td>{{ row.numero_di or '-' }}</td>
+                        <td>{{ row.data_embarque or '-' }}</td>
+                        <td>{{ row.data_registro or '-' }}</td>
+                        <td>{{ row.ref_unique or '-' }}</td>
+                        <td>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                {% if row.canal == 'Verde' %}bg-green-100 text-green-800
+                                {% elif row.canal == 'Amarelo' %}bg-yellow-100 text-yellow-800
+                                {% elif row.canal == 'Vermelho' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ row.canal or '-' }}
+                            </span>
+                        </td>
+                        <td>{{ row.data_chegada or '-' }}</td>
+                        <td class="mobile-hidden">{{ row.observacoes or '-' }}</td>
+                        <td class="text-right">
+                            <button class="text-blue-600 hover:text-blue-800 lg:hidden"
+                                    onclick="showDetails('{{ row.ref_unique }}')">
+                                + detalhes
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterByCompany(value) {
+    const url = new URL(window.location);
+    if (value) {
+        url.searchParams.set('empresa', value);
+    } else {
+        url.searchParams.delete('empresa');
+    }
+    window.location = url;
+}
+
+function showDetails(refUnique) {
+    // Implement mobile details view
+    alert('Detalhes para ' + refUnique);
+}
+
+function refreshData() {
+    location.reload();
+}
+
+// Add loading state handling
+document.addEventListener('DOMContentLoaded', function() {
+    const kpiCards = document.querySelectorAll('.kpi-card');
+    const table = document.querySelector('.data-table');
+    
+    function setLoading(loading) {
+        kpiCards.forEach(card => {
+            card.classList.toggle('loading', loading);
+        });
+        table.classList.toggle('loading', loading);
+    }
+});
+</script>
+{% endblock %}
