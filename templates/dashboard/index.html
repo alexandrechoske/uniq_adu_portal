@@ -1,16 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Portal Unique Aduaneira{% endblock %}
+{% block title %}Dashboard Importações - Portal Unique Aduaneira{% endblock %}
 
 {% block extra_css %}
 <style>
+    :root {
+        --color-primary: #007BFF;
+        --color-primary-dark: #0056b3;
+        --color-success: #28a745;
+        --color-neutral: #6c757d;
+        --color-bg: #FFFFFF;
+        --color-text: #000000;
+    }
+
+    body {
+        font-family: 'Open Sans', Arial, sans-serif;
+        background-color: #f8f9fa;
+    }
+
     .metric-card {
         border-radius: 1rem;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
         border: none;
-        height: 100%;
+        background-color: var(--color-bg);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+
     .metric-icon {
         width: 48px;
         height: 48px;
@@ -22,131 +42,225 @@
     }
     
     .metric-value {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
         line-height: 1.2;
         margin: 0.5rem 0;
+        color: var(--color-text);
     }
     
     .metric-label {
-        color: #6c757d;
+        color: var(--color-neutral);
         font-size: 0.875rem;
     }
-    
-    .chart-card {
+
+    .metric-variation {
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
         border-radius: 1rem;
+    }
+
+    .variation-up {
+        color: var(--color-success);
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+
+    .variation-down {
+        color: #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    .chart-card {
+        background-color: var(--color-bg);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
         height: 100%;
     }
     
-    .table-card {
-        border-radius: 1rem;
+    .chart-card:hover {
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
     }
-    
-    .dashboard-table {
-        margin: 0;
+
+    .header-action {
+        transition: all 0.2s ease;
+        border-radius: 0.5rem;
     }
-    
-    .dashboard-table th {
-        border-top: none;
-        background: #f8f9fa;
-        font-weight: 600;
+
+    .header-action:hover {
+        background-color: rgba(0, 123, 255, 0.1);
     }
-    
-    .dashboard-table td {
-        vertical-align: middle;
-        padding: 1rem 0.75rem;
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
     }
-    
-    .status-badge {
-        padding: 0.35rem 0.75rem;
-        border-radius: 50rem;
+
+    .status-indicator {
+        animation: pulse 2s infinite;
+    }
+
+    .loading-overlay {
+        background-color: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(4px);
+    }
+
+    .countdown {
+        font-family: 'Roboto Mono', monospace;
         font-size: 0.875rem;
-        font-weight: 500;
+        padding: 0.5rem 1rem;
+        background-color: rgba(0, 123, 255, 0.1);
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--color-primary);
+    }
+
+    .countdown-text {
+        color: var(--color-neutral);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .metric-card {
+            margin-bottom: 1rem;
+        }
+        
+        .chart-card {
+            margin-bottom: 1.5rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="p-4">
+<div class="p-4 bg-gray-50 min-h-screen">
     <!-- Header Section -->
-    <div class="mb-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">Dashboard Operacional</h1>
-            <div class="flex items-center mt-2 text-sm text-gray-600">
-                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z"></path>
-                    <path d="M10 4a1 1 0 011 1v4.382l2.553 1.276a1 1 0 01-.894 1.788l-3-1.5A1 1 0 019 10V5a1 1 0 011-1z"></path>
-                </svg>
-                <span>Última atualização: {{ last_update }}</span>
-                <div class="ml-4 flex items-center">
-                    <div class="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
-                    <span>Sistema Online</span>
-                </div>
-            </div>
-        </div>
-        <div class="flex items-center space-x-4">
-            <div class="relative">
-                <button class="flex items-center space-x-2 bg-white p-2 rounded-lg shadow hover:shadow-md transition-shadow">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-                    </svg>
-                    <span class="text-sm font-medium text-gray-700">Filtros</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Total de Operações</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ total_operations }}</p>
-                </div>
-                <div class="p-3 bg-blue-100 rounded-lg">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Processos Abertos</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ processos_abertos }}</p>
-                </div>
-                <div class="p-3 bg-yellow-100 rounded-lg">
-                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard Importações</h1>
+                <div class="flex items-center text-sm text-gray-600">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
+                    <span>Última atualização: {{ last_update }}</span>
+                    <div class="ml-4 flex items-center">
+                        <div class="w-2 h-2 rounded-full bg-green-500 mr-1 status-indicator"></div>
+                        <span>Sistema Online</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="countdown">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="countdown-text">Próxima atualização em:</span>
+                    <span id="countdown">60</span>s
+                </div>
+                <button 
+                    id="refresh-button"
+                    class="header-action px-4 py-2 text-sm font-medium text-gray-700 flex items-center space-x-2"
+                    onclick="refreshDashboard()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Atualizar</span>
+                </button>
+
+            </div>
+        </div>
+    </div>    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="metric-card bg-white shadow-lg">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Total de Operações</h3>
+                        <p class="metric-value">{{ total_operations }}</p>
+                        <div class="flex items-center">
+                            <span class="metric-variation {{ 'variation-up' if variations.total_var.startswith('+') else 'variation-down' }}">
+                                {{ variations.total_var }}
+                            </span>
+                            <span class="text-gray-500 text-sm ml-2">vs. mês anterior</span>
+                        </div>
+                    </div>
+                    <div class="bg-blue-100 metric-icon">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Novos (7 dias)</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ novos_semana }}</p>
-                </div>
-                <div class="p-3 bg-green-100 rounded-lg">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
+
+        <div class="metric-card bg-white shadow-lg">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Processos Abertos</h3>
+                        <p class="metric-value">{{ processos_abertos }}</p>
+                        <div class="flex items-center">
+                            <span class="metric-variation {{ 'variation-up' if variations.abertos_var.startswith('+') else 'variation-down' }}">
+                                {{ variations.abertos_var }}
+                            </span>
+                            <span class="text-gray-500 text-sm ml-2">vs. mês anterior</span>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-100 metric-icon">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Em Trânsito</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ em_transito }}</p>
+
+        <div class="metric-card bg-white shadow-lg">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Novos (7 dias)</h3>
+                        <p class="metric-value">{{ novos_semana }}</p>
+                        <div class="flex items-center">
+                            <span class="metric-variation {{ 'variation-up' if variations.novos_var.startswith('+') else 'variation-down' }}">
+                                {{ variations.novos_var }}
+                            </span>
+                            <span class="text-gray-500 text-sm ml-2">vs. semana anterior</span>
+                        </div>
+                    </div>
+                    <div class="bg-green-100 metric-icon">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                    </div>
                 </div>
-                <div class="p-3 bg-purple-100 rounded-lg">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                    </svg>
+            </div>
+        </div>
+
+        <div class="metric-card bg-white shadow-lg">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Em Trânsito</h3>
+                        <p class="metric-value">{{ em_transito }}</p>
+                        <div class="flex items-center">
+                            <span class="metric-variation {{ 'variation-up' if variations.transito_var.startswith('+') else 'variation-down' }}">
+                                {{ variations.transito_var }}
+                            </span>
+                            <span class="text-gray-500 text-sm ml-2">vs. mês anterior</span>
+                        </div>
+                    </div>
+                    <div class="bg-purple-100 metric-icon">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -155,28 +269,28 @@
     <!-- Charts Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Evolução Temporal -->
-        <div class="bg-white rounded-lg shadow p-4" id="chart-container-temporal">
+        <div class="chart-card bg-white shadow-lg">
             <div class="mb-4">
                 {{ chart_data | safe if chart_data }}
             </div>
         </div>
 
         <!-- Distribuição por Cliente -->
-        <div class="bg-white rounded-lg shadow p-4" id="chart-container-cliente">
+        <div class="chart-card bg-white shadow-lg">
             <div class="mb-4">
                 {{ chart_cliente | safe if chart_cliente }}
             </div>
         </div>
 
         <!-- Modal de Transporte -->
-        <div class="bg-white rounded-lg shadow p-4" id="chart-container-tipo">
+        <div class="chart-card bg-white shadow-lg">
             <div class="mb-4">
                 {{ chart_tipo | safe if chart_tipo }}
             </div>
         </div>
 
         <!-- Status por Canal -->
-        <div class="bg-white rounded-lg shadow p-4" id="chart-container-canal">
+        <div class="chart-card bg-white shadow-lg">
             <div class="mb-4">
                 {{ chart_canal | safe if chart_canal }}
             </div>
@@ -185,17 +299,16 @@
 </div>
 
 <!-- Loading overlay -->
-<div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-4 rounded-lg shadow-lg flex items-center space-x-3">
+<div id="loading-overlay" class="hidden fixed inset-0 loading-overlay flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
         <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
-        <span class="text-gray-700">Carregando...</span>
+        <span class="text-gray-700 font-medium">Carregando...</span>
     </div>
 </div>
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Add loading state for graphs
     function showLoading() {
         document.getElementById('loading-overlay').classList.remove('hidden');
     }
@@ -204,19 +317,85 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('loading-overlay').classList.add('hidden');
     }
 
-    // Add micro-animations for graph containers
-    const chartContainers = document.querySelectorAll('[id^="chart-container-"]');
-    chartContainers.forEach(container => {
-        container.classList.add('transition-all', 'duration-300', 'hover:shadow-lg', 'transform', 'hover:scale-[1.01]');
-    });
+    // Atualização automática e contador
+    let countdown = 60;
+    const countdownElement = document.getElementById('countdown');
+    
+    function updateCountdown() {
+        countdown--;
+        if (countdown <= 0) {
+            refreshDashboard();
+        } else {
+            countdownElement.textContent = countdown;
+        }
+    }
+
+    function refreshDashboard() {
+        showLoading();
+        
+        // Resetar contador
+        countdown = 60;
+        countdownElement.textContent = countdown;
+        
+        // Atualizar página
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, 'text/html');
+                
+                // Atualizar conteúdo dos cartões
+                document.querySelector('.metric-cards').innerHTML = newDoc.querySelector('.metric-cards').innerHTML;
+                
+                // Atualizar gráficos
+                document.querySelectorAll('.chart-card').forEach((card, index) => {
+                    const newChart = newDoc.querySelectorAll('.chart-card')[index];
+                    if (newChart) {
+                        card.querySelector('.mb-4').innerHTML = newChart.querySelector('.mb-4').innerHTML;
+                    }
+                });
+                
+                // Atualizar timestamp
+                const lastUpdateEl = document.querySelector('span:contains("Última atualização:")');
+                if (lastUpdateEl) {
+                    lastUpdateEl.textContent = newDoc.querySelector('span:contains("Última atualização:")').textContent;
+                }
+                
+                hideLoading();
+                
+                // Redimensionar gráficos após atualização
+                resizeGraphs();
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar dashboard:', error);
+                hideLoading();
+            });
+    }
+
+    // Iniciar contador
+    setInterval(updateCountdown, 1000);
 
     // Make graphs responsive
-    window.addEventListener('resize', function() {
+    function resizeGraphs() {
         const graphs = document.querySelectorAll('.js-plotly-plot');
         graphs.forEach(graph => {
             if (graph && graph._context) {
                 Plotly.Plots.resize(graph);
             }
+        });
+    }
+
+    // Add resize listener
+    window.addEventListener('resize', resizeGraphs);
+    
+    // Initialize tooltips
+    const tooltips = document.querySelectorAll('[data-tooltip]');
+    tooltips.forEach(tooltip => {
+        tippy(tooltip, {
+            content: tooltip.dataset.tooltip,
+            placement: 'top',
+            arrow: true,
+            theme: 'light'
         });
     });
 });
