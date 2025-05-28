@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unique Aduaneira - {% block title %}{% endblock %}</title>    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Unique Aduaneira - {% block title %}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -41,19 +42,18 @@
             animation: fadeIn 0.5s ease-in-out;
         }
     </style>
+    {# O bloco extra_css agora está definido aqui para carregar estilos customizados #}
+    {% block extra_css %}{% endblock %} 
 </head>
 <body>
     {% if session.get('user') %}
     <div class="flex h-screen">
-        <!-- Sidebar -->
         <aside class="w-64 bg-white shadow-lg hidden lg:block animate-fadeIn">
             <div class="h-full flex flex-col">
-                <!-- Logo -->
                 <div class="p-4">
                     <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique Aduaneira" class="h-12">
                 </div>
                 
-                <!-- Navigation -->
                 <nav class="flex-1 px-2 py-4 space-y-2">
                     <a href="{{ url_for('dashboard.index') }}" class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
                         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,9 +90,7 @@
                     {% endif %}
                 </nav>
                 
-                <!-- User Section -->
                 <div class="border-t border-gray-200 p-4">
-                    <!-- User Info -->
                     <div class="flex items-center mb-3">
                         <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,7 +111,6 @@
                         </div>
                     </div>
                     
-                    <!-- Logout Button -->
                     <a href="{{ url_for('auth.logout') }}" 
                        class="w-full flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors duration-200 group">
                         <svg class="w-4 h-4 mr-2 text-gray-500 group-hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,7 +122,6 @@
             </div>
         </aside>
         
-        <!-- Mobile Header -->
         <div class="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-50">
             <div class="flex items-center justify-between p-4">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Unique Aduaneira" class="h-8">
@@ -137,13 +133,11 @@
             </div>
         </div>
         
-        <!-- Main Content -->
         <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
             {% block content %}{% endblock %}
         </main>
     </div>
     {% else %}
-    <!-- Login page content -->
     {% block auth_content %}{% endblock %}
     {% endif %}
     

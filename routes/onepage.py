@@ -33,7 +33,7 @@ def index():
     selected_company = request.args.get('empresa')
 
     # Build query with proper filters
-    query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=True)
+    query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=False)
     
     if session['user']['role'] == 'cliente_unique':
         if user_companies:
@@ -44,11 +44,6 @@ def index():
     elif selected_company:  # interno_unique with filter
         query = query.eq('cliente_cpfcnpj', selected_company)
 
-    # Build query with client filter
-    query = supabase.table('importacoes_processos').select('*').order('data_abertura', desc=True)
-    if user_companies:
-        query = query.in_('cliente_cpfcnpj', user_companies)
-    
     # Execute query and process data
     result = query.execute()
     df = pd.DataFrame(result.data if result.data else [])
@@ -77,8 +72,14 @@ def index():
         }
 
         # Prepare table data
-        df['data_embarque'] = pd.to_datetime(df['data_embarque']).dt.strftime('%d/%m/%Y')
-        df['data_chegada'] = pd.to_datetime(df['data_chegada']).dt.strftime('%d/%m/%Y')
+        # Convert date columns and handle NaT, replacing with " "
+        date_columns = ['data_embarque', 'data_chegada'] # Add other date columns if necessary
+        for col in date_columns:
+            # Convert to datetime, errors='coerce' will turn invalid parsing into NaT (Not a Time)
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+            # Format valid dates and replace NaT with " "
+            df[col] = df[col].apply(lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else " ")
+
         table_data = df.to_dict('records')
 
     # Get all available companies for filtering

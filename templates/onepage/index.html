@@ -4,113 +4,297 @@
 
 {% block extra_css %}
 <style>
-    :root {
-        --color-primary: #007BFF;
-        --color-primary-dark: #0056b3;
-        --color-success: #28a745;
-        --color-neutral: #6c757d;
-        --color-bg: #FFFFFF;
-        --color-text: #000000;
+    /* Estilos para os cards de métricas */
+    .metric-card {
+        background-color: white; /* Fundo branco */
+        border-radius: 0.75rem; /* Bordas mais arredondadas */
+        transition: all 0.3s ease;
+        border: 1px solid #e5e7eb; /* Borda leve */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* Sombra leve */
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px); /* Efeito de levantar */
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra mais pronunciada no hover */
     }
 
-    body {
-        font-family: 'Open Sans', Arial, sans-serif;
-    }
-
-    .kpi-card {
-        background: var(--color-bg);
+    .metric-icon-wrapper {
+        padding: 0.75rem;
         border-radius: 0.5rem;
-        padding: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid;
+        transition: all 0.2s;
     }
 
-    .kpi-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    .metric-icon-wrapper:hover {
+        transform: scale(1.05);
     }
 
-    .table-container {
+    /* Cores das métricas (usando classes customizadas) */
+    .color-blue {
+        background-color: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.2);
+        color: #2563eb;
+    }
+
+    .color-green {
+        background-color: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.2);
+        color: #059669;
+    }
+
+    .color-yellow {
+        background-color: rgba(245, 158, 11, 0.1);
+        border-color: rgba(245, 158, 11, 0.2);
+        color: #d97706;
+    }
+
+    .color-purple {
+        background-color: rgba(139, 92, 246, 0.1);
+        border-color: rgba(139, 92, 246, 0.2);
+        color: #7c3aed;
+    }
+
+    .color-red {
+        background-color: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.2);
+        color: #dc2626;
+    }
+
+    .metric-value {
+        font-size: 1.875rem; /* text-3xl */
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+        color: #1f2937; /* Cor mais escura para o valor */
+    }
+    
+    .metric-title {
+        color: #4b5563;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem; /* Aumentar espaço */
+    }
+
+    /* Canal badges */
+    .canal-badge {
+        padding: 4px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 4px;
+        text-align: center;
+        display: inline-block;
+        min-width: 60px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .canal-verde {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .canal-amarelo {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+    .canal-vermelho {
+        background-color: #fecaca;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    /* Loading overlay (mantido como está, pois pode ser específico) */
+    .loading-overlay {
+        background-color: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(4px);
+    }
+
+    /* Countdown (mantido como está, se usado) */
+    .countdown {
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        background-color: rgba(0, 123, 255, 0.1);
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--color-primary);
+    }
+
+    .countdown-text {
+        color: var(--color-neutral);
+    }
+
+    /* Estilos para a tabela */
+    .table-wrapper {
+        background: white; /* Fundo branco para o wrapper da tabela */
+        border-radius: 0.75rem; /* Mais arredondado */
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e5e7eb;
+        width: 100%; /* Garante que o wrapper ocupe a largura total do seu contêiner */
+        max-width: none; /* Remove qualquer restrição de largura máxima */
+        margin-top: 1.5rem; /* Espaço acima da tabela */
+    }
+
+    .table-header {
+        background: #f8fafc;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .table-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .table-scroll {
         overflow-x: auto;
-        background: var(--color-bg);
-        border-radius: 0.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        max-height: 500px;
+        overflow-y: auto;
     }
 
     .data-table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
+        border-collapse: collapse;
+        background: white; /* Garante fundo branco para a tabela */
+        font-size: 0.875rem;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .data-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
     .data-table th {
-        background: var(--color-bg);
-        position: sticky;
-        top: 0;
-        padding: 1rem;
+        background: #f3f4f6;
+        padding: 1rem 1.25rem;
         text-align: left;
-        color: var(--color-primary-dark);
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #374151;
         border-bottom: 2px solid #e5e7eb;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        font-family: 'Inter', sans-serif;
     }
 
     .data-table td {
-        padding: 1rem;
-        border-bottom: 1px solid #e5e7eb;
+        padding: 1rem 1.25rem;
+        color: #4b5563;
+        border-bottom: 1px solid #f1f3f4;
+        vertical-align: middle;
+        font-family: 'Inter', sans-serif;
+        background: transparent; /* Permite que a zebra stripe apareça */
     }
 
-    .data-table tr:nth-child(even) {
-        background-color: #f8f9fa;
+    .data-table tbody tr:nth-child(even) td {
+        background-color: #f9fafb; /* Cinza claro para as listras de zebra */
     }
 
-    .data-table tr:hover {
-        background-color: #f3f4f6;
+    .data-table tbody tr:hover td {
+        background-color: #f0f9ff;
+        transition: background-color 0.2s ease;
     }
 
-    @keyframes pulse {
-        0% { opacity: 0.5; }
-        50% { opacity: 1; }
-        100% { opacity: 0.5; }
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 2.5rem 1.25rem;
+        color: #6b7280;
+        font-style: italic;
+        font-family: 'Inter', sans-serif;
     }
 
-    .loading {
-        animation: pulse 1.5s infinite;
+    /* Estilos específicos para select e botões */
+    .company-select {
+        font-family: 'Inter', sans-serif;
+        background-color: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        color: #374151;
     }
 
+    .company-select:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* ring-blue-500 */
+        border-color: #3b82f6; /* border-blue-500 */
+    }
+
+    #refresh-button {
+        font-family: 'Inter', sans-serif;
+        background-color: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        color: #374151;
+        transition: all 0.2s ease;
+    }
+
+    #refresh-button:hover {
+        background-color: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    /* Responsive */
     @media (max-width: 640px) {
-        .kpi-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .data-table {
-            font-size: 0.875rem;
-        }
-        
         .mobile-hidden {
             display: none;
+        }
+
+        .kpi-grid { /* Embora não haja mais uma classe 'kpi-grid', mantido por precaução */
+            grid-template-columns: 1fr;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .table-header {
+            padding: 1rem;
+        }
+
+        .table-title {
+            font-size: 1.125rem;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="p-4 bg-gray-50 min-h-screen" x-data="dashboard()">
-    <!-- Header Section -->
+<div class="p-4 bg-slate-50 min-h-screen">
     <div class="mb-6">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-                <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Logo" class="h-12">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-800">IMPORTAÇÕES</h1>
-                    <p class="text-sm text-gray-600">Visão consolidada</p>
-                </div>
+        <div class="flex justify-between items-center flex-wrap gap-4">
+            <div class="flex items-center gap-4 flex-grow">
+                {% if client_logo_url %}
+                <img src="{{ client_logo_url }}" alt="Logo Cliente" class="h-12 w-auto object-contain">
+                {% else %}
+                <div class="h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-xs font-semibold">LOGO</div>
+                {% endif %}
+                <h1 class="text-2xl font-bold text-slate-800">{{ dashboard_title or 'Dashboard de Importações' }}</h1>
             </div>
             
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-4 flex-wrap justify-end gap-2">
                 {% if companies %}
-                <select id="company-filter" 
-                        class="form-select rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                        onchange="filterByCompany(this.value)">
+                <select id="company-filter" class="company-select px-4 py-2 border border-slate-300 rounded-md bg-white text-sm text-slate-700 focus:ring-blue-500 focus:border-blue-500" onchange="filterByCompany(this.value)">
                     <option value="">Todas as empresas</option>
                     {% for company in companies %}
                     <option value="{{ company.cpfcnpj }}" {% if selected_company == company.cpfcnpj %}selected{% endif %}>
@@ -119,138 +303,145 @@
                     {% endfor %}
                 </select>
                 {% endif %}
-
-                <button 
-                    onclick="refreshData()"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors duration-200"
-                    aria-label="Atualizar dados">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                    id="refresh-button"
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
+                    onclick="refreshDashboard()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
+                    <span>Atualizar</span>
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Transport KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">Total de Processos</h3>
-                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                </svg>
+        <div class="flex items-center text-sm text-slate-600 mt-2">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Última atualização: {{ last_update | default('N/A') }}</span> 
+            <div class="ml-4 flex items-center">
+                <div class="w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse"></div>
+                <span>Sistema Online</span>
             </div>
-            <p class="text-3xl font-bold text-blue-600">{{ kpis.total }}</p>
-        </div>
-
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">Total Aéreo</h3>
-                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                </svg>
-            </div>
-            <p class="text-3xl font-bold text-blue-600">{{ kpis.aereo }}</p>
-        </div>
-
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">Total Terrestre</h3>
-                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                </svg>
-            </div>
-            <p class="text-3xl font-bold text-blue-600">{{ kpis.terrestre }}</p>
-        </div>
-
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">Total Marítimo</h3>
-                <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-            </div>
-            <p class="text-3xl font-bold text-blue-600">{{ kpis.maritimo }}</p>
         </div>
     </div>
 
-    <!-- Status KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">Aguardando Chegada</h3>
-                <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpi-cards-container">
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">Total de Processos</p>
+                <p class="metric-value text-blue-600">{{ kpis.total if kpis.total is defined else 0 }}</p>
             </div>
-            <p class="text-3xl font-bold text-yellow-600">{{ kpis.aguardando_chegada }}</p>
+            <div class="metric-icon-wrapper color-blue">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
+            </div>
         </div>
 
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">Aguardando Embarque</h3>
-                <svg class="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">Total Aéreo</p>
+                <p class="metric-value text-green-600">{{ kpis.aereo if kpis.aereo is defined else 0 }}</p>
             </div>
-            <p class="text-3xl font-bold text-orange-600">{{ kpis.aguardando_embarque }}</p>
+            <div class="metric-icon-wrapper color-green">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </div>
         </div>
 
-        <div class="kpi-card">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-700">DI Registrada</h3>
-                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">Total Terrestre</p>
+                <p class="metric-value text-yellow-600">{{ kpis.terrestre if kpis.terrestre is defined else 0 }}</p>
             </div>
-            <p class="text-3xl font-bold text-green-600">{{ kpis.di_registrada }}</p>
+            <div class="metric-icon-wrapper color-yellow">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17l-2 2m2-2l2 2m-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-2 0h.01M17 17l2 2m-2-2l-2 2m2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m2 0h.01"></path></svg>
+            </div>
+        </div>
+
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">Total Marítimo</p>
+                <p class="metric-value text-purple-600">{{ kpis.maritimo if kpis.maritimo is defined else 0 }}</p>
+            </div>
+            <div class="metric-icon-wrapper color-purple">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
+            </div>
+        </div>
+
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">Aguardando Chegada</p>
+                <p class="metric-value text-red-600">{{ kpis.aguardando_chegada if kpis.aguardando_chegada is defined else 0 }}</p>
+            </div>
+            <div class="metric-icon-wrapper color-red">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+        </div>
+
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">Aguardando Embarque</p>
+                <p class="metric-value text-orange-600">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
+            </div>
+            <div class="metric-icon-wrapper color-yellow">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            </div>
+        </div>
+
+        <div class="metric-card p-6 flex items-center justify-between bg-white">
+            <div>
+                <p class="metric-title">DI Registrada</p>
+                <p class="metric-value text-blue-600">{{ kpis.di_registrada if kpis.di_registrada is defined else 0 }}</p>
+            </div>
+            <div class="metric-icon-wrapper color-blue">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
         </div>
     </div>
 
-    <!-- Table Section -->
-    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div class="p-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-800">Processos Detalhados</h2>
+    <div class="table-wrapper w-full" id="detailed-table-container">
+        <div class="table-header">
+            <h2 class="table-title">Processos Detalhados</h2>
         </div>
-        
-        <div class="table-container">
+        <div class="table-scroll">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>Nº DI</th>
-                        <th>Embarque</th>
-                        <th>Registro</th>
-                        <th>Ref. Unique</th>
-                        <th>Canal</th>
-                        <th>Chegada</th>
-                        <th class="mobile-hidden">Observações</th>
-                        <th></th>
+                        <th>EMBARQUE</th>
+                        <th>REGISTRO</th>
+                        <th>REF UNIQUE</th>
+                        <th>CANAL</th>
+                        <th>CHEGADA</th>
+                        <th>OBS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in table_data %}
                     <tr>
-                        <td>{{ row.numero_di or '-' }}</td>
+                        <td>{{ row.numero or ' ' }}</td>
                         <td>{{ row.data_embarque or '-' }}</td>
                         <td>{{ row.data_registro or '-' }}</td>
                         <td>{{ row.ref_unique or '-' }}</td>
                         <td>
-                            <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                {% if row.canal == 'Verde' %}bg-green-100 text-green-800
-                                {% elif row.canal == 'Amarelo' %}bg-yellow-100 text-yellow-800
-                                {% elif row.canal == 'Vermelho' %}bg-red-100 text-red-800
-                                {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                {{ row.canal or '-' }}
+                            {% if row.diduimp_canal %}
+                            <span class="canal-badge 
+                                {% if row.diduimp_canal.lower() == 'verde' %}canal-verde
+                                {% elif row.diduimp_canal.lower() == 'amarelo' %}canal-amarelo
+                                {% elif row.diduimp_canal.lower() == 'vermelho' %}canal-vermelho
+                                {% else %}canal-verde{% endif %}">
+                                {{ row.diduimp_canal }}
                             </span>
+                            {% else %}
+                            -
+                            {% endif %}
                         </td>
                         <td>{{ row.data_chegada or '-' }}</td>
-                        <td class="mobile-hidden">{{ row.observacoes or '-' }}</td>
-                        <td class="text-right">
-                            <button class="text-blue-600 hover:text-blue-800 lg:hidden"
-                                    onclick="showDetails('{{ row.ref_unique }}')">
-                                + detalhes
-                            </button>
+                        <td>{{ row.observacoes or '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            Nenhum processo encontrado
                         </td>
                     </tr>
                     {% endfor %}
@@ -259,40 +450,89 @@
         </div>
     </div>
 </div>
-{% endblock %}
+
+<div id="loading-overlay" class="hidden fixed inset-0 loading-overlay flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
+        <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+        <span class="text-gray-700 font-medium">Carregando...</span>
+    </div>
+</div>
 
 {% block extra_js %}
 <script>
-function filterByCompany(value) {
-    const url = new URL(window.location);
-    if (value) {
-        url.searchParams.set('empresa', value);
-    } else {
-        url.searchParams.delete('empresa');
+    // Move filterByCompany to global scope
+    function filterByCompany(value) {
+        const url = new URL(window.location);
+        if (value) {
+            url.searchParams.set('empresa', value);
+        } else {
+            url.searchParams.delete('empresa');
+        }
+        window.location = url;
     }
-    window.location = url;
-}
 
-function showDetails(refUnique) {
-    // Implement mobile details view
-    alert('Detalhes para ' + refUnique);
-}
+    document.addEventListener('DOMContentLoaded', function() {
+        function showLoading() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        }
 
-function refreshData() {
-    location.reload();
-}
+        function refreshDashboard() {
+            showLoading();
+            
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const newDoc = parser.parseFromString(html, 'text/html');
+                    
+                    const newKpiContent = newDoc.getElementById('kpi-cards-container').innerHTML;
+                    document.getElementById('kpi-cards-container').innerHTML = newKpiContent;
 
-// Add loading state handling
-document.addEventListener('DOMContentLoaded', function() {
-    const kpiCards = document.querySelectorAll('.kpi-card');
-    const table = document.querySelector('.data-table');
-    
-    function setLoading(loading) {
-        kpiCards.forEach(card => {
-            card.classList.toggle('loading', loading);
+                    const newTableContent = newDoc.getElementById('detailed-table-container').innerHTML;
+                    document.getElementById('detailed-table-container').innerHTML = newTableContent;
+
+                    const lastUpdateEl = document.querySelector('span:contains("Última atualização:")');
+                    if (lastUpdateEl) {
+                        const newLastUpdateEl = newDoc.querySelector('span:contains("Última atualização:")');
+                        if (newLastUpdateEl) {
+                            lastUpdateEl.textContent = newLastUpdateEl.textContent;
+                        }
+                    }
+                    
+                    hideLoading();
+                })
+                .catch(error => {
+                    console.error('Erro ao atualizar dashboard:', error);
+                    hideLoading();
+                });
+        }
+
+        const selectElement = document.querySelector('#company-filter');
+        if (selectElement) {
+            selectElement.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    this.blur();
+                }
+            });
+        }
+        
+        const focusElements = document.querySelectorAll('button, select');
+        focusElements.forEach(element => {
+            element.addEventListener('focus', function() {
+                this.style.outline = '2px solid #007BFF';
+                this.style.outlineOffset = '2px';
+            });
+            
+            element.addEventListener('blur', function() {
+                this.style.outline = '';
+                this.style.outlineOffset = '';
+            });
         });
-        table.classList.toggle('loading', loading);
-    }
-});
+    });
 </script>
+{% endblock %}
 {% endblock %}
