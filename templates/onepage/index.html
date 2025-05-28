@@ -408,8 +408,10 @@
                     <tr>
                         <th>Nº DI</th>
                         <th>EMBARQUE</th>
+                        <th>MODAL</th>
                         <th>REGISTRO</th>
                         <th>REF UNIQUE</th>
+                        <th>STATUS</th>
                         <th>CANAL</th>
                         <th>CHEGADA</th>
                         <th>OBS</th>
@@ -420,8 +422,20 @@
                     <tr>
                         <td>{{ row.numero or ' ' }}</td>
                         <td>{{ row.data_embarque or '-' }}</td>
+                        <td>
+                            {% if row.via_transporte_descricao == 'Aéreo' %}
+                                <img src="{{ url_for('static', filename='medias/aereo.png') }}" alt="Aéreo" class="h-6 w-auto inline-block">
+                            {% elif row.via_transporte_descricao == 'Terrestre' %}
+                                <img src="{{ url_for('static', filename='medias/terrestre.png') }}" alt="Terrestre" class="h-6 w-auto inline-block">
+                            {% elif row.via_transporte_descricao == 'Marítimo' %}
+                                <img src="{{ url_for('static', filename='medias/maritimo.png') }}" alt="Marítimo" class="h-6 w-auto inline-block">
+                            {% else %}
+                                {{ row.via_transporte_descricao or '-' }}
+                            {% endif %}
+                        </td>
                         <td>{{ row.data_registro or '-' }}</td>
                         <td>{{ row.ref_unique or '-' }}</td>
+                        <td>{{ row.carga_status or '-' }}</td>
                         <td>
                             {% if row.diduimp_canal %}
                             <span class="canal-badge 
@@ -440,7 +454,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="9" class="empty-state">
                             Nenhum processo encontrado
                         </td>
                     </tr>
