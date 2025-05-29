@@ -274,15 +274,13 @@
     #refresh-button:hover {
         background-color: #f9fafb;
         border-color: #9ca3af;
-    }
-
-    /* Responsive */
+    }    /* Responsive */
     @media (max-width: 640px) {
         .mobile-hidden {
             display: none;
         }
 
-        .kpi-grid { /* Embora não haja mais uma classe 'kpi-grid', mantido por precaução */
+        #kpi-cards-container .grid {
             grid-template-columns: 1fr;
         }
 
@@ -302,9 +300,9 @@
     }
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="p-4 bg-slate-50 min-h-screen">
+    {# Header Section #}
     <div class="mb-6">
         <div class="flex justify-between items-center flex-wrap gap-4">
             <div class="flex items-center gap-4 flex-grow">
@@ -350,103 +348,114 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpi-cards-container">
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">Total de Processos</p>
-                <p class="metric-value text-blue-600">{{ kpis.total if kpis.total is defined else 0 }}</p>
-            </div>
-            <div class="metric-icon-wrapper color-blue">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
-            </div>
-        </div>
-
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">Total Aéreo</p>
-                <p class="metric-value text-green-600">{{ kpis.aereo if kpis.aereo is defined else 0 }}</p>
-            </div>
-            <div class="metric-icon-wrapper color-green">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+    {# KPI Cards Section #}
+    <div id="kpi-cards-container" class="mb-6">
+        {# Linha 1: Total Processos (Centralizado) #}
+        <div class="grid grid-cols-1 mb-4">
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg mx-auto w-full md:w-3/4 lg:w-1/2">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">Total de Processos</p>
+                    <p class="text-3xl font-bold text-blue-600 metric-value">{{ kpis.total if kpis.total is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
+                </div>
             </div>
         </div>
 
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">Total Terrestre</p>
-                <p class="metric-value text-yellow-600">{{ kpis.terrestre if kpis.terrestre is defined else 0 }}</p>
+        {# Linha 2: Tipos de Transporte e Status (7 colunas com espaçamento) #}
+        <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
+            {# Tipos de Transporte #}
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">Total Aéreo</p>
+                    <p class="text-3xl font-bold text-green-600 metric-value">{{ kpis.aereo if kpis.aereo is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-green-100 text-green-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                </div>
             </div>
-            <div class="metric-icon-wrapper color-yellow">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17l-2 2m2-2l2 2m-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-2 0h.01M17 17l2 2m-2-2l-2 2m2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m2 0h.01"></path></svg>
-            </div>
-        </div>
 
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">Total Marítimo</p>
-                <p class="metric-value text-purple-600">{{ kpis.maritimo if kpis.maritimo is defined else 0 }}</p>
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">Total Terrestre</p>
+                    <p class="text-3xl font-bold text-yellow-600 metric-value">{{ kpis.terrestre if kpis.terrestre is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17l-2 2m2-2l2 2m-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-2 0h.01M17 17l2 2m-2-2l-2 2m2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m2 0h.01"></path></svg>
+                </div>
             </div>
-            <div class="metric-icon-wrapper color-purple">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
-            </div>
-        </div>
 
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">Aguardando Chegada</p>
-                <p class="metric-value text-red-600">{{ kpis.aguardando_chegada if kpis.aguardando_chegada is defined else 0 }}</p>
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">Total Marítimo</p>
+                    <p class="text-3xl font-bold text-purple-600 metric-value">{{ kpis.maritimo if kpis.maritimo is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
+                </div>
             </div>
-            <div class="metric-icon-wrapper color-red">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </div>
-        </div>
 
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">Aguardando Embarque</p>
-                <p class="metric-value text-orange-600">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
-            </div>
-            <div class="metric-icon-wrapper color-yellow">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-            </div>
-        </div>
+            {# Espaçamento #}
+            <div class="col-span-1"></div> {# Esta div vazia cria o espaçamento na grid de 7 colunas #}
 
-        <div class="metric-card p-6 flex items-center justify-between bg-white">
-            <div>
-                <p class="metric-title">DI Registrada</p>
-                <p class="metric-value text-blue-600">{{ kpis.di_registrada if kpis.di_registrada is defined else 0 }}</p>
+            {# Status #}
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">Aguardando Chegada</p>
+                    <p class="text-3xl font-bold text-red-600 metric-value">{{ kpis.aguardando_chegada if kpis.aguardando_chegada is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-red-100 text-red-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
             </div>
-            <div class="metric-icon-wrapper color-blue">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">Aguardando Embarque</p>
+                    <p class="text-3xl font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+            </div>
+
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 metric-title">DI Registrada</p>
+                    <p class="text-3xl font-bold text-blue-600 metric-value">{{ kpis.di_registrada if kpis.di_registrada is defined else 0 }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
             </div>
         </div>
     </div>
+    {# Detailed Table Section #}
+    <div class="table-wrapper w-full shadow-sm rounded-lg bg-white overflow-hidden" id="detailed-table-container">
+        <div class="p-4 border-b border-slate-200">
 
-    <div class="table-wrapper w-full" id="detailed-table-container">
-        <div class="table-header">
-            <h2 class="table-title">Processos Detalhados</h2>
-        </div>
-        <div class="table-scroll">
-            <table class="data-table">
-                <thead>
+        <div class="overflow-x-auto table-scroll">
+            <table class="min-w-full divide-y divide-slate-200 data-table">
+                <thead class="bg-slate-50">
                     <tr>
-                        <th>Nº DI</th>
-                        <th>EMBARQUE</th>
-                        <th>MODAL</th>
-                        <th>REGISTRO</th>
-                        <th>REF UNIQUE</th>
-                        <th>STATUS</th>
-                        <th>CANAL</th>
-                        <th>CHEGADA</th>
-                        <th>OBS</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nº DI</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">EMBARQUE</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">MODAL</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">REGISTRO</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">REF UNIQUE</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">STATUS</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CANAL</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CHEGADA</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">OBS</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-white divide-y divide-slate-200">
                     {% for row in table_data %}
                     <tr>
-                        <td>{{ row.numero or ' ' }}</td>
-                        <td>{{ row.data_embarque or ' ' }}</td>
-                        <td class="img_modal">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.numero or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_embarque or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 img_modal">
                             {% if row.via_transporte_descricao == 'AEREA' %}
                                 <img src="{{ url_for('static', filename='medias/aereo.png') }}" alt="Aéreo" class="h-6 w-auto inline-block">
                             {% elif row.via_transporte_descricao == 'TERRESTRE' %}
@@ -457,34 +466,34 @@
                                 {{ row.via_transporte_descricao or ' ' }}
                             {% endif %}
                         </td>
-                        <td>{{ row.data_registro or ' ' }}</td>
-                        <td>{{ row.ref_unique or ' ' }}</td>
-                        <td class="
-                            {% if row.carga_status == '1 - Aguardando Embarque' %}status-aguardando-embarque
-                            {% elif row.carga_status == '2 - Em Trânsito' %}status-em-transito
-                            {% elif row.carga_status == '3 - Desembarcada' %}status-desembarcada
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_registro or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.ref_unique or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm 
+                            {% if row.carga_status == '1 - Aguardando Embarque' %}text-orange-600 font-semibold status-aguardando-embarque
+                            {% elif row.carga_status == '2 - Em Trânsito' %}text-blue-600 font-semibold status-em-transito
+                            {% elif row.carga_status == '3 - Desembarcada' %}text-green-600 font-semibold status-desembarcada
                             {% endif %}">
                             {{ row.carga_status or ' ' }}
                         </td>
-                        <td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
                             {% if row.diduimp_canal %}
-                            <span class="canal-badge 
-                                {% if row.diduimp_canal.lower() == 'verde' %}canal-verde
-                                {% elif row.diduimp_canal.lower() == 'amarelo' %}canal-amarelo
-                                {% elif row.diduimp_canal.lower() == 'vermelho' %}canal-vermelho
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                {% if row.diduimp_canal.lower() == 'verde' %}bg-green-100 text-green-800 canal-verde
+                                {% elif row.diduimp_canal.lower() == 'amarelo' %}bg-yellow-100 text-yellow-800 canal-amarelo
+                                {% elif row.diduimp_canal.lower() == 'vermelho' %}bg-red-100 text-red-800 canal-vermelho
                                 {% endif %}">
                                 {{ row.diduimp_canal or ' ' }}
                             </span>
                             {% else %}
-                            
+                                {# Você pode adicionar um placeholder ou deixar vazio se não houver canal disponível #}
                             {% endif %}
                         </td>
-                        <td>{{ row.data_chegada or ' ' }}</td>
-                        <td>{{ row.observacoes or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_chegada or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.observacoes or ' ' }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="9" class="empty-state">
+                        <td colspan="9" class="px-6 py-4 text-center text-sm text-slate-500 empty-state">
                             Nenhum processo encontrado
                         </td>
                     </tr>
