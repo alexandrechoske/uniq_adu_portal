@@ -32,15 +32,39 @@ def index():
     user_companies = get_user_companies()
     selected_company = request.args.get('empresa')
 
-    # Build query with proper filters
-    query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=False)
-    
+    # Build initial query ordered by data_embarque (most recent first)
+    query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=True)
+
+    # Apply filters based on user role and selected company
     if session['user']['role'] == 'cliente_unique':
-        if user_companies:
-            if selected_company and selected_company in user_companies:
-                query = query.eq('cliente_cpfcnpj', selected_company)
-            else:
-                query = query.in_('cliente_cpfcnpj', user_companies)
+        # If cliente_unique user has no companies, return empty data immediately
+        if not user_companies:
+             kpis = {
+                'total': 0,
+                'aereo': 0,
+                'terrestre': 0,
+                'maritimo': 0,
+                'aguardando_chegada': 0,
+                'aguardando_embarque': 0,
+                'di_registrada': 0
+            }
+             table_data = []
+             available_companies = [] # No companies to filter if user has none
+             return render_template(
+                'onepage/index.html',
+                kpis=kpis,
+                table_data=table_data,
+                companies=available_companies,
+                selected_company=selected_company,
+                user_role=session['user']['role']
+            )
+
+        # Filter by user's companies
+        if selected_company and selected_company in user_companies:
+            query = query.eq('cliente_cpfcnpj', selected_company)
+        else:
+            query = query.in_('cliente_cpfcnpj', user_companies)
+
     elif selected_company:  # interno_unique with filter
         query = query.eq('cliente_cpfcnpj', selected_company)
 
@@ -63,12 +87,12 @@ def index():
         # Calculate KPIs
         kpis = {
             'total': len(df),
-            'aereo': len(df[df['via_transporte_descricao'] == 'Aéreo']),
-            'terrestre': len(df[df['via_transporte_descricao'] == 'Terrestre']),
-            'maritimo': len(df[df['via_transporte_descricao'] == 'Marítimo']),
-            'aguardando_chegada': len(df[df['carga_status'] == 'Aguardando Chegada']),
-            'aguardando_embarque': len(df[df['carga_status'] == 'Aguardando Embarque']),
-            'di_registrada': len(df[df['status_doc'] == 'Registrada'])
+            'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
+            'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
+            'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
+            'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
+            'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
+            'di_registrada': len(df[df['status_doc'] == '3 - Desembarcada'])
         }
 
         # Prepare table data

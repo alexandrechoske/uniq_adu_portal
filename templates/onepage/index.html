@@ -201,6 +201,30 @@
         background: transparent; /* Permite que a zebra stripe apareça */
     }
 
+   /* Estilos para a imagem dentro da célula img_modal */
+    .data-table td.img_modal img {
+        height: 30px; /* Use a altura definida no HTML (h-6) */
+        width: auto; /* Mantém a proporção */
+        display: inline-block; /* Garante que a imagem se comporte como inline-block */
+        vertical-align: middle; /* Alinha a imagem verticalmente */
+    }
+
+    /* Status colors */
+    .data-table td.status-aguardando-embarque {
+        color: #d97706; /* yellow-600 */
+        font-weight: 600;
+    }
+
+    .data-table td.status-em-transito {
+        color: #2563eb; /* blue-600 */
+        font-weight: 600;
+    }
+
+    .data-table td.status-desembarcada {
+        color: #059669; /* green-600 */
+        font-weight: 600;
+    }
+
     .data-table tbody tr:nth-child(even) td {
         background-color: #f9fafb; /* Cinza claro para as listras de zebra */
     }
@@ -421,36 +445,42 @@
                     {% for row in table_data %}
                     <tr>
                         <td>{{ row.numero or ' ' }}</td>
-                        <td>{{ row.data_embarque or '-' }}</td>
-                        <td>
-                            {% if row.via_transporte_descricao == 'Aéreo' %}
+                        <td>{{ row.data_embarque or ' ' }}</td>
+                        <td class="img_modal">
+                            {% if row.via_transporte_descricao == 'AEREA' %}
                                 <img src="{{ url_for('static', filename='medias/aereo.png') }}" alt="Aéreo" class="h-6 w-auto inline-block">
-                            {% elif row.via_transporte_descricao == 'Terrestre' %}
+                            {% elif row.via_transporte_descricao == 'TERRESTRE' %}
                                 <img src="{{ url_for('static', filename='medias/terrestre.png') }}" alt="Terrestre" class="h-6 w-auto inline-block">
-                            {% elif row.via_transporte_descricao == 'Marítimo' %}
+                            {% elif row.via_transporte_descricao == 'MARITIMA' %}
                                 <img src="{{ url_for('static', filename='medias/maritimo.png') }}" alt="Marítimo" class="h-6 w-auto inline-block">
                             {% else %}
-                                {{ row.via_transporte_descricao or '-' }}
+                                {{ row.via_transporte_descricao or ' ' }}
                             {% endif %}
                         </td>
-                        <td>{{ row.data_registro or '-' }}</td>
-                        <td>{{ row.ref_unique or '-' }}</td>
-                        <td>{{ row.carga_status or '-' }}</td>
+                        <td>{{ row.data_registro or ' ' }}</td>
+                        <td>{{ row.ref_unique or ' ' }}</td>
+                        <td class="
+                            {% if row.carga_status == '1 - Aguardando Embarque' %}status-aguardando-embarque
+                            {% elif row.carga_status == '2 - Em Trânsito' %}status-em-transito
+                            {% elif row.carga_status == '3 - Desembarcada' %}status-desembarcada
+                            {% endif %}">
+                            {{ row.carga_status or ' ' }}
+                        </td>
                         <td>
                             {% if row.diduimp_canal %}
                             <span class="canal-badge 
                                 {% if row.diduimp_canal.lower() == 'verde' %}canal-verde
                                 {% elif row.diduimp_canal.lower() == 'amarelo' %}canal-amarelo
                                 {% elif row.diduimp_canal.lower() == 'vermelho' %}canal-vermelho
-                                {% else %}canal-verde{% endif %}">
-                                {{ row.diduimp_canal }}
+                                {% endif %}">
+                                {{ row.diduimp_canal or ' ' }}
                             </span>
                             {% else %}
-                            -
+                            
                             {% endif %}
                         </td>
-                        <td>{{ row.data_chegada or '-' }}</td>
-                        <td>{{ row.observacoes or '-' }}</td>
+                        <td>{{ row.data_chegada or ' ' }}</td>
+                        <td>{{ row.observacoes or ' ' }}</td>
                     </tr>
                     {% else %}
                     <tr>
