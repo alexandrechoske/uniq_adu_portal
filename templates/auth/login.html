@@ -2,18 +2,163 @@
 
 {% block title %}Login - Portal Unique Aduaneira{% endblock %}
 
+{% block extra_css %}
+    <style>
+        /* Cores da Unique Aduaneira */
+        :root {
+            --unique-blue: #007bff; /* Um azul vibrante, similar ao do logo */
+            --unique-dark-blue: #0056b3; /* Um azul mais escuro para hover/foco */
+            --unique-gray: #f8f9fa; /* Um cinza claro para fundos */
+            --unique-text-color: #343a40; /* Cor de texto padrão */
+            --unique-border-color: #dee2e6; /* Cor de borda padrão */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Evita scroll desnecessário devido aos elementos de fundo */
+        }
+
+        .background-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0; /* Garante que as formas fiquem atrás do conteúdo */
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.2; /* Transparência para o efeito de sobreposição */
+            filter: blur(50px); /* Efeito de desfoque para as formas */
+        }
+
+        .shape-1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #a8c0ff, #3f2b96); /* Azul-roxo */
+            top: 10%;
+            left: 5%;
+            animation: moveShape 15s infinite alternate ease-in-out;
+        }
+
+        .shape-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #89f7fe, #66a6ff); /* Azul-claro */
+            bottom: 15%;
+            right: 10%;
+            animation: moveShape 18s infinite alternate-reverse ease-in-out;
+        }
+
+        .shape-3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #ffc3a0, #ff8c00); /* Laranja-dourado */
+            top: 40%;
+            right: 20%;
+            animation: moveShape 12s infinite alternate ease-in-out;
+        }
+
+        .shape-4 {
+            width: 350px;
+            height: 350px;
+            background: linear-gradient(135deg, #c7d2fe, #818cf8); /* Lilás */
+            bottom: 5%;
+            left: 20%;
+            animation: moveShape 20s infinite alternate-reverse ease-in-out;
+        }
+
+        @keyframes moveShape {
+            0% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(20px, -30px) scale(1.05); }
+            50% { transform: translate(-10px, 40px) scale(0.95); }
+            75% { transform: translate(30px, -15px) scale(1.1); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        .login-card {
+            background-color: rgba(255, 255, 255, 0.9); /* Fundo branco semi-transparente */
+            backdrop-filter: blur(10px); /* Efeito de desfoque no fundo do card */
+            border-radius: 1rem; /* Bordas mais arredondadas */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Sombra mais pronunciada */
+            z-index: 1; /* Garante que o card fique na frente das formas */
+            padding: 2.5rem; /* Aumenta o padding interno */
+        }
+
+        .input-field {
+            border-radius: 0.5rem !important; /* Bordas arredondadas nos inputs */
+            border: 1px solid var(--unique-border-color) !important;
+            padding: 0.75rem 1rem !important;
+            color: var(--unique-text-color) !important;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .input-field:focus {
+            border-color: var(--unique-blue) !important;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+        }
+
+        .submit-button {
+            background-color: var(--unique-blue) !important;
+            border-radius: 0.5rem !important;
+            padding: 0.75rem 1.5rem !important;
+            font-weight: 600 !important;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .submit-button:hover {
+            background-color: var(--unique-dark-blue) !important;
+        }
+
+        .connection-status-box {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+    </style>
+{% endblock %}
+
 {% block auth_content %}
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative bg-white"> {# Adicionado bg-white aqui #}
+    {# Background Shapes #}
+    <div class="background-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+    </div>
+
+    <div class="max-w-md w-full space-y-8 login-card"> {# CLASSE login-card APLICADA AQUI #}
         <div>
-            <img class="mx-auto h-12 w-auto" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique Aduaneira">
+            <img class="mx-auto h-16 w-auto" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique Aduaneira">
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                 Portal Unique Aduaneira
             </h2>
         </div>
 
-        <!-- Status da Conexão -->
-        <div id="connection-status" class="bg-blue-50 border border-blue-200 rounded-md p-4">
+        {# Status da Conexão #}
+        <div id="connection-status" class="connection-status-box alert-info">
             <div class="flex items-center">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
                 <span class="text-blue-700">Verificando conexão com o Supabase...</span>
@@ -23,7 +168,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="rounded-md p-4 {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-green-50 text-green-700 border border-green-200{% endif %}">
+                    <div class="rounded-md p-4 {% if category == 'error' %}alert-danger{% else %}alert-success{% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -35,27 +180,30 @@
                 <div>
                     <label for="email" class="sr-only">Email</label>
                     <input id="email" name="email" type="email" required 
-                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           class="relative block w-full input-field" {# CLASSE input-field APLICADA AQUI #}
                            placeholder="Email">
                 </div>
                 <div>
                     <label for="senha" class="sr-only">Senha</label>
                     <input id="senha" name="senha" type="password" required 
-                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           class="relative block w-full input-field mt-3" {# CLASSE input-field APLICADA AQUI #}
                            placeholder="Senha">
                 </div>
             </div>
 
+            <div class="text-sm">
+                <a href="#" class="font-medium text-unique-blue hover:text-unique-dark-blue">
+                    Esqueceu sua senha?
+                </a>
+            </div>
+
             <div>
                 <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white submit-button">
                     Entrar
                 </button>
             </div>
         </form>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -66,34 +214,38 @@ document.addEventListener('DOMContentLoaded', function() {
     // Testar conexão com o Supabase
     fetch('/test-connection')
         .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                statusDiv.className = 'alert alert-success mb-3';
+        .then(data => {            if (data.status === 'success') {
+                statusDiv.className = 'connection-status-box alert-success mb-3';
                 statusDiv.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-check-circle-fill me-2"></i>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
                         <span>${data.message}</span>
                     </div>
                 `;
             } else {
-                statusDiv.className = 'alert alert-danger mb-3';
+                statusDiv.className = 'connection-status-box alert-danger mb-3';
                 statusDiv.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
                         <span>${data.message}</span>
                     </div>
                 `;
             }
-        })
-        .catch(error => {
-            statusDiv.className = 'alert alert-danger mb-3';
+        })        .catch(error => {
+            statusDiv.className = 'connection-status-box alert-danger mb-3';
             statusDiv.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                     <span>Erro ao verificar conexão: ${error.message}</span>
                 </div>
             `;
         });
 });
 </script>
-{% endblock %} 
+{% endblock %}

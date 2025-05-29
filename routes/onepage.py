@@ -4,8 +4,23 @@ from routes.auth import login_required
 import pandas as pd
 from datetime import datetime
 import json
+import requests
 
 bp = Blueprint('onepage', __name__, url_prefix='/onepage')
+
+def update_importacoes_processos():
+    try:
+        response = requests.post(
+            'https://ixytthtngeifjumvbuwe.supabase.co/functions/v1/att_importacoes-processos',
+            headers={
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4eXR0aHRuZ2VpZmp1bXZidXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MjIwMDQsImV4cCI6MjA2MzQ5ODAwNH0.matnofV1H9hi2bEQGak6fo-RtmJIOyU455fcgsKbPfk',
+                'Content-Type': 'application/json'
+            },
+            json={'name': 'Functions'}
+        )
+        return response.status_code == 200
+    except:
+        return False
 
 def get_user_companies():
     """Get companies that the user has access to"""
@@ -31,6 +46,9 @@ def index():
     # Get user's companies and selected filter
     user_companies = get_user_companies()
     selected_company = request.args.get('empresa')
+    
+    # Timestamp da última atualização
+    last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     # Build initial query ordered by data_embarque (most recent first)
     query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=True)
@@ -39,7 +57,7 @@ def index():
     if session['user']['role'] == 'cliente_unique':
         # If cliente_unique user has no companies, return empty data immediately
         if not user_companies:
-             kpis = {
+            kpis = {
                 'total': 0,
                 'aereo': 0,
                 'terrestre': 0,
@@ -47,16 +65,17 @@ def index():
                 'aguardando_chegada': 0,
                 'aguardando_embarque': 0,
                 'di_registrada': 0
-            }
-             table_data = []
-             available_companies = [] # No companies to filter if user has none
-             return render_template(
+            }            
+            table_data = []
+            available_companies = [] # No companies to filter if user has none
+            return render_template(
                 'onepage/index.html',
                 kpis=kpis,
                 table_data=table_data,
                 companies=available_companies,
                 selected_company=selected_company,
-                user_role=session['user']['role']
+                user_role=session['user']['role'],
+                last_update=last_update
             )
 
         # Filter by user's companies
@@ -125,7 +144,32 @@ def index():
         'onepage/index.html',
         kpis=kpis,
         table_data=table_data,
-        companies=available_companies,
+        companies=available_companies,        
         selected_company=selected_company,
-        user_role=session['user']['role']
+        user_role=session['user']['role'],
+        last_update=last_update
     )
+    
+@bp.route('/update-data', methods=['POST'])
+@login_required
+def update_data():
+    """Endpoint para atualizar os dados de importações"""
+    if session['user']['role'] not in ['cliente_unique', 'interno_unique']:
+        return jsonify({
+            'status': 'error',
+            'message': 'Acesso não autorizado'
+        }), 401
+        
+    # Chamar a função de atualização
+    update_success = update_importacoes_processos()
+    
+    if update_success:
+        return jsonify({
+            'status': 'success',
+            'message': 'Dados atualizados com sucesso!'
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Erro ao atualizar os dados'
+        }), 500

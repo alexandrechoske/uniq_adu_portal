@@ -531,37 +531,49 @@
         
         function hideLoading() {
             document.getElementById('loading-overlay').classList.add('hidden');
-        }
-
-        function refreshDashboard() {
+        }        function refreshDashboard() {
             showLoading();
             
-            fetch(window.location.href)
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const newDoc = parser.parseFromString(html, 'text/html');
-                    
-                    const newKpiContent = newDoc.getElementById('kpi-cards-container').innerHTML;
-                    document.getElementById('kpi-cards-container').innerHTML = newKpiContent;
+            // Primeiro, chamar a API de atualização para buscar os dados mais recentes do Supabase
+            fetch('/onepage/update-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Resposta da atualização:', data);
+                
+                // Em seguida, recarregar os dados da página
+                return fetch(window.location.href);
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(html, 'text/html');
+                
+                const newKpiContent = newDoc.getElementById('kpi-cards-container').innerHTML;
+                document.getElementById('kpi-cards-container').innerHTML = newKpiContent;
 
-                    const newTableContent = newDoc.getElementById('detailed-table-container').innerHTML;
-                    document.getElementById('detailed-table-container').innerHTML = newTableContent;
+                const newTableContent = newDoc.getElementById('detailed-table-container').innerHTML;
+                document.getElementById('detailed-table-container').innerHTML = newTableContent;
 
-                    const lastUpdateEl = document.querySelector('span:contains("Última atualização:")');
-                    if (lastUpdateEl) {
-                        const newLastUpdateEl = newDoc.querySelector('span:contains("Última atualização:")');
-                        if (newLastUpdateEl) {
-                            lastUpdateEl.textContent = newLastUpdateEl.textContent;
-                        }
+                const lastUpdateEl = document.querySelector('span:contains("Última atualização:")');
+                if (lastUpdateEl) {
+                    const newLastUpdateEl = newDoc.querySelector('span:contains("Última atualização:")');
+                    if (newLastUpdateEl) {
+                        lastUpdateEl.textContent = newLastUpdateEl.textContent;
                     }
-                    
-                    hideLoading();
-                })
-                .catch(error => {
-                    console.error('Erro ao atualizar dashboard:', error);
-                    hideLoading();
-                });
+                }
+                
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar dashboard:', error);
+                hideLoading();
+                alert('Erro ao atualizar dados: ' + error.message);
+            });
         }
 
         const selectElement = document.querySelector('#company-filter');
