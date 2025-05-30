@@ -20,12 +20,21 @@ class Config:
     
     # Dashboard Configuration
     DASH_DEBUG = os.getenv('DASH_DEBUG', 'False').lower() == 'true'
-    
-    # PDF Generation Configuration
+      # PDF Generation Configuration
     PDF_TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
+      # AI Configuration
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+    
+    # Upload Configuration
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static/uploads/conferencia')
+    MAX_CONTENT_LENGTH = 20 * 1024 * 1024  # 20MB limit for uploads
     
     @staticmethod
     def init_app(app):
         # Create temp directory for PDF generation if it doesn't exist
         if not os.path.exists(Config.PDF_TEMP_DIR):
-            os.makedirs(Config.PDF_TEMP_DIR) 
+            os.makedirs(Config.PDF_TEMP_DIR)
+        
+        # Create uploads directory if it doesn't exist
+        if not os.path.exists(Config.UPLOAD_FOLDER):
+            os.makedirs(Config.UPLOAD_FOLDER)

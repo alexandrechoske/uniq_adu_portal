@@ -50,8 +50,8 @@ def index():
     # Timestamp da última atualização
     last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    # Build initial query ordered by data_embarque (most recent first)
-    query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=True)
+    # Build initial query without sorting (will sort after date conversion)
+    query = supabase.table('importacoes_processos').select('*')
 
     # Apply filters based on user role and selected company
     if session['user']['role'] == 'cliente_unique':
@@ -115,11 +115,17 @@ def index():
         }
 
         # Prepare table data
-        # Convert date columns and handle NaT, replacing with " "
+        # First convert dates to datetime for proper sorting
         date_columns = ['data_embarque', 'data_chegada'] # Add other date columns if necessary
         for col in date_columns:
             # Convert to datetime, errors='coerce' will turn invalid parsing into NaT (Not a Time)
             df[col] = pd.to_datetime(df[col], errors='coerce')
+        
+        # Sort by data_embarque (most recent first)
+        df = df.sort_values(by='data_embarque', ascending=False, na_position='last')
+        
+        # Format dates for display
+        for col in date_columns:
             # Format valid dates and replace NaT with " "
             df[col] = df[col].apply(lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else " ")
 
@@ -187,8 +193,8 @@ def page_data():
         # Timestamp da última atualização
         last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-        # Build initial query ordered by data_embarque (most recent first)
-        query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=True)
+        # Build initial query without sorting (will sort after date conversion)
+        query = supabase.table('importacoes_processos').select('*')
 
         # Apply filters based on user role and selected company
         if session['user']['role'] == 'cliente_unique':
@@ -249,11 +255,17 @@ def page_data():
             }
 
             # Prepare table data
-            # Convert date columns and handle NaT, replacing with " "
+            # First convert dates to datetime for proper sorting
             date_columns = ['data_embarque', 'data_chegada'] # Add other date columns if necessary
             for col in date_columns:
                 # Convert to datetime, errors='coerce' will turn invalid parsing into NaT (Not a Time)
                 df[col] = pd.to_datetime(df[col], errors='coerce')
+            
+            # Sort by data_embarque (most recent first)
+            df = df.sort_values(by='data_embarque', ascending=False, na_position='last')
+            
+            # Format dates for display
+            for col in date_columns:
                 # Format valid dates and replace NaT with " "
                 df[col] = df[col].apply(lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else " ")
 

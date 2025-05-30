@@ -1,0 +1,1203 @@
+{% extends "base.html" %}
+
+{% block title %}Conferência Documental IA{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos para a página de conferência */
+    .page-header {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .radio-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .radio-option {
+        display: flex;
+        align-items: center;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .radio-option:hover {
+        border-color: #3b82f6;
+        background-color: #f0f9ff;
+    }
+
+    .radio-option.selected {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+
+    .radio-option input[type="radio"] {
+        margin-right: 0.75rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        accent-color: #3b82f6;
+    }
+
+    .radio-option-info {
+        flex: 1;
+    }
+
+    .radio-option-title {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+    }
+
+    .radio-option-desc {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .upload-container {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .upload-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .upload-title svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        color: #3b82f6;
+    }
+
+    .dropzone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.2s;
+        background-color: #f8fafc;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+        border-color: #3b82f6;
+        background-color: #f0f9ff;
+    }
+
+    .dropzone-icon {
+        color: #64748b;
+        width: 3rem;
+        height: 3rem;
+        margin: 0 auto 1rem;
+    }
+
+    .dropzone-title {
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: #334155;
+        margin-bottom: 0.5rem;
+    }
+
+    .dropzone-subtitle {
+        color: #64748b;
+        margin-bottom: 1rem;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+
+    .file-list {
+        margin-top: 1.5rem;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        background-color: #f8fafc;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .file-item:hover {
+        background-color: #f0f9ff;
+    }
+
+    .file-icon {
+        width: 2rem;
+        height: 2rem;
+        margin-right: 1rem;
+        color: #64748b;
+    }
+
+    .file-info {
+        flex: 1;
+    }
+
+    .file-name {
+        font-weight: 500;
+        color: #334155;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 300px;
+    }
+
+    .file-size {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .file-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .file-action {
+        border: none;
+        background: none;
+        color: #64748b;
+        cursor: pointer;
+        transition: color 0.2s;
+        width: 1.25rem;
+        height: 1.25rem;
+        padding: 0;
+    }
+
+    .file-action:hover {
+        color: #ef4444;
+    }
+
+    .progress-container {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: none;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .progress-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .progress-title svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        color: #3b82f6;
+    }
+
+    .progress-info {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .progress-bar-container {
+        height: 0.5rem;
+        background-color: #e5e7eb;
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background-color: #3b82f6;
+        border-radius: 9999px;
+        transition: width 0.3s ease;
+    }
+
+    .results-container {
+        display: none;
+    }
+
+    .results-header {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .results-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .results-title svg {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    .results-summary {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .results-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .result-card {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .result-card-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .result-card-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        background-color: #f0f9ff;
+        color: #3b82f6;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        margin-right: 1rem;
+    }
+
+    .result-status-ok {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
+    .result-status-alerta {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .result-status-erro {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .result-card-info {
+        flex: 1;
+    }
+
+    .result-card-filename {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        color: #1f2937;
+    }
+
+    .result-card-summary {
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .result-card-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .result-card-stat-icon {
+        width: 0.75rem;
+        height: 0.75rem;
+    }
+
+    .stat-error {
+        color: #dc2626;
+    }
+
+    .stat-warning {
+        color: #d97706;
+    }
+
+    .stat-info {
+        color: #2563eb;
+    }
+
+    .result-card-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1rem;
+    }
+
+    .btn-outline {
+        background-color: transparent;
+        border: 1px solid #cbd5e1;
+        color: #64748b;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .btn-outline:hover {
+        background-color: #f8fafc;
+        border-color: #94a3b8;
+        color: #334155;
+    }
+
+    .btn-outline svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .details-container {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: none;
+    }
+
+    .details-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .details-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .details-close {
+        background: none;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        transition: color 0.2s;
+        width: 1.5rem;
+        height: 1.5rem;
+        padding: 0;
+    }
+
+    .details-close:hover {
+        color: #ef4444;
+    }
+
+    .details-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .details-table th,
+    .details-table td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .details-table th {
+        background-color: #f8fafc;
+        font-weight: 600;
+        color: #475569;
+        font-size: 0.875rem;
+    }
+
+    .details-table td {
+        font-size: 0.875rem;
+        color: #334155;
+    }
+
+    .details-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .details-table tr:hover td {
+        background-color: #f8fafc;
+    }
+
+    .status-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 9999px;
+    }
+
+    .status-ok {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
+    .status-alerta {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .status-erro {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .status-cell {
+        width: 1%;
+        white-space: nowrap;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        backdrop-filter: blur(3px);
+    }
+
+    .loading-content {
+        background-color: white;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 90%;
+    }
+
+    .loading-spinner {
+        margin-bottom: 1rem;
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid #f3f4f6;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .loading-message {
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: #1f2937;
+    }
+
+    @media (max-width: 768px) {
+        .radio-container {
+            flex-direction: column;
+        }
+        .radio-option {
+            min-width: auto;
+        }
+        .results-cards {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-6 bg-slate-50 min-h-screen">
+    <!-- Header da Página -->
+    <div class="page-header">
+        <h1 class="page-title">Conferência Documental com IA</h1>
+    </div>
+
+    <!-- Formulário de Upload -->
+    <div class="upload-container">
+        <h2 class="upload-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+            </svg>
+            Selecione o Tipo de Conferência
+        </h2>
+
+        <div class="radio-container">
+            <label class="radio-option" data-tipo="inconsistencias">
+                <input type="radio" name="tipo_conferencia" value="inconsistencias" checked>
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Inconsistências</div>
+                    <div class="radio-option-desc">Verificação geral de inconsistências em todos os tipos de documentos.</div>
+                </div>
+            </label>
+            
+            <label class="radio-option" data-tipo="invoice">
+                <input type="radio" name="tipo_conferencia" value="invoice">
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Invoices</div>
+                    <div class="radio-option-desc">Verificação específica para invoices comerciais.</div>
+                </div>
+            </label>
+
+            <label class="radio-option" data-tipo="packlist">
+                <input type="radio" name="tipo_conferencia" value="packlist">
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Packlists</div>
+                    <div class="radio-option-desc">Verificação específica para packlists.</div>
+                </div>
+            </label>
+
+            <label class="radio-option" data-tipo="conhecimento">
+                <input type="radio" name="tipo_conferencia" value="conhecimento">
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Conhecimentos</div>
+                    <div class="radio-option-desc">Verificação específica para conhecimentos de embarque (BL/AWB).</div>
+                </div>
+            </label>
+        </div>
+
+        <h2 class="upload-title">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Upload de Documentos
+        </h2>
+
+        <div class="dropzone" id="dropzone">
+            <svg class="dropzone-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <div class="dropzone-title">Arraste e solte arquivos PDF aqui</div>
+            <div class="dropzone-subtitle">ou clique para selecionar arquivos</div>
+            <input type="file" id="file-input" multiple accept=".pdf" class="hidden">
+            <button type="button" class="btn-primary" id="select-files">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/>
+                </svg>
+                Selecionar Arquivos
+            </button>
+        </div>
+
+        <div class="file-list" id="file-list"></div>
+
+        <div class="mt-4">
+            <button type="button" class="btn-primary" id="upload-btn" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                </svg>
+                Iniciar Conferência
+            </button>
+        </div>
+    </div>
+
+    <!-- Container de Progresso -->
+    <div class="progress-container" id="progress-container">
+        <div class="progress-header">
+            <div class="progress-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                Processamento em Andamento
+            </div>
+            <div class="progress-info" id="progress-info">0%</div>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <!-- Container de Resultados -->
+    <div class="results-container" id="results-container">
+        <div class="results-header">
+            <h2 class="results-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                    <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/>
+                </svg>
+                Resultados da Conferência
+            </h2>
+            <div class="results-summary" id="results-summary"></div>
+        </div>
+
+        <div class="results-cards" id="results-cards">
+            <!-- Os cards de resultados serão injetados aqui via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Container de Detalhes -->
+    <div class="details-container" id="details-container">
+        <div class="details-header">
+            <h3 class="details-title" id="details-title">Detalhes da Conferência</h3>
+            <button type="button" class="details-close" id="details-close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="details-content" id="details-content">
+            <table class="details-table">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">Status</th>
+                        <th style="width: 20%;">Campo</th>
+                        <th style="width: 15%;">Tipo</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody id="details-table-body">
+                    <!-- As linhas da tabela de detalhes serão injetadas aqui via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-message" id="loading-message">Processando arquivos...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elementos do DOM
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const selectFiles = document.getElementById('select-files');
+        const fileList = document.getElementById('file-list');
+        const uploadBtn = document.getElementById('upload-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressInfo = document.getElementById('progress-info');
+        const resultsContainer = document.getElementById('results-container');
+        const resultsCards = document.getElementById('results-cards');
+        const resultsSummary = document.getElementById('results-summary');
+        const detailsContainer = document.getElementById('details-container');
+        const detailsTitle = document.getElementById('details-title');
+        const detailsTableBody = document.getElementById('details-table-body');
+        const detailsClose = document.getElementById('details-close');
+        const radioOptions = document.querySelectorAll('.radio-option');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingMessage = document.getElementById('loading-message');
+
+        let selectedFiles = [];
+        let currentJobId = null;
+        let jobResults = null;
+        let checkStatusInterval = null;
+
+        // Inicializa a seleção do tipo de conferência
+        radioOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                radioOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                // Marca o input radio
+                const radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+            });
+        });
+        // Seleciona a primeira opção por padrão
+        radioOptions[0].classList.add('selected');
+
+        // Event listeners para drag & drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropzone.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            dropzone.classList.remove('dragover');
+        }
+
+        // Manipulação de arquivos
+        dropzone.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        selectFiles.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+        });
+
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(file => 
+                file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+            );
+            
+            if (validFiles.length === 0) {
+                alert('Por favor, selecione apenas arquivos PDF.');
+                return;
+            }
+
+            validFiles.forEach(file => {
+                if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    selectedFiles.push(file);
+                    addFileToList(file);
+                }
+            });
+
+            updateUploadButton();
+        }
+
+        function addFileToList(file) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            const fileSize = file.size < 1024 * 1024 
+                ? `${(file.size / 1024).toFixed(1)} KB` 
+                : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+            fileItem.innerHTML = `
+                <svg class="file-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${fileSize}</div>
+                </div>
+                <div class="file-actions">
+                    <button type="button" class="file-action remove-file" data-filename="${file.name}" title="Remover arquivo">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            fileList.appendChild(fileItem);
+
+            // Adicionar event listener para remover arquivo
+            const removeBtn = fileItem.querySelector('.remove-file');
+            removeBtn.addEventListener('click', () => {
+                const filename = removeBtn.getAttribute('data-filename');
+                selectedFiles = selectedFiles.filter(f => f.name !== filename);
+                fileItem.remove();
+                updateUploadButton();
+            });
+        }
+
+        function updateUploadButton() {
+            if (selectedFiles.length > 0) {
+                uploadBtn.style.display = 'inline-flex';
+            } else {
+                uploadBtn.style.display = 'none';
+            }
+        }
+
+        // Evento de upload
+        uploadBtn.addEventListener('click', uploadFiles);
+
+        function uploadFiles() {
+            if (selectedFiles.length === 0) {
+                alert('Por favor, selecione pelo menos um arquivo para enviar.');
+                return;
+            }
+
+            const tipoConferencia = document.querySelector('input[name="tipo_conferencia"]:checked').value;
+            
+            const formData = new FormData();
+            formData.append('tipo_conferencia', tipoConferencia);
+            
+            selectedFiles.forEach(file => {
+                formData.append('files[]', file);
+            });
+            
+            showLoading('Enviando arquivos...');
+            
+            fetch('/conferencia/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    currentJobId = data.job_id;
+                    startProgressMonitoring(currentJobId);
+                } else {
+                    hideLoading();
+                    alert(`Erro: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                alert(`Erro ao enviar arquivos: ${error.message}`);
+            });
+        }
+
+        function startProgressMonitoring(jobId) {
+            progressContainer.style.display = 'block';
+            
+            // Oculta o painel de upload
+            showLoading('Processando arquivos...');
+            
+            // Inicia o monitoramento do progresso
+            checkStatusInterval = setInterval(() => {
+                checkJobStatus(jobId);
+            }, 2000); // Verifica a cada 2 segundos
+        }
+
+        function checkJobStatus(jobId) {
+            fetch(`/conferencia/status/${jobId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const job = data.job;
+                        updateProgress(job.progress);
+                        
+                        if (job.status === 'completed') {
+                            clearInterval(checkStatusInterval);
+                            loadJobResults(jobId);
+                        }
+                    } else {
+                        clearInterval(checkStatusInterval);
+                        hideLoading();
+                        alert(`Erro ao verificar status: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    clearInterval(checkStatusInterval);
+                    hideLoading();
+                    alert(`Erro na verificação de status: ${error.message}`);
+                });
+        }
+
+        function updateProgress(progress) {
+            progressBar.style.width = `${progress}%`;
+            progressInfo.textContent = `${progress}%`;
+        }
+
+        function loadJobResults(jobId) {
+            fetch(`/conferencia/result/${jobId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        hideLoading();
+                        jobResults = data.job;
+                        displayResults(jobResults);
+                    } else {
+                        hideLoading();
+                        alert(`Erro ao carregar resultados: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    alert(`Erro ao carregar resultados: ${error.message}`);
+                });
+        }
+
+        function displayResults(job) {
+            // Exibe o container de resultados
+            resultsContainer.style.display = 'block';
+            
+            // Atualiza o resumo
+            resultsSummary.textContent = `${job.arquivos_processados} de ${job.total_arquivos} arquivos processados • ${getTipoConferenciaLabel(job.tipo_conferencia)}`;
+            
+            // Limpa os cards existentes
+            resultsCards.innerHTML = '';
+            
+            // Adiciona um card para cada arquivo
+            job.arquivos.forEach(arquivo => {
+                if (arquivo.status === 'completed' && arquivo.result) {
+                    const result = arquivo.result;
+                    const card = createResultCard(arquivo.filename, result);
+                    resultsCards.appendChild(card);
+                }
+            });
+            
+            // Scroll para os resultados
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function getTipoConferenciaLabel(tipo) {
+            switch (tipo) {
+                case 'invoice':
+                    return 'Conferência de Invoices';
+                case 'packlist':
+                    return 'Conferência de Packlists';
+                case 'conhecimento':
+                    return 'Conferência de Conhecimentos';
+                default:
+                    return 'Conferência de Inconsistências';
+            }
+        }
+
+        function createResultCard(filename, result) {
+            const sumario = result.sumario;
+            const statusClass = getStatusClass(sumario.status);
+            
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            
+            card.innerHTML = `
+                <div class="result-card-header">
+                    <div class="result-card-icon ${statusClass}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <div class="result-card-info">
+                        <div class="result-card-filename">${truncateFilename(filename, 20)}</div>
+                        <div class="result-card-summary">
+                            <div class="result-card-stat stat-error">
+                                <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                                </svg>
+                                ${sumario.total_erros_criticos}
+                            </div>
+                            <div class="result-card-stat stat-warning">
+                                <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                                </svg>
+                                ${sumario.total_observacoes}
+                            </div>
+                            <div class="result-card-stat stat-info">
+                                <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M8.93 6.588-2.29.287-.082.38.45.083c0-.355.28-.65.63-.65.41 0 .72.22.87.628.7.99.54 1.3.54 2.31v.334c0 .308-.094.545-.281.75-.187.204-.378.333-.6.333-.577 0-1.004-.31-1.004-.803 0-.21.077-.412.23-.596C7.36 4.59 7.6 4.473 8 4.473c.252 0 .45.06.612.12.163.045.3.106.44.214.14.107.173.21.173.33"/>
+                                </svg>
+                                ${sumario.total_alertas}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="result-card-actions">
+                    <button type="button" class="btn-outline download-pdf" data-filename="${filename}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        PDF
+                    </button>
+                    <button type="button" class="btn-outline view-details" data-filename="${filename}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+                            <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+                        </svg>
+                        Ver Detalhes
+                    </button>
+                </div>
+            `;
+            
+            // Adicionar event listeners
+            const viewDetailsBtn = card.querySelector('.view-details');
+            viewDetailsBtn.addEventListener('click', function() {
+                const filename = this.getAttribute('data-filename');
+                showDetails(filename, result);
+            });
+            
+            return card;
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'ok':
+                    return 'result-status-ok';
+                case 'alerta':
+                    return 'result-status-alerta';
+                case 'erro':
+                    return 'result-status-erro';
+                default:
+                    return '';
+            }
+        }
+
+        function truncateFilename(filename, maxLength) {
+            if (filename.length <= maxLength) return filename;
+            
+            const extension = filename.slice(filename.lastIndexOf('.'));
+            const name = filename.slice(0, filename.lastIndexOf('.'));
+            
+            return `${name.slice(0, maxLength - extension.length - 3)}...${extension}`;
+        }
+
+        function showDetails(filename, result) {
+            detailsTitle.textContent = `Detalhes: ${filename}`;
+            detailsTableBody.innerHTML = '';
+            
+            if (result && result.itens) {
+                result.itens.forEach(item => {
+                    const row = document.createElement('tr');
+                    const statusClass = `status-${item.status}`;
+                    
+                    row.innerHTML = `
+                        <td class="status-cell">
+                            <span class="status-icon ${statusClass}">
+                                ${getStatusIcon(item.status)}
+                            </span>
+                        </td>
+                        <td><strong>${item.campo}</strong></td>
+                        <td>${getTipoLabel(item.tipo)}</td>
+                        <td>${item.descricao}</td>
+                    `;
+                    
+                    detailsTableBody.appendChild(row);
+                });
+            }
+            
+            detailsContainer.style.display = 'block';
+            detailsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function getStatusIcon(status) {
+            switch (status) {
+                case 'ok':
+                    return `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/>
+                        </svg>
+                    `;
+                case 'alerta':
+                    return `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M7.005 3.1a1 1 0 1 1 1.99 0l-.388 6.35a.61.61 0 0 1-1.214 0L7.005 3.1ZM7 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0Z"/>
+                        </svg>
+                    `;
+                case 'erro':
+                    return `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                    `;
+                default:
+                    return '';
+            }
+        }
+
+        function getTipoLabel(tipo) {
+            switch (tipo) {
+                case 'erro_critico':
+                    return 'Erro Crítico';
+                case 'observacao':
+                    return 'Observação';
+                case 'alerta':
+                    return 'Alerta';
+                case 'ok':
+                    return 'OK';
+                default:
+                    return tipo;
+            }
+        }
+
+        // Fechar detalhes
+        detailsClose.addEventListener('click', function() {
+            detailsContainer.style.display = 'none';
+        });
+
+        // Funções de loading
+        function showLoading(message) {
+            loadingMessage.textContent = message || 'Carregando...';
+            loadingOverlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

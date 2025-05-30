@@ -1,12 +1,24 @@
-# Portal UniSystem
+# UniSystem Portal - Unique Aduaneira
 
-Portal web corporativo para a UniSystem, desenvolvido com Flask e Supabase.
+Portal web corporativo para a Unique Aduaneira, desenvolvido com Flask e Supabase.
 
-## Requisitos
+## Módulos Disponíveis
 
-- Python 3.x
-- pip (gerenciador de pacotes Python)
-- Conta no Supabase (para banco de dados e autenticação)
+1. **Dashboard** - Visão geral das operações e métricas principais
+2. **One Page** - Interface simplificada para clientes e usuários internos
+3. **Conferência Documental IA** - Verificação automatizada de documentos com OCR e IA
+4. **Agente Unique** - Agente conversacional para atendimento ao cliente
+5. **Relatórios** - Geração e visualização de relatórios personalizados
+6. **Usuários** - Gerenciamento de usuários e permissões (apenas admin)
+
+## Requisitos de Sistema
+
+- Python 3.8 ou superior
+- Flask e dependências (ver requirements.txt)
+- Supabase (para banco de dados e autenticação)
+- Para o módulo de Conferência Documental IA:
+  - Poppler (para o pdf2image)
+  - Chave de API para Google Gemini
 
 ## Instalação
 
@@ -38,16 +50,46 @@ FLASK_DEBUG=True
 ```
 
 5. Configure o banco de dados Supabase:
-- Crie as tabelas necessárias no Supabase:
-  - users (id, nome, email, role)
+- Execute os scripts SQL na pasta `sql/` para criar as tabelas:
+  - users (usuários do sistema)
+  - conferencia_jobs (para o módulo de Conferência Documental IA)
+  - outras tabelas conforme necessário
 - Configure as políticas de Row Level Security (RLS) para cada tabela
 
-6. Execute a aplicação:
+6. Para o módulo de Conferência Documental IA, configure a API do Gemini:
+   - Adicione sua chave de API ao arquivo `.env`: `GEMINI_API_KEY=sua-chave-gemini-aqui`
+
+7. Execute a aplicação:
 ```bash
-flask run
+python app.py
+```
+
+Ou use o script de inicialização:
+```bash
+./start.bat   # Windows
 ```
 
 A aplicação estará disponível em `http://localhost:5000`
+
+## Módulo de Conferência Documental IA
+
+O módulo de Conferência Documental IA permite verificar automaticamente documentos aduaneiros como invoices, packlists e conhecimentos de embarque.
+
+### Funcionalidades:
+
+- Extração inteligente de texto de documentos PDF
+- Análise baseada em IA (Google Gemini)
+- Verificação de conformidade com o Art. 557 do regulamento aduaneiro
+- Classificação de problemas em 3 níveis (erro crítico, alerta, observação)
+- Interface amigável para upload e visualização de resultados
+
+Para mais detalhes, consulte a [documentação completa](docs/conferencia_documental.md) e o [guia de instalação](docs/conferencia_instalacao.md).
+
+## Níveis de Acesso
+
+- **admin**: Acesso completo a todos os módulos
+- **interno_unique**: Acesso aos módulos internos, incluindo Conferência Documental IA
+- **cliente_unique**: Acesso limitado (One Page e Agente Unique)
 
 ## Estrutura do Projeto
 

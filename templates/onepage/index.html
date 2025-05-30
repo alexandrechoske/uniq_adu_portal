@@ -3,6 +3,7 @@
 {% block title %}IMPORTAÇÕES - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table-sort.css') }}">
 <style>
     /* Estilos para os cards de métricas */
     .metric-card {
@@ -12,6 +13,7 @@
         border: 1px solid #e5e7eb; /* Borda leve */
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* Sombra leve */
     }
+      /* Estilos para os cards de métricas - mantido aqui para não interferir em outros componentes */
     
     .metric-card:hover {
         transform: translateY(-4px); /* Efeito de levantar */
@@ -156,9 +158,7 @@
         font-weight: 600;
         color: #1f2937;
         margin: 0;
-    }
-
-    .table-scroll {
+    }    .table-scroll {
         overflow-x: auto;
         max-height: 500px;
         overflow-y: auto;
@@ -169,6 +169,9 @@
         border-collapse: collapse;
         background: white; /* Garante fundo branco para a tabela */
         font-size: 0.875rem;
+    }    /* Os estilos para os cabeçalhos ordenáveis foram movidos para o arquivo table-sort.css */
+    
+    .data-table {
         font-family: 'Inter', sans-serif;
     }
 
@@ -176,9 +179,7 @@
         position: sticky;
         top: 0;
         z-index: 10;
-    }
-
-    .data-table th {
+    }    .data-table th {
         background: #f3f4f6;
         padding: 1rem 1.25rem;
         text-align: left;
@@ -439,19 +440,18 @@
     <div class="table-wrapper w-full shadow-sm rounded-lg bg-white overflow-hidden" id="detailed-table-container">
         <div class="p-4 border-b border-slate-200">
 
-        <div class="overflow-x-auto table-scroll">
-            <table class="min-w-full divide-y divide-slate-200 data-table">
+        <div class="overflow-x-auto table-scroll">            <table class="min-w-full divide-y divide-slate-200 data-table">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nº DI</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">EMBARQUE</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">MODAL</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">REGISTRO</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">REF UNIQUE</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">STATUS</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CANAL</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CHEGADA</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">OBS</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="numero">Nº DI <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_embarque">EMBARQUE <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="via_transporte_descricao">MODAL <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_registro">REGISTRO <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="ref_unique">REF UNIQUE <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="carga_status">STATUS <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="diduimp_canal">CANAL <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_chegada">CHEGADA <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="observacoes">OBS <span class="sort-icon"></span></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-slate-200">
@@ -517,6 +517,7 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/onepage-refresh.js') }}"></script>
+<script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script>
     // Move filterByCompany to global scope
     function filterByCompany(value) {

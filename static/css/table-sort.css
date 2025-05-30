@@ -1,0 +1,57 @@
+/* Estilos para ordenação de tabela */
+.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px !important;
+    transition: background-color 0.2s ease;
+}
+
+.sortable:hover {
+    background-color: #f3f4f6;
+}
+
+.sortable:after {
+    content: '⇅';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 12px;
+    transition: color 0.2s ease;
+}
+
+.sortable.asc:after {
+    content: '↑';
+    color: #2563eb;
+    font-weight: bold;
+}
+
+.sortable.desc:after {
+    content: '↓';
+    color: #2563eb;
+    font-weight: bold;
+}
+
+/* Estilo melhorado para o overlay de carregamento */
+.loading-overlay {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+    transition: opacity 0.3s ease;
+}
+
+/* Indicador de coluna ordenada */
+.sortable.asc, .sortable.desc {
+    background-color: #f0f9ff; /* Tom azul muito claro para mostrar qual coluna está selecionada */
+    border-bottom: 2px solid #2563eb;
+}
+
+/* Melhora o animation spin para o loader */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
