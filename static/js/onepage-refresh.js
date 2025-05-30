@@ -31,13 +31,17 @@ function refreshDashboard() {
         return fetch('/onepage/page-data');
     })
     .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
+    .then(data => {        if (data.status === 'success') {
             // Atualizar KPIs
             updateKPIs(data.kpis);
             
             // Atualizar tabela
             updateTable(data.table_data);
+            
+            // Atualizar taxas de câmbio
+            if (data.currencies) {
+                updateCurrencyRates(data.currencies);
+            }
             
             // Atualizar timestamp
             updateTimestamp(data.last_update);
@@ -242,6 +246,29 @@ function updateTimestamp(lastUpdate) {
         }
     } catch (error) {
         console.error('Erro ao atualizar timestamp:', error);
+    }
+}
+
+// Função para atualizar as taxas de câmbio
+function updateCurrencyRates(currencies) {
+    try {
+        if (currencies.USD !== undefined) {
+            const usdElement = document.getElementById('usd-rate');
+            if (usdElement) {
+                usdElement.textContent = `R$ ${currencies.USD.toFixed(4)}`;
+            }
+        }
+        
+        if (currencies.EUR !== undefined) {
+            const eurElement = document.getElementById('eur-rate');
+            if (eurElement) {
+                eurElement.textContent = `R$ ${currencies.EUR.toFixed(4)}`;
+            }
+        }
+        
+        console.log('Taxas de câmbio atualizadas');
+    } catch (error) {
+        console.error('Erro ao atualizar taxas de câmbio:', error);
     }
 }
 

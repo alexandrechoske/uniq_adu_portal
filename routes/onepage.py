@@ -36,6 +36,32 @@ def get_user_companies():
             return companies
     return []
 
+def get_currencies():
+    """Get latest USD and EUR exchange rates"""
+    try:
+        # Use the Banco Central do Brasil API or a public currency API
+        response = requests.get('https://api.exchangerate-api.com/v4/latest/BRL')
+        if response.status_code == 200:
+            data = response.json()
+            # We want BRL to USD/EUR rates (how many USD/EUR per 1 BRL)
+            # The API returns USD/EUR to BRL, so we take the inverse
+            usd_rate = 1 / data['rates']['USD']
+            eur_rate = 1 / data['rates']['EUR']
+            return {
+                'USD': round(usd_rate, 4),
+                'EUR': round(eur_rate, 4),
+                'last_updated': data['date']
+            }
+    except Exception as e:
+        print(f"Error fetching currency rates: {str(e)}")
+    
+    # Return default values if API fails
+    return {
+        'USD': 0.00,
+        'EUR': 0.00,
+        'last_updated': datetime.now().strftime('%Y-%m-%d')
+    }
+
 @bp.route('/')
 @login_required
 def index():
@@ -49,6 +75,9 @@ def index():
     
     # Timestamp da última atualização
     last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    
+    # Get currency exchange rates
+    currencies = get_currencies()
 
     # Build initial query without sorting (will sort after date conversion)
     query = supabase.table('importacoes_processos').select('*')
@@ -67,6 +96,7 @@ def index():
                 'di_registrada': 0
             }            
             table_data = []
+            
             available_companies = [] # No companies to filter if user has none
             return render_template(
                 'onepage/index.html',
@@ -75,7 +105,8 @@ def index():
                 companies=available_companies,
                 selected_company=selected_company,
                 user_role=session['user']['role'],
-                last_update=last_update
+                last_update=last_update,
+                currencies=currencies
             )
 
         # Filter by user's companies
@@ -146,6 +177,9 @@ def index():
     if session['user']['role'] == 'cliente_unique' and user_companies:
         available_companies = [c for c in all_companies if c['cpfcnpj'] in user_companies]
 
+    # Get currency rates
+    currency_rates = get_currencies()
+
     return render_template(
         'onepage/index.html',
         kpis=kpis,
@@ -153,7 +187,8 @@ def index():
         companies=available_companies,        
         selected_company=selected_company,
         user_role=session['user']['role'],
-        last_update=last_update
+        last_update=last_update,
+        currencies=currencies
     )
     
 @bp.route('/update-data', methods=['POST'])
@@ -192,6 +227,9 @@ def page_data():
         
         # Timestamp da última atualização
         last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        
+        # Get currency exchange rates
+        currencies = get_currencies()
 
         # Build initial query without sorting (will sort after date conversion)
         query = supabase.table('importacoes_processos').select('*')
@@ -275,7 +313,8 @@ def page_data():
             'status': 'success',
             'kpis': kpis,
             'table_data': table_data,
-            'last_update': last_update
+            'last_update': last_update,
+            'currencies': currencies
         })
     except Exception as e:
         return jsonify({
