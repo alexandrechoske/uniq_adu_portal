@@ -166,10 +166,107 @@ def update_data():
     if update_success:
         return jsonify({
             'status': 'success',
-            'message': 'Dados atualizados com sucesso!'
+            'message': 'Dados atualizados com sucesso!',
+            'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         })
     else:
         return jsonify({
             'status': 'error',
             'message': 'Erro ao atualizar os dados'
+        }), 500
+        
+@bp.route('/page-data', methods=['GET'])
+@login_required
+def page_data():
+    """Endpoint para obter dados da página em formato JSON para atualização via AJAX"""
+    try:
+        # Get user's companies and selected filter
+        user_companies = get_user_companies()
+        selected_company = request.args.get('empresa')
+        
+        # Timestamp da última atualização
+        last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        # Build initial query ordered by data_embarque (most recent first)
+        query = supabase.table('importacoes_processos').select('*').order('data_embarque', desc=True)
+
+        # Apply filters based on user role and selected company
+        if session['user']['role'] == 'cliente_unique':
+            # If cliente_unique user has no companies, return empty data immediately
+            if not user_companies:
+                kpis = {
+                    'total': 0,
+                    'aereo': 0,
+                    'terrestre': 0,
+                    'maritimo': 0,
+                    'aguardando_chegada': 0,
+                    'aguardando_embarque': 0,
+                    'di_registrada': 0
+                }                
+                table_data = []
+                
+                return jsonify({
+                    'status': 'success',
+                    'kpis': kpis,
+                    'table_data': table_data,
+                    'last_update': last_update
+                })
+
+            # Filter by user's companies
+            if selected_company and selected_company in user_companies:
+                query = query.eq('cliente_cpfcnpj', selected_company)
+            else:
+                query = query.in_('cliente_cpfcnpj', user_companies)
+
+        elif selected_company:  # interno_unique with filter
+            query = query.eq('cliente_cpfcnpj', selected_company)
+
+        # Execute query and process data
+        result = query.execute()
+        df = pd.DataFrame(result.data if result.data else [])
+
+        if df.empty:
+            kpis = {
+                'total': 0,
+                'aereo': 0,
+                'terrestre': 0,
+                'maritimo': 0,
+                'aguardando_chegada': 0,
+                'aguardando_embarque': 0,
+                'di_registrada': 0
+            }
+            table_data = []
+        else:
+            # Calculate KPIs
+            kpis = {
+                'total': len(df),
+                'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
+                'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
+                'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
+                'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
+                'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
+                'di_registrada': len(df[df['status_doc'] == '3 - Desembarcada'])
+            }
+
+            # Prepare table data
+            # Convert date columns and handle NaT, replacing with " "
+            date_columns = ['data_embarque', 'data_chegada'] # Add other date columns if necessary
+            for col in date_columns:
+                # Convert to datetime, errors='coerce' will turn invalid parsing into NaT (Not a Time)
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+                # Format valid dates and replace NaT with " "
+                df[col] = df[col].apply(lambda x: x.strftime('%d/%m/%Y') if pd.notna(x) else " ")
+
+            table_data = df.to_dict('records')
+            
+        return jsonify({
+            'status': 'success',
+            'kpis': kpis,
+            'table_data': table_data,
+            'last_update': last_update
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Erro ao gerar dados da página: {str(e)}'
         }), 500

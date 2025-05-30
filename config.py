@@ -16,7 +16,7 @@ class Config:
     DEBUG = True  # Forçando DEBUG para true para ver mais logs
     
     # Application Configuration
-    APP_NAME = "Unique Aduaneira Portal"
+    APP_NAME = "UniSystem Portal"
     
     # Dashboard Configuration
     DASH_DEBUG = os.getenv('DASH_DEBUG', 'False').lower() == 'true'

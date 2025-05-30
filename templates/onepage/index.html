@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}IMPORTAÇÕES - Portal Unique Aduaneira{% endblock %}
+{% block title %}IMPORTAÇÕES - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -324,8 +324,7 @@
                     </option>
                     {% endfor %}
                 </select>
-                {% endif %}
-                <button
+                {% endif %}                <button
                     id="refresh-button"
                     class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
                     onclick="refreshDashboard()">
@@ -335,8 +334,7 @@
                     <span>Atualizar</span>
                 </button>
             </div>
-        </div>
-        <div class="flex items-center text-sm text-slate-600 mt-2">
+        </div>        <div class="flex items-center text-sm text-slate-600 mt-2">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
@@ -344,6 +342,12 @@
             <div class="ml-4 flex items-center">
                 <div class="w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse"></div>
                 <span>Sistema Online</span>
+            </div>
+            <div class="ml-4 countdown">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="countdown-text">Atualização em <span id="countdown">60</span>s</span>
             </div>
         </div>
     </div>
@@ -512,6 +516,7 @@
 </div>
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/onepage-refresh.js') }}"></script>
 <script>
     // Move filterByCompany to global scope
     function filterByCompany(value) {
@@ -525,57 +530,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        function showLoading() {
-            document.getElementById('loading-overlay').classList.remove('hidden');
-        }
-        
-        function hideLoading() {
-            document.getElementById('loading-overlay').classList.add('hidden');
-        }        function refreshDashboard() {
-            showLoading();
-            
-            // Primeiro, chamar a API de atualização para buscar os dados mais recentes do Supabase
-            fetch('/onepage/update-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Resposta da atualização:', data);
-                
-                // Em seguida, recarregar os dados da página
-                return fetch(window.location.href);
-            })
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const newDoc = parser.parseFromString(html, 'text/html');
-                
-                const newKpiContent = newDoc.getElementById('kpi-cards-container').innerHTML;
-                document.getElementById('kpi-cards-container').innerHTML = newKpiContent;
-
-                const newTableContent = newDoc.getElementById('detailed-table-container').innerHTML;
-                document.getElementById('detailed-table-container').innerHTML = newTableContent;
-
-                const lastUpdateEl = document.querySelector('span:contains("Última atualização:")');
-                if (lastUpdateEl) {
-                    const newLastUpdateEl = newDoc.querySelector('span:contains("Última atualização:")');
-                    if (newLastUpdateEl) {
-                        lastUpdateEl.textContent = newLastUpdateEl.textContent;
-                    }
-                }
-                
-                hideLoading();
-            })
-            .catch(error => {
-                console.error('Erro ao atualizar dashboard:', error);
-                hideLoading();
-                alert('Erro ao atualizar dados: ' + error.message);
-            });
-        }
-
         const selectElement = document.querySelector('#company-filter');
         if (selectElement) {
             selectElement.addEventListener('keydown', function(e) {

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unique Aduaneira - {% block title %}{% endblock %}</title>
+    <title>UniSystem - {% block title %}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -51,7 +52,7 @@
         <aside class="w-64 bg-white shadow-lg hidden lg:block animate-fadeIn">
             <div class="h-full flex flex-col">
                 <div class="p-4">
-                    <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique Aduaneira" class="h-12">
+                    <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem" class="h-12">
                 </div>
                 
                 <nav class="flex-1 px-2 py-4 space-y-2">
@@ -124,7 +125,7 @@
         
         <div class="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-50">
             <div class="flex items-center justify-between p-4">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Unique Aduaneira" class="h-8">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="UniSystem" class="h-8">
                 <button type="button" class="text-gray-600" id="mobile-menu-button">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>

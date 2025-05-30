@@ -1,6 +1,6 @@
-# Portal Unique Aduaneira
+# Portal UniSystem
 
-Portal web corporativo para a Unique Aduaneira, desenvolvido com Flask e Supabase.
+Portal web corporativo para a UniSystem, desenvolvido com Flask e Supabase.
 
 ## Requisitos
 
