@@ -246,9 +246,8 @@
     </div>
 
     <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <!-- Total Operations Card -->
-        <div class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">        <!-- Total Operations Card -->
+        <div id="total-operations" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-lg border bg-blue-50 text-blue-600 border-blue-200">
@@ -257,7 +256,7 @@
                         </svg>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-700' if variations.total_var.startswith('+') else 'bg-red-100 text-red-700' }}">
+                        <span class="metric-variation {{ 'variation-up' if variations.total_var.startswith('+') else 'variation-down' }}">
                             {{ variations.total_var }}
                         </span>
                         <div class="group relative">
@@ -276,13 +275,11 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-600 mb-1">Total de Operações</p>
-                    <p class="text-2xl font-bold text-slate-900">{{ total_operations }}</p>
+                    <p class="metric-value text-2xl font-bold text-slate-900">{{ total_operations }}</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Open Processes Card -->
-        <div class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+        </div>        <!-- Open Processes Card -->
+        <div id="processos-abertos" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-lg border bg-orange-50 text-orange-600 border-orange-200">
@@ -291,7 +288,7 @@
                         </svg>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-700' if variations.abertos_var.startswith('+') else 'bg-red-100 text-red-700' }}">
+                        <span class="metric-variation {{ 'variation-up' if variations.abertos_var.startswith('+') else 'variation-down' }}">
                             {{ variations.abertos_var }}
                         </span>
                         <div class="group relative">
@@ -310,13 +307,11 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-600 mb-1">Processos Abertos</p>
-                    <p class="text-2xl font-bold text-slate-900">{{ processos_abertos }}</p>
+                    <p class="metric-value text-2xl font-bold text-slate-900">{{ processos_abertos }}</p>
                 </div>
             </div>
-        </div>
-
-        <!-- New Processes Card -->
-        <div class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+        </div>        <!-- New Processes Card -->
+        <div id="novos-semana" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-lg border bg-green-50 text-green-600 border-green-200">
@@ -325,7 +320,7 @@
                         </svg>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-700' if variations.novos_var.startswith('+') else 'bg-red-100 text-red-700' }}">
+                        <span class="metric-variation {{ 'variation-up' if variations.novos_var.startswith('+') else 'variation-down' }}">
                             {{ variations.novos_var }}
                         </span>
                         <div class="group relative">
@@ -344,13 +339,13 @@
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-600 mb-1">Novos (7 dias)</p>
-                    <p class="text-2xl font-bold text-slate-900">{{ novos_semana }}</p>
+                    <p class="metric-value text-2xl font-bold text-slate-900">{{ novos_semana }}</p>
                 </div>
             </div>
         </div>
 
         <!-- In Transit Card -->
-        <div class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+    <div id="em-transito" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
             <div class="p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 rounded-lg border bg-purple-50 text-purple-600 border-purple-200">
@@ -359,7 +354,7 @@
                         </svg>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-700' if variations.transito_var.startswith('+') else 'bg-red-100 text-red-700' }}">
+                        <span class="metric-variation {{ 'variation-up' if variations.transito_var.startswith('+') else 'variation-down' }}">
                             {{ variations.transito_var }}
                         </span>
                         <div class="group relative">
@@ -375,43 +370,40 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div>
+                </div>                <div>
                     <p class="text-sm font-medium text-slate-600 mb-1">Em Trânsito</p>
-                    <p class="text-2xl font-bold text-slate-900">{{ em_transito }}</p>
+                    <p class="metric-value text-2xl font-bold text-slate-900">{{ em_transito }}</p>
                 </div>
             </div>
         </div>
     </div>
 
-
-
     <!-- Charts Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Evolução Temporal -->
         <div class="chart-card bg-white shadow-lg">
-            <div class="mb-4">
+            <div id="chart-data-container" class="mb-4">
                 {{ chart_data | safe if chart_data }}
             </div>
         </div>
 
         <!-- Distribuição por Cliente -->
         <div class="chart-card bg-white shadow-lg">
-            <div class="mb-4">
+            <div id="chart-cliente-container" class="mb-4">
                 {{ chart_cliente | safe if chart_cliente }}
             </div>
         </div>
 
         <!-- Modal de Transporte -->
         <div class="chart-card bg-white shadow-lg">
-            <div class="mb-4">
+            <div id="chart-tipo-container" class="mb-4">
                 {{ chart_tipo | safe if chart_tipo }}
             </div>
         </div>
 
         <!-- Status por Canal -->
         <div class="chart-card bg-white shadow-lg">
-            <div class="mb-4">
+            <div id="chart-canal-container" class="mb-4">
                 {{ chart_canal | safe if chart_canal }}
             </div>
         </div>
@@ -427,97 +419,21 @@
 </div>
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard-refresh.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    function showLoading() {
-        document.getElementById('loading-overlay').classList.remove('hidden');
-    }
-    
-    function hideLoading() {
-        document.getElementById('loading-overlay').classList.add('hidden');
-    }
-
-    // Atualização automática e contador
-    let countdown = 60;
-    const countdownElement = document.getElementById('countdown');
-    
-    function updateCountdown() {
-        countdown--;
-        if (countdown <= 0) {
-            refreshDashboard();
-        } else {
-            countdownElement.textContent = countdown;
-        }
-    }
-
-    function refreshDashboard() {
-        showLoading();
-        
-        // Resetar contador
-        countdown = 60;
-        countdownElement.textContent = countdown;
-        
-        // Atualizar página
-        fetch(window.location.href)
-            .then(response => response.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const newDoc = parser.parseFromString(html, 'text/html');
-                
-                // Atualizar conteúdo dos cartões
-                document.querySelector('.metric-cards').innerHTML = newDoc.querySelector('.metric-cards').innerHTML;
-                
-                // Atualizar gráficos
-                document.querySelectorAll('.chart-card').forEach((card, index) => {
-                    const newChart = newDoc.querySelectorAll('.chart-card')[index];
-                    if (newChart) {
-                        card.querySelector('.mb-4').innerHTML = newChart.querySelector('.mb-4').innerHTML;
-                    }
-                });
-                
-                // Atualizar timestamp
-                const lastUpdateEl = document.querySelector('span:contains("Última atualização:")');
-                if (lastUpdateEl) {
-                    lastUpdateEl.textContent = newDoc.querySelector('span:contains("Última atualização:")').textContent;
-                }
-                
-                hideLoading();
-                
-                // Redimensionar gráficos após atualização
-                resizeGraphs();
-            })
-            .catch(error => {
-                console.error('Erro ao atualizar dashboard:', error);
-                hideLoading();
-            });
-    }
-
-    // Iniciar contador
-    setInterval(updateCountdown, 1000);
-
-    // Make graphs responsive
-    function resizeGraphs() {
-        const graphs = document.querySelectorAll('.js-plotly-plot');
-        graphs.forEach(graph => {
-            if (graph && graph._context) {
-                Plotly.Plots.resize(graph);
-            }
-        });
-    }
-
-    // Add resize listener
-    window.addEventListener('resize', resizeGraphs);
-    
-    // Initialize tooltips
+    // Initialize tooltips (if tippy.js is used)
     const tooltips = document.querySelectorAll('[data-tooltip]');
-    tooltips.forEach(tooltip => {
-        tippy(tooltip, {
-            content: tooltip.dataset.tooltip,
-            placement: 'top',
-            arrow: true,
-            theme: 'light'
+    if (typeof tippy !== 'undefined') {
+        tooltips.forEach(tooltip => {
+            tippy(tooltip, {
+                content: tooltip.dataset.tooltip,
+                placement: 'top',
+                arrow: true,
+                theme: 'light'
+            });
         });
-    });
+    }
 });
 </script>
 {% endblock %}
