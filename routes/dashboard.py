@@ -4,6 +4,7 @@ from routes.auth import login_required, role_required
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import scipy.stats as stats
 from datetime import datetime, timedelta
 
 bp = Blueprint('dashboard', __name__)
@@ -74,44 +75,151 @@ def index():
             template='plotly_white',
             paper_bgcolor='white',
             plot_bgcolor='white'
-        )
-        # Temporal Evolution (area chart with gradient and moving average)
-        df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
-        df_week = df.groupby('week_year').size().reset_index(name='Quantidade')
-        df_week.columns = ['Semana', 'Quantidade']
+        )        # Temporal Evolution - adaptativo entre diário e semanal com base no volume de registros
         
-        # Convert week_year back to datetime for better x-axis display
-        df_week['Semana'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_week['Semana']], format='%Y-W%W-%w')
+        # Determinar o tipo de visualização baseado no volume de dados
+        show_daily = len(df) < 30  # Mostrar visualização diária se tiver menos de 30 registros
         
-        # Calculate 4-week moving average (monthly trend)
-        df_week['Media_Movel'] = df_week['Quantidade'].rolling(window=4).mean()
+        if show_daily:
+            # Agrupamento diário
+            df['date'] = df['data_abertura'].dt.date
+            df_time = df.groupby('date').size().reset_index(name='Quantidade')
+            df_time.columns = ['Data', 'Quantidade']
+            df_time['Data'] = pd.to_datetime(df_time['Data'])
+            
+            # Ordenar por data
+            df_time = df_time.sort_values('Data')
+            
+            # Se houver menos de 7 registros, preencher os dias intermediários
+            if len(df_time) < 7:
+                date_range = pd.date_range(start=df_time['Data'].min(), end=df_time['Data'].max())
+                date_df = pd.DataFrame({'Data': date_range})
+                df_time = pd.merge(date_df, df_time, on='Data', how='left').fillna(0)
+            
+            # Calcular média móvel de 3 dias
+            window_size = min(3, len(df_time))
+            df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=window_size).mean()
+            
+            period_text = "Diária"
+            hover_format = 'Data: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
+            mm_name = 'Média 3 dias'
+        else:
+            # Agrupamento semanal (código original)
+            df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
+            df_time = df.groupby('week_year').size().reset_index(name='Quantidade')
+            df_time.columns = ['Semana', 'Quantidade']
+            
+            # Converter week_year de volta para datetime para melhor visualização
+            df_time['Data'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_time['Semana']], format='%Y-W%W-%w')
+            
+            # Ordenar por data
+            df_time = df_time.sort_values('Data')
+            
+            # Calcular média móvel de 4 semanas
+            df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=4).mean()
+            
+            period_text = "Semanal"
+            hover_format = 'Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
+            mm_name = 'Média 4 semanas'
+        
+        # Preparar dados para regressão linear e previsão
+        has_trend = False
+        if len(df_time) > 1:
+            # Criar índices numéricos para x
+            df_time['idx'] = range(len(df_time))
+            
+            # Filtrar pontos nulos para regressão
+            regression_data = df_time.dropna()
+            
+            if len(regression_data) > 1:
+                # Calcular regressão linear
+                slope, intercept, r_value, p_value, std_err = stats.linregress(
+                    regression_data['idx'], regression_data['Quantidade']
+                )
+                
+                # Criar linha de tendência
+                df_time['Tendencia'] = intercept + slope * df_time['idx']
+                
+                # Adicionar pontos de previsão futura (3 períodos)
+                future_periods = 3
+                future_indices = range(len(df_time), len(df_time) + future_periods)
+                future_dates = pd.date_range(start=df_time['Data'].max(), periods=future_periods+1, freq='W' if not show_daily else 'D')[1:]
+                
+                future_df = pd.DataFrame({
+                    'Data': future_dates,
+                    'idx': future_indices
+                })
+                future_df['Tendencia'] = intercept + slope * future_df['idx']
+                
+                # Texto da equação da tendência
+                trend_equation = f"y = {intercept:.2f} + {slope:.2f}x (R² = {r_value**2:.2f})"
+                has_trend = True
         
         chart_data = go.Figure()
         
-        # Area with gradient
+        # Área com gradiente
         chart_data.add_trace(go.Scatter(
-            x=df_week['Semana'],
-            y=df_week['Quantidade'],
+            x=df_time['Data'],
+            y=df_time['Quantidade'],
             fill='tozeroy',
             mode='lines',
             line=dict(width=0.5, color='#007BFF'),
             fillcolor='rgba(0, 123, 255, 0.2)',
-            name='Volume Semanal',
-            hovertemplate='Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
+            name=f'Volume {period_text}',
+            hovertemplate=hover_format
         ))
         
-        # Moving average line
+        # Linha de média móvel
         chart_data.add_trace(go.Scatter(
-            x=df_week['Semana'],
-            y=df_week['Media_Movel'],
+            x=df_time['Data'],
+            y=df_time['Media_Movel'],
             mode='lines',
             line=dict(color='#0056b3', width=2, dash='dot'),
-            name='Média 4 semanas',
-            hovertemplate='Semana: %{x|%d/%m/%Y}<br>Média: %{y:.1f}<extra></extra>'
+            name=mm_name,
+            hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Média: %{{y:.1f}}<extra></extra>'
         ))
         
+        # Adicionar linha de tendência e previsão se disponível
+        if has_trend:
+            # Linha de tendência para dados existentes
+            chart_data.add_trace(go.Scatter(
+                x=df_time['Data'],
+                y=df_time['Tendencia'],
+                mode='lines',
+                line=dict(color='#DC143C', width=1.5),  # Vermelho carmesim
+                name='Tendência',
+                hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Tendência: %{{y:.1f}}<extra></extra>'
+            ))
+            
+            # Linha de previsão para períodos futuros
+            chart_data.add_trace(go.Scatter(
+                x=future_df['Data'],
+                y=future_df['Tendencia'],
+                mode='lines+markers',
+                line=dict(color='#DC143C', width=1.5, dash='dash'),  # Vermelho carmesim tracejado
+                marker=dict(symbol='circle', size=8, color='#DC143C'),
+                name='Previsão',
+                hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Previsão: %{{y:.1f}}<extra></extra>'
+            ))
+            
+            # Adicionar anotação com a equação da tendência
+            chart_data.add_annotation(
+                x=0.02,
+                y=0.98,
+                xref="paper",
+                yref="paper",
+                text=trend_equation,
+                showarrow=False,
+                font=dict(size=10, color="#666"),
+                bgcolor="rgba(255, 255, 255, 0.8)",
+                bordercolor="#DDD",
+                borderwidth=1,
+                borderpad=4,
+                align="left"
+            )
+        
         chart_data.update_layout(
-            title_text='Evolução Temporal (Semanal)',
+            title_text=f'Evolução Temporal ({period_text})',
             title_x=0.5,
             title_font={'family': 'Roboto, sans-serif'},
             xaxis_title='',
@@ -123,11 +231,11 @@ def index():
             paper_bgcolor='white',
             plot_bgcolor='white',
             legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
             )
         )
 
@@ -411,44 +519,153 @@ def chart_data():
                 paper_bgcolor='white',
                 plot_bgcolor='white'
             )
+              # Temporal Evolution - adaptativo entre diário e semanal com base no volume de registros
             
-            # Temporal Evolution (area chart with gradient and moving average)
-            df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
-            df_week = df.groupby('week_year').size().reset_index(name='Quantidade')
-            df_week.columns = ['Semana', 'Quantidade']
+            # Determinar o tipo de visualização baseado no volume de dados
+            show_daily = len(df) < 30  # Mostrar visualização diária se tiver menos de 30 registros
             
-            # Convert week_year back to datetime for better x-axis display
-            df_week['Semana'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_week['Semana']], format='%Y-W%W-%w')
+            if show_daily:
+                # Agrupamento diário
+                df['date'] = df['data_abertura'].dt.date
+                df_time = df.groupby('date').size().reset_index(name='Quantidade')
+                df_time.columns = ['Data', 'Quantidade']
+                df_time['Data'] = pd.to_datetime(df_time['Data'])
+                
+                # Ordenar por data
+                df_time = df_time.sort_values('Data')
+                
+                # Se houver menos de 7 registros, preencher os dias intermediários
+                if len(df_time) < 7:
+                    date_range = pd.date_range(start=df_time['Data'].min(), end=df_time['Data'].max())
+                    date_df = pd.DataFrame({'Data': date_range})
+                    df_time = pd.merge(date_df, df_time, on='Data', how='left').fillna(0)
+                
+                # Calcular média móvel de 3 dias
+                window_size = min(3, len(df_time))
+                df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=window_size).mean()
+                
+                period_text = "Diária"
+                hover_format = 'Data: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
+                mm_name = 'Média 3 dias'
+            else:
+                # Agrupamento semanal (código original)
+                df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
+                df_time = df.groupby('week_year').size().reset_index(name='Quantidade')
+                df_time.columns = ['Semana', 'Quantidade']
+                
+                # Converter week_year de volta para datetime para melhor visualização
+                df_time['Data'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_time['Semana']], format='%Y-W%W-%w')
+                
+                # Ordenar por data
+                df_time = df_time.sort_values('Data')
+                
+                # Calcular média móvel de 4 semanas
+                df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=4).mean()
+                
+                period_text = "Semanal"
+                hover_format = 'Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
+                mm_name = 'Média 4 semanas'
             
-            # Calculate 4-week moving average (monthly trend)
-            df_week['Media_Movel'] = df_week['Quantidade'].rolling(window=4).mean()
+            # Preparar dados para regressão linear e previsão
+            if len(df_time) > 1:
+                # Criar índices numéricos para x
+                df_time['idx'] = range(len(df_time))
+                
+                # Filtrar pontos nulos para regressão
+                regression_data = df_time.dropna()
+                
+                if len(regression_data) > 1:                # Calcular regressão linear
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(
+                        regression_data['idx'], regression_data['Quantidade']
+                    )
+                    
+                    # Criar linha de tendência
+                    df_time['Tendencia'] = intercept + slope * df_time['idx']
+                    
+                    # Adicionar pontos de previsão futura (3 períodos)
+                    future_periods = 3
+                    future_indices = range(len(df_time), len(df_time) + future_periods)
+                    future_dates = pd.date_range(start=df_time['Data'].max(), periods=future_periods+1, freq='W' if not show_daily else 'D')[1:]
+                    
+                    future_df = pd.DataFrame({
+                        'Data': future_dates,
+                        'idx': future_indices
+                    })
+                    future_df['Tendencia'] = intercept + slope * future_df['idx']
+                    
+                    # Texto da equação da tendência
+                    trend_equation = f"y = {intercept:.2f} + {slope:.2f}x (R² = {r_value**2:.2f})"
+                    has_trend = True
+                else:
+                    has_trend = False
+            else:
+                has_trend = False
             
             chart_data_obj = go.Figure()
             
-            # Area with gradient
+            # Área com gradiente
             chart_data_obj.add_trace(go.Scatter(
-                x=df_week['Semana'],
-                y=df_week['Quantidade'],
+                x=df_time['Data'],
+                y=df_time['Quantidade'],
                 fill='tozeroy',
                 mode='lines',
                 line=dict(width=0.5, color='#007BFF'),
                 fillcolor='rgba(0, 123, 255, 0.2)',
-                name='Volume Semanal',
-                hovertemplate='Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
+                name=f'Volume {period_text}',
+                hovertemplate=hover_format
             ))
             
-            # Moving average line
+            # Linha de média móvel
             chart_data_obj.add_trace(go.Scatter(
-                x=df_week['Semana'],
-                y=df_week['Media_Movel'],
+                x=df_time['Data'],
+                y=df_time['Media_Movel'],
                 mode='lines',
                 line=dict(color='#0056b3', width=2, dash='dot'),
-                name='Média 4 semanas',
-                hovertemplate='Semana: %{x|%d/%m/%Y}<br>Média: %{y:.1f}<extra></extra>'
+                name=mm_name,
+                hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Média: %{{y:.1f}}<extra></extra>'
             ))
             
+            # Adicionar linha de tendência e previsão se disponível
+            if has_trend:
+                # Linha de tendência para dados existentes
+                chart_data_obj.add_trace(go.Scatter(
+                    x=df_time['Data'],
+                    y=df_time['Tendencia'],
+                    mode='lines',
+                    line=dict(color='#DC143C', width=1.5),  # Vermelho carmesim
+                    name='Tendência',
+                    hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Tendência: %{{y:.1f}}<extra></extra>'
+                ))
+                
+                # Linha de previsão para períodos futuros
+                chart_data_obj.add_trace(go.Scatter(
+                    x=future_df['Data'],
+                    y=future_df['Tendencia'],
+                    mode='lines+markers',
+                    line=dict(color='#DC143C', width=1.5, dash='dash'),  # Vermelho carmesim tracejado
+                    marker=dict(symbol='circle', size=8, color='#DC143C'),
+                    name='Previsão',
+                    hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Previsão: %{{y:.1f}}<extra></extra>'
+                ))
+                
+                # Adicionar anotação com a equação da tendência
+                chart_data_obj.add_annotation(
+                    x=0.02,
+                    y=0.98,
+                    xref="paper",
+                    yref="paper",
+                    text=trend_equation,
+                    showarrow=False,
+                    font=dict(size=10, color="#666"),
+                    bgcolor="rgba(255, 255, 255, 0.8)",
+                    bordercolor="#DDD",
+                    borderwidth=1,
+                    borderpad=4,
+                    align="left"
+                )
+            
             chart_data_obj.update_layout(
-                title_text='Evolução Temporal (Semanal)',
+                title_text=f'Evolução Temporal ({period_text})',
                 title_x=0.5,
                 title_font={'family': 'Roboto, sans-serif'},
                 xaxis_title='',

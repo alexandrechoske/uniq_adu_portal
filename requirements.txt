@@ -10,6 +10,7 @@ requests==2.31.0
 Werkzeug==3.0.1
 Jinja2==3.1.2 
 pandas
+scipy>=1.11.0
 # Dependencies for PDF processing and AI
 PyPDF2==3.0.1
 pdf2image==1.16.3
