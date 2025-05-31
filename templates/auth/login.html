@@ -155,13 +155,11 @@
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                 Portal UniSystem
             </h2>
-        </div>
-
-        {# Status da Conexão #}
+        </div>        {# Status da Conexão #}
         <div id="connection-status" class="connection-status-box alert-info">
             <div class="flex items-center">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-                <span class="text-blue-700">Verificando conexão com o Supabase...</span>
+                <span class="text-blue-700">Verificando conexão com o Banco de dados...</span>
             </div>
         </div>
 
@@ -214,35 +212,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Testar conexão com o Supabase
     fetch('/test-connection')
         .then(response => response.json())
-        .then(data => {            if (data.status === 'success') {
+        .then(data => {            
+            if (data.status === 'success') {
                 statusDiv.className = 'connection-status-box alert-success mb-3';
                 statusDiv.innerHTML = `
                     <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span>${data.message}</span>
+                        <div class="w-3 h-3 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+                        <span>Conexão com o Banco de dados</span>
                     </div>
                 `;
             } else {
                 statusDiv.className = 'connection-status-box alert-danger mb-3';
                 statusDiv.innerHTML = `
                     <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span>${data.message}</span>
+                        <div class="w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></div>
+                        <span>Conexão com o Banco de dados</span>
                     </div>
                 `;
             }
-        })        .catch(error => {
+        })
+        .catch(error => {
             statusDiv.className = 'connection-status-box alert-danger mb-3';
             statusDiv.innerHTML = `
                 <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>Erro ao verificar conexão: ${error.message}</span>
+                    <div class="w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></div>
+                    <span>Conexão com o Banco de dados</span>
                 </div>
             `;
         });
