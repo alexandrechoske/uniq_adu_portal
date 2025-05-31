@@ -21,3 +21,4 @@ redis==5.0.1
 aiohttp==3.9.1
 tqdm==4.66.1
 fpdf==1.7.2
+gunicorn==23.0.0
