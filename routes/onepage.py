@@ -11,10 +11,12 @@ bp = Blueprint('onepage', __name__, url_prefix='/onepage')
 
 def update_importacoes_processos():
     try:
+        from config import Config
+        
         response = requests.post(
-            'https://ixytthtngeifjumvbuwe.supabase.co/functions/v1/att_importacoes-processos',
+            f'{Config.SUPABASE_URL}/functions/v1/att_importacoes-processos',
             headers={
-                'Authorization': f'Bearer {os.getenv("SUPABASE_CURL_BEARER", "")}',
+                'Authorization': f'Bearer {Config.SUPABASE_CURL_BEARER}',
                 'Content-Type': 'application/json'
             },
             json={'name': 'Functions'}

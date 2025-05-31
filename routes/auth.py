@@ -30,10 +30,12 @@ def role_required(roles):
 
 def update_importacoes_processos():
     try:
+        from config import Config
+        
         response = requests.post(
-            'https://ixytthtngeifjumvbuwe.supabase.co/functions/v1/att_importacoes-processos',
+            f'{Config.SUPABASE_URL}/functions/v1/att_importacoes-processos',
             headers={
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4eXR0aHRuZ2VpZmp1bXZidXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MjIwMDQsImV4cCI6MjA2MzQ5ODAwNH0.matnofV1H9hi2bEQGak6fo-RtmJIOyU455fcgsKbPfk',
+                'Authorization': f'Bearer {Config.SUPABASE_CURL_BEARER}',
                 'Content-Type': 'application/json'
             },
             json={'name': 'Functions'}
