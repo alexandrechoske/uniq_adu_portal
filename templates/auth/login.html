@@ -107,10 +107,30 @@
             padding: 0.75rem 1.5rem !important;
             font-weight: 600 !important;
             transition: background-color 0.2s ease-in-out;
+        }        .submit-button:hover {
+            background-color: var(--unique-dark-blue) !important;
         }
 
-        .submit-button:hover {
+        .submit-button.loading {
             background-color: var(--unique-dark-blue) !important;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .submit-button.success {
+            background-color: #10b981 !important; /* Verde para sucesso */
+            border-color: #10b981 !important;
+            transition: all 0.3s ease;
+        }
+
+        @keyframes scaleSuccess {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .submit-button .success-animate {
+            animation: scaleSuccess 0.5s ease forwards;
         }
 
         .connection-status-box {
@@ -123,12 +143,16 @@
             background-color: #d4edda;
             color: #155724;
             border-color: #c3e6cb;
-        }
-
-        .alert-danger {
+        }        .alert-danger {
             background-color: #f8d7da;
             color: #721c24;
             border-color: #f5c6cb;
+        }
+        
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
         }
 
         .alert-info {
@@ -193,12 +217,21 @@
                 <a href="#" class="font-medium text-unique-blue hover:text-unique-dark-blue">
                     Esqueceu sua senha?
                 </a>
-            </div>
-
-            <div>
-                <button type="submit" 
+            </div>            <div>
+                <button type="submit" id="login-button"
                         class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white submit-button">
-                    Entrar
+                    <span id="login-text">Entrar</span>
+                    <span id="login-spinner" class="hidden">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    <span id="login-success" class="hidden">
+                        <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </span>
                 </button>
             </div>
         </form>
@@ -208,6 +241,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const statusDiv = document.getElementById('connection-status');
+    const loginForm = document.querySelector('form');
+    const loginButton = document.getElementById('login-button');
+    const loginText = document.getElementById('login-text');
+    const loginSpinner = document.getElementById('login-spinner');
+    const loginSuccess = document.getElementById('login-success');
     
     // Testar conexão com o Supabase
     fetch('/test-connection')
@@ -240,6 +278,73 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         });
+        
+    // Animação do botão de login
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Mostrar spinner
+        loginText.classList.add('hidden');
+        loginSpinner.classList.remove('hidden');
+        loginButton.classList.add('loading');
+        loginButton.disabled = true;
+        
+        // Collect form data
+        const formData = new FormData(loginForm);
+        
+        // Send form data via fetch
+        fetch('/login', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (response.redirected) {
+                // Se for redirecionado, mostrar animação de sucesso primeiro
+                loginSpinner.classList.add('hidden');
+                loginSuccess.classList.remove('hidden');
+                loginSuccess.classList.add('success-animate');
+                loginButton.classList.remove('loading');
+                loginButton.classList.add('success');
+                
+                // Esperar um momento para mostrar a animação de sucesso
+                setTimeout(() => {
+                    window.location.href = response.url;
+                }, 600);
+                return;
+            }
+            return response.text();
+        })
+        .then(html => {
+            if (html) {
+                // Processar erros
+                loginSpinner.classList.add('hidden');
+                loginText.classList.remove('hidden');
+                loginButton.classList.remove('loading');
+                loginButton.disabled = false;
+                
+                // Procurar por mensagens de erro no HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const errorMessages = doc.querySelectorAll('.alert-danger');
+                
+                if (errorMessages.length > 0) {
+                    // Se houver uma mensagem de erro no retorno, atualize a página com ela
+                    document.documentElement.innerHTML = html;
+                }
+            }
+        })
+        .catch(error => {
+            // Lidar com erros
+            loginSpinner.classList.add('hidden');
+            loginText.classList.remove('hidden');
+            loginButton.classList.remove('loading');
+            loginButton.disabled = false;
+            console.error('Erro de login:', error);
+        });
+    });
 });
 </script>
 {% endblock %}

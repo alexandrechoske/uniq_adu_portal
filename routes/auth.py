@@ -68,6 +68,10 @@ def login():
         senha = request.form.get('senha')
         print(f"[DEBUG] Tentando login para email: {email}")
         
+        # Para facilitar as animações, adicionamos um pequeno delay
+        import time
+        time.sleep(0.5)  # Delay de 0.5 segundos para permitir a animação
+        
         try:
             # Autenticar usuário usando o cliente Supabase
             print("[DEBUG] Iniciando autenticação com Supabase...")
