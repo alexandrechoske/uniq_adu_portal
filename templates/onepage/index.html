@@ -72,12 +72,26 @@
         margin: 0;
         color: #1f2937; /* Cor mais escura para o valor */
     }
-    
-    .metric-title {
+      .metric-title {
         color: #4b5563;
         font-size: 0.875rem;
         font-weight: 500;
         margin-bottom: 0.5rem; /* Aumentar espaço */
+    }
+      /* Estilos para indicadores de câmbio */
+    .currency-container {
+        transition: all 0.3s ease;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    
+    .currency-container:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .currency-symbol {
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
     }
 
     /* Canal badges */
@@ -284,6 +298,14 @@
         #kpi-cards-container .grid {
             grid-template-columns: 1fr;
         }
+        
+        .currency-indicator {
+            margin-bottom: 0.75rem;
+        }
+        
+        .currency-indicator .text-2xl {
+            font-size: 1.25rem;
+        }
 
         .data-table th,
         .data-table td {
@@ -354,9 +376,13 @@
     </div>
 
     {# KPI Cards Section #}
-    <div id="kpi-cards-container" class="mb-6">        {# Linha 1: Total Processos e Câmbio (lado a lado) #}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg mx-auto w-full md:col-span-1">
+    <div id="kpi-cards-container" class="mb-6">        {# Linha 1: Total Processos (Centralizado) e Câmbio (lateral direita) #}
+        <div class="flex justify-between gap-4 mb-4">
+            {# Espaçamento à esquerda para centralização visual #}
+            <div class="hidden md:block w-1/4"></div>
+            
+            {# Total de Processos (centralizado) #}
+            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg mx-auto w-full md:w-1/3">
                 <div>
                     <p class="text-sm font-medium text-slate-500 metric-title">Total de Processos</p>
                     <p class="text-3xl font-bold text-blue-600 metric-value">{{ kpis.total if kpis.total is defined else 0 }}</p>
@@ -366,29 +392,62 @@
                 </div>
             </div>
             
-            {# Taxas de Câmbio #}
-            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg" id="usd-rate-card">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500 metric-title">Dólar (USD)</p>
-                        <p class="text-3xl font-bold text-green-600 metric-value" id="usd-rate">R$ {{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
+            {# Taxas de Câmbio - Em uma única caixa à direita #}
+            <div class="hidden md:block w-1/4">
+                <div class="currency-container bg-white shadow-sm rounded-lg p-4">
+                    {# Dólar #}
+                    <div class="flex items-center mb-3" id="usd-rate-card">
+                        <div class="currency-symbol bg-green-100 text-green-600 rounded-full w-10 h-10 flex items-center justify-center mr-3">
+                            <span class="text-xl font-bold">$</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-gray-800">{{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
+                            <p class="text-xs text-gray-500">(USD)</p>
+                        </div>
                     </div>
-                    <div class="p-3 rounded-full bg-green-100 text-green-600 metric-icon-wrapper">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                    
+                    {# Linha divisória #}
+                    <div class="border-t border-gray-100 my-2"></div>
+                    
+                    {# Euro #}
+                    <div class="flex items-center mt-3" id="eur-rate-card">
+                        <div class="currency-symbol bg-purple-100 text-purple-600 rounded-full w-10 h-10 flex items-center justify-center mr-3">
+                            <span class="text-xl font-bold">€</span>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-gray-800">{{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
+                            <p class="text-xs text-gray-500">(EUR)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {# Versão mobile dos indicadores de câmbio #}
+        <div class="md:hidden currency-container bg-white shadow-sm rounded-lg p-4 mb-4">
+            <div class="flex justify-between">
+                {# Dólar #}
+                <div class="flex items-center" id="usd-rate-card-mobile">
+                    <div class="currency-symbol bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center mr-2">
+                        <span class="text-lg font-bold">$</span>
+                    </div>
+                    <div>
+                        <p class="text-xl font-bold text-gray-800">{{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
+                        <p class="text-xs text-gray-500">(USD)</p>
                     </div>
                 </div>
                 
-                <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg" id="eur-rate-card">
-                    <div>
-                        <p class="text-sm font-medium text-slate-500 metric-title">Euro (EUR)</p>
-                        <p class="text-3xl font-bold text-purple-600 metric-value" id="eur-rate">R$ {{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
+                {# Separador vertical #}
+                <div class="border-r border-gray-200 mx-4"></div>
+                
+                {# Euro #}
+                <div class="flex items-center" id="eur-rate-card-mobile">
+                    <div class="currency-symbol bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center mr-2">
+                        <span class="text-lg font-bold">€</span>
                     </div>
-                    <div class="p-3 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 15.536c-1.171 1.952-3.07 1.952-4.242 0-1.172-1.953-1.172-5.119 0-7.072 1.171-1.952 3.07-1.952 4.242 0M8 10.5h4m-4 3h4m9-1.5a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+                    <div>
+                        <p class="text-xl font-bold text-gray-800">{{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
+                        <p class="text-xs text-gray-500">(EUR)</p>
                     </div>
                 </div>
             </div>

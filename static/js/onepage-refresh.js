@@ -253,16 +253,30 @@ function updateTimestamp(lastUpdate) {
 function updateCurrencyRates(currencies) {
     try {
         if (currencies.USD !== undefined) {
-            const usdElement = document.getElementById('usd-rate');
-            if (usdElement) {
-                usdElement.textContent = `R$ ${currencies.USD.toFixed(4)}`;
+            // Atualiza na versão desktop
+            const usdElements = document.querySelectorAll('#usd-rate-card p:first-child');
+            if (usdElements && usdElements.length > 0) {
+                usdElements[0].textContent = currencies.USD.toFixed(4);
+            }
+            
+            // Atualiza na versão mobile
+            const usdMobileElements = document.querySelectorAll('#usd-rate-card-mobile p:first-child');
+            if (usdMobileElements && usdMobileElements.length > 0) {
+                usdMobileElements[0].textContent = currencies.USD.toFixed(4);
             }
         }
         
         if (currencies.EUR !== undefined) {
-            const eurElement = document.getElementById('eur-rate');
-            if (eurElement) {
-                eurElement.textContent = `R$ ${currencies.EUR.toFixed(4)}`;
+            // Atualiza na versão desktop
+            const eurElements = document.querySelectorAll('#eur-rate-card p:first-child');
+            if (eurElements && eurElements.length > 0) {
+                eurElements[0].textContent = currencies.EUR.toFixed(4);
+            }
+            
+            // Atualiza na versão mobile
+            const eurMobileElements = document.querySelectorAll('#eur-rate-card-mobile p:first-child');
+            if (eurMobileElements && eurMobileElements.length > 0) {
+                eurMobileElements[0].textContent = currencies.EUR.toFixed(4);
             }
         }
         
