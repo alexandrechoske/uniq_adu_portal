@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Debug do Sistema{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <h1 class="text-2xl font-bold mb-6">Diagnóstico do Sistema</h1>
+    
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Informações da Sessão</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead>
+                    <tr>
+                        <th class="py-2 px-4 bg-gray-100 text-left text-gray-600 font-semibold">Chave</th>
+                        <th class="py-2 px-4 bg-gray-100 text-left text-gray-600 font-semibold">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if session %}
+                        {% for key, value in session.items() %}
+                        <tr class="border-b">
+                            <td class="py-2 px-4">{{ key }}</td>
+                            <td class="py-2 px-4">
+                                <pre class="whitespace-pre-wrap">{{ value | tojson(indent=2) }}</pre>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="2" class="py-2 px-4 text-center text-red-500">Sessão vazia</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Testes de Endpoint</h2>
+        
+        <div class="mb-4">
+            <h3 class="font-medium mb-2">1. Verificar Status da Sessão</h3>
+            <button id="check-session-btn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                Testar /paginas/check-session
+            </button>
+            <div id="check-session-result" class="mt-2 p-3 bg-gray-100 rounded hidden"></div>
+        </div>
+        
+        <div class="mb-4">
+            <h3 class="font-medium mb-2">2. Carregar Menu</h3>
+            <button id="load-menu-btn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                Testar /paginas/api
+            </button>
+            <div id="load-menu-result" class="mt-2 p-3 bg-gray-100 rounded hidden"></div>
+        </div>
+    </div>
+    
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Informações do Sistema</h2>
+        <table class="min-w-full bg-white">
+            <tbody>
+                <tr class="border-b">
+                    <td class="py-2 px-4 font-semibold">Versão Flask</td>
+                    <td class="py-2 px-4">{{ flask_version }}</td>
+                </tr>
+                <tr class="border-b">
+                    <td class="py-2 px-4 font-semibold">Ambiente</td>
+                    <td class="py-2 px-4">{{ env }}</td>
+                </tr>
+                <tr class="border-b">
+                    <td class="py-2 px-4 font-semibold">DEBUG</td>
+                    <td class="py-2 px-4">{{ debug }}</td>
+                </tr>
+                <tr>
+                    <td class="py-2 px-4 font-semibold">Horário do servidor</td>
+                    <td class="py-2 px-4">{{ now }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Teste de verificação de sessão
+    document.getElementById('check-session-btn').addEventListener('click', function() {
+        const resultDiv = document.getElementById('check-session-result');
+        resultDiv.innerHTML = 'Carregando...';
+        resultDiv.classList.remove('hidden');
+        
+        fetch('/paginas/check-session')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                resultDiv.classList.add('bg-green-100');
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `Erro: ${error.message}`;
+                resultDiv.classList.add('bg-red-100');
+            });
+    });
+    
+    // Teste de carregamento do menu
+    document.getElementById('load-menu-btn').addEventListener('click', function() {
+        const resultDiv = document.getElementById('load-menu-result');
+        resultDiv.innerHTML = 'Carregando...';
+        resultDiv.classList.remove('hidden');
+        
+        fetch('/paginas/api')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                resultDiv.classList.add('bg-green-100');
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `Erro: ${error.message}`;
+                resultDiv.classList.add('bg-red-100');
+            });
+    });
+});
+</script>
+{% endblock %}

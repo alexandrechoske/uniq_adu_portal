@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, request, jsonify
 from extensions import supabase
 from routes.auth import login_required, role_required
+from permissions import check_permission
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -10,8 +11,8 @@ from datetime import datetime, timedelta
 bp = Blueprint('dashboard', __name__)
 
 @bp.route('/dashboard')
-@login_required
-def index():
+@check_permission()  # Usando o novo sistema de permissões
+def index(**kwargs):
     # Get user companies if client
     user_companies = []
     if session['user']['role'] == 'cliente_unique':

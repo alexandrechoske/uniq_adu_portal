@@ -434,15 +434,47 @@ function forceUpdateCharts() {
 document.addEventListener('DOMContentLoaded', function() {
     // Elementos globais
     window.countdownElement = document.getElementById('countdown');
-    window.countdown = 60;
-    
-    // Função de contagem regressiva
+    window.countdown = 60;    // Função de contagem regressiva
     function updateCountdown() {
         countdown--;
         countdownElement.textContent = countdown;
         
         if (countdown <= 0) {
-            refreshDashboard();
+            // Verifica primeiro se a sessão está ativa
+            checkSession().then(sessionValid => {
+                if (sessionValid) {
+                    refreshDashboard();
+                } else {
+                    // Se a sessão não for válida, recarregar apenas os componentes em vez da página inteira
+                    countdown = 60; // Reiniciar contador
+                    console.warn("Sessão inválida ou expirada, atualizando apenas o menu.");
+                    
+                    // Tentar recarregar o menu sem refresh total
+                    if (typeof loadSidebarMenu === 'function') {
+                        loadSidebarMenu();
+                    }
+                }
+            }).catch(() => {
+                // Em caso de erro, apenas reiniciar o contador e notificar o usuário
+                countdown = 60;
+                console.warn("Erro ao verificar sessão. Reiniciando contador.");
+                
+                // Mostrar notificação para o usuário
+                const notification = document.createElement('div');
+                notification.className = 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4';
+                notification.innerHTML = '<p>Houve um problema com a atualização automática. Os dados podem estar desatualizados.</p>';
+                
+                const dashboardContainer = document.querySelector('.dashboard-container');
+                if (dashboardContainer) {
+                    dashboardContainer.prepend(notification);
+                    
+                    // Remover notificação após 5 segundos
+                    setTimeout(() => {
+                        notification.classList.add('fadeOut');
+                        setTimeout(() => notification.remove(), 500);
+                    }, 5000);
+                }
+            });
         }
     }
     

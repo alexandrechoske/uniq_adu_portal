@@ -127,36 +127,90 @@
                 document.querySelector('aside').classList.remove('hidden');
             } else {
                 document.querySelector('aside').classList.add('hidden');
-            }
-        });
+            }        });
 
-        // Carregar menu dinamicamente baseado nas permissões do usuário
-        document.addEventListener('DOMContentLoaded', function() {
-            // Verificar se o usuário está logado antes de carregar o menu
-            const isUserLoggedIn = {% if session.get('user') %}true{% else %}false{% endif %};
-            if (isUserLoggedIn) {
-                loadSidebarMenu();
-            }
-        });
-        
-        function loadSidebarMenu() {
+        // Função global para carregar menu dinamicamente baseado nas permissões do usuário
+        window.loadSidebarMenu = function() {
+            console.log("Carregando menu lateral...");
             const sidebarNav = document.getElementById('sidebar-nav');
+            if (!sidebarNav) {
+                console.error("Elemento sidebar-nav não encontrado! Não é possível carregar o menu.");
+                return;
+            }
+            
+            // Adicionando mensagem visual para indicar carregamento
+            sidebarNav.innerHTML = '<div class="text-center text-gray-500 py-2">Carregando menu...</div>';
+            
             const currentRole = '{{ session.get("user", {}).get("role", "none") }}';
             const currentEndpoint = '{{ request.endpoint }}';
+            console.log("Papel atual:", currentRole);
+            console.log("Endpoint atual:", currentEndpoint);
             
-            fetch('/paginas/api')
-                .then(response => response.json())
-                .then(data => {
+            // Primeiro verificar se a sessão está válida
+            console.log("Verificando sessão antes de carregar menu...");
+            fetch('/paginas/check-session', {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            })
+            .then(sessionResponse => {
+                console.log("Resposta de verificação de sessão:", sessionResponse.status);
+                if (!sessionResponse.ok) {
+                    if (sessionResponse.status === 401) {
+                        console.warn("Sessão expirada. Redirecionando para login...");
+                        window.location.href = '/login';
+                        throw new Error('Sessão expirada');
+                    }
+                    throw new Error('Erro na verificação da sessão');
+                }
+                return sessionResponse.json();
+            })
+            .then(sessionData => {
+                if (sessionData.status !== 'success') {
+                    throw new Error('Sessão inválida');
+                }
+                
+                console.log("Sessão verificada com sucesso. Carregando menu...");
+                console.log("Iniciando fetch para /paginas/api...");
+                
+                // Agora carregamos o menu com um timestamp para evitar cache
+                const timestamp = new Date().getTime();
+                return fetch(`/paginas/api?_=${timestamp}`, {
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+            })
+            .then(response => {
+                console.log("Resposta recebida:", response.status);
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Sessão expirada, redirecionar para página de login
+                        console.warn("Sessão expirada. Redirecionando para login...");
+                        window.location.href = '/login';
+                        throw new Error('Sessão expirada. Redirecionando para login...');
+                    }
+                    throw new Error('Erro na resposta: ' + response.status);
+                }
+                console.log("Resposta OK, convertendo para JSON...");
+                return response.json();
+            }).then(data => {
+                    console.log("Dados recebidos:", data);
                     if (data.status === 'success') {
                         const pages = data.data;
+                        console.log(`Recebidas ${pages ? pages.length : 0} páginas do servidor`);
                         
                         // Limpar loader
                         sidebarNav.innerHTML = '';
                         
                         // Construir links de navegação
-                        pages.forEach(page => {
-                            // Verificar se o usuário tem permissão para ver esta página
-                            if (page.roles && Array.isArray(page.roles) && page.roles.includes(currentRole)) {
+                        if (pages && pages.length > 0) {
+                            pages.forEach(page => {
+                                console.log("Processando página:", page.nome_pagina);
+                                // As páginas já foram filtradas pelo servidor, não precisamos filtrar novamente
                                 const link = document.createElement('a');
                                 
                                 // Se a página está ativa ou em manutenção
@@ -186,22 +240,71 @@
                                 }
                                 
                                 sidebarNav.appendChild(link);
-                            }
-                        });
+                            });
+                        }
                         
                         // Se não tiver nenhuma página para mostrar
                         if (sidebarNav.children.length === 0) {
+                            console.warn("Nenhuma página disponível para exibição");
                             sidebarNav.innerHTML = '<div class="text-center text-gray-500 py-2">Nenhuma página disponível.</div>';
                         }
                     } else {
+                        console.error("Erro nos dados recebidos:", data);
                         sidebarNav.innerHTML = '<div class="text-center text-red-500 py-2">Erro ao carregar o menu.</div>';
                     }
-                })
-                .catch(error => {
+                })        .catch(error => {
                     console.error('Erro ao carregar menu:', error);
                     sidebarNav.innerHTML = '<div class="text-center text-red-500 py-2">Erro ao carregar o menu.</div>';
+                    
+                    // Adicionar link para a página de debug em caso de erro
+                    const debugLink = document.createElement('a');
+                    debugLink.href = '/debug';
+                    debugLink.className = 'block text-center text-blue-500 underline mt-2';
+                    debugLink.innerText = 'Acessar diagnóstico do sistema';
+                    sidebarNav.appendChild(debugLink);
                 });
         }
     </script>
+    
+    <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
+    {% if session.get('user') %}
+    <script>
+        document.body.classList.add('logged-in');
+    </script>
+    {% endif %}
+      <!-- Script para gerenciamento de sessão -->
+    <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>
+    
+    <!-- Inicialização automática para usuários logados -->
+    {% if session.get('user') %}
+    <script>
+        // Aguarda o carregamento completo da página e dos scripts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aguarda um pouco para garantir que todos os scripts foram carregados
+            setTimeout(function() {
+                // Carrega o menu sidebar automaticamente para usuários logados
+                if (typeof window.loadSidebarMenu === 'function') {
+                    window.loadSidebarMenu();
+                } else if (typeof reloadSidebarMenuRobust === 'function') {
+                    reloadSidebarMenuRobust();
+                } else {
+                    console.log('Menu loading functions not available, trying direct load...');
+                    // Fallback: tenta carregar via fetch direto
+                    fetch('/api/menu')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.menu_html) {
+                                const sidebarNav = document.getElementById('sidebar-nav');
+                                if (sidebarNav) {
+                                    sidebarNav.innerHTML = data.menu_html;
+                                }
+                            }
+                        })
+                        .catch(error => console.log('Fallback menu load failed:', error));
+                }
+            }, 100);
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

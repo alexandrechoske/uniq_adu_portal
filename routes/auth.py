@@ -4,9 +4,11 @@ from functools import wraps
 from extensions import supabase, supabase_admin
 import requests
 import json
+from permissions import get_user_permissions, check_permission
 
 bp = Blueprint('auth', __name__)
 
+# Decorador simplificado para compatibilidade com código existente (login_required)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -15,18 +17,16 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Decorador role_required, agora usando o novo sistema de permissões
 def role_required(roles):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if 'user' not in session:
-                return redirect(url_for('auth.login'))
-            if session['user']['role'] not in roles:
-                flash('Acesso não autorizado.', 'error')
-                return redirect(url_for('dashboard.index'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
+    """
+    Decorador legado que chama o novo check_permission - mantido para compatibilidade
+    """
+    if isinstance(roles, str):
+        roles = [roles]  # Converter string para lista
+    
+    # Usar o novo decorador
+    return check_permission(required_roles=roles)
 
 def update_importacoes_processos():
     try:
@@ -141,8 +141,7 @@ def login():
                                 'numero': agent_data.data[0].get('numero'),
                                 'aceite_termos': any(agent.get('aceite_termos', False) for agent in agent_data.data)
                             })
-                    
-                    # Store user info in session
+                      # Store user info in session
                     session['user'] = {
                         'id': user_id,
                         'email': user.get('email'),
@@ -150,6 +149,10 @@ def login():
                         'agent_status': agent_status,
                         'user_companies': user_companies
                     }
+                    
+                    # Adicionar permissões à sessão
+                    permissions = get_user_permissions(user_id, user.get('role'))
+                    session['permissions'] = permissions
                     
                     flash('Login realizado com sucesso!', 'success')
                     return redirect(url_for('dashboard.index'))

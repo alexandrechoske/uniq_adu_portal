@@ -2,10 +2,17 @@ from flask import Flask, render_template, redirect, url_for, session
 from config import Config
 import os
 from extensions import init_supabase
+from session_handler import init_session_handler
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Configurar sessão para expirar após 8 horas (28800 segundos)
+app.config['PERMANENT_SESSION_LIFETIME'] = 28800
+
+# Inicializar manipulador de sessão
+init_session_handler(app)
 
 # Debug configuration
 print("\n[DEBUG] ===== Configuração da Aplicação =====")
@@ -27,9 +34,12 @@ except Exception as e:
     print(f"[DEBUG] ERRO ao inicializar extensões: {str(e)}")
     raise
 
+# Import session handler
+from session_handler import init_session_handler
+
 # Import routes after app initialization to avoid circular imports
 from routes import auth, dashboard, relatorios, usuarios, agente, api, onepage, conferencia
-from routes import conferencia_pdf, paginas
+from routes import conferencia_pdf, paginas, debug
 
 # Register blueprints
 app.register_blueprint(auth.bp)
@@ -42,6 +52,13 @@ app.register_blueprint(onepage.bp)  # Registrando o blueprint do OnePage
 app.register_blueprint(conferencia.bp)  # Registrando o blueprint de Conferência Documental IA
 app.register_blueprint(conferencia_pdf.bp)  # Registrando o blueprint de PDF anotado para Conferência
 app.register_blueprint(paginas.bp)  # Registrando o blueprint de Controle de Páginas
+app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
+
+# Debug das rotas registradas
+print("\n[DEBUG] ===== Rotas Registradas =====")
+for rule in app.url_map.iter_rules():
+    print(f"[DEBUG] Rota: {rule.rule} - Endpoint: {rule.endpoint}")
+print("[DEBUG] ============================\n")
 
 # Error handlers
 @app.errorhandler(401)

@@ -6,24 +6,70 @@ from datetime import datetime
 import json
 import requests
 import os
+import logging
+
+# Configurar logging específico para este módulo
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s [%(name)s] [%(levelname)s] %(message)s'))
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 bp = Blueprint('onepage', __name__, url_prefix='/onepage')
 
 def update_importacoes_processos():
+    """
+    Atualiza os dados de importações e processos via Edge Function do Supabase.
+    Retorna (bool, str): Tupla com status de sucesso e mensagem de erro se houver.
+    """
     try:
         from config import Config
         
-        response = requests.post(
-            f'{Config.SUPABASE_URL}/functions/v1/att_importacoes-processos',
-            headers={
-                'Authorization': f'Bearer {Config.SUPABASE_CURL_BEARER}',
-                'Content-Type': 'application/json'
-            },
-            json={'name': 'Functions'}
-        )
-        return response.status_code == 200
-    except:
-        return False
+        # Log da tentativa de atualização
+        logger.info("Iniciando atualização de importações e processos via Supabase Edge Function")
+          # Verificar se as configurações necessárias existem
+        if not hasattr(Config, 'SUPABASE_URL') or not Config.SUPABASE_URL:
+            logger.error("SUPABASE_URL não configurado")
+            return False, "Configuração de URL do Supabase ausente"
+            
+        if not hasattr(Config, 'SUPABASE_CURL_BEARER') or not Config.SUPABASE_CURL_BEARER:
+            logger.error("SUPABASE_CURL_BEARER não configurado")
+            return False, "Token de autenticação do Supabase ausente"
+          # Fazer a requisição para a Edge Function
+        try:            # Verificar conexão com internet antes de tentar
+            try:
+                test_conn = requests.get('https://supabase.com', timeout=5)
+                if test_conn.status_code != 200:
+                    logger.warning("Possível problema de conexão com internet")
+            except requests.RequestException:
+                logger.error("Problema ao verificar conexão com internet")
+                return False, "Não foi possível conectar à internet"
+            
+            # Tentar requisição principal
+            response = requests.post(
+                f'{Config.SUPABASE_URL}/functions/v1/att_importacoes-processos',
+                headers={
+                    'Authorization': f'Bearer {Config.SUPABASE_CURL_BEARER}',
+                    'Content-Type': 'application/json'
+                },
+                json={'name': 'Functions'},
+                timeout=20  # Timeout de 20 segundos para evitar bloqueio indefinido
+            )
+              # Verificar resposta
+            if response.status_code == 200:
+                logger.info(f"Atualização bem-sucedida: {response.status_code}")
+                return True, ""
+            else:
+                logger.error(f"Erro na atualização: Status {response.status_code}, Resposta: {response.text[:200]}")
+                return False, f"Erro {response.status_code} na atualização: {response.text[:200]}"
+                
+        except requests.RequestException as req_err:
+            logger.error(f"Erro de requisição: {str(req_err)}")
+            return False, f"Erro na comunicação com Supabase: {str(req_err)}"
+            
+    except Exception as e:
+        logger.exception(f"Erro inesperado na atualização: {str(e)}")
+        return False, f"Erro inesperado: {str(e)}"
 
 def get_user_companies():
     """Get companies that the user has access to"""
@@ -83,7 +129,8 @@ def index():
     currencies = get_currencies()
 
     # Build initial query without sorting (will sort after date conversion)
-    query = supabase.table('importacoes_processos').select('*')
+    # Filtrar para excluir registros com "Despacho Cancelado"
+    query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado')
 
     # Apply filters based on user role and selected company
     if session['user']['role'] == 'cliente_unique':
@@ -198,25 +245,74 @@ def index():
 @login_required
 def update_data():
     """Endpoint para atualizar os dados de importações"""
-    if session['user']['role'] not in ['cliente_unique', 'interno_unique']:
+    if session['user']['role'] not in ['cliente_unique', 'interno_unique', 'admin']:
+        print(f"[DEBUG] Acesso não autorizado para /update-data: usuário com role {session['user']['role']}")
         return jsonify({
             'status': 'error',
             'message': 'Acesso não autorizado'
         }), 401
+      # Chamar a função de atualização
+    try:
+        update_success, error_message = update_importacoes_processos()
         
-    # Chamar a função de atualização
-    update_success = update_importacoes_processos()
-    
-    if update_success:
-        return jsonify({
-            'status': 'success',
-            'message': 'Dados atualizados com sucesso!',
-            'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-        })
-    else:
+        if update_success:
+            logger.info("Atualização de dados bem-sucedida")
+            return jsonify({
+                'status': 'success',
+                'message': 'Dados atualizados com sucesso!',
+                'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            })
+        else:
+            # Log do erro no servidor
+            logger.error(f"Erro ao atualizar dados: {error_message}")
+            
+            # Tentar o método de fallback
+            logger.info("Tentando método de fallback automático")
+            fallback_success, fallback_message, records = get_importacoes_direct()
+            
+            if fallback_success:
+                logger.info(f"Método de fallback funcionou: {records} registros obtidos")
+                return jsonify({
+                    'status': 'warning',
+                    'message': f'Usamos método alternativo com sucesso ({records} registros)',
+                    'original_error': error_message,
+                    'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                    'was_fallback': True
+                })
+            else:
+                logger.error(f"Ambos os métodos falharam. Principal: {error_message}, Fallback: {fallback_message}")
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Erro ao atualizar os dados: {error_message}',
+                    'fallback_error': fallback_message,
+                    'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                }), 500
+                
+    except Exception as e:
+        import traceback
+        logger.error(f"Exceção não tratada em update_data: {str(e)}")
+        logger.error(traceback.format_exc())
+        
+        # Tentar o método de fallback como último recurso
+        try:
+            fallback_success, fallback_message, records = get_importacoes_direct()
+            if fallback_success:
+                logger.info(f"Recuperação de erro com método de fallback: {records} registros")
+                return jsonify({
+                    'status': 'warning',
+                    'message': f'Usamos método alternativo após erro ({records} registros)',
+                    'original_error': str(e),
+                    'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                    'was_fallback': True
+                })
+        except:
+            # Se até o fallback falhar, retornamos o erro original
+            pass
+            
         return jsonify({
             'status': 'error',
-            'message': 'Erro ao atualizar os dados'
+            'message': f'Erro interno do servidor: {str(e)}',
+            'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         }), 500
         
 @bp.route('/page-data', methods=['GET'])
@@ -235,7 +331,8 @@ def page_data():
         currencies = get_currencies()
 
         # Build initial query without sorting (will sort after date conversion)
-        query = supabase.table('importacoes_processos').select('*')
+        # Filtrar para excluir registros com "Despacho Cancelado"
+        query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado')
 
         # Apply filters based on user role and selected company
         if session['user']['role'] == 'cliente_unique':
@@ -323,4 +420,54 @@ def page_data():
         return jsonify({
             'status': 'error',
             'message': f'Erro ao gerar dados da página: {str(e)}'
+        }), 500
+
+def get_importacoes_direct():
+    """
+    Função de fallback que busca dados diretamente da tabela no Supabase
+    quando a Edge Function falha. Não faz sincronização completa, apenas lê os dados atuais.
+    """
+    try:
+        from extensions import supabase
+        logger.info("Utilizando método fallback para obtenção de dados")
+          # Consulta direta à tabela de importações_processos
+        # Filtrar para excluir registros com "Despacho Cancelado"
+        response = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').execute()
+        
+        if response.data:
+            return True, "", len(response.data)
+        else:
+            return True, "Nenhum registro encontrado", 0
+            
+    except Exception as e:
+        logger.exception(f"Erro no método fallback: {str(e)}")
+        return False, f"Erro no método fallback: {str(e)}", 0
+
+@bp.route('/bypass-update', methods=['POST'])
+@login_required
+def bypass_update():
+    """
+    Endpoint alternativo quando o padrão falha, usando acesso direto sem Edge Function
+    """
+    if session['user']['role'] not in ['cliente_unique', 'interno_unique', 'admin']:
+        return jsonify({
+            'status': 'error',
+            'message': 'Acesso não autorizado'
+        }), 401
+    
+    # Usar o método fallback
+    success, message, records_count = get_importacoes_direct()
+    
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': f'Dados obtidos diretamente: {records_count} registros',
+            'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+            'was_fallback': True
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': message,
+            'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         }), 500
