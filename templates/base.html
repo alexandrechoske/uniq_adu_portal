@@ -265,44 +265,57 @@
                 });
         }
     </script>
-    
-    <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
+      <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
     {% if session.get('user') %}
     <script>
         document.body.classList.add('logged-in');
     </script>
-    {% endif %}
-      <!-- Script para gerenciamento de sessão -->
+    
+    <!-- Script para gerenciamento de sessão -->
     <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>
+    
+    <!-- Sistema de Cache para Menu -->
+    <script src="{{ url_for('static', filename='js/menu-cache.js') }}"></script>
+      <!-- Sistema de Testes (apenas em desenvolvimento) -->
+    {% if config.DEBUG %}
+    <script src="{{ url_for('static', filename='js/menu-test.js') }}"></script>
+    {% endif %}
+    {% endif %}
     
     <!-- Inicialização automática para usuários logados -->
     {% if session.get('user') %}
     <script>
         // Aguarda o carregamento completo da página e dos scripts
         document.addEventListener('DOMContentLoaded', function() {
-            // Aguarda um pouco para garantir que todos os scripts foram carregados
-            setTimeout(function() {
-                // Carrega o menu sidebar automaticamente para usuários logados
-                if (typeof window.loadSidebarMenu === 'function') {
-                    window.loadSidebarMenu();
-                } else if (typeof reloadSidebarMenuRobust === 'function') {
-                    reloadSidebarMenuRobust();
+            console.log('[Base] Usuário logado detectado, aguardando inicialização do cache...');
+            
+            // Aguarda o sistema de cache estar pronto
+            function waitForCache() {
+                if (window.menuCache) {
+                    console.log('[Base] Sistema de cache disponível');
+                    return Promise.resolve();
                 } else {
-                    console.log('Menu loading functions not available, trying direct load...');
-                    // Fallback: tenta carregar via fetch direto
-                    fetch('/api/menu')
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success && data.menu_html) {
-                                const sidebarNav = document.getElementById('sidebar-nav');
-                                if (sidebarNav) {
-                                    sidebarNav.innerHTML = data.menu_html;
-                                }
-                            }
-                        })
-                        .catch(error => console.log('Fallback menu load failed:', error));
+                    console.log('[Base] Aguardando sistema de cache...');
+                    return new Promise(resolve => {
+                        setTimeout(() => waitForCache().then(resolve), 100);
+                    });
                 }
-            }, 100);
+            }
+            
+            // Inicializa o menu usando o cache
+            waitForCache().then(() => {
+                console.log('[Base] Inicializando menu via cache...');
+                // O menu-cache.js já inicializa automaticamente no DOMContentLoaded
+                // Apenas garantimos que está funcionando
+                if (!window.menuCache.menuLoaded) {
+                    setTimeout(() => {
+                        if (!window.menuCache.menuLoaded) {
+                            console.log('[Base] Forçando carregamento do menu...');
+                            window.menuCache.loadMenu();
+                        }
+                    }, 500);
+                }
+            });
         });
     </script>
     {% endif %}

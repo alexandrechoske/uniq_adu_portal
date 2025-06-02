@@ -15,10 +15,18 @@ function initSessionChecker() {
     checkSession();
 }
 
-// Função para verificar o status da sessão
+// Função para verificar o status da sessão (integrada com cache)
 function checkSession() {
-    console.log("Verificando status da sessão...");
+    console.log("[SessionHandler] Verificando status da sessão...");
     
+    // Se o sistema de cache estiver disponível, usar ele
+    if (window.menuCache) {
+        console.log("[SessionHandler] Usando sistema de cache para verificar sessão...");
+        return window.menuCache.validateSession();
+    }
+    
+    // Fallback para o método tradicional
+    console.log("[SessionHandler] Sistema de cache não disponível, usando método tradicional...");
     return new Promise((resolve, reject) => {
         console.log("Iniciando fetch para /paginas/check-session...");
         fetch('/paginas/check-session', {
@@ -62,7 +70,22 @@ function checkSession() {
 }
 
 // Função robusta para recarregar o menu lateral
+// Função de compatibilidade que usa o sistema de cache quando disponível
 function reloadSidebarMenuRobust() {
+    console.log('[SessionHandler] Recarga robusta do menu solicitada...');
+    
+    // Verifica se o sistema de cache está disponível
+    if (window.menuCache) {
+        console.log('[SessionHandler] Usando sistema de cache para recarregar menu...');
+        return window.menuCache.forceRefreshMenu();
+    } else {
+        console.log('[SessionHandler] Sistema de cache não disponível, usando método tradicional...');
+        return reloadSidebarMenuTraditional();
+    }
+}
+
+// Método tradicional mantido como fallback
+function reloadSidebarMenuTraditional() {
     console.log("Recarregando menu lateral de forma robusta...");
     
     // Primeira tentativa - se loadSidebarMenu estiver disponível no escopo global
@@ -154,9 +177,23 @@ function loadMenuViaFetch() {
 
 // Inicializar quando o documento estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se não estamos na página de login ou em páginas não autenticadas
+    const isLoginPage = window.location.pathname.includes('/login') || 
+                       window.location.pathname.includes('/register') ||
+                       window.location.pathname.includes('/reset-password');
+    
     // Verificar se o usuário está logado antes de iniciar o verificador de sessão
     const isUserLoggedIn = document.body.classList.contains('logged-in');
+    
+    if (isLoginPage) {
+        console.log('[SessionHandler] Página de login detectada, não inicializando verificador de sessão');
+        return;
+    }
+    
     if (isUserLoggedIn) {
+        console.log('[SessionHandler] Usuário logado detectado, inicializando verificador de sessão');
         initSessionChecker();
+    } else {
+        console.log('[SessionHandler] Usuário não logado, não inicializando verificador de sessão');
     }
 });

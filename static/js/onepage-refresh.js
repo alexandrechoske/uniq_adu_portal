@@ -17,29 +17,39 @@ function refreshOnepage() {
     if (window.countdownElement) {
         window.countdownElement.textContent = window.countdown;
     }
-    
-    // Primeiro verificar se a sessão está válida
-    fetch('/paginas/check-session', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                console.warn("Sessão expirada durante atualização da OnePage. Redirecionando para login...");
-                window.location.href = '/login';
+      // Usar o sistema de cache para validar sessão
+    const sessionValidPromise = window.menuCache ? 
+        window.menuCache.validateSession() : 
+        // Fallback para o método antigo se o cache não estiver disponível
+        fetch('/paginas/check-session', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn("Sessão expirada durante atualização da OnePage. Redirecionando para login...");
+                    window.location.href = '/login';
+                    return Promise.reject('Sessão inválida');
+                }
+                throw new Error('Erro ao verificar sessão: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(sessionData => {
+            if (!sessionData || sessionData.status !== 'success') {
+                console.warn('Sessão inválida ou expirada:', sessionData);
                 return Promise.reject('Sessão inválida');
             }
-            throw new Error('Erro ao verificar sessão: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(sessionData => {
-        if (!sessionData || sessionData.status !== 'success') {
-            console.warn('Sessão inválida ou expirada:', sessionData);
+            return true;
+        });
+
+    sessionValidPromise.then(sessionValid => {
+        if (!sessionValid) {
+            console.warn('Sessão inválida ou expirada');
             return Promise.reject('Sessão inválida');
         }
         
@@ -143,11 +153,24 @@ function refreshOnepage() {
             if (data.currencies) {
                 updateCurrencyRates(data.currencies);
             }
-            
-            // Atualizar timestamp
+              // Atualizar timestamp
             updateTimestamp(data.last_update);
             
             console.log('OnePage atualizada com sucesso');
+            
+            // Usar o sistema de cache para recarregar menu se necessário
+            // Só recarrega menu se houver uma atualização significativa ou se o menu não estiver carregado
+            if (window.menuCache && !window.menuCache.menuLoaded) {
+                console.log('Menu não está carregado, carregando via cache...');
+                window.menuCache.loadMenu();
+            } else if (window.menuCache) {
+                // Menu já está carregado, não precisa recarregar a cada atualização
+                console.log('Menu já está carregado e válido');
+            } else {
+                // Fallback para o método antigo se o cache não estiver disponível
+                console.log('Sistema de cache não disponível, usando método tradicional');
+                reloadSidebarMenu();
+            }
         } else {
             console.error('Erro na resposta do servidor:', data);
             // Método de fallback: recarregar a página
