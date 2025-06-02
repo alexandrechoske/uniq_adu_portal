@@ -243,17 +243,20 @@
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">        <!-- Total Operations Card -->
-        <div id="total-operations" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="p-3 rounded-lg border bg-blue-50 text-blue-600 border-blue-200">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+    </div>    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6"><!-- Total Operations Card -->        <div id="total-operations" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg border bg-blue-50 text-blue-600 border-blue-200">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-1">Total de Operações</p>
+                            <p class="metric-value text-xl font-bold text-slate-900">{{ total_operations }}</p>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.total_var.startswith('+') else 'variation-down' }}">
@@ -273,19 +276,20 @@
                         </div>
                     </div>
                 </div>
-                <div>
-                    <p class="text-sm font-medium text-slate-600 mb-1">Total de Operações</p>
-                    <p class="metric-value text-2xl font-bold text-slate-900">{{ total_operations }}</p>
-                </div>
             </div>
-        </div>        <!-- Open Processes Card -->
-        <div id="processos-abertos" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="p-3 rounded-lg border bg-orange-50 text-orange-600 border-orange-200">
-                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+        </div>        <!-- Open Processes Card -->        <div id="processos-abertos" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg border bg-orange-50 text-orange-600 border-orange-200">
+                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-1">Processos Abertos</p>
+                            <p class="metric-value text-xl font-bold text-slate-900">{{ processos_abertos }}</p>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.abertos_var.startswith('+') else 'variation-down' }}">
@@ -305,19 +309,20 @@
                         </div>
                     </div>
                 </div>
-                <div>
-                    <p class="text-sm font-medium text-slate-600 mb-1">Processos Abertos</p>
-                    <p class="metric-value text-2xl font-bold text-slate-900">{{ processos_abertos }}</p>
-                </div>
             </div>
-        </div>        <!-- New Processes Card -->
-        <div id="novos-semana" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="p-3 rounded-lg border bg-green-50 text-green-600 border-green-200">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
+        </div>        <!-- New Processes Card -->        <div id="novos-semana" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg border bg-green-50 text-green-600 border-green-200">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-1">Novos (7 dias)</p>
+                            <p class="metric-value text-xl font-bold text-slate-900">{{ novos_semana }}</p>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.novos_var.startswith('+') else 'variation-down' }}">
@@ -337,21 +342,23 @@
                         </div>
                     </div>
                 </div>
-                <div>
-                    <p class="text-sm font-medium text-slate-600 mb-1">Novos (7 dias)</p>
-                    <p class="metric-value text-2xl font-bold text-slate-900">{{ novos_semana }}</p>
-                </div>
             </div>
         </div>
 
-        <!-- In Transit Card -->
-    <div id="em-transito" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="p-3 rounded-lg border bg-purple-50 text-purple-600 border-purple-200">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
+        <!-- In Transit Card -->        
+         <div id="em-transito" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg border bg-purple-50 text-purple-600 border-purple-200">
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-1">Em Trânsito</p>
+                            <p class="metric-value text-xl font-bold text-slate-900">{{ em_transito }}</p>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.transito_var.startswith('+') else 'variation-down' }}">
@@ -370,9 +377,41 @@
                             </div>
                         </div>
                     </div>
-                </div>                <div>
-                    <p class="text-sm font-medium text-slate-600 mb-1">Em Trânsito</p>
-                    <p class="metric-value text-2xl font-bold text-slate-900">{{ em_transito }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Arriving This Week Card -->        <div id="a-chegar-semana" class="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02] relative hover:z-30">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 rounded-lg border bg-amber-50 text-amber-600 border-amber-200">
+                            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-600 mb-1">A chegar nessa semana</p>
+                            <p class="metric-value text-xl font-bold text-slate-900">{{ a_chegar_semana }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="metric-variation {{ 'variation-up' if variations.chegar_var.startswith('+') else 'variation-down' }}">
+                            {{ variations.chegar_var }}
+                        </span>
+                        <div class="group relative">
+                            <div class="p-1 rounded-full hover:bg-slate-100 cursor-help transition-colors">
+                                <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <!-- Tooltip -->
+                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-slate-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-[9999] pointer-events-none">
+                                Processos que chegarão durante a semana atual
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

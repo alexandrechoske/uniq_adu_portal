@@ -133,9 +133,10 @@
         // Carregar menu dinamicamente baseado nas permissões do usuário
         document.addEventListener('DOMContentLoaded', function() {
             // Verificar se o usuário está logado antes de carregar o menu
-            {% if session.get('user') %}
+            const isUserLoggedIn = {% if session.get('user') %}true{% else %}false{% endif %};
+            if (isUserLoggedIn) {
                 loadSidebarMenu();
-            {% endif %}
+            }
         });
         
         function loadSidebarMenu() {

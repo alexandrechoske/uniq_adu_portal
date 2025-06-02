@@ -233,6 +233,14 @@ function updateKPIs(kpis) {
             }
         }
         
+        // Atualizar a chegar nessa semana
+        if (kpis.a_chegar_semana !== undefined) {
+            const aChegarSemanaElement = document.querySelector('#a-chegar-semana .metric-value');
+            if (aChegarSemanaElement) {
+                aChegarSemanaElement.textContent = kpis.a_chegar_semana;
+            }
+        }
+        
         // Atualizar variações
         if (kpis.variations) {
             // Total operations variation
@@ -283,6 +291,19 @@ function updateKPIs(kpis) {
                         transitoVarElement.className = 'metric-variation variation-up';
                     } else {
                         transitoVarElement.className = 'metric-variation variation-down';
+                    }
+                }
+            }
+            
+            // A chegar nessa semana variation
+            if (kpis.variations.chegar_var) {
+                const chegarVarElement = document.querySelector('#a-chegar-semana .metric-variation');
+                if (chegarVarElement) {
+                    chegarVarElement.textContent = kpis.variations.chegar_var;
+                    if (kpis.variations.chegar_var.includes('+')) {
+                        chegarVarElement.className = 'metric-variation variation-up';
+                    } else {
+                        chegarVarElement.className = 'metric-variation variation-down';
                     }
                 }
             }

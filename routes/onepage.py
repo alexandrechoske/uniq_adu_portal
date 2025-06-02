@@ -69,7 +69,7 @@ def get_currencies():
 @login_required
 def index():
     """OnePage dashboard view"""
-    if session['user']['role'] not in ['cliente_unique', 'interno_unique']:
+    if session['user']['role'] not in ['cliente_unique', 'interno_unique','admin']:
         return render_template('errors/401.html'), 401
 
     # Get user's companies and selected filter

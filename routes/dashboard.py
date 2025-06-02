@@ -26,7 +26,7 @@ def index():
                     user_companies = [user_companies]
 
     # Build query with client filter
-    query = supabase.table('importacoes_processos').select('*').order('data_abertura', desc=True)
+    query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').order('data_abertura', desc=True)
     if user_companies:
         query = query.in_('cliente_cpfcnpj', user_companies)
     
@@ -42,6 +42,25 @@ def index():
     df['data_abertura'] = pd.to_datetime(df['data_abertura'])
     novos_semana = len(df[df['data_abertura'] > uma_semana_atras]) if not df.empty else 0
     em_transito = len(df[df['carga_status'].notna()]) if not df.empty else 0
+    
+    # Calculate new metric: "A chegar nessa semana" (Arriving This Week)
+    semana_atual = datetime.now()
+    fim_semana = semana_atual + timedelta(days=(6 - semana_atual.weekday()))  # Find the end of current week (Sunday)
+    
+    # Check if a predicted arrival date field exists in the dataset
+    a_chegar_semana = 0
+    if 'data_prevista_chegada' in df.columns:
+        df['data_prevista_chegada'] = pd.to_datetime(df['data_prevista_chegada'])
+        # Filter processes arriving this week (from today until end of week)
+        a_chegar_semana = len(df[(df['data_prevista_chegada'] >= semana_atual.date()) & 
+                                (df['data_prevista_chegada'] <= fim_semana.date()) &
+                                (df['situacao'] == 'Aberto')]) if not df.empty else 0
+    elif 'eta' in df.columns:  # Alternative field name for estimated arrival
+        df['eta'] = pd.to_datetime(df['eta'])
+        # Filter processes arriving this week (from today until end of week)
+        a_chegar_semana = len(df[(df['eta'] >= semana_atual.date()) & 
+                                (df['eta'] <= fim_semana.date()) &
+                                (df['situacao'] == 'Aberto')]) if not df.empty else 0
 
     # Create charts
     if not df.empty:
@@ -201,22 +220,21 @@ def index():
                 name='Previsão',
                 hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Previsão: %{{y:.1f}}<extra></extra>'
             ))
-            
-            # Adicionar anotação com a equação da tendência
-            chart_data.add_annotation(
-                x=0.02,
-                y=0.98,
-                xref="paper",
-                yref="paper",
-                text=trend_equation,
-                showarrow=False,
-                font=dict(size=10, color="#666"),
-                bgcolor="rgba(255, 255, 255, 0.8)",
-                bordercolor="#DDD",
-                borderwidth=1,
-                borderpad=4,
-                align="left"
-            )
+              # Comentado para remover a equação de tendência do gráfico
+            # chart_data.add_annotation(
+            #     x=0.02,
+            #     y=0.98,
+            #     xref="paper",
+            #     yref="paper",
+            #     text=trend_equation,
+            #     showarrow=False,
+            #     font=dict(size=10, color="#666"),
+            #     bgcolor="rgba(255, 255, 255, 0.8)",
+            #     bordercolor="#DDD",
+            #     borderwidth=1,
+            #     borderpad=4,
+            #     align="left"
+            # )
         
         chart_data.update_layout(
             title_text=f'Evolução Temporal ({period_text})',
@@ -232,10 +250,10 @@ def index():
             plot_bgcolor='white',
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
+                yanchor="top",
+                y=-0.15,
+                xanchor="center",
+                x=0.5
             )
         )
 
@@ -312,8 +330,11 @@ def index():
         'total_var': '+5%',
         'abertos_var': '-2%',
         'novos_var': '+10%',
-        'transito_var': '+3%'
-    }    # Configurar IDs específicos para cada gráfico para facilitar atualização
+        'transito_var': '+3%',
+        'chegar_var': '+7%'  # Variation for the new "A chegar nessa semana" metric
+    }
+    
+    # Configurar IDs específicos para cada gráfico para facilitar atualização
     chart_configs = {
         'responsive': True,
         'displayModeBar': False,
@@ -321,15 +342,10 @@ def index():
         'scrollZoom': False
     }
           # Prepare chart HTML for initial rendering
-    chart_cliente_html = chart_cliente.to_html(full_html=False, include_plotlyjs=False, 
-                          div_id='chart-cliente', config=chart_configs) if chart_cliente else None
-    chart_data_html = chart_data.to_html(full_html=False, include_plotlyjs=False,
-                          div_id='chart-data', config=chart_configs) if chart_data else None
-    chart_tipo_html = chart_tipo.to_html(full_html=False, include_plotlyjs=False,
-                          div_id='chart-tipo', config=chart_configs) if chart_tipo else None
-    chart_canal_html = chart_canal.to_html(full_html=False, include_plotlyjs=False,
-                          div_id='chart-canal', config=chart_configs) if chart_canal else None
-                         
+    chart_cliente_html = chart_cliente.to_html(full_html=False, include_plotlyjs=False,div_id='chart-cliente', config=chart_configs) if chart_cliente else None
+    chart_data_html = chart_data.to_html(full_html=False, include_plotlyjs=False,div_id='chart-data', config=chart_configs) if chart_data else None
+    chart_tipo_html = chart_tipo.to_html(full_html=False, include_plotlyjs=False,div_id='chart-tipo', config=chart_configs) if chart_tipo else None
+    chart_canal_html = chart_canal.to_html(full_html=False, include_plotlyjs=False,div_id='chart-canal', config=chart_configs) if chart_canal else None
     return render_template('dashboard/index.html',
                          now=datetime.now(),
                          operacoes=data,
@@ -337,6 +353,7 @@ def index():
                          processos_abertos=processos_abertos,
                          novos_semana=novos_semana,
                          em_transito=em_transito,
+                         a_chegar_semana=a_chegar_semana,
                          last_update=last_update,
                          variations=variations,
                          chart_cliente=chart_cliente_html,
@@ -467,12 +484,32 @@ def chart_data():
         novos_semana = len(df[df['data_abertura'] > uma_semana_atras]) if not df.empty else 0
         em_transito = len(df[df['carga_status'].notna()]) if not df.empty else 0
 
+        # Calculate new metric: "A chegar nessa semana" (Arriving This Week)
+        semana_atual = datetime.now()
+        fim_semana = semana_atual + timedelta(days=(6 - semana_atual.weekday()))  # Find the end of current week (Sunday)
+        
+        # Check if a predicted arrival date field exists in the dataset
+        a_chegar_semana = 0
+        if 'data_prevista_chegada' in df.columns:
+            df['data_prevista_chegada'] = pd.to_datetime(df['data_prevista_chegada'])
+            # Filter processes arriving this week (from today until end of week)
+            a_chegar_semana = len(df[(df['data_prevista_chegada'] >= semana_atual.date()) & 
+                                    (df['data_prevista_chegada'] <= fim_semana.date()) &
+                                    (df['situacao'] == 'Aberto')]) if not df.empty else 0
+        elif 'eta' in df.columns:  # Alternative field name for estimated arrival
+            df['eta'] = pd.to_datetime(df['eta'])
+            # Filter processes arriving this week (from today until end of week)
+            a_chegar_semana = len(df[(df['eta'] >= semana_atual.date()) & 
+                                    (df['eta'] <= fim_semana.date()) &
+                                    (df['situacao'] == 'Aberto')]) if not df.empty else 0
+
         # Calculate KPI variations (dummy values for demonstration)
         variations = {
             'total_var': '+5%',
             'abertos_var': '-2%',
             'novos_var': '+10%',
-            'transito_var': '+3%'
+            'transito_var': '+3%',
+            'chegar_var': '+7%'  # Variation for the new "A chegar nessa semana" metric
         }
         
         # KPI data
@@ -481,7 +518,8 @@ def chart_data():
             'processos_abertos': processos_abertos,
             'novos_semana': novos_semana,
             'em_transito': em_transito,
-            'variations': variations
+            'variations': variations,
+            'a_chegar_semana': a_chegar_semana  # New metric
         }
 
         chart_data = {}
@@ -678,10 +716,10 @@ def chart_data():
                 plot_bgcolor='white',
                 legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="right",
-                x=1
+                yanchor="top",
+                y=-0.15,
+                xanchor="center",
+                x=0.5
                 )
             )
 
