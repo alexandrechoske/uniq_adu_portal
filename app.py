@@ -29,7 +29,7 @@ except Exception as e:
 
 # Import routes after app initialization to avoid circular imports
 from routes import auth, dashboard, relatorios, usuarios, agente, api, onepage, conferencia
-from routes import conferencia_pdf
+from routes import conferencia_pdf, paginas
 
 # Register blueprints
 app.register_blueprint(auth.bp)
@@ -41,6 +41,7 @@ app.register_blueprint(api.bp)  # Registrando o blueprint da API
 app.register_blueprint(onepage.bp)  # Registrando o blueprint do OnePage
 app.register_blueprint(conferencia.bp)  # Registrando o blueprint de Conferência Documental IA
 app.register_blueprint(conferencia_pdf.bp)  # Registrando o blueprint de PDF anotado para Conferência
+app.register_blueprint(paginas.bp)  # Registrando o blueprint de Controle de Páginas
 
 # Error handlers
 @app.errorhandler(401)

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Páginas - Portal UniSystem{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Gerenciar Páginas do Portal</h2>
+        <a href="{{ url_for('paginas.create_page') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nova Página
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="mb-4 rounded-md p-4 {% if category == 'error' %}bg-red-100 border border-red-400 text-red-700{% else %}bg-green-100 border border-green-400 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rota</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Perfis</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ordem</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for pagina in paginas %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">{{ pagina.id_pagina }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ pagina.nome_pagina }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ pagina.url_rota }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex flex-wrap gap-1">
+                            {% for role in pagina.roles %}
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if role == 'admin' %}
+                                    bg-red-100 text-red-800
+                                {% elif role == 'interno_unique' %}
+                                    bg-blue-100 text-blue-800
+                                {% else %}
+                                    bg-green-100 text-green-800
+                                {% endif %}">
+                                    {% if role == 'admin' %}
+                                        Administrador
+                                    {% elif role == 'interno_unique' %}
+                                        Interno Unique
+                                    {% else %}
+                                        Cliente Unique
+                                    {% endif %}
+                                </span>
+                            {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">{{ pagina.ordem }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if pagina.flg_ativo %}
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ativo</span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Em Manutenção</span>
+                            {% endif %}
+                        </td>                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex space-x-2">
+                                <!-- Botão de Editar -->
+                                <a href="{{ url_for('paginas.edit_page', id=pagina.id) }}" class="inline-flex items-center px-3 py-1 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                    Editar
+                                </a>
+                                
+                                <!-- Botão de Ativar/Desativar -->
+                                <form method="POST" action="{{ url_for('paginas.toggle_page', id=pagina.id) }}" class="inline">
+                                    <button type="submit" class="inline-flex items-center px-3 py-1 rounded-md 
+                                    {% if pagina.flg_ativo %}
+                                        bg-yellow-100 text-yellow-800 hover:bg-yellow-200 focus:ring-yellow-500
+                                    {% else %}
+                                        bg-green-100 text-green-800 hover:bg-green-200 focus:ring-green-500
+                                    {% endif %}
+                                    focus:outline-none focus:ring-2 focus:ring-offset-2">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            {% if pagina.flg_ativo %}
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                            {% else %}
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            {% endif %}
+                                        </svg>
+                                        {% if pagina.flg_ativo %}
+                                            Desativar
+                                        {% else %}
+                                            Ativar
+                                        {% endif %}
+                                    </button>
+                                </form>
+                                
+                                <!-- Botão de Excluir -->
+                                <button onclick="confirmDelete({{ pagina.id }}, '{{ pagina.nome_pagina }}')" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 focus:ring-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Excluir
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="mt-6 bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Instruções</h3>
+        <ul class="list-disc pl-5 space-y-2 text-gray-700">
+            <li>Quando uma página está <span class="font-medium text-green-700">Ativa</span>, ela aparece normalmente na barra lateral.</li>
+            <li>Quando uma página está <span class="font-medium text-red-700">Em Manutenção</span>, ela aparece com o status de manutenção e não pode ser acessada.</li>
+            <li>Use os botões de Ativar/Desativar para alterar o status de cada página.</li>
+            <li>A coluna <span class="font-medium">Ordem</span> define a posição da página na barra lateral (menor número = mais ao topo).</li>
+        </ul>    </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Confirmar Exclusão</h3>
+            <p class="text-gray-600 mb-6">Você tem certeza que deseja excluir a página <span id="pageNameToDelete" class="font-medium"></span>?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                    Cancelar
+                </button>
+                <form id="deleteForm" method="POST" action="">
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        Sim, Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmDelete(pageId, pageName) {
+        document.getElementById('pageNameToDelete').textContent = pageName;
+        document.getElementById('deleteForm').action = "{{ url_for('paginas.delete_page', id='') }}" + pageId;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

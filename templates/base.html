@@ -54,48 +54,12 @@
                 <div class="p-4">
                     <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem" class="h-12">
                 </div>
-                
-                <nav class="flex-1 px-2 py-4 space-y-2">
-                    <a href="{{ url_for('dashboard.index') }}" class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                        </svg>
-                        <span>Dashboard</span>
-                    </a>                    {% if session['user']['role'] in ['cliente_unique', 'interno_unique'] %}
-                    <a href="{{ url_for('onepage.index') }}" class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"></path>
-                        </svg>
-                        <span>One Page</span>
-                    </a>
-                    {% endif %}
-                    
-                    <!-- {% if session['user']['role'] in ['admin', 'interno_unique'] %}
-                    <a href="{{ url_for('conferencia.index') }}" class="sidebar-item {% if request.endpoint == 'conferencia.index' %}active{% endif %}">
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                        </svg>
-                        <span>Conferência Documental IA</span>
-                    </a>
-                    {% endif %} -->
-                    
-                    {% if session['user']['role'] == 'cliente_unique' %}
-                    <a href="{{ url_for('agente.index') }}" class="sidebar-item {% if request.endpoint == 'agente.index' %}active{% endif %}">
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-                        </svg>
-                        <span>Agente Unique</span>
-                    </a>
-                    {% endif %}
-                    
-                    {% if session['user']['role'] == 'admin' %}
-                    <a href="{{ url_for('usuarios.index') }}" class="sidebar-item {% if request.endpoint == 'usuarios.index' %}active{% endif %}">
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                        <span>Usuários</span>
-                    </a>
-                    {% endif %}
+                  <nav class="flex-1 px-2 py-4 space-y-2" id="sidebar-nav">
+                    <!-- O menu será carregado dinamicamente via JavaScript -->
+                    <div class="text-center text-gray-500 py-2">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        Carregando menu...
+                    </div>
                 </nav>
                 
                 <div class="border-t border-gray-200 p-4">
@@ -148,8 +112,7 @@
     {% else %}
     {% block auth_content %}{% endblock %}
     {% endif %}
-    
-    {% block extra_js %}{% endblock %}
+      {% block extra_js %}{% endblock %}
     
     <script>
         // Mobile menu functionality
@@ -166,6 +129,78 @@
                 document.querySelector('aside').classList.add('hidden');
             }
         });
+
+        // Carregar menu dinamicamente baseado nas permissões do usuário
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar se o usuário está logado antes de carregar o menu
+            {% if session.get('user') %}
+                loadSidebarMenu();
+            {% endif %}
+        });
+        
+        function loadSidebarMenu() {
+            const sidebarNav = document.getElementById('sidebar-nav');
+            const currentRole = '{{ session.get("user", {}).get("role", "none") }}';
+            const currentEndpoint = '{{ request.endpoint }}';
+            
+            fetch('/paginas/api')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const pages = data.data;
+                        
+                        // Limpar loader
+                        sidebarNav.innerHTML = '';
+                        
+                        // Construir links de navegação
+                        pages.forEach(page => {
+                            // Verificar se o usuário tem permissão para ver esta página
+                            if (page.roles && Array.isArray(page.roles) && page.roles.includes(currentRole)) {
+                                const link = document.createElement('a');
+                                
+                                // Se a página está ativa ou em manutenção
+                                if (page.flg_ativo) {
+                                    link.href = page.url_rota;
+                                    link.className = `sidebar-item ${currentEndpoint === page.id_pagina + '.index' ? 'active' : ''}`;
+                                } else {
+                                    link.href = 'javascript:void(0)';  // Link desabilitado
+                                    link.className = 'sidebar-item opacity-60 cursor-not-allowed';
+                                }
+                                
+                                // Montar o link com ícone e texto
+                                link.innerHTML = `
+                                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        ${page.icone}
+                                    </svg>
+                                    <span>${page.flg_ativo ? page.nome_pagina : page.nome_pagina + ' (' + page.mensagem_manutencao + ')'}</span>
+                                    ${!page.flg_ativo ? '<span class="ml-1 text-yellow-500"><svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></span>' : ''}
+                                `;
+                                
+                                // Adicionar evento para páginas em manutenção
+                                if (!page.flg_ativo) {
+                                    link.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        alert(`A página ${page.nome_pagina} está temporariamente em manutenção.`);
+                                    });
+                                }
+                                
+                                sidebarNav.appendChild(link);
+                            }
+                        });
+                        
+                        // Se não tiver nenhuma página para mostrar
+                        if (sidebarNav.children.length === 0) {
+                            sidebarNav.innerHTML = '<div class="text-center text-gray-500 py-2">Nenhuma página disponível.</div>';
+                        }
+                    } else {
+                        sidebarNav.innerHTML = '<div class="text-center text-red-500 py-2">Erro ao carregar o menu.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar menu:', error);
+                    sidebarNav.innerHTML = '<div class="text-center text-red-500 py-2">Erro ao carregar o menu.</div>';
+                });
+        }
     </script>
 </body>
 </html>
