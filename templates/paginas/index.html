@@ -5,11 +5,8 @@
 {% block content %}
 <div class="p-6">
     <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Gerenciar Páginas do Portal</h2>
-        <a href="{{ url_for('paginas.create_page') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
+        <h2 class="text-2xl font-bold text-gray-900">Gerenciar Páginas do Portal</h2>        <a href="{{ url_for('paginas.create_page') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <i class="mdi mdi-plus w-4 h-4 mr-2"></i>
             Nova Página
         </a>
     </div>
@@ -75,11 +72,8 @@
                             {% endif %}
                         </td>                        <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex space-x-2">
-                                <!-- Botão de Editar -->
-                                <a href="{{ url_for('paginas.edit_page', id=pagina.id) }}" class="inline-flex items-center px-3 py-1 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
+                                <!-- Botão de Editar -->                                <a href="{{ url_for('paginas.edit_page', id=pagina.id) }}" class="inline-flex items-center px-3 py-1 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2">
+                                    <i class="mdi mdi-pencil w-4 h-4 mr-1"></i>
                                     Editar
                                 </a>
                                 
@@ -90,15 +84,9 @@
                                         bg-yellow-100 text-yellow-800 hover:bg-yellow-200 focus:ring-yellow-500
                                     {% else %}
                                         bg-green-100 text-green-800 hover:bg-green-200 focus:ring-green-500
-                                    {% endif %}
-                                    focus:outline-none focus:ring-2 focus:ring-offset-2">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            {% if pagina.flg_ativo %}
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
-                                            {% else %}
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                            {% endif %}
-                                        </svg>
+                                    {% endif %}                                    focus:outline-none focus:ring-2 focus:ring-offset-2">
+                                        <i class="mdi mdi-close-circle w-4 h-4 mr-1" style="display: {% if pagina.flg_ativo %}inline{% else %}none{% endif %}"></i>
+                                        <i class="mdi mdi-check-circle w-4 h-4 mr-1" style="display: {% if not pagina.flg_ativo %}inline{% else %}none{% endif %}"></i>
                                         {% if pagina.flg_ativo %}
                                             Desativar
                                         {% else %}
@@ -107,11 +95,8 @@
                                     </button>
                                 </form>
                                 
-                                <!-- Botão de Excluir -->
-                                <button onclick="confirmDelete({{ pagina.id }}, '{{ pagina.nome_pagina }}')" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 focus:ring-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
+                                <!-- Botão de Excluir -->                                <button onclick="confirmDelete({{ pagina.id }}, '{{ pagina.nome_pagina }}')" class="inline-flex items-center px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 focus:ring-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2">
+                                    <i class="mdi mdi-delete w-4 h-4 mr-1"></i>
                                     Excluir
                                 </button>
                             </div>

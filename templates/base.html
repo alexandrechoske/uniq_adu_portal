@@ -4,19 +4,153 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniSystem - {% block title %}{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            /* background-color: #f3f4f6; */
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet"><style>
+        /* Unique Aduaneira Brand Colors */
+        :root {
+            --color-primary: #1F406F;
+            --color-secondary: #3498DB;
+            --color-white: #FFFFFF;
+            --color-primary-light: rgba(31, 64, 111, 0.1);
+            --color-secondary-light: rgba(52, 152, 219, 0.1);
         }
+          body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }/* Top Navigation Bar - Unique Aduaneira Brand Colors */
+        .top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4rem;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 4px rgba(31, 64, 111, 0.1);
+        }
+        
+        .navbar-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+            padding: 0 1rem;
+        }
+        
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+          .navbar-hamburger {
+            background: transparent;
+            border: none;
+            color: var(--color-white);
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .navbar-hamburger:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .navbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .navbar-logo img {
+            height: 2rem;
+            width: auto;
+        }
+          .navbar-title {
+            color: var(--color-white);
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .navbar-user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-white);
+            font-size: 0.875rem;
+        }/* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0 !important; /* Override sidebar margin on mobile */
+                padding: 70px 0.5rem 0.5rem 0.5rem; /* Slightly more top padding on mobile */
+            }
+            
+            .navbar-content {
+                padding: 0 0.75rem;
+            }
+            
+            .navbar-logo {
+                gap: 0.5rem;
+            }
+            
+            .navbar-logo img {
+                height: 1.75rem;
+            }
+            
+            .navbar-title {
+                font-size: 1rem;
+            }
+        }
+
+        /* Sidebar adjustments for top navbar */
         .sidebar-icon {
             width: 1.5rem;
             height: 1.5rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .sidebar-icon svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }        /* Main content area adjustments - Optimized spacing */
+        .main-content {
+            margin-left: 16rem; /* w-64 equivalent when sidebar expanded */
+            transition: margin-left 0.3s ease;
+            padding: 60px 0.75rem 0.75rem 0.75rem; /* Top padding to clear fixed header */
+            min-height: calc(100vh - 4rem); /* Full height minus header */
+            background-color: #f8fafc; /* Match body background */
+            position: relative; /* Ensure proper positioning context */
+        }
+        
+        .main-content.sidebar-collapsed {
+            margin-left: 4rem; /* w-16 equivalent when sidebar collapsed */
+        }
+
+        /* Content wrapper to eliminate any potential spacing issues */
+        .content-wrapper {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }/* Ensure icons render properly on all devices */
+        svg {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        
         .sidebar-item {
             display: flex;
             align-items: center;
@@ -30,82 +164,233 @@
         }
         .sidebar-item:hover {
             background-color: #f3f4f6;
-        }
+        }          /* Active sidebar item - Using brand colors */
         .sidebar-item.active {
-            background-color: #eff6ff;
-            color: #1d4ed8;
+            background-color: var(--color-secondary-light);
+            color: var(--color-primary);
+            border-left: 3px solid var(--color-secondary);
         }
+        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
         .animate-fadeIn {
             animation: fadeIn 0.5s ease-in-out;
+        }        /* Sidebar collapse styles */
+        .sidebar {
+            transition: width 0.3s ease;
+            width: 16rem; /* w-64 equivalent */
+            position: fixed;
+            left: 0;
+            top: 4rem; /* Below top navbar */
+            height: calc(100vh - 4rem);
+            z-index: 900;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow-y: auto; /* Enable scrolling for long menus */
         }
+        .sidebar.collapsed {
+            width: 4rem; /* w-16 equivalent */
+        }
+        .sidebar.collapsed .sidebar-text {
+            display: none;
+        }.sidebar.collapsed .sidebar-item {
+            justify-content: center;
+            padding: 0.75rem 0.5rem;
+        }
+          /* Remove hamburger button from sidebar header */
+        .sidebar-header {
+            display: none;
+        }
+        .sidebar.collapsed .sidebar-item {
+            position: relative;
+        }
+        .sidebar.collapsed .sidebar-item:hover::after {
+            content: attr(title);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-left: 0.75rem;            font-size: 0.875rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 1023px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 16rem;
+                z-index: 1001;
+            }
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .main-content.sidebar-collapsed {
+                margin-left: 0;
+            }
+            .navbar-title {
+                display: none;
+            }
+            .navbar-content {
+                padding: 0 0.75rem;
+            }
+            .navbar-left {
+                gap: 0.5rem;
+            }
+            .navbar-right {
+                gap: 0.5rem;
+            }
+        }
+        
+        /* Extra small mobile devices */
+        @media (max-width: 640px) {
+            .navbar-content {
+                padding: 0 0.5rem;
+            }
+            .navbar-left {
+                gap: 0.25rem;
+            }
+            .navbar-right {
+                gap: 0.25rem;
+            }
+            .navbar-logo img {
+                height: 1.75rem;
+            }
+        }
+        
+        /* Mobile overlay */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+        }
+        
+        @media (max-width: 1023px) {
+            .mobile-overlay.show {
+                display: block;
+            }
+        }
+          /* Tooltip para itens quando sidebar está recolhida */
     </style>
     {# O bloco extra_css agora está definido aqui para carregar estilos customizados #}
-    {% block extra_css %}{% endblock %} 
+    {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body><body>
     {% if session.get('user') %}
-    <div class="flex h-screen">
-        <aside class="w-64 bg-white shadow-lg hidden lg:block animate-fadeIn">
-            <div class="h-full flex flex-col">
-                <div class="p-4">
-                    <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem" class="h-12">
-                </div>
-                  <nav class="flex-1 px-2 py-4 space-y-2" id="sidebar-nav">
-                    <!-- O menu será carregado dinamicamente via JavaScript -->
-                    <div class="text-center text-gray-500 py-2">
-                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                        Carregando menu...
-                    </div>
-                </nav>
+    <!-- Top Navigation Bar -->
+    <header class="top-navbar">
+        <div class="navbar-content">
+            <div class="navbar-left">
+                <!-- Hamburger menu for sidebar toggle -->
+                <button id="sidebar-toggle" class="navbar-hamburger" type="button">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
                 
-                <div class="border-t border-gray-200 p-4">
-                    <div class="flex items-center mb-3">
-                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                <!-- Logo and app name -->
+                <div class="navbar-logo">
+                    <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
+                    <h1 class="navbar-title">UniSystem - Portal Aduaneiro</h1>
+                </div>
+            </div>            <div class="navbar-right">
+                <!-- User info in top bar (desktop) -->
+                <div class="navbar-user-info hidden md:flex">
+                    <div class="flex items-center gap-3">
+                        <!-- User avatar and info -->
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex flex-col text-left">
+                                <span class="text-sm font-medium">{{ session['user']['email'] }}</span>
+                                <span class="text-xs text-blue-200 capitalize">
+                                    {% if session['user']['role'] == 'cliente_unique' %}
+                                        Cliente
+                                    {% elif session['user']['role'] == 'admin' %}
+                                        Administrador
+                                    {% else %}
+                                        {{ session['user']['role'] }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Logout button -->
+                        <a href="{{ url_for('auth.logout') }}" 
+                           title="Sair do sistema"
+                           class="flex items-center gap-1 px-3 py-1.5 text-sm text-white bg-blue-800 hover:bg-blue-900 rounded-md transition-colors duration-200 border border-blue-700">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                             </svg>
-                        </div>
-                        <div class="ml-3 flex-1 min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ session['user']['email'] }}</p>
-                            <p class="text-xs text-gray-500 capitalize">
-                                {% if session['user']['role'] == 'cliente_unique' %}
-                                    Cliente
-                                {% elif session['user']['role'] == 'admin' %}
-                                    Administrador
-                                {% else %}
-                                    {{ session['user']['role'] }}
-                                {% endif %}
-                            </p>
-                        </div>
+                            <span>Sair</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Mobile user info and controls -->
+                <div class="flex items-center gap-2 md:hidden">
+                    <!-- User avatar (mobile) -->
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7 7z"></path>
+                        </svg>
                     </div>
                     
+                    <!-- Mobile logout button -->
                     <a href="{{ url_for('auth.logout') }}" 
-                       class="w-full flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors duration-200 group">
-                        <svg class="w-4 h-4 mr-2 text-gray-500 group-hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       title="Sair do sistema"
+                       class="flex items-center justify-center w-8 h-8 text-white bg-blue-800 hover:bg-blue-900 rounded-md transition-colors duration-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
-                        Sair
                     </a>
                 </div>
-            </div>
-        </aside>
-        
-        <div class="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-50">
-            <div class="flex items-center justify-between p-4">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="UniSystem" class="h-8">
-                <button type="button" class="text-gray-600" id="mobile-menu-button">
+                
+                <!-- Mobile menu button -->
+                <button id="mobile-menu-toggle" class="navbar-hamburger lg:hidden" type="button">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                 </button>
             </div>
         </div>
+    </header>    <div class="flex">
+        <!-- Mobile overlay -->
+        <div id="mobile-overlay" class="mobile-overlay"></div>
+          <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar hidden lg:block">
+            <!-- Navigation menu -->
+            <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
+                <!-- Loading state -->
+                <div class="text-center text-gray-500 py-4">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-3"></div>
+                    <span class="sidebar-text text-sm">Carregando menu...</span>
+                </div>
+            </nav>
+        </aside>
         
-        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+        <!-- Main content area -->
+        <main id="main-content" class="main-content flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -113,21 +398,75 @@
     {% block auth_content %}{% endblock %}
     {% endif %}
       {% block extra_js %}{% endblock %}
-    
-    <script>
-        // Mobile menu functionality
-        document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
-            const sidebar = document.querySelector('aside');
-            sidebar.classList.toggle('hidden');
-        });
-        
-        // Hide mobile menu on window resize
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 1024) {
-                document.querySelector('aside').classList.remove('hidden');
+      <script>
+        // Sidebar toggle functionality
+        let sidebarExpanded = true;
+          function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const hamburgerBtn = document.getElementById('sidebar-toggle');
+              sidebarExpanded = !sidebarExpanded;
+            
+            if (sidebarExpanded) {
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('sidebar-collapsed');
             } else {
-                document.querySelector('aside').classList.add('hidden');
-            }        });
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+            }
+            
+            // Store preference in localStorage
+            localStorage.setItem('sidebarExpanded', sidebarExpanded);
+        }
+          // Initialize sidebar state from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedState = localStorage.getItem('sidebarExpanded');
+            if (savedState !== null) {
+                sidebarExpanded = savedState === 'true';
+                if (!sidebarExpanded) {                    // Apply collapsed state without calling toggleSidebar to avoid double toggle
+                    const sidebar = document.getElementById('sidebar');
+                    const mainContent = document.getElementById('main-content');
+                    
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.add('sidebar-collapsed');
+                }
+            }
+            
+            // Add event listener to hamburger button
+            document.getElementById('sidebar-toggle')?.addEventListener('click', toggleSidebar);
+        });        // Mobile menu functionality
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            const isOpen = sidebar.classList.contains('mobile-open');
+            
+            if (isOpen) {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('show');
+            } else {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('show');
+            }
+        }
+        
+        document.getElementById('mobile-menu-toggle')?.addEventListener('click', toggleMobileMenu);
+        
+        // Close mobile menu when clicking overlay
+        document.getElementById('mobile-overlay')?.addEventListener('click', toggleMobileMenu);        // Hide mobile menu on window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.remove('mobile-open');
+                sidebar.classList.remove('hidden');
+                overlay.classList.remove('show');
+            } else {
+                sidebar.classList.remove('mobile-open');
+                sidebar.classList.add('hidden');
+                overlay.classList.remove('show');
+            }
+        });
 
         // Função global para carregar menu dinamicamente baseado nas permissões do usuário
         window.loadSidebarMenu = function() {
@@ -220,16 +559,47 @@
                                 } else {
                                     link.href = 'javascript:void(0)';  // Link desabilitado
                                     link.className = 'sidebar-item opacity-60 cursor-not-allowed';
+                                }                                // Montar o link com ícone e texto
+                                link.title = page.nome_pagina; // Para tooltip quando colapsado                                  // Criar div para o ícone
+                                const iconDiv = document.createElement('div');
+                                iconDiv.className = 'sidebar-icon';
+                                
+                                // Criar elemento i para Material Design Icons
+                                const iconElement = document.createElement('i');
+                                iconElement.className = 'text-xl'; // Tamanho do ícone (equivalente a w-6 h-6)
+                                
+                                if (page.icone && page.icone.trim()) {
+                                    // Verificar se é uma classe MDI válida
+                                    if (page.icone.startsWith('mdi-')) {
+                                        iconElement.classList.add('mdi', page.icone);
+                                        console.log(`MDI icon for ${page.nome_pagina}:`, page.icone);
+                                    } else {
+                                        // Fallback para ícones antigos (SVG paths) - tentar converter para MDI
+                                        console.warn(`Ícone antigo detectado para ${page.nome_pagina}, usando ícone padrão`);
+                                        iconElement.classList.add('mdi', 'mdi-file-document-outline');
+                                    }
+                                } else {
+                                    // Ícone padrão se não houver ícone específico
+                                    iconElement.classList.add('mdi', 'mdi-file-document-outline');
                                 }
                                 
-                                // Montar o link com ícone e texto
-                                link.innerHTML = `
-                                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        ${page.icone}
-                                    </svg>
-                                    <span>${page.flg_ativo ? page.nome_pagina : page.nome_pagina + ' (' + page.mensagem_manutencao + ')'}</span>
-                                    ${!page.flg_ativo ? '<span class="ml-1 text-yellow-500"><svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></span>' : ''}
-                                `;
+                                iconDiv.appendChild(iconElement);
+                                
+                                // Criar span para o texto
+                                const textSpan = document.createElement('span');
+                                textSpan.className = 'sidebar-text';
+                                textSpan.textContent = page.flg_ativo ? page.nome_pagina : page.nome_pagina + ' (' + page.mensagem_manutencao + ')';
+                                  // Adicionar elementos ao link
+                                link.appendChild(iconDiv);
+                                link.appendChild(textSpan);
+                                
+                                // Adicionar ícone de aviso para páginas em manutenção
+                                if (!page.flg_ativo) {
+                                    const warningIcon = document.createElement('span');
+                                    warningIcon.className = 'ml-1 text-yellow-500 sidebar-text';
+                                    warningIcon.innerHTML = '<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+                                    link.appendChild(warningIcon);
+                                }
                                 
                                 // Adicionar evento para páginas em manutenção
                                 if (!page.flg_ativo) {

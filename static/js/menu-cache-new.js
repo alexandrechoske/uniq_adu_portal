@@ -255,7 +255,8 @@ class MenuCache {
             
             pages.forEach((page, index) => {
                 console.log(`[MenuCache] Renderizando página ${index + 1}:`, page);
-                  const link = document.createElement('a');
+                
+                const link = document.createElement('a');
                 
                 // Se a página está ativa ou em manutenção
                 if (page.flg_ativo) {
@@ -266,37 +267,16 @@ class MenuCache {
                     link.className = 'sidebar-item opacity-60 cursor-not-allowed';
                 }
                 
-                // Adicionar title para tooltip quando sidebar estiver colapsada
-                link.title = page.nome_pagina;                // Criar elementos separadamente para evitar problemas com template literals
-                const iconDiv = document.createElement('div');
-                iconDiv.className = 'sidebar-icon';
-                
-                // Criar elemento i para Material Design Icons
-                const iconElement = document.createElement('i');
-                iconElement.className = 'text-xl'; // Tamanho do ícone
-                
-                if (page.icone && page.icone.trim()) {
-                    // Verificar se é uma classe MDI válida
-                    if (page.icone.startsWith('mdi-')) {
-                        iconElement.classList.add('mdi', page.icone);
-                        console.log(`[MenuCache] MDI icon for ${page.nome_pagina}:`, page.icone);
-                    } else {
-                        // Fallback para ícones antigos (SVG paths) - usar ícone padrão
-                        console.warn(`[MenuCache] Ícone antigo detectado para ${page.nome_pagina}, usando ícone padrão`);
-                        iconElement.classList.add('mdi', 'mdi-file-document-outline');
-                    }
-                } else {
-                    // Ícone padrão se não houver ícone específico
-                    iconElement.classList.add('mdi', 'mdi-file-document-outline');
-                }
-                
-                iconDiv.appendChild(iconElement);
+                // Criar elementos separadamente para evitar problemas com template literals
+                const iconSvg = document.createElement('div');
+                iconSvg.className = 'sidebar-icon';
+                iconSvg.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">' + page.icone + '</svg>';
                 
                 const textSpan = document.createElement('span');
                 textSpan.className = 'sidebar-text';
                 textSpan.textContent = page.flg_ativo ? page.nome_pagina : page.nome_pagina + ' (' + page.mensagem_manutencao + ')';
                 
-                link.appendChild(iconDiv);
+                link.appendChild(iconSvg);
                 link.appendChild(textSpan);
                 
                 // Adicionar ícone de aviso para páginas em manutenção

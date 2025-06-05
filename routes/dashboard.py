@@ -290,7 +290,7 @@ def index(**kwargs):
         df_canal = df['diduimp_canal'].value_counts().reset_index()
         df_canal.columns = ['Canal', 'Quantidade']
         
-        colors = ['#28a745', '#007BFF', '#6c757d', '#0056b3']  # Different colors for different statuses
+        colors = ['#28a745', "#FF0000", "#ffee00", "#ffffff"]  # Different colors for different statuses
         
         chart_canal = go.Figure()
         
@@ -371,6 +371,7 @@ def operations():
     
     response = supabase.table('importacoes_processos')\
         .select('*')\
+        .neq('situacao', 'Despacho Cancelado')\
         .order('data_abertura', desc=True)\
         .range((page-1)*per_page, page*per_page-1)\
         .execute()
@@ -403,10 +404,9 @@ def refresh():
                         user_companies = json.loads(user_companies)
                     except:
                         user_companies = [user_companies]
-                print(f"DEBUG: Processed user_companies: {user_companies}")
-
-        print("DEBUG: Building query")
-        query = supabase.table('importacoes_processos').select('*').order('data_abertura', desc=True)
+                print(f"DEBUG: Processed user_companies: {user_companies}")        
+                print("DEBUG: Building query")
+        query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').order('data_abertura', desc=True)
         if user_companies:
             query = query.in_('cliente_cpfcnpj', user_companies)
             print(f"DEBUG: Applied company filter: {user_companies}")
@@ -465,10 +465,8 @@ def chart_data():
                     try:
                         user_companies = json.loads(user_companies)
                     except:
-                        user_companies = [user_companies]
-
-        # Build query with client filter
-        query = supabase.table('importacoes_processos').select('*').order('data_abertura', desc=True)
+                        user_companies = [user_companies]        # Build query with client filter - exclude cancelled processes
+        query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').order('data_abertura', desc=True)
         if user_companies:
             query = query.in_('cliente_cpfcnpj', user_companies)
         

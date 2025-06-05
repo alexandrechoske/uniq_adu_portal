@@ -85,7 +85,7 @@ def get_paginas():
 
 @bp.route('/', methods=['GET'])
 @admin_required
-def index():
+def index(**kwargs):
     """
     Página de administração das páginas do portal
     """

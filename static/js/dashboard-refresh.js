@@ -16,68 +16,105 @@ function refreshDashboard() {
     countdown = 60;
     countdownElement.textContent = countdown;
     
-    // Chamar a API de atualização para buscar os dados mais recentes do Supabase
-    fetch('/dashboard/update-data', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Resposta da atualização:', data);
+    const currentTime = Math.floor(Date.now() / 1000); // Timestamp atual em segundos
+    const timeSinceLastFetch = currentTime - lastDatabaseFetch;
+    
+    // Verificar se precisa buscar dados do banco (a cada 5 minutos) ou usar cache
+    if (timeSinceLastFetch >= databaseFetchInterval || !cachedDashboardData) {
+        console.log('Buscando dados atualizados do banco de dados (intervalo de 5 minutos)');
         
-        // Agora, obter os dados dos gráficos atualizados em formato JSON
-        return fetch('/dashboard/chart-data');
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Atualizar KPIs
-            updateKPIs(data.kpis);
-            
-            // Atualizar gráficos
-            if (data.charts) {
-                try {
-                    console.log("Atualizando gráficos...");
-                    
-                    if (data.charts.chart_cliente) {
-                        updateChart('chart-cliente-container', data.charts.chart_cliente);
-                    }
-                    
-                    if (data.charts.chart_data) {
-                        updateChart('chart-data-container', data.charts.chart_data);
-                    }
-                    
-                    if (data.charts.chart_tipo) {
-                        updateChart('chart-tipo-container', data.charts.chart_tipo);
-                    }
-                    
-                    if (data.charts.chart_canal) {
-                        updateChart('chart-canal-container', data.charts.chart_canal);
-                    }                } catch (chartError) {
-                    console.error("Erro ao atualizar gráficos:", chartError);
-                    
-                    // Método alternativo: forçar atualização dos gráficos
-                    console.warn("Tentando forçar atualização dos gráficos...");
-                    forceUpdateCharts();
-                }
+        // Buscar dados frescos do banco
+        // Chamar a API de atualização para buscar os dados mais recentes do Supabase
+        fetch('/dashboard/update-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
             }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Resposta da atualização:', data);
             
-            // Atualizar timestamp
-            updateTimestamp(data.last_update);
+            // Agora, obter os dados dos gráficos atualizados em formato JSON
+            return fetch('/dashboard/chart-data');
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Atualizar cache
+                cachedDashboardData = data;
+                lastDatabaseFetch = currentTime;
+                console.log('Dados do banco atualizados e armazenados em cache');
+                
+                // Atualizar interface
+                updateDashboardInterface(data);
+            } else {
+                throw new Error('Falha ao obter dados do dashboard');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar dados do banco:', error);
             
-            console.log('Dashboard atualizado com sucesso');
-        } else {
-            console.error('Erro na resposta do servidor:', data);
+            // Se houver dados em cache, usar como fallback
+            if (cachedDashboardData) {
+                console.log('Usando dados em cache como fallback');
+                updateDashboardInterface(cachedDashboardData);
+            } else {
+                console.error('Nenhum dado disponível (nem fresco nem em cache)');
+                hideLoading();
+            }
+        });
+    } else {
+        console.log(`Usando dados em cache (última atualização há ${timeSinceLastFetch} segundos)`);
+        // Usar dados em cache
+        updateDashboardInterface(cachedDashboardData);
+    }
+}
+
+// Função auxiliar para atualizar a interface com os dados
+function updateDashboardInterface(data) {
+    if (data.status === 'success') {
+        // Atualizar KPIs
+        updateKPIs(data.kpis);
+        
+        // Atualizar gráficos
+        if (data.charts) {
+            try {
+                console.log("Atualizando gráficos...");
+                
+                if (data.charts.chart_cliente) {
+                    updateChart('chart-cliente-container', data.charts.chart_cliente);
+                }
+                
+                if (data.charts.chart_data) {
+                    updateChart('chart-data-container', data.charts.chart_data);
+                }
+                
+                if (data.charts.chart_tipo) {
+                    updateChart('chart-tipo-container', data.charts.chart_tipo);
+                }
+                
+                if (data.charts.chart_canal) {
+                    updateChart('chart-canal-container', data.charts.chart_canal);
+                }
+            } catch (chartError) {
+                console.error("Erro ao atualizar gráficos:", chartError);
+                
+                // Método alternativo: forçar atualização dos gráficos
+                console.warn("Tentando forçar atualização dos gráficos...");
+                forceUpdateCharts();
+            }
         }
         
-        hideLoading();
-    })
-    .catch(error => {
-        console.error('Erro ao atualizar dashboard:', error);
-        hideLoading();
-    });
+        // Atualizar timestamp
+        updateTimestamp(data.last_update);
+        
+        console.log('Dashboard atualizado com sucesso');
+    } else {
+        console.error('Erro na resposta do servidor:', data);
+    }
+    
+    hideLoading();
 }
 
 // Função para atualizar um gráfico Plotly
@@ -434,7 +471,12 @@ function forceUpdateCharts() {
 document.addEventListener('DOMContentLoaded', function() {
     // Elementos globais
     window.countdownElement = document.getElementById('countdown');
-    window.countdown = 60;    // Função de contagem regressiva
+    window.countdown = 60;
+    window.lastDatabaseFetch = 0; // Timestamp da última busca no banco
+    window.cachedDashboardData = null; // Cache dos dados do dashboard
+    window.databaseFetchInterval = 300; // 5 minutos = 300 segundos
+    
+    // Função de contagem regressiva
     function updateCountdown() {
         countdown--;
         countdownElement.textContent = countdown;

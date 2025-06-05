@@ -9,7 +9,7 @@ function hideLoading() {
 }
 
 // Função para atualizar a OnePage
-function refreshOnepage() {
+function refreshOnepage(forceUpdate = false) {
     showLoading();
     
     // Resetar contador global
@@ -17,7 +17,13 @@ function refreshOnepage() {
     if (window.countdownElement) {
         window.countdownElement.textContent = window.countdown;
     }
-      // Usar o sistema de cache para validar sessão
+    
+    // Verificar se deve buscar dados do banco (a cada 5 minutos) ou usar cache
+    const currentTime = Math.floor(Date.now() / 1000); // Timestamp atual em segundos
+    const timeSinceLastFetch = currentTime - (window.lastDatabaseFetch || 0);
+    const shouldFetchFromDatabase = forceUpdate || timeSinceLastFetch >= window.databaseFetchInterval || !window.cachedOnepageData;
+    
+    // Usar o sistema de cache para validar sessão
     const sessionValidPromise = window.menuCache ? 
         window.menuCache.validateSession() : 
         // Fallback para o método antigo se o cache não estiver disponível
@@ -592,7 +598,22 @@ function updateCountdown() {
         .then(data => {
             if (data.status === 'success') {
                 console.log("Sessão verificada, iniciando atualização da OnePage...");
-                refreshOnepage();
+                
+                // Verificar se deve buscar dados do banco (a cada 5 minutos) ou usar cache
+                const currentTime = Math.floor(Date.now() / 1000); // Timestamp atual em segundos
+                const timeSinceLastFetch = currentTime - window.lastDatabaseFetch;
+                
+                if (timeSinceLastFetch >= window.databaseFetchInterval || !window.cachedOnepageData) {
+                    console.log('Buscando dados frescos do banco de dados (intervalo de 5 minutos)');
+                    
+                    // Buscar dados frescos do banco
+                    refreshOnepage(true); // true = forçar busca no banco
+                } else {
+                    console.log(`Usando dados em cache (última atualização há ${timeSinceLastFetch} segundos)`);
+                    
+                    // Usar dados em cache, atualizando apenas a interface
+                    refreshOnepage(false); // false = usar cache se disponível
+                }
             } else {
                 // Se a sessão não for válida, recarregar apenas os componentes em vez da página inteira
                 window.countdown = 60; // Reiniciar contador
@@ -655,17 +676,40 @@ function reloadSidebarMenu() {
                 // Implementação simplificada do carregamento do menu
                 sidebarNav.innerHTML = '';
                 
-                // Adicionar as páginas ao menu
-                data.menu.forEach(page => {
+                // Adicionar as páginas ao menu                data.menu.forEach(page => {
                     const link = document.createElement('a');
                     link.href = page.flg_ativo ? page.url_rota : 'javascript:void(0)';
                     link.className = `sidebar-item ${page.flg_ativo ? '' : 'opacity-60 cursor-not-allowed'}`;
-                    link.innerHTML = `
-                        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            ${page.icone}
-                        </svg>
-                        <span>${page.nome_pagina}${page.flg_ativo ? '' : ' (' + page.mensagem_manutencao + ')'}</span>
-                    `;
+                      // Create icon div
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'sidebar-icon';
+                    
+                    // Criar elemento i para Material Design Icons
+                    const iconElement = document.createElement('i');
+                    iconElement.className = 'text-xl'; // Tamanho do ícone
+                    
+                    if (page.icone && page.icone.trim()) {
+                        // Verificar se é uma classe MDI válida
+                        if (page.icone.startsWith('mdi-')) {
+                            iconElement.classList.add('mdi', page.icone);
+                        } else {
+                            // Fallback para ícones antigos
+                            iconElement.classList.add('mdi', 'mdi-file-document-outline');
+                        }
+                    } else {
+                        // Ícone padrão
+                        iconElement.classList.add('mdi', 'mdi-file-document-outline');
+                    }
+                    
+                    iconDiv.appendChild(iconElement);
+                    
+                    // Create text span
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'sidebar-text';
+                    textSpan.textContent = page.nome_pagina + (page.flg_ativo ? '' : ' (' + page.mensagem_manutencao + ')');
+                    
+                    link.appendChild(iconDiv);
+                    link.appendChild(textSpan);
                     sidebarNav.appendChild(link);
                 });
             }
@@ -679,6 +723,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar elemento de contagem e configurações
     window.countdownElement = document.getElementById('countdown');
     window.countdown = 60;
+    
+    // Configuração para cache de dados
+    window.lastDatabaseFetch = 0; // Timestamp da última busca no banco
+    window.cachedOnepageData = null; // Cache dos dados do dashboard
+    window.databaseFetchInterval = 300; // 5 minutos = 300 segundos
     
     // Iniciar contador
     setInterval(updateCountdown, 1000);

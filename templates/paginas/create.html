@@ -50,39 +50,79 @@
                        placeholder="/exemplo">
                 <p class="mt-1 text-sm text-gray-500">Caminho da URL para a página (ex: /dashboard, /usuarios)</p>
             </div>
-            
-            <!-- Ícone SVG -->
+              <!-- Ícone MDI -->
             <div class="mb-6">
-                <label for="icone" class="block text-sm font-medium text-gray-700 mb-1">Código do Ícone SVG</label>
-                <textarea id="icone" name="icone" rows="3" required
+                <label for="icone" class="block text-sm font-medium text-gray-700 mb-1">Ícone MDI</label>
+                <input type="text" id="icone" name="icone" required
                        class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                       placeholder='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>'></textarea>
-                <p class="mt-1 text-sm text-gray-500">Cole o código SVG do ícone (apenas a tag path).</p>
+                       placeholder="mdi-home"
+                       value="mdi-file-document-outline">
+                <p class="mt-1 text-sm text-gray-500">Digite o nome da classe MDI (ex: mdi-home, mdi-account, mdi-chart-line).</p>
                 
                 <div class="mt-3">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Ícones comuns:</label>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <button type="button" onclick="setIcon(this.dataset.icon)" data-icon='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>' class="flex items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ícones comuns (clique para selecionar):</label>
+                    <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+                        <button type="button" onclick="setMdiIcon('mdi-home')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-home text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Home</span>
                         </button>
-                        <button type="button" onclick="setIcon(this.dataset.icon)" data-icon='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>' class="flex items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                            </svg>
+                        <button type="button" onclick="setMdiIcon('mdi-account')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-account text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Usuário</span>
                         </button>
-                        <button type="button" onclick="setIcon(this.dataset.icon)" data-icon='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>' class="flex items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                            </svg>
+                        <button type="button" onclick="setMdiIcon('mdi-chart-line')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-chart-line text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Gráficos</span>
                         </button>
-                        <button type="button" onclick="setIcon(this.dataset.icon)" data-icon='<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>' class="flex items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
+                        <button type="button" onclick="setMdiIcon('mdi-file-document-outline')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-file-document-outline text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Documento</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-cog')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-cog text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Config</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-database')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-database text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Dados</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-shield-account')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-shield-account text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Segurança</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-email')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-email text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Email</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-calendar')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-calendar text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Agenda</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-folder')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-folder text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Pastas</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-view-dashboard')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-view-dashboard text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Dashboard</span>
+                        </button>
+                        <button type="button" onclick="setMdiIcon('mdi-truck')" class="flex flex-col items-center justify-center p-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            <i class="mdi mdi-truck text-xl text-gray-700"></i>
+                            <span class="text-xs mt-1">Logística</span>
                         </button>
                     </div>
+                    
+                    <div class="mt-3 p-3 bg-blue-50 rounded-md">
+                        <h4 class="font-medium text-sm text-blue-800">Preview do ícone selecionado:</h4>
+                        <div class="flex items-center mt-2">
+                            <i id="iconPreview" class="mdi mdi-file-document-outline text-2xl text-blue-600 mr-2"></i>
+                            <span id="iconName" class="text-sm text-blue-700">mdi-file-document-outline</span>
+                        </div>
+                    </div>
+                    
+                    <p class="mt-2 text-xs text-gray-500">
+                        Visite <a href="https://materialdesignicons.com/" target="_blank" class="text-blue-500 hover:underline">materialdesignicons.com</a> para ver todos os ícones disponíveis.
+                    </p>
                 </div>
             </div>
             
@@ -149,8 +189,49 @@
 </div>
 
 <script>
-    function setIcon(iconPath) {
-        document.getElementById('icone').value = iconPath;
+    function setMdiIcon(iconClass) {
+        // Atualizar o campo de input
+        document.getElementById('icone').value = iconClass;
+        
+        // Atualizar o preview
+        const preview = document.getElementById('iconPreview');
+        const nameSpan = document.getElementById('iconName');
+        
+        if (preview && nameSpan) {
+            // Remover classes antigas
+            preview.className = 'mdi text-2xl text-blue-600 mr-2';
+            // Adicionar nova classe
+            preview.classList.add(iconClass);
+            nameSpan.textContent = iconClass;
+        }
     }
+    
+    // Atualizar preview quando o usuário digita
+    document.addEventListener('DOMContentLoaded', function() {
+        const iconeInput = document.getElementById('icone');
+        const preview = document.getElementById('iconPreview');
+        const nameSpan = document.getElementById('iconName');
+        
+        if (iconeInput && preview && nameSpan) {
+            iconeInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value) {
+                    // Remover classes antigas
+                    preview.className = 'mdi text-2xl text-blue-600 mr-2';
+                    // Adicionar nova classe se for válida
+                    if (value.startsWith('mdi-')) {
+                        preview.classList.add(value);
+                        nameSpan.textContent = value;
+                    } else {
+                        preview.classList.add('mdi-file-document-outline');
+                        nameSpan.textContent = 'mdi-file-document-outline (padrão - digite mdi-<nome>)';
+                    }
+                } else {
+                    preview.className = 'mdi mdi-file-document-outline text-2xl text-blue-600 mr-2';
+                    nameSpan.textContent = 'mdi-file-document-outline';
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}

@@ -4,25 +4,15 @@
 
 {% block extra_css %}
 <style>
-    :root {
-        --color-primary: #007BFF;
-        --color-primary-dark: #0056b3;
-        --color-success: #28a745;
-        --color-neutral: #6c757d;
-        --color-bg: #FFFFFF;
-        --color-text: #000000;
-    }
-
+    /* Remove color overrides to use base.html brand colors */
     body {
         font-family: 'Open Sans', Arial, sans-serif;
         background-color: #f8f9fa;
-    }
-
-    .metric-card {
+    }    .metric-card {
         border-radius: 0.5rem;
         transition: all 0.2s;
         border: 1px solid #e5e7eb;
-        background-color: var(--color-bg);
+        background-color: #FFFFFF;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
     
@@ -72,14 +62,12 @@
         background-color: rgba(139, 92, 246, 0.1);
         border-color: rgba(139, 92, 246, 0.2);
         color: #7c3aed;
-    }
-
-    .metric-value {
+    }    .metric-value {
         font-size: 1.5rem;
         font-weight: 700;
         line-height: 1.2;
         margin: 0;
-        color: var(--color-text);
+        color: #000000;
     }
     
     .metric-title {
@@ -94,9 +82,7 @@
         border-radius: 9999px;
         font-size: 0.75rem;
         font-weight: 500;
-    }
-
-    .metric-badge-up {
+    }    .metric-badge-up {
         background-color: rgba(16, 185, 129, 0.1);
         color: #059669;
     }
@@ -128,20 +114,16 @@
         font-weight: 600;
         padding: 0.25rem 0.5rem;
         border-radius: 1rem;
-    }
-
-    .variation-up {
-        color: var(--color-success);
+    }    .variation-up {
+        color: #28a745;
         background-color: rgba(40, 167, 69, 0.1);
     }
 
     .variation-down {
         color: #dc3545;
         background-color: rgba(220, 53, 69, 0.1);
-    }
-
-    .chart-card {
-        background-color: var(--color-bg);
+    }    .chart-card {
+        background-color: #FFFFFF;
         border-radius: 1rem;
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -175,9 +157,7 @@
     .loading-overlay {
         background-color: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(4px);
-    }
-
-    .countdown {
+    }    .countdown {
         font-family: 'Roboto Mono', monospace;
         font-size: 0.875rem;
         padding: 0.5rem 1rem;
@@ -186,11 +166,11 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        color: var(--color-primary);
+        color: #007bff;
     }
 
     .countdown-text {
-        color: var(--color-neutral);
+        color: #6c757d;
     }
 
     /* Responsive adjustments */
@@ -212,11 +192,8 @@
     <div class="mb-6">
         <div class="flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-slate-800 mb-2">Dashboard Importações</h1>
-                <div class="flex items-center text-sm text-slate-600">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+                <h1 class="text-2xl font-bold text-slate-800 mb-2">Dashboard Importações</h1>                <div class="flex items-center text-sm text-slate-600">
+                    <i class="mdi mdi-clock-outline w-4 h-4 mr-1"></i>
                     <span>Última atualização: {{ last_update }}</span>
                     <div class="ml-4 flex items-center">
                         <div class="w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse"></div>
@@ -224,21 +201,15 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center space-x-4">
-                <div class="countdown flex items-center gap-2 text-sm text-slate-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+            <div class="flex items-center space-x-4">                <div class="countdown flex items-center gap-2 text-sm text-slate-600">
+                    <i class="mdi mdi-clock-outline w-4 h-4"></i>
                     <span class="countdown-text">Próxima atualização em:</span>
                     <span id="countdown">60</span>s
                 </div>
                 <button
                     id="refresh-button"
-                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-                    onclick="refreshDashboard()">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"                    onclick="refreshDashboard()">
+                    <i class="mdi mdi-refresh w-4 h-4"></i>
                     <span>Atualizar</span>
                 </button>
             </div>
@@ -249,9 +220,7 @@
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
                         <div class="p-2 rounded-lg border bg-blue-50 text-blue-600 border-blue-200">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
+                            <i class="mdi mdi-check-circle-outline w-5 h-5 text-blue-600 flex items-center justify-center text-xl"></i>
                         </div>
                         <div>
                             <p class="text-sm font-medium text-slate-600 mb-1">Total de Operações</p>
@@ -264,9 +233,7 @@
                         </span>
                         <div class="group relative">
                             <div class="p-1 rounded-full hover:bg-slate-100 cursor-help transition-colors">
-                                <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                                <i class="mdi mdi-information-outline w-4 h-4 text-slate-400 hover:text-slate-600 flex items-center justify-center"></i>
                             </div>
                             <!-- Tooltip -->
                             <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-slate-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-[9999] pointer-events-none">
@@ -282,24 +249,19 @@
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
                         <div class="p-2 rounded-lg border bg-orange-50 text-orange-600 border-orange-200">
-                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
+                            <i class="mdi mdi-folder-open-outline w-5 h-5 text-orange-600 flex items-center justify-center text-xl"></i>
                         </div>
                         <div>
                             <p class="text-sm font-medium text-slate-600 mb-1">Processos Abertos</p>
                             <p class="metric-value text-xl font-bold text-slate-900">{{ processos_abertos }}</p>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
+                    </div>                    <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.abertos_var.startswith('+') else 'variation-down' }}">
                             {{ variations.abertos_var }}
                         </span>
                         <div class="group relative">
                             <div class="p-1 rounded-full hover:bg-slate-100 cursor-help transition-colors">
-                                <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                                <i class="mdi mdi-information-outline w-4 h-4 text-slate-400 hover:text-slate-600"></i>
                             </div>
                             <!-- Tooltip -->
                             <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-slate-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-[9999] pointer-events-none">
@@ -315,24 +277,19 @@
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
                         <div class="p-2 rounded-lg border bg-green-50 text-green-600 border-green-200">
-                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
+                            <i class="mdi mdi-plus-circle-outline w-5 h-5 text-green-600 flex items-center justify-center text-xl"></i>
                         </div>
                         <div>
                             <p class="text-sm font-medium text-slate-600 mb-1">Novos (7 dias)</p>
                             <p class="metric-value text-xl font-bold text-slate-900">{{ novos_semana }}</p>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
+                    </div>                    <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.novos_var.startswith('+') else 'variation-down' }}">
                             {{ variations.novos_var }}
                         </span>
                         <div class="group relative">
                             <div class="p-1 rounded-full hover:bg-slate-100 cursor-help transition-colors">
-                                <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                                <i class="mdi mdi-information-outline w-4 h-4 text-slate-400 hover:text-slate-600"></i>
                             </div>
                             <!-- Tooltip -->
                             <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-slate-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-[9999] pointer-events-none">
@@ -351,24 +308,19 @@
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
                         <div class="p-2 rounded-lg border bg-purple-50 text-purple-600 border-purple-200">
-                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
+                            <i class="mdi mdi-truck-fast-outline w-5 h-5 text-purple-600 flex items-center justify-center text-xl"></i>
                         </div>
                         <div>
                             <p class="text-sm font-medium text-slate-600 mb-1">Em Trânsito</p>
                             <p class="metric-value text-xl font-bold text-slate-900">{{ em_transito }}</p>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
+                    </div>                    <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.transito_var.startswith('+') else 'variation-down' }}">
                             {{ variations.transito_var }}
                         </span>
                         <div class="group relative">
                             <div class="p-1 rounded-full hover:bg-slate-100 cursor-help transition-colors">
-                                <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                                <i class="mdi mdi-information-outline w-4 h-4 text-slate-400 hover:text-slate-600"></i>
                             </div>
                             <!-- Tooltip -->
                             <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-slate-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-[9999] pointer-events-none">
@@ -385,25 +337,20 @@
             <div class="p-4">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-3">
-                        <div class="p-2 rounded-lg border bg-amber-50 text-amber-600 border-amber-200">
-                            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
+                        <div class="p-2 rounded-lg border bg-teal-50 text-teal-600 border-teal-200">
+                            <i class="mdi mdi-calendar-clock w-5 h-5 text-teal-600 flex items-center justify-center text-xl"></i>
                         </div>
                         <div>
                             <p class="text-sm font-medium text-slate-600 mb-1">A chegar nessa semana</p>
                             <p class="metric-value text-xl font-bold text-slate-900">{{ a_chegar_semana }}</p>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-2">
+                    </div>                    <div class="flex items-center gap-2">
                         <span class="metric-variation {{ 'variation-up' if variations.chegar_var.startswith('+') else 'variation-down' }}">
                             {{ variations.chegar_var }}
                         </span>
                         <div class="group relative">
                             <div class="p-1 rounded-full hover:bg-slate-100 cursor-help transition-colors">
-                                <svg class="w-4 h-4 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
+                                <i class="mdi mdi-information-outline w-4 h-4 text-slate-400 hover:text-slate-600"></i>
                             </div>
                             <!-- Tooltip -->
                             <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-slate-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-[9999] pointer-events-none">

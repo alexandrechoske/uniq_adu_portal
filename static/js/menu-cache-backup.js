@@ -202,6 +202,14 @@ class MenuCache {
             if (response.ok) {
                 const menuData = await response.json();
                 console.log('[MenuCache] Menu recebido do servidor:', menuData);
+                console.log('[MenuCache] Estrutura dos dados:', {
+                    status: menuData.status,
+                    success: menuData.success,
+                    data: menuData.data,
+                    pages: menuData.pages,
+                    dataLength: Array.isArray(menuData.data) ? menuData.data.length : 'não é array',
+                    pagesLength: Array.isArray(menuData.pages) ? menuData.pages.length : 'não é array'
+                });
                 
                 // Salva no cache
                 this.saveToCache(this.CACHE_KEY_MENU, menuData);
@@ -231,6 +239,7 @@ class MenuCache {
         }
 
         console.log('[MenuCache] Iniciando renderização do menu');
+        console.log('[MenuCache] Data recebida:', menuData);
 
         // Extrair páginas dos dados recebidos
         let pages = [];
@@ -255,7 +264,8 @@ class MenuCache {
             
             pages.forEach((page, index) => {
                 console.log(`[MenuCache] Renderizando página ${index + 1}:`, page);
-                  const link = document.createElement('a');
+                
+                const link = document.createElement('a');
                 
                 // Se a página está ativa ou em manutenção
                 if (page.flg_ativo) {
@@ -266,37 +276,16 @@ class MenuCache {
                     link.className = 'sidebar-item opacity-60 cursor-not-allowed';
                 }
                 
-                // Adicionar title para tooltip quando sidebar estiver colapsada
-                link.title = page.nome_pagina;                // Criar elementos separadamente para evitar problemas com template literals
-                const iconDiv = document.createElement('div');
-                iconDiv.className = 'sidebar-icon';
-                
-                // Criar elemento i para Material Design Icons
-                const iconElement = document.createElement('i');
-                iconElement.className = 'text-xl'; // Tamanho do ícone
-                
-                if (page.icone && page.icone.trim()) {
-                    // Verificar se é uma classe MDI válida
-                    if (page.icone.startsWith('mdi-')) {
-                        iconElement.classList.add('mdi', page.icone);
-                        console.log(`[MenuCache] MDI icon for ${page.nome_pagina}:`, page.icone);
-                    } else {
-                        // Fallback para ícones antigos (SVG paths) - usar ícone padrão
-                        console.warn(`[MenuCache] Ícone antigo detectado para ${page.nome_pagina}, usando ícone padrão`);
-                        iconElement.classList.add('mdi', 'mdi-file-document-outline');
-                    }
-                } else {
-                    // Ícone padrão se não houver ícone específico
-                    iconElement.classList.add('mdi', 'mdi-file-document-outline');
-                }
-                
-                iconDiv.appendChild(iconElement);
+                // Criar elementos separadamente para evitar problemas com template literals
+                const iconSvg = document.createElement('div');
+                iconSvg.className = 'sidebar-icon';
+                iconSvg.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">${page.icone}</svg>`;
                 
                 const textSpan = document.createElement('span');
                 textSpan.className = 'sidebar-text';
                 textSpan.textContent = page.flg_ativo ? page.nome_pagina : page.nome_pagina + ' (' + page.mensagem_manutencao + ')';
                 
-                link.appendChild(iconDiv);
+                link.appendChild(iconSvg);
                 link.appendChild(textSpan);
                 
                 // Adicionar ícone de aviso para páginas em manutenção
@@ -316,9 +305,39 @@ class MenuCache {
                 sidebarNav.appendChild(link);
             });
 
-            console.log('[MenuCache] Menu renderizado com sucesso');        } else {
+            console.log('[MenuCache] Menu renderizado com sucesso');
+        } else {
             console.warn('[MenuCache] Nenhuma página disponível para renderização');
             sidebarNav.innerHTML = '<div class="text-center text-gray-500 py-2"><span class="sidebar-text">Nenhuma página disponível.</span></div>';
+        }
+    }
+
+    /**
+     * Atualiza cache de permissões
+     */
+    async updatePermissions() {
+        try {
+            console.log('[MenuCache] Atualizando permissões...');
+            const response = await fetch('/paginas/permissions', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            if (response.ok) {
+                const permissionsData = await response.json();
+                this.saveToCache(this.CACHE_KEY_PERMISSIONS, permissionsData);
+                console.log('[MenuCache] Permissões atualizadas');
+                return true;
+            } else {
+                console.error('[MenuCache] Erro ao buscar permissões');
+                return false;
+            }
+        } catch (error) {
+            console.error('[MenuCache] Erro ao atualizar permissões:', error);
+            return false;
         }
     }
 
@@ -330,6 +349,18 @@ class MenuCache {
         this.clearCache();
         this.menuLoaded = false;
         await this.loadMenu();
+    }
+
+    /**
+     * Verifica se tem acesso a uma página específica
+     */
+    hasPageAccess(pageUrl) {
+        const cachedMenu = this.getFromCache(this.CACHE_KEY_MENU);
+        if (!cachedMenu) return false;
+
+        const pages = cachedMenu.data.data || cachedMenu.data;
+        const page = pages.find(p => p.url_rota === pageUrl);
+        return page && page.flg_ativo;
     }
 }
 
@@ -366,8 +397,22 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[MenuCache] Menu carregado com sucesso');
         } catch (error) {
             console.error('[MenuCache] Erro ao carregar menu:', error);
+            
+            // Fallback: tentar usar a função global do base.html
+            if (typeof window.loadSidebarMenu === 'function') {
+                console.log('[MenuCache] Tentando fallback para função global');
+                window.loadSidebarMenu();
+            }
         }
     }, 100);
+});
+
+// Atualizar menu a cada mudança de página (se usando SPA)
+window.addEventListener('popstate', function() {
+    if (window.menuCache && window.menuCache.menuLoaded) {
+        console.log('[MenuCache] Página mudou, atualizando menu...');
+        window.menuCache.forceRefresh();
+    }
 });
 
 // Limpar cache ao fazer logout

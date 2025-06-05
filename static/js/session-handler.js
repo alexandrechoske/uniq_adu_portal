@@ -141,8 +141,7 @@ function loadMenuViaFetch() {
             // Adicionar as páginas ao menu
             data.menu.forEach(page => {
                 const link = document.createElement('a');
-                
-                if (page.flg_ativo) {
+                  if (page.flg_ativo) {
                     link.href = page.url_rota;
                     link.className = 'sidebar-item';
                 } else {
@@ -153,13 +152,36 @@ function loadMenuViaFetch() {
                         alert(`A página ${page.nome_pagina} está temporariamente em manutenção.`);
                     });
                 }
+                  // Create icon div
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'sidebar-icon';
                 
-                link.innerHTML = `
-                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        ${page.icone}
-                    </svg>
-                    <span>${page.nome_pagina}${page.flg_ativo ? '' : ' (' + page.mensagem_manutencao + ')'}</span>
-                `;
+                // Criar elemento i para Material Design Icons
+                const iconElement = document.createElement('i');
+                iconElement.className = 'text-xl'; // Tamanho do ícone
+                
+                if (page.icone && page.icone.trim()) {
+                    // Verificar se é uma classe MDI válida
+                    if (page.icone.startsWith('mdi-')) {
+                        iconElement.classList.add('mdi', page.icone);
+                    } else {
+                        // Fallback para ícones antigos
+                        iconElement.classList.add('mdi', 'mdi-file-document-outline');
+                    }
+                } else {
+                    // Ícone padrão
+                    iconElement.classList.add('mdi', 'mdi-file-document-outline');
+                }
+                
+                iconDiv.appendChild(iconElement);
+                
+                // Create text span
+                const textSpan = document.createElement('span');
+                textSpan.className = 'sidebar-text';
+                textSpan.textContent = page.nome_pagina + (page.flg_ativo ? '' : ' (' + page.mensagem_manutencao + ')');
+                
+                link.appendChild(iconDiv);
+                link.appendChild(textSpan);
                 
                 sidebarNav.appendChild(link);
             });
