@@ -3,15 +3,25 @@
 {% block title %}Usuários - Portal UniSystem{% endblock %}
 
 {% block content %}
-<div class="p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Usuários</h2>        <a href="{{ url_for('usuarios.novo') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <i class="mdi mdi-plus w-5 h-5 mr-2"></i>
-            Novo Usuário
-        </a>
-    </div>
-
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+<div class="p-6">    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Usuários</h2>
+        <div class="flex items-center space-x-3">
+            <!-- Botão de Atualizar Lista -->
+            <a href="{{ url_for('usuarios.refresh') }}" 
+               class="inline-flex items-center px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200"
+               title="Forçar atualização da lista de usuários">
+                <i class="mdi mdi-refresh w-4 h-4 mr-2"></i>
+                Atualizar
+            </a>
+            <!-- Botão de Novo Usuário -->
+            <a href="{{ url_for('usuarios.novo') }}" 
+               class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <i class="mdi mdi-plus w-5 h-5 mr-2"></i>
+                Novo Usuário
+            </a>
+        </div>
+    </div>    <div class="bg-white rounded-lg shadow overflow-hidden">
+        {% if users %}
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -54,11 +64,34 @@
                                         class="text-red-600 hover:text-red-900">Excluir</button>
                             </div>
                         </td>
-                    </tr>
-                    {% endfor %}
+                    </tr>                    {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <!-- Mensagem quando não há usuários -->
+        <div class="text-center py-12">
+            <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <i class="mdi mdi-account-multiple-outline text-gray-400 text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Nenhum usuário encontrado</h3>
+            <p class="text-gray-500 mb-6">
+                A lista de usuários está vazia. Isso pode ser devido a um problema de conexão com o banco de dados.
+            </p>
+            <div class="flex justify-center space-x-3">
+                <a href="{{ url_for('usuarios.refresh') }}" 
+                   class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                    <i class="mdi mdi-refresh w-4 h-4 mr-2"></i>
+                    Tentar Novamente
+                </a>
+                <a href="{{ url_for('usuarios.novo') }}" 
+                   class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <i class="mdi mdi-plus w-4 h-4 mr-2"></i>
+                    Adicionar Primeiro Usuário
+                </a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -95,6 +128,23 @@ async function refreshPage() {
     // Reload the entire page to show updated data
     window.location.reload();
 }
+
+// Adicionar funcionalidade ao botão de atualizar
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshButton = document.querySelector('a[href*="/usuarios/refresh"]');
+    
+    if (refreshButton) {
+        refreshButton.addEventListener('click', function(e) {
+            // Adicionar estado de carregamento
+            const originalContent = this.innerHTML;
+            this.innerHTML = '<i class="mdi mdi-loading mdi-spin w-4 h-4 mr-2"></i>Atualizando...';
+            this.classList.add('pointer-events-none', 'opacity-75');
+            
+            // Permitir que o link funcione normalmente
+            // O estado será resetado quando a página recarregar
+        });
+    }
+});
 </script>
 
 {% endblock %}

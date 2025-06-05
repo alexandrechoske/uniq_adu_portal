@@ -143,7 +143,7 @@ def global_data():
         if user_role in ['admin', 'interno_unique']:
             try:
                 logger.info("Buscando dados de usuários...")
-                usuarios_response = supabase.table('usuarios').select('*').execute()
+                usuarios_response = supabase.table('users').select('*').execute()
                 global_data['usuarios'] = usuarios_response.data if usuarios_response.data else []
                 logger.info(f"Dados de usuários processados: {len(global_data['usuarios'])} registros")
             except Exception as e:

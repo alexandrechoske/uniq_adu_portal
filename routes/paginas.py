@@ -43,8 +43,8 @@ def check_session():
         
         # Opcional: Verificar se o usuário ainda existe no banco
         try:
-            response = supabase.table('usuarios').select('id, nome, email, ativo').eq('id', user_id).single().execute()
-            if not response.data or not response.data.get('ativo'):
+            response = supabase.table('users').select('id, name, email').eq('id', user_id).single().execute()
+            if not response.data:
                 logger.warning(f"Usuário {user_id} não encontrado ou inativo")
                 return jsonify({
                     'status': 'error',
@@ -61,7 +61,7 @@ def check_session():
             'message': 'Sessão válida',
             'user': {
                 'id': user_data.get('id'),
-                'nome': user_data.get('nome'),
+                'nome': user_data.get('name'),
                 'email': user_data.get('email')
             }
         }), 200

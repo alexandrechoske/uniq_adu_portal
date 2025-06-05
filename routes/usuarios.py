@@ -11,10 +11,8 @@ bp = Blueprint('usuarios', __name__)
 
 VALID_ROLES = ['admin', 'interno_unique', 'cliente_unique']
 
-@bp.route('/usuarios')
-@login_required
-@role_required(['admin'])
-def index():
+def carregar_usuarios():
+    """Função auxiliar para carregar usuários do banco de dados"""
     try:
         print("[DEBUG] Iniciando busca de usuários")
         
@@ -35,7 +33,7 @@ def index():
         
         if not users:
             print("[DEBUG] Nenhum usuário encontrado")
-            return render_template('usuarios/index.html', users=[])
+            return []
         
         for user in users:
             if not isinstance(user, dict):
@@ -79,13 +77,35 @@ def index():
             else:
                 user['agent_info'] = {'empresas': []}
         
-        return render_template('usuarios/index.html', users=users)
+        return users
     except Exception as e:
         print(f"[DEBUG] Erro ao carregar usuários: {str(e)}\nTipo do erro: {type(e)}")
-        import traceback
         print("[DEBUG] Traceback completo:")
         print(traceback.format_exc())
+        raise e
+
+@bp.route('/usuarios')
+@login_required
+@role_required(['admin'])
+def index():
+    try:
+        users = carregar_usuarios()
+        return render_template('usuarios/index.html', users=users)
+    except Exception as e:
         flash(f'Erro ao carregar usuários: {str(e)}', 'error')
+        return render_template('usuarios/index.html', users=[])
+
+@bp.route('/usuarios/refresh')
+@login_required
+@role_required(['admin'])
+def refresh():
+    """Endpoint para forçar atualização da lista de usuários"""
+    try:
+        users = carregar_usuarios()
+        flash('Lista de usuários atualizada com sucesso!', 'success')
+        return render_template('usuarios/index.html', users=users)
+    except Exception as e:
+        flash(f'Erro ao atualizar lista de usuários: {str(e)}', 'error')
         return render_template('usuarios/index.html', users=[])
 
 @bp.route('/usuarios/novo', methods=['GET'])
