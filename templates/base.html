@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniSystem - {% block title %}{% endblock %}</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet"><style>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
         /* Unique Aduaneira Brand Colors */
         :root {
             --color-primary: #1F406F;
@@ -16,10 +18,13 @@
             --color-primary-light: rgba(31, 64, 111, 0.1);
             --color-secondary-light: rgba(52, 152, 219, 0.1);
         }
-          body {
+        
+        body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
-        }/* Top Navigation Bar - Unique Aduaneira Brand Colors */
+        }
+        
+        /* Top Navigation Bar - Unique Aduaneira Brand Colors */
         .top-navbar {
             position: fixed;
             top: 0;
@@ -45,7 +50,8 @@
             align-items: center;
             gap: 1rem;
         }
-          .navbar-hamburger {
+        
+        .navbar-hamburger {
             background: transparent;
             border: none;
             color: var(--color-white);
@@ -69,7 +75,8 @@
             height: 2rem;
             width: auto;
         }
-          .navbar-title {
+        
+        .navbar-title {
             color: var(--color-white);
             font-size: 1.125rem;
             font-weight: 600;
@@ -88,7 +95,9 @@
             gap: 0.5rem;
             color: var(--color-white);
             font-size: 0.875rem;
-        }/* Mobile responsive adjustments */
+        }
+        
+        /* Mobile responsive adjustments */
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0 !important; /* Override sidebar margin on mobile */
@@ -121,10 +130,13 @@
             align-items: center;
             justify-content: center;
         }
+        
         .sidebar-icon svg {
             width: 1.5rem;
             height: 1.5rem;
-        }        /* Main content area adjustments - Optimized spacing */
+        }
+        
+        /* Main content area adjustments - Optimized spacing */
         .main-content {
             margin-left: 16rem; /* w-64 equivalent when sidebar expanded */
             transition: margin-left 0.3s ease;
@@ -144,7 +156,9 @@
             border-radius: 0.5rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
             overflow: hidden;
-        }/* Ensure icons render properly on all devices */
+        }
+        
+        /* Ensure icons render properly on all devices */
         svg {
             display: block;
             max-width: 100%;
@@ -162,9 +176,12 @@
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
             transition-duration: 200ms;
         }
+        
         .sidebar-item:hover {
             background-color: #f3f4f6;
-        }          /* Active sidebar item - Using brand colors */
+        }
+        
+        /* Active sidebar item - Using brand colors */
         .sidebar-item.active {
             background-color: var(--color-secondary-light);
             color: var(--color-primary);
@@ -175,9 +192,12 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
+        
         .animate-fadeIn {
             animation: fadeIn 0.5s ease-in-out;
-        }        /* Sidebar collapse styles */
+        }
+        
+        /* Sidebar collapse styles */
         .sidebar {
             transition: width 0.3s ease;
             width: 16rem; /* w-64 equivalent */
@@ -191,22 +211,29 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             overflow-y: auto; /* Enable scrolling for long menus */
         }
+        
         .sidebar.collapsed {
             width: 4rem; /* w-16 equivalent */
         }
+        
         .sidebar.collapsed .sidebar-text {
             display: none;
-        }.sidebar.collapsed .sidebar-item {
+        }
+        
+        .sidebar.collapsed .sidebar-item {
             justify-content: center;
             padding: 0.75rem 0.5rem;
         }
-          /* Remove hamburger button from sidebar header */
+        
+        /* Remove hamburger button from sidebar header */
         .sidebar-header {
             display: none;
         }
+        
         .sidebar.collapsed .sidebar-item {
             position: relative;
         }
+        
         .sidebar.collapsed .sidebar-item:hover::after {
             content: attr(title);
             position: absolute;
@@ -219,7 +246,8 @@
             border-radius: 0.375rem;
             white-space: nowrap;
             z-index: 1000;
-            margin-left: 0.75rem;            font-size: 0.875rem;
+            margin-left: 0.75rem;
+            font-size: 0.875rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             pointer-events: none;
         }
@@ -287,12 +315,12 @@
                 display: block;
             }
         }
-          /* Tooltip para itens quando sidebar está recolhida */
+        
+        /* Tooltip para itens quando sidebar está recolhida */
     </style>
-    {# O bloco extra_css agora está definido aqui para carregar estilos customizados #}
     {% block extra_css %}{% endblock %}
 </head>
-<body><body>
+<body>
     {% if session.get('user') %}
     <!-- Top Navigation Bar -->
     <header class="top-navbar">
@@ -310,7 +338,9 @@
                     <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
                     <h1 class="navbar-title">UniSystem - Portal Aduaneiro</h1>
                 </div>
-            </div>            <div class="navbar-right">
+            </div>
+            
+            <div class="navbar-right">
                 <!-- User info in top bar (desktop) -->
                 <div class="navbar-user-info hidden md:flex">
                     <div class="flex items-center gap-3">
@@ -374,21 +404,49 @@
                 </button>
             </div>
         </div>
-    </header>    <div class="flex">
+    </header>
+    
+    <div class="flex">
         <!-- Mobile overlay -->
         <div id="mobile-overlay" class="mobile-overlay"></div>
-          <!-- Sidebar -->
+        
+        <!-- Sidebar -->
         <aside id="sidebar" class="sidebar hidden lg:block">
             <!-- Navigation menu -->
             <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
-                <!-- Loading state -->
-                <div class="text-center text-gray-500 py-4">
-                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                    <span class="sidebar-text text-sm">Carregando menu...</span>
-                </div>
+            <!-- Dashboard -->
+            <a href="{{ url_for('dashboard.index') }}" 
+               class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                <i class="mdi mdi-view-dashboard text-xl"></i>
+                <span class="sidebar-text">Dashboard</span>
+            </a>
+
+            <!-- OnePage -->
+            <a href="{{ url_for('onepage.index') }}" 
+               class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
+                <i class="mdi mdi-file-document-multiple text-xl"></i>
+                <span class="sidebar-text">One Page</span>
+            </a>
+
+            <!-- Agente Unique (apenas para admin e cliente_unique) -->
+            {% if session.get('user', {}).get('role') in ['admin', 'cliente_unique'] %}
+            <a href="{{ url_for('agente.index') }}" 
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
+                <i class="mdi mdi-chat text-xl"></i>
+                <span class="sidebar-text">Agente Unique</span>
+            </a>
+            {% endif %}
+
+            <!-- Usuários (apenas para admins) -->
+            {% if session.get('user', {}).get('role') == 'admin' %}
+            <a href="{{ url_for('usuarios.index') }}" 
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}">
+                <i class="mdi mdi-account-group text-xl"></i>
+                <span class="sidebar-text">Usuários</span>
+            </a>
+            {% endif %}
             </nav>
         </aside>
-        
         <!-- Main content area -->
         <main id="main-content" class="main-content flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
             {% block content %}{% endblock %}
@@ -397,245 +455,10 @@
     {% else %}
     {% block auth_content %}{% endblock %}
     {% endif %}
-      {% block extra_js %}{% endblock %}
-      <script>
-        // Sidebar toggle functionality
-        let sidebarExpanded = true;
-          function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
-            const hamburgerBtn = document.getElementById('sidebar-toggle');
-              sidebarExpanded = !sidebarExpanded;
-            
-            if (sidebarExpanded) {
-                sidebar.classList.remove('collapsed');
-                mainContent.classList.remove('sidebar-collapsed');
-            } else {
-                sidebar.classList.add('collapsed');
-                mainContent.classList.add('sidebar-collapsed');
-            }
-            
-            // Store preference in localStorage
-            localStorage.setItem('sidebarExpanded', sidebarExpanded);
-        }
-          // Initialize sidebar state from localStorage
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedState = localStorage.getItem('sidebarExpanded');
-            if (savedState !== null) {
-                sidebarExpanded = savedState === 'true';
-                if (!sidebarExpanded) {                    // Apply collapsed state without calling toggleSidebar to avoid double toggle
-                    const sidebar = document.getElementById('sidebar');
-                    const mainContent = document.getElementById('main-content');
-                    
-                    sidebar.classList.add('collapsed');
-                    mainContent.classList.add('sidebar-collapsed');
-                }
-            }
-            
-            // Add event listener to hamburger button
-            document.getElementById('sidebar-toggle')?.addEventListener('click', toggleSidebar);
-        });        // Mobile menu functionality
-        function toggleMobileMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            const isOpen = sidebar.classList.contains('mobile-open');
-            
-            if (isOpen) {
-                sidebar.classList.remove('mobile-open');
-                overlay.classList.remove('show');
-            } else {
-                sidebar.classList.add('mobile-open');
-                overlay.classList.add('show');
-            }
-        }
-        
-        document.getElementById('mobile-menu-toggle')?.addEventListener('click', toggleMobileMenu);
-        
-        // Close mobile menu when clicking overlay
-        document.getElementById('mobile-overlay')?.addEventListener('click', toggleMobileMenu);        // Hide mobile menu on window resize
-        window.addEventListener('resize', function() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            
-            if (window.innerWidth >= 1024) {
-                sidebar.classList.remove('mobile-open');
-                sidebar.classList.remove('hidden');
-                overlay.classList.remove('show');
-            } else {
-                sidebar.classList.remove('mobile-open');
-                sidebar.classList.add('hidden');
-                overlay.classList.remove('show');
-            }
-        });
-
-        // Função global para carregar menu dinamicamente baseado nas permissões do usuário
-        window.loadSidebarMenu = function() {
-            console.log("Carregando menu lateral...");
-            const sidebarNav = document.getElementById('sidebar-nav');
-            if (!sidebarNav) {
-                console.error("Elemento sidebar-nav não encontrado! Não é possível carregar o menu.");
-                return;
-            }
-            
-            // Adicionando mensagem visual para indicar carregamento
-            sidebarNav.innerHTML = '<div class="text-center text-gray-500 py-2">Carregando menu...</div>';
-            
-            const currentRole = '{{ session.get("user", {}).get("role", "none") }}';
-            const currentEndpoint = '{{ request.endpoint }}';
-            console.log("Papel atual:", currentRole);
-            console.log("Endpoint atual:", currentEndpoint);
-            
-            // Primeiro verificar se a sessão está válida
-            console.log("Verificando sessão antes de carregar menu...");
-            fetch('/paginas/check-session', {
-                method: 'GET',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
-            })
-            .then(sessionResponse => {
-                console.log("Resposta de verificação de sessão:", sessionResponse.status);
-                if (!sessionResponse.ok) {
-                    if (sessionResponse.status === 401) {
-                        console.warn("Sessão expirada. Redirecionando para login...");
-                        window.location.href = '/login';
-                        throw new Error('Sessão expirada');
-                    }
-                    throw new Error('Erro na verificação da sessão');
-                }
-                return sessionResponse.json();
-            })
-            .then(sessionData => {
-                if (sessionData.status !== 'success') {
-                    throw new Error('Sessão inválida');
-                }
-                
-                console.log("Sessão verificada com sucesso. Carregando menu...");
-                console.log("Iniciando fetch para /paginas/api...");
-                
-                // Agora carregamos o menu com um timestamp para evitar cache
-                const timestamp = new Date().getTime();
-                return fetch(`/paginas/api?_=${timestamp}`, {
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    }
-                });
-            })
-            .then(response => {
-                console.log("Resposta recebida:", response.status);
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        // Sessão expirada, redirecionar para página de login
-                        console.warn("Sessão expirada. Redirecionando para login...");
-                        window.location.href = '/login';
-                        throw new Error('Sessão expirada. Redirecionando para login...');
-                    }
-                    throw new Error('Erro na resposta: ' + response.status);
-                }
-                console.log("Resposta OK, convertendo para JSON...");
-                return response.json();
-            }).then(data => {
-                    console.log("Dados recebidos:", data);
-                    if (data.status === 'success') {
-                        const pages = data.data;
-                        console.log(`Recebidas ${pages ? pages.length : 0} páginas do servidor`);
-                        
-                        // Limpar loader
-                        sidebarNav.innerHTML = '';
-                        
-                        // Construir links de navegação
-                        if (pages && pages.length > 0) {
-                            pages.forEach(page => {
-                                console.log("Processando página:", page.nome_pagina);
-                                // As páginas já foram filtradas pelo servidor, não precisamos filtrar novamente
-                                const link = document.createElement('a');
-                                
-                                // Se a página está ativa ou em manutenção
-                                if (page.flg_ativo) {
-                                    link.href = page.url_rota;
-                                    link.className = `sidebar-item ${currentEndpoint === page.id_pagina + '.index' ? 'active' : ''}`;
-                                } else {
-                                    link.href = 'javascript:void(0)';  // Link desabilitado
-                                    link.className = 'sidebar-item opacity-60 cursor-not-allowed';
-                                }                                // Montar o link com ícone e texto
-                                link.title = page.nome_pagina; // Para tooltip quando colapsado                                  // Criar div para o ícone
-                                const iconDiv = document.createElement('div');
-                                iconDiv.className = 'sidebar-icon';
-                                
-                                // Criar elemento i para Material Design Icons
-                                const iconElement = document.createElement('i');
-                                iconElement.className = 'text-xl'; // Tamanho do ícone (equivalente a w-6 h-6)
-                                
-                                if (page.icone && page.icone.trim()) {
-                                    // Verificar se é uma classe MDI válida
-                                    if (page.icone.startsWith('mdi-')) {
-                                        iconElement.classList.add('mdi', page.icone);
-                                        console.log(`MDI icon for ${page.nome_pagina}:`, page.icone);
-                                    } else {
-                                        // Fallback para ícones antigos (SVG paths) - tentar converter para MDI
-                                        console.warn(`Ícone antigo detectado para ${page.nome_pagina}, usando ícone padrão`);
-                                        iconElement.classList.add('mdi', 'mdi-file-document-outline');
-                                    }
-                                } else {
-                                    // Ícone padrão se não houver ícone específico
-                                    iconElement.classList.add('mdi', 'mdi-file-document-outline');
-                                }
-                                
-                                iconDiv.appendChild(iconElement);
-                                
-                                // Criar span para o texto
-                                const textSpan = document.createElement('span');
-                                textSpan.className = 'sidebar-text';
-                                textSpan.textContent = page.flg_ativo ? page.nome_pagina : page.nome_pagina + ' (' + page.mensagem_manutencao + ')';
-                                  // Adicionar elementos ao link
-                                link.appendChild(iconDiv);
-                                link.appendChild(textSpan);
-                                
-                                // Adicionar ícone de aviso para páginas em manutenção
-                                if (!page.flg_ativo) {
-                                    const warningIcon = document.createElement('span');
-                                    warningIcon.className = 'ml-1 text-yellow-500 sidebar-text';
-                                    warningIcon.innerHTML = '<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
-                                    link.appendChild(warningIcon);
-                                }
-                                
-                                // Adicionar evento para páginas em manutenção
-                                if (!page.flg_ativo) {
-                                    link.addEventListener('click', function(e) {
-                                        e.preventDefault();
-                                        alert(`A página ${page.nome_pagina} está temporariamente em manutenção.`);
-                                    });
-                                }
-                                
-                                sidebarNav.appendChild(link);
-                            });
-                        }
-                        
-                        // Se não tiver nenhuma página para mostrar
-                        if (sidebarNav.children.length === 0) {
-                            console.warn("Nenhuma página disponível para exibição");
-                            sidebarNav.innerHTML = '<div class="text-center text-gray-500 py-2">Nenhuma página disponível.</div>';
-                        }
-                    } else {
-                        console.error("Erro nos dados recebidos:", data);
-                        sidebarNav.innerHTML = '<div class="text-center text-red-500 py-2">Erro ao carregar o menu.</div>';
-                    }
-                })        .catch(error => {
-                    console.error('Erro ao carregar menu:', error);
-                    sidebarNav.innerHTML = '<div class="text-center text-red-500 py-2">Erro ao carregar o menu.</div>';
-                    
-                    // Adicionar link para a página de debug em caso de erro
-                    const debugLink = document.createElement('a');
-                    debugLink.href = '/debug';
-                    debugLink.className = 'block text-center text-blue-500 underline mt-2';
-                    debugLink.innerText = 'Acessar diagnóstico do sistema';
-                    sidebarNav.appendChild(debugLink);
-                });
-        }
-    </script>
-      <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
+    
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
     {% if session.get('user') %}
     <script>
         document.body.classList.add('logged-in');
@@ -644,50 +467,8 @@
     <!-- Script para gerenciamento de sessão -->
     <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>
     
-    <!-- Sistema de Cache para Menu -->
-    <script src="{{ url_for('static', filename='js/menu-cache.js') }}"></script>
-      <!-- Sistema de Testes (apenas em desenvolvimento) -->
-    {% if config.DEBUG %}
-    <script src="{{ url_for('static', filename='js/menu-test.js') }}"></script>
-    {% endif %}
-    {% endif %}
-    
-    <!-- Inicialização automática para usuários logados -->
-    {% if session.get('user') %}
-    <script>
-        // Aguarda o carregamento completo da página e dos scripts
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Base] Usuário logado detectado, aguardando inicialização do cache...');
-            
-            // Aguarda o sistema de cache estar pronto
-            function waitForCache() {
-                if (window.menuCache) {
-                    console.log('[Base] Sistema de cache disponível');
-                    return Promise.resolve();
-                } else {
-                    console.log('[Base] Aguardando sistema de cache...');
-                    return new Promise(resolve => {
-                        setTimeout(() => waitForCache().then(resolve), 100);
-                    });
-                }
-            }
-            
-            // Inicializa o menu usando o cache
-            waitForCache().then(() => {
-                console.log('[Base] Inicializando menu via cache...');
-                // O menu-cache.js já inicializa automaticamente no DOMContentLoaded
-                // Apenas garantimos que está funcionando
-                if (!window.menuCache.menuLoaded) {
-                    setTimeout(() => {
-                        if (!window.menuCache.menuLoaded) {
-                            console.log('[Base] Forçando carregamento do menu...');
-                            window.menuCache.loadMenu();
-                        }
-                    }, 500);
-                }
-            });
-        });
-    </script>
+    <!-- Script para gerenciamento da sidebar (sem sistema de cache) -->
+    <script src="{{ url_for('static', filename='js/sidebar-manager.js') }}"></script>
     {% endif %}
 </body>
 </html>

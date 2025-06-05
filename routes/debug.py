@@ -33,3 +33,45 @@ def log_session():
         'status': 'success',
         'session': session_data
     }
+
+@bp.route('/check-paginas-table')
+def check_paginas_table():
+    """
+    Verifica o estado da tabela paginas_portal no Supabase
+    """
+    from extensions import supabase
+    
+    try:
+        # Verificar se a tabela existe tentando consultar ela
+        response = supabase.table('paginas_portal').select('*').execute()
+        
+        table_info = {
+            'table_exists': True,
+            'total_records': len(response.data) if response.data else 0,
+            'records': response.data if response.data else [],
+            'status': 'success'
+        }
+        
+        # Se não há registros, mostrar estrutura esperada
+        if not response.data:
+            table_info['expected_structure'] = {
+                'id': 'integer (auto-increment)',
+                'id_pagina': 'text (unique identifier)',
+                'nome_pagina': 'text (display name)',
+                'url_rota': 'text (route URL)',
+                'icone': 'text (MDI icon class)',
+                'roles': 'json array (user roles)',
+                'flg_ativo': 'boolean (active flag)',
+                'ordem': 'integer (display order)',
+                'mensagem_manutencao': 'text (maintenance message)'
+            }
+        
+        return table_info
+        
+    except Exception as e:
+        return {
+            'status': 'error',
+            'table_exists': False,
+            'error': str(e),
+            'message': 'Tabela paginas_portal não existe ou não é acessível'
+        }
