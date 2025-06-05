@@ -339,8 +339,30 @@
                     <h1 class="navbar-title">UniSystem - Portal Aduaneiro</h1>
                 </div>
             </div>
-            
-            <div class="navbar-right">
+              <div class="navbar-right">
+                <!-- Global refresh status (desktop) -->
+                <div class="global-refresh-status hidden lg:flex items-center gap-4 mr-4">
+                    <!-- Timestamp -->
+                    <div class="flex items-center gap-2 text-xs text-blue-100">
+                        <i class="mdi mdi-clock-outline"></i>
+                        <span data-global-timestamp>Carregando...</span>
+                    </div>
+                    
+                    <!-- Countdown and refresh button -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1 text-xs text-blue-200">
+                            <i class="mdi mdi-timer-outline"></i>
+                            <span>Próxima atualização: </span>
+                            <span data-global-countdown class="font-mono font-medium">60</span>s
+                        </div>
+                        <button id="global-refresh-button" 
+                                title="Atualizar dados manualmente"
+                                class="flex items-center justify-center w-6 h-6 text-blue-200 hover:text-white hover:bg-blue-700 rounded transition-colors duration-200">
+                            <i class="mdi mdi-refresh text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- User info in top bar (desktop) -->
                 <div class="navbar-user-info hidden md:flex">
                     <div class="flex items-center gap-3">
@@ -463,9 +485,11 @@
     <script>
         document.body.classList.add('logged-in');
     </script>
-    
-    <!-- Script para gerenciamento de sessão -->
+      <!-- Script para gerenciamento de sessão -->
     <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>
+    
+    <!-- Script para refresh global de dados -->
+    <script src="{{ url_for('static', filename='js/global-refresh.js') }}"></script>
     
     <!-- Script para gerenciamento da sidebar (sem sistema de cache) -->
     <script src="{{ url_for('static', filename='js/sidebar-manager.js') }}"></script>

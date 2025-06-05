@@ -334,7 +334,7 @@
                 {% else %}
                 <div class="h-12 w-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-xs font-semibold">LOGO</div>
                 {% endif %}
-                <h1 class="text-2xl font-bold text-slate-800">{{ dashboard_title or 'Dashboard de Importações' }}</h1>
+                <h1 class="text-2xl font-bold text-slate-800">Importações</h1>
             </div>
             
             <div class="flex items-center space-x-4 flex-wrap justify-end gap-2">
@@ -347,30 +347,9 @@
                     </option>
                     {% endfor %}
                 </select>
-                {% endif %}                <button
-                    id="refresh-button"
-                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-                    onclick="refreshOnepage()">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    <span>Atualizar</span>
-                </button>
+                {% endif %}
             </div>
-        </div>        <div class="flex items-center text-sm text-slate-600 mt-2">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>Última atualização: {{ last_update | default('N/A') }}</span> 
-            <div class="ml-4 flex items-center">
-                <div class="w-2 h-2 rounded-full bg-green-500 mr-1 animate-pulse"></div>
-                <span>Sistema Online</span>
-            </div>            <div class="ml-4 countdown flex items-center gap-2 text-sm text-slate-600">
-                <i class="mdi mdi-clock-outline w-4 h-4"></i>
-                <span class="countdown-text">Próxima atualização em:</span>
-                <span id="countdown">60</span>s
-            </div>
-        </div>
+
     </div>
 
     {# KPI Cards Section #}
@@ -599,7 +578,7 @@
 </div>
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/onepage-refresh.js') }}"></script>
+<script src="{{ url_for('static', filename='js/onepage-global-consumer.js') }}"></script>
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script>
     // Move filterByCompany to global scope

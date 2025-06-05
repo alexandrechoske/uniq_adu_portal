@@ -1,384 +1,430 @@
-/**
- * OnePage Refresh - Versão simplificada sem dependência de cache
- */
+// OnePage Auto-refresh System
+// Sistema simplificado de atualização automática da OnePage sem dependências de cache
 
-// Função para mostrar o indicador de carregamento
-function showLoading() {
-    document.getElementById('loading-overlay').classList.remove('hidden');
-}
-
-// Função para esconder o indicador de carregamento
-function hideLoading() {
-    document.getElementById('loading-overlay').classList.add('hidden');
-}
-
-// Função para atualizar a OnePage
-function refreshOnepage(forceUpdate = false) {
-    showLoading();
+// Criar namespace isolado para evitar conflitos
+(function() {
+    'use strict';
     
-    // Resetar contador global
-    window.countdown = 60;
-    if (window.countdownElement) {
-        window.countdownElement.textContent = window.countdown;
+    // Verificar se já foi inicializado
+    if (window.OnePageRefresh) {
+        console.warn('[OnePage] Sistema já inicializado, ignorando nova inicialização');
+        return;
     }
     
-    // Verificar se deve buscar dados do banco (a cada 5 minutos) ou usar cache
-    const currentTime = Math.floor(Date.now() / 1000); // Timestamp atual em segundos
-    const timeSinceLastFetch = currentTime - (window.lastDatabaseFetch || 0);
-    const shouldFetchFromDatabase = forceUpdate || timeSinceLastFetch >= window.databaseFetchInterval || !window.cachedOnepageData;
-    
-    // Validar sessão
-    const sessionValidPromise = fetch('/paginas/check-session', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache'
-        }
-    })
-    .then(response => {
+    // Variáveis privadas do namespace
+    let refreshInterval = null;
+    let countdownInterval = null;
+    let countdown = 60; // 60 segundos
+
+    // Configuração do sistema
+    const CONFIG = {
+        AUTO_REFRESH_INTERVAL: 60, // 60 segundos
+        DATA_UPDATE_ENDPOINT: '/onepage/update-data',
+        PAGE_DATA_ENDPOINT: '/onepage/page-data',
+        CHECK_SESSION_ENDPOINT: '/paginas/check-session'
+    };
+
+// Função para verificar se a sessão ainda é válida
+async function checkSession() {
+    try {
+        console.log('[OnePage] Verificando sessão...');
+        const response = await fetch(CONFIG.CHECK_SESSION_ENDPOINT, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+
         if (!response.ok) {
             if (response.status === 401) {
-                console.warn("Sessão expirada durante atualização da OnePage. Redirecionando para login...");
+                console.warn('[OnePage] Sessão expirada, redirecionando para login...');
                 window.location.href = '/login';
-                return Promise.reject('Sessão inválida');
+                return false;
             }
-            throw new Error('Erro ao verificar sessão: ' + response.status);
+            throw new Error(`Erro ao verificar sessão: ${response.status}`);
         }
-        return response.json();
-    })
-    .then(sessionData => {
-        if (!sessionData || sessionData.status !== 'success') {
-            console.warn('Sessão inválida ou expirada:', sessionData);
-            return Promise.reject('Sessão inválida');
-        }
-        return true;
-    });
 
-    // Verificar e atualizar dados da OnePage
-    sessionValidPromise
-        .then(() => {
-            if (shouldFetchFromDatabase) {
-                console.log("Buscando dados atualizados da OnePage do banco de dados...");
-                
-                return fetch('/onepage/update-data', {
+        const sessionData = await response.json();
+        if (!sessionData || sessionData.status !== 'success') {
+            console.warn('[OnePage] Sessão inválida:', sessionData);
+            window.location.href = '/login';
+            return false;
+        }
+
+        console.log('[OnePage] Sessão válida');
+        return true;
+    } catch (error) {
+        console.error('[OnePage] Erro na verificação de sessão:', error);
+        // Se não conseguir verificar a sessão, assume que é válida para não interromper o fluxo
+        return true;
+    }
+}
+
+// Função para mostrar indicador de carregamento
+function showLoading() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('hidden');
+    }
+}
+
+// Função para esconder indicador de carregamento
+function hideLoading() {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('hidden');
+    }
+}
+
+// Função para atualizar os dados da página
+async function updatePageData() {
+    try {
+        console.log('[OnePage] Atualizando dados da página...');
+        
+        const currentUrl = new URL(window.location);
+        const empresa = currentUrl.searchParams.get('empresa');
+        
+        const params = new URLSearchParams();
+        if (empresa) {
+            params.append('empresa', empresa);
+        }
+        
+        const response = await fetch(`${CONFIG.PAGE_DATA_ENDPOINT}?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            updateKPICards(data.kpis);
+            updateTable(data.table_data);
+            updateLastUpdateTime(data.last_update);
+            if (data.currencies) {
+                updateCurrencyDisplay(data.currencies);
+            }
+            console.log('[OnePage] Dados atualizados com sucesso');
+        } else {
+            throw new Error(data.message || 'Erro desconhecido');
+        }
+    } catch (error) {
+        console.error('[OnePage] Erro ao atualizar dados da página:', error);
+        showNotification('Erro ao atualizar dados: ' + error.message, 'error');
+    }
+}
+
+// Função para atualizar os cards de KPI
+function updateKPICards(kpis) {
+    if (!kpis) return;
+    
+    const kpiElements = {
+        total: document.querySelector('[data-kpi="total"]'),
+        aereo: document.querySelector('[data-kpi="aereo"]'),
+        terrestre: document.querySelector('[data-kpi="terrestre"]'),
+        maritimo: document.querySelector('[data-kpi="maritimo"]'),
+        aguardando_chegada: document.querySelector('[data-kpi="aguardando_chegada"]'),
+        aguardando_embarque: document.querySelector('[data-kpi="aguardando_embarque"]'),
+        di_registrada: document.querySelector('[data-kpi="di_registrada"]')
+    };
+
+    Object.keys(kpiElements).forEach(key => {
+        const element = kpiElements[key];
+        if (element && kpis.hasOwnProperty(key)) {
+            element.textContent = kpis[key];
+        }
+    });
+}
+
+// Função para atualizar a tabela
+function updateTable(tableData) {
+    const tableBody = document.querySelector('.data-table tbody');
+    if (!tableBody || !Array.isArray(tableData)) return;
+
+    if (tableData.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="100%" class="text-center py-8 text-gray-500">
+                    <div class="empty-state">
+                        <p class="text-lg font-medium">Nenhum processo encontrado</p>
+                        <p class="text-sm">Não há processos correspondentes aos filtros selecionados.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    // Reconstruct table rows
+    tableBody.innerHTML = tableData.map(row => {
+        return `
+            <tr>
+                <td>${row.processo || ''}</td>
+                <td>${row.cliente_razaosocial || ''}</td>
+                <td>${row.data_embarque || ''}</td>
+                <td>${row.data_chegada || ''}</td>
+                <td>${row.via_transporte_descricao || ''}</td>
+                <td>${row.carga_status || ''}</td>
+                <td>${row.status_doc || ''}</td>
+                <td>
+                    <span class="canal-badge ${getCanalClass(row.canal_parametrizado)}">
+                        ${row.canal_parametrizado || ''}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Função para determinar a classe CSS do canal
+function getCanalClass(canal) {
+    if (!canal) return '';
+    
+    switch (canal.toLowerCase()) {
+        case 'verde':
+            return 'canal-verde';
+        case 'amarelo':
+            return 'canal-amarelo';
+        case 'vermelho':
+            return 'canal-vermelho';
+        default:
+            return '';
+    }
+}
+
+// Função para atualizar a moeda
+function updateCurrencyDisplay(currencies) {
+    if (!currencies) return;
+    
+    const usdElement = document.querySelector('[data-currency="USD"]');
+    const eurElement = document.querySelector('[data-currency="EUR"]');
+    
+    if (usdElement && currencies.USD) {
+        usdElement.textContent = `R$ ${currencies.USD.toFixed(4)}`;
+    }
+    
+    if (eurElement && currencies.EUR) {
+        eurElement.textContent = `R$ ${currencies.EUR.toFixed(4)}`;
+    }
+}
+
+// Função para atualizar o timestamp da última atualização
+function updateLastUpdateTime(lastUpdate) {
+    const timestampElement = document.querySelector('[data-timestamp]');
+    if (timestampElement && lastUpdate) {
+        timestampElement.textContent = lastUpdate;
+    }
+}
+
+// Função para mostrar notificações
+function showNotification(message, type = 'info') {
+    // Criar elemento de notificação se não existir
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
+        document.body.appendChild(notificationContainer);
+    }
+
+    const notification = document.createElement('div');
+    notification.className = `
+        px-4 py-3 rounded-lg shadow-lg text-white transform transition-all duration-300 translate-x-full
+        ${type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500'}
+    `;
+    notification.textContent = message;
+
+    notificationContainer.appendChild(notification);
+
+    // Animação de entrada
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+
+    // Remover após 5 segundos
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 5000);
+}
+
+// Função para iniciar o contador regressivo
+function startCountdown() {
+    const countdownElement = document.querySelector('[data-countdown]');
+    
+    countdownInterval = setInterval(() => {
+        countdown--;
+        
+        if (countdownElement) {
+            countdownElement.textContent = countdown;
+        }
+        
+        if (countdown <= 0) {
+            countdown = CONFIG.AUTO_REFRESH_INTERVAL;
+            refreshOnePage();
+        }
+    }, 1000);
+}
+
+// Função para parar o contador
+function stopCountdown() {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+}
+
+// Função principal de refresh da OnePage
+async function refreshOnePage(forceUpdate = false) {
+    try {
+        console.log('[OnePage] Iniciando refresh...');
+        
+        // Verificar sessão primeiro
+        const sessionValid = await checkSession();
+        if (!sessionValid) {
+            return;
+        }
+
+        showLoading();
+        
+        // Se forceUpdate for true, chamar a atualização de dados primeiro
+        if (forceUpdate) {
+            console.log('[OnePage] Forçando atualização de dados...');
+            try {
+                const updateResponse = await fetch(CONFIG.DATA_UPDATE_ENDPOINT, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Cache-Control': 'no-cache'
-                    },
-                    body: JSON.stringify({ force_update: forceUpdate })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Erro ao atualizar dados da OnePage: ' + response.status);
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Dados da OnePage atualizados com sucesso:", data);
-                    
-                    // Atualizar timestamp da última atualização do banco
-                    window.lastDatabaseFetch = Math.floor(Date.now() / 1000);
-                    
-                    // Armazenar dados em cache na memória
-                    window.cachedOnepageData = data;
-                    
-                    // Atualizar a página com os novos dados
-                    updatePageWithData(data);
-                    
-                    return data;
                 });
-            } else {
-                console.log("Usando dados em cache da OnePage...");
-                updatePageWithData(window.cachedOnepageData);
-                return window.cachedOnepageData;
-            }
-        })
-        .catch(error => {
-            console.error("Erro durante a atualização da OnePage:", error);
-            // Tentar mostrar uma mensagem de erro na página
-            const errorContainer = document.getElementById('error-container');
-            if (errorContainer) {
-                errorContainer.classList.remove('hidden');
-                errorContainer.textContent = `Erro ao atualizar dados: ${error}`;
-            }
-        })
-        .finally(() => {
-            hideLoading();
-            // Reiniciar o contador de atualização automática
-            startCountdown();
-        });
-}
 
-// Função para atualizar a página com os dados recebidos
-function updatePageWithData(data) {
-    if (!data) {
-        console.error("Dados inválidos recebidos para atualização da página");
-        return;
-    }
-    
-    try {
-        // Atualizar contador total de processos
-        document.getElementById('total-processos').textContent = data.total_processos || 0;
-        
-        // Atualizar últimas atualizações
-        const ultimasAtualizacoesContainer = document.getElementById('ultimas-atualizacoes');
-        if (ultimasAtualizacoesContainer && data.ultimas_atualizacoes) {
-            ultimasAtualizacoesContainer.innerHTML = '';
-            
-            if (data.ultimas_atualizacoes.length === 0) {
-                const noDataMessage = document.createElement('div');
-                noDataMessage.className = 'text-center text-gray-500 p-4';
-                noDataMessage.textContent = 'Nenhuma atualização recente';
-                ultimasAtualizacoesContainer.appendChild(noDataMessage);
-            } else {
-                data.ultimas_atualizacoes.forEach(atualizacao => {
-                    const card = document.createElement('div');
-                    card.className = 'bg-white rounded-lg shadow p-4 mb-4';
-                    
-                    const header = document.createElement('div');
-                    header.className = 'flex justify-between items-center mb-2';
-                    
-                    const processNumber = document.createElement('h3');
-                    processNumber.className = 'text-primary font-semibold';
-                    processNumber.textContent = atualizacao.numero_processo || 'Sem número';
-                    
-                    const date = document.createElement('span');
-                    date.className = 'text-gray-500 text-sm';
-                    date.textContent = atualizacao.data_atualizacao || 'Data desconhecida';
-                    
-                    header.appendChild(processNumber);
-                    header.appendChild(date);
-                    card.appendChild(header);
-                    
-                    const status = document.createElement('div');
-                    status.className = 'text-gray-700';
-                    status.textContent = atualizacao.status_atual || 'Status desconhecido';
-                    card.appendChild(status);
-                    
-                    ultimasAtualizacoesContainer.appendChild(card);
-                });
+                const updateResult = await updateResponse.json();
+                if (updateResult.status === 'success' || updateResult.status === 'warning') {
+                    showNotification(updateResult.message, updateResult.status === 'warning' ? 'info' : 'success');
+                } else {
+                    showNotification('Erro na atualização: ' + updateResult.message, 'error');
+                }
+            } catch (updateError) {
+                console.error('[OnePage] Erro na atualização forçada:', updateError);
+                showNotification('Erro ao atualizar dados: ' + updateError.message, 'error');
             }
-        }
+        }        // Atualizar dados da página
+        await updatePageData();
         
-        // Atualizar tabela de processos
-        updateProcessTable(data.processos || []);
-        
-        // Atualizar gráficos
-        updateCharts(data.charts || {});
-        
-        // Exibir timestamp da última atualização
-        const lastUpdateElement = document.getElementById('ultima-atualizacao');
-        if (lastUpdateElement) {
-            const now = new Date();
-            lastUpdateElement.textContent = `Última atualização: ${now.toLocaleTimeString()}`;
-        }
-        
-        // Esconder mensagens de erro se existirem
-        const errorContainer = document.getElementById('error-container');
-        if (errorContainer) {
-            errorContainer.classList.add('hidden');
-        }
+        // Resetar contador
+        countdown = CONFIG.AUTO_REFRESH_INTERVAL;
         
     } catch (error) {
-        console.error("Erro ao atualizar elementos da página:", error);
+        console.error('[OnePage] Erro durante refresh:', error);
+        showNotification('Erro durante atualização: ' + error.message, 'error');
+    } finally {
+        hideLoading();
     }
 }
 
-// Função para atualizar a tabela de processos
-function updateProcessTable(processos) {
-    const tableBody = document.querySelector('#processos-table tbody');
-    if (!tableBody) return;
+// Função para inicializar o sistema de auto-refresh
+function initializeAutoRefresh() {
+    console.log('[OnePage] Inicializando sistema de auto-refresh...');
     
-    tableBody.innerHTML = '';
-    
-    if (processos.length === 0) {
-        const emptyRow = document.createElement('tr');
-        const emptyCell = document.createElement('td');
-        emptyCell.colSpan = 5; // Ajustar conforme o número de colunas da tabela
-        emptyCell.className = 'text-center py-4 text-gray-500';
-        emptyCell.textContent = 'Nenhum processo encontrado';
-        emptyRow.appendChild(emptyCell);
-        tableBody.appendChild(emptyRow);
-    } else {
-        processos.forEach(processo => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-50';
-            
-            // Número do processo
-            const numeroCell = document.createElement('td');
-            numeroCell.className = 'px-4 py-2 border-b';
-            numeroCell.textContent = processo.numero_processo || '';
-            row.appendChild(numeroCell);
-            
-            // Cliente
-            const clienteCell = document.createElement('td');
-            clienteCell.className = 'px-4 py-2 border-b';
-            clienteCell.textContent = processo.cliente || '';
-            row.appendChild(clienteCell);
-            
-            // Status
-            const statusCell = document.createElement('td');
-            statusCell.className = 'px-4 py-2 border-b';
-            statusCell.textContent = processo.status || '';
-            row.appendChild(statusCell);
-            
-            // Data de atualização
-            const dataCell = document.createElement('td');
-            dataCell.className = 'px-4 py-2 border-b';
-            dataCell.textContent = processo.data_atualizacao || '';
-            row.appendChild(dataCell);
-            
-            // Responsável
-            const respCell = document.createElement('td');
-            respCell.className = 'px-4 py-2 border-b';
-            respCell.textContent = processo.responsavel || '';
-            row.appendChild(respCell);
-            
-            tableBody.appendChild(row);
-        });
+    // Parar qualquer intervalo existente
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
     }
+    
+    // Iniciar contador
+    countdown = CONFIG.AUTO_REFRESH_INTERVAL;
+    startCountdown();
+    
+    console.log('[OnePage] Sistema de auto-refresh iniciado');
 }
 
-// Função para atualizar os gráficos
-function updateCharts(chartData) {
-    try {
-        // Gráfico de Status
-        if (chartData.status && document.getElementById('status-chart')) {
-            const labels = Object.keys(chartData.status);
-            const values = Object.values(chartData.status);
-            
-            Plotly.newPlot('status-chart', [{
-                type: 'pie',
-                labels: labels,
-                values: values,
-                textinfo: 'label+percent',
-                hoverinfo: 'label+value',
-                hole: 0.4,
-                marker: {
-                    colors: ['#1F406F', '#3498DB', '#9b59b6', '#f1c40f', '#e74c3c']
-                }
-            }], {
-                height: 300,
-                margin: { l: 0, r: 0, t: 30, b: 0 },
-                showlegend: false,
-                title: {
-                    text: 'Status dos Processos',
-                    font: {
-                        size: 16
-                    }
-                }
-            });
-        }
-        
-        // Gráfico de Modalidades
-        if (chartData.modalidades && document.getElementById('modalidades-chart')) {
-            const labels = Object.keys(chartData.modalidades);
-            const values = Object.values(chartData.modalidades);
-            
-            Plotly.newPlot('modalidades-chart', [{
-                type: 'pie',
-                labels: labels,
-                values: values,
-                textinfo: 'label+percent',
-                hoverinfo: 'label+value',
-                hole: 0.4,
-                marker: {
-                    colors: ['#2ecc71', '#f39c12', '#3498db', '#1F406F']
-                }
-            }], {
-                height: 300,
-                margin: { l: 0, r: 0, t: 30, b: 0 },
-                showlegend: false,
-                title: {
-                    text: 'Modalidades de Operação',
-                    font: {
-                        size: 16
-                    }
-                }
-            });
-        }
-    } catch (error) {
-        console.error("Erro ao atualizar gráficos:", error);
+// Função para parar o sistema de auto-refresh
+function stopAutoRefresh() {
+    console.log('[OnePage] Parando sistema de auto-refresh...');
+    
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
     }
+    
+    stopCountdown();
+    
+    console.log('[OnePage] Sistema de auto-refresh parado');
 }
 
-// Função de contagem regressiva para próxima atualização
-function startCountdown() {
-    if (window.countdownTimer) {
-        clearInterval(window.countdownTimer);
-    }
-    
-    window.countdown = 60; // 60 segundos
-    
-    // Elemento que exibe a contagem regressiva
-    window.countdownElement = document.getElementById('countdown-timer');
-    
-    if (window.countdownElement) {
-        window.countdownElement.textContent = window.countdown;
-    }
-    
-    // Atualizar contador a cada segundo
-    window.countdownTimer = setInterval(updateCountdown, 1000);
-}
-
-// Função para atualizar a contagem regressiva
-function updateCountdown() {
-    if (window.countdown > 0) {
-        window.countdown -= 1;
-        
-        if (window.countdownElement) {
-            // Atualizar texto do contador
-            window.countdownElement.textContent = window.countdown;
-            
-            // Animação de pulsar nos últimos 5 segundos
-            if (window.countdown <= 5) {
-                window.countdownElement.classList.add('text-red-500');
-                
-                // Animação de pulso
-                window.countdownElement.style.transform = 'scale(1.1)';
-                setTimeout(() => {
-                    if (window.countdownElement) {
-                        window.countdownElement.style.transform = 'scale(1)';
-                    }
-                }, 200);
-            }
-        }
-    } else {
-        // Quando o contador chegar a zero
-        clearInterval(window.countdownTimer);
-        
-        // Remover classes visuais
-        if (window.countdownElement) {
-            window.countdownElement.classList.remove('text-red-500');
-        }
-        
-        // Atualizar a página
-        refreshOnepage();
-    }
-}
-
-// Inicialização quando o documento estiver pronto
+// Event listeners e inicialização
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Inicializando OnePage...");
+    console.log('[OnePage] Inicializando OnePage...');
     
-    // Definir intervalo de atualização do banco para 5 minutos (300 segundos)
-    window.databaseFetchInterval = 300;
+    // Inicializar sistema de auto-refresh
+    initializeAutoRefresh();
     
-    // Iniciar com uma atualização completa
-    refreshOnepage(true);
-    
-    // Adicionar evento para o botão de atualização manual
+    // Event listener para botão de refresh manual
     const refreshButton = document.getElementById('refresh-button');
     if (refreshButton) {
         refreshButton.addEventListener('click', function() {
-            // Força buscar do banco de dados
-            refreshOnepage(true);
+            console.log('[OnePage] Refresh manual solicitado');
+            refreshOnePage(true); // true = forceUpdate
         });
     }
     
-    // Adicionar eventos para ordenação de tabela, se o script table-sort.js estiver carregado
-    if (typeof initTableSort === 'function') {
-        initTableSort();
+    // Event listener para mudança de filtro de empresa
+    const companySelect = document.getElementById('company-select');
+    if (companySelect) {
+        companySelect.addEventListener('change', function() {
+            console.log('[OnePage] Filtro de empresa alterado');
+            const selectedCompany = this.value;
+            filterByCompany(selectedCompany);
+        });
     }
+    
+    // Parar auto-refresh quando a página não estiver visível
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            console.log('[OnePage] Página oculta, pausando auto-refresh');
+            stopCountdown();
+        } else {
+            console.log('[OnePage] Página visível, retomando auto-refresh');
+            startCountdown();
+        }
+    });
+    
+    console.log('[OnePage] Inicialização concluída');
 });
+
+// Função para filtrar por empresa (mantida para compatibilidade)
+function filterByCompany(value) {
+    const url = new URL(window.location);
+    if (value && value !== '') {
+        url.searchParams.set('empresa', value);
+    } else {
+        url.searchParams.delete('empresa');
+    }
+    window.location.href = url.toString();
+}
+
+// Expor funções globalmente para uso externo
+window.refreshOnePage = refreshOnePage;
+window.filterByCompany = filterByCompany;
+window.onepageAutoRefresh = {
+    start: initializeAutoRefresh,
+    stop: stopAutoRefresh,
+    refresh: refreshOnePage
+};
+
+// Marcar como inicializado
+window.OnePageRefresh = true;
+
+})(); // Fim do namespace

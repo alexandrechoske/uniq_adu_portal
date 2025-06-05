@@ -32,7 +32,7 @@ def notificar_cadastro_n8n(numero_zap):
 
 @bp.route('/agente', methods=['GET', 'POST'])
 @login_required
-@role_required(['cliente_unique'])
+@role_required(['cliente_unique', 'admin'])
 def index():
     user_id = session['user']['id']
     agent_status = session['user'].get('agent_status', {})

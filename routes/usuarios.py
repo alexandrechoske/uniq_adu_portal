@@ -5,6 +5,7 @@ import uuid
 import datetime
 import json
 import re
+import traceback
 
 bp = Blueprint('usuarios', __name__)
 
