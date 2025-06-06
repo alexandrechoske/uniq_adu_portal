@@ -19,10 +19,15 @@ def carregar_usuarios():
         if not supabase:
             raise Exception("Cliente Supabase não está inicializado")
         
+        # Adicionar timeout e tratamento específico para erros do Supabase
         users_response = supabase.table('users').select('*').execute()
         
         print(f"[DEBUG] Resposta da busca: {users_response}")
         print(f"[DEBUG] Tipo da resposta: {type(users_response)}")
+        
+        # Verificar se houve erro na resposta
+        if hasattr(users_response, 'error') and users_response.error:
+            raise Exception(f"Erro do Supabase: {users_response.error}")
         
         if not hasattr(users_response, 'data'):
             raise Exception("Resposta do Supabase não contém dados")
@@ -32,7 +37,7 @@ def carregar_usuarios():
         print(f"[DEBUG] Usuários encontrados: {len(users) if users else 0}")
         
         if not users:
-            print("[DEBUG] Nenhum usuário encontrado")
+            print("[DEBUG] Nenhum usuário encontrado - retornando lista vazia")
             return []
         
         for user in users:
@@ -45,7 +50,7 @@ def carregar_usuarios():
                     agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
                     user['agent_info'] = {'empresas': []}
                     
-                    if agent_response.data and agent_response.data[0].get('empresa'):
+                    if agent_response.data and len(agent_response.data) > 0 and agent_response.data[0].get('empresa'):
                         empresas = agent_response.data[0].get('empresa', [])
                         if isinstance(empresas, str):
                             try:
@@ -58,17 +63,24 @@ def carregar_usuarios():
                         empresas_detalhadas = []
                         for cnpj in empresas:
                             if isinstance(cnpj, str):
-                                empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
-                                if empresa_info.data:
-                                    empresa_data = empresa_info.data[0]
-                                    empresas_detalhadas.append({
-                                        'cnpj': empresa_data.get('cnpj'),
-                                        'razao_social': empresa_data.get('razao_social', 'Não informado')
-                                    })
-                                else:
+                                try:
+                                    empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                                    if empresa_info.data and len(empresa_info.data) > 0:
+                                        empresa_data = empresa_info.data[0]
+                                        empresas_detalhadas.append({
+                                            'cnpj': empresa_data.get('cnpj'),
+                                            'razao_social': empresa_data.get('razao_social', 'Não informado')
+                                        })
+                                    else:
+                                        empresas_detalhadas.append({
+                                            'cnpj': cnpj,
+                                            'razao_social': 'Empresa não encontrada'
+                                        })
+                                except Exception as empresa_error:
+                                    print(f"[DEBUG] Erro ao buscar dados da empresa {cnpj}: {str(empresa_error)}")
                                     empresas_detalhadas.append({
                                         'cnpj': cnpj,
-                                        'razao_social': 'Empresa não encontrada'
+                                        'razao_social': 'Erro ao carregar dados'
                                     })
                         user['agent_info']['empresas'] = empresas_detalhadas
                 except Exception as e:

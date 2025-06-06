@@ -40,16 +40,17 @@ def check_session():
                 'status': 'error',
                 'message': 'ID do usuário inválido'
             }), 401
-        
-        # Opcional: Verificar se o usuário ainda existe no banco
+          # Opcional: Verificar se o usuário ainda existe no banco
         try:
-            response = supabase.table('users').select('id, name, email').eq('id', user_id).single().execute()
-            if not response.data:
+            response = supabase.table('users').select('id, name, email').eq('id', user_id).execute()
+            if not response.data or len(response.data) == 0:
                 logger.warning(f"Usuário {user_id} não encontrado ou inativo")
                 return jsonify({
                     'status': 'error',
                     'message': 'Usuário inativo ou inexistente'
                 }), 401
+            elif len(response.data) > 1:
+                logger.warning(f"Múltiplos usuários encontrados para ID {user_id}")
         except Exception as db_error:
             logger.error(f"Erro ao verificar usuário no banco: {str(db_error)}")
             # Em caso de erro de banco, permitir continuar se a sessão local é válida
@@ -139,12 +140,13 @@ def edit(pagina_id):
     Página para editar página existente
     """
     try:
-        response = supabase.table('paginas_portal').select('*').eq('id', pagina_id).single().execute()
-        if not response.data:
+        response = supabase.table('paginas_portal').select('*').eq('id', pagina_id).execute()
+        if not response.data or len(response.data) == 0:
             flash('Página não encontrada', 'error')
             return redirect(url_for('paginas.index'))
         
-        return render_template('paginas/edit.html', pagina=response.data)
+        pagina = response.data[0]  # Pegar o primeiro resultado
+        return render_template('paginas/edit.html', pagina=pagina)
         
     except Exception as e:
         logger.error(f"Erro ao carregar página para edição: {str(e)}")
