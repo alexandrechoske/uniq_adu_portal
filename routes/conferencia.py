@@ -16,10 +16,8 @@ import logging
 # Imports for PDF processing
 import PyPDF2
 from pdf2image import convert_from_path
-from PIL import Image
 import re
 import io
-import base64
 
 # Import for Gemini AI integration
 import google.generativeai as genai
@@ -244,10 +242,12 @@ def upload():
         except Exception as e:
             # Fallback para armazenamento em memória (apenas para desenvolvimento)
             jobs[job_id] = job_data
-            
+              # Obtém a API key do Gemini da configuração
+        gemini_api_key = current_app.config.get('GEMINI_API_KEY')
+        
         # Inicia processamento assíncrono (simulado aqui - em produção usar Celery ou similar)
         # Aqui vamos simular o processamento com um delay de 5 segundos por arquivo
-        asyncio.run(process_files(job_id, tipo_conferencia, saved_files))
+        asyncio.run(process_files(job_id, tipo_conferencia, saved_files, gemini_api_key))
             
         return jsonify({
             'status': 'success',
@@ -280,24 +280,28 @@ def extract_text_from_pdf(pdf_path):
         logging.error(f"Error extracting text from PDF: {str(e)}")
         return "Texto de exemplo para demonstração. Este documento parece conter informações sobre uma importação de produtos eletrônicos da China, incluindo detalhes de fatura, conhecimento de embarque e lista de embalagem. Contém dados como valor, quantidade, peso e descrição dos produtos."
 
-def process_pdf_with_gemini(pdf_path):
+def process_pdf_with_gemini(pdf_path, api_key=None):
     """
     Process PDF with Gemini API for text extraction.
     Uses PDF content directly with image-based model if available, otherwise passes sample text.
     """
     try:
-        genai.configure(api_key=current_app.config.get('GEMINI_API_KEY'))
+        if api_key:
+            genai.configure(api_key=api_key)
+        else:
+            # Fallback para demonstração
+            return "Texto de exemplo para demonstração. Este documento parece conter informações sobre uma importação de produtos eletrônicos da China, incluindo detalhes de fatura, conhecimento de embarque e lista de embalagem. Contém dados como valor, quantidade, peso e descrição dos produtos."
         
         # Check if we can use Gemini Pro Vision for image processing
         use_vision_model = False
         
         if use_vision_model:
             # For Gemini Pro Vision - when this becomes available for document processing
-            model = genai.GenerativeModel(model_name='gemini-pro-vision')
+            model = genai.GenerativeModel(model_name='gemini-2.5-flash-preview-04-17')
             
             # Convert PDF to images for processing
             with tempfile.TemporaryDirectory() as temp_dir:
-                images = convert_from_path(pdf_path, output_folder=temp_dir)
+                images = convert_from_path(pdf_path, output_folder=temp_dir)                
                 text = ""
                 
                 # Process each page with Gemini
@@ -317,8 +321,8 @@ def process_pdf_with_gemini(pdf_path):
                 
                 return text
         else:
-            # Current implementation: Use Gemini Pro with a request to extract info from PDF document
-            model = genai.GenerativeModel(model_name='gemini-pro')
+            # Current implementation: Use Gemini 2.5 Flash with a request to extract info from PDF document
+            model = genai.GenerativeModel(model_name='gemini-2.5-flash-preview-04-17')
             
             # Create a temporary directory for images to count pages
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -339,13 +343,13 @@ def process_pdf_with_gemini(pdf_path):
         logging.error(f"Error processing PDF with Gemini: {str(e)}")
         return "Texto de exemplo para demonstração. Este documento parece conter informações sobre uma importação de produtos eletrônicos da China, incluindo detalhes de fatura, conhecimento de embarque e lista de embalagem. Contém dados como valor, quantidade, peso e descrição dos produtos."
 
-def process_with_ai(text, prompt_template, model="gemini"):
+def process_with_ai(text, prompt_template, model="gemini", api_key=None):
     """
     Process the extracted text with AI (only Gemini).
     """
     try:
-        if current_app.config.get('GEMINI_API_KEY'):
-            return process_with_gemini(text, prompt_template)
+        if api_key:
+            return process_with_gemini(text, prompt_template, api_key)
         else:
             # Fallback to sample results if no API key is available
             raise Exception("Gemini API key not available")
@@ -372,14 +376,14 @@ def process_with_ai(text, prompt_template, model="gemini"):
 
 # OpenAI processing function has been removed as we are using Gemini exclusively
 
-def process_with_gemini(text, prompt_template):
+def process_with_gemini(text, prompt_template, api_key):
     """
     Process text with Google Gemini API.
     """
     try:
-        genai.configure(api_key=current_app.config.get('GEMINI_API_KEY'))
+        genai.configure(api_key=api_key)
         
-        model = genai.GenerativeModel(model_name='gemini-pro')
+        model = genai.GenerativeModel(model_name='gemini-2.5-flash-preview-04-17')
         
         response = model.generate_content(
             f"{prompt_template}\n\nDocumento para análise:\n{text[:10000]}"  # Limiting text size
@@ -417,7 +421,7 @@ def process_with_gemini(text, prompt_template):
         logging.error(f"Error with Gemini processing: {str(e)}")
         raise
 
-async def process_files(job_id, tipo_conferencia, files):
+async def process_files(job_id, tipo_conferencia, files, api_key=None):
     """Processa os arquivos em background"""
     prompt_template = PROMPTS[tipo_conferencia]
     
@@ -438,7 +442,7 @@ async def process_files(job_id, tipo_conferencia, files):
                 )
                   # Process with Gemini AI exclusively
                 result = await asyncio.get_event_loop().run_in_executor(
-                    executor, process_with_ai, text, prompt_template
+                    executor, process_with_ai, text, prompt_template, "gemini", api_key
                 )
                 
                 # Update file status

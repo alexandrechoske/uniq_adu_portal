@@ -18,14 +18,12 @@ def carregar_usuarios():
         
         if not supabase:
             raise Exception("Cliente Supabase não está inicializado")
-        
-        # Adicionar timeout e tratamento específico para erros do Supabase
-        users_response = supabase.table('users').select('*').execute()
+          # Adicionar timeout e tratamento específico para erros do Supabase
+        users_response = supabase_admin.table('users').select('*').execute()
         
         print(f"[DEBUG] Resposta da busca: {users_response}")
         print(f"[DEBUG] Tipo da resposta: {type(users_response)}")
-        
-        # Verificar se houve erro na resposta
+          # Verificar se houve erro na resposta
         if hasattr(users_response, 'error') and users_response.error:
             raise Exception(f"Erro do Supabase: {users_response.error}")
         
@@ -47,7 +45,7 @@ def carregar_usuarios():
                 
             if user.get('role') == 'cliente_unique':
                 try:
-                    agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
+                    agent_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
                     user['agent_info'] = {'empresas': []}
                     
                     if agent_response.data and len(agent_response.data) > 0 and agent_response.data[0].get('empresa'):
@@ -64,7 +62,7 @@ def carregar_usuarios():
                         for cnpj in empresas:
                             if isinstance(cnpj, str):
                                 try:
-                                    empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                                    empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                                     if empresa_info.data and len(empresa_info.data) > 0:
                                         empresa_data = empresa_info.data[0]
                                         empresas_detalhadas.append({
@@ -131,7 +129,7 @@ def novo():
 @role_required(['admin'])
 def editar(user_id):
     try:
-        user_response = supabase.table('users').select('*').eq('id', user_id).execute()
+        user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
         if user_response.data:
             user = user_response.data[0]
             return render_template('usuarios/form.html', user=user)
@@ -147,12 +145,11 @@ def editar(user_id):
 @login_required
 @role_required(['admin']) # Apenas admins podem criar/editar usuários
 def salvar(user_id=None):
-    try:
-        # Coletar dados do formulário
+    try:        # Coletar dados do formulário
         name = request.form.get('name')
         email = request.form.get('email')
         role = request.form.get('role')
-        senha = request.form.get('senha')
+        senha = request.form.get('senha') or request.form.get('password')  # Aceita ambos os nomes
         
         # Validação básica
         if not all([name, email, role]):
@@ -172,10 +169,9 @@ def salvar(user_id=None):
                     'role': role,
                     'updated_at': datetime.datetime.utcnow().isoformat()
                 }
-                
-                # Executa a atualização na tabela 'users'
+                  # Executa a atualização na tabela 'users'
                 # O trigger de 'updated_at' cuidará do campo updated_at no DB
-                supabase.table('users').update(update_data).eq('id', user_id).execute()
+                supabase_admin.table('users').update(update_data).eq('id', user_id).execute()
                 
                 # Atualizar metadados do usuário no Supabase Auth
                 # Isso é importante para manter os metadados em auth.users sincronizados
@@ -290,7 +286,7 @@ def pesquisar_empresa():
         if not cnpj:
             return jsonify({'success': False, 'message': 'CNPJ não informado'})
         
-        empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+        empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
         
         print(f"[DEBUG] Resultado da busca de empresa: {empresa_info.data}")
         
@@ -314,19 +310,21 @@ def pesquisar_empresa():
 @role_required(['admin'])
 def adicionar_empresa_usuario(user_id):
     try:
+        # Validar user_id
+        if not user_id or user_id == 'null' or user_id == 'undefined':
+            print(f"[DEBUG] user_id inválido recebido: '{user_id}'")
+            return jsonify({'error': 'ID do usuário inválido'}), 400
+        
         data = request.get_json()
         cnpj = data.get('cnpj')
         
         if not cnpj:
-            return jsonify({'error': 'CNPJ não informado'}), 400
-
-        # Verificar se o usuário existe e é do tipo cliente_unique
-        user_response = supabase.table('users').select('role').eq('id', user_id).execute()
+            return jsonify({'error': 'CNPJ não informado'}), 400# Verificar se o usuário existe e é do tipo cliente_unique
+        user_response = supabase_admin.table('users').select('role').eq('id', user_id).execute()
         if not user_response.data or user_response.data[0].get('role') != 'cliente_unique':
             return jsonify({'error': 'Usuário inválido ou não é um cliente'}), 400
-        
-        # Buscar empresas atuais do usuário
-        user_companies = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+          # Buscar empresas atuais do usuário
+        user_companies = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
         
         if user_companies.data:
             empresas = user_companies.data[0].get('empresa', [])
@@ -348,14 +346,13 @@ def adicionar_empresa_usuario(user_id):
             # Adicionar nova empresa
             empresas.append(cnpj)
             print(f"[DEBUG] Novas empresas: {empresas}")
-            
-            # Atualizar no banco
-            supabase.table('clientes_agentes').update({
+              # Atualizar no banco
+            supabase_admin.table('clientes_agentes').update({
                 'empresa': empresas
             }).eq('user_id', user_id).execute()
         else:
             # Criar novo registro na tabela clientes_agentes
-            supabase.table('clientes_agentes').insert({
+            supabase_admin.table('clientes_agentes').insert({
                 'user_id': user_id,
                 'empresa': [cnpj]
             }).execute()
@@ -372,9 +369,8 @@ def adicionar_empresa_usuario(user_id):
 def get_empresas_detalhadas(user_id):
     try:
         print(f"[DEBUG] Buscando empresas para o usuário {user_id}")
-        
-        # Buscar empresas do usuário
-        user_companies = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+          # Buscar empresas do usuário
+        user_companies = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
         print(f"[DEBUG] Resultado da busca de empresas: {user_companies.data}")
         
         empresas_detalhadas = []
@@ -393,7 +389,7 @@ def get_empresas_detalhadas(user_id):
             # Buscar detalhes de cada empresa
             for cnpj in empresas_array:
                 if isinstance(cnpj, str):
-                    empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                    empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                     
                     if empresa_info.data:
                         empresas_detalhadas.append({
@@ -422,9 +418,8 @@ def remover_empresa_usuario(user_id):
         
         if not cnpj:
             return jsonify({'error': 'CNPJ não informado'}), 400
-        
-        # Buscar empresas atuais
-        user_companies = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+          # Buscar empresas atuais
+        user_companies = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
         
         if not user_companies.data:
             return jsonify({'error': 'Usuário não encontrado'}), 404
@@ -445,9 +440,8 @@ def remover_empresa_usuario(user_id):
             empresas.remove(cnpj)
             
             print(f"[DEBUG] Empresas após remoção: {empresas}")
-            
-            # Atualizar no banco
-            supabase.table('clientes_agentes').update({
+              # Atualizar no banco
+            supabase_admin.table('clientes_agentes').update({
                 'empresa': empresas
             }).eq('user_id', user_id).execute()
             
@@ -473,9 +467,8 @@ def adicionar_empresas(user_id):
             return jsonify({'error': 'Nenhuma empresa fornecida'}), 400
             
         current_app.logger.debug(f'Adicionando empresas para usuário {user_id}: {empresas}')
-        
-        # Verificar se o usuário existe
-        user = supabase.table('users').select('*').eq('id', user_id).execute()
+          # Verificar se o usuário existe
+        user = supabase_admin.table('users').select('*').eq('id', user_id).execute()
         if not user.data:
             return jsonify({'error': 'Usuário não encontrado'}), 404
             
@@ -499,9 +492,8 @@ def adicionar_empresas(user_id):
 @login_required
 @role_required(['admin'])
 def listar_empresas(user_id):
-    try:
-        # Buscar o registro do cliente_agente
-        result = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+    try:        # Buscar o registro do cliente_agente
+        result = supabase_admin.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
         
         if not result.data:
             return jsonify({'empresas': []})
@@ -519,7 +511,7 @@ def listar_empresas(user_id):
         # Buscar detalhes de cada empresa
         empresas_detalhadas = []
         for cnpj in empresas:
-            empresa_info = supabase.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+            empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
             if empresa_info.data:
                 empresas_detalhadas.append({
                     'cnpj': cnpj,
@@ -544,9 +536,8 @@ def remover_empresa(user_id):
             return jsonify({'error': 'CNPJ não informado'}), 400
             
         current_app.logger.debug(f'Removendo empresa {cnpj} do usuário {user_id}')
-        
-        # Buscar registro atual
-        result = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+          # Buscar registro atual
+        result = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
         
         if not result.data:
             return jsonify({'error': 'Cliente não encontrado'}), 404
@@ -564,9 +555,8 @@ def remover_empresa(user_id):
         # Remover o CNPJ da lista
         if cnpj in empresas:
             empresas.remove(cnpj)
-            
-            # Atualizar o registro
-            supabase.table('clientes_agentes').update({
+              # Atualizar o registro
+            supabase_admin.table('clientes_agentes').update({
                 'empresa': empresas
             }).eq('user_id', user_id).execute()
             
@@ -581,28 +571,38 @@ def remover_empresa(user_id):
 @role_required(['admin'])
 def criar():
     try:
+        print("[DEBUG] Endpoint /usuarios/criar chamado")
         data = request.form.to_dict()
+        print(f"[DEBUG] Dados recebidos do formulário: {data}")
+        
         selected_companies = json.loads(data.get('selected_companies', '[]'))
+        print(f"[DEBUG] Empresas selecionadas: {selected_companies}")
         
         # Validar role
         if data['role'] not in VALID_ROLES:
+            print(f"[DEBUG] Role inválida: {data['role']}")
             flash('Role inválida', 'error')
             return redirect(url_for('usuarios.novo'))
         
+        print(f"[DEBUG] Criando usuário no Auth do Supabase...")
         # Criar usuário no Auth do Supabase
         user_data = {
             'email': data['email'],
             'password': data['password'],
             'email_confirm': True
         }
+        print(f"[DEBUG] Dados para auth: {user_data}")
         
         auth_response = supabase_admin.auth.admin.create_user(user_data)
+        print(f"[DEBUG] Resposta do auth: {auth_response}")
         
         if not auth_response.user:
+            print("[DEBUG] Falha na criação do usuário no Auth")
             flash('Erro ao criar usuário no Auth', 'error')
             return redirect(url_for('usuarios.novo'))
             
         user_id = auth_response.user.id
+        print(f"[DEBUG] Usuário criado no Auth com ID: {user_id}")
         
         # Adicionar informações adicionais na tabela users
         user_metadata = {
@@ -610,12 +610,14 @@ def criar():
             'email': data['email'],
             'role': data['role'],
             'name': data['name'],
-            'created_at': datetime.datetime.utcnow().isoformat()
-        }
+            'created_at': datetime.datetime.utcnow().isoformat()        }
+        print(f"[DEBUG] Inserindo metadados do usuário: {user_metadata}")
         
-        supabase.table('users').insert(user_metadata).execute()
+        supabase_admin.table('users').insert(user_metadata).execute()
+        print("[DEBUG] Metadados do usuário inseridos com sucesso")
           # Se houver empresas selecionadas, criar/atualizar o registro em clientes_agentes
         if selected_companies:
+            print(f"[DEBUG] Criando registro em clientes_agentes...")
             # Preparar array de CNPJs
             empresas_cnpjs = [empresa['cnpj'] for empresa in selected_companies]
             
@@ -623,18 +625,34 @@ def criar():
                 'user_id': user_id,
                 'empresa': empresas_cnpjs,
                 'created_at': datetime.datetime.utcnow().isoformat(),
-                'name': data['name'],
                 'numero': data.get('numero', ''),
-                'aceite_termos': data.get('aceite_termos', False)
+                'aceite_termos': data.get('aceite_termos', False),
+                'usuario_ativo': True  # Ativar o usuário por padrão
             }
-            
-            # Inserir na tabela clientes_agentes
-            supabase.table('clientes_agentes').insert(cliente_data).execute()
+            print(f"[DEBUG] Dados do cliente_agente: {cliente_data}")
+              # Inserir na tabela clientes_agentes
+            supabase_admin.table('clientes_agentes').insert(cliente_data).execute()
+            print("[DEBUG] Registro em clientes_agentes criado com sucesso")
+        elif data['role'] == 'cliente_unique':
+            print("[DEBUG] Cliente unique sem empresas, criando registro vazio...")
+            # Mesmo sem empresas selecionadas, criar registro para cliente_unique
+            cliente_data = {
+                'user_id': user_id,
+                'empresa': [],
+                'created_at': datetime.datetime.utcnow().isoformat(),
+                'numero': data.get('numero', ''),
+                'aceite_termos': data.get('aceite_termos', False),
+                'usuario_ativo': True
+            }
+            supabase_admin.table('clientes_agentes').insert(cliente_data).execute()
+            print("[DEBUG] Registro vazio em clientes_agentes criado")
         
+        print("[DEBUG] Usuário criado com sucesso, redirecionando...")
         flash('Usuário criado com sucesso!', 'success')
         return redirect(url_for('usuarios.index'))
         
     except Exception as e:
+        print(f"[DEBUG] Erro ao criar usuário: {str(e)}")
         current_app.logger.error(f'Erro ao criar usuário: {str(e)}')
         flash(f'Erro ao criar usuário: {str(e)}', 'error')
         return redirect(url_for('usuarios.novo'))

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for, flash
-from extensions import supabase
+from extensions import supabase, supabase_admin
 from routes.auth import login_required
 import logging
 
@@ -31,8 +31,7 @@ def check_session():
                 'status': 'error',
                 'message': 'Dados do usuário não encontrados'
             }), 401
-        
-        # Verificar se a sessão ainda é válida
+          # Verificar se a sessão ainda é válida
         user_id = user_data.get('id')
         if not user_id:
             logger.warning("ID do usuário não encontrado nos dados da sessão")
@@ -40,31 +39,47 @@ def check_session():
                 'status': 'error',
                 'message': 'ID do usuário inválido'
             }), 401
-          # Opcional: Verificar se o usuário ainda existe no banco
+          # Verificar se o usuário ainda existe no banco (verificação opcional para compatibilidade)
+        user_exists_in_db = True
+        db_user_data = None
+        
         try:
-            response = supabase.table('users').select('id, name, email').eq('id', user_id).execute()
+            # Usar cliente admin para contornar problemas de RLS
+            response = supabase_admin.table('users').select('id, name, email').eq('id', user_id).execute()
             if not response.data or len(response.data) == 0:
-                logger.warning(f"Usuário {user_id} não encontrado ou inativo")
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Usuário inativo ou inexistente'
-                }), 401
-            elif len(response.data) > 1:
-                logger.warning(f"Múltiplos usuários encontrados para ID {user_id}")
+                user_exists_in_db = False
+                logger.warning(f"Usuário {user_id} não encontrado no banco, mas sessão válida - permitindo acesso")
+                # Para usuários que não existem no banco mas têm sessão válida (ex: usuários system),
+                # usar dados da sessão em vez de invalidar
+            else:
+                db_user_data = response.data[0]
+                if len(response.data) > 1:
+                    logger.warning(f"Múltiplos usuários encontrados para ID {user_id}")
         except Exception as db_error:
             logger.error(f"Erro ao verificar usuário no banco: {str(db_error)}")
+            user_exists_in_db = False
             # Em caso de erro de banco, permitir continuar se a sessão local é válida
-            pass
-        
-        logger.info(f"Verificação de sessão bem-sucedida para usuário {user_id}")
-        return jsonify({
-            'status': 'success',
-            'message': 'Sessão válida',
-            'user': {
+        # Determinar dados do usuário para resposta
+        if user_exists_in_db and db_user_data:
+            # Usar dados do banco se disponíveis
+            response_user_data = {
+                'id': db_user_data.get('id'),
+                'nome': db_user_data.get('name'),
+                'email': db_user_data.get('email')
+            }
+        else:
+            # Usar dados da sessão se usuário não existe no banco
+            response_user_data = {
                 'id': user_data.get('id'),
                 'nome': user_data.get('name'),
                 'email': user_data.get('email')
             }
+        
+        logger.info(f"Verificação de sessão bem-sucedida para usuário {user_id} (exists_in_db: {user_exists_in_db})")
+        return jsonify({
+            'status': 'success',
+            'message': 'Sessão válida',
+            'user': response_user_data
         }), 200
         
     except Exception as e:

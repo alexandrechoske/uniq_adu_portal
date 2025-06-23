@@ -45,8 +45,8 @@ def update_importacoes_processos():
 @bp.route('/test-connection')
 def test_connection():
     try:
-        # Testar conexão com o Supabase
-        response = supabase.table('users').select('*').limit(1).execute()
+        # Testar conexão com o Supabase usando cliente admin para evitar problemas de RLS
+        response = supabase_admin.table('users').select('*').limit(1).execute()
         return jsonify({
             'status': 'success',
             'message': 'Conexão com Supabase estabelecida com sucesso!',
@@ -83,10 +83,9 @@ def login():
                 print("[DEBUG] Chamando função de atualização de importacoes_processos")
                 update_success = update_importacoes_processos()
                 print(f"[DEBUG] Atualização de importações: {'sucesso' if update_success else 'falha'}")
-                
-                # Buscar dados do usuário na tabela users
+                  # Buscar dados do usuário na tabela users
                 print("[DEBUG] Buscando dados do usuário na tabela users...")
-                user_data = supabase.table('users').select('*').eq('id', user_id).execute()
+                user_data = supabase_admin.table('users').select('*').eq('id', user_id).execute()
                 print(f"[DEBUG] Dados do usuário: {user_data}")
                 
                 if user_data.data:
@@ -204,7 +203,7 @@ def debug_agentes():
 def corrigir_user_ids():
     """Rota temporária para corrigir user_ids"""
     try:
-        users = supabase.table('users').select('*').execute()
+        users = supabase_admin.table('users').select('*').execute()
         corrigidos = 0
         
         for user in users.data:

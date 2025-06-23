@@ -16,7 +16,7 @@
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">{% if user %}Editar{% else %}Novo{% endif %} Usuário</h2>
-                <form method="POST" class="space-y-6" id="userForm">
+                <form method="POST" action="{% if user %}{{ url_for('usuarios.salvar', user_id=user.id) }}{% else %}{{ url_for('usuarios.criar') }}{% endif %}" class="space-y-6" id="userForm">
                     <!-- Campo name -->
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700">Nome</label>
@@ -33,13 +33,11 @@
                                value="{{ user.email if user else '' }}"
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                required>
-                    </div>
-
-                    <!-- Campo Senha (apenas para novos usuários) -->
+                    </div>                    <!-- Campo Senha (apenas para novos usuários) -->
                     {% if not user %}
                     <div>
-                        <label for="senha" class="block text-sm font-medium text-gray-700">Senha</label>
-                        <input type="password" name="senha" id="senha" 
+                        <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
+                        <input type="password" name="password" id="password" 
                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                required>
                     </div>
@@ -62,10 +60,10 @@
                         <a href="{{ url_for('usuarios.index') }}" 
                            class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Cancelar
-                        </a>
-                        <button type="submit" 
-                                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            {% if user %}Salvar{% else %}Criar{% endif %}
+                        </a>                        <button type="submit" id="submitButton"
+                                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="submitButtonText">{% if user %}Salvar{% else %}Criar{% endif %}</span>
+                            <i id="submitLoader" class="mdi mdi-loading mdi-spin ml-2 hidden"></i>
                         </button>
                     </div>
                 </form>
@@ -164,20 +162,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const roleSelect = document.getElementById('role');
     const empresasSection = document.getElementById('empresasSection');
     const userId = getUserIdFromUrl();
-    
-    // Função para obter user ID da URL
+      // Função para obter user ID da URL
     function getUserIdFromUrl() {
         const pathParts = window.location.pathname.split('/');
         const editIndex = pathParts.indexOf('editar');
-        return editIndex !== -1 ? pathParts[editIndex - 1] : null;
+        if (editIndex !== -1) {
+            return pathParts[editIndex - 1];
+        }
+        // Para páginas de criação, não há userId ainda
+        return null;
     }
-    
-    // Mostrar/ocultar seção de empresas baseado no perfil
+      // Mostrar/ocultar seção de empresas baseado no perfil
     function toggleEmpresasSection() {
         if (roleSelect.value === 'cliente_unique') {
             empresasSection.classList.remove('hidden');
             if (userId) {
+                // Apenas carrega empresas se estivermos editando um usuário existente
                 carregarEmpresasUsuario();
+            } else {
+                // Para novos usuários, apenas mostra a seção para seleção
+                document.getElementById('empresasTableBody').innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-500">Selecione as empresas abaixo para vincular ao novo usuário</td></tr>';
+                document.getElementById('totalEmpresas').textContent = '0';
             }
         } else {
             empresasSection.classList.add('hidden');
@@ -190,8 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Verificar perfil inicial
         toggleEmpresasSection();
     }
-    
-    // Carregar empresas do usuário
+      // Carregar empresas do usuário (apenas para edição)
     async function carregarEmpresasUsuario() {
         if (!userId) return;
         
@@ -329,53 +333,68 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Remover empresa
+      // Remover empresa
     window.removerEmpresa = async function(cnpj) {
         if (!confirm('Deseja remover esta empresa?')) return;
         
         try {
-            const response = await fetch(`/usuarios/${userId}/empresas/remover`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ cnpj: cnpj })
-            });
-            
-            if (response.ok) {
-                carregarEmpresasUsuario();
-                mostrarNotificacao('Empresa removida com sucesso', 'success');
+            if (userId) {
+                // Modo edição: remover via API
+                const response = await fetch(`/usuarios/${userId}/empresas/remover`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cnpj: cnpj })
+                });
+                
+                if (response.ok) {
+                    carregarEmpresasUsuario();
+                    mostrarNotificacao('Empresa removida com sucesso', 'success');
+                } else {
+                    mostrarNotificacao('Erro ao remover empresa', 'error');
+                }
             } else {
-                mostrarNotificacao('Erro ao remover empresa', 'error');
+                // Modo criação: remover da lista local
+                removeCompany(cnpj);
+                mostrarNotificacao('Empresa removida da lista', 'success');
             }
         } catch (error) {
             console.error('Erro:', error);
             mostrarNotificacao('Erro ao remover empresa', 'error');
         }
     };
-    
-    // Adicionar empresa
+      // Adicionar empresa
     window.adicionarEmpresa = async function(cnpj, razaoSocial) {
         try {
-            const response = await fetch(`/usuarios/${userId}/empresas`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    cnpj: cnpj
-                })
-            });
-            
-            if (response.ok) {
-                carregarEmpresasUsuario();
+            if (userId) {
+                // Modo edição: adicionar via API
+                const response = await fetch(`/usuarios/${userId}/empresas`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        cnpj: cnpj
+                    })
+                });
+                
+                if (response.ok) {
+                    carregarEmpresasUsuario();
+                    document.getElementById('cnpjSearch').value = '';
+                    document.getElementById('searchResults').classList.add('hidden');
+                    mostrarNotificacao('Empresa adicionada com sucesso', 'success');
+                } else {
+                    const errorData = await response.json();
+                    mostrarNotificacao(errorData.error || 'Erro ao adicionar empresa', 'error');
+                }
+            } else {
+                // Modo criação: adicionar à lista local
+                const company = { cnpj: cnpj, razao_social: razaoSocial };
+                addCompany(company);
                 document.getElementById('cnpjSearch').value = '';
                 document.getElementById('searchResults').classList.add('hidden');
-                mostrarNotificacao('Empresa adicionada com sucesso', 'success');
-            } else {
-                const errorData = await response.json();
-                mostrarNotificacao(errorData.error || 'Erro ao adicionar empresa', 'error');
+                mostrarNotificacao('Empresa adicionada à lista', 'success');
             }
         } catch (error) {
             console.error('Erro:', error);
@@ -394,9 +413,42 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             notificacao.style.opacity = '0';
             setTimeout(() => notificacao.remove(), 500);
-        }, 3000);
-    }
+        }, 3000);    }
     
+    // Função para atualizar a tabela de empresas
+    function atualizarTabelaEmpresas(empresas) {
+        const tbody = document.getElementById('empresasTableBody');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '';
+        
+        if (!empresas || empresas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="px-6 py-4 text-center text-gray-500">
+                        ${userId ? 'Nenhuma empresa vinculada' : 'Selecione as empresas abaixo para vincular ao novo usuário'}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        empresas.forEach(empresa => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${empresa.cnpj}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${empresa.razao_social}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button type="button" onclick="removerEmpresa('${empresa.cnpj}')"
+                            class="text-red-600 hover:text-red-900">
+                        <i class="mdi mdi-delete h-5 w-5"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
     // Se estivermos na página de edição, carregar empresas
     if (userId) {
         carregarEmpresasUsuario();
@@ -503,9 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function removeCompany(cnpj) {
         selectedCompaniesArray = selectedCompaniesArray.filter(c => c.cnpj !== cnpj);
         updateSelectedCompaniesList();
-    }
-
-    // Função para atualizar a lista visual de empresas selecionadas
+    }    // Função para atualizar a lista visual de empresas selecionadas
     function updateSelectedCompaniesList() {
         selectedCompanies.innerHTML = '';
         selectedCompaniesArray.forEach(company => {
@@ -527,6 +577,62 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Atualizar input hidden com as empresas selecionadas
         selectedCompaniesInput.value = JSON.stringify(selectedCompaniesArray);
+          // Se estivermos no modo criação, também atualizar a tabela principal
+        if (!userId) {
+            atualizarTabelaEmpresas(selectedCompaniesArray);
+            document.getElementById('totalEmpresas').textContent = selectedCompaniesArray.length;
+        }
+    }
+    
+    // Controle de submit do formulário principal
+    const userForm = document.getElementById('userForm');
+    const submitButton = document.getElementById('submitButton');
+    const submitButtonText = document.getElementById('submitButtonText');
+    const submitLoader = document.getElementById('submitLoader');
+    
+    if (userForm) {
+        userForm.addEventListener('submit', function(e) {
+            console.log('[DEBUG] Formulário enviado');
+            
+            // Mostrar loading
+            submitButton.disabled = true;
+            submitButtonText.textContent = userId ? 'Salvando...' : 'Criando...';
+            submitLoader.classList.remove('hidden');
+            
+            // Validar campos obrigatórios
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const role = document.getElementById('role').value;
+            
+            console.log('[DEBUG] Dados do formulário:', { name, email, role });
+            
+            if (!name || !email || !role) {
+                e.preventDefault();
+                alert('Preencha todos os campos obrigatórios');
+                resetSubmitButton();
+                return false;
+            }
+            
+            // Para novos usuários, validar senha
+            if (!userId) {
+                const password = document.getElementById('password').value;
+                if (!password) {
+                    e.preventDefault();
+                    alert('A senha é obrigatória para novos usuários');
+                    resetSubmitButton();
+                    return false;
+                }
+                console.log('[DEBUG] Password validado para novo usuário');
+            }
+            
+            console.log('[DEBUG] Validação concluída, enviando formulário...');
+        });
+    }
+    
+    function resetSubmitButton() {
+        submitButton.disabled = false;
+        submitButtonText.textContent = userId ? 'Salvar' : 'Criar';
+        submitLoader.classList.add('hidden');
     }
 });
 </script>

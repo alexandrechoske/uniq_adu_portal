@@ -1,6 +1,6 @@
 from flask import session
 from functools import wraps
-from extensions import supabase
+from extensions import supabase, supabase_admin
 from flask import redirect, url_for, flash, current_app
 
 def get_user_permissions(user_id, role=None):
@@ -32,8 +32,7 @@ def get_user_permissions(user_id, role=None):
                     print(f"[DEBUG] Admin: encontradas {len(all_companies)} empresas únicas")
             except Exception as e:
                 print(f"[DEBUG] Erro ao buscar empresas para admin: {str(e)}")
-                all_companies = []
-                
+                all_companies = []                
             return {
                 'is_admin': True,
                 'is_active': True,
@@ -45,12 +44,13 @@ def get_user_permissions(user_id, role=None):
         # Para clientes_unique
         if role == 'cliente_unique':
             # Buscar dados do agente
-            agent_data = supabase.table('clientes_agentes')\
+            agent_data = supabase_admin.table('clientes_agentes')\
                 .select('empresa, usuario_ativo, numero, aceite_termos')\
                 .eq('user_id', user_id)\
                 .execute()
             
             if not agent_data.data:
+                print(f"[DEBUG] Nenhum dado de agente encontrado para user_id: {user_id}")
                 return {
                     'is_admin': False,
                     'is_active': False,
@@ -59,9 +59,34 @@ def get_user_permissions(user_id, role=None):
                     'accessible_companies': []
                 }
             
+            print(f"[DEBUG] Dados do agente encontrados: {agent_data.data}")
+            
             # Extrair empresas
             user_companies = []
+            is_active = False
+            terms_accepted = False
+            agent_number = None
+            
             for agent in agent_data.data:
+                print(f"[DEBUG] Processando agente: {agent}")
+                
+                # Verificar status ativo - considerar True se for True ou None (para retrocompatibilidade)
+                agent_active = agent.get('usuario_ativo')
+                if agent_active is True:
+                    is_active = True
+                elif agent_active is None:
+                    # Para usuários antigos sem o campo definido, assumir como ativo
+                    is_active = True
+                    print(f"[DEBUG] Campo usuario_ativo é None, assumindo ativo para retrocompatibilidade")
+                
+                # Verificar termos
+                if agent.get('aceite_termos'):
+                    terms_accepted = True
+                    
+                # Número do agente
+                if agent.get('numero'):
+                    agent_number = agent.get('numero')
+                
                 if agent.get('empresa'):
                     # Tratar formatos diferentes (string ou array)
                     companies = agent['empresa']
@@ -74,12 +99,14 @@ def get_user_permissions(user_id, role=None):
             
             user_companies = list(set(user_companies))  # Remover duplicatas
             
+            print(f"[DEBUG] Status final - is_active: {is_active}, terms_accepted: {terms_accepted}, companies: {len(user_companies)}")
+            
             return {
                 'is_admin': False,
-                'is_active': any(agent.get('usuario_ativo', False) for agent in agent_data.data),
+                'is_active': is_active,
                 'has_full_access': False,
-                'agent_number': agent_data.data[0].get('numero'),
-                'terms_accepted': any(agent.get('aceite_termos', False) for agent in agent_data.data),
+                'agent_number': agent_number,
+                'terms_accepted': terms_accepted,
                 'pages': [],  # Será preenchido pelo endpoint de páginas
                 'accessible_companies': user_companies
             }

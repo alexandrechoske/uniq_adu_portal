@@ -320,7 +320,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body{% if session.get('user') %} class="logged-in" data-user-id="{{ session['user']['id'] }}"{% endif %}>
     {% if session.get('user') %}
     <!-- Top Navigation Bar -->
     <header class="top-navbar">
@@ -441,14 +441,21 @@
                class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>
                 <span class="sidebar-text">Dashboard</span>
-            </a>
-
-            <!-- OnePage -->
+            </a>            <!-- OnePage -->
             <a href="{{ url_for('onepage.index') }}" 
                class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
                 <i class="mdi mdi-file-document-multiple text-xl"></i>
                 <span class="sidebar-text">One Page</span>
             </a>
+
+            <!-- Conferência Documental (apenas para admin e interno_unique) -->
+            {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
+            <a href="{{ url_for('conferencia.index') }}" 
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
+                <i class="mdi mdi-file-check text-xl"></i>
+                <span class="sidebar-text">Conferência Documental</span>
+            </a>
+            {% endif %}
 
             <!-- Agente Unique (apenas para admin e cliente_unique) -->
             {% if session.get('user', {}).get('role') in ['admin', 'cliente_unique'] %}

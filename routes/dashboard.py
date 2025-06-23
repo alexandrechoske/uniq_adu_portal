@@ -290,18 +290,26 @@ def index(**kwargs):
         df_canal = df['diduimp_canal'].value_counts().reset_index()
         df_canal.columns = ['Canal', 'Quantidade']
         
-        colors = ['#28a745', "#FF0000", "#ffee00", "#ffffff"]  # Different colors for different statuses
+        # Define colors based on channel names
+        color_mapping = {
+            'VERDE': '#28a745',     # Green
+            'AMARELO': '#ffc107',   # Yellow  
+            'VERMELHO': '#dc3545'   # Red
+        }
         
         chart_canal = go.Figure()
         
         for i, row in df_canal.iterrows():
+            # Get color based on channel name, fallback to gray if not found
+            color = color_mapping.get(row['Canal'], '#6c757d')
+            
             chart_canal.add_trace(go.Bar(
-                x=[row['Canal']],
-                y=[row['Quantidade']],
-                name=row['Canal'],
-                marker_color=colors[i % len(colors)],
-                text=[row['Quantidade']],
-                textposition='auto',
+            x=[row['Canal']],
+            y=[row['Quantidade']],
+            name=row['Canal'],
+            marker_color=color,
+            text=[row['Quantidade']],
+            textposition='auto',
             ))
         
         chart_canal.update_layout(

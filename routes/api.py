@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, session
-from extensions import supabase
+from extensions import supabase, supabase_admin
 from routes.auth import login_required
 import pandas as pd
 from datetime import datetime
@@ -138,12 +138,11 @@ def global_data():
             logger.error(f"Erro ao buscar importações: {str(e)}")
             global_data['importacoes'] = []
             global_data['dashboard_stats'] = {}
-        
-        # 2. Buscar usuários (apenas para admin e interno_unique)
+          # 2. Buscar usuários (apenas para admin e interno_unique)
         if user_role in ['admin', 'interno_unique']:
             try:
                 logger.info("Buscando dados de usuários...")
-                usuarios_response = supabase.table('users').select('*').execute()
+                usuarios_response = supabase_admin.table('users').select('*').execute()
                 global_data['usuarios'] = usuarios_response.data if usuarios_response.data else []
                 logger.info(f"Dados de usuários processados: {len(global_data['usuarios'])} registros")
             except Exception as e:

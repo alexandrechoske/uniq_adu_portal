@@ -1,0 +1,108 @@
+Requisitos Obrigatórios de uma Invoice para Importação
+1. Dados do Exportador (Seller/Supplier):
+Nome e razão social;
+Endereço completo (rua, número, cidade, estado, país, CEP);
+CNPJ ou identificação fiscal do país de origem (se houver);
+Telefone e e-mail para contato;
+
+2. Dados do Importador (Buyer):
+Nome e razão social;
+Endereço completo (rua, número, cidade, estado, país, CEP);
+CNPJ ou identificação fiscal;
+Telefone e e-mail para contato.
+
+3. Detalhamento da Fatura:
+Número da Invoice;
+Data de emissão da Invoice;
+Número do pedido de compra (Purchase Order), se aplicável;
+Condições de pagamento (ex: antecipado, à vista, 30/60 dias);
+Termos de entrega – Incoterms® (EXW, FCA, CPT, CIP, DAP, DPU, DDP, FAS, FOB, CFR, CIF).
+
+4. Descrição Detalhada das Mercadorias:
+Descrição completa de cada item (especificando modelo, marca, características técnicas);
+Código do produto no fabricante/exportador e (se possível) o NCM/HS Code;
+Quantidade de cada item;
+Unidade de medida (ex: peças, kg, m);
+Valor unitário de cada item e moeda (USD, EUR, etc.);
+Valor total por item;
+Valor total da invoice e moeda;
+Marca, numeração e tipo das embalagens (Packing list pode ser documento à parte, mas se incluir aqui, facilita).
+
+
+5. Dados de Transporte:
+Modal de transporte (aéreo, marítimo, rodoviário, ferroviário);
+Nome e endereço do local de embarque;
+Nome e endereço do local de destino;
+Nome do navio/voo/transportador (se disponível);
+Porto/terminal de origem e destino.
+
+6. Informações Complementares e Legais:
+Peso bruto e peso líquido total da carga;
+Volume total (m³);
+País de origem e de embarque das mercadorias;
+País de destino final das mercadorias;
+Observações especiais (quando exigido por acordos internacionais ou exigências contratuais).
+
+7. Assinatura e Carimbo:
+Assinatura do exportador (digital ou manuscrita);
+Carimbo da empresa exportadora;
+Data da assinatura.
+
+8. Outros Itens Importantes (quando aplicáveis):
+Número do conhecimento de embarque (B/L, AWB, etc.);
+Proforma Invoice (se for o caso de adiantamento / pagamento antecipado);
+Declaração de veracidade dos dados;
+Dados bancários do exportador (caso necessário para pagamento);
+Modelo Simplificado de Invoice;
+Plaintext.
+
+
+
+
+Modelo (EXEMPLO) de Invoice
+INVOICE No: 12345                                   Date: 10/06/2025
+
+Exporter (Seller):                                       Importer (Buyer):
+Empresa Exportadora Ltda                      Empresa Importadora S.A
+Endereço completo                                  Endereço completo
+CNPJ/Fiscal ID:                                           CNPJ/Fiscal ID:
+Contato: export@empresa.com             Contato: import@empresa.com
+
+Purchase Order: 98765
+Payment Terms: 30 days net
+Incoterms: CIF Santos, Brazil
+
+Description of Goods:
+| Item | Description        | Model | HS Code | Qty | Unit | Unit Price | Total Price |
+|-------|-----------------------|---------|-------------|------|-------|---------------|---------------|
+| 01   | Máquina XYZ           | 123X  | 8479.89 | 2   | pcs  | USD 5,000  | USD 10,000  |
+| 02   | Peças de reposição | 456Y  | 8479.90 | 10  | pcs  | USD 200    | USD 2,000   |
+
+Total Amount: USD 12,000
+
+Weight: 150 kg (gross) / 130 kg (net)
+Volume: 1.2 m³
+Country of Origin: Alemanha
+Ship From: Hamburg, Germany
+Ship To: Santos, Brazil
+
+Remarks: All goods are new and packed for export.
+
+Signature: ___________________           Stamp:
+Name: Export Manager
+Com base no (art. 557 do Regulamento Aduaneiro) a Invoice deve conter as seguintes informações:
+ nome e endereço, completos, do exportador; 
+ nome e endereço, completos, do importador;
+ especificação das mercadorias em português ou em idioma oficial do Acordo Geral sobre Tarifas e Comércio, ou, se em outro idioma, acompanhada de tradução em língua portuguesa, a critério da autoridade aduaneira, contendo as denominações próprias e comerciais, com a indicação dos elementos indispensáveis a sua perfeita identificação. Os idiomas oficiais do Acordo Geral sobre Tarifas e Comércio são o inglês, o francês e o espanhol;
+ marca, numeração e, se houver, número de referência dos volumes;
+ quantidade e espécie dos volumes;
+ peso bruto dos volumes;
+ peso líquido dos volumes;
+ país de origem, como tal entendido aquele onde houver sido produzida a mercadoria ou onde tiver ocorrido a última transformação substancial;
+ país de aquisição, assim considerado aquele do qual a mercadoria foi adquirida para ser exportada para o Brasil, independentemente do país de origem da mercadoria ou de seus insumos;
+ país de procedência, assim considerado aquele onde se encontrava a mercadoria no momento de sua aquisição;
+ preço unitário e total de cada espécie de mercadoria e, se houver, o montante e a natureza das reduções e dos descontos concedidos ao importador;
+ frete e demais despesas relativas às mercadorias especificadas na fatura;
+ condições e moeda de pagamento; 
+ termo da condição de venda (INCOTERM).
+

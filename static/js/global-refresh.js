@@ -256,10 +256,22 @@
         stopCountdown();
         
         console.log('[GlobalRefresh] Sistema de refresh global parado');
-    }
-
-    // Event listeners e inicialização
+    }    // Event listeners e inicialização
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('[GlobalRefresh] Verificando se deve inicializar...');
+        
+        // Não inicializar o sistema na página de login
+        if (window.location.pathname === '/login' || window.location.pathname === '/auth/login') {
+            console.log('[GlobalRefresh] Na página de login, não inicializando sistema');
+            return;
+        }
+        
+        // Verificar se existe um usuário logado antes de inicializar
+        if (!document.body.classList.contains('logged-in') && !document.querySelector('[data-user-id]')) {
+            console.log('[GlobalRefresh] Usuário não logado, não inicializando sistema');
+            return;
+        }
+        
         console.log('[GlobalRefresh] Inicializando GlobalRefresh...');
         
         // Inicializar sistema
