@@ -51,3 +51,5 @@ sql/
 
 OS generated files
 Thumbs.db
+
+/static/uploads/
