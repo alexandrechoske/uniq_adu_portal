@@ -320,6 +320,30 @@
         .table-title {
             font-size: 1.125rem;
         }
+        
+        /* Ajustes para os KPIs mobile */
+        .metric-value {
+            font-size: 1.5rem;
+        }
+        
+        .metric-title {
+            font-size: 0.75rem;
+        }
+    }
+    
+    /* Tablet e desktop médio */
+    @media (max-width: 1024px) {
+        .lg\\:grid-cols-8 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        
+        .lg\\:col-span-1 {
+            grid-column: span 1;
+        }
+        
+        .metric-value {
+            font-size: 1.75rem;
+        }
     }
 </style>
 {% endblock %}
@@ -351,48 +375,113 @@
             </div>
 
     </div>
+    
+    {# Padding adicional após o filtro #}
+    <div class="mb-4"></div>
 
-    {# KPI Cards Section #}
-    <div id="kpi-cards-container" class="mb-6">        {# Linha 1: Total Processos (Centralizado) e Câmbio (lateral direita) #}
-        <div class="flex justify-between gap-4 mb-4">
-            {# Espaçamento à esquerda para centralização visual #}
-            <div class="hidden md:block w-1/4"></div>
-            
-            {# Total de Processos (centralizado) #}
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg mx-auto w-full md:w-1/3">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">Total de Processos</p>
-                    <p class="text-3xl font-bold text-blue-600 metric-value">{{ kpis.total if kpis.total is defined else 0 }}</p>
+    {# KPI Cards Section - Todos em uma linha #}
+    <div id="kpi-cards-container" class="mb-6">
+        {# Grid principal com todos os KPIs em linha #}
+        <div class="grid grid-cols-1 lg:grid-cols-8 gap-4 mb-4">
+            {# Total de Processos #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Total Processos</p>
+                    <p class="text-2xl font-bold text-blue-600 metric-value">{{ kpis.total if kpis.total is defined else 0 }}</p>
                 </div>
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
+                <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
                 </div>
             </div>
-            
-            {# Taxas de Câmbio - Em uma única caixa à direita #}
-            <div class="hidden md:block w-1/4">
-                <div class="currency-container bg-white shadow-sm rounded-lg p-4">
+
+            {# Aéreo #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Aéreo</p>
+                    <p class="text-2xl font-bold text-green-600 metric-value">{{ kpis.aereo if kpis.aereo is defined else 0 }}</p>
+                </div>
+                <div class="p-2 rounded-full bg-green-100 text-green-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                </div>
+            </div>
+
+            {# Terrestre #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Terrestre</p>
+                    <p class="text-2xl font-bold text-yellow-600 metric-value">{{ kpis.terrestre if kpis.terrestre is defined else 0 }}</p>
+                </div>
+                <div class="p-2 rounded-full bg-yellow-100 text-yellow-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17l-2 2m2-2l2 2m-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-2 0h.01M17 17l2 2m-2-2l-2 2m2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m2 0h.01"></path></svg>
+                </div>
+            </div>
+
+            {# Marítimo #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Marítimo</p>
+                    <p class="text-2xl font-bold text-purple-600 metric-value">{{ kpis.maritimo if kpis.maritimo is defined else 0 }}</p>
+                </div>
+                <div class="p-2 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
+                </div>
+            </div>
+
+            {# Aguardando Chegada #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Aguard. Chegada</p>
+                    <p class="text-2xl font-bold text-red-600 metric-value">{{ kpis.aguardando_chegada if kpis.aguardando_chegada is defined else 0 }}</p>
+                </div>
+                <div class="p-2 rounded-full bg-red-100 text-red-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+
+            {# Aguardando Embarque #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Aguard. Embarque</p>
+                    <p class="text-2xl font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
+                </div>
+                <div class="p-2 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+            </div>
+
+            {# DI Registrada #}
+            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
+                <div class="text-center w-full">
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">DI Registrada</p>
+                    <p class="text-2xl font-bold text-blue-600 metric-value">{{ kpis.di_registrada if kpis.di_registrada is defined else 0 }}</p>
+                </div>
+                <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+
+            {# Taxas de Câmbio - Layout compacto lado a lado #}
+            <div class="currency-container bg-white shadow-sm rounded-lg p-3 lg:col-span-1">
+                {# Dólar e Euro lado a lado #}
+                <div class="space-y-2">
                     {# Dólar #}
-                    <div class="flex items-center mb-3" id="usd-rate-card">
-                        <div class="currency-symbol bg-green-100 text-green-600 rounded-full w-10 h-10 flex items-center justify-center mr-3">
-                            <span class="text-xl font-bold">$</span>
+                    <div class="flex items-center justify-center" id="usd-rate-card">
+                        <div class="currency-symbol bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center mr-1">
+                            <span class="text-sm font-bold">$</span>
                         </div>
-                        <div>
-                            <p class="text-2xl font-bold text-gray-800">{{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
+                        <div class="text-center">
+                            <p class="text-lg font-bold text-gray-800">{{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
                             <p class="text-xs text-gray-500">(USD)</p>
                         </div>
                     </div>
                     
-                    {# Linha divisória #}
-                    <div class="border-t border-gray-100 my-2"></div>
-                    
                     {# Euro #}
-                    <div class="flex items-center mt-3" id="eur-rate-card">
-                        <div class="currency-symbol bg-purple-100 text-purple-600 rounded-full w-10 h-10 flex items-center justify-center mr-3">
-                            <span class="text-xl font-bold">€</span>
+                    <div class="flex items-center justify-center" id="eur-rate-card">
+                        <div class="currency-symbol bg-purple-100 text-purple-600 rounded-full w-6 h-6 flex items-center justify-center mr-1">
+                            <span class="text-sm font-bold">€</span>
                         </div>
-                        <div>
-                            <p class="text-2xl font-bold text-gray-800">{{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
+                        <div class="text-center">
+                            <p class="text-lg font-bold text-gray-800">{{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
                             <p class="text-xs text-gray-500">(EUR)</p>
                         </div>
                     </div>
@@ -400,100 +489,104 @@
             </div>
         </div>
         
-        {# Versão mobile dos indicadores de câmbio #}
-        <div class="md:hidden currency-container bg-white shadow-sm rounded-lg p-4 mb-4">
-            <div class="flex justify-between">
-                {# Dólar #}
-                <div class="flex items-center" id="usd-rate-card-mobile">
-                    <div class="currency-symbol bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center mr-2">
-                        <span class="text-lg font-bold">$</span>
+        {# Versão mobile dos KPIs - Layout em grid 2x4 #}
+        <div class="lg:hidden">
+            {# Linha 1: Total de Processos e Câmbio #}
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                {# Total de Processos #}
+                <div class="metric-card p-4 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper mb-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
                     </div>
-                    <div>
-                        <p class="text-xl font-bold text-gray-800">{{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
-                        <p class="text-xs text-gray-500">(USD)</p>
-                    </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Total Processos</p>
+                    <p class="text-xl font-bold text-blue-600 metric-value">{{ kpis.total if kpis.total is defined else 0 }}</p>
                 </div>
                 
-                {# Separador vertical #}
-                <div class="border-r border-gray-200 mx-4"></div>
-                
-                {# Euro #}
-                <div class="flex items-center" id="eur-rate-card-mobile">
-                    <div class="currency-symbol bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center mr-2">
-                        <span class="text-lg font-bold">€</span>
+                {# Câmbio Mobile #}
+                <div class="currency-container bg-white shadow-sm rounded-lg p-3">
+                    <div class="space-y-2">
+                        {# Dólar #}
+                        <div class="flex items-center justify-center" id="usd-rate-card-mobile">
+                            <div class="currency-symbol bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center mr-1">
+                                <span class="text-sm font-bold">$</span>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm font-bold text-gray-800">{{ currencies.USD if currencies and currencies.USD else '0.00' }}</p>
+                                <p class="text-xs text-gray-500">(USD)</p>
+                            </div>
+                        </div>
+                        
+                        {# Euro #}
+                        <div class="flex items-center justify-center" id="eur-rate-card-mobile">
+                            <div class="currency-symbol bg-purple-100 text-purple-600 rounded-full w-6 h-6 flex items-center justify-center mr-1">
+                                <span class="text-sm font-bold">€</span>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm font-bold text-gray-800">{{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
+                                <p class="text-xs text-gray-500">(EUR)</p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-xl font-bold text-gray-800">{{ currencies.EUR if currencies and currencies.EUR else '0.00' }}</p>
-                        <p class="text-xs text-gray-500">(EUR)</p>
+                </div>
+            </div>
+            
+            {# Linha 2: Tipos de Transporte #}
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                {# Aéreo #}
+                <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-green-100 text-green-600 metric-icon-wrapper mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                     </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Aéreo</p>
+                    <p class="text-lg font-bold text-green-600 metric-value">{{ kpis.aereo if kpis.aereo is defined else 0 }}</p>
+                </div>
+
+                {# Terrestre #}
+                <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-yellow-100 text-yellow-600 metric-icon-wrapper mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17l-2 2m2-2l2 2m-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-2 0h.01M17 17l2 2m-2-2l-2 2m2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m2 0h.01"></path></svg>
+                    </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Terrestre</p>
+                    <p class="text-lg font-bold text-yellow-600 metric-value">{{ kpis.terrestre if kpis.terrestre is defined else 0 }}</p>
+                </div>
+
+                {# Marítimo #}
+                <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
+                    </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Marítimo</p>
+                    <p class="text-lg font-bold text-purple-600 metric-value">{{ kpis.maritimo if kpis.maritimo is defined else 0 }}</p>
                 </div>
             </div>
-        </div>
+            
+            {# Linha 3: Status #}
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                {# Aguardando Chegada #}
+                <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-red-100 text-red-600 metric-icon-wrapper mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Aguard. Chegada</p>
+                    <p class="text-lg font-bold text-red-600 metric-value">{{ kpis.aguardando_chegada if kpis.aguardando_chegada is defined else 0 }}</p>
+                </div>
 
-        {# Linha 2: Tipos de Transporte e Status (7 colunas com espaçamento) #}
-        <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
-            {# Tipos de Transporte #}
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">Total Aéreo</p>
-                    <p class="text-3xl font-bold text-green-600 metric-value">{{ kpis.aereo if kpis.aereo is defined else 0 }}</p>
+                {# Aguardando Embarque #}
+                <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Aguard. Embarque</p>
+                    <p class="text-lg font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
                 </div>
-                <div class="p-3 rounded-full bg-green-100 text-green-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                </div>
-            </div>
 
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">Total Terrestre</p>
-                    <p class="text-3xl font-bold text-yellow-600 metric-value">{{ kpis.terrestre if kpis.terrestre is defined else 0 }}</p>
-                </div>
-                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17l-2 2m2-2l2 2m-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-2 0h.01M17 17l2 2m-2-2l-2 2m2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m2 0h.01"></path></svg>
-                </div>
-            </div>
-
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">Total Marítimo</p>
-                    <p class="text-3xl font-bold text-purple-600 metric-value">{{ kpis.maritimo if kpis.maritimo is defined else 0 }}</p>
-                </div>
-                <div class="p-3 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
-                </div>
-            </div>
-
-            {# Espaçamento #}
-            <div class="col-span-1"></div> {# Esta div vazia cria o espaçamento na grid de 7 colunas #}
-
-            {# Status #}
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">Aguardando Chegada</p>
-                    <p class="text-3xl font-bold text-red-600 metric-value">{{ kpis.aguardando_chegada if kpis.aguardando_chegada is defined else 0 }}</p>
-                </div>
-                <div class="p-3 rounded-full bg-red-100 text-red-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">Aguardando Embarque</p>
-                    <p class="text-3xl font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
-                </div>
-                <div class="p-3 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                </div>
-            </div>
-
-            <div class="metric-card p-6 flex items-center justify-between bg-white shadow-sm rounded-lg col-span-1">
-                <div>
-                    <p class="text-sm font-medium text-slate-500 metric-title">DI Registrada</p>
-                    <p class="text-3xl font-bold text-blue-600 metric-value">{{ kpis.di_registrada if kpis.di_registrada is defined else 0 }}</p>
-                </div>
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                {# DI Registrada #}
+                <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
+                    <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">DI Registrada</p>
+                    <p class="text-lg font-bold text-blue-600 metric-value">{{ kpis.di_registrada if kpis.di_registrada is defined else 0 }}</p>
                 </div>
             </div>
         </div>
@@ -508,12 +601,11 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="numero">Nº DI <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_embarque">EMBARQUE <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="via_transporte_descricao">MODAL <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_registro">REGISTRO <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="ref_unique">REF UNIQUE <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_abertura">ABERTURA <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="carga_status">STATUS <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="diduimp_canal">CANAL <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_chegada">CHEGADA <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="observacoes">OBS <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="cliente_razaosocial">CLIENTE <span class="sort-icon"></span></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-slate-200">
@@ -532,8 +624,7 @@
                                 {{ row.via_transporte_descricao or ' ' }}
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_registro or ' ' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.ref_unique or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_abertura or ' ' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm 
                             {% if row.carga_status == '1 - Aguardando Embarque' %}text-orange-600 font-semibold status-aguardando-embarque
                             {% elif row.carga_status == '2 - Em Trânsito' %}text-blue-600 font-semibold status-em-transito
@@ -555,7 +646,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_chegada or ' ' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.observacoes or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.cliente_razaosocial or ' ' }}</td>
                     </tr>
                     {% else %}
                     <tr>

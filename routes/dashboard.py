@@ -35,33 +35,37 @@ def index(**kwargs):
     data = operacoes.data if operacoes.data else []
     df = pd.DataFrame(data)
 
-    # Calculate metrics
+    # Calculate metrics baseado na nova estrutura
     total_operations = len(df)
     processos_abertos = len(df[df['situacao'] == 'Aberto']) if not df.empty else 0
     
     uma_semana_atras = datetime.now() - timedelta(days=7)
     df['data_abertura'] = pd.to_datetime(df['data_abertura'])
     novos_semana = len(df[df['data_abertura'] > uma_semana_atras]) if not df.empty else 0
-    em_transito = len(df[df['carga_status'].notna()]) if not df.empty else 0
+    em_transito = len(df[df['carga_status'] == '2 - Em Trânsito']) if not df.empty else 0  # Usando carga_status
     
     # Calculate new metric: "A chegar nessa semana" (Arriving This Week)
     semana_atual = datetime.now()
     fim_semana = semana_atual + timedelta(days=(6 - semana_atual.weekday()))  # Find the end of current week (Sunday)
     
-    # Check if a predicted arrival date field exists in the dataset
+    # Converter para datetime para comparação correta
+    semana_atual_dt = pd.to_datetime(semana_atual.date())
+    fim_semana_dt = pd.to_datetime(fim_semana.date())
+    
+    # Usar previsao_chegada se disponível
     a_chegar_semana = 0
-    if 'data_prevista_chegada' in df.columns:
-        df['data_prevista_chegada'] = pd.to_datetime(df['data_prevista_chegada'])
+    if 'previsao_chegada' in df.columns and not df.empty:
+        df['previsao_chegada'] = pd.to_datetime(df['previsao_chegada'])
         # Filter processes arriving this week (from today until end of week)
-        a_chegar_semana = len(df[(df['data_prevista_chegada'] >= semana_atual.date()) & 
-                                (df['data_prevista_chegada'] <= fim_semana.date()) &
-                                (df['situacao'] == 'Aberto')]) if not df.empty else 0
-    elif 'eta' in df.columns:  # Alternative field name for estimated arrival
-        df['eta'] = pd.to_datetime(df['eta'])
+        a_chegar_semana = len(df[(df['previsao_chegada'] >= semana_atual_dt) & 
+                                (df['previsao_chegada'] <= fim_semana_dt) &
+                                (df['situacao'] == 'Aberto')])
+    elif 'data_chegada' in df.columns and not df.empty:  # Alternative field name
+        df['data_chegada'] = pd.to_datetime(df['data_chegada'])
         # Filter processes arriving this week (from today until end of week)
-        a_chegar_semana = len(df[(df['eta'] >= semana_atual.date()) & 
-                                (df['eta'] <= fim_semana.date()) &
-                                (df['situacao'] == 'Aberto')]) if not df.empty else 0
+        a_chegar_semana = len(df[(df['data_chegada'] >= semana_atual_dt) & 
+                                (df['data_chegada'] <= fim_semana_dt) &
+                                (df['situacao'] == 'Aberto')])
 
     # Create charts
     if not df.empty:

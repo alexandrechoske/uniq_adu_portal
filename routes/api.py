@@ -99,8 +99,8 @@ def global_data():
             if importacoes_data:
                 df = pd.DataFrame(importacoes_data)
                 
-                # Converter datas para datetime para ordenação adequada
-                date_columns = ['data_embarque', 'data_chegada']
+                # Converter datas para datetime para ordenação adequada - incluindo novos campos
+                date_columns = ['data_embarque', 'data_chegada', 'data_abertura']
                 for col in date_columns:
                     if col in df.columns:
                         df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
@@ -116,7 +116,7 @@ def global_data():
                 
                 global_data['importacoes'] = df.to_dict('records')
                 
-                # Calcular estatísticas
+                # Calcular estatísticas usando campos atualizados
                 global_data['dashboard_stats'] = {
                     'total_processos': len(df),
                     'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
@@ -124,7 +124,7 @@ def global_data():
                     'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
                     'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
                     'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-                    'di_registrada': len(df[df['status_doc'] == '3 - Desembarcada'])
+                    'di_registrada': len(df[df['carga_status'] == '3 - Desembarcada'])  # Usando carga_status
                 }
             else:
                 global_data['dashboard_stats'] = {

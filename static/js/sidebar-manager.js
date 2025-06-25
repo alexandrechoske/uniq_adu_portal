@@ -3,8 +3,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Sidebar toggle functionality
-    let sidebarExpanded = localStorage.getItem('sidebarExpanded') === 'false' ? false : true;
+    // Sidebar toggle functionality - SEMPRE INICIA COLAPSADA
+    let sidebarExpanded = false; // Sempre inicia colapsada
     
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
@@ -24,14 +24,12 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('sidebarExpanded', sidebarExpanded);
     }
     
-    // Apply initial state
-    if (!sidebarExpanded) {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('main-content');
-        
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('sidebar-collapsed');
-    }
+    // Apply initial state - SEMPRE COLAPSADA
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    
+    sidebar.classList.add('collapsed');
+    mainContent.classList.add('sidebar-collapsed');
     
     // Add event listener to hamburger button
     document.getElementById('sidebar-toggle')?.addEventListener('click', toggleSidebar);

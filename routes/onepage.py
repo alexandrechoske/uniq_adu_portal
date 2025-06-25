@@ -184,20 +184,20 @@ def index():
         }
         table_data = []
     else:
-        # Calculate KPIs
+        # Calculate KPIs baseado na nova estrutura da tabela
         kpis = {
             'total': len(df),
             'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
-            'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
+            'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),  
             'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
             'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
             'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-            'di_registrada': len(df[df['status_doc'] == '3 - Desembarcada'])
+            'di_registrada': len(df[df['carga_status'] == '3 - Desembarcada'])  # Usando carga_status ao invés de status_doc
         }
 
-        # Prepare table data
-        # First convert dates to datetime for proper sorting
-        date_columns = ['data_embarque', 'data_chegada'] # Add other date columns if necessary
+        # Prepare table data - usando campos que existem na tabela
+        # Converter datas para datetime para ordenação correta
+        date_columns = ['data_embarque', 'data_chegada', 'data_abertura']
         for col in date_columns:
             # Convert to datetime, errors='coerce' will turn invalid parsing into NaT (Not a Time)
             df[col] = pd.to_datetime(df[col], errors='coerce')
@@ -381,7 +381,7 @@ def page_data():
             }
             table_data = []
         else:
-            # Calculate KPIs
+            # Calculate KPIs - usando a estrutura atualizada da tabela
             kpis = {
                 'total': len(df),
                 'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
@@ -389,12 +389,12 @@ def page_data():
                 'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
                 'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
                 'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-                'di_registrada': len(df[df['status_doc'] == '3 - Desembarcada'])
+                'di_registrada': len(df[df['carga_status'] == '3 - Desembarcada'])  # Usando carga_status
             }
 
-            # Prepare table data
-            # First convert dates to datetime for proper sorting
-            date_columns = ['data_embarque', 'data_chegada'] # Add other date columns if necessary
+            # Prepare table data - usando campos que existem na tabela
+            # Converter datas para datetime para ordenação correta
+            date_columns = ['data_embarque', 'data_chegada', 'data_abertura']
             for col in date_columns:
                 # Convert to datetime, errors='coerce' will turn invalid parsing into NaT (Not a Time)
                 df[col] = pd.to_datetime(df[col], errors='coerce')
