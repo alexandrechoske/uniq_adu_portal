@@ -7,840 +7,446 @@ import plotly.graph_objects as go
 import pandas as pd
 import scipy.stats as stats
 from datetime import datetime, timedelta
+import json
+import requests
+import numpy as np
 
 bp = Blueprint('dashboard', __name__)
 
-@bp.route('/dashboard')
-@check_permission()  # Usando o novo sistema de permissões
-def index(**kwargs):
-    # Get user companies if client
-    user_companies = []
+def get_currencies():
+    """Get latest USD and EUR exchange rates"""
+    try:
+        response = requests.get('https://api.exchangerate-api.com/v4/latest/BRL')
+        if response.status_code == 200:
+            data = response.json()
+            usd_rate = 1 / data['rates']['USD']
+            eur_rate = 1 / data['rates']['EUR']
+            return {
+                'USD': round(usd_rate, 4),
+                'EUR': round(eur_rate, 4),
+                'last_updated': data['date']
+            }
+    except Exception as e:
+        print(f"Error fetching currency rates: {str(e)}")
+    
+    return {
+        'USD': 0.00,
+        'EUR': 0.00,
+        'last_updated': datetime.now().strftime('%Y-%m-%d')
+    }
+
+def get_user_companies():
+    """Get companies that the user has access to"""
     if session['user']['role'] == 'cliente_unique':
         agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', session['user']['id']).execute()
         if agent_response.data and agent_response.data[0].get('empresa'):
-            user_companies = agent_response.data[0].get('empresa')
-            if isinstance(user_companies, str):
-                import json
+            companies = agent_response.data[0].get('empresa')
+            if isinstance(companies, str):
                 try:
-                    user_companies = json.loads(user_companies)
+                    return json.loads(companies)
                 except:
-                    user_companies = [user_companies]
+                    return [companies]
+            return companies
+    return []
+
+def get_arrival_date_display(row):
+    """Get appropriate arrival date based on current date"""
+    hoje = pd.Timestamp.now().date()
+    
+    if pd.notna(row['data_chegada']):
+        data_chegada = pd.to_datetime(row['data_chegada']).date()
+        if data_chegada <= hoje:
+            return row['data_chegada']
+    
+    if pd.notna(row['previsao_chegada']):
+        return row['previsao_chegada']
+    
+    return ""
+
+@bp.route('/dashboard')
+@check_permission()
+def index(**kwargs):
+    # Get user companies if client
+    user_companies = get_user_companies()
+    selected_company = request.args.get('empresa')
+    
+    # Timestamp da última atualização
+    last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    
+    # Get currency exchange rates
+    currencies = get_currencies()
 
     # Build query with client filter
-    query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').order('data_abertura', desc=True)
-    if user_companies:
-        query = query.in_('cliente_cpfcnpj', user_companies)
+    query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado')
     
+    # Apply filters based on user role and selected company
+    if session['user']['role'] == 'cliente_unique':
+        if not user_companies:
+            return render_template('dashboard/index.html', 
+                                 kpis={}, table_data=[], companies=[], 
+                                 currencies=currencies, last_update=last_update)
+        
+        if selected_company and selected_company in user_companies:
+            query = query.eq('cliente_cpfcnpj', selected_company)
+        else:
+            query = query.in_('cliente_cpfcnpj', user_companies)
+    elif selected_company:
+        query = query.eq('cliente_cpfcnpj', selected_company)
+    
+    # Execute query
     operacoes = query.execute()
     data = operacoes.data if operacoes.data else []
     df = pd.DataFrame(data)
 
-    # Calculate metrics baseado na nova estrutura
+    if df.empty:
+        return render_template('dashboard/index.html', 
+                             kpis={}, 
+                             analise_material=[],
+                             data=[],
+                             table_data=[], 
+                             companies=[], 
+                             currencies=currencies, 
+                             last_update=last_update,
+                             user_role=session['user']['role'])
+
+    # Converter colunas numéricas
+    df['total_vmle_real'] = pd.to_numeric(df['total_vmle_real'], errors='coerce').fillna(0)
+    df['total_vmcv_real'] = pd.to_numeric(df['total_vmcv_real'], errors='coerce').fillna(0)
+    
+    # Converter datas
+    date_columns = ['data_abertura', 'data_embarque', 'data_chegada', 'previsao_chegada']
+    for col in date_columns:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+
+    # Calcular métricas básicas (do OnePage)
     total_operations = len(df)
-    processos_abertos = len(df[df['situacao'] == 'Aberto']) if not df.empty else 0
     
-    uma_semana_atras = datetime.now() - timedelta(days=7)
-    df['data_abertura'] = pd.to_datetime(df['data_abertura'])
-    novos_semana = len(df[df['data_abertura'] > uma_semana_atras]) if not df.empty else 0
-    em_transito = len(df[df['carga_status'] == '2 - Em Trânsito']) if not df.empty else 0  # Usando carga_status
+    # Métricas por modal de transporte
+    aereo = len(df[df['via_transporte_descricao'] == 'AEREA'])
+    terrestre = len(df[df['via_transporte_descricao'] == 'TERRESTRE'])
+    maritimo = len(df[df['via_transporte_descricao'] == 'MARITIMA'])
     
-    # Calculate new metric: "A chegar nessa semana" (Arriving This Week)
-    semana_atual = datetime.now()
-    fim_semana = semana_atual + timedelta(days=(6 - semana_atual.weekday()))  # Find the end of current week (Sunday)
+    # Métricas por status
+    aguardando_embarque = len(df[df['carga_status'] == '1 - Aguardando Embarque'])
+    aguardando_chegada = len(df[df['carga_status'] == '2 - Em Trânsito'])
+    di_registrada = len(df[df['carga_status'] == '3 - Desembarcada'])
     
-    # Converter para datetime para comparação correta
-    semana_atual_dt = pd.to_datetime(semana_atual.date())
-    fim_semana_dt = pd.to_datetime(fim_semana.date())
+    # Calcular períodos
+    hoje = datetime.now()
+    inicio_semana = hoje - timedelta(days=hoje.weekday())
+    fim_semana = inicio_semana + timedelta(days=6)
+    inicio_mes = hoje.replace(day=1)
+    fim_mes = (inicio_mes + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    proxima_semana_inicio = fim_semana + timedelta(days=1)
+    proxima_semana_fim = proxima_semana_inicio + timedelta(days=6)
     
-    # Usar previsao_chegada se disponível
-    a_chegar_semana = 0
-    if 'previsao_chegada' in df.columns and not df.empty:
-        df['previsao_chegada'] = pd.to_datetime(df['previsao_chegada'])
-        # Filter processes arriving this week (from today until end of week)
-        a_chegar_semana = len(df[(df['previsao_chegada'] >= semana_atual_dt) & 
-                                (df['previsao_chegada'] <= fim_semana_dt) &
-                                (df['situacao'] == 'Aberto')])
-    elif 'data_chegada' in df.columns and not df.empty:  # Alternative field name
-        df['data_chegada'] = pd.to_datetime(df['data_chegada'])
-        # Filter processes arriving this week (from today until end of week)
-        a_chegar_semana = len(df[(df['data_chegada'] >= semana_atual_dt) & 
-                                (df['data_chegada'] <= fim_semana_dt) &
-                                (df['situacao'] == 'Aberto')])
-
-    # Create charts
+    # Métricas de VMCV
+    vmcv_total = df['total_vmcv_real'].sum()
+    vmcv_mes = df[df['data_abertura'].dt.month == hoje.month]['total_vmcv_real'].sum()
+    vmcv_semana = df[(df['data_abertura'] >= inicio_semana) & (df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
+    vmcv_proxima_semana = df[(df['data_abertura'] >= proxima_semana_inicio) & (df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
+    
+    # Métricas de processos por período
+    processos_mes = len(df[df['data_abertura'].dt.month == hoje.month])
+    processos_semana = len(df[(df['data_abertura'] >= inicio_semana) & (df['data_abertura'] <= fim_semana)])
+    processos_proxima_semana = len(df[(df['data_abertura'] >= proxima_semana_inicio) & (df['data_abertura'] <= proxima_semana_fim)])
+    
+    # Processos a chegar
+    a_chegar_semana = len(df[
+        ((df['previsao_chegada'] >= inicio_semana) & (df['previsao_chegada'] <= fim_semana)) |
+        ((df['data_chegada'] >= inicio_semana) & (df['data_chegada'] <= fim_semana))
+    ])
+    a_chegar_mes = len(df[
+        ((df['previsao_chegada'] >= inicio_mes) & (df['previsao_chegada'] <= fim_mes)) |
+        ((df['data_chegada'] >= inicio_mes) & (df['data_chegada'] <= fim_mes))
+    ])
+    a_chegar_proxima_semana = len(df[
+        ((df['previsao_chegada'] >= proxima_semana_inicio) & (df['previsao_chegada'] <= proxima_semana_fim)) |
+        ((df['data_chegada'] >= proxima_semana_inicio) & (df['data_chegada'] <= proxima_semana_fim))
+    ])
+    
+    # Preparar dados para a tabela com as colunas solicitadas
+    table_data = []
+    for _, row in df.iterrows():
+        # Extrair primeira referência
+        referencias = row.get('referencias', [])
+        nro_pedido = ""
+        try:
+            if referencias:
+                if isinstance(referencias, str):
+                    # Se for string, tentar fazer parse do JSON
+                    import json
+                    referencias = json.loads(referencias)
+                if isinstance(referencias, list) and len(referencias) > 0:
+                    nro_pedido = str(referencias[0]) if referencias[0] else ""
+        except (json.JSONDecodeError, TypeError, IndexError):
+            nro_pedido = ""
+        
+        # Extrair primeiro armazém
+        armazens = row.get('armazens', [])
+        armazem_recinto = ""
+        try:
+            if armazens:
+                if isinstance(armazens, str):
+                    # Se for string, tentar fazer parse do JSON
+                    import json
+                    armazens = json.loads(armazens)
+                if isinstance(armazens, list) and len(armazens) > 0:
+                    armazem_recinto = str(armazens[0]) if armazens[0] else ""
+        except (json.JSONDecodeError, TypeError, IndexError):
+            armazem_recinto = ""
+        
+        # Calcular despesas (40% do VMLE se não tiver VMCV)
+        try:
+            vmcv = float(row.get('total_vmcv_real', 0) or 0)
+            vmle = float(row.get('total_vmle_real', 0) or 0)
+            despesas = vmcv if vmcv > 0 else (vmle * 0.4)
+        except (ValueError, TypeError):
+            despesas = 0.0
+        
+        # Determinar data de chegada apropriada
+        data_chegada_display = get_arrival_date_display(row)
+        
+        # Formatar datas para exibição
+        data_embarque_formatted = ""
+        if pd.notna(row.get('data_embarque')):
+            data_embarque_formatted = pd.to_datetime(row['data_embarque']).strftime('%d/%m/%Y')
+        
+        data_chegada_formatted = ""
+        if data_chegada_display and pd.notna(data_chegada_display):
+            data_chegada_formatted = pd.to_datetime(data_chegada_display).strftime('%d/%m/%Y')
+        
+        table_data.append({
+            'nro_pedido': nro_pedido,
+            'data_embarque': data_embarque_formatted,
+            'local_embarque': row.get('local_embarque', ''),
+            'via_transporte_descricao': row.get('via_transporte_descricao', ''),
+            'armazem_recinto': armazem_recinto,
+            'carga_status': row.get('carga_status', ''),
+            'resumo_mercadoria': row.get('resumo_mercadoria', ''),
+            'despesas': despesas,
+            'data_chegada': data_chegada_formatted,
+            'cliente_razaosocial': row.get('cliente_razaosocial', '')
+        })
+    
+    # Organizar KPIs para compatibilidade com o novo template
+    kpis = {
+        'total': total_operations,
+        'aereo': aereo,
+        'terrestre': terrestre,
+        'maritimo': maritimo,
+        'aguardando_embarque': aguardando_embarque,
+        'em_transito': aguardando_chegada,  # Alias para compatibilidade
+        'aguardando_chegada': aguardando_chegada,  # Manter para compatibilidade
+        'desembarcadas': di_registrada,  # Alias para compatibilidade
+        'di_registrada': di_registrada,  # Manter para compatibilidade
+        'vmcv_total': vmcv_total,
+        'valor_total_formatted': f"R$ {vmcv_total:,.0f}".replace(',', '.') if vmcv_total > 0 else "R$ 0",
+        'vmcv_mes': vmcv_mes,
+        'vmcv_semana': vmcv_semana,
+        'vmcv_proxima_semana': vmcv_proxima_semana,
+        'processos_mes': processos_mes,
+        'processos_semana': processos_semana,
+        'processos_proxima_semana': processos_proxima_semana,
+        'a_chegar_semana': a_chegar_semana,
+        'a_chegar_mes': a_chegar_mes,
+        'a_chegar_proxima_semana': a_chegar_proxima_semana
+    }
+    
+    # Preparar dados para o novo template
+    analise_material = []
+    data = []
+    
+    # Análise por Material (Principal Tipos de Material)
     if not df.empty:
-        # Client Distribution (horizontal bar with gradient)
-        df_cliente = df['cliente_razaosocial'].value_counts().reset_index()
-        df_cliente.columns = ['Cliente', 'Quantidade']
-        df_cliente = df_cliente.head(10)  # Limit to top 10 clients
+        # Agrupar por resumo_mercadoria
+        material_groups = df.groupby('resumo_mercadoria').agg({
+            'numero': 'count',
+            'total_vmcv_real': 'sum'
+        }).reset_index()
         
-        chart_cliente = go.Figure()
-        chart_cliente.add_trace(go.Bar(
-            x=df_cliente['Quantidade'],
-            y=df_cliente['Cliente'],
-            orientation='h',
-            marker=dict(
-                color=df_cliente['Quantidade'],
-                colorscale=[[0, '#007BFF'], [1, '#0056b3']],
-                showscale=False
-            )
-        ))
+        material_groups = material_groups.sort_values('total_vmcv_real', ascending=False)
         
-        chart_cliente.update_layout(
-            title_text='Distribuição por Cliente',
-            title_x=0.5,
-            title_font={'family': 'Roboto, sans-serif'},
-            showlegend=False,
-            yaxis={'categoryorder':'total ascending'},
-            xaxis_title='Volume de Processos',
-            yaxis_title='',
-            margin=dict(l=0, r=0, t=40, b=0),
-            height=400,
-            template='plotly_white',
-            paper_bgcolor='white',
-            plot_bgcolor='white'
-        )        # Temporal Evolution - adaptativo entre diário e semanal com base no volume de registros
+        # Pegar top 10 materiais para análise
+        for _, row in material_groups.head(10).iterrows():
+            material_name = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
+            total_processos = int(row['numero'])
+            valor_total = float(row['total_vmcv_real'])
+            
+            # Calcular valor da semana atual e próxima semana
+            material_df = df[df['resumo_mercadoria'] == row['resumo_mercadoria']]
+            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana) & (material_df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
+            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio) & (material_df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
+            
+            analise_material.append({
+                'item_descricao': material_name,
+                'total_processos': total_processos,
+                'valor_total': valor_total,
+                'valor_total_formatted': f"R$ {valor_total:,.0f}".replace(',', '.'),
+                'valor_semana_atual': valor_semana_atual,
+                'valor_semana_atual_formatted': f"R$ {valor_semana_atual:,.0f}".replace(',', '.'),
+                'valor_proxima_semana': valor_proxima_semana,
+                'valor_proxima_semana_formatted': f"R$ {valor_proxima_semana:,.0f}".replace(',', '.')
+            })
         
-        # Determinar o tipo de visualização baseado no volume de dados
-        show_daily = len(df) < 30  # Mostrar visualização diária se tiver menos de 30 registros
+        # Preparar dados principais da tabela
+        for _, row in df.iterrows():
+            data.append({
+                'processo': row.get('numero', ''),
+                'empresa_nome': row.get('cliente_razaosocial', ''),
+                'modal': row.get('via_transporte_descricao', ''),
+                'pais_origem': row.get('pais_origem', ''),
+                'carga_status': row.get('carga_status', ''),
+                'previsao_chegada': row.get('previsao_chegada') if pd.notna(row.get('previsao_chegada')) else None,
+                'valor_fob_reais': float(row.get('total_vmcv_real', 0) or 0),
+                'peso_bruto': float(row.get('peso_bruto', 0) or 0)
+            })
+
+    # Análise por Material (Compatibilidade com template antigo)
+    material_analysis = []
+    if not df.empty:
+        # Agrupar por resumo_mercadoria
+        material_groups = df.groupby('resumo_mercadoria').agg({
+            'numero': 'count',
+            'total_vmcv_real': 'sum'
+        }).reset_index()
         
-        if show_daily:
-            # Agrupamento diário
-            df['date'] = df['data_abertura'].dt.date
-            df_time = df.groupby('date').size().reset_index(name='Quantidade')
-            df_time.columns = ['Data', 'Quantidade']
-            df_time['Data'] = pd.to_datetime(df_time['Data'])
-            
-            # Ordenar por data
-            df_time = df_time.sort_values('Data')
-            
-            # Se houver menos de 7 registros, preencher os dias intermediários
-            if len(df_time) < 7:
-                date_range = pd.date_range(start=df_time['Data'].min(), end=df_time['Data'].max())
-                date_df = pd.DataFrame({'Data': date_range})
-                df_time = pd.merge(date_df, df_time, on='Data', how='left').fillna(0)
-            
-            # Calcular média móvel de 3 dias
-            window_size = min(3, len(df_time))
-            df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=window_size).mean()
-            
-            period_text = "Diária"
-            hover_format = 'Data: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
-            mm_name = 'Média 3 dias'
-        else:
-            # Agrupamento semanal (código original)
-            df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
-            df_time = df.groupby('week_year').size().reset_index(name='Quantidade')
-            df_time.columns = ['Semana', 'Quantidade']
-            
-            # Converter week_year de volta para datetime para melhor visualização
-            df_time['Data'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_time['Semana']], format='%Y-W%W-%w')
-            
-            # Ordenar por data
-            df_time = df_time.sort_values('Data')
-            
-            # Calcular média móvel de 4 semanas
-            df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=4).mean()
-            
-            period_text = "Semanal"
-            hover_format = 'Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
-            mm_name = 'Média 4 semanas'
+        material_groups = material_groups.sort_values('total_vmcv_real', ascending=False)
+        total_vmcv_materials = material_groups['total_vmcv_real'].sum()
         
-        # Preparar dados para regressão linear e previsão
-        has_trend = False
-        if len(df_time) > 1:
-            # Criar índices numéricos para x
-            df_time['idx'] = range(len(df_time))
+        # Pegar top 10 materiais
+        for _, row in material_groups.head(10).iterrows():
+            material = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
+            quantidade = int(row['numero'])
+            valor_total = float(row['total_vmcv_real'])
             
-            # Filtrar pontos nulos para regressão
-            regression_data = df_time.dropna()
+            # Calcular valor da semana atual e próxima semana
+            material_df = df[df['resumo_mercadoria'] == row['resumo_mercadoria']]
+            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana) & (material_df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
+            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio) & (material_df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
             
-            if len(regression_data) > 1:
-                # Calcular regressão linear
-                slope, intercept, r_value, p_value, std_err = stats.linregress(
-                    regression_data['idx'], regression_data['Quantidade']
-                )
-                
-                # Criar linha de tendência
-                df_time['Tendencia'] = intercept + slope * df_time['idx']
-                
-                # Adicionar pontos de previsão futura (3 períodos)
-                future_periods = 3
-                future_indices = range(len(df_time), len(df_time) + future_periods)
-                future_dates = pd.date_range(start=df_time['Data'].max(), periods=future_periods+1, freq='W' if not show_daily else 'D')[1:]
-                
-                future_df = pd.DataFrame({
-                    'Data': future_dates,
-                    'idx': future_indices
-                })
-                future_df['Tendencia'] = intercept + slope * future_df['idx']
-                
-                # Texto da equação da tendência
-                trend_equation = f"y = {intercept:.2f} + {slope:.2f}x (R² = {r_value**2:.2f})"
-                has_trend = True
-        
-        chart_data = go.Figure()
-        
-        # Área com gradiente
-        chart_data.add_trace(go.Scatter(
-            x=df_time['Data'],
-            y=df_time['Quantidade'],
-            fill='tozeroy',
-            mode='lines',
-            line=dict(width=0.5, color='#007BFF'),
-            fillcolor='rgba(0, 123, 255, 0.2)',
-            name=f'Volume {period_text}',
-            hovertemplate=hover_format
-        ))
-        
-        # Linha de média móvel
-        chart_data.add_trace(go.Scatter(
-            x=df_time['Data'],
-            y=df_time['Media_Movel'],
-            mode='lines',
-            line=dict(color='#0056b3', width=2, dash='dot'),
-            name=mm_name,
-            hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Média: %{{y:.1f}}<extra></extra>'
-        ))
-        
-        # Adicionar linha de tendência e previsão se disponível
-        if has_trend:
-            # Linha de tendência para dados existentes
-            chart_data.add_trace(go.Scatter(
-                x=df_time['Data'],
-                y=df_time['Tendencia'],
-                mode='lines',
-                line=dict(color='#DC143C', width=1.5),  # Vermelho carmesim
-                name='Tendência',
-                hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Tendência: %{{y:.1f}}<extra></extra>'
-            ))
+            percentual = (valor_total / total_vmcv_materials * 100) if total_vmcv_materials > 0 else 0
             
-            # Linha de previsão para períodos futuros
-            chart_data.add_trace(go.Scatter(
-                x=future_df['Data'],
-                y=future_df['Tendencia'],
+            material_analysis.append({
+                'material': material,
+                'quantidade': quantidade,
+                'valor_total': valor_total,
+                'valor_total_formatado': f"R$ {valor_total:,.0f}".replace(',', '.'),
+                'valor_semana_atual': valor_semana_atual,
+                'valor_semana_atual_formatado': f"R$ {valor_semana_atual:,.0f}".replace(',', '.'),
+                'valor_proxima_semana': valor_proxima_semana,
+                'valor_proxima_semana_formatado': f"R$ {valor_proxima_semana:,.0f}".replace(',', '.'),
+                'percentual': round(percentual, 1)
+            })
+    
+    # Gráfico por Mês: Total de Processos e VMCV Total
+    monthly_chart = None
+    if not df.empty:
+        # Agrupar por mês
+        df['mes_ano'] = df['data_abertura'].dt.to_period('M')
+        monthly_data = df.groupby('mes_ano').agg({
+            'numero': 'count',  # Total de processos
+            'total_vmcv_real': 'sum'  # VMCV total
+        }).reset_index()
+        
+        # Converter período para datetime para plotly
+        monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
+        monthly_data = monthly_data.sort_values('data')
+        
+        # Calcular regressão linear para processos
+        if len(monthly_data) >= 2:
+            x_numeric = np.arange(len(monthly_data))
+            
+            # Regressão para processos
+            slope_proc, intercept_proc, r_value_proc, p_value_proc, std_err_proc = stats.linregress(x_numeric, monthly_data['numero'])
+            trend_proc = slope_proc * x_numeric + intercept_proc
+            
+            # Regressão para VMCV
+            slope_vmcv, intercept_vmcv, r_value_vmcv, p_value_vmcv, std_err_vmcv = stats.linregress(x_numeric, monthly_data['total_vmcv_real'])
+            trend_vmcv = slope_vmcv * x_numeric + intercept_vmcv
+            
+            # Criar gráfico com duas linhas
+            monthly_chart = go.Figure()
+            
+            # Linha de processos
+            monthly_chart.add_trace(go.Scatter(
+                x=monthly_data['data'],
+                y=monthly_data['numero'],
                 mode='lines+markers',
-                line=dict(color='#DC143C', width=1.5, dash='dash'),  # Vermelho carmesim tracejado
-                marker=dict(symbol='circle', size=8, color='#DC143C'),
-                name='Previsão',
-                hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Previsão: %{{y:.1f}}<extra></extra>'
-            ))
-              # Comentado para remover a equação de tendência do gráfico
-            # chart_data.add_annotation(
-            #     x=0.02,
-            #     y=0.98,
-            #     xref="paper",
-            #     yref="paper",
-            #     text=trend_equation,
-            #     showarrow=False,
-            #     font=dict(size=10, color="#666"),
-            #     bgcolor="rgba(255, 255, 255, 0.8)",
-            #     bordercolor="#DDD",
-            #     borderwidth=1,
-            #     borderpad=4,
-            #     align="left"
-            # )
-        
-        chart_data.update_layout(
-            title_text=f'Evolução Temporal ({period_text})',
-            title_x=0.5,
-            title_font={'family': 'Roboto, sans-serif'},
-            xaxis_title='',
-            yaxis_title='Volume de Processos',
-            hovermode='x unified',
-            margin=dict(l=0, r=0, t=40, b=0),
-            height=400,
-            template='plotly_white',
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.15,
-                xanchor="center",
-                x=0.5
-            )
-        )
-
-        # Transport Modal (enhanced donut chart)
-        df_modal = df['via_transporte_descricao'].value_counts().reset_index()
-        df_modal.columns = ['Modal', 'Quantidade']
-        
-        chart_tipo = go.Figure(data=[go.Pie(
-            labels=df_modal['Modal'],
-            values=df_modal['Quantidade'],
-            hole=.4,
-            marker=dict(colors=[
-                '#007BFF', '#0056b3', '#28a745', '#6c757d', '#FFFFFF'
-            ]),
-            textinfo='label+percent',
-            hovertemplate='Modal: %{label}<br>Processos: %{value}<br>Percentual: %{percent}<extra></extra>'
-        )])
-        
-        chart_tipo.update_layout(
-            title_text='Modal de Transporte',
-            title_x=0.5,
-            title_font={'family': 'Roboto, sans-serif'},
-            showlegend=False,
-            margin=dict(l=0, r=0, t=40, b=0),
-            height=400,
-            paper_bgcolor='white',
-            annotations=[dict(text='Total<br>' + str(df_modal['Quantidade'].sum()), 
-                           x=0.5, y=0.5, font_size=20, font_family='Roboto, sans-serif', 
-                           showarrow=False)]
-        )
-
-        # Status by Channel (stacked vertical bars with gradient)
-        df_canal = df['diduimp_canal'].value_counts().reset_index()
-        df_canal.columns = ['Canal', 'Quantidade']
-        
-        # Define colors based on channel names
-        color_mapping = {
-            'VERDE': '#28a745',     # Green
-            'AMARELO': '#ffc107',   # Yellow  
-            'VERMELHO': '#dc3545'   # Red
-        }
-        
-        chart_canal = go.Figure()
-        
-        for i, row in df_canal.iterrows():
-            # Get color based on channel name, fallback to gray if not found
-            color = color_mapping.get(row['Canal'], '#6c757d')
-            
-            chart_canal.add_trace(go.Bar(
-            x=[row['Canal']],
-            y=[row['Quantidade']],
-            name=row['Canal'],
-            marker_color=color,
-            text=[row['Quantidade']],
-            textposition='auto',
-            ))
-        
-        chart_canal.update_layout(
-            title_text='Status por Canal',
-            title_x=0.5,
-            title_font={'family': 'Roboto, sans-serif'},
-            showlegend=True,
-            xaxis_title='',
-            yaxis_title='Quantidade',
-            margin=dict(l=0, r=0, t=40, b=0),
-            height=400,
-            template='plotly_white',
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            barmode='group'
-        )
-    else:
-        chart_cliente = chart_data = chart_tipo = chart_canal = None
-
-    # Add last update timestamp
-    last_update = datetime.now().strftime('%d/%m/%Y %H:%M')
-
-    # Calculate KPI variations
-    # You would need historical data for proper calculations
-    # For now using dummy values for demonstration
-    variations = {
-        'total_var': '+5%',
-        'abertos_var': '-2%',
-        'novos_var': '+10%',
-        'transito_var': '+3%',
-        'chegar_var': '+7%'  # Variation for the new "A chegar nessa semana" metric
-    }
-    
-    # Configurar IDs específicos para cada gráfico para facilitar atualização
-    chart_configs = {
-        'responsive': True,
-        'displayModeBar': False,
-        'displaylogo': False,
-        'scrollZoom': False
-    }
-          # Prepare chart HTML for initial rendering
-    chart_cliente_html = chart_cliente.to_html(full_html=False, include_plotlyjs=False,div_id='chart-cliente', config=chart_configs) if chart_cliente else None
-    chart_data_html = chart_data.to_html(full_html=False, include_plotlyjs=False,div_id='chart-data', config=chart_configs) if chart_data else None
-    chart_tipo_html = chart_tipo.to_html(full_html=False, include_plotlyjs=False,div_id='chart-tipo', config=chart_configs) if chart_tipo else None
-    chart_canal_html = chart_canal.to_html(full_html=False, include_plotlyjs=False,div_id='chart-canal', config=chart_configs) if chart_canal else None
-    return render_template('dashboard/index.html',
-                         now=datetime.now(),
-                         operacoes=data,
-                         total_operations=total_operations,
-                         processos_abertos=processos_abertos,
-                         novos_semana=novos_semana,
-                         em_transito=em_transito,
-                         a_chegar_semana=a_chegar_semana,
-                         last_update=last_update,
-                         variations=variations,
-                         chart_cliente=chart_cliente_html,
-                         chart_data=chart_data_html,
-                         chart_tipo=chart_tipo_html,
-                         chart_canal=chart_canal_html,
-                         user_role=session['user']['role'])
-
-@bp.route('/dashboard/operations')
-@login_required
-def operations():
-    page = request.args.get('page', 1, type=int)
-    per_page = 10
-    
-    response = supabase.table('importacoes_processos')\
-        .select('*')\
-        .neq('situacao', 'Despacho Cancelado')\
-        .order('data_abertura', desc=True)\
-        .range((page-1)*per_page, page*per_page-1)\
-        .execute()
-        
-    operations = response.data
-    
-    return render_template('dashboard/operations.html',
-                         operations=operations,
-                         page=page,
-                         user_role=session['user']['role'])
-
-@bp.route('/dashboard/refresh')
-@login_required
-def refresh():
-    """Endpoint para atualização AJAX do dashboard"""
-    print("DEBUG: /dashboard/refresh endpoint called")
-    try:
-        # Reutilizar a lógica do index
-        user_companies = []
-        if session['user']['role'] == 'cliente_unique':
-            print(f"DEBUG: User role is {session['user']['role']}, fetching companies")
-            agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', session['user']['id']).execute()
-            print(f"DEBUG: Agent response: {agent_response}")
-            if agent_response.data and agent_response.data[0].get('empresa'):
-                user_companies = agent_response.data[0].get('empresa')
-                print(f"DEBUG: Raw user_companies: {user_companies}")
-                if isinstance(user_companies, str):
-                    import json
-                    try:
-                        user_companies = json.loads(user_companies)
-                    except:
-                        user_companies = [user_companies]
-                print(f"DEBUG: Processed user_companies: {user_companies}")        
-                print("DEBUG: Building query")
-        query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').order('data_abertura', desc=True)
-        if user_companies:
-            query = query.in_('cliente_cpfcnpj', user_companies)
-            print(f"DEBUG: Applied company filter: {user_companies}")
-        
-        print("DEBUG: Executing query")
-        operacoes = query.execute()
-        data = operacoes.data if operacoes.data else []
-        print(f"DEBUG: Query returned {len(data)} operations")
-        
-        response_data = {
-            'success': True,
-            'data': data,
-            'last_update': datetime.now().strftime('%d/%m/%Y %H:%M')
-        }
-        print("DEBUG: Returning successful response")
-        return jsonify(response_data)
-    except Exception as e:
-        print(f"DEBUG: Error in refresh endpoint: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@bp.route('/dashboard/update-data', methods=['POST'])
-@login_required
-def update_data():
-    """Endpoint para atualizar os dados do dashboard a partir do Supabase"""
-    try:
-        # Atualizar dados do Supabase
-        # (Esta chamada apenas simula o processo, os dados já serão os mais recentes do Supabase)
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Dados atualizados com sucesso',
-            'timestamp': datetime.now().strftime('%d/%m/%Y %H:%M:%S')
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Erro ao atualizar dados: {str(e)}'
-        }), 500
-
-@bp.route('/dashboard/chart-data', methods=['GET'])
-@login_required
-def chart_data():
-    """Endpoint para obter dados de gráficos em formato JSON para atualização via AJAX"""
-    try:
-        # Get user companies if client
-        user_companies = []
-        if session['user']['role'] == 'cliente_unique':
-            agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', session['user']['id']).execute()
-            if agent_response.data and agent_response.data[0].get('empresa'):
-                user_companies = agent_response.data[0].get('empresa')
-                if isinstance(user_companies, str):
-                    import json
-                    try:
-                        user_companies = json.loads(user_companies)
-                    except:
-                        user_companies = [user_companies]        # Build query with client filter - exclude cancelled processes
-        query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').order('data_abertura', desc=True)
-        if user_companies:
-            query = query.in_('cliente_cpfcnpj', user_companies)
-        
-        operacoes = query.execute()
-        data = operacoes.data if operacoes.data else []
-        df = pd.DataFrame(data)
-
-        # Calculate metrics
-        total_operations = len(df)
-        processos_abertos = len(df[df['situacao'] == 'Aberto']) if not df.empty else 0
-        
-        uma_semana_atras = datetime.now() - timedelta(days=7)
-        df['data_abertura'] = pd.to_datetime(df['data_abertura'])
-        novos_semana = len(df[df['data_abertura'] > uma_semana_atras]) if not df.empty else 0
-        em_transito = len(df[df['carga_status'].notna()]) if not df.empty else 0
-
-        # Calculate new metric: "A chegar nessa semana" (Arriving This Week)
-        semana_atual = datetime.now()
-        fim_semana = semana_atual + timedelta(days=(6 - semana_atual.weekday()))  # Find the end of current week (Sunday)
-        
-        # Check if a predicted arrival date field exists in the dataset
-        a_chegar_semana = 0
-        if 'data_prevista_chegada' in df.columns:
-            df['data_prevista_chegada'] = pd.to_datetime(df['data_prevista_chegada'])
-            # Filter processes arriving this week (from today until end of week)
-            a_chegar_semana = len(df[(df['data_prevista_chegada'] >= semana_atual.date()) & 
-                                    (df['data_prevista_chegada'] <= fim_semana.date()) &
-                                    (df['situacao'] == 'Aberto')]) if not df.empty else 0
-        elif 'eta' in df.columns:  # Alternative field name for estimated arrival
-            df['eta'] = pd.to_datetime(df['eta'])
-            # Filter processes arriving this week (from today until end of week)
-            a_chegar_semana = len(df[(df['eta'] >= semana_atual.date()) & 
-                                    (df['eta'] <= fim_semana.date()) &
-                                    (df['situacao'] == 'Aberto')]) if not df.empty else 0
-
-        # Calculate KPI variations (dummy values for demonstration)
-        variations = {
-            'total_var': '+5%',
-            'abertos_var': '-2%',
-            'novos_var': '+10%',
-            'transito_var': '+3%',
-            'chegar_var': '+7%'  # Variation for the new "A chegar nessa semana" metric
-        }
-        
-        # KPI data
-        kpi_data = {
-            'total_operations': total_operations,
-            'processos_abertos': processos_abertos,
-            'novos_semana': novos_semana,
-            'em_transito': em_transito,
-            'variations': variations,
-            'a_chegar_semana': a_chegar_semana  # New metric
-        }
-
-        chart_data = {}
-        
-        # Create charts
-        if not df.empty:
-            # Client Distribution (horizontal bar with gradient)
-            df_cliente = df['cliente_razaosocial'].value_counts().reset_index()
-            df_cliente.columns = ['Cliente', 'Quantidade']
-            df_cliente = df_cliente.head(10)  # Limit to top 10 clients
-            
-            chart_cliente = go.Figure()
-            chart_cliente.add_trace(go.Bar(
-                x=df_cliente['Quantidade'],
-                y=df_cliente['Cliente'],
-                orientation='h',
-                marker=dict(
-                    color=df_cliente['Quantidade'],
-                    colorscale=[[0, '#007BFF'], [1, '#0056b3']],
-                    showscale=False
-                )
+                name='Total de Processos',
+                line=dict(color='#007BFF', width=3),
+                marker=dict(size=8)
             ))
             
-            chart_cliente.update_layout(
-                title_text='Distribuição por Cliente',
-                title_x=0.5,
-                title_font={'family': 'Roboto, sans-serif'},
-                showlegend=False,
-                yaxis={'categoryorder':'total ascending'},
-                xaxis_title='Volume de Processos',
-                yaxis_title='',
-                margin=dict(l=0, r=0, t=40, b=0),
-                height=400,
-                template='plotly_white',
-                paper_bgcolor='white',
-                plot_bgcolor='white'
-            )
-              # Temporal Evolution - adaptativo entre diário e semanal com base no volume de registros
-            
-            # Determinar o tipo de visualização baseado no volume de dados
-            show_daily = len(df) < 30  # Mostrar visualização diária se tiver menos de 30 registros
-            
-            if show_daily:
-                # Agrupamento diário
-                df['date'] = df['data_abertura'].dt.date
-                df_time = df.groupby('date').size().reset_index(name='Quantidade')
-                df_time.columns = ['Data', 'Quantidade']
-                df_time['Data'] = pd.to_datetime(df_time['Data'])
-                
-                # Ordenar por data
-                df_time = df_time.sort_values('Data')
-                
-                # Se houver menos de 7 registros, preencher os dias intermediários
-                if len(df_time) < 7:
-                    date_range = pd.date_range(start=df_time['Data'].min(), end=df_time['Data'].max())
-                    date_df = pd.DataFrame({'Data': date_range})
-                    df_time = pd.merge(date_df, df_time, on='Data', how='left').fillna(0)
-                
-                # Calcular média móvel de 3 dias
-                window_size = min(3, len(df_time))
-                df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=window_size).mean()
-                
-                period_text = "Diária"
-                hover_format = 'Data: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
-                mm_name = 'Média 3 dias'
-            else:
-                # Agrupamento semanal (código original)
-                df['week_year'] = df['data_abertura'].dt.strftime('%Y-%U')
-                df_time = df.groupby('week_year').size().reset_index(name='Quantidade')
-                df_time.columns = ['Semana', 'Quantidade']
-                
-                # Converter week_year de volta para datetime para melhor visualização
-                df_time['Data'] = pd.to_datetime([f"{w.split('-')[0]}-W{w.split('-')[1]}-1" for w in df_time['Semana']], format='%Y-W%W-%w')
-                
-                # Ordenar por data
-                df_time = df_time.sort_values('Data')
-                
-                # Calcular média móvel de 4 semanas
-                df_time['Media_Movel'] = df_time['Quantidade'].rolling(window=4).mean()
-                
-                period_text = "Semanal"
-                hover_format = 'Semana: %{x|%d/%m/%Y}<br>Processos: %{y}<extra></extra>'
-                mm_name = 'Média 4 semanas'
-            
-            # Preparar dados para regressão linear e previsão
-            if len(df_time) > 1:
-                # Criar índices numéricos para x
-                df_time['idx'] = range(len(df_time))
-                
-                # Filtrar pontos nulos para regressão
-                regression_data = df_time.dropna()
-                
-                if len(regression_data) > 1:                # Calcular regressão linear
-                    slope, intercept, r_value, p_value, std_err = stats.linregress(
-                        regression_data['idx'], regression_data['Quantidade']
-                    )
-                    
-                    # Criar linha de tendência
-                    df_time['Tendencia'] = intercept + slope * df_time['idx']
-                    
-                    # Adicionar pontos de previsão futura (3 períodos)
-                    future_periods = 3
-                    future_indices = range(len(df_time), len(df_time) + future_periods)
-                    future_dates = pd.date_range(start=df_time['Data'].max(), periods=future_periods+1, freq='W' if not show_daily else 'D')[1:]
-                    
-                    future_df = pd.DataFrame({
-                        'Data': future_dates,
-                        'idx': future_indices
-                    })
-                    future_df['Tendencia'] = intercept + slope * future_df['idx']
-                    
-                    # Texto da equação da tendência
-                    trend_equation = f"y = {intercept:.2f} + {slope:.2f}x (R² = {r_value**2:.2f})"
-                    has_trend = True
-                else:
-                    has_trend = False
-            else:
-                has_trend = False
-            
-            chart_data_obj = go.Figure()
-            
-            # Área com gradiente
-            chart_data_obj.add_trace(go.Scatter(
-                x=df_time['Data'],
-                y=df_time['Quantidade'],
-                fill='tozeroy',
+            # Linha de tendência para processos
+            monthly_chart.add_trace(go.Scatter(
+                x=monthly_data['data'],
+                y=trend_proc,
                 mode='lines',
-                line=dict(width=0.5, color='#007BFF'),
-                fillcolor='rgba(0, 123, 255, 0.2)',
-                name=f'Volume {period_text}',
-                hovertemplate=hover_format
+                name=f'Tendência Processos (R²: {r_value_proc**2:.3f})',
+                line=dict(color='#007BFF', dash='dash', width=2)
             ))
             
-            # Linha de média móvel
-            chart_data_obj.add_trace(go.Scatter(
-                x=df_time['Data'],
-                y=df_time['Media_Movel'],
+            # Linha de VMCV (eixo Y secundário)
+            monthly_chart.add_trace(go.Scatter(
+                x=monthly_data['data'],
+                y=monthly_data['total_vmcv_real'],
+                mode='lines+markers',
+                name='VMCV Total',
+                line=dict(color='#28a745', width=3),
+                marker=dict(size=8),
+                yaxis='y2'
+            ))
+            
+            # Linha de tendência para VMCV
+            monthly_chart.add_trace(go.Scatter(
+                x=monthly_data['data'],
+                y=trend_vmcv,
                 mode='lines',
-                line=dict(color='#0056b3', width=2, dash='dot'),
-                name=mm_name,
-                hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Média: %{{y:.1f}}<extra></extra>'
+                name=f'Tendência VMCV (R²: {r_value_vmcv**2:.3f})',
+                line=dict(color='#28a745', dash='dash', width=2),
+                yaxis='y2'
             ))
             
-            # Adicionar linha de tendência e previsão se disponível
-            if has_trend:
-                # Linha de tendência para dados existentes
-                chart_data_obj.add_trace(go.Scatter(
-                    x=df_time['Data'],
-                    y=df_time['Tendencia'],
-                    mode='lines',
-                    line=dict(color='#DC143C', width=1.5),  # Vermelho carmesim
-                    name='Tendência',
-                    hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Tendência: %{{y:.1f}}<extra></extra>'
-                ))
-                
-                # Linha de previsão para períodos futuros
-                chart_data_obj.add_trace(go.Scatter(
-                    x=future_df['Data'],
-                    y=future_df['Tendencia'],
-                    mode='lines+markers',
-                    line=dict(color='#DC143C', width=1.5, dash='dash'),  # Vermelho carmesim tracejado
-                    marker=dict(symbol='circle', size=8, color='#DC143C'),
-                    name='Previsão',
-                    hovertemplate=f'Data: %{{x|%d/%m/%Y}}<br>Previsão: %{{y:.1f}}<extra></extra>'
-                ))
-                
-                # Adicionar anotação com a equação da tendência
-                chart_data_obj.add_annotation(
-                    x=0.02,
-                    y=0.98,
-                    xref="paper",
-                    yref="paper",
-                    text=trend_equation,
-                    showarrow=False,
-                    font=dict(size=10, color="#666"),
-                    bgcolor="rgba(255, 255, 255, 0.8)",
-                    bordercolor="#DDD",
-                    borderwidth=1,
-                    borderpad=4,
-                    align="left"
-                )
-            
-            chart_data_obj.update_layout(
-                title_text=f'Evolução Temporal ({period_text})',
-                title_x=0.5,
-                title_font={'family': 'Roboto, sans-serif'},
-                xaxis_title='',
-                yaxis_title='Volume de Processos',
+            monthly_chart.update_layout(
+                title='Evolução Mensal: Processos e VMCV',
+                xaxis_title='Mês',
+                yaxis=dict(title='Total de Processos', side='left'),
+                yaxis2=dict(title='VMCV Total (R$)', side='right', overlaying='y'),
                 hovermode='x unified',
-                margin=dict(l=0, r=0, t=40, b=0),
-                height=400,
                 template='plotly_white',
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.15,
-                xanchor="center",
-                x=0.5
-                )
+                height=400
             )
 
-            # Transport Modal (enhanced donut chart)
-            df_modal = df['via_transporte_descricao'].value_counts().reset_index()
-            df_modal.columns = ['Modal', 'Quantidade']
-            
-            chart_tipo = go.Figure(data=[go.Pie(
-                labels=df_modal['Modal'],
-                values=df_modal['Quantidade'],
-                hole=.4,
-                marker=dict(colors=[
-                    '#007BFF', '#0056b3', '#28a745', '#6c757d', '#FFFFFF'
-                ]),
-                textinfo='label+percent',
-                hovertemplate='Modal: %{label}<br>Processos: %{value}<br>Percentual: %{percent}<extra></extra>'
-            )])
-            
-            chart_tipo.update_layout(
-                title_text='Modal de Transporte',
-                title_x=0.5,
-                title_font={'family': 'Roboto, sans-serif'},
-                showlegend=False,
-                margin=dict(l=0, r=0, t=40, b=0),
-                height=400,
-                paper_bgcolor='white',
-                annotations=[dict(text='Total<br>' + str(df_modal['Quantidade'].sum()), 
-                               x=0.5, y=0.5, font_size=20, font_family='Roboto, sans-serif', 
-                               showarrow=False)]
-            )
+    # Get all available companies for filtering
+    companies_query = supabase.table('importacoes_processos').select('cliente_cpfcnpj', 'cliente_razaosocial').execute()
+    all_companies = []
+    if companies_query.data:
+        companies_df = pd.DataFrame(companies_query.data)
+        all_companies = [
+            {'cpfcnpj': row['cliente_cpfcnpj'], 'nome': row['cliente_razaosocial']}
+            for _, row in companies_df.drop_duplicates(subset=['cliente_cpfcnpj']).iterrows()
+        ]
 
-            # Status by Channel (stacked vertical bars with gradient)
-            df_canal = df['diduimp_canal'].value_counts().reset_index()
-            df_canal.columns = ['Canal', 'Quantidade']
-            
-            colors = ['#28a745', '#007BFF', '#6c757d', '#0056b3']  # Different colors for different statuses
-            
-            chart_canal = go.Figure()
-            
-            for i, row in df_canal.iterrows():
-                chart_canal.add_trace(go.Bar(
-                    x=[row['Canal']],
-                    y=[row['Quantidade']],
-                    name=row['Canal'],
-                    marker_color=colors[i % len(colors)],
-                    text=[row['Quantidade']],
-                    textposition='auto',
-                ))
-            chart_canal.update_layout(
-                title_text='Status por Canal',
-                title_x=0.5,
-                title_font={'family': 'Roboto, sans-serif'},
-                showlegend=True,
-                xaxis_title='',
-                yaxis_title='Quantidade',
-                margin=dict(l=0, r=0, t=40, b=0),
-                height=400,
-                template='plotly_white',
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                barmode='group'
-            )
-            
-            # Add charts to response - with proper config for JavaScript interaction
-            chart_configs = {
-                'responsive': True,
-                'displayModeBar': False,
-                'displaylogo': False,
-                'scrollZoom': False
-            }
-              # Para cada gráfico, enviaremos tanto o HTML quanto os dados em JSON
-            # Isso permitirá que o JavaScript use os dados diretamente para atualização
-            chart_data = {
-                'chart_cliente': {
-                    'html': chart_cliente.to_html(full_html=False, include_plotlyjs=False, 
-                                div_id='chart-cliente', config=chart_configs),
-                    'data': chart_cliente.to_json(),
-                    'id': 'chart-cliente'
-                },
-                'chart_data': {
-                    'html': chart_data_obj.to_html(full_html=False, include_plotlyjs=False, 
-                                div_id='chart-data', config=chart_configs),
-                    'data': chart_data_obj.to_json(),
-                    'id': 'chart-data'
-                },
-                'chart_tipo': {
-                    'html': chart_tipo.to_html(full_html=False, include_plotlyjs=False, 
-                                div_id='chart-tipo', config=chart_configs),
-                    'data': chart_tipo.to_json(),
-                    'id': 'chart-tipo'
-                },
-                'chart_canal': {
-                    'html': chart_canal.to_html(full_html=False, include_plotlyjs=False, 
-                                div_id='chart-canal', config=chart_configs),
-                    'data': chart_canal.to_json(),
-                    'id': 'chart-canal'
-                }
-            }
-        
-        # Add last update timestamp
-        last_update = datetime.now().strftime('%d/%m/%Y %H:%M')
-        
-        return jsonify({
-            'status': 'success',
-            'charts': chart_data,
-            'kpis': kpi_data,
-            'last_update': last_update
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Erro ao gerar dados dos gráficos: {str(e)}'
-        }), 500
+    # Filter companies based on user role
+    available_companies = all_companies
+    if session['user']['role'] == 'cliente_unique' and user_companies:
+        available_companies = [c for c in all_companies if c['cpfcnpj'] in user_companies]
+
+    # Convert charts to HTML
+    chart_configs = {'displayModeBar': False, 'responsive': True}
+    monthly_chart_html = monthly_chart.to_html(full_html=False, include_plotlyjs=False, div_id='monthly-chart', config=chart_configs) if monthly_chart else None
+    
+    return render_template('dashboard/index.html',
+                         kpis=kpis,
+                         analise_material=material_analysis,
+                         material_analysis=material_analysis,
+                         data=table_data,
+                         table_data=table_data,
+                         monthly_chart=monthly_chart_html,
+                         companies=available_companies,
+                         selected_company=selected_company,
+                         currencies=currencies,
+                         last_update=last_update,
+                         user_role=session['user']['role'])
