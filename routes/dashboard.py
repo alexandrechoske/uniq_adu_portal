@@ -169,33 +169,55 @@ def index(**kwargs):
     # Preparar dados para a tabela com as colunas solicitadas
     table_data = []
     for _, row in df.iterrows():
-        # Extrair primeira referência
-        referencias = row.get('referencias', [])
+        # Extrair referência correta
         nro_pedido = ""
+        referencias = row.get('referencias', [])
         try:
             if referencias:
                 if isinstance(referencias, str):
                     # Se for string, tentar fazer parse do JSON
                     import json
                     referencias = json.loads(referencias)
+                
+                # Se for uma lista com dicionários
                 if isinstance(referencias, list) and len(referencias) > 0:
-                    nro_pedido = str(referencias[0]) if referencias[0] else ""
-        except (json.JSONDecodeError, TypeError, IndexError):
+                    primeiro_item = referencias[0]
+                    if isinstance(primeiro_item, dict) and 'referencia' in primeiro_item:
+                        nro_pedido = str(primeiro_item['referencia'])
+                    elif primeiro_item:
+                        nro_pedido = str(primeiro_item)
+                
+                # Se for um dicionário direto
+                elif isinstance(referencias, dict) and 'referencia' in referencias:
+                    nro_pedido = str(referencias['referencia'])
+                    
+        except (json.JSONDecodeError, TypeError, IndexError, KeyError):
             nro_pedido = ""
         
-        # Extrair primeiro armazém
+        # Extrair nome do armazém
+        armazem_nome = ""
         armazens = row.get('armazens', [])
-        armazem_recinto = ""
         try:
             if armazens:
                 if isinstance(armazens, str):
                     # Se for string, tentar fazer parse do JSON
                     import json
                     armazens = json.loads(armazens)
+                
+                # Se for uma lista com dicionários
                 if isinstance(armazens, list) and len(armazens) > 0:
-                    armazem_recinto = str(armazens[0]) if armazens[0] else ""
-        except (json.JSONDecodeError, TypeError, IndexError):
-            armazem_recinto = ""
+                    primeiro_item = armazens[0]
+                    if isinstance(primeiro_item, dict) and 'nome' in primeiro_item:
+                        armazem_nome = str(primeiro_item['nome']).strip()
+                    elif primeiro_item:
+                        armazem_nome = str(primeiro_item).strip()
+                
+                # Se for um dicionário direto
+                elif isinstance(armazens, dict) and 'nome' in armazens:
+                    armazem_nome = str(armazens['nome']).strip()
+                    
+        except (json.JSONDecodeError, TypeError, IndexError, KeyError):
+            armazem_nome = ""
         
         # Calcular despesas (40% do VMLE se não tiver VMCV)
         try:
@@ -222,7 +244,7 @@ def index(**kwargs):
             'data_embarque': data_embarque_formatted,
             'local_embarque': row.get('local_embarque', ''),
             'via_transporte_descricao': row.get('via_transporte_descricao', ''),
-            'armazem_recinto': armazem_recinto,
+            'armazem_nome': armazem_nome,
             'carga_status': row.get('carga_status', ''),
             'resumo_mercadoria': row.get('resumo_mercadoria', ''),
             'despesas': despesas,
@@ -231,6 +253,7 @@ def index(**kwargs):
         })
     
     # Organizar KPIs para compatibilidade com o novo template
+    valor_medio_processo = (vmcv_total / total_operations) if total_operations > 0 else 0
     kpis = {
         'total': total_operations,
         'aereo': aereo,
@@ -243,9 +266,13 @@ def index(**kwargs):
         'di_registrada': di_registrada,  # Manter para compatibilidade
         'vmcv_total': vmcv_total,
         'valor_total_formatted': f"R$ {vmcv_total:,.0f}".replace(',', '.') if vmcv_total > 0 else "R$ 0",
+        'valor_medio_processo': valor_medio_processo,
+        'valor_medio_processo_formatted': f"R$ {valor_medio_processo:,.0f}".replace(',', '.') if valor_medio_processo > 0 else "R$ 0",
         'vmcv_mes': vmcv_mes,
         'vmcv_semana': vmcv_semana,
+        'vmcv_semana_formatted': f"R$ {vmcv_semana:,.0f}".replace(',', '.') if vmcv_semana > 0 else "R$ 0",
         'vmcv_proxima_semana': vmcv_proxima_semana,
+        'vmcv_proxima_semana_formatted': f"R$ {vmcv_proxima_semana:,.0f}".replace(',', '.') if vmcv_proxima_semana > 0 else "R$ 0",
         'processos_mes': processos_mes,
         'processos_semana': processos_semana,
         'processos_proxima_semana': processos_proxima_semana,
@@ -340,83 +367,247 @@ def index(**kwargs):
                 'percentual': round(percentual, 1)
             })
     
-    # Gráfico por Mês: Total de Processos e VMCV Total
-    monthly_chart = None
+    # Gráfico de linha com área: Processos por dia e valor
+    daily_chart = None
     if not df.empty:
-        # Agrupar por mês
-        df['mes_ano'] = df['data_abertura'].dt.to_period('M')
-        monthly_data = df.groupby('mes_ano').agg({
+        # Agrupar por dia
+        df['data_abertura_day'] = df['data_abertura'].dt.date
+        daily_data = df.groupby('data_abertura_day').agg({
             'numero': 'count',  # Total de processos
             'total_vmcv_real': 'sum'  # VMCV total
         }).reset_index()
         
-        # Converter período para datetime para plotly
-        monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
-        monthly_data = monthly_data.sort_values('data')
+        # Converter para datetime
+        daily_data['data'] = pd.to_datetime(daily_data['data_abertura_day'])
+        daily_data = daily_data.sort_values('data')
         
-        # Calcular regressão linear para processos
-        if len(monthly_data) >= 2:
-            x_numeric = np.arange(len(monthly_data))
+        # Pegar últimos 60 dias
+        if len(daily_data) > 60:
+            daily_data = daily_data.tail(60)
+        
+        # Criar gráfico de linha com área
+        daily_chart = go.Figure()
+        
+        # Área para processos
+        daily_chart.add_trace(go.Scatter(
+            x=daily_data['data'],
+            y=daily_data['numero'],
+            mode='lines',
+            name='Processos por Dia',
+            line=dict(color='#3b82f6', width=2),
+            fill='tozeroy',  # Preenche até o zero em Y
+            fillcolor='rgba(59, 130, 246, 0.2)'
+        ))
+        
+        # Linha para valor (eixo Y secundário)
+        daily_chart.add_trace(go.Scatter(
+            x=daily_data['data'],
+            y=daily_data['total_vmcv_real'],
+            mode='lines+markers',
+            name='Valor VMCV por Dia',
+            line=dict(color='#10b981', width=2),
+            marker=dict(size=4),
+            yaxis='y2'
+        ))
+        
+        daily_chart.update_layout(
+            title={
+                'text': 'Evolução Diária - Últimos 60 dias',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            xaxis_title='Data',
+            yaxis=dict(title='Quantidade de Processos', side='left'),
+            yaxis2=dict(title='Valor VMCV (R$)', side='right', overlaying='y'),
+            hovermode='x unified',
+            template='plotly_white',
+            height=300,
+            margin=dict(t=40, b=30, l=30, r=30),
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="center",
+                x=0.5
+            )
+        )
+
+    # Gráfico de rosca por canal DI
+    canal_chart = None
+    if not df.empty:
+        # Agrupar por canal DI
+        canal_data = df.groupby('diduimp_canal').agg({
+            'numero': 'count',
+            'total_vmcv_real': 'sum'  
+        }).reset_index()
+        
+        # Definir cores para os canais
+        canal_colors = {
+            'Verde': '#10b981',     # Verde
+            'Amarelo': '#f59e0b',   # Amarelo
+            'Vermelho': '#ef4444',  # Vermelho
+            'Cinza': '#6b7280'      # Cinza
+        }
+        
+        # Preparar dados para o gráfico
+        labels = []
+        values = []
+        colors = []
+        
+        for _, row in canal_data.iterrows():
+            canal = row['diduimp_canal'] if row['diduimp_canal'] else 'Não Informado'
+            quantidade = row['numero']
             
-            # Regressão para processos
-            slope_proc, intercept_proc, r_value_proc, p_value_proc, std_err_proc = stats.linregress(x_numeric, monthly_data['numero'])
-            trend_proc = slope_proc * x_numeric + intercept_proc
+            labels.append(canal)
+            values.append(quantidade)
+            colors.append(canal_colors.get(canal, '#6b7280'))
+        
+        # Criar gráfico de rosca (donut chart)
+        canal_chart = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            hole=0.4,  # Cria o buraco no meio (rosca)
+            marker=dict(
+                colors=colors,
+                line=dict(color='white', width=2)
+            ),
+            textinfo='label+percent',
+            textposition='outside',
+            hovertemplate='<b>%{label}</b><br>Processos: %{value}<br>Percentual: %{percent}<extra></extra>',
+            showlegend=True
+        )])
+        
+        canal_chart.update_layout(
+            title={
+                'text': 'Distribuição por Canal DI',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            template='plotly_white',
+            height=300,
+            margin=dict(t=40, b=10, l=10, r=10),
+            legend=dict(
+                orientation="v",
+                yanchor="middle",
+                y=0.5,
+                xanchor="left",
+                x=1.02
+            )
+        )
+
+    # Gráfico de radar por categoria de material
+    radar_chart = None
+    if not df.empty:
+        # Agrupar por resumo_mercadoria e pegar top 6
+        radar_data = df.groupby('resumo_mercadoria').agg({
+            'numero': 'count',
+            'total_vmcv_real': 'sum'  
+        }).reset_index()
+        
+        radar_data = radar_data.sort_values('total_vmcv_real', ascending=False).head(6)
+        
+        # Preparar dados para o radar
+        categories = []
+        values = []
+        
+        for _, row in radar_data.iterrows():
+            material = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
+            valor = row['total_vmcv_real']
             
-            # Regressão para VMCV
-            slope_vmcv, intercept_vmcv, r_value_vmcv, p_value_vmcv, std_err_vmcv = stats.linregress(x_numeric, monthly_data['total_vmcv_real'])
-            trend_vmcv = slope_vmcv * x_numeric + intercept_vmcv
+            # Truncar nome longo para melhor visualização
+            if len(material) > 20:
+                material = material[:20] + '...'
             
-            # Criar gráfico com duas linhas
-            monthly_chart = go.Figure()
+            categories.append(material)
+            values.append(valor)
+        
+        # Fechar o radar adicionando o primeiro valor no final
+        categories.append(categories[0])
+        values.append(values[0])
+        
+        # Criar gráfico de radar
+        radar_chart = go.Figure()
+        
+        radar_chart.add_trace(go.Scatterpolar(
+            r=values,
+            theta=categories,
+            fill='toself',
+            fillcolor='rgba(59, 130, 246, 0.2)',
+            line=dict(color='#3b82f6', width=2),
+            marker=dict(color='#3b82f6', size=6),
+            name='Valor VMCV',
+            hovertemplate='<b>%{theta}</b><br>Valor: R$ %{r:,.0f}<extra></extra>'
+        ))
+        
+        radar_chart.update_layout(
+            title={
+                'text': 'Radar - Top Categorias por Valor',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, max(values[:-1]) * 1.1] if values else [0, 10],
+                    tickformat='.0f'
+                ),
+                angularaxis=dict(
+                    tickfont=dict(size=10)
+                )
+            ),
+            template='plotly_white',
+            height=300,
+            margin=dict(t=40, b=10, l=10, r=10),
+            showlegend=False
+        )
+
+    # Gráfico de barras por material
+    material_chart = None
+    if not df.empty:
+        # Usar os dados já processados de material_analysis
+        if material_analysis:
+            # Pegar top 8 materiais
+            top_materials = material_analysis[:8]
             
-            # Linha de processos
-            monthly_chart.add_trace(go.Scatter(
-                x=monthly_data['data'],
-                y=monthly_data['numero'],
-                mode='lines+markers',
-                name='Total de Processos',
-                line=dict(color='#007BFF', width=3),
-                marker=dict(size=8)
+            labels = []
+            values = []
+            
+            for material in top_materials:
+                # Truncar nome para melhor visualização
+                nome = material['material']
+                if len(nome) > 25:
+                    nome = nome[:25] + '...'
+                
+                labels.append(nome)
+                values.append(material['valor_total'])
+            
+            # Criar gráfico de barras horizontais
+            material_chart = go.Figure()
+            
+            material_chart.add_trace(go.Bar(
+                x=values,
+                y=labels,
+                orientation='h',
+                marker=dict(
+                    color='#8b5cf6',  # Roxo
+                    line=dict(color='white', width=1)
+                ),
+                hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>'
             ))
             
-            # Linha de tendência para processos
-            monthly_chart.add_trace(go.Scatter(
-                x=monthly_data['data'],
-                y=trend_proc,
-                mode='lines',
-                name=f'Tendência Processos (R²: {r_value_proc**2:.3f})',
-                line=dict(color='#007BFF', dash='dash', width=2)
-            ))
-            
-            # Linha de VMCV (eixo Y secundário)
-            monthly_chart.add_trace(go.Scatter(
-                x=monthly_data['data'],
-                y=monthly_data['total_vmcv_real'],
-                mode='lines+markers',
-                name='VMCV Total',
-                line=dict(color='#28a745', width=3),
-                marker=dict(size=8),
-                yaxis='y2'
-            ))
-            
-            # Linha de tendência para VMCV
-            monthly_chart.add_trace(go.Scatter(
-                x=monthly_data['data'],
-                y=trend_vmcv,
-                mode='lines',
-                name=f'Tendência VMCV (R²: {r_value_vmcv**2:.3f})',
-                line=dict(color='#28a745', dash='dash', width=2),
-                yaxis='y2'
-            ))
-            
-            monthly_chart.update_layout(
-                title='Evolução Mensal: Processos e VMCV',
-                xaxis_title='Mês',
-                yaxis=dict(title='Total de Processos', side='left'),
-                yaxis2=dict(title='VMCV Total (R$)', side='right', overlaying='y'),
-                hovermode='x unified',
+            material_chart.update_layout(
+                title={
+                    'text': 'Top Materiais por Valor VMCV',
+                    'x': 0.5,
+                    'xanchor': 'center'
+                },
+                xaxis_title='Valor VMCV (R$)',
+                yaxis_title='Material',
                 template='plotly_white',
-                height=400
+                height=300,
+                margin=dict(t=40, b=30, l=150, r=30),
+                showlegend=False
             )
 
     # Get all available companies for filtering
@@ -436,7 +627,10 @@ def index(**kwargs):
 
     # Convert charts to HTML
     chart_configs = {'displayModeBar': False, 'responsive': True}
-    monthly_chart_html = monthly_chart.to_html(full_html=False, include_plotlyjs=False, div_id='monthly-chart', config=chart_configs) if monthly_chart else None
+    daily_chart_html = daily_chart.to_html(full_html=False, include_plotlyjs=False, div_id='daily-chart', config=chart_configs) if daily_chart else None
+    canal_chart_html = canal_chart.to_html(full_html=False, include_plotlyjs=False, div_id='canal-chart', config=chart_configs) if canal_chart else None
+    radar_chart_html = radar_chart.to_html(full_html=False, include_plotlyjs=False, div_id='radar-chart', config=chart_configs) if radar_chart else None
+    material_chart_html = material_chart.to_html(full_html=False, include_plotlyjs=False, div_id='material-chart', config=chart_configs) if material_chart else None
     
     return render_template('dashboard/index.html',
                          kpis=kpis,
@@ -444,7 +638,10 @@ def index(**kwargs):
                          material_analysis=material_analysis,
                          data=table_data,
                          table_data=table_data,
-                         monthly_chart=monthly_chart_html,
+                         daily_chart=daily_chart_html,
+                         canal_chart=canal_chart_html,
+                         radar_chart=radar_chart_html,
+                         material_chart=material_chart_html,
                          companies=available_companies,
                          selected_company=selected_company,
                          currencies=currencies,
