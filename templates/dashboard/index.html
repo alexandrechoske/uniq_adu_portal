@@ -5,673 +5,627 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/table-sort.css') }}">
 <style>
-    /* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
-    :root {
-        /* Paleta de cores minimalista */
-        --color-background: #fafbfc;
-        --color-surface: #ffffff;
-        --color-surface-hover: #f8fafc;
-        --color-border: #e2e8f0;
-        --color-border-light: #f1f5f9;
-        
-        /* Textos */
-        --color-text-primary: #0f172a;
-        --color-text-secondary: #475569;
-        --color-text-muted: #64748b;
-        --color-text-light: #94a3b8;
-        
-        /* Cores de destaque elegantes */
-        --color-primary: #3b82f6;
-        --color-primary-light: #dbeafe;
-        --color-success: #10b981;
-        --color-success-light: #d1fae5;
-        --color-warning: #f59e0b;
-        --color-warning-light: #fef3c7;
-        --color-danger: #ef4444;
-        --color-danger-light: #fee2e2;
-        --color-info: #06b6d4;
-        --color-info-light: #cffafe;
-        --color-purple: #8b5cf6;
-        --color-purple-light: #ede9fe;
-        
-        /* Sombras minimalistas */
-        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        
-        /* Espacamentos consistentes */
-        --spacing-xs: 0.5rem;
-        --spacing-sm: 0.75rem;
-        --spacing-md: 1rem;
-        --spacing-lg: 1.5rem;
-        --spacing-xl: 2rem;
-        --spacing-2xl: 3rem;
-        
-        /* Bordas arredondadas */
-        --radius-sm: 0.375rem;
-        --radius-md: 0.5rem;
-        --radius-lg: 0.75rem;
-        --radius-xl: 1rem;
-        
-        /* Transições suaves */
-        --transition-fast: 0.15s ease;
-        --transition-normal: 0.3s ease;
-        --transition-slow: 0.5s ease;
+/* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
+:root {
+    /* Paleta de cores minimalista */
+    --color-background: #fafbfc;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f8fafc;
+    --color-border: #e2e8f0;
+    --color-border-light: #f1f5f9;
+    
+    /* Textos */
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #64748b;
+    --color-text-light: #94a3b8;
+    
+    /* Cores de destaque elegantes */
+    --color-primary: #3b82f6;
+    --color-primary-light: #dbeafe;
+    --color-success: #10b981;
+    --color-success-light: #d1fae5;
+    --color-warning: #f59e0b;
+    --color-warning-light: #fef3c7;
+    --color-danger: #ef4444;
+    --color-danger-light: #fee2e2;
+    --color-info: #06b6d4;
+    --color-info-light: #cffafe;
+    --color-purple: #8b5cf6;
+    --color-purple-light: #ede9fe;
+    
+    /* Sombras minimalistas */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Espacamentos consistentes */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    
+    /* Bordas arredondadas */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    
+    /* Transições suaves */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}
+
+/* === LAYOUT BASE === */
+.dashboard-container {
+    background: var(--color-background);
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.main-content {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+    box-sizing: border-box;
+}
+
+/* === HEADER MODERNIZADO === */
+.dashboard-header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border-light);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header-title-section {
+    flex: 1;
+}
+
+.header-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-xs) 0;
+    letter-spacing: -0.02em;
+}
+
+.header-subtitle {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.period-selector {
+    display: flex;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0.25rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.period-btn {
+    padding: var(--spacing-xs) var(--spacing-md);
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.period-btn.active {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.period-btn:hover:not(.active) {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+}
+
+.company-filter {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    min-width: 200px;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+}
+
+.company-filter:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* === [NOVO] LAYOUT COMPACTO PARA OS CARDS DE MÉTRICAS (MÁXIMO 2 LINHAS) === */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-2xl);
+}
+
+/* === [ALTERADO] LAYOUT INTERNO DO CARTÃO === */
+.metric-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border-light);
+    padding: var(--spacing-md);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+    grid-column: span 2;
+    min-height: 100px;
+    
+    /* Layout principal: Ícone ao lado do bloco de texto */
+    display: flex;
+    flex-direction: row; /* Eixo horizontal */
+    align-items: center;  /* Alinha o ícone e o conteúdo verticalmente */
+    gap: var(--spacing-sm);
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--metric-color, var(--color-primary));
+    opacity: 0.3;
+    transition: opacity var(--transition-normal);
+}
+
+.metric-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--metric-color, var(--color-primary));
+}
+
+.metric-card:hover::before {
+    opacity: 1;
+}
+
+.metric-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--metric-bg, var(--color-primary-light));
+    color: var(--metric-color, var(--color-primary));
+    flex-shrink: 0;
+    /* margin-bottom foi removido */
+}
+
+.metric-content {
+    flex: 1; /* Ocupa o espaço restante */
+    min-width: 0;
+    display: flex;
+    flex-direction: column; /* Empilha valor e descritivo */
+    justify-content: center;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Empurra o trend para a direita */
+    width: 100%;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    margin: 0;
+    white-space: normal;
+    line-height: 1.3;
+}
+
+.metric-trend {
+    /* margin-left: auto foi removido */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.125rem 0.25rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-success-light);
+    color: var(--color-success);
+    white-space: nowrap;
+}
+
+.metric-trend.negative {
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+}
+
+.metric-trend.neutral {
+    background: var(--color-border-light);
+    color: var(--color-text-muted);
+}
+
+.metric-trend svg {
+    width: 8px;
+    height: 8px;
+}
+
+/* Cores específicas para cada métrica */
+.metric-card.operations { --metric-color: var(--color-primary); --metric-bg: var(--color-primary-light); }
+.metric-card.pending { --metric-color: var(--color-warning); --metric-bg: var(--color-warning-light); }
+.metric-card.transit { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
+.metric-card.completed { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
+.metric-card.air { --metric-color: var(--color-purple); --metric-bg: var(--color-purple-light); }
+.metric-card.sea { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
+.metric-card.value { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
+.metric-card.expense { --metric-color: var(--color-danger); --metric-bg: var(--color-danger-light); }
+
+/* === GRID DE GRÁFICOS MODERNO === */
+.charts-section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.chart-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border-light);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-border);
+}
+
+.chart-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border-light);
+    background: var(--color-surface);
+}
+
+.chart-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.chart-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.chart-content {
+    padding: var(--spacing-md);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+}
+
+/* Grid layouts para gráficos */
+.chart-large { grid-column: span 8; }
+.chart-medium { grid-column: span 4; }
+.chart-small { grid-column: span 6; }
+
+/* === TABELA MODERNA === */
+.table-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border-light);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.table-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.table-filters {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.search-input {
+    background: var(--color-surface-hover);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.875rem;
+    width: 250px;
+    transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.data-table th {
+    background: var(--color-surface-hover);
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border-light);
+    color: var(--color-text-primary);
+    vertical-align: middle;
+}
+
+.data-table tbody tr {
+    transition: background-color var(--transition-fast);
+}
+
+.data-table tbody tr:hover {
+    background: var(--color-surface-hover);
+}
+
+/* === STATUS BADGES MODERNOS === */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-badge.pending {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+}
+
+.status-badge.transit {
+    background: var(--color-info-light);
+    color: var(--color-info);
+}
+
+.status-badge.completed {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
+
+.status-badge.default {
+    background: #f1f5f9;
+    color: var(--color-text-muted);
+}
+
+/* === RESPONSIVIDADE AVANÇADA === */
+
+/* Ajustes gerais de espaçamento */
+@media (max-width: 1200px) {
+    .main-content {
+        padding: 0 var(--spacing-lg);
     }
-    
-    /* === LAYOUT BASE === */
-    .dashboard-container {
-        background: var(--color-background);
-        min-height: 100vh;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    /* === HEADER MODERNIZADO === */
-    .dashboard-header {
-        background: var(--color-surface);
-        border-bottom: 1px solid var(--color-border-light);
-        padding: var(--spacing-lg) var(--spacing-xl);
-        margin-bottom: var(--spacing-xl);
-    }
-    
-    .header-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: var(--spacing-lg);
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-    
-    .header-title-section {
-        flex: 1;
-    }
-    
-    .header-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--color-text-primary);
-        margin: 0 0 var(--spacing-xs) 0;
-        letter-spacing: -0.02em;
-    }
-    
-    .header-subtitle {
-        color: var(--color-text-secondary);
-        font-size: 0.875rem;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
-    
-    .header-controls {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-    }
-    
-    .period-selector {
-        display: flex;
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        padding: 0.25rem;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .period-btn {
-        padding: var(--spacing-xs) var(--spacing-md);
-        border: none;
-        background: transparent;
-        color: var(--color-text-secondary);
-        font-size: 0.875rem;
-        font-weight: 500;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        transition: all var(--transition-fast);
-        white-space: nowrap;
-    }
-    
-    .period-btn.active {
-        background: var(--color-primary);
-        color: white;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .period-btn:hover:not(.active) {
-        background: var(--color-surface-hover);
-        color: var(--color-text-primary);
-    }
-    
-    .company-filter {
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        padding: var(--spacing-sm) var(--spacing-md);
-        font-size: 0.875rem;
-        color: var(--color-text-primary);
-        min-width: 200px;
-        box-shadow: var(--shadow-sm);
-        transition: all var(--transition-fast);
-    }
-    
-    .company-filter:focus {
-        outline: none;
-        border-color: var(--color-primary);
-        box-shadow: 0 0 0 3px var(--color-primary-light);
-    }
-    
-    /* === CARDS DE MÉTRICAS ULTRA COMPACTOS === */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-2xl);
-        max-width: 1400px;
-        margin-left: auto;
-        margin-right: auto;
-        padding: 0 var(--spacing-xl);
-    }
-    
-    /* Layout específico para organização dos cartões */
-    .metric-card:nth-child(1) { grid-column: span 1; } /* Total Operações */
-    .metric-card:nth-child(2) { grid-column: span 1; } /* Aguardando Embarque */
-    .metric-card:nth-child(3) { grid-column: span 1; } /* Em Trânsito */
-    .metric-card:nth-child(4) { grid-column: span 1; } /* Desembarcadas */
-    .metric-card:nth-child(5) { grid-column: span 1; } /* Modal Aéreo */
-    .metric-card:nth-child(6) { grid-column: span 1; } /* Modal Marítimo */
-    .metric-card:nth-child(7) { grid-column: span 3; } /* Valor Total */
-    .metric-card:nth-child(8) { grid-column: span 3; } /* Valor Médio */
-    
-    /* Estilo especial para cartões de valor (maiores) */
-    .metric-card:nth-child(7),
-    .metric-card:nth-child(8) {
-        min-height: 90px;
-    }
-    
-    .metric-card:nth-child(7) .metric-value,
-    .metric-card:nth-child(8) .metric-value {
-        font-size: 1.75rem;
-        font-weight: 900;
-    }
-    
-    .metric-card {
-        background: var(--color-surface);
-        border-radius: var(--radius-lg);
-        border: 1px solid var(--color-border-light);
-        padding: var(--spacing-md);
-        transition: all var(--transition-normal);
-        position: relative;
-        overflow: hidden;
-        min-height: 80px; /* Reduzido */
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-    }
-    
-    .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: var(--metric-color, var(--color-primary));
-        opacity: 0.3;
-        transition: opacity var(--transition-normal);
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--shadow-md);
-        border-color: var(--metric-color, var(--color-primary));
-    }
-    
-    .metric-card:hover::before {
-        opacity: 1;
-    }
-    
-    .metric-icon {
-        width: 2.25rem;
-        height: 2.25rem;
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--metric-bg, var(--color-primary-light));
-        color: var(--metric-color, var(--color-primary));
-        flex-shrink: 0;
-    }
-    
-    .metric-content {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.125rem;
-    }
-    
-    .metric-value {
-        font-size: 1.625rem; /* Reduzido */
-        font-weight: 800;
-        color: var(--color-text-primary);
-        line-height: 1;
-        letter-spacing: -0.02em;
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-    }
-    
-    .metric-label {
-        color: var(--color-text-secondary);
-        font-size: 0.75rem;
-        font-weight: 500;
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .metric-trend {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.125rem;
-        font-size: 0.625rem;
-        font-weight: 700;
-        padding: 0.125rem 0.25rem;
-        border-radius: var(--radius-sm);
-        background: var(--color-success-light);
-        color: var(--color-success);
-        white-space: nowrap;
-        margin-left: auto;
-    }
-    
-    .metric-trend.negative {
-        background: var(--color-danger-light);
-        color: var(--color-danger);
-    }
-    
-    .metric-trend.neutral {
-        background: var(--color-border-light);
-        color: var(--color-text-muted);
-    }
-    
-    .metric-trend svg {
-        width: 8px;
-        height: 8px;
-    }
-    
-    /* Cores específicas para cada métrica */
-    .metric-card.operations { --metric-color: var(--color-primary); --metric-bg: var(--color-primary-light); }
-    .metric-card.pending { --metric-color: var(--color-warning); --metric-bg: var(--color-warning-light); }
-    .metric-card.transit { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
-    .metric-card.completed { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
-    .metric-card.air { --metric-color: var(--color-purple); --metric-bg: var(--color-purple-light); }
-    .metric-card.sea { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
-    .metric-card.value { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
-    
-    /* === GRID DE GRÁFICOS MODERNO === */
-    .charts-section {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 var(--spacing-xl);
-        margin-bottom: var(--spacing-2xl);
-    }
-    
     .charts-grid {
-        display: grid;
-        grid-template-columns: repeat(12, 1fr);
-        gap: var(--spacing-lg);
-        margin-bottom: var(--spacing-2xl);
+        grid-template-columns: 1fr;
     }
-    
-    .chart-card {
-        background: var(--color-surface);
-        border-radius: var(--radius-xl);
-        border: 1px solid var(--color-border-light);
-        overflow: hidden;
-        transition: all var(--transition-normal);
-        display: flex;
-        flex-direction: column;
+    .chart-large, .chart-medium, .chart-small {
+        grid-column: span 1;
     }
-    
-    .chart-card:hover {
-        box-shadow: var(--shadow-lg);
-        border-color: var(--color-border);
+}
+
+/* TABLETS MAIORES (ex: iPad Pro em paisagem) - 4 cartões por linha */
+@media (max-width: 1200px) {
+    .metrics-grid {
+        grid-template-columns: repeat(8, 1fr);
     }
-    
-    .chart-header {
-        padding: var(--spacing-lg);
-        border-bottom: 1px solid var(--color-border-light);
-        background: var(--color-surface);
+    .metric-card {
+        grid-column: span 2;
     }
-    
-    .chart-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: var(--color-text-primary);
-        margin: 0;
+}
+
+/* TABLETS (ex: iPad em retrato) - 3 cartões por linha */
+@media (max-width: 992px) {
+    .metrics-grid {
+        grid-template-columns: repeat(6, 1fr);
     }
-    
-    .chart-subtitle {
-        color: var(--color-text-muted);
-        font-size: 0.75rem;
-        margin-top: 0.25rem;
+    .metric-card {
+        grid-column: span 2;
     }
-    
-    .chart-content {
+}
+
+
+@media (max-width: 768px) {
+    .dashboard-header {
         padding: var(--spacing-md);
-        flex: 1;
-        display: flex;
+    }
+    .main-content {
+        padding: 0 var(--spacing-md);
+    }
+    .header-content {
         flex-direction: column;
-        min-height: 300px;
+        gap: var(--spacing-md);
     }
-    
-    /* Grid layouts responsivos */
-    .chart-large { grid-column: span 8; }
-    .chart-medium { grid-column: span 4; }
-    .chart-small { grid-column: span 6; }
-    
-    /* === TABELA MODERNA === */
-    .table-section {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 var(--spacing-xl);
-    }
-    
-    .table-card {
-        background: var(--color-surface);
-        border-radius: var(--radius-xl);
-        border: 1px solid var(--color-border-light);
-        overflow: hidden;
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .table-header {
-        padding: var(--spacing-lg);
-        border-bottom: 1px solid var(--color-border-light);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .table-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--color-text-primary);
-        margin: 0;
-    }
-    
-    .table-filters {
-        display: flex;
-        gap: var(--spacing-sm);
-        align-items: center;
-    }
-    
-    .search-input {
-        background: var(--color-surface-hover);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        padding: var(--spacing-xs) var(--spacing-sm);
-        font-size: 0.875rem;
-        width: 250px;
-        transition: all var(--transition-fast);
-    }
-    
-    .search-input:focus {
-        outline: none;
-        border-color: var(--color-primary);
-        background: var(--color-surface);
-        box-shadow: 0 0 0 3px var(--color-primary-light);
-    }
-    
-    .data-table {
+    .header-controls {
         width: 100%;
-        border-collapse: collapse;
-        font-size: 0.875rem;
+        flex-direction: column;
+        gap: var(--spacing-sm);
     }
-    
-    .data-table th {
-        background: var(--color-surface-hover);
-        padding: var(--spacing-md) var(--spacing-lg);
-        text-align: left;
-        font-weight: 600;
-        color: var(--color-text-secondary);
-        border-bottom: 1px solid var(--color-border-light);
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        position: sticky;
-        top: 0;
-        z-index: 10;
+    .period-selector {
+        width: 100%;
+        justify-content: space-between;
     }
-    
+    .company-filter {
+        width: 100%;
+    }
+    .data-table th,
     .data-table td {
-        padding: var(--spacing-md) var(--spacing-lg);
-        border-bottom: 1px solid var(--color-border-light);
-        color: var(--color-text-primary);
-        vertical-align: middle;
+        padding: var(--spacing-sm);
     }
-    
-    .data-table tbody tr {
-        transition: background-color var(--transition-fast);
+    .mobile-hidden {
+        display: none;
     }
-    
-    .data-table tbody tr:hover {
-        background: var(--color-surface-hover);
+}
+
+/* CELULARES (em paisagem e tablets menores) - 2 cartões por linha */
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
     }
-    
-    /* === STATUS BADGES MODERNOS === */
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: var(--radius-lg);
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    .metric-card {
+        grid-column: span 1;
     }
-    
-    .status-badge.pending {
-        background: var(--color-warning-light);
-        color: var(--color-warning);
+    .metric-value {
+       font-size: 1.375rem;
     }
-    
-    .status-badge.transit {
-        background: var(--color-info-light);
-        color: var(--color-info);
+}
+
+/* CELULARES (em retrato) - 1 cartão por linha */
+@media (max-width: 480px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
     }
-    
-    .status-badge.completed {
-        background: var(--color-success-light);
-        color: var(--color-success);
+    .metric-card {
+        grid-column: span 1;
+        flex-direction: column; /* Em telas muito pequenas, volta ao layout vertical */
+        align-items: flex-start;
     }
-    
-    .status-badge.default {
-        background: #f1f5f9;
-        color: var(--color-text-muted);
+}
+
+
+/* === ANIMAÇÕES E UTILITÁRIOS === */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
-    
-    /* === RESPONSIVIDADE AVANÇADA === */
-    @media (max-width: 1200px) {
-        .charts-grid {
-            grid-template-columns: repeat(8, 1fr);
-        }
-        .chart-large { grid-column: span 8; }
-        .chart-medium { grid-column: span 4; }
-        .chart-small { grid-column: span 4; }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
-    
-    /* === TABLET BREAKPOINT === */
-    @media (max-width: 1024px) and (min-width: 769px) {
-        .metrics-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: var(--spacing-md);
-        }
-        
-        /* Layout tablet para métricas */
-        .metric-card:nth-child(1) { grid-column: span 1; } /* Total */
-        .metric-card:nth-child(2) { grid-column: span 1; } /* Aguardando */
-        .metric-card:nth-child(3) { grid-column: span 1; } /* Trânsito */
-        .metric-card:nth-child(4) { grid-column: span 1; } /* Desembarcadas */
-        .metric-card:nth-child(5) { grid-column: span 2; } /* Modal Aéreo */
-        .metric-card:nth-child(6) { grid-column: span 2; } /* Modal Marítimo */
-        .metric-card:nth-child(7) { grid-column: span 2; } /* Valor Total */
-        .metric-card:nth-child(8) { grid-column: span 2; } /* Valor Médio */
-        
-        .charts-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-        
-        .chart-large {
-            grid-column: span 2;
-        }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: var(--radius-md);
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
-    
-    @media (max-width: 768px) {
-        .dashboard-header {
-            padding: var(--spacing-md);
-        }
-        
-        .header-content {
-            flex-direction: column;
-            gap: var(--spacing-md);
-        }
-        
-        .header-controls {
-            width: 100%;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-        
-        .period-selector {
-            width: 100%;
-            justify-content: space-between;
-        }
-        
-        .company-filter {
-            width: 100%;
-        }
-        
-        .metrics-grid {
-            grid-template-columns: repeat(2, 1fr);
-            padding: 0 var(--spacing-md);
-            gap: var(--spacing-sm);
-        }
-        
-        /* Resetar layout específico no mobile */
-        .metric-card:nth-child(n) { 
-            grid-column: span 1; 
-        }
-        
-        .metric-card:nth-child(7),
-        .metric-card:nth-child(8) { 
-            grid-column: span 2; /* Valores ocupam linha inteira no mobile */
-        }
-        
-        .metric-card {
-            min-height: 70px;
-            padding: var(--spacing-sm);
-        }
-        
-        .metric-icon {
-            width: 1.75rem;
-            height: 1.75rem;
-        }
-        
-        .metric-value {
-            font-size: 1.375rem;
-        }
-        
-        .metric-label {
-            font-size: 0.7rem;
-        }
-        
-        .charts-section,
-        .table-section {
-            padding: 0 var(--spacing-md);
-        }
-        
-        .charts-grid {
-            grid-template-columns: 1fr;
-            gap: var(--spacing-md);
-        }
-        
-        .chart-large,
-        .chart-medium,
-        .chart-small {
-            grid-column: span 1;
-        }
-        
-        .data-table th,
-        .data-table td {
-            padding: var(--spacing-sm);
-        }
-        
-        .mobile-hidden {
-            display: none;
-        }
-    }
-    
-    /* === ANIMAÇÕES SUAVES === */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-fade-in-up {
-        animation: fadeInUp 0.6s ease-out;
-    }
-    
-    /* === LOADING STATES === */
-    .loading-skeleton {
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s infinite;
-        border-radius: var(--radius-md);
-    }
-    
-    @keyframes loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-    }
-    
-    /* === ACESSIBILIDADE === */
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-        }
-    }
-    
-    /* === UTILITÁRIOS === */
-    .text-truncate {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    
-    .break-words {
-        word-wrap: break-word;
-        word-break: break-word;
-    }
-    
-    .gradient-text {
-        background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+}
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.break-words {
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 </style>
 {% endblock %}
 
@@ -869,8 +823,10 @@
         </div>
     </div>
 
-    <!-- Grid de Métricas Ultra Compacto -->
-    <div class="metrics-grid">
+    <!-- Conteúdo Principal -->
+    <div class="main-content">
+        <!-- Grid de Métricas Ultra Compacto -->
+        <div class="metrics-grid">
         <!-- Total de Operações -->
         <div class="metric-card operations">
             <div class="metric-icon">
@@ -903,7 +859,7 @@
             </div>
             <div class="metric-content">
                 <div class="metric-value">{{ kpis.aguardando_embarque or 0 }}</div>
-                <div class="metric-label">Aguardando Embarque</div>
+                <div class="metric-label">Agd Embarque</div>
             </div>
         </div>
 
@@ -963,40 +919,138 @@
             </div>
         </div>
 
-        <!-- Valor Total -->
+        <!-- Modal Terrestre -->
+        <div class="metric-card pending">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 6v6h8V6"/>
+                    <path d="M4 6h16"/>
+                    <path d="M6 2h12v4H6z"/>
+                    <circle cx="7" cy="17" r="2"/>
+                    <path d="M9 17h6"/>
+                    <circle cx="17" cy="17" r="2"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.terrestre or 0 }}</div>
+                <div class="metric-label">Modal Terrestre</div>
+            </div>
+        </div>
+
+        <!-- Total de Despesas -->
         <div class="metric-card value">
             <div class="metric-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                    <path d="M12 11h4"/>
+                    <path d="M12 16h4"/>
+                    <path d="M8 11h.01"/>
+                    <path d="M8 16h.01"/>
                 </svg>
             </div>
             <div class="metric-content">
                 <div class="metric-value">
-                    {{ kpis.valor_total_formatted or "R$ 0" }}
+                    {{ kpis.despesas_total_formatted or "R$ 0" }}
                     <div class="metric-trend">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 6l-6 6-4-4-6 6"/>
                         </svg>
-                        +8%
+                        +15%
                     </div>
                 </div>
-                <div class="metric-label">Valor Total VMCV</div>
+                <div class="metric-label">Total de Despesas</div>
             </div>
         </div>
 
-        <!-- Valor Médio -->
+        <!-- Despesa Média por Processo -->
         <div class="metric-card value">
             <div class="metric-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0"/>
-                    <path d="M9 12l2 2 4-4"/>
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    <path d="M15 2v6h6"/>
+                    <path d="M12 9v3l1.5 1.5"/>
                 </svg>
             </div>
             <div class="metric-content">
                 <div class="metric-value">
-                    {{ kpis.valor_medio_processo_formatted or "R$ 0" }}
+                    {{ kpis.despesa_media_processo_formatted or "R$ 0" }}
                 </div>
-                <div class="metric-label">Valor Médio/Processo</div>
+                <div class="metric-label">Despesa Média/Processo</div>
+            </div>
+        </div>
+
+        <!-- Despesas do Mês -->
+        <div class="metric-card expense">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <path d="M8 14h.01"/>
+                    <path d="M12 14h.01"/>
+                    <path d="M16 14h.01"/>
+                    <path d="M8 18h.01"/>
+                    <path d="M12 18h.01"/>
+                    <path d="M16 18h.01"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_mes_formatted or "R$ 0" }}
+                    <div class="metric-trend">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6l-6 6-4-4-6 6"/>
+                        </svg>
+                        +5%
+                    </div>
+                </div>
+                <div class="metric-label">Despesas neste Mês</div>
+            </div>
+        </div>
+
+        <!-- Despesas desta Semana -->
+        <div class="metric-card expense">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <rect x="8" y="14" width="8" height="4" rx="1"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_semana_formatted or "R$ 0" }}
+                </div>
+                <div class="metric-label">Despesas esta Semana</div>
+            </div>
+        </div>
+
+        <!-- Despesas Semana Seguinte -->
+        <div class="metric-card expense">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <path d="M9 16l2 2 4-4"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_proxima_semana_formatted or "R$ 0" }}
+                    <div class="metric-trend neutral">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 13l3 3 7-7"/>
+                        </svg>
+                        S+1
+                    </div>
+                </div>
+                <div class="metric-label">Despesas Semana Seguinte</div>
             </div>
         </div>
     </div>
@@ -1094,7 +1148,7 @@
                     <tbody>
                         {% for row in table_data %}
                         <tr>
-                            <td class="break-words" style="max-width: 150px;">{{ row.cliente_razaosocial or '-' }}</td>
+                            <td class="break-words" style="max-width: 150px;">{{ (row.cliente_razaosocial or '-')[:10] }}</td>
                             <td class="font-medium">{{ row.nro_pedido or '-' }}</td>
                             <td>{{ row.data_embarque or '-' }}</td>
                             <td class="mobile-hidden break-words" style="max-width: 120px;">{{ row.local_embarque or '-' }}</td>
@@ -1136,6 +1190,6 @@
                 </table>
             </div>
         </div>
-    </div>
-</div>
+    </div> <!-- Fecha main-content -->
+</div> <!-- Fecha dashboard-container -->
 {% endblock %}

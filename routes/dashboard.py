@@ -313,6 +313,65 @@ def index(**kwargs):
     # Organizar KPIs para compatibilidade com o novo template
     valor_medio_processo = (vmcv_total / total_operations) if total_operations > 0 else 0
     
+    # ===== CÁLCULO DAS DESPESAS =====
+    # Calcular despesas totais para todas as operações usando a mesma lógica da tabela
+    despesas_total = 0.0
+    despesas_mes = 0.0
+    despesas_semana = 0.0
+    despesas_proxima_semana = 0.0
+    
+    for _, row in df.iterrows():
+        # Usar a mesma lógica de cálculo de despesas da tabela
+        try:
+            despesas_processo = 0.0
+            processo_id = row.get('id')
+            
+            if processo_id:
+                # Buscar despesas do processo na tabela importacoes_despesas
+                despesas_query = supabase.table('importacoes_despesas').select('valor_real').eq('processo_id', processo_id).execute()
+                
+                if despesas_query.data:
+                    # Somar todas as despesas reais do processo (impostos, taxas, honorários)
+                    despesas_processo = sum(float(d.get('valor_real', 0) or 0) for d in despesas_query.data)
+                
+            # Se não tiver despesas registradas, usar estimativa de 40% do VMCV
+            if despesas_processo == 0.0:
+                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                if vmcv > 0:
+                    despesas_processo = vmcv * 0.4  # 40% do valor da mercadoria
+                    
+        except (ValueError, TypeError, Exception):
+            # Em caso de erro, usar fallback para 40% do VMCV
+            try:
+                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                despesas_processo = vmcv * 0.4 if vmcv > 0 else 0.0
+            except:
+                despesas_processo = 0.0
+        
+        # Somar ao total
+        despesas_total += despesas_processo
+        
+        # Verificar se está no mês atual
+        data_abertura = row.get('data_abertura')
+        if pd.notna(data_abertura):
+            data_abertura_dt = pd.to_datetime(data_abertura)
+            if data_abertura_dt.month == hoje.month and data_abertura_dt.year == hoje.year:
+                despesas_mes += despesas_processo
+            
+            # Verificar se está na semana atual
+            if data_abertura_dt >= inicio_semana and data_abertura_dt <= fim_semana:
+                despesas_semana += despesas_processo
+        
+        # Para despesas da próxima semana, usar data de chegada prevista/real
+        data_chegada_display = get_arrival_date_display(row)
+        if data_chegada_display and pd.notna(data_chegada_display):
+            data_chegada_dt = pd.to_datetime(data_chegada_display)
+            if data_chegada_dt >= proxima_semana_inicio and data_chegada_dt <= proxima_semana_fim:
+                despesas_proxima_semana += despesas_processo
+    
+    # Calcular despesa média por processo
+    despesa_media_processo = (despesas_total / total_operations) if total_operations > 0 else 0
+    
     kpis = {
         'total': total_operations,
         'aereo': aereo,
@@ -323,6 +382,8 @@ def index(**kwargs):
         'aguardando_chegada': aguardando_chegada,  # Manter para compatibilidade
         'desembarcadas': di_registrada,  # Alias para compatibilidade
         'di_registrada': di_registrada,  # Manter para compatibilidade
+        
+        # ===== MÉTRICAS DE VMCV (mantidas para compatibilidade) =====
         'vmcv_total': vmcv_total,
         'valor_total_formatted': format_value_smart(vmcv_total, currency=True),
         'valor_medio_processo': valor_medio_processo,
@@ -332,6 +393,20 @@ def index(**kwargs):
         'vmcv_semana_formatted': format_value_smart(vmcv_semana, currency=True),
         'vmcv_proxima_semana': vmcv_proxima_semana,
         'vmcv_proxima_semana_formatted': format_value_smart(vmcv_proxima_semana, currency=True),
+        
+        # ===== NOVAS MÉTRICAS DE DESPESAS =====
+        'despesas_total': despesas_total,
+        'despesas_total_formatted': format_value_smart(despesas_total, currency=True),
+        'despesa_media_processo': despesa_media_processo,
+        'despesa_media_processo_formatted': format_value_smart(despesa_media_processo, currency=True),
+        'despesas_mes': despesas_mes,
+        'despesas_mes_formatted': format_value_smart(despesas_mes, currency=True),
+        'despesas_semana': despesas_semana,
+        'despesas_semana_formatted': format_value_smart(despesas_semana, currency=True),
+        'despesas_proxima_semana': despesas_proxima_semana,
+        'despesas_proxima_semana_formatted': format_value_smart(despesas_proxima_semana, currency=True),
+        
+        # ===== OUTRAS MÉTRICAS =====
         'processos_mes': processos_mes,
         'processos_semana': processos_semana,
         'processos_proxima_semana': processos_proxima_semana,
