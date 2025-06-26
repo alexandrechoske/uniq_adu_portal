@@ -219,13 +219,34 @@ def index(**kwargs):
         except (json.JSONDecodeError, TypeError, IndexError, KeyError):
             armazem_nome = ""
         
-        # Calcular despesas (40% do VMLE se não tiver VMCV)
+        # Calcular despesas usando nova lógica:
+        # 1. Se tiver despesas na tabela importacoes_despesas, usar a soma
+        # 2. Caso contrário, estimar como 40% do VMCV
         try:
-            vmcv = float(row.get('total_vmcv_real', 0) or 0)
-            vmle = float(row.get('total_vmle_real', 0) or 0)
-            despesas = vmcv if vmcv > 0 else (vmle * 0.4)
-        except (ValueError, TypeError):
             despesas = 0.0
+            processo_id = row.get('id')
+            
+            if processo_id:
+                # Buscar despesas do processo na tabela importacoes_despesas
+                despesas_query = supabase.table('importacoes_despesas').select('valor_real').eq('processo_id', processo_id).execute()
+                
+                if despesas_query.data:
+                    # Somar todas as despesas reais do processo
+                    despesas = sum(float(d.get('valor_real', 0) or 0) for d in despesas_query.data)
+                
+            # Se não tiver despesas registradas, usar estimativa de 40% do VMCV
+            if despesas == 0.0:
+                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                if vmcv > 0:
+                    despesas = vmcv * 0.4
+                
+        except (ValueError, TypeError, Exception) as e:
+            # Em caso de erro, usar fallback para 40% do VMCV
+            try:
+                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                despesas = vmcv * 0.4 if vmcv > 0 else 0.0
+            except:
+                despesas = 0.0
         
         # Determinar data de chegada apropriada
         data_chegada_display = get_arrival_date_display(row)
