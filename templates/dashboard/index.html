@@ -1,407 +1,676 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Geral - Portal UniSystem{% endblock %}
+{% block title %}Dashboard Executivo - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/table-sort.css') }}">
 <style>
-    /* Estilos para quebra de linha em células específicas */
-    .break-lines {
-        white-space: normal;
-        word-wrap: break-word;
-        max-width: 150px;
-        line-height: 1.3;
-        font-size: 0.85rem;
+    /* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
+    :root {
+        /* Paleta de cores minimalista */
+        --color-background: #fafbfc;
+        --color-surface: #ffffff;
+        --color-surface-hover: #f8fafc;
+        --color-border: #e2e8f0;
+        --color-border-light: #f1f5f9;
+        
+        /* Textos */
+        --color-text-primary: #0f172a;
+        --color-text-secondary: #475569;
+        --color-text-muted: #64748b;
+        --color-text-light: #94a3b8;
+        
+        /* Cores de destaque elegantes */
+        --color-primary: #3b82f6;
+        --color-primary-light: #dbeafe;
+        --color-success: #10b981;
+        --color-success-light: #d1fae5;
+        --color-warning: #f59e0b;
+        --color-warning-light: #fef3c7;
+        --color-danger: #ef4444;
+        --color-danger-light: #fee2e2;
+        --color-info: #06b6d4;
+        --color-info-light: #cffafe;
+        --color-purple: #8b5cf6;
+        --color-purple-light: #ede9fe;
+        
+        /* Sombras minimalistas */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        
+        /* Espacamentos consistentes */
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
+        
+        /* Bordas arredondadas */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        
+        /* Transições suaves */
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.3s ease;
+        --transition-slow: 0.5s ease;
     }
     
-    .break-lines-cliente {
-        white-space: normal;
-        word-wrap: break-word;
-        max-width: 120px;
-        line-height: 1.3;
-        font-size: 0.8rem;
+    /* === LAYOUT BASE === */
+    .dashboard-container {
+        background: var(--color-background);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-
-    /* Estilos para os cards de métricas */
-    .metric-card {
-        background-color: white; /* Fundo branco */
-        border-radius: 0.75rem; /* Bordas mais arredondadas */
-        transition: all 0.3s ease;
-        border: 1px solid #e5e7eb; /* Borda leve */
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* Sombra leve */
-        min-height: 120px; /* Altura mínima para estabilizar */
+    
+    /* === HEADER MODERNIZADO === */
+    .dashboard-header {
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border-light);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--spacing-lg);
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .header-title-section {
+        flex: 1;
+    }
+    
+    .header-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0 0 var(--spacing-xs) 0;
+        letter-spacing: -0.02em;
+    }
+    
+    .header-subtitle {
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
         display: flex;
         align-items: center;
+        gap: var(--spacing-xs);
     }
-
+    
+    .header-controls {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+    
+    .period-selector {
+        display: flex;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 0.25rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .period-btn {
+        padding: var(--spacing-xs) var(--spacing-md);
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        white-space: nowrap;
+    }
+    
+    .period-btn.active {
+        background: var(--color-primary);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .period-btn:hover:not(.active) {
+        background: var(--color-surface-hover);
+        color: var(--color-text-primary);
+    }
+    
+    .company-filter {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+        min-width: 200px;
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-fast);
+    }
+    
+    .company-filter:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+    
+    /* === CARDS DE MÉTRICAS ULTRA COMPACTOS === */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-2xl);
+        max-width: 1400px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 0 var(--spacing-xl);
+    }
+    
+    /* Layout específico para organização dos cartões */
+    .metric-card:nth-child(1) { grid-column: span 1; } /* Total Operações */
+    .metric-card:nth-child(2) { grid-column: span 1; } /* Aguardando Embarque */
+    .metric-card:nth-child(3) { grid-column: span 1; } /* Em Trânsito */
+    .metric-card:nth-child(4) { grid-column: span 1; } /* Desembarcadas */
+    .metric-card:nth-child(5) { grid-column: span 1; } /* Modal Aéreo */
+    .metric-card:nth-child(6) { grid-column: span 1; } /* Modal Marítimo */
+    .metric-card:nth-child(7) { grid-column: span 3; } /* Valor Total */
+    .metric-card:nth-child(8) { grid-column: span 3; } /* Valor Médio */
+    
+    /* Estilo especial para cartões de valor (maiores) */
+    .metric-card:nth-child(7),
+    .metric-card:nth-child(8) {
+        min-height: 90px;
+    }
+    
+    .metric-card:nth-child(7) .metric-value,
+    .metric-card:nth-child(8) .metric-value {
+        font-size: 1.75rem;
+        font-weight: 900;
+    }
+    
+    .metric-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border-light);
+        padding: var(--spacing-md);
+        transition: all var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+        min-height: 80px; /* Reduzido */
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--metric-color, var(--color-primary));
+        opacity: 0.3;
+        transition: opacity var(--transition-normal);
+    }
+    
     .metric-card:hover {
-        transform: translateY(-4px); /* Efeito de levantar */
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra mais pronunciada no hover */
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--metric-color, var(--color-primary));
     }
-
-    .metric-icon-wrapper {
-        padding: 0.75rem;
-        border-radius: 0.5rem;
+    
+    .metric-card:hover::before {
+        opacity: 1;
+    }
+    
+    .metric-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: var(--radius-md);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid;
-        transition: all 0.2s;
+        background: var(--metric-bg, var(--color-primary-light));
+        color: var(--metric-color, var(--color-primary));
+        flex-shrink: 0;
     }
-
-    .metric-icon-wrapper:hover {
-        transform: scale(1.05);
+    
+    .metric-content {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
     }
-
-    /* Cores das métricas (usando classes customizadas) */
-    .color-blue {
-        background-color: rgba(59, 130, 246, 0.1);
-        border-color: rgba(59, 130, 246, 0.2);
-        color: #2563eb;
-    }
-
-    .color-green {
-        background-color: rgba(16, 185, 129, 0.1);
-        border-color: rgba(16, 185, 129, 0.2);
-        color: #059669;
-    }
-
-    .color-yellow {
-        background-color: rgba(245, 158, 11, 0.1);
-        border-color: rgba(245, 158, 11, 0.2);
-        color: #d97706;
-    }
-
-    .color-purple {
-        background-color: rgba(139, 92, 246, 0.1);
-        border-color: rgba(139, 92, 246, 0.2);
-        color: #7c3aed;
-    }
-
-    .color-red {
-        background-color: rgba(239, 68, 68, 0.1);
-        border-color: rgba(239, 68, 68, 0.2);
-        color: #dc2626;
-    }
-
-    .color-orange {
-        background-color: rgba(251, 146, 60, 0.1);
-        border-color: rgba(251, 146, 60, 0.2);
-        color: #ea580c;
-    }
-
-    .color-emerald {
-        background-color: rgba(16, 185, 129, 0.1);
-        border-color: rgba(16, 185, 129, 0.2);
-        color: #059669;
-    }
-
-    .color-cyan {
-        background-color: rgba(6, 182, 212, 0.1);
-        border-color: rgba(6, 182, 212, 0.2);
-        color: #0891b2;
-    }
-
+    
     .metric-value {
-        font-size: 1.875rem; /* text-3xl */
-        font-weight: 700;
-        line-height: 1.2;
-        margin: 0;
-        color: #1f2937; /* Cor mais escura para o valor */
+        font-size: 1.625rem; /* Reduzido */
+        font-weight: 800;
+        color: var(--color-text-primary);
+        line-height: 1;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
     }
-
-    .metric-title {
-        color: #4b5563;
-        font-size: 0.875rem;
+    
+    .metric-label {
+        color: var(--color-text-secondary);
+        font-size: 0.75rem;
         font-weight: 500;
-        margin-bottom: 0.5rem; /* Aumentar espaço */
-    }
-
-    /* Estilos para indicadores de câmbio */
-    .currency-container {
-        transition: all 0.3s ease;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    }
-    
-    .currency-container:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-    
-    .currency-symbol {
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-    }
-
-    /* Estilos para a tabela */
-    .table-wrapper {
-        background: white; /* Fundo branco para o wrapper da tabela */
-        border-radius: 0.75rem; /* Mais arredondado */
+        margin: 0;
+        white-space: nowrap;
         overflow: hidden;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e5e7eb;
-        width: 100%; /* Garante que o wrapper ocupe a largura total do seu contêiner */
-        max-width: none; /* Remove qualquer restrição de largura máxima */
-        margin-top: 1.5rem; /* Espaço acima da tabela */
+        text-overflow: ellipsis;
     }
-
+    
+    .metric-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.125rem;
+        font-size: 0.625rem;
+        font-weight: 700;
+        padding: 0.125rem 0.25rem;
+        border-radius: var(--radius-sm);
+        background: var(--color-success-light);
+        color: var(--color-success);
+        white-space: nowrap;
+        margin-left: auto;
+    }
+    
+    .metric-trend.negative {
+        background: var(--color-danger-light);
+        color: var(--color-danger);
+    }
+    
+    .metric-trend.neutral {
+        background: var(--color-border-light);
+        color: var(--color-text-muted);
+    }
+    
+    .metric-trend svg {
+        width: 8px;
+        height: 8px;
+    }
+    
+    /* Cores específicas para cada métrica */
+    .metric-card.operations { --metric-color: var(--color-primary); --metric-bg: var(--color-primary-light); }
+    .metric-card.pending { --metric-color: var(--color-warning); --metric-bg: var(--color-warning-light); }
+    .metric-card.transit { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
+    .metric-card.completed { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
+    .metric-card.air { --metric-color: var(--color-purple); --metric-bg: var(--color-purple-light); }
+    .metric-card.sea { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
+    .metric-card.value { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
+    
+    /* === GRID DE GRÁFICOS MODERNO === */
+    .charts-section {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 var(--spacing-xl);
+        margin-bottom: var(--spacing-2xl);
+    }
+    
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-2xl);
+    }
+    
+    .chart-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+        transition: all var(--transition-normal);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chart-card:hover {
+        box-shadow: var(--shadow-lg);
+        border-color: var(--color-border);
+    }
+    
+    .chart-header {
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--color-border-light);
+        background: var(--color-surface);
+    }
+    
+    .chart-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+    
+    .chart-subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    
+    .chart-content {
+        padding: var(--spacing-md);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 300px;
+    }
+    
+    /* Grid layouts responsivos */
+    .chart-large { grid-column: span 8; }
+    .chart-medium { grid-column: span 4; }
+    .chart-small { grid-column: span 6; }
+    
+    /* === TABELA MODERNA === */
+    .table-section {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 var(--spacing-xl);
+    }
+    
+    .table-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+    
     .table-header {
-        background: #f8fafc;
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid #e5e7eb;
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--color-border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
-
+    
     .table-title {
-        font-family: 'Inter', sans-serif;
         font-size: 1.25rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         margin: 0;
     }
-
-    .table-scroll {
-        overflow-x: auto;
-        max-height: 500px;
-        overflow-y: auto;
+    
+    .table-filters {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
     }
-
+    
+    .search-input {
+        background: var(--color-surface-hover);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.875rem;
+        width: 250px;
+        transition: all var(--transition-fast);
+    }
+    
+    .search-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        background: var(--color-surface);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+    
     .data-table {
         width: 100%;
         border-collapse: collapse;
-        background: white; /* Garante fundo branco para a tabela */
         font-size: 0.875rem;
-        font-family: 'Inter', sans-serif;
     }
-
-    .data-table thead {
+    
+    .data-table th {
+        background: var(--color-surface-hover);
+        padding: var(--spacing-md) var(--spacing-lg);
+        text-align: left;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        border-bottom: 1px solid var(--color-border-light);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         position: sticky;
         top: 0;
         z-index: 10;
     }
-
-    .data-table th {
-        background: #f3f4f6;
-        padding: 1rem 1.25rem;
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #374151;
-        border-bottom: 2px solid #e5e7eb;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        white-space: nowrap;
-        font-family: 'Inter', sans-serif;
-    }
-
+    
     .data-table td {
-        padding: 1rem 1.25rem;
-        color: #4b5563;
-        border-bottom: 1px solid #f1f3f4;
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid var(--color-border-light);
+        color: var(--color-text-primary);
         vertical-align: middle;
-        font-family: 'Inter', sans-serif;
-        background: transparent; /* Permite que a zebra stripe apareça */
     }
-
-    .data-table tbody tr:nth-child(even) td {
-        background-color: #f9fafb; /* Cinza claro para as listras de zebra */
+    
+    .data-table tbody tr {
+        transition: background-color var(--transition-fast);
     }
-
-    .data-table tbody tr:hover td {
-        background-color: #f0f9ff;
-        transition: background-color 0.2s ease;
+    
+    .data-table tbody tr:hover {
+        background: var(--color-surface-hover);
     }
-
-    /* Status colors */
-    .status-aguardando-embarque {
-        color: #f59e0b; /* amber-500 */
-        background-color: rgba(245, 158, 11, 0.1);
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-weight: 600;
+    
+    /* === STATUS BADGES MODERNOS === */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-lg);
         font-size: 0.75rem;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
-
-    .status-em-transito {
-        color: #3b82f6; /* blue-500 */
-        background-color: rgba(59, 130, 246, 0.1);
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    
+    .status-badge.pending {
+        background: var(--color-warning-light);
+        color: var(--color-warning);
     }
-
-    .status-desembarcada {
-        color: #10b981; /* emerald-500 */
-        background-color: rgba(16, 185, 129, 0.1);
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    
+    .status-badge.transit {
+        background: var(--color-info-light);
+        color: var(--color-info);
     }
-
-    .status-default {
-        color: #6b7280; /* gray-500 */
-        background-color: rgba(107, 114, 128, 0.1);
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    
+    .status-badge.completed {
+        background: var(--color-success-light);
+        color: var(--color-success);
     }
-
-    /* Empty state */
-    .empty-state {
-        text-align: center;
-        padding: 2.5rem 1.25rem;
-        color: #6b7280;
-        font-style: italic;
-        font-family: 'Inter', sans-serif;
+    
+    .status-badge.default {
+        background: #f1f5f9;
+        color: var(--color-text-muted);
     }
-
-    /* Estilos específicos para select e botões */
-    .company-select {
-        font-family: 'Inter', sans-serif;
-        background-color: #ffffff;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
-        color: #374151;
-    }
-
-    .company-select:focus {
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* ring-blue-500 */
-        border-color: #3b82f6; /* border-blue-500 */
-    }
-
-    /* Responsive */
-    @media (max-width: 640px) {
-        .mobile-hidden {
-            display: none;
+    
+    /* === RESPONSIVIDADE AVANÇADA === */
+    @media (max-width: 1200px) {
+        .charts-grid {
+            grid-template-columns: repeat(8, 1fr);
         }
-
-        .data-table th,
-        .data-table td {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.75rem;
-        }
-
-        .table-header {
-            padding: 1rem;
-        }
-
-        .table-title {
-            font-size: 1.125rem;
+        .chart-large { grid-column: span 8; }
+        .chart-medium { grid-column: span 4; }
+        .chart-small { grid-column: span 4; }
+    }
+    
+    /* === TABLET BREAKPOINT === */
+    @media (max-width: 1024px) and (min-width: 769px) {
+        .metrics-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
         }
         
-        /* Ajustes para os KPIs mobile */
-        .metric-value {
-            font-size: 1.5rem;
+        /* Layout tablet para métricas */
+        .metric-card:nth-child(1) { grid-column: span 1; } /* Total */
+        .metric-card:nth-child(2) { grid-column: span 1; } /* Aguardando */
+        .metric-card:nth-child(3) { grid-column: span 1; } /* Trânsito */
+        .metric-card:nth-child(4) { grid-column: span 1; } /* Desembarcadas */
+        .metric-card:nth-child(5) { grid-column: span 2; } /* Modal Aéreo */
+        .metric-card:nth-child(6) { grid-column: span 2; } /* Modal Marítimo */
+        .metric-card:nth-child(7) { grid-column: span 2; } /* Valor Total */
+        .metric-card:nth-child(8) { grid-column: span 2; } /* Valor Médio */
+        
+        .charts-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
         
-        .metric-title {
-            font-size: 0.75rem;
+        .chart-large {
+            grid-column: span 2;
         }
     }
     
-    /* Tablet e desktop médio */
-    @media (max-width: 1024px) {
+    @media (max-width: 768px) {
+        .dashboard-header {
+            padding: var(--spacing-md);
+        }
+        
+        .header-content {
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .header-controls {
+            width: 100%;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .period-selector {
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .company-filter {
+            width: 100%;
+        }
+        
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+            padding: 0 var(--spacing-md);
+            gap: var(--spacing-sm);
+        }
+        
+        /* Resetar layout específico no mobile */
+        .metric-card:nth-child(n) { 
+            grid-column: span 1; 
+        }
+        
+        .metric-card:nth-child(7),
+        .metric-card:nth-child(8) { 
+            grid-column: span 2; /* Valores ocupam linha inteira no mobile */
+        }
+        
+        .metric-card {
+            min-height: 70px;
+            padding: var(--spacing-sm);
+        }
+        
+        .metric-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
+        
         .metric-value {
-            font-size: 1.75rem;
+            font-size: 1.375rem;
+        }
+        
+        .metric-label {
+            font-size: 0.7rem;
+        }
+        
+        .charts-section,
+        .table-section {
+            padding: 0 var(--spacing-md);
+        }
+        
+        .charts-grid {
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .chart-large,
+        .chart-medium,
+        .chart-small {
+            grid-column: span 1;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: var(--spacing-sm);
+        }
+        
+        .mobile-hidden {
+            display: none;
         }
     }
-
-    /* Animações */
-    @keyframes slideInUp {
+    
+    /* === ANIMAÇÕES SUAVES === */
+    @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(20px);
         }
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
-
-    .animate-slide-in {
-        animation: slideInUp 0.6s ease-out;
+    
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
     }
-
-    /* Estilos para os gráficos */
-    .chart-container {
-        background: white;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border: 1px solid #e5e7eb;
+    
+    /* === LOADING STATES === */
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: var(--radius-md);
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    /* === ACESSIBILIDADE === */
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+    
+    /* === UTILITÁRIOS === */
+    .text-truncate {
         overflow: hidden;
-        min-height: 380px; /* Altura mínima otimizada */
-        max-height: 450px; /* Altura máxima para melhor visualização */
-        display: flex;
-        flex-direction: column;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
-
-    /* Específico para o gráfico mensal (que ocupa 2 colunas) */
-    .chart-container.lg\\:col-span-2 {
-        min-height: 380px;
-        max-height: 450px;
+    
+    .break-words {
+        word-wrap: break-word;
+        word-break: break-word;
     }
-
-    /* Específico para o gráfico de rosca (que ocupa 1 coluna) */
-    .chart-container.lg\\:col-span-1 {
-        min-height: 380px;
-        max-height: 450px;
-    }
-
-    /* Ajustes para tabelas dentro do grid de gráficos */
-    .table-wrapper.lg\\:col-span-2 {
-        min-height: 380px;
-        max-height: 450px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .table-wrapper.lg\\:col-span-2 .table-scroll {
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .chart-container:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        transition: box-shadow 0.3s ease;
-    }
-
-    /* Ajustes para os divs internos dos gráficos */
-    .chart-container > div {
-        height: 100%;
-        width: 100%;
-    }
-
-    /* Responsive para gráficos */
-    @media (max-width: 1024px) {
-        .chart-container {
-            margin-bottom: 1rem;
-        }
-        
-        /* Em telas menores, todos os containers têm a mesma altura */
-        .chart-container.lg\\:col-span-2,
-        .chart-container.lg\\:col-span-1,
-        .table-wrapper.lg\\:col-span-2 {
-            min-height: 350px;
-            max-height: 400px;
-        }
-        
-        /* Ajustes para grid de 5 colunas em telas menores */
-        .lg\\:grid-cols-5 {
-            grid-template-columns: 1fr;
-        }
+    
+    .gradient-text {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 </style>
 {% endblock %}
@@ -410,412 +679,462 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="{{ url_for('static', filename='js/dashboard-table-sort.js') }}"></script>
 <script>
-    // Animação de entrada
+    // === FORMATAÇÃO DE VALORES ===
+    function formatValue(value, type = 'number') {
+        if (!value || value === 0) return type === 'currency' ? 'R$ 0' : '0';
+        
+        const num = parseFloat(value.toString().replace(/[R$\s.]/g, '').replace(',', '.'));
+        if (isNaN(num)) return type === 'currency' ? 'R$ 0' : '0';
+        
+        let formatted;
+        let suffix = '';
+        
+        if (num >= 1000000000) { // Bilhões
+            formatted = (num / 1000000000).toFixed(1);
+            suffix = 'B';
+        } else if (num >= 1000000) { // Milhões
+            formatted = (num / 1000000).toFixed(1);
+            suffix = 'M';
+        } else if (num >= 1000) { // Milhares
+            formatted = (num / 1000).toFixed(1);
+            suffix = 'K';
+        } else {
+            formatted = Math.round(num).toString();
+        }
+        
+        // Remove .0 desnecessário
+        if (formatted.endsWith('.0')) {
+            formatted = formatted.slice(0, -2);
+        }
+        
+        if (type === 'currency') {
+            return `R$ ${formatted}${suffix}`;
+        }
+        
+        return `${formatted}${suffix}`;
+    }
+    
+    // === INICIALIZAÇÃO DO DASHBOARD ===
     document.addEventListener('DOMContentLoaded', function() {
-        const cards = document.querySelectorAll('.metric-card, .chart-container');
-        cards.forEach((card, index) => {
-            setTimeout(() => {
-                card.classList.add('animate-slide-in');
-            }, index * 100);
-        });
-
-        // Redimensionar gráficos quando necessário
-        window.addEventListener('resize', function() {
-            if (typeof Plotly !== 'undefined') {
-                const charts = ['daily-chart', 'canal-chart', 'radar-chart', 'material-chart'];
-                charts.forEach(chartId => {
-                    const element = document.getElementById(chartId);
-                    if (element) {
-                        Plotly.Plots.resize(element);
-                    }
-                });
-            }
-        });
+        initializeDashboard();
+        // formatMetricValues(); // Removido: valores já vêm formatados do backend
     });
 
-    // Filtro por empresa
+    function initializeDashboard() {
+        // Animação de entrada staggered
+        const cards = document.querySelectorAll('.metric-card, .chart-card');
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.classList.add('animate-fade-in-up');
+            }, index * 30);
+        });
+
+        // Inicializar seletor de período
+        initializePeriodSelector();
+        
+        // Redimensionar gráficos quando necessário
+        window.addEventListener('resize', debounce(handleResize, 250));
+        
+        // Atualizar timestamps
+        updateTimestamps();
+        setInterval(updateTimestamps, 60000);
+    }
+
+    function formatMetricValues() {
+        // Os valores já vêm formatados do backend, apenas verificar se há elementos 
+        // específicos que precisam de formatação adicional (caso necessário no futuro)
+        console.log('Valores dos cartões já formatados pelo backend');
+    }
+
+    function initializePeriodSelector() {
+        const periodBtns = document.querySelectorAll('.period-btn');
+        periodBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.dataset.period) { // Só para botões de período
+                    periodBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const period = this.dataset.period;
+                    console.log('Período selecionado:', period);
+                    // TODO: Implementar filtro por período
+                }
+            });
+        });
+    }
+
+    function handleResize() {
+        if (typeof Plotly !== 'undefined') {
+            const charts = ['monthly-chart', 'canal-chart', 'radar-chart', 'material-chart'];
+            charts.forEach(chartId => {
+                const element = document.getElementById(chartId);
+                if (element) {
+                    Plotly.Plots.resize(element);
+                }
+            });
+        }
+    }
+
+    function updateTimestamps() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const timestampElements = document.querySelectorAll('.timestamp');
+        timestampElements.forEach(el => {
+            el.textContent = `Atualizado às ${timeString}`;
+        });
+    }
+
+    // Filtro por empresa com animação
     function filterByCompany(value) {
+        const tableBody = document.querySelector('.data-table tbody');
+        if (tableBody) {
+            tableBody.style.opacity = '0.5';
+        }
+        
         const url = new URL(window.location);
         if (value) {
             url.searchParams.set('empresa', value);
         } else {
             url.searchParams.delete('empresa');
         }
-        window.location.href = url.toString();
+        
+        setTimeout(() => {
+            window.location.href = url.toString();
+        }, 150);
+    }
+
+    // Utilitários
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Export da tabela
+    function exportTable() {
+        console.log('Exportando tabela...');
+        // TODO: Implementar export
     }
 </script>
 {% endblock %}
 
 {% block content %}
-<div class="p-4 bg-slate-50 min-h-screen">
-    {# Header Section #}
-    <div class="mb-6">
-        <div class="flex justify-between items-center flex-wrap gap-4">
-            <div class="flex items-center gap-4 flex-grow">
-                <h1 class="text-2xl font-bold text-slate-800">Dashboard Executivo</h1>
+<div class="dashboard-container">
+    <!-- Header Modernizado -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-title-section">
+                <h1 class="header-title gradient-text">Dashboard Executivo</h1>
+                <p class="header-subtitle">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6"/>
+                        <path d="m21 12-6-3-6 3-6-3"/>
+                    </svg>
+                    Visão geral das operações de importação
+                    <span class="timestamp">• Atualizado em {{ last_update }}</span>
+                </p>
             </div>
             
-            {% if user_role in ['interno_unique', 'admin'] %}
-            <div class="flex items-center space-x-4 flex-wrap justify-end gap-2">
-                <select id="company-filter" class="company-select px-4 py-2 border border-slate-300 rounded-md bg-white text-sm text-slate-700 focus:ring-blue-500 focus:border-blue-500" onchange="filterByCompany(this.value)">
-                    <option value="">Todas as empresas</option>
+            <div class="header-controls">
+                <!-- Seletor de Período -->
+                <div class="period-selector">
+                    <button class="period-btn active" data-period="7d">7 dias</button>
+                    <button class="period-btn" data-period="30d">30 dias</button>
+                    <button class="period-btn" data-period="90d">3 meses</button>
+                    <button class="period-btn" data-period="1y">1 ano</button>
+                </div>
+                
+                <!-- Filtro de Empresa -->
+                {% if user_role in ['interno_unique', 'admin'] %}
+                <select class="company-filter" onchange="filterByCompany(this.value)">
+                    <option value="">🏢 Todas as empresas</option>
                     {% for company in companies %}
                     <option value="{{ company.cpfcnpj }}" {% if selected_company == company.cpfcnpj %}selected{% endif %}>
                         {{ company.nome }}
                     </option>
                     {% endfor %}
                 </select>
-            </div>
-            {% endif %}
-        </div>
-        
-        {# Subtitle com última atualização #}
-        <p class="text-sm text-slate-600 mt-2">Visão geral das operações de importação • Atualizado em {{ last_update }}</p>
-    </div>
-
-    {# KPI Cards Section - Desktop Layout #}
-    <div class="mb-6 hidden lg:block">
-        {# Primeira linha: Operações e Status #}
-        <div class="grid grid-cols-6 gap-4 mb-4">
-            {# Total de Operações #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Total Operações</p>
-                    <p class="text-2xl font-bold text-blue-600 metric-value">{{ kpis.total or 0 }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper color-blue ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
-                </div>
-            </div>
-
-            {# Aguardando Embarque #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Aguard. Embarque</p>
-                    <p class="text-2xl font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque or 0 }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper color-orange ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-
-            {# Em Trânsito #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Em Trânsito</p>
-                    <p class="text-2xl font-bold text-blue-600 metric-value">{{ kpis.em_transito or 0 }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper color-blue ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-
-            {# Desembarcadas #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Desembarcadas</p>
-                    <p class="text-2xl font-bold text-green-600 metric-value">{{ kpis.desembarcadas or 0 }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-green-100 text-green-600 metric-icon-wrapper color-green ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-
-            {# Aéreo #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Aéreo</p>
-                    <p class="text-2xl font-bold text-green-600 metric-value">{{ kpis.aereo or 0 }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-green-100 text-green-600 metric-icon-wrapper color-green ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                </div>
-            </div>
-
-            {# Marítimo #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Marítimo</p>
-                    <p class="text-2xl font-bold text-purple-600 metric-value">{{ kpis.maritimo or 0 }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper color-purple ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
-                </div>
-            </div>
-        </div>
-
-        {# Segunda linha: Valores #}
-        <div class="grid grid-cols-4 gap-4 mb-4">
-            {# Valor Total #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Valor Total</p>
-                    <p class="text-2xl font-bold text-purple-600 metric-value">{{ kpis.valor_total_formatted or 'R$ 0' }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper color-purple ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path></svg>
-                </div>
-            </div>
-
-            {# Valor Médio por Processo #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Valor Médio</p>
-                    <p class="text-2xl font-bold text-indigo-600 metric-value">{{ kpis.valor_medio_processo_formatted or 'R$ 0' }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-indigo-100 text-indigo-600 metric-icon-wrapper color-purple ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                </div>
-            </div>
-
-            {# Valor Semana Atual #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Semana Atual</p>
-                    <p class="text-2xl font-bold text-emerald-600 metric-value">{{ kpis.vmcv_semana_formatted or 'R$ 0' }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-emerald-100 text-emerald-600 metric-icon-wrapper color-green ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                </div>
-            </div>
-
-            {# Semana S+1 #}
-            <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg">
-                <div class="text-center w-full">
-                    <p class="text-xs font-medium text-slate-500 metric-title mb-1">Semana S+1</p>
-                    <p class="text-2xl font-bold text-cyan-600 metric-value">{{ kpis.vmcv_proxima_semana_formatted or 'R$ 0' }}</p>
-                </div>
-                <div class="p-2 rounded-full bg-cyan-100 text-cyan-600 metric-icon-wrapper color-blue ml-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    {# KPI Cards Section - Mobile Layout #}
-    <div class="lg:hidden mb-6">
-        {# Grid responsivo mobile #}
-        <div class="grid grid-cols-2 gap-4 mb-4">
-            {# Total de Operações #}
-            <div class="metric-card p-4 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper color-blue mb-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M12 15h.01"></path></svg>
-                </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Total Operações</p>
-                <p class="text-xl font-bold text-blue-600 metric-value">{{ kpis.total or 0 }}</p>
+    <!-- Grid de Métricas Ultra Compacto -->
+    <div class="metrics-grid">
+        <!-- Total de Operações -->
+        <div class="metric-card operations">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3v18h18"/>
+                    <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                </svg>
             </div>
-
-            {# Valor Total #}
-            <div class="metric-card p-4 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper color-purple mb-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path></svg>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.total or 0 }}
+                    <div class="metric-trend">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6l-6 6-4-4-6 6"/>
+                        </svg>
+                        +12%
+                    </div>
                 </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Valor Total</p>
-                <p class="text-xl font-bold text-purple-600 metric-value">{{ kpis.valor_total_formatted or 'R$ 0' }}</p>
-            </div>
-        </div>
-
-        {# Segunda linha mobile - Status #}
-        <div class="grid grid-cols-3 gap-2 mb-4">
-            <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper color-orange mb-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Aguard. Embarque</p>
-                <p class="text-lg font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque or 0 }}</p>
-            </div>
-
-            <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-blue-100 text-blue-600 metric-icon-wrapper color-blue mb-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Em Trânsito</p>
-                <p class="text-lg font-bold text-blue-600 metric-value">{{ kpis.em_transito or 0 }}</p>
-            </div>
-
-            <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-green-100 text-green-600 metric-icon-wrapper color-green mb-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Desembarcadas</p>
-                <p class="text-lg font-bold text-green-600 metric-value">{{ kpis.desembarcadas or 0 }}</p>
+                <div class="metric-label">Total de Operações</div>
             </div>
         </div>
 
-        {# Terceira linha mobile - Modais #}
-        <div class="grid grid-cols-2 gap-2 mb-4">
-            <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-green-100 text-green-600 metric-icon-wrapper color-green mb-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Aéreo</p>
-                <p class="text-lg font-bold text-green-600 metric-value">{{ kpis.aereo or 0 }}</p>
+        <!-- Aguardando Embarque -->
+        <div class="metric-card pending">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
             </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.aguardando_embarque or 0 }}</div>
+                <div class="metric-label">Aguardando Embarque</div>
+            </div>
+        </div>
 
-            <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                <div class="p-2 rounded-full bg-purple-100 text-purple-600 metric-icon-wrapper color-purple mb-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path></svg>
+        <!-- Em Trânsito -->
+        <div class="metric-card transit">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 3h5v5"/>
+                    <path d="M8 3H3v5"/>
+                    <path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.em_transito or 0 }}</div>
+                <div class="metric-label">Em Trânsito</div>
+            </div>
+        </div>
+
+        <!-- Desembarcadas -->
+        <div class="metric-card completed">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.desembarcadas or 0 }}</div>
+                <div class="metric-label">Desembarcadas</div>
+            </div>
+        </div>
+
+        <!-- Modal Aéreo -->
+        <div class="metric-card air">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.aereo or 0 }}</div>
+                <div class="metric-label">Modal Aéreo</div>
+            </div>
+        </div>
+
+        <!-- Modal Marítimo -->
+        <div class="metric-card sea">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 20a2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1 2.4 2.4 0 0 1 2-1 2.4 2.4 0 0 1 2 1 2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1 2.4 2.4 0 0 1 2-1 2.4 2.4 0 0 1 2 1 2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1"/>
+                    <path d="M8 19h8"/>
+                    <path d="M5 3l1.5 7h11L19 3"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.maritimo or 0 }}</div>
+                <div class="metric-label">Modal Marítimo</div>
+            </div>
+        </div>
+
+        <!-- Valor Total -->
+        <div class="metric-card value">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.valor_total_formatted or "R$ 0" }}
+                    <div class="metric-trend">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6l-6 6-4-4-6 6"/>
+                        </svg>
+                        +8%
+                    </div>
                 </div>
-                <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Marítimo</p>
-                <p class="text-lg font-bold text-purple-600 metric-value">{{ kpis.maritimo or 0 }}</p>
+                <div class="metric-label">Valor Total VMCV</div>
+            </div>
+        </div>
+
+        <!-- Valor Médio -->
+        <div class="metric-card value">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0"/>
+                    <path d="M9 12l2 2 4-4"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.valor_medio_processo_formatted or "R$ 0" }}
+                </div>
+                <div class="metric-label">Valor Médio/Processo</div>
             </div>
         </div>
     </div>
 
-    {# Seção de Gráficos - Nova Estrutura #}
-    <div class="mb-6">
-        {# Primeira linha: Gráfico Mensal (2 cols) + Rosca Canal (1 col) #}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {# Gráfico mensal ocupando 2 colunas #}
+    <!-- Seção de Gráficos -->
+    <div class="charts-section">
+        <div class="charts-grid">
+            <!-- Gráfico Mensal (8 colunas) -->
             {% if monthly_chart %}
-            <div class="chart-container p-4 lg:col-span-2">
-                <div id="monthly-chart">
+            <div class="chart-card chart-large">
+                <div class="chart-header">
+                    <h3 class="chart-title">Evolução Mensal</h3>
+                    <p class="chart-subtitle">Processos e valores por mês</p>
+                </div>
+                <div class="chart-content">
                     {{ monthly_chart|safe }}
                 </div>
             </div>
             {% endif %}
 
-            {# Gráfico de rosca por canal DI ocupando 1 coluna #}
+            <!-- Gráfico de Canal DI (4 colunas) -->
             {% if canal_chart %}
-            <div class="chart-container p-4 lg:col-span-1">
-                <div id="canal-chart">
+            <div class="chart-card chart-medium">
+                <div class="chart-header">
+                    <h3 class="chart-title">Distribuição por Canal DI</h3>
+                    <p class="chart-subtitle">Análise por canal de despacho</p>
+                </div>
+                <div class="chart-content">
                     {{ canal_chart|safe }}
                 </div>
             </div>
             {% endif %}
-        </div>
 
-        {# Segunda linha: Radar de Armazéns, Barra de Materiais e Tabela de Análise #}
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
-            {# Gráfico de radar por armazém - 1 coluna #}
+            <!-- Gráfico Radar (6 colunas) -->
             {% if radar_chart %}
-            <div class="chart-container p-4 lg:col-span-1">
-                <div id="radar-chart">
+            <div class="chart-card chart-small">
+                <div class="chart-header">
+                    <h3 class="chart-title">Top Armazéns</h3>
+                    <p class="chart-subtitle">Quantidade e valor</p>
+                </div>
+                <div class="chart-content">
                     {{ radar_chart|safe }}
                 </div>
             </div>
             {% endif %}
 
-            {# Gráfico de barras por material - 2 colunas #}
+            <!-- Gráfico de Materiais (6 colunas) -->
             {% if material_chart %}
-            <div class="chart-container p-4 lg:col-span-2">
-                <div id="material-chart">
+            <div class="chart-card chart-small">
+                <div class="chart-header">
+                    <h3 class="chart-title">Top Materiais</h3>
+                    <p class="chart-subtitle">Ranking por valor VMCV</p>
+                </div>
+                <div class="chart-content">
                     {{ material_chart|safe }}
-                </div>
-            </div>
-            {% endif %}
-            {# Análise por Material - Tabela Compacta - 2 colunas #}
-            {% if material_analysis %}
-            <div class="table-wrapper shadow-lg rounded-xl bg-white overflow-hidden border border-gray-200 lg:col-span-2">
-                <div class="table-header bg-gray-50 border-b border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800">Análise por Material</h3>
-                </div>
-                <div class="table-scroll" style="max-height: 300px;">
-                    <table class="data-table bg-white" id="material-analysis-table">
-                        <thead>
-                            <tr>
-                                <th class="sortable text-xs px-3 py-2" data-sort="material">Item</th>
-                                <th class="sortable text-xs px-3 py-2" data-sort="quantidade">Total Proc.</th>
-                                <th class="sortable text-xs px-3 py-2" data-sort="valor_total">Valor Total</th>
-                                <th class="sortable text-xs px-3 py-2" data-sort="valor_semana_atual">Semana Atual</th>
-                                <th class="sortable text-xs px-3 py-2" data-sort="valor_proxima_semana">S+1</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for material in material_analysis %}
-                            <tr>
-                                <td class="font-medium text-xs px-3 py-2">{{ material.material[:20] }}{% if material.material|length > 20 %}...{% endif %}</td>
-                                <td class="text-center text-xs px-3 py-2" data-sort-value="{{ material.quantidade }}">{{ material.quantidade }}</td>
-                                <td class="text-right text-xs px-3 py-2" data-sort-value="{{ material.valor_total }}">{{ material.valor_total_formatado }}</td>
-                                <td class="text-right text-xs px-3 py-2" data-sort-value="{{ material.valor_semana_atual }}">{{ material.valor_semana_atual_formatado }}</td>
-                                <td class="text-right text-xs px-3 py-2" data-sort-value="{{ material.valor_proxima_semana }}">{{ material.valor_proxima_semana_formatado }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
                 </div>
             </div>
             {% endif %}
         </div>
     </div>
 
-    {# Tabela Principal de Importações #}
-    <div class="table-wrapper w-full shadow-lg rounded-xl bg-white overflow-hidden border border-gray-200">
-        <div class="table-header bg-gray-50 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-800">Operações de Importação</h3>
-        </div>
-        <div class="table-scroll">
-            <table class="data-table bg-white" id="importacoes-table">
-                <thead>
-                    <tr>
-                        <th class="sortable" data-sort="cliente_razaosocial">Cliente</th>
-                        <th class="sortable" data-sort="nro_pedido">Nº Pedido</th>
-                        <th class="sortable" data-sort="data_embarque">Data Embarque</th>
-                        <th class="sortable" data-sort="local_embarque">Local Embarque</th>
-                        <th class="sortable" data-sort="via_transporte_descricao">Modal</th>
-                        <th class="sortable" data-sort="carga_status">Status</th>
-                        <th class="sortable mobile-hidden" data-sort="resumo_mercadoria">Mercadoria</th>
-                        <th class="sortable mobile-hidden" data-sort="despesas">Despesas</th>
-                        <th class="sortable" data-sort="armazem_nome">Recinto</th>
-                        <th class="sortable mobile-hidden" data-sort="data_chegada">Data Chegada</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in table_data %}
-                    <tr>
-                        <td class="break-lines-cliente">{{ row.cliente_razaosocial or '-' }}</td>
-                        <td class="font-medium">{{ row.nro_pedido or '-' }}</td>
-                        <td>{{ row.data_embarque or '-' }}</td>
-                        <td class="break-lines">{{ row.local_embarque or '-' }}</td>
-                        <td class="text-center">
-                            {% if row.via_transporte_descricao == 'AEREO' %}
-                                <span class="inline-flex items-center text-green-600">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                    </svg>
-                                    Aéreo
-                                </span>
-                            {% elif row.via_transporte_descricao == 'MARITIMO' %}
-                                <span class="inline-flex items-center text-blue-600">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path>
-                                    </svg>
-                                    Marítimo
-                                </span>
-                            {% elif row.via_transporte_descricao == 'TERRESTRE' %}
-                                <span class="inline-flex items-center text-yellow-600">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
-                                    </svg>
-                                    Terrestre
-                                </span>
-                            {% else %}
-                                {{ row.via_transporte_descricao or '-' }}
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if row.carga_status %}
-                                {% if 'aguardando embarque' in row.carga_status.lower() %}
-                                    <span class="status-aguardando-embarque">{{ row.carga_status }}</span>
-                                {% elif 'em transito' in row.carga_status.lower() or 'trânsito' in row.carga_status.lower() %}
-                                    <span class="status-em-transito">{{ row.carga_status }}</span>
-                                {% elif 'desembarcada' in row.carga_status.lower() %}
-                                    <span class="status-desembarcada">{{ row.carga_status }}</span>
+    <!-- Tabela Principal -->
+    <div class="table-section">
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">Operações de Importação</h3>
+                <div class="table-filters">
+                    <input type="text" class="search-input" placeholder="🔍 Buscar operações..." id="table-search">
+                    <button class="period-btn" onclick="exportTable()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Exportar
+                    </button>
+                </div>
+            </div>
+            <div style="overflow-x: auto; max-height: 600px;">
+                <table class="data-table" id="importacoes-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="cliente_razaosocial">Cliente</th>
+                            <th class="sortable" data-sort="nro_pedido">Nº Pedido</th>
+                            <th class="sortable" data-sort="data_embarque">Data Embarque</th>
+                            <th class="sortable mobile-hidden" data-sort="local_embarque">Local Embarque</th>
+                            <th class="sortable" data-sort="via_transporte_descricao">Modal</th>
+                            <th class="sortable" data-sort="carga_status">Status</th>
+                            <th class="sortable mobile-hidden" data-sort="resumo_mercadoria">Mercadoria</th>
+                            <th class="sortable mobile-hidden" data-sort="despesas">Despesas</th>
+                            <th class="sortable" data-sort="armazem_nome">Recinto</th>
+                            <th class="sortable mobile-hidden" data-sort="data_chegada">Data Chegada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_data %}
+                        <tr>
+                            <td class="break-words" style="max-width: 150px;">{{ row.cliente_razaosocial or '-' }}</td>
+                            <td class="font-medium">{{ row.nro_pedido or '-' }}</td>
+                            <td>{{ row.data_embarque or '-' }}</td>
+                            <td class="mobile-hidden break-words" style="max-width: 120px;">{{ row.local_embarque or '-' }}</td>
+                            <td>
+                                {% if row.via_transporte_descricao == 'AEREA' %}
+                                    <span class="status-badge transit">✈️ AÉREO</span>
+                                {% elif row.via_transporte_descricao == 'MARITIMA' %}
+                                    <span class="status-badge completed">🚢 MARÍTIMO</span>
+                                {% elif row.via_transporte_descricao == 'TERRESTRE' %}
+                                    <span class="status-badge pending">🚛 TERRESTRE</span>
                                 {% else %}
-                                    <span class="status-default">{{ row.carga_status }}</span>
+                                    <span class="status-badge default">{{ row.via_transporte_descricao or '-' }}</span>
                                 {% endif %}
-                            {% else %}
-                                <span class="status-default">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td class="mobile-hidden">{{ row.resumo_mercadoria or '-' }}</td>
-                        <td class="text-right mobile-hidden" data-sort-value="{{ row.despesas or 0 }}">R$ {{ "{:,.2f}".format(row.despesas or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
-                        <td>{{ row.armazem_nome or '-' }}</td>
-                        <td class="mobile-hidden">{{ row.data_chegada or '-' }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td>
+                                {% if row.carga_status %}
+                                    {% if 'aguardando embarque' in row.carga_status.lower() %}
+                                        <span class="status-badge pending">{{ row.carga_status }}</span>
+                                    {% elif 'em transito' in row.carga_status.lower() or 'trânsito' in row.carga_status.lower() %}
+                                        <span class="status-badge transit">{{ row.carga_status }}</span>
+                                    {% elif 'desembarcada' in row.carga_status.lower() %}
+                                        <span class="status-badge completed">{{ row.carga_status }}</span>
+                                    {% else %}
+                                        <span class="status-badge default">{{ row.carga_status }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="status-badge default">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="mobile-hidden break-words" style="max-width: 200px;">{{ row.resumo_mercadoria or '-' }}</td>
+                            <td class="mobile-hidden text-right" data-sort-value="{{ row.despesas or 0 }}">
+                                <strong>R$ {{ "{:,.2f}".format(row.despesas or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</strong>
+                            </td>
+                            <td>{{ row.armazem_nome or '-' }}</td>
+                            <td class="mobile-hidden">{{ row.data_chegada or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

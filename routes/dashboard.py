@@ -13,6 +13,40 @@ import numpy as np
 
 bp = Blueprint('dashboard', __name__)
 
+def format_value_smart(value, currency=False):
+    """Format values with K, M, B abbreviations for better readability"""
+    if not value or value == 0:
+        return "R$ 0" if currency else "0"
+    
+    num = float(value)
+    if num == 0:
+        return "R$ 0" if currency else "0"
+    
+    # Determine suffix and divide accordingly
+    if abs(num) >= 1_000_000_000:  # Bilhões
+        formatted = num / 1_000_000_000
+        suffix = "B"
+    elif abs(num) >= 1_000_000:  # Milhões
+        formatted = num / 1_000_000
+        suffix = "M"
+    elif abs(num) >= 1_000:  # Milhares
+        formatted = num / 1_000
+        suffix = "K"
+    else:
+        formatted = num
+        suffix = ""
+    
+    # Format to 1 decimal place, remove .0 if not needed
+    if suffix:
+        if formatted == int(formatted):
+            value_str = f"{int(formatted)}{suffix}"
+        else:
+            value_str = f"{formatted:.1f}{suffix}"
+    else:
+        value_str = f"{int(formatted)}" if formatted == int(formatted) else f"{formatted:.1f}"
+    
+    return f"R$ {value_str}" if currency else value_str
+
 def get_currencies():
     """Get latest USD and EUR exchange rates"""
     try:
@@ -221,7 +255,8 @@ def index(**kwargs):
         
         # Calcular despesas usando nova lógica:
         # 1. Se tiver despesas na tabela importacoes_despesas, usar a soma
-        # 2. Caso contrário, estimar como 40% do VMCV
+        # 2. Caso contrário, estimar como 40% do VMCV (impostos/taxas/honorários estimados)
+        #    Exemplo: VMCV R$ 2.343.513,78 -> Despesas estimadas R$ 937.405,52 (40%)
         try:
             despesas = 0.0
             processo_id = row.get('id')
@@ -231,20 +266,22 @@ def index(**kwargs):
                 despesas_query = supabase.table('importacoes_despesas').select('valor_real').eq('processo_id', processo_id).execute()
                 
                 if despesas_query.data:
-                    # Somar todas as despesas reais do processo
+                    # Somar todas as despesas reais do processo (impostos, taxas, honorários)
                     despesas = sum(float(d.get('valor_real', 0) or 0) for d in despesas_query.data)
                 
             # Se não tiver despesas registradas, usar estimativa de 40% do VMCV
+            # Esta é a estimativa padrão de custos adicionais (impostos/taxas/honorários)
             if despesas == 0.0:
                 vmcv = float(row.get('total_vmcv_real', 0) or 0)
                 if vmcv > 0:
-                    despesas = vmcv * 0.4
+                    despesas = vmcv * 0.4  # 40% do valor da mercadoria
                 
         except (ValueError, TypeError, Exception) as e:
             # Em caso de erro, usar fallback para 40% do VMCV
+            # Esta é a estimativa padrão de impostos/taxas/honorários
             try:
                 vmcv = float(row.get('total_vmcv_real', 0) or 0)
-                despesas = vmcv * 0.4 if vmcv > 0 else 0.0
+                despesas = vmcv * 0.4 if vmcv > 0 else 0.0  # 40% do valor da mercadoria
             except:
                 despesas = 0.0
         
@@ -275,6 +312,7 @@ def index(**kwargs):
     
     # Organizar KPIs para compatibilidade com o novo template
     valor_medio_processo = (vmcv_total / total_operations) if total_operations > 0 else 0
+    
     kpis = {
         'total': total_operations,
         'aereo': aereo,
@@ -286,14 +324,14 @@ def index(**kwargs):
         'desembarcadas': di_registrada,  # Alias para compatibilidade
         'di_registrada': di_registrada,  # Manter para compatibilidade
         'vmcv_total': vmcv_total,
-        'valor_total_formatted': f"R$ {vmcv_total:,.0f}".replace(',', '.') if vmcv_total > 0 else "R$ 0",
+        'valor_total_formatted': format_value_smart(vmcv_total, currency=True),
         'valor_medio_processo': valor_medio_processo,
-        'valor_medio_processo_formatted': f"R$ {valor_medio_processo:,.0f}".replace(',', '.') if valor_medio_processo > 0 else "R$ 0",
+        'valor_medio_processo_formatted': format_value_smart(valor_medio_processo, currency=True),
         'vmcv_mes': vmcv_mes,
         'vmcv_semana': vmcv_semana,
-        'vmcv_semana_formatted': f"R$ {vmcv_semana:,.0f}".replace(',', '.') if vmcv_semana > 0 else "R$ 0",
+        'vmcv_semana_formatted': format_value_smart(vmcv_semana, currency=True),
         'vmcv_proxima_semana': vmcv_proxima_semana,
-        'vmcv_proxima_semana_formatted': f"R$ {vmcv_proxima_semana:,.0f}".replace(',', '.') if vmcv_proxima_semana > 0 else "R$ 0",
+        'vmcv_proxima_semana_formatted': format_value_smart(vmcv_proxima_semana, currency=True),
         'processos_mes': processos_mes,
         'processos_semana': processos_semana,
         'processos_proxima_semana': processos_proxima_semana,
@@ -331,11 +369,11 @@ def index(**kwargs):
                 'item_descricao': material_name,
                 'total_processos': total_processos,
                 'valor_total': valor_total,
-                'valor_total_formatted': f"R$ {valor_total:,.0f}".replace(',', '.'),
+                'valor_total_formatted': format_value_smart(valor_total, currency=True),
                 'valor_semana_atual': valor_semana_atual,
-                'valor_semana_atual_formatted': f"R$ {valor_semana_atual:,.0f}".replace(',', '.'),
+                'valor_semana_atual_formatted': format_value_smart(valor_semana_atual, currency=True),
                 'valor_proxima_semana': valor_proxima_semana,
-                'valor_proxima_semana_formatted': f"R$ {valor_proxima_semana:,.0f}".replace(',', '.')
+                'valor_proxima_semana_formatted': format_value_smart(valor_proxima_semana, currency=True)
             })
         
         # Preparar dados principais da tabela
@@ -380,11 +418,11 @@ def index(**kwargs):
                 'material': material,
                 'quantidade': quantidade,
                 'valor_total': valor_total,
-                'valor_total_formatado': f"R$ {valor_total:,.0f}".replace(',', '.'),
+                'valor_total_formatado': format_value_smart(valor_total, currency=True),
                 'valor_semana_atual': valor_semana_atual,
-                'valor_semana_atual_formatado': f"R$ {valor_semana_atual:,.0f}".replace(',', '.'),
+                'valor_semana_atual_formatado': format_value_smart(valor_semana_atual, currency=True),
                 'valor_proxima_semana': valor_proxima_semana,
-                'valor_proxima_semana_formatado': f"R$ {valor_proxima_semana:,.0f}".replace(',', '.'),
+                'valor_proxima_semana_formatado': format_value_smart(valor_proxima_semana, currency=True),
                 'percentual': round(percentual, 1)
             })
     
@@ -435,12 +473,7 @@ def index(**kwargs):
         ))
         
         daily_chart.update_layout(
-            title={
-                'text': 'Processos e Valor VMCV por Dia',
-                'x': 0.5,
-                'xanchor': 'center',
-                'y': 0.95
-            },
+
             yaxis=dict(title='Quantidade de Processos', side='left'),
             yaxis2=dict(title='Valor VMCV (Milhões R$)', side='right', overlaying='y'),
             hovermode='x unified',
@@ -505,28 +538,32 @@ def index(**kwargs):
         ))
         
         monthly_chart.update_layout(
-            title={
-                'text': 'Processos e Valores Mensais',
-                'x': 0.5,
-                'xanchor': 'center',
-                'y': 0.95
-            },
             yaxis=dict(
-                side='left'
+                side='left',
+                showticklabels=False,  # Remove labels do eixo Y
+                title='',  # Remove título do eixo
+                showgrid=True,
+                gridcolor='rgba(0,0,0,0.1)'
             ),
             yaxis2=dict(
                 side='right', 
                 overlaying='y',
-                tickformat=',.0f'  # Formato de moeda para o eixo Y secundário
+                showticklabels=False,  # Remove labels do eixo Y secundário
+                title='',  # Remove título do eixo
+                showgrid=False
+            ),
+            xaxis=dict(
+                title='',  # Remove título do eixo X
+                showgrid=False
             ),
             hovermode='x unified',
             template='plotly_white',
             height=350,
-            margin=dict(t=50, b=80, l=60, r=60),  # Mais margem para acomodar legendas
+            margin=dict(t=30, b=50, l=30, r=30),  # Margens reduzidas
             legend=dict(
                 orientation="h",
                 yanchor="top",
-                y=-0.2,
+                y=-0.15,
                 xanchor="center",
                 x=0.5
             )
@@ -571,19 +608,16 @@ def index(**kwargs):
                 colors=colors,
                 line=dict(color='white', width=2)
             ),
-            textinfo='label+value',  # Mudança: mostra label + quantidade em vez de percentual
-            textposition='outside',
+            textinfo='label+value',  # Mostra label + quantidade
+            textposition='inside',  # Labels dentro dos segmentos
+            insidetextorientation='radial',  # Orientação dos textos
+            textfont=dict(color='white', size=12, family='Arial'),  # Texto branco e legível
             hovertemplate='<b>%{label}</b><br>Processos: %{value}<br>Percentual: %{percent}<extra></extra>',
-            showlegend=False  # Mudança: remove as legendas
+            showlegend=False  # Remove as legendas externas
         )])
         
         canal_chart.update_layout(
-            title={
-                'text': 'Distribuição por Canal DI',
-                'x': 0.5,
-                'xanchor': 'center',
-                'y': 0.98
-            },
+
             template='plotly_white',
             height=350,
             margin=dict(t=100, b=10, l=10, r=10),  # Mudança: aumenta margem superior
@@ -698,13 +732,7 @@ def index(**kwargs):
             ))
             
             radar_chart.update_layout(
-                title={
-                    'text': 'Top Armazéns: Quantidade e Valor',
-                    'x': 0.5,
-                    'xanchor': 'center',
-                    'y': 0.95,
-                    'font': {'size': 14}
-                },
+
                 polar=dict(
                     radialaxis=dict(
                         visible=True,
@@ -729,59 +757,102 @@ def index(**kwargs):
                 )
             )
 
-    # Gráfico de barras por material
+    # Gráfico de barras por material - DUPLO (valor + quantidade)
     material_chart = None
     if not df.empty:
         # Usar os dados já processados de material_analysis
         if material_analysis:
-            # Pegar top 8 materiais
-            top_materials = material_analysis[:8]
+            # Pegar top 6 materiais para melhor visualização
+            top_materials = material_analysis[:6]
             
             labels = []
-            values = []
+            values_valor = []
+            values_quantidade = []
             
             for material in top_materials:
                 # Truncar nome para melhor visualização
                 nome = material['material']
-                if len(nome) > 25:
-                    nome = nome[:25] + '...'
+                if len(nome) > 30:
+                    nome = nome[:30] + '...'
                 
                 labels.append(nome)
-                values.append(material['valor_total'])
+                values_valor.append(material['valor_total'])
+                values_quantidade.append(material['quantidade'])
             
             # Reverter as listas para mostrar maior valor no topo
             labels.reverse()
-            values.reverse()
+            values_valor.reverse()
+            values_quantidade.reverse()
             
-            # Criar gráfico de barras horizontais
+            # Criar gráfico de barras horizontais duplas
             material_chart = go.Figure()
             
+            # Barra 1: Valor VMCV
             material_chart.add_trace(go.Bar(
-                x=values,
+                x=values_valor,
                 y=labels,
                 orientation='h',
+                name='Valor VMCV',
                 marker=dict(
                     color='#8b5cf6',  # Roxo
                     line=dict(color='white', width=1)
                 ),
-                text=[f'{val/1000000:.1f}M' for val in values],
-                textposition='outside',
-                hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>'
+                text=[format_value_smart(val, currency=True) for val in values_valor],
+                textposition='inside',
+                textfont=dict(color='white', size=10),
+                hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
+                offsetgroup=1  # Grupo para barras lado a lado
+            ))
+            
+            # Barra 2: Quantidade de Processos (eixo secundário)
+            material_chart.add_trace(go.Bar(
+                x=values_quantidade,
+                y=labels,
+                orientation='h',
+                name='Qtd. Processos',
+                marker=dict(
+                    color='#10b981',  # Verde
+                    line=dict(color='white', width=1)
+                ),
+                text=[f'{val}' for val in values_quantidade],
+                textposition='inside',
+                textfont=dict(color='white', size=10),
+                hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
+                xaxis='x2',  # Usar eixo X secundário
+                offsetgroup=2  # Grupo separado para barras lado a lado
             ))
             
             material_chart.update_layout(
-                title={
-                    'text': 'Top Materiais por Valor VMCV',
-                    'x': 0.5,
-                    'xanchor': 'center',
-                    'y': 0.95
-                },
-                xaxis_title='Valor VMCV (R$)',
-                yaxis_title='Material',
+                xaxis=dict(
+                    title='Valor VMCV (R$)',
+                    side='bottom',
+                    showticklabels=False,  # Remove labels para ficar mais limpo
+                    showgrid=True,
+                    gridcolor='rgba(139, 92, 246, 0.1)'  # Grid roxo claro
+                ),
+                xaxis2=dict(
+                    title='Quantidade de Processos',
+                    side='top',
+                    overlaying='x',
+                    showticklabels=False,  # Remove labels para ficar mais limpo
+                    showgrid=False
+                ),
+                yaxis=dict(
+                    title='',  # Remove título do eixo Y
+                    tickfont=dict(size=10)
+                ),
                 template='plotly_white',
-                height=350,  # Altura ajustada para ficar alinhado
-                margin=dict(t=50, b=50, l=150, r=30),
-                showlegend=False
+                height=350,
+                margin=dict(t=60, b=60, l=180, r=30),  # Mais espaço à esquerda para nomes
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="top",
+                    y=-0.15,
+                    xanchor="center",
+                    x=0.5
+                ),
+                barmode='group'  # Barras agrupadas lado a lado
             )
 
 
