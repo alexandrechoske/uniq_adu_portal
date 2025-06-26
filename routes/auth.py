@@ -94,7 +94,7 @@ def login():
                     
                     # Verificar status do agente se for cliente_unique
                     agent_status = {
-                        'is_active': False,
+                        'is_active': True,  # Padrão True para outros roles
                         'numero': None,
                         'aceite_termos': False
                     }
@@ -114,8 +114,19 @@ def login():
                         print(f"[DEBUG] Dados do agente: {agent_data.data}")
                         
                         if agent_data.data:
+                            # Check if user is active
+                            is_user_active = False
+                            
                             # Extract companies from all records
                             for agent in agent_data.data:
+                                # Verificar se o usuário está ativo
+                                agent_active = agent.get('usuario_ativo')
+                                if agent_active is True:
+                                    is_user_active = True
+                                elif agent_active is None:
+                                    # Para usuários antigos sem o campo definido, assumir como ativo
+                                    is_user_active = True
+                                
                                 if agent.get('empresa'):
                                     # Handle both string and array formats
                                     companies = agent['empresa']
@@ -130,10 +141,16 @@ def login():
                             
                             # Update agent status
                             agent_status.update({
-                                'is_active': any(agent.get('usuario_ativo', False) for agent in agent_data.data),
+                                'is_active': is_user_active,  # Use the calculated active status
                                 'numero': agent_data.data[0].get('numero'),
                                 'aceite_termos': any(agent.get('aceite_termos', False) for agent in agent_data.data)
                             })
+                            
+                            # Check if user is inactive and prevent login
+                            if not is_user_active:
+                                print(f"[DEBUG] Usuário inativo - impedindo login")
+                                flash('Seu acesso está desativado. Entre em contato com o suporte.', 'error')
+                                return redirect(url_for('auth.acesso_negado'))
                     
                     # Store user info in session
                     session['user'] = {
@@ -226,3 +243,8 @@ def corrigir_user_ids():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/acesso-negado')
+def acesso_negado():
+    """Página para usuários com acesso negado/desativado"""
+    return render_template('auth/acesso_negado.html')

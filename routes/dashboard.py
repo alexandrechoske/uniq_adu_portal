@@ -550,92 +550,163 @@ def index(**kwargs):
                 colors=colors,
                 line=dict(color='white', width=2)
             ),
-            textinfo='label+percent',
+            textinfo='label+value',  # Mudança: mostra label + quantidade em vez de percentual
             textposition='outside',
             hovertemplate='<b>%{label}</b><br>Processos: %{value}<br>Percentual: %{percent}<extra></extra>',
-            showlegend=True
+            showlegend=False  # Mudança: remove as legendas
         )])
         
         canal_chart.update_layout(
             title={
-                'text': 'Distribuição por Canal DI',
+                'text': 'Processos e Valores Mensais',
                 'x': 0.5,
                 'xanchor': 'center',
-                'y': 0.95
+                'y': 0.98
             },
             template='plotly_white',
-            height=350, # Altura ajustada para 1 coluna
-            margin=dict(t=50, b=10, l=10, r=10),
+            height=350,
+            margin=dict(t=100, b=10, l=10, r=10),  # Mudança: aumenta margem superior
         )
 
 
-    # Gráfico de radar por categoria de material
-    radar_chart = None
-    if not df.empty:
-        # Agrupar por resumo_mercadoria e pegar top 6
-        radar_data = df.groupby('resumo_mercadoria').agg({
-            'numero': 'count',
-            'total_vmcv_real': 'sum'  
-        }).reset_index()
-        
-        # Ordenar por quantidade de processos (não valor) e pegar top 6
-        radar_data = radar_data.sort_values('numero', ascending=False).head(6)
-        
-        # Preparar dados para o radar
-        categories = []
-        values = []
-        
-        for _, row in radar_data.iterrows():
-            material = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
-            quantidade = row['numero']  # Usar quantidade em vez de valor
+        # Gráfico de radar por armazém
+        radar_chart = None
+        if not df.empty:
+            # Processar a coluna armazens para extrair nomes
+            df_armazens = df.copy()
+            armazem_names = []
             
-            # Truncar nome longo para melhor visualização
-            if len(material) > 20:
-                material = material[:20] + '...'
+            for _, row in df_armazens.iterrows():
+                armazem_nome = ""
+                armazens = row.get('armazens', [])
+                try:
+                    if armazens:
+                        if isinstance(armazens, str):
+                            # Se for string, tentar fazer parse do JSON
+                            armazens = json.loads(armazens)
+                        
+                        # Se for uma lista com dicionários
+                        if isinstance(armazens, list) and len(armazens) > 0:
+                            primeiro_item = armazens[0]
+                            if isinstance(primeiro_item, dict) and 'nome' in primeiro_item:
+                                armazem_nome = str(primeiro_item['nome']).strip()
+                            elif primeiro_item:
+                                armazem_nome = str(primeiro_item).strip()
+                        
+                        # Se for um dicionário direto
+                        elif isinstance(armazens, dict) and 'nome' in armazens:
+                            armazem_nome = str(armazens['nome']).strip()
+                            
+                except (json.JSONDecodeError, TypeError, IndexError, KeyError):
+                    armazem_nome = "Não Informado"
+                
+                if not armazem_nome:
+                    armazem_nome = "Não Informado"
+                    
+                armazem_names.append(armazem_nome)
             
-            categories.append(material)
-            values.append(quantidade)
-        
-        # Fechar o radar adicionando o primeiro valor no final
-        categories.append(categories[0])
-        values.append(values[0])
-        
-        # Criar gráfico de radar
-        radar_chart = go.Figure()
-        
-        radar_chart.add_trace(go.Scatterpolar(
-            r=values,
-            theta=categories,
-            fill='toself',
-            fillcolor='rgba(59, 130, 246, 0.2)',
-            line=dict(color='#3b82f6', width=2),
-            marker=dict(color='#3b82f6', size=6),
-            name='Qtd. Processos',
-            hovertemplate='<b>%{theta}</b><br>Processos: %{r}<extra></extra>'
-        ))
-        
-        radar_chart.update_layout(
-            title={
-                'text': 'Radar - Top Categorias por Quantidade',
-                'x': 0.5,
-                'xanchor': 'center',
-                'y': 0.95
-            },
-            polar=dict(
-                radialaxis=dict(
-                    visible=True,
-                    range=[0, max(values[:-1]) * 1.1] if values else [0, 10],
-                    tickformat='.0f'
+            # Adicionar coluna de armazém processada
+            df_armazens['armazem_nome'] = armazem_names
+            
+            # Agrupar por armazém e pegar top 6
+            radar_data = df_armazens.groupby('armazem_nome').agg({
+                'numero': 'count',
+                'total_vmcv_real': 'sum'  
+            }).reset_index()
+            
+            # Ordenar por quantidade de processos e pegar top 6
+            radar_data = radar_data.sort_values('numero', ascending=False).head(6)
+            
+            # Preparar dados para o radar
+            categories = []
+            values_qtd = []
+            values_vmcv = []
+            
+            for _, row in radar_data.iterrows():
+                armazem = row['armazem_nome']
+                quantidade = row['numero']
+                valor = row['total_vmcv_real']
+                
+                # Truncar nome longo para melhor visualização
+                if len(armazem) > 20:
+                    armazem = armazem[:20] + '...'
+                
+                categories.append(armazem)
+                values_qtd.append(quantidade)
+                values_vmcv.append(valor)
+            
+            # Normalizar valores VMCV para ter escala comparável com quantidade
+            # Determinar o fator de escala com base no maior valor de cada série
+            max_qtd = max(values_qtd) if values_qtd else 1
+            max_vmcv = max(values_vmcv) if values_vmcv else 1
+            scale_factor = max_qtd / max_vmcv if max_vmcv > 0 else 1
+            
+            normalized_vmcv = [v * scale_factor for v in values_vmcv]
+            
+            # Fechar o radar adicionando o primeiro valor no final
+            categories.append(categories[0])
+            values_qtd.append(values_qtd[0])
+            normalized_vmcv.append(normalized_vmcv[0])
+            
+            # Criar gráfico de radar
+            radar_chart = go.Figure()
+            
+            # Adicionar primeira série (quantidade de processos)
+            radar_chart.add_trace(go.Scatterpolar(
+                r=values_qtd,
+                theta=categories,
+                fill='toself',
+                fillcolor='rgba(59, 130, 246, 0.2)',
+                line=dict(color='#3b82f6', width=2),
+                marker=dict(color='#3b82f6', size=6),
+                name='Qtd. Processos',
+                hovertemplate='<b>%{theta}</b><br>Processos: %{r}<extra></extra>'
+            ))
+            
+            # Adicionar segunda série (valores VMCV normalizados)
+            radar_chart.add_trace(go.Scatterpolar(
+                r=normalized_vmcv,
+                theta=categories,
+                fill='toself',
+                fillcolor='rgba(249, 115, 22, 0.2)',  # Laranja com transparência
+                line=dict(color='#f97316', width=2),
+                marker=dict(color='#f97316', size=6),
+                name='Valor VMCV',
+                hovertemplate='<b>%{theta}</b><br>VMCV: R$ %{customdata:,.0f}<extra></extra>',
+                customdata=[[v] for v in values_vmcv + [values_vmcv[0]]]  # Adiciona os valores originais
+            ))
+            
+            radar_chart.update_layout(
+                title={
+                    'text': 'Top Armazéns: Quantidade e Valor',
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'y': 0.95,
+                    'font': {'size': 14}
+                },
+                polar=dict(
+                    radialaxis=dict(
+                        visible=True,
+                        range=[0, max(max(values_qtd[:-1]), max(normalized_vmcv[:-1])) * 1.1] if values_qtd else [0, 10],
+                        tickformat='.0f',
+                        tickfont=dict(size=9)
+                    ),
+                    angularaxis=dict(
+                        tickfont=dict(size=8)
+                    )
                 ),
-                angularaxis=dict(
-                    tickfont=dict(size=10)
+                template='plotly_white',
+                height=350,  # Ajustado para altura padrão
+                margin=dict(t=50, b=50, l=10, r=10),  # Margens ajustadas para acomodar legenda
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.15,
+                    xanchor="center",
+                    x=0.5
                 )
-            ),
-            template='plotly_white',
-            height=300,
-            margin=dict(t=50, b=50, l=20, r=20),
-            showlegend=False
-        )
+            )
 
     # Gráfico de barras por material
     material_chart = None
@@ -672,6 +743,8 @@ def index(**kwargs):
                     color='#8b5cf6',  # Roxo
                     line=dict(color='white', width=1)
                 ),
+                text=[f'{val/1000000:.1f}M' for val in values],
+                textposition='outside',
                 hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>'
             ))
             
@@ -685,10 +758,11 @@ def index(**kwargs):
                 xaxis_title='Valor VMCV (R$)',
                 yaxis_title='Material',
                 template='plotly_white',
-                height=300,
+                height=350,  # Altura ajustada para ficar alinhado
                 margin=dict(t=50, b=50, l=150, r=30),
                 showlegend=False
             )
+
 
     # Get all available companies for filtering
     companies_query = supabase.table('importacoes_processos').select('cliente_cpfcnpj', 'cliente_razaosocial').execute()

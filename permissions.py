@@ -78,6 +78,10 @@ def get_user_permissions(user_id, role=None):
                     # Para usuários antigos sem o campo definido, assumir como ativo
                     is_active = True
                     print(f"[DEBUG] Campo usuario_ativo é None, assumindo ativo para retrocompatibilidade")
+                elif agent_active is False:
+                    # Usuário explicitamente desativado
+                    print(f"[DEBUG] Usuário explicitamente desativado (usuario_ativo = False)")
+                    # Não altera is_active se já foi definido como True por outro registro
                 
                 # Verificar termos
                 if agent.get('aceite_termos'):
@@ -164,7 +168,7 @@ def check_permission(required_roles=None, required_companies=None):
             # Verificar se o usuário está ativo
             if not permissions.get('is_active', False):
                 flash('Seu acesso está desativado. Entre em contato com o suporte.', 'error')
-                return redirect(url_for('dashboard.index'))
+                return redirect(url_for('auth.acesso_negado'))  # Redirecionar para página específica
             
             # Para clientes_unique, verificar acesso às empresas
             if user_role == 'cliente_unique' and required_companies:
@@ -173,7 +177,7 @@ def check_permission(required_roles=None, required_companies=None):
                 
                 if not has_company_access:
                     flash('Você não tem permissão para acessar esta empresa.', 'error')
-                    return redirect(url_for('dashboard.index'))
+                    return redirect(url_for('auth.login'))  # Redirecionar para login
             
             # Atualizar permissões na sessão para uso em templates
             session['permissions'] = permissions
