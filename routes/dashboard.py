@@ -388,51 +388,129 @@ def index(**kwargs):
         # Criar gráfico de linha com área
         daily_chart = go.Figure()
         
-        # Área para processos
-        daily_chart.add_trace(go.Scatter(
+        # Barras para processos
+        daily_chart.add_trace(go.Bar(
             x=daily_data['data'],
             y=daily_data['numero'],
-            mode='lines',
             name='Processos por Dia',
-            line=dict(color='#3b82f6', width=2),
-            fill='tozeroy',  # Preenche até o zero em Y
-            fillcolor='rgba(59, 130, 246, 0.2)'
+            marker=dict(color='#3b82f6'),
+            text=daily_data['numero'],
+            textposition='outside',
+            hovertemplate='<b>%{x}</b><br>Processos: %{y}<extra></extra>'
         ))
         
         # Linha para valor (eixo Y secundário)
         daily_chart.add_trace(go.Scatter(
             x=daily_data['data'],
-            y=daily_data['total_vmcv_real'],
+            y=daily_data['total_vmcv_real'] / 1000000,  # Converter para milhões
             mode='lines+markers',
-            name='Valor VMCV por Dia',
-            line=dict(color='#10b981', width=2),
+            name='Valor VMCV/dia (M)',
+            line=dict(color='#10b981', width=2, shape='spline'),
             marker=dict(size=4),
-            yaxis='y2'
+            yaxis='y2',
+            text=[f'{val/1000000:.1f}M' for val in daily_data['total_vmcv_real']],
+            textposition='top center',
+            hovertemplate='<b>%{x}</b><br>Valor: R$ %{text}<extra></extra>'
         ))
         
         daily_chart.update_layout(
             title={
-                'text': 'Evolução Diária - Últimos 60 dias',
+                'text': 'Processos e Valor VMCV por Dia',
                 'x': 0.5,
-                'xanchor': 'center'
+                'xanchor': 'center',
+                'y': 0.95
             },
-            xaxis_title='Data',
             yaxis=dict(title='Quantidade de Processos', side='left'),
-            yaxis2=dict(title='Valor VMCV (R$)', side='right', overlaying='y'),
+            yaxis2=dict(title='Valor VMCV (Milhões R$)', side='right', overlaying='y'),
             hovermode='x unified',
             template='plotly_white',
             height=300,
-            margin=dict(t=40, b=30, l=30, r=30),
+            margin=dict(t=50, b=50, l=40, r=40),
             showlegend=True,
             legend=dict(
                 orientation="h",
-                yanchor="bottom",
-                y=1.02,
+                yanchor="top",
+                y=-0.15,
                 xanchor="center",
                 x=0.5
             )
         )
 
+
+    # Gráfico Mensal: Área + Linha (Processos e Valores Mensais)
+    monthly_chart = None
+    if not df.empty:
+        # Agrupar por mês
+        df['mes_ano'] = df['data_abertura'].dt.to_period('M')
+        monthly_data = df.groupby('mes_ano').agg({
+            'numero': 'count',  # Total de processos
+            'total_vmcv_real': 'sum'  # VMCV total
+        }).reset_index()
+        
+        # Converter período para datetime para plotly
+        monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
+        monthly_data = monthly_data.sort_values('data')
+        
+        # Criar gráfico com área e linha
+        monthly_chart = go.Figure()
+        
+        # Série 1: Área para Nº de Processos
+        monthly_chart.add_trace(go.Scatter(
+            x=monthly_data['data'],
+            y=monthly_data['numero'],
+            mode='lines+markers+text',
+            name='Nº de Processos',
+            fill='tozeroy',  # Preenche área até o zero
+            fillcolor='rgba(255, 140, 0, 0.3)',  # Cor alaranjada com transparência
+            line=dict(color='#FF8C00', width=2, shape='spline'),  # Linha alaranjada suave
+            marker=dict(color='#FF8C00', size=6),
+            text=monthly_data['numero'],
+            textposition='top center',
+            hovertemplate='<b>%{x|%b %Y}</b><br>Processos: %{y}<extra></extra>'
+        ))
+        
+        # Série 2: Linha para VMCV Total (eixo Y secundário)
+        monthly_chart.add_trace(go.Scatter(
+            x=monthly_data['data'],
+            y=monthly_data['total_vmcv_real'],
+            mode='lines+markers+text',
+            name='VMCV Total',
+            line=dict(color='#8A2BE2', width=3, shape='spline'),  # Linha roxa suave
+            marker=dict(color='#8A2BE2', size=6),
+            text=[f'R$ {val/1000000:.1f}M' for val in monthly_data['total_vmcv_real']],
+            textposition='top center',
+            yaxis='y2',
+            hovertemplate='<b>%{x|%b %Y}</b><br>VMCV: R$ %{y:,.0f}<extra></extra>'
+        ))
+        
+        monthly_chart.update_layout(
+            title={
+                'text': 'Processos e Valores Mensais',
+                'x': 0.5,
+                'xanchor': 'center',
+                'y': 0.95
+            },
+            yaxis=dict(
+                side='left'
+            ),
+            yaxis2=dict(
+                side='right', 
+                overlaying='y',
+                tickformat=',.0f'  # Formato de moeda para o eixo Y secundário
+            ),
+            hovermode='x unified',
+            template='plotly_white',
+            height=350,
+            margin=dict(t=50, b=80, l=60, r=60),  # Mais margem para acomodar legendas
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.2,
+                xanchor="center",
+                x=0.5
+            )
+        )
+    
     # Gráfico de rosca por canal DI
     canal_chart = None
     if not df.empty:
@@ -442,12 +520,12 @@ def index(**kwargs):
             'total_vmcv_real': 'sum'  
         }).reset_index()
         
-        # Definir cores para os canais
+        # Definir cores específicas para os canais DI
         canal_colors = {
-            'Verde': '#10b981',     # Verde
-            'Amarelo': '#f59e0b',   # Amarelo
-            'Vermelho': '#ef4444',  # Vermelho
-            'Cinza': '#6b7280'      # Cinza
+            'VERDE': '#10b981',     # Verde
+            'AMARELO': '#f59e0b',   # Amarelo
+            'VERMELHO': '#ef4444',  # Vermelho
+            'CINZA': '#6b7280'      # Cinza para outros
         }
         
         # Preparar dados para o gráfico
@@ -482,19 +560,14 @@ def index(**kwargs):
             title={
                 'text': 'Distribuição por Canal DI',
                 'x': 0.5,
-                'xanchor': 'center'
+                'xanchor': 'center',
+                'y': 0.95
             },
             template='plotly_white',
-            height=300,
-            margin=dict(t=40, b=10, l=10, r=10),
-            legend=dict(
-                orientation="v",
-                yanchor="middle",
-                y=0.5,
-                xanchor="left",
-                x=1.02
-            )
+            height=350, # Altura ajustada para 1 coluna
+            margin=dict(t=50, b=10, l=10, r=10),
         )
+
 
     # Gráfico de radar por categoria de material
     radar_chart = None
@@ -505,7 +578,8 @@ def index(**kwargs):
             'total_vmcv_real': 'sum'  
         }).reset_index()
         
-        radar_data = radar_data.sort_values('total_vmcv_real', ascending=False).head(6)
+        # Ordenar por quantidade de processos (não valor) e pegar top 6
+        radar_data = radar_data.sort_values('numero', ascending=False).head(6)
         
         # Preparar dados para o radar
         categories = []
@@ -513,14 +587,14 @@ def index(**kwargs):
         
         for _, row in radar_data.iterrows():
             material = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
-            valor = row['total_vmcv_real']
+            quantidade = row['numero']  # Usar quantidade em vez de valor
             
             # Truncar nome longo para melhor visualização
             if len(material) > 20:
                 material = material[:20] + '...'
             
             categories.append(material)
-            values.append(valor)
+            values.append(quantidade)
         
         # Fechar o radar adicionando o primeiro valor no final
         categories.append(categories[0])
@@ -536,15 +610,16 @@ def index(**kwargs):
             fillcolor='rgba(59, 130, 246, 0.2)',
             line=dict(color='#3b82f6', width=2),
             marker=dict(color='#3b82f6', size=6),
-            name='Valor VMCV',
-            hovertemplate='<b>%{theta}</b><br>Valor: R$ %{r:,.0f}<extra></extra>'
+            name='Qtd. Processos',
+            hovertemplate='<b>%{theta}</b><br>Processos: %{r}<extra></extra>'
         ))
         
         radar_chart.update_layout(
             title={
-                'text': 'Radar - Top Categorias por Valor',
+                'text': 'Radar - Top Categorias por Quantidade',
                 'x': 0.5,
-                'xanchor': 'center'
+                'xanchor': 'center',
+                'y': 0.95
             },
             polar=dict(
                 radialaxis=dict(
@@ -558,7 +633,7 @@ def index(**kwargs):
             ),
             template='plotly_white',
             height=300,
-            margin=dict(t=40, b=10, l=10, r=10),
+            margin=dict(t=50, b=50, l=20, r=20),
             showlegend=False
         )
 
@@ -582,6 +657,10 @@ def index(**kwargs):
                 labels.append(nome)
                 values.append(material['valor_total'])
             
+            # Reverter as listas para mostrar maior valor no topo
+            labels.reverse()
+            values.reverse()
+            
             # Criar gráfico de barras horizontais
             material_chart = go.Figure()
             
@@ -600,13 +679,14 @@ def index(**kwargs):
                 title={
                     'text': 'Top Materiais por Valor VMCV',
                     'x': 0.5,
-                    'xanchor': 'center'
+                    'xanchor': 'center',
+                    'y': 0.95
                 },
                 xaxis_title='Valor VMCV (R$)',
                 yaxis_title='Material',
                 template='plotly_white',
                 height=300,
-                margin=dict(t=40, b=30, l=150, r=30),
+                margin=dict(t=50, b=50, l=150, r=30),
                 showlegend=False
             )
 
@@ -628,6 +708,7 @@ def index(**kwargs):
     # Convert charts to HTML
     chart_configs = {'displayModeBar': False, 'responsive': True}
     daily_chart_html = daily_chart.to_html(full_html=False, include_plotlyjs=False, div_id='daily-chart', config=chart_configs) if daily_chart else None
+    monthly_chart_html = monthly_chart.to_html(full_html=False, include_plotlyjs=False, div_id='monthly-chart', config=chart_configs) if monthly_chart else None
     canal_chart_html = canal_chart.to_html(full_html=False, include_plotlyjs=False, div_id='canal-chart', config=chart_configs) if canal_chart else None
     radar_chart_html = radar_chart.to_html(full_html=False, include_plotlyjs=False, div_id='radar-chart', config=chart_configs) if radar_chart else None
     material_chart_html = material_chart.to_html(full_html=False, include_plotlyjs=False, div_id='material-chart', config=chart_configs) if material_chart else None
@@ -639,6 +720,7 @@ def index(**kwargs):
                          data=table_data,
                          table_data=table_data,
                          daily_chart=daily_chart_html,
+                         monthly_chart=monthly_chart_html,
                          canal_chart=canal_chart_html,
                          radar_chart=radar_chart_html,
                          material_chart=material_chart_html,

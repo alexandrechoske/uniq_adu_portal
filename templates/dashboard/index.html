@@ -12,6 +12,9 @@
         transition: all 0.3s ease;
         border: 1px solid #e5e7eb; /* Borda leve */
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* Sombra leve */
+        min-height: 120px; /* Altura mínima para estabilizar */
+        display: flex;
+        align-items: center;
     }
 
     .metric-card:hover {
@@ -322,6 +325,22 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         border: 1px solid #e5e7eb;
         overflow: hidden;
+        min-height: 380px; /* Altura mínima otimizada */
+        max-height: 450px; /* Altura máxima para melhor visualização */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Específico para o gráfico mensal (que ocupa 2 colunas) */
+    .chart-container.lg\\:col-span-2 {
+        min-height: 380px;
+        max-height: 450px;
+    }
+
+    /* Específico para o gráfico de rosca (que ocupa 1 coluna) */
+    .chart-container.lg\\:col-span-1 {
+        min-height: 380px;
+        max-height: 450px;
     }
 
     .chart-container:hover {
@@ -329,10 +348,23 @@
         transition: box-shadow 0.3s ease;
     }
 
+    /* Ajustes para os divs internos dos gráficos */
+    .chart-container > div {
+        height: 100%;
+        width: 100%;
+    }
+
     /* Responsive para gráficos */
     @media (max-width: 1024px) {
         .chart-container {
             margin-bottom: 1rem;
+        }
+        
+        /* Em telas menores, todos os containers têm a mesma altura */
+        .chart-container.lg\\:col-span-2,
+        .chart-container.lg\\:col-span-1 {
+            min-height: 350px;
+            max-height: 400px;
         }
     }
 </style>
@@ -596,20 +628,20 @@
 
     {# Seção de Gráficos - Nova Estrutura #}
     <div class="mb-6">
-        {# Primeira linha: Evolução Diária e Rosca Canal #}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {# Gráfico de evolução diária #}
-            {% if daily_chart %}
-            <div class="chart-container p-4">
-                <div id="daily-chart">
-                    {{ daily_chart|safe }}
+        {# Primeira linha: Gráfico Mensal (2 cols) + Rosca Canal (1 col) #}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            {# Gráfico mensal ocupando 2 colunas #}
+            {% if monthly_chart %}
+            <div class="chart-container p-4 lg:col-span-2">
+                <div id="monthly-chart">
+                    {{ monthly_chart|safe }}
                 </div>
             </div>
             {% endif %}
 
-            {# Gráfico de rosca por canal DI #}
+            {# Gráfico de rosca por canal DI ocupando 1 coluna #}
             {% if canal_chart %}
-            <div class="chart-container p-4">
+            <div class="chart-container p-4 lg:col-span-1">
                 <div id="canal-chart">
                     {{ canal_chart|safe }}
                 </div>
