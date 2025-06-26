@@ -1,10 +1,14 @@
 from flask import session, request, jsonify, redirect, url_for
 from datetime import datetime, timedelta
+import os
 
 def init_session_handler(app):
     """
     Configura o middleware para lidar com a limpeza de sessão
     """
+    # Determinar se deve fazer log detalhado (apenas em debug)
+    DEBUG_SESSION = app.debug and os.getenv('DEBUG_SESSION', 'false').lower() == 'true'
+    
     @app.before_request
     def clear_invalid_session():
         """
@@ -14,13 +18,15 @@ def init_session_handler(app):
         if request.path.startswith('/static/') or request.path == '/favicon.ico':
             return None
             
-        # Debug para acompanhamento de sessão
-        print(f"[SESSION] Verificando sessão para rota {request.path}")
+        # Debug para acompanhamento de sessão (apenas se DEBUG_SESSION estiver ativo)
+        if DEBUG_SESSION:
+            print(f"[SESSION] Verificando sessão para rota {request.path}")
             
         if 'user' in session:
             # Adicionar timestamp se não existir
             if 'last_activity' not in session:
-                print(f"[SESSION] Timestamp não existe, criando...")
+                if DEBUG_SESSION:
+                    print(f"[SESSION] Timestamp não existe, criando...")
                 session['last_activity'] = datetime.now().timestamp()
             
             # Verificar se a sessão expirou (8 horas sem atividade)
@@ -28,9 +34,12 @@ def init_session_handler(app):
             time_diff = datetime.now() - last_activity
             hours_diff = time_diff.total_seconds() / 3600
             
-            print(f"[SESSION] Última atividade há {hours_diff:.2f} horas")
+            if DEBUG_SESSION:
+                print(f"[SESSION] Última atividade há {hours_diff:.2f} horas")
+                
             if hours_diff > 8:
-                print(f"[SESSION] Sessão expirada após {hours_diff:.2f} horas sem atividade")
+                if DEBUG_SESSION:
+                    print(f"[SESSION] Sessão expirada após {hours_diff:.2f} horas sem atividade")
                 session.clear()
                 
                 # Se for uma requisição AJAX, retornar 401
@@ -51,11 +60,13 @@ def init_session_handler(app):
             # Atualizar timestamp de atividade (apenas se for uma rota que não seja verificação de sessão)
             if not (request.path.endswith('/check-session') or request.path.endswith('/api')):
                 session['last_activity'] = datetime.now().timestamp()
-                print(f"[SESSION] Timestamp atualizado para {session['last_activity']}")
+                if DEBUG_SESSION:
+                    print(f"[SESSION] Timestamp atualizado para {session['last_activity']}")
             
                 # Verificar se todos os dados necessários estão na sessão
                 if not all(k in session['user'] for k in ['id', 'role']):
-                    print(f"[SESSION] Sessão corrompida, dados faltantes no objeto user")
+                    if DEBUG_SESSION:
+                        print(f"[SESSION] Sessão corrompida, dados faltantes no objeto user")
                     # Sessão corrompida, limpar
                     session.clear()
             

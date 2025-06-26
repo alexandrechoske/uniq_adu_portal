@@ -28,19 +28,9 @@ def role_required(roles):
         return decorated_function
     return decorator
 
-def update_importacoes_processos():
-    try:
-        response = requests.post(
-            'https://ixytthtngeifjumvbuwe.supabase.co/functions/v1/att_importacoes-processos',
-            headers={
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4eXR0aHRuZ2VpZmp1bXZidXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MjIwMDQsImV4cCI6MjA2MzQ5ODAwNH0.matnofV1H9hi2bEQGak6fo-RtmJIOyU455fcgsKbPfk',
-                'Content-Type': 'application/json'
-            },
-            json={'name': 'Functions'}
-        )
-        return response.status_code == 200
-    except:
-        return False
+# Função removida para otimização de performance do login
+# A atualização de importações será feita em background ou via cron job
+# def update_importacoes_processos(): - REMOVIDO
 
 @bp.route('/test-connection')
 def test_connection():
@@ -64,35 +54,24 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         senha = request.form.get('senha')
-        print(f"[DEBUG] Tentando login para email: {email}")
         
         try:
             # Autenticar usuário usando o cliente Supabase
-            print("[DEBUG] Iniciando autenticação com Supabase...")
             auth_response = supabase.auth.sign_in_with_password({
                 "email": email,
                 "password": senha
             })
-            print(f"[DEBUG] Resposta da autenticação: {auth_response}")
             
             if auth_response.user:
                 user_id = auth_response.user.id
-                print(f"[DEBUG] Usuário autenticado com ID: {user_id}")
                 
-                # Call the Supabase function to update importacoes_processos
-                print("[DEBUG] Chamando função de atualização de importacoes_processos")
-                update_success = update_importacoes_processos()
-                print(f"[DEBUG] Atualização de importações: {'sucesso' if update_success else 'falha'}")
-                  # Buscar dados do usuário na tabela users
-                print("[DEBUG] Buscando dados do usuário na tabela users...")
+                # Buscar dados do usuário na tabela users
                 user_data = supabase_admin.table('users').select('*').eq('id', user_id).execute()
-                print(f"[DEBUG] Dados do usuário: {user_data}")
                 
                 if user_data.data:
                     user = user_data.data[0]
-                    print(f"[DEBUG] Role do usuário: {user['role']}")
                     
-                    # Verificar status do agente se for cliente_unique
+                    # Verificar status do agente se for cliente_unique - OTIMIZADO
                     agent_status = {
                         'is_active': True,  # Padrão True para outros roles
                         'numero': None,
@@ -103,21 +82,17 @@ def login():
                     user_companies = []
                     
                     if user.get('role') == 'cliente_unique':
-                        print(f"[DEBUG] Buscando dados de agente para user_id: {user_id}")
-                        
-                        # Get agent data with companies
-                        agent_data = supabase.table('clientes_agentes')\
+                        # Get agent data with companies - consulta única otimizada
+                        agent_data = supabase_admin.table('clientes_agentes')\
                             .select('empresa, usuario_ativo, numero, aceite_termos')\
                             .eq('user_id', user_id)\
                             .execute()
-                        
-                        print(f"[DEBUG] Dados do agente: {agent_data.data}")
                         
                         if agent_data.data:
                             # Check if user is active
                             is_user_active = False
                             
-                            # Extract companies from all records
+                            # Extract companies from all records in a single loop
                             for agent in agent_data.data:
                                 # Verificar se o usuário está ativo
                                 agent_active = agent.get('usuario_ativo')
@@ -148,7 +123,6 @@ def login():
                             
                             # Check if user is inactive and prevent login
                             if not is_user_active:
-                                print(f"[DEBUG] Usuário inativo - impedindo login")
                                 flash('Seu acesso está desativado. Entre em contato com o suporte.', 'error')
                                 return redirect(url_for('auth.acesso_negado'))
                     
@@ -161,13 +135,14 @@ def login():
                         'user_companies': user_companies
                     }
                     
+                    # Cache inicial das permissões para evitar consultas repetidas
+                    session['permissions_cache'] = {}
+                    
                     flash('Login realizado com sucesso!', 'success')
                     return redirect(url_for('dashboard.index'))
                 else:
-                    print("[DEBUG] Usuário não encontrado na tabela users")
                     flash('Usuário não encontrado na base de dados.', 'error')
             else:
-                print("[DEBUG] Falha na autenticação")
                 flash('Email ou senha inválidos.', 'error')
                 
         except Exception as e:

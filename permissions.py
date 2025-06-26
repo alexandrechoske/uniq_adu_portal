@@ -2,129 +2,134 @@ from flask import session
 from functools import wraps
 from extensions import supabase, supabase_admin
 from flask import redirect, url_for, flash, current_app
+import time
 
-def get_user_permissions(user_id, role=None):
+def get_user_permissions(user_id, role=None, force_refresh=False):
     """
-    Busca as permissões do usuário no banco de dados
+    Busca as permissões do usuário no banco de dados com cache em sessão otimizado
     
     Args:
         user_id (str): ID do usuário
         role (str, optional): Papel do usuário para cache
+        force_refresh (bool): Força atualização do cache
         
     Returns:
         dict: Dicionário com as permissões do usuário
     """
     try:
-        print(f"[DEBUG] Buscando permissões para user_id: {user_id}, role: {role}")
+        # Verificar se já temos permissões em cache na sessão
+        cache_key = f'permissions_{user_id}'
+        cache_expiry = 1800  # 30 minutos de cache
+        
+        if not force_refresh and 'permissions_cache' in session and cache_key in session['permissions_cache']:
+            cached_data = session['permissions_cache'][cache_key]
+            # Verificar se o cache ainda é válido
+            if 'cached_at' in cached_data and (time.time() - cached_data['cached_at']) < cache_expiry:
+                return cached_data['data']
+            else:
+                # Cache expirado, será renovado
+                pass
+        
         if role is None and 'user' in session:
             role = session['user'].get('role')
-            print(f"[DEBUG] Role obtida da sessão: {role}")
-          # Se for admin, retorna todas as permissões
-        if role == 'admin':
-            print(f"[DEBUG] Usuário é admin, retornando permissões de administrador")
             
-            # Buscar todas as empresas disponíveis para o admin
-            try:
-                companies_response = supabase.table('importacoes_processos').select('cliente_cpfcnpj').execute()
-                all_companies = []
-                if companies_response.data:
-                    all_companies = list(set([item.get('cliente_cpfcnpj') for item in companies_response.data if item.get('cliente_cpfcnpj')]))
-                    print(f"[DEBUG] Admin: encontradas {len(all_companies)} empresas únicas")
-            except Exception as e:
-                print(f"[DEBUG] Erro ao buscar empresas para admin: {str(e)}")
-                all_companies = []                
-            return {
+        permissions = None
+        
+        # Se for admin, retorna todas as permissões
+        if role == 'admin':
+            permissions = {
                 'is_admin': True,
                 'is_active': True,
                 'has_full_access': True,
                 'pages': [],  # Será preenchido com todas as páginas pelo endpoint
-                'accessible_companies': all_companies  # Admins têm acesso a todas as empresas
+                'accessible_companies': []  # Admin tem acesso total, não precisa listar
             }
         
-        # Para clientes_unique
-        if role == 'cliente_unique':
-            # Buscar dados do agente
+        # Para clientes_unique - otimizado para reduzir consultas DB
+        elif role == 'cliente_unique':
+            # Buscar dados do agente - consulta única otimizada
             agent_data = supabase_admin.table('clientes_agentes')\
                 .select('empresa, usuario_ativo, numero, aceite_termos')\
                 .eq('user_id', user_id)\
                 .execute()
             
             if not agent_data.data:
-                print(f"[DEBUG] Nenhum dado de agente encontrado para user_id: {user_id}")
-                return {
+                permissions = {
                     'is_admin': False,
                     'is_active': False,
                     'has_full_access': False,
                     'pages': [],
                     'accessible_companies': []
                 }
-            
-            print(f"[DEBUG] Dados do agente encontrados: {agent_data.data}")
-            
-            # Extrair empresas
-            user_companies = []
-            is_active = False
-            terms_accepted = False
-            agent_number = None
-            
-            for agent in agent_data.data:
-                print(f"[DEBUG] Processando agente: {agent}")
+            else:
+                # Extrair empresas e status em um loop otimizado
+                user_companies = []
+                is_active = False
+                terms_accepted = False
+                agent_number = None
                 
-                # Verificar status ativo - considerar True se for True ou None (para retrocompatibilidade)
-                agent_active = agent.get('usuario_ativo')
-                if agent_active is True:
-                    is_active = True
-                elif agent_active is None:
-                    # Para usuários antigos sem o campo definido, assumir como ativo
-                    is_active = True
-                    print(f"[DEBUG] Campo usuario_ativo é None, assumindo ativo para retrocompatibilidade")
-                elif agent_active is False:
-                    # Usuário explicitamente desativado
-                    print(f"[DEBUG] Usuário explicitamente desativado (usuario_ativo = False)")
-                    # Não altera is_active se já foi definido como True por outro registro
-                
-                # Verificar termos
-                if agent.get('aceite_termos'):
-                    terms_accepted = True
+                for agent in agent_data.data:
+                    # Verificar status ativo
+                    agent_active = agent.get('usuario_ativo')
+                    if agent_active is True:
+                        is_active = True
+                    elif agent_active is None:
+                        # Para usuários antigos sem o campo definido, assumir como ativo
+                        is_active = True
                     
-                # Número do agente
-                if agent.get('numero'):
-                    agent_number = agent.get('numero')
+                    # Verificar termos
+                    if agent.get('aceite_termos'):
+                        terms_accepted = True
+                        
+                    # Número do agente
+                    if agent.get('numero'):
+                        agent_number = agent.get('numero')
+                    
+                    if agent.get('empresa'):
+                        # Tratar formatos diferentes (string ou array)
+                        companies = agent['empresa']
+                        if isinstance(companies, str):
+                            try:
+                                companies = eval(companies)  # Tratar formato string ["company1", "company2"]
+                            except:
+                                companies = [companies]  # Tratar formato string única
+                        user_companies.extend(companies)
                 
-                if agent.get('empresa'):
-                    # Tratar formatos diferentes (string ou array)
-                    companies = agent['empresa']
-                    if isinstance(companies, str):
-                        try:
-                            companies = eval(companies)  # Tratar formato string ["company1", "company2"]
-                        except:
-                            companies = [companies]  # Tratar formato string única
-                    user_companies.extend(companies)
-            
-            user_companies = list(set(user_companies))  # Remover duplicatas
-            
-            print(f"[DEBUG] Status final - is_active: {is_active}, terms_accepted: {terms_accepted}, companies: {len(user_companies)}")
-            
-            return {
-                'is_admin': False,
-                'is_active': is_active,
-                'has_full_access': False,
-                'agent_number': agent_number,
-                'terms_accepted': terms_accepted,
-                'pages': [],  # Será preenchido pelo endpoint de páginas
-                'accessible_companies': user_companies
-            }
+                user_companies = list(set(user_companies))  # Remover duplicatas
+                
+                permissions = {
+                    'is_admin': False,
+                    'is_active': is_active,
+                    'has_full_access': False,
+                    'agent_number': agent_number,
+                    'terms_accepted': terms_accepted,
+                    'pages': [],  # Será preenchido pelo endpoint de páginas
+                    'accessible_companies': user_companies
+                }
         
         # Para outros papéis
-        return {
-            'is_admin': False,
-            'is_active': True,  # Assume-se que outros papéis estão ativos por padrão
-            'has_full_access': False,
-            'pages': [],  # Será preenchido pelo endpoint de páginas
-            'accessible_companies': []
+        else:
+            permissions = {
+                'is_admin': False,
+                'is_active': True,  # Assume-se que outros papéis estão ativos por padrão
+                'has_full_access': False,
+                'pages': [],  # Será preenchido pelo endpoint de páginas
+                'accessible_companies': []
+            }
+        
+        # Salvar no cache da sessão com timestamp
+        if 'permissions_cache' not in session:
+            session['permissions_cache'] = {}
+        session['permissions_cache'][cache_key] = {
+            'data': permissions,
+            'cached_at': time.time()
         }
+        
+        return permissions
+        
     except Exception as e:
         current_app.logger.error(f"Erro ao buscar permissões: {str(e)}")
+        # Em caso de erro, retornar permissões mínimas
         return {
             'is_admin': False,
             'is_active': False,
