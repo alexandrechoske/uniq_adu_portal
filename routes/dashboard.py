@@ -16,11 +16,11 @@ bp = Blueprint('dashboard', __name__)
 def format_value_smart(value, currency=False):
     """Format values with K, M, B abbreviations for better readability"""
     if not value or value == 0:
-        return "R$ 0" if currency else "0"
+        return "0" if currency else "0"
     
     num = float(value)
     if num == 0:
-        return "R$ 0" if currency else "0"
+        return "0" if currency else "0"
     
     # Determine suffix and divide accordingly
     if abs(num) >= 1_000_000_000:  # Bilhões
@@ -45,7 +45,7 @@ def format_value_smart(value, currency=False):
     else:
         value_str = f"{int(formatted)}" if formatted == int(formatted) else f"{formatted:.1f}"
     
-    return f"R$ {value_str}" if currency else value_str
+    return f"{value_str}" if currency else value_str
 
 def get_currencies():
     """Get latest USD and EUR exchange rates"""
