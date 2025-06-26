@@ -240,16 +240,16 @@ def index(**kwargs):
             data_chegada_formatted = pd.to_datetime(data_chegada_display).strftime('%d/%m/%Y')
         
         table_data.append({
+            'cliente_razaosocial': row.get('cliente_razaosocial', ''),
             'nro_pedido': nro_pedido,
             'data_embarque': data_embarque_formatted,
             'local_embarque': row.get('local_embarque', ''),
             'via_transporte_descricao': row.get('via_transporte_descricao', ''),
-            'armazem_nome': armazem_nome,
             'carga_status': row.get('carga_status', ''),
             'resumo_mercadoria': row.get('resumo_mercadoria', ''),
             'despesas': despesas,
-            'data_chegada': data_chegada_formatted,
-            'cliente_razaosocial': row.get('cliente_razaosocial', '')
+            'armazem_nome': armazem_nome,
+            'data_chegada': data_chegada_formatted
         })
     
     # Organizar KPIs para compatibilidade com o novo template
@@ -558,7 +558,7 @@ def index(**kwargs):
         
         canal_chart.update_layout(
             title={
-                'text': 'Processos e Valores Mensais',
+                'text': 'Distribuição por Canal DI',
                 'x': 0.5,
                 'xanchor': 'center',
                 'y': 0.98

@@ -5,6 +5,23 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/table-sort.css') }}">
 <style>
+    /* Estilos para quebra de linha em células específicas */
+    .break-lines {
+        white-space: normal;
+        word-wrap: break-word;
+        max-width: 150px;
+        line-height: 1.3;
+        font-size: 0.85rem;
+    }
+    
+    .break-lines-cliente {
+        white-space: normal;
+        word-wrap: break-word;
+        max-width: 120px;
+        line-height: 1.3;
+        font-size: 0.8rem;
+    }
+
     /* Estilos para os cards de métricas */
     .metric-card {
         background-color: white; /* Fundo branco */
@@ -391,7 +408,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-table-sort.js') }}"></script>
 <script>
     // Animação de entrada
     document.addEventListener('DOMContentLoaded', function() {
@@ -687,32 +704,31 @@
                 </div>
             </div>
             {% endif %}
-
             {# Análise por Material - Tabela Compacta - 2 colunas #}
             {% if material_analysis %}
-            <div class="table-wrapper shadow-sm rounded-lg bg-white overflow-hidden lg:col-span-2">
-                <div class="table-header">
-                    <h3 class="table-title">Análise por Material</h3>
+            <div class="table-wrapper shadow-lg rounded-xl bg-white overflow-hidden border border-gray-200 lg:col-span-2">
+                <div class="table-header bg-gray-50 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800">Análise por Material</h3>
                 </div>
-                <div class="table-scroll" style="max-height: 350px;">
-                    <table class="data-table">
+                <div class="table-scroll" style="max-height: 300px;">
+                    <table class="data-table bg-white" id="material-analysis-table">
                         <thead>
                             <tr>
-                                <th class="sortable">Item</th>
-                                <th class="sortable">Total Proc.</th>
-                                <th class="sortable">Valor Total</th>
-                                <th class="sortable">Semana Atual</th>
-                                <th class="sortable">S+1</th>
+                                <th class="sortable text-xs px-3 py-2" data-sort="material">Item</th>
+                                <th class="sortable text-xs px-3 py-2" data-sort="quantidade">Total Proc.</th>
+                                <th class="sortable text-xs px-3 py-2" data-sort="valor_total">Valor Total</th>
+                                <th class="sortable text-xs px-3 py-2" data-sort="valor_semana_atual">Semana Atual</th>
+                                <th class="sortable text-xs px-3 py-2" data-sort="valor_proxima_semana">S+1</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for material in material_analysis %}
                             <tr>
-                                <td class="font-medium">{{ material.material[:25] }}{% if material.material|length > 25 %}...{% endif %}</td>
-                                <td class="text-center">{{ material.quantidade }}</td>
-                                <td class="text-right">{{ material.valor_total_formatado }}</td>
-                                <td class="text-right">{{ material.valor_semana_atual_formatado }}</td>
-                                <td class="text-right">{{ material.valor_proxima_semana_formatado }}</td>
+                                <td class="font-medium text-xs px-3 py-2">{{ material.material[:20] }}{% if material.material|length > 20 %}...{% endif %}</td>
+                                <td class="text-center text-xs px-3 py-2" data-sort-value="{{ material.quantidade }}">{{ material.quantidade }}</td>
+                                <td class="text-right text-xs px-3 py-2" data-sort-value="{{ material.valor_total }}">{{ material.valor_total_formatado }}</td>
+                                <td class="text-right text-xs px-3 py-2" data-sort-value="{{ material.valor_semana_atual }}">{{ material.valor_semana_atual_formatado }}</td>
+                                <td class="text-right text-xs px-3 py-2" data-sort-value="{{ material.valor_proxima_semana }}">{{ material.valor_proxima_semana_formatado }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -724,40 +740,42 @@
     </div>
 
     {# Tabela Principal de Importações #}
-    <div class="table-wrapper w-full shadow-sm rounded-lg bg-white overflow-hidden">
-        <div class="table-header">
-            <h3 class="table-title">Operações de Importação</h3>
+    <div class="table-wrapper w-full shadow-lg rounded-xl bg-white overflow-hidden border border-gray-200">
+        <div class="table-header bg-gray-50 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">Operações de Importação</h3>
         </div>
         <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table bg-white" id="importacoes-table">
                 <thead>
                     <tr>
-                        <th class="sortable">Nº Pedido</th>
-                        <th class="sortable">Data Embarque</th>
-                        <th class="sortable">Local Embarque</th>
-                        <th class="sortable">Modal</th>
-                        <th class="sortable">Armazém</th>
-                        <th class="sortable">Status</th>
-                        <th class="sortable mobile-hidden">Mercadoria</th>
-                        <th class="sortable mobile-hidden">Despesas</th>
-                        <th class="sortable mobile-hidden">Cliente</th>
+                        <th class="sortable" data-sort="cliente_razaosocial">Cliente</th>
+                        <th class="sortable" data-sort="nro_pedido">Nº Pedido</th>
+                        <th class="sortable" data-sort="data_embarque">Data Embarque</th>
+                        <th class="sortable" data-sort="local_embarque">Local Embarque</th>
+                        <th class="sortable" data-sort="via_transporte_descricao">Modal</th>
+                        <th class="sortable" data-sort="carga_status">Status</th>
+                        <th class="sortable mobile-hidden" data-sort="resumo_mercadoria">Mercadoria</th>
+                        <th class="sortable mobile-hidden" data-sort="despesas">Despesas</th>
+                        <th class="sortable" data-sort="armazem_nome">Recinto</th>
+                        <th class="sortable mobile-hidden" data-sort="data_chegada">Data Chegada</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in table_data %}
                     <tr>
+                        <td class="break-lines-cliente">{{ row.cliente_razaosocial or '-' }}</td>
                         <td class="font-medium">{{ row.nro_pedido or '-' }}</td>
                         <td>{{ row.data_embarque or '-' }}</td>
-                        <td>{{ row.local_embarque or '-' }}</td>
+                        <td class="break-lines">{{ row.local_embarque or '-' }}</td>
                         <td class="text-center">
-                            {% if row.via_transporte_descricao == 'AEREA' %}
+                            {% if row.via_transporte_descricao == 'AEREO' %}
                                 <span class="inline-flex items-center text-green-600">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                                     </svg>
                                     Aéreo
                                 </span>
-                            {% elif row.via_transporte_descricao == 'MARITIMA' %}
+                            {% elif row.via_transporte_descricao == 'MARITIMO' %}
                                 <span class="inline-flex items-center text-blue-600">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18v-9"></path>
@@ -775,7 +793,6 @@
                                 {{ row.via_transporte_descricao or '-' }}
                             {% endif %}
                         </td>
-                        <td>{{ row.armazem_nome or '-' }}</td>
                         <td>
                             {% if row.carga_status %}
                                 {% if 'aguardando embarque' in row.carga_status.lower() %}
@@ -792,8 +809,9 @@
                             {% endif %}
                         </td>
                         <td class="mobile-hidden">{{ row.resumo_mercadoria or '-' }}</td>
-                        <td class="text-right mobile-hidden">R$ {{ "{:,.2f}".format(row.despesas or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
-                        <td class="mobile-hidden">{{ row.cliente_razaosocial[:30] if row.cliente_razaosocial else '-' }}{% if row.cliente_razaosocial and row.cliente_razaosocial|length > 30 %}...{% endif %}</td>
+                        <td class="text-right mobile-hidden" data-sort-value="{{ row.despesas or 0 }}">R$ {{ "{:,.2f}".format(row.despesas or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+                        <td>{{ row.armazem_nome or '-' }}</td>
+                        <td class="mobile-hidden">{{ row.data_chegada or '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
