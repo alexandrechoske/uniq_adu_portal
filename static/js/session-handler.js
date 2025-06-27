@@ -83,9 +83,14 @@ class SessionHandler {
     interceptAjaxRequests() {
         const originalFetch = window.fetch;
         
+        // Armazenar referência ao fetch original para uso por outras partes do código
+        this.originalFetch = originalFetch;
+        window.sessionHandler = this;
+        
         window.fetch = async (...args) => {
             try {
-                const response = await originalFetch.apply(this, args);
+                // Aplicar o contexto correto do window, não do SessionHandler
+                const response = await originalFetch.apply(window, args);
                 
                 // Verificar se a resposta indica sessão expirada
                 if (response.status === 401) {

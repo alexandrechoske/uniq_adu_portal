@@ -826,6 +826,12 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Verificação de compatibilidade do navegador
+        if (!window.fetch) {
+            alert('Este navegador não suporta todas as funcionalidades necessárias. Por favor, atualize seu navegador.');
+            return;
+        }
+
         // Elementos do DOM
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('file-input');
@@ -846,10 +852,110 @@
         const loadingOverlay = document.getElementById('loading-overlay');
         const loadingMessage = document.getElementById('loading-message');
 
+        // Verificação de elementos críticos
+        const criticalElements = [dropzone, fileInput, selectFiles, uploadBtn, loadingOverlay];
+        const missingElements = criticalElements.filter(el => !el);
+        
+        if (missingElements.length > 0) {
+            console.error('Elementos críticos não encontrados no DOM');
+            alert('Erro na inicialização da página. Por favor, recarregue a página.');
+            return;
+        }
+
         let selectedFiles = [];
         let currentJobId = null;
         let jobResults = null;
         let checkStatusInterval = null;
+
+        // Função auxiliar para fazer requests fetch de forma segura
+        function safeFetch(url, options = {}) {
+            // Opções padrão para todas as requisições
+            const defaultOptions = {
+                credentials: 'same-origin', // Inclui cookies de sessão
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest' // Indica que é uma requisição AJAX
+                }
+            };
+            
+            // Mescla as opções
+            const finalOptions = { ...defaultOptions, ...options };
+            
+            // Se há headers customizados, mescla com os padrão
+            if (options.headers) {
+                finalOptions.headers = { ...defaultOptions.headers, ...options.headers };
+            }
+            
+            console.log('Fazendo request para:', url, 'com opções:', finalOptions);
+            
+            // Tentar usar o fetch original se disponível
+            if (window.sessionHandler && window.sessionHandler.originalFetch) {
+                console.log('Usando fetch original do session handler');
+                return window.sessionHandler.originalFetch.call(window, url, finalOptions);
+            }
+            
+            // Fallback para XMLHttpRequest se fetch não estiver disponível ou causar problemas
+            if (!window.fetch || typeof window.fetch !== 'function') {
+                console.log('Fetch não disponível, usando XMLHttpRequest');
+                return makeXMLHttpRequest(url, finalOptions);
+            }
+            
+            try {
+                // Tentar usar o fetch padrão
+                console.log('Usando fetch padrão');
+                return window.fetch.call(window, url, finalOptions);
+            } catch (error) {
+                console.log('Erro com fetch padrão, usando XMLHttpRequest:', error);
+                return makeXMLHttpRequest(url, finalOptions);
+            }
+        }
+
+        // Função fallback usando XMLHttpRequest
+        function makeXMLHttpRequest(url, options = {}) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                const method = options.method || 'GET';
+                
+                xhr.open(method, url, true);
+                
+                // Configurar headers
+                if (options.headers) {
+                    Object.keys(options.headers).forEach(key => {
+                        xhr.setRequestHeader(key, options.headers[key]);
+                    });
+                }
+                
+                // Incluir credenciais se especificado
+                if (options.credentials === 'same-origin' || options.credentials === 'include') {
+                    xhr.withCredentials = true;
+                }
+                
+                xhr.onload = function() {
+                    const response = {
+                        ok: xhr.status >= 200 && xhr.status < 300,
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        json: function() {
+                            return Promise.resolve(JSON.parse(xhr.responseText));
+                        },
+                        text: function() {
+                            return Promise.resolve(xhr.responseText);
+                        }
+                    };
+                    resolve(response);
+                };
+                
+                xhr.onerror = function() {
+                    reject(new Error('Erro na requisição XMLHttpRequest'));
+                };
+                
+                // Enviar dados
+                if (options.body) {
+                    xhr.send(options.body);
+                } else {
+                    xhr.send();
+                }
+            });
+        }
 
         // Inicializa a seleção do tipo de conferência
         radioOptions.forEach(option => {
@@ -972,8 +1078,12 @@
             }
         }
 
-        // Evento de upload
-        uploadBtn.addEventListener('click', uploadFiles);
+        // Evento de upload com verificação adicional
+        uploadBtn.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadFiles();
+        });
 
         function uploadFiles() {
             if (selectedFiles.length === 0) {
@@ -981,7 +1091,13 @@
                 return;
             }
 
-            const tipoConferencia = document.querySelector('input[name="tipo_conferencia"]:checked').value;
+            const tipoConferenciaInput = document.querySelector('input[name="tipo_conferencia"]:checked');
+            if (!tipoConferenciaInput) {
+                alert('Por favor, selecione um tipo de conferência.');
+                return;
+            }
+            
+            const tipoConferencia = tipoConferenciaInput.value;
             
             const formData = new FormData();
             formData.append('tipo_conferencia', tipoConferencia);
@@ -992,11 +1108,17 @@
             
             showLoading('Enviando arquivos...');
             
-            fetch('/conferencia/upload', {
+            // Usa a função safeFetch para evitar problemas de contexto
+            safeFetch('/conferencia/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
                     currentJobId = data.job_id;
@@ -1008,6 +1130,7 @@
             })
             .catch(error => {
                 hideLoading();
+                console.error('Erro ao enviar arquivos:', error);
                 alert(`Erro ao enviar arquivos: ${error.message}`);
             });
         }
@@ -1028,8 +1151,14 @@
             const statusUrl = `/conferencia/status/${jobId}?t=${Date.now()}`;
             console.log(`Verificando status: ${statusUrl}`);
             
-            fetch(statusUrl)
-                .then(response => response.json())
+            // Usa a função safeFetch para evitar problemas de contexto
+            safeFetch(statusUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.status === 'success') {
                         const job = data.job;
@@ -1046,6 +1175,7 @@
                     }
                 })
                 .catch(error => {
+                    console.error('Erro na verificação de status:', error);
                     clearInterval(checkStatusInterval);
                     hideLoading();
                     alert(`Erro na verificação de status: ${error.message}`);
@@ -1062,8 +1192,14 @@
             const resultUrl = `/conferencia/result/${jobId}?t=${Date.now()}`;
             console.log(`URL dos resultados: ${resultUrl}`);
             
-            fetch(resultUrl)
-                .then(response => response.json())
+            // Usa a função safeFetch para evitar problemas de contexto
+            safeFetch(resultUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('Dados recebidos:', data);
                     if (data.status === 'success') {

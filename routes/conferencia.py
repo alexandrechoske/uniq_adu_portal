@@ -165,7 +165,8 @@ def upload():
     """Endpoint para receber os arquivos e o tipo de conferência"""
     try:
         # Garante que os diretórios existam
-        ensure_upload_folders()
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         
         # Verifica se há arquivos na requisição
         if 'files[]' not in request.files:
