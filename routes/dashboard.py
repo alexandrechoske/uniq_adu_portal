@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 import json
 import requests
 import numpy as np
+import unicodedata
+import re
 
 bp = Blueprint('dashboard', __name__)
 
@@ -226,6 +228,7 @@ def index(**kwargs):
                 if isinstance(armazens, str):
                     # Se for string, tentar fazer parse do JSON
                     import json
+
                     armazens = json.loads(armazens)
                 
                 # Se for uma lista com dicionários
@@ -836,104 +839,147 @@ def index(**kwargs):
                     x=0.5
                 )
             )
-
-    # Gráfico de barras por material - DUPLO (valor + quantidade)
-    material_chart = None
-    if not df.empty:
-        # Usar os dados já processados de material_analysis
-        if material_analysis:
-            # Pegar top 6 materiais para melhor visualização
-            top_materials = material_analysis[:6]
-            
-            labels = []
-            values_valor = []
-            values_quantidade = []
-            
-            for material in top_materials:
-                # Truncar nome para melhor visualização
-                nome = material['material']
-                if len(nome) > 30:
-                    nome = nome[:30] + '...'
+            def clean_material_name(material_name):
+                """Limpa e normaliza nomes de materiais removendo acentos, caracteres especiais e espaços"""
                 
-                labels.append(nome)
-                values_valor.append(material['valor_total'])
-                values_quantidade.append(material['quantidade'])
-            
-            # Reverter as listas para mostrar maior valor no topo
-            labels.reverse()
-            values_valor.reverse()
-            values_quantidade.reverse()
-            
-            # Criar gráfico de barras horizontais duplas
-            material_chart = go.Figure()
-            
-            # Barra 1: Valor VMCV
-            material_chart.add_trace(go.Bar(
-                x=values_valor,
-                y=labels,
-                orientation='h',
-                name='Valor VMCV',
-                marker=dict(
-                    color='#8b5cf6',  # Roxo
-                    line=dict(color='white', width=1)
-                ),
-                text=[format_value_smart(val, currency=True) for val in values_valor],
-                textposition='inside',
-                textfont=dict(color='white', size=10),
-                hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
-                offsetgroup=1  # Grupo para barras lado a lado
-            ))
-            
-            # Barra 2: Quantidade de Processos (eixo secundário)
-            material_chart.add_trace(go.Bar(
-                x=values_quantidade,
-                y=labels,
-                orientation='h',
-                name='Qtd. Processos',
-                marker=dict(
-                    color='#10b981',  # Verde
-                    line=dict(color='white', width=1)
-                ),
-                text=[f'{val}' for val in values_quantidade],
-                textposition='inside',
-                textfont=dict(color='white', size=10),
-                hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
-                xaxis='x2',  # Usar eixo X secundário
-                offsetgroup=2  # Grupo separado para barras lado a lado
-            ))
-            
-            material_chart.update_layout(
-                xaxis=dict(
+                if not material_name or pd.isna(material_name):
+                    return "Não Informado"
+                
+                # Converter para string e fazer trim
+                material = str(material_name).strip()
+                
+                # Se ainda estiver vazio, retornar padrão
+                if not material:
+                    return "Não Informado"
+                
+                # Remover acentos (normalizar unicode)
+                material = unicodedata.normalize('NFD', material)
+                material = ''.join(char for char in material if unicodedata.category(char) != 'Mn')
+                
+                # Converter para uppercase para padronizar
+                material = material.upper()
+                
+                # Remover caracteres especiais, mantendo apenas letras, números, espaços e hífen
+                material = re.sub(r'[^A-Z0-9\s\-]', '', material)
+                
+                # Normalizar espaços múltiplos
+                material = re.sub(r'\s+', ' ', material)
+                
+                # Trim final
+                material = material.strip()
+                
+                # Se ficou vazio após limpeza, retornar padrão
+                if not material:
+                    return "NAO INFORMADO"
+                
+                return material
 
-                    side='bottom',
-                    showticklabels=False,  # Remove labels para ficar mais limpo
-                    showgrid=True,
-                    gridcolor='rgba(139, 92, 246, 0.1)'  # Grid roxo claro
-                ),
-                xaxis2=dict(
-
-                    side='top',
-                    overlaying='x',
-                    showticklabels=False,  # Remove labels para ficar mais limpo
-                    showgrid=False
-                ),
-                yaxis=dict(
-                    title='',  # Remove título do eixo Y
-                    tickfont=dict(size=10)
-                ),
-                template='plotly_white',
-                height=350,
-                margin=dict(t=60, b=60, l=180, r=30),  # Mais espaço à esquerda para nomes
-                showlegend=True,
-                legend=dict(
-                    orientation="h",
-                    yanchor="top",
-                    y=-0.15,
-                    xanchor="center",
-                    x=0.5
-                ),
-                barmode='group'  # Barras agrupadas lado a lado
-            )
+            # Gráfico de barras por material - DUPLO (valor + quantidade)
+            material_chart = None
+            if not df.empty:
+                # Limpar e agrupar materiais com nomes similares
+                df_materials = df.copy()
+                df_materials['material_limpo'] = df_materials['resumo_mercadoria'].apply(clean_material_name)
+                
+                # Agrupar por material limpo
+                material_groups_clean = df_materials.groupby('material_limpo').agg({
+                    'numero': 'count',
+                    'total_vmcv_real': 'sum'
+                }).reset_index()
+                
+                material_groups_clean = material_groups_clean.sort_values('total_vmcv_real', ascending=False)
+                
+                # Pegar top 6 materiais para melhor visualização
+                top_materials_clean = material_groups_clean.head(6)
+                
+                if not top_materials_clean.empty:
+                    labels = []
+                    values_valor = []
+                    values_quantidade = []
+                    
+                    for _, row in top_materials_clean.iterrows():
+                        # Truncar nome para melhor visualização
+                        nome = row['material_limpo']
+                        if len(nome) > 30:
+                            nome = nome[:30] + '...'
+                        
+                        labels.append(nome)
+                        values_valor.append(float(row['total_vmcv_real']))
+                        values_quantidade.append(int(row['numero']))
+                    
+                    # Reverter as listas para mostrar maior valor no topo
+                    labels.reverse()
+                    values_valor.reverse()
+                    values_quantidade.reverse()
+                    
+                    # Criar gráfico de barras horizontais duplas
+                    material_chart = go.Figure()
+                    
+                    # Barra 1: Valor VMCV
+                    material_chart.add_trace(go.Bar(
+                        x=values_valor,
+                        y=labels,
+                        orientation='h',
+                        name='Valor VMCV',
+                        marker=dict(
+                            color='#8b5cf6',  # Roxo
+                            line=dict(color='white', width=1)
+                        ),
+                        text=[format_value_smart(val, currency=True) for val in values_valor],
+                        textposition='inside',
+                        textfont=dict(color='white', size=10),
+                        hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
+                        offsetgroup=1  # Grupo para barras lado a lado
+                    ))
+                    
+                    # Barra 2: Quantidade de Processos (eixo secundário)
+                    material_chart.add_trace(go.Bar(
+                        x=values_quantidade,
+                        y=labels,
+                        orientation='h',
+                        name='Qtd. Processos',
+                        marker=dict(
+                            color='#10b981',  # Verde
+                            line=dict(color='white', width=1)
+                        ),
+                        text=[f'{val}' for val in values_quantidade],
+                        textposition='inside',
+                        textfont=dict(color='white', size=10),
+                        hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
+                        xaxis='x2',  # Usar eixo X secundário
+                        offsetgroup=2  # Grupo separado para barras lado a lado
+                    ))
+                    
+                    material_chart.update_layout(
+                        xaxis=dict(
+                            side='bottom',
+                            showticklabels=False,  # Remove labels para ficar mais limpo
+                            showgrid=True,
+                            gridcolor='rgba(139, 92, 246, 0.1)'  # Grid roxo claro
+                        ),
+                        xaxis2=dict(
+                            side='top',
+                            overlaying='x',
+                            showticklabels=False,  # Remove labels para ficar mais limpo
+                            showgrid=False
+                        ),
+                        yaxis=dict(
+                            title='',  # Remove título do eixo Y
+                            tickfont=dict(size=10)
+                        ),
+                        template='plotly_white',
+                        height=350,
+                        margin=dict(t=60, b=60, l=180, r=30),  # Mais espaço à esquerda para nomes
+                        showlegend=True,
+                        legend=dict(
+                            orientation="h",
+                            yanchor="top",
+                            y=-0.15,
+                            xanchor="center",
+                            x=0.5
+                        ),
+                        barmode='group'  # Barras agrupadas lado a lado
+                    )
 
 
     # Get all available companies for filtering - OTIMIZADO
