@@ -899,14 +899,14 @@ def index(**kwargs):
             
             material_chart.update_layout(
                 xaxis=dict(
-                    title='Valor VMCV (R$)',
+
                     side='bottom',
                     showticklabels=False,  # Remove labels para ficar mais limpo
                     showgrid=True,
                     gridcolor='rgba(139, 92, 246, 0.1)'  # Grid roxo claro
                 ),
                 xaxis2=dict(
-                    title='Quantidade de Processos',
+
                     side='top',
                     overlaying='x',
                     showticklabels=False,  # Remove labels para ficar mais limpo
