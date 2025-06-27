@@ -549,8 +549,6 @@ def index(**kwargs):
         
         daily_chart.update_layout(
 
-            yaxis=dict(title='Quantidade de Processos', side='left'),
-            yaxis2=dict(title='Valor VMCV (Milhões R$)', side='right', overlaying='y'),
             hovermode='x unified',
             template='plotly_white',
             height=300,
@@ -591,10 +589,11 @@ def index(**kwargs):
             name='Nº de Processos',
             fill='tozeroy',  # Preenche área até o zero
             fillcolor='rgba(255, 140, 0, 0.3)',  # Cor alaranjada com transparência
-            line=dict(color='#FF8C00', width=2, shape='spline'),  # Linha alaranjada suave
-            marker=dict(color='#FF8C00', size=6),
+            line=dict(color="#0079A5", width=2, shape='spline'),  # Linha alaranjada suave
+            marker=dict(color='#0079A5', size=6),
             text=monthly_data['numero'],
-            textposition='top center',
+            textposition='bottom center',  # Posição embaixo para evitar sobreposição
+            textfont=dict(size=10, color='#0079A5'),
             hovertemplate='<b>%{x|%b %Y}</b><br>Processos: %{y}<extra></extra>'
         ))
         
@@ -607,7 +606,8 @@ def index(**kwargs):
             line=dict(color='#8A2BE2', width=3, shape='spline'),  # Linha roxa suave
             marker=dict(color='#8A2BE2', size=6),
             text=[f'R$ {val/1000000:.1f}M' for val in monthly_data['total_vmcv_real']],
-            textposition='top center',
+            textposition='top center',  # Posição em cima para os valores
+            textfont=dict(size=10, color='#8A2BE2'),
             yaxis='y2',
             hovertemplate='<b>%{x|%b %Y}</b><br>VMCV: R$ %{y:,.0f}<extra></extra>'
         ))

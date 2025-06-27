@@ -597,39 +597,38 @@
             </svg>
             Selecione o Tipo de Conferência
         </h2>
-
         <div class="radio-container">
-            <label class="radio-option" data-tipo="inconsistencias">
-                <input type="radio" name="tipo_conferencia" value="inconsistencias" checked>
-                <div class="radio-option-info">
-                    <div class="radio-option-title">Conferência de Inconsistências</div>
-                    <div class="radio-option-desc">Verificação geral de inconsistências em todos os tipos de documentos.</div>
-                </div>
-            </label>
+            <!-- <label class="radio-option" data-tipo="inconsistencias">
+            <input type="radio" name="tipo_conferencia" value="inconsistencias" disabled>
+            <div class="radio-option-info">
+                <div class="radio-option-title">Conferência de Inconsistências</div>
+                <div class="radio-option-desc">Verificação geral de inconsistências em todos os tipos de documentos. (Em desenvolvimento)</div>
+            </div>
+            </label> -->
             
             <label class="radio-option" data-tipo="invoice">
-                <input type="radio" name="tipo_conferencia" value="invoice">
-                <div class="radio-option-info">
-                    <div class="radio-option-title">Conferência de Invoices</div>
-                    <div class="radio-option-desc">Verificação específica para invoices comerciais.</div>
-                </div>
+            <input type="radio" name="tipo_conferencia" value="invoice" checked>
+            <div class="radio-option-info">
+                <div class="radio-option-title">Conferência de Invoices</div>
+                <div class="radio-option-desc">Verificação específica para invoices comerciais.</div>
+            </div>
             </label>
 
-            <label class="radio-option" data-tipo="packlist">
-                <input type="radio" name="tipo_conferencia" value="packlist">
-                <div class="radio-option-info">
-                    <div class="radio-option-title">Conferência de Packlists</div>
-                    <div class="radio-option-desc">Verificação específica para packlists.</div>
-                </div>
-            </label>
+            <!-- <label class="radio-option" data-tipo="packlist">
+            <input type="radio" name="tipo_conferencia" value="packlist" disabled>
+            <div class="radio-option-info">
+                <div class="radio-option-title">Conferência de Packlists</div>
+                <div class="radio-option-desc">Verificação específica para packlists. (Em desenvolvimento)</div>
+            </div>
+            </label> -->
 
-            <label class="radio-option" data-tipo="conhecimento">
-                <input type="radio" name="tipo_conferencia" value="conhecimento">
-                <div class="radio-option-info">
-                    <div class="radio-option-title">Conferência de Conhecimentos</div>
-                    <div class="radio-option-desc">Verificação específica para conhecimentos de embarque (BL/AWB).</div>
-                </div>
-            </label>
+            <!-- <label class="radio-option" data-tipo="conhecimento">
+            <input type="radio" name="tipo_conferencia" value="conhecimento" disabled>
+            <div class="radio-option-info">
+                <div class="radio-option-title">Conferência de Conhecimentos</div>
+                <div class="radio-option-desc">Verificação específica para conhecimentos de embarque (BL/AWB). (Em desenvolvimento)</div>
+            </div>
+            </label> -->
         </div>
 
         <h2 class="upload-title">
@@ -941,7 +940,10 @@
         }
 
         function checkJobStatus(jobId) {
-            fetch(`/conferencia/status/${jobId}`)
+            const statusUrl = `/conferencia/status/${jobId}?t=${Date.now()}`;
+            console.log(`Verificando status: ${statusUrl}`);
+            
+            fetch(statusUrl)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -971,12 +973,18 @@
         }
 
         function loadJobResults(jobId) {
-            fetch(`/conferencia/result/${jobId}`)
+            console.log('Carregando resultados para job:', jobId);
+            const resultUrl = `/conferencia/result/${jobId}?t=${Date.now()}`;
+            console.log(`URL dos resultados: ${resultUrl}`);
+            
+            fetch(resultUrl)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Dados recebidos:', data);
                     if (data.status === 'success') {
                         hideLoading();
                         jobResults = data.job;
+                        console.log('Job results:', jobResults);
                         displayResults(jobResults);
                     } else {
                         hideLoading();
@@ -985,11 +993,13 @@
                 })
                 .catch(error => {
                     hideLoading();
+                    console.error('Erro ao carregar resultados:', error);
                     alert(`Erro ao carregar resultados: ${error.message}`);
                 });
         }
 
         function displayResults(job) {
+            console.log('Exibindo resultados:', job);
             // Exibe o container de resultados
             resultsContainer.style.display = 'block';
             
@@ -1000,11 +1010,25 @@
             resultsCards.innerHTML = '';
             
             // Adiciona um card para cada arquivo
-            job.arquivos.forEach(arquivo => {
+            console.log('Arquivos:', job.arquivos);
+            job.arquivos.forEach((arquivo, index) => {
+                console.log(`Processando arquivo ${index}:`, arquivo);
+                console.log(`Filename: ${arquivo.filename}`);
+                console.log(`Status: ${arquivo.status}`);
+                console.log(`Has result: ${!!arquivo.result}`);
+                
                 if (arquivo.status === 'completed' && arquivo.result) {
                     const result = arquivo.result;
+                    console.log(`Resultado detalhado do arquivo ${arquivo.filename}:`, result);
+                    console.log(`Sumário status: ${result.sumario?.status}`);
+                    console.log(`Conclusão: ${result.sumario?.conclusao}`);
+                    console.log(`Total erros: ${result.sumario?.total_erros_criticos}`);
+                    
                     const card = createResultCard(arquivo.filename, result);
                     resultsCards.appendChild(card);
+                    console.log(`Card criado para ${arquivo.filename}`);
+                } else {
+                    console.log('Arquivo não processado ou sem resultado:', arquivo);
                 }
             });
             
@@ -1117,11 +1141,14 @@
         }
 
         function showDetails(filename, result) {
+            console.log(`Mostrando detalhes para ${filename}:`, result);
             detailsTitle.textContent = `Detalhes: ${filename}`;
             detailsTableBody.innerHTML = '';
             
             if (result && result.itens) {
-                result.itens.forEach(item => {
+                console.log(`Itens encontrados: ${result.itens.length}`);
+                result.itens.forEach((item, index) => {
+                    console.log(`Item ${index}:`, item);
                     const row = document.createElement('tr');
                     const statusClass = `status-${item.status}`;
                     
@@ -1138,6 +1165,8 @@
                     
                     detailsTableBody.appendChild(row);
                 });
+            } else {
+                console.log('Nenhum item encontrado no resultado:', result);
             }
             
             detailsContainer.style.display = 'block';

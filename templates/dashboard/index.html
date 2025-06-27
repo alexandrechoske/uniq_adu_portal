@@ -67,6 +67,7 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     width: 100%;
     box-sizing: border-box;
+    padding-top: 4rem; /* Compensar header fixo do base.html */
 }
 
 .main-content {
@@ -408,20 +409,25 @@
     box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
+.search-input.searching {
+    border-color: var(--color-success);
+    background: var(--color-success-light);
+}
+
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: 0.8rem; /* Reduzido de 0.875rem para 0.8rem */
 }
 
 .data-table th {
     background: var(--color-surface-hover);
-    padding: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md); /* Reduzido de md/lg para sm/md */
     text-align: left;
     font-weight: 600;
     color: var(--color-text-secondary);
     border-bottom: 1px solid var(--color-border-light);
-    font-size: 0.75rem;
+    font-size: 0.7rem; /* Reduzido de 0.75rem para 0.7rem */
     text-transform: uppercase;
     letter-spacing: 0.05em;
     position: sticky;
@@ -430,10 +436,15 @@
 }
 
 .data-table td {
-    padding: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md); /* Reduzido de md/lg para sm/md */
     border-bottom: 1px solid var(--color-border-light);
     color: var(--color-text-primary);
     vertical-align: middle;
+}
+
+.data-table tbody tr.search-match {
+    background: var(--color-primary-light) !important;
+    border-left: 3px solid var(--color-primary);
 }
 
 .data-table tbody tr {
@@ -538,7 +549,7 @@
     }
     .data-table th,
     .data-table td {
-        padding: var(--spacing-sm);
+        padding: var(--spacing-xs) var(--spacing-sm); /* Ainda mais compacto no mobile */
     }
     .mobile-hidden {
         display: none;
@@ -626,6 +637,67 @@
     background-clip: text;
 }
 
+/* === FOOTER LEVE === */
+.dashboard-footer {
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border-light);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    margin-top: var(--spacing-2xl);
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.footer-info,
+.footer-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.footer-text,
+.footer-stat {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.footer-stat {
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.footer-divider {
+    color: var(--color-text-muted);
+    font-weight: 300;
+}
+
+/* Responsividade do footer */
+@media (max-width: 768px) {
+    .dashboard-footer {
+        padding: var(--spacing-md);
+    }
+    
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .footer-info,
+    .footer-stats {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
 </style>
 {% endblock %}
 
@@ -675,6 +747,8 @@
     });
 
     function initializeDashboard() {
+        console.log('Inicializando dashboard...');
+        
         // Animação de entrada staggered
         const cards = document.querySelectorAll('.metric-card, .chart-card');
         cards.forEach((card, index) => {
@@ -686,18 +760,118 @@
         // Inicializar seletor de período
         initializePeriodSelector();
         
+        // Inicializar busca na tabela
+        console.log('Inicializando busca da tabela...');
+        initializeTableSearch();
+        
         // Redimensionar gráficos quando necessário
         window.addEventListener('resize', debounce(handleResize, 250));
         
         // Atualizar timestamps
         updateTimestamps();
         setInterval(updateTimestamps, 60000);
+        
+        console.log('Dashboard inicializado com sucesso!');
     }
 
     function formatMetricValues() {
         // Os valores já vêm formatados do backend, apenas verificar se há elementos 
         // específicos que precisam de formatação adicional (caso necessário no futuro)
         console.log('Valores dos cartões já formatados pelo backend');
+    }
+
+    // Inicializar busca na tabela
+    function initializeTableSearch() {
+        // Aguardar um pouco para garantir que a página carregou completamente
+        setTimeout(() => {
+            const searchInput = document.getElementById('table-search');
+            const table = document.getElementById('importacoes-table');
+            
+            console.log('Elementos encontrados:', {
+                searchInput: !!searchInput,
+                table: !!table
+            });
+            
+            if (!searchInput || !table) {
+                console.error('Elementos de busca não encontrados');
+                return;
+            }
+
+            const tbody = table.querySelector('tbody');
+            if (!tbody) {
+                console.error('Tbody da tabela não encontrado');
+                return;
+            }
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            console.log('Inicializando busca com', rows.length, 'linhas');
+
+            // Remover listener anterior se existir
+            searchInput.removeEventListener('input', searchHandler);
+            
+            // Adicionar novo listener
+            searchInput.addEventListener('input', searchHandler);
+            
+            function searchHandler() {
+                const searchTerm = this.value.toLowerCase().trim();
+                console.log('Buscando por:', searchTerm);
+                
+                // Adicionar/remover classe de busca ativa
+                if (searchTerm === '') {
+                    searchInput.classList.remove('searching');
+                } else {
+                    searchInput.classList.add('searching');
+                }
+                
+                let visibleCount = 0;
+                
+                rows.forEach((row, index) => {
+                    // Remover classe de destaque anterior
+                    row.classList.remove('search-match');
+                    
+                    if (searchTerm === '') {
+                        row.style.display = '';
+                        visibleCount++;
+                        return;
+                    }
+
+                    // Buscar em todas as células da linha
+                    const cells = row.querySelectorAll('td');
+                    let found = false;
+
+                    cells.forEach(cell => {
+                        const cellText = cell.textContent.toLowerCase().trim();
+                        if (cellText.includes(searchTerm)) {
+                            found = true;
+                            console.log('Encontrado em:', cellText);
+                        }
+                    });
+
+                    if (found) {
+                        row.style.display = '';
+                        row.classList.add('search-match');
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Atualizar contador de resultados
+                console.log('Resultados visíveis:', visibleCount, 'de', rows.length);
+                updateSearchResults(searchTerm, visibleCount, rows.length);
+            }
+        }, 500); // Aguardar 500ms
+    }
+
+    // Atualizar contador de resultados da busca
+    function updateSearchResults(searchTerm, visibleCount, totalCount) {
+        const searchInput = document.getElementById('table-search');
+        
+        if (searchTerm === '') {
+            searchInput.placeholder = '🔍 Buscar operações...';
+        } else {
+            searchInput.placeholder = `📋 ${visibleCount} de ${totalCount} operações`;
+        }
     }
 
     function initializePeriodSelector() {
@@ -772,12 +946,6 @@
             timeout = setTimeout(later, wait);
         };
     }
-
-    // Export da tabela
-    function exportTable() {
-        console.log('Exportando tabela...');
-        // TODO: Implementar export
-    }
 </script>
 {% endblock %}
 
@@ -794,22 +962,12 @@
                         <path d="M12 1v6m0 6v6"/>
                         <path d="m21 12-6-3-6 3-6-3"/>
                     </svg>
-                    Visão geral das operações de importação
-                    <span class="timestamp">• Atualizado em {{ last_update }}</span>
                 </p>
             </div>
             
-            <div class="header-controls">
-                <!-- Seletor de Período -->
-                <div class="period-selector">
-                    <button class="period-btn active" data-period="7d">7 dias</button>
-                    <button class="period-btn" data-period="30d">30 dias</button>
-                    <button class="period-btn" data-period="90d">3 meses</button>
-                    <button class="period-btn" data-period="1y">1 ano</button>
-                </div>
-                
+            <div class="header-controls">               
                 <!-- Filtro de Empresa -->
-                {% if user_role in ['interno_unique', 'admin'] %}
+                {% if user_role in ['interno_unique', 'admin','cliente_unique'] %}
                 <select class="company-filter" onchange="filterByCompany(this.value)">
                     <option value="">🏢 Todas as empresas</option>
                     {% for company in companies %}
@@ -919,7 +1077,7 @@
             </div>
         </div>
 
-        <!-- Modal Terrestre -->
+        <!-- Modal Terrestre
         <div class="metric-card pending">
             <div class="metric-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -935,7 +1093,7 @@
                 <div class="metric-value">{{ kpis.terrestre or 0 }}</div>
                 <div class="metric-label">Modal Terrestre</div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Total de Despesas -->
         <div class="metric-card value">
@@ -1119,14 +1277,6 @@
                 <h3 class="table-title">Operações de Importação</h3>
                 <div class="table-filters">
                     <input type="text" class="search-input" placeholder="🔍 Buscar operações..." id="table-search">
-                    <button class="period-btn" onclick="exportTable()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7,10 12,15 17,10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        Exportar
-                    </button>
                 </div>
             </div>
             <div style="overflow-x: auto; max-height: 600px;">
@@ -1191,5 +1341,21 @@
             </div>
         </div>
     </div> <!-- Fecha main-content -->
+    
+    <!-- Footer Leve -->
+    <footer class="dashboard-footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <span class="footer-text">Portal UniSystem - Dashboard Executivo</span>
+                <span class="footer-divider">•</span>
+                <span class="footer-text">{{ last_update }}</span>
+            </div>
+            <div class="footer-stats">
+                <span class="footer-stat">{{ kpis.total or 0 }} operações</span>
+                <span class="footer-divider">•</span>
+                <span class="footer-stat">{{ (table_data|length) or 0 }} registros exibidos</span>
+            </div>
+        </div>
+    </footer>
 </div> <!-- Fecha dashboard-container -->
 {% endblock %}
