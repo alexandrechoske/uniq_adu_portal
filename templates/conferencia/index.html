@@ -398,6 +398,67 @@
         margin-top: 1rem;
     }
 
+    .valor-extraido {
+        background-color: #dcfce7;
+        color: #16a34a;
+        padding: 0.125rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .valor-nao-encontrado {
+        background-color: #fee2e2;
+        color: #dc2626;
+        padding: 0.125rem 0.5rem;
+        border-radius: 0.25rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .details-table tbody tr:nth-child(even) {
+        background-color: #f9fafb;
+    }
+
+    .details-table tbody tr:hover {
+        background-color: #f3f4f6;
+    }
+
+    .status-cell {
+        text-align: center;
+        width: 5%;
+    }
+
+    .status-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        font-weight: 600;
+    }
+
+    .status-ok {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
+    .status-alerta {
+        background-color: #fef3c7;
+        color: #d97706;
+    }
+
+    .status-erro {
+        background-color: #fee2e2;
+        color: #dc2626;
+    }
+
+    .result-status-success {
+        background-color: #dcfce7;
+        color: #16a34a;
+    }
+
     .btn-outline {
         background-color: transparent;
         border: 1px solid #cbd5e1;
@@ -520,6 +581,30 @@
     .status-cell {
         width: 1%;
         white-space: nowrap;
+    }
+
+    /* Estilos para valores extraídos */
+    .valor-extraido {
+        background-color: #dbeafe;
+        color: #1d4ed8;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border: 1px solid #93c5fd;
+    }
+
+    .valor-nao-encontrado {
+        background-color: #fee2e2;
+        color: #dc2626;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid #fca5a5;
+        font-style: italic;
     }
 
     .loading-overlay {
@@ -1050,8 +1135,23 @@
         }
 
         function createResultCard(filename, result) {
-            const sumario = result.sumario;
-            const statusClass = getStatusClass(sumario.status);
+            const sumario = result.sumario || {};
+            const statusClass = getStatusClass(sumario.status || 'ok');
+            
+            // Calcular totais se não estiverem disponíveis
+            const totalErros = sumario.total_erros_criticos || 0;
+            const totalAlertas = sumario.total_alertas || 0;
+            const totalObservacoes = sumario.total_observacoes || 0;
+            
+            // Verificar se há dados para análise
+            const hasAnalysisData = (result.itens && result.itens.length > 0) || 
+                                   (result.itens_analisados && result.itens_analisados.length > 0);
+            
+            // Criar mensagem de status mais informativa
+            let statusMessage = sumario.conclusao || 'Análise concluída';
+            if (hasAnalysisData) {
+                statusMessage += ' • Dados analisados disponíveis';
+            }
             
             const card = document.createElement('div');
             card.className = 'result-card';
@@ -1071,24 +1171,28 @@
                                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                     <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
                                 </svg>
-                                ${sumario.total_erros_criticos}
+                                ${totalErros}
                             </div>
                             <div class="result-card-stat stat-warning">
                                 <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                     <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
                                 </svg>
-                                ${sumario.total_observacoes}
+                                ${totalAlertas}
                             </div>
                             <div class="result-card-stat stat-info">
                                 <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M8 15A7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                                     <path d="M8.93 6.588-2.29.287-.082.38.45.083c0-.355.28-.65.63-.65.41 0 .72.22.87.628.7.99.54 1.3.54 2.31v.334c0 .308-.094.545-.281.75-.187.204-.378.333-.6.333-.577 0-1.004-.31-1.004-.803 0-.21.077-.412.23-.596C7.36 4.59 7.6 4.473 8 4.473c.252 0 .45.06.612.12.163.045.3.106.44.214.14.107.173.21.173.33"/>
                                 </svg>
-                                ${sumario.total_alertas}
+                                ${totalObservacoes}
                             </div>
+                            ${hasAnalysisData ? '<div class="result-card-stat" style="color: #059669;"><svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16"><path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/></svg>✓</div>' : ''}
                         </div>
                     </div>
+                </div>
+                <div style="margin: 1rem 0; font-size: 0.875rem; color: #6b7280;">
+                    ${statusMessage}
                 </div>
                 <div class="result-card-actions">
                     <button type="button" class="btn-outline download-pdf" data-filename="${filename}">
@@ -1145,12 +1249,26 @@
             detailsTitle.textContent = `Detalhes: ${filename}`;
             detailsTableBody.innerHTML = '';
             
-            if (result && result.itens) {
-                console.log(`Itens encontrados: ${result.itens.length}`);
-                result.itens.forEach((item, index) => {
+            // Identificar a estrutura de itens (pode ser 'itens' ou 'itens_analisados')
+            const itemsArray = result?.itens || result?.itens_analisados || [];
+            let hasItems = false;
+            
+            if (itemsArray && itemsArray.length > 0) {
+                console.log(`Itens encontrados: ${itemsArray.length}`);
+                hasItems = true;
+                
+                itemsArray.forEach((item, index) => {
                     console.log(`Item ${index}:`, item);
                     const row = document.createElement('tr');
                     const statusClass = `status-${item.status}`;
+                    
+                    // Criar descrição mais detalhada com valor extraído
+                    let descricaoCompleta = item.descricao || item.message || 'Descrição não disponível';
+                    if (item.valor_extraido) {
+                        descricaoCompleta += `<br><strong>Valor detectado:</strong> <span class="valor-extraido">[${item.valor_extraido}]</span>`;
+                    } else if (item.valor_extraido === null) {
+                        descricaoCompleta += `<br><strong>Valor detectado:</strong> <span class="valor-nao-encontrado">[Não encontrado]</span>`;
+                    }
                     
                     row.innerHTML = `
                         <td class="status-cell">
@@ -1158,15 +1276,39 @@
                                 ${getStatusIcon(item.status)}
                             </span>
                         </td>
-                        <td><strong>${item.campo}</strong></td>
-                        <td>${getTipoLabel(item.tipo)}</td>
-                        <td>${item.descricao}</td>
+                        <td><strong>${item.campo || item.field || 'Campo não especificado'}</strong></td>
+                        <td>${getTipoLabel(item.tipo || item.type)}</td>
+                        <td>${descricaoCompleta}</td>
                     `;
                     
                     detailsTableBody.appendChild(row);
                 });
-            } else {
-                console.log('Nenhum item encontrado no resultado:', result);
+            }
+            
+            // Os dados brutos agora estão integrados na análise principal
+            // através dos campos 'valor_extraido', então não precisamos de seção separada
+            
+            // Se não há itens nem dados brutos, mostrar mensagem informativa
+            if (!hasItems) {
+                console.log('Nenhum item ou dado encontrado no resultado:', result);
+                const noDataRow = document.createElement('tr');
+                noDataRow.innerHTML = `
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #6b7280;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16" style="color: #9ca3af;">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                            </svg>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 0.5rem;">Análise em Processamento</div>
+                                <div style="font-size: 0.875rem;">
+                                    ${result?.sumario?.conclusao || 'O arquivo foi processado mas os dados ainda não estão disponíveis para exibição.'}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                detailsTableBody.appendChild(noDataRow);
             }
             
             detailsContainer.style.display = 'block';
@@ -1179,7 +1321,6 @@
                     return `
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/>
-                        </svg>
                     `;
                 case 'alerta':
                     return `
