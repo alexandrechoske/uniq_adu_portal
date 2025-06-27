@@ -320,7 +320,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body{% if session.get('user') %} class="logged-in" data-user-id="{{ session['user']['id'] }}"{% endif %}>
+<body{% if session.get('user') and session['user'].get('id') %} class="logged-in" data-user-id="{{ session['user']['id'] }}"{% endif %}>
     {% if session.get('user') %}
     <!-- Top Navigation Bar -->
     <header class="top-navbar">
@@ -374,14 +374,14 @@
                                 </svg>
                             </div>
                             <div class="flex flex-col text-left">
-                                <span class="text-sm font-medium">{{ session['user']['email'] }}</span>
+                                <span class="text-sm font-medium">{{ session['user'].get('email', 'Usuário') }}</span>
                                 <span class="text-xs text-blue-200 capitalize">
-                                    {% if session['user']['role'] == 'cliente_unique' %}
+                                    {% if session['user'].get('role') == 'cliente_unique' %}
                                         Cliente
-                                    {% elif session['user']['role'] == 'admin' %}
+                                    {% elif session['user'].get('role') == 'admin' %}
                                         Administrador
                                     {% else %}
-                                        {{ session['user']['role'] }}
+                                        {{ session['user'].get('role', 'Usuário') }}
                                     {% endif %}
                                 </span>
                             </div>

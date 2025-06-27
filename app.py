@@ -8,8 +8,12 @@ from session_handler import init_session_handler
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Configurar sessão para expirar após 8 horas (28800 segundos)
-app.config['PERMANENT_SESSION_LIFETIME'] = 28800
+# Configurar sessão para expirar após 12 horas (43200 segundos)
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
+app.config['SESSION_COOKIE_SECURE'] = False  # True apenas em HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Inicializar manipulador de sessão
 init_session_handler(app)

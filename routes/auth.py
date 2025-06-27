@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.security import check_password_hash
 from functools import wraps
 from extensions import supabase, supabase_admin
+from datetime import datetime
 import requests
 import json
 
@@ -10,8 +11,31 @@ bp = Blueprint('auth', __name__)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
+        # Verificar se existe usuário na sessão e se tem os dados mínimos necessários
+        if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
+            print(f"[AUTH] Redirecionando para login - usuário não encontrado na sessão")
             return redirect(url_for('auth.login'))
+        
+        # Verificar se os dados essenciais estão presentes
+        user_data = session['user']
+        required_fields = ['id', 'email', 'role']
+        missing_fields = [field for field in required_fields if not user_data.get(field)]
+        
+        if missing_fields:
+            print(f"[AUTH] Sessão corrompida - campos faltantes: {missing_fields}")
+            session.clear()
+            return redirect(url_for('auth.login'))
+        
+        # Verificar integridade da sessão
+        if 'created_at' not in session:
+            print(f"[AUTH] Sessão sem timestamp de criação, recriando...")
+            session['created_at'] = datetime.now().timestamp()
+            session.permanent = True
+        
+        # Renovar timestamp de atividade
+        session['last_activity'] = datetime.now().timestamp()
+        session.permanent = True  # Garantir que a sessão permaneça permanente
+        
         return f(*args, **kwargs)
     return decorated_function
 
@@ -19,11 +43,34 @@ def role_required(roles):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if 'user' not in session:
+            # Verificar se existe usuário na sessão
+            if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
+                print(f"[AUTH] Redirecionando para login - usuário não encontrado na sessão")
                 return redirect(url_for('auth.login'))
-            if session['user']['role'] not in roles:
+            
+            user_data = session['user']
+            
+            # Verificar se o role existe
+            if not user_data.get('role'):
+                print(f"[AUTH] Role não encontrado na sessão")
+                session.clear()
+                return redirect(url_for('auth.login'))
+            
+            # Verificar se o role tem permissão
+            if user_data['role'] not in roles:
                 flash('Acesso não autorizado.', 'error')
                 return redirect(url_for('dashboard.index'))
+            
+            # Verificar integridade da sessão
+            if 'created_at' not in session:
+                print(f"[AUTH] Sessão sem timestamp de criação, recriando...")
+                session['created_at'] = datetime.now().timestamp()
+                session.permanent = True
+            
+            # Renovar timestamp de atividade
+            session['last_activity'] = datetime.now().timestamp()
+            session.permanent = True  # Garantir que a sessão permaneça permanente
+            
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -127,6 +174,7 @@ def login():
                                 return redirect(url_for('auth.acesso_negado'))
                     
                     # Store user info in session
+                    session.permanent = True  # Marcar sessão como permanente
                     session['user'] = {
                         'id': user_id,
                         'email': user.get('email'),
@@ -134,6 +182,10 @@ def login():
                         'agent_status': agent_status,
                         'user_companies': user_companies
                     }
+                    
+                    # Marcar timestamp de criação da sessão
+                    session['created_at'] = datetime.now().timestamp()
+                    session['last_activity'] = datetime.now().timestamp()
                     
                     # Cache inicial das permissões para evitar consultas repetidas
                     session['permissions_cache'] = {}

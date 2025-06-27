@@ -79,6 +79,7 @@ def check_session():
         return jsonify({
             'status': 'success',
             'message': 'Sessão válida',
+            'valid': True,
             'user': response_user_data
         }), 200
         

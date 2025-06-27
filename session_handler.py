@@ -22,53 +22,76 @@ def init_session_handler(app):
         if DEBUG_SESSION:
             print(f"[SESSION] Verificando sessão para rota {request.path}")
             
-        if 'user' in session:
+        if 'user' in session and session['user']:
             # Adicionar timestamp se não existir
             if 'last_activity' not in session:
                 if DEBUG_SESSION:
                     print(f"[SESSION] Timestamp não existe, criando...")
                 session['last_activity'] = datetime.now().timestamp()
+                session.permanent = True  # Garantir que a sessão seja permanente
             
-            # Verificar se a sessão expirou (8 horas sem atividade)
-            last_activity = datetime.fromtimestamp(session['last_activity'])
-            time_diff = datetime.now() - last_activity
-            hours_diff = time_diff.total_seconds() / 3600
-            
-            if DEBUG_SESSION:
-                print(f"[SESSION] Última atividade há {hours_diff:.2f} horas")
+            # Verificar se a sessão expirou (12 horas sem atividade - aumentado de 8h)
+            try:
+                last_activity = datetime.fromtimestamp(session['last_activity'])
+                time_diff = datetime.now() - last_activity
+                hours_diff = time_diff.total_seconds() / 3600
                 
-            if hours_diff > 8:
                 if DEBUG_SESSION:
-                    print(f"[SESSION] Sessão expirada após {hours_diff:.2f} horas sem atividade")
-                session.clear()
-                
-                # Se for uma requisição AJAX, retornar 401
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-                    return jsonify({
-                        'status': 'error', 
-                        'message': 'Sessão expirada', 
-                        'code': 'session_expired'
-                    }), 401
+                    print(f"[SESSION] Última atividade há {hours_diff:.2f} horas")
                     
-                # Se for uma rota protegida, redirecionar para login
-                if not request.path.startswith('/login') and not request.path.startswith('/static/'):
-                    from flask import redirect, url_for
-                    return redirect(url_for('auth.login'))
-                    
-                return None
-            
-            # Atualizar timestamp de atividade (apenas se for uma rota que não seja verificação de sessão)
-            if not (request.path.endswith('/check-session') or request.path.endswith('/api')):
-                session['last_activity'] = datetime.now().timestamp()
-                if DEBUG_SESSION:
-                    print(f"[SESSION] Timestamp atualizado para {session['last_activity']}")
-            
-                # Verificar se todos os dados necessários estão na sessão
-                if not all(k in session['user'] for k in ['id', 'role']):
+                if hours_diff > 12:  # Aumentado de 8 para 12 horas
                     if DEBUG_SESSION:
-                        print(f"[SESSION] Sessão corrompida, dados faltantes no objeto user")
-                    # Sessão corrompida, limpar
+                        print(f"[SESSION] Sessão expirada após {hours_diff:.2f} horas sem atividade")
                     session.clear()
+                    
+                    # Se for uma requisição AJAX, retornar 401
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                        return jsonify({
+                            'status': 'error', 
+                            'message': 'Sessão expirada', 
+                            'code': 'session_expired'
+                        }), 401
+                        
+                    # Se for uma rota protegida, redirecionar para login
+                    if not request.path.startswith('/login') and not request.path.startswith('/static/'):
+                        from flask import redirect, url_for
+                        return redirect(url_for('auth.login'))
+                        
+                    return None
+                
+                # Atualizar timestamp de atividade apenas em rotas não estáticas
+                if not (request.path.endswith('/check-session') or 
+                       request.path.startswith('/static/') or 
+                       request.path.startswith('/api/health')):
+                    session['last_activity'] = datetime.now().timestamp()
+                    session.permanent = True  # Renovar permanência da sessão
+                    if DEBUG_SESSION:
+                        print(f"[SESSION] Timestamp atualizado para {session['last_activity']}")
+                
+                # Verificar integridade básica da sessão - mais permissivo
+                user_data = session.get('user', {})
+                if not isinstance(user_data, dict):
+                    if DEBUG_SESSION:
+                        print(f"[SESSION] Sessão corrompida, user não é um dict")
+                    session.clear()
+                elif not user_data.get('id'):
+                    if DEBUG_SESSION:
+                        print(f"[SESSION] Sessão corrompida, user.id não existe")
+                    # Apenas limpar se realmente estiver corrompida (sem ID)
+                    session.clear()
+                else:
+                    # Sessão válida, apenas verificar se tem os campos essenciais
+                    if not all(k in user_data for k in ['email', 'role']):
+                        if DEBUG_SESSION:
+                            print(f"[SESSION] Sessão incompleta mas válida, mantendo...")
+                        # Não limpar, apenas deixar aviso - o decorador login_required vai lidar com isso
+                    
+            except (ValueError, TypeError, OSError) as e:
+                if DEBUG_SESSION:
+                    print(f"[SESSION] Erro ao processar timestamp: {e}")
+                # Recriar timestamp se estiver corrompido
+                session['last_activity'] = datetime.now().timestamp()
+                session.permanent = True
             
     def set_session_timeout(response):
         """
