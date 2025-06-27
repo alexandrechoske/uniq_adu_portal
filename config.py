@@ -15,6 +15,10 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
+    # Performance Configuration
+    QUERY_TIMEOUT = int(os.getenv('QUERY_TIMEOUT', '15'))  # 15 segundos de timeout
+    MAX_ROWS_DASHBOARD = int(os.getenv('MAX_ROWS_DASHBOARD', '1000'))  # Máximo 1000 linhas no dashboard
+    
     # Application Configuration
     APP_NAME = "UniSystem Portal"
       # Dashboard Configuration

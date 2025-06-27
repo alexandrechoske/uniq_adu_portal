@@ -112,83 +112,87 @@ def login():
             if auth_response.user:
                 user_id = auth_response.user.id
                 
-                # Buscar dados do usuário na tabela users
-                user_data = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+                # Buscar dados do usuário na tabela users com uma única consulta
+                user_data = supabase_admin.table('users').select('id, email, role, name').eq('id', user_id).single().execute()
                 
                 if user_data.data:
-                    user = user_data.data[0]
+                    user = user_data.data
                     
-                    # Verificar status do agente se for cliente_unique - OTIMIZADO
+                    # Inicializar dados básicos
                     agent_status = {
-                        'is_active': True,  # Padrão True para outros roles
+                        'is_active': True,  # Padrão True para roles não-cliente
                         'numero': None,
                         'aceite_termos': False
                     }
-                    
-                    # Store user companies for cliente_unique users
                     user_companies = []
                     
+                    # Verificar dados do agente apenas se for cliente_unique
                     if user.get('role') == 'cliente_unique':
-                        # Get agent data with companies - consulta única otimizada
-                        agent_data = supabase_admin.table('clientes_agentes')\
-                            .select('empresa, usuario_ativo, numero, aceite_termos')\
-                            .eq('user_id', user_id)\
-                            .execute()
-                        
-                        if agent_data.data:
-                            # Check if user is active
-                            is_user_active = False
+                        try:
+                            # Consulta otimizada - buscar apenas campos necessários
+                            agent_data = supabase_admin.table('clientes_agentes')\
+                                .select('empresa, usuario_ativo, numero, aceite_termos')\
+                                .eq('user_id', user_id)\
+                                .execute()
                             
-                            # Extract companies from all records in a single loop
-                            for agent in agent_data.data:
-                                # Verificar se o usuário está ativo
-                                agent_active = agent.get('usuario_ativo')
-                                if agent_active is True:
-                                    is_user_active = True
-                                elif agent_active is None:
-                                    # Para usuários antigos sem o campo definido, assumir como ativo
-                                    is_user_active = True
+                            if agent_data.data:
+                                is_user_active = False
                                 
-                                if agent.get('empresa'):
-                                    # Handle both string and array formats
-                                    companies = agent['empresa']
-                                    if isinstance(companies, str):
-                                        try:
-                                            companies = eval(companies)  # Handle string format ["company1", "company2"]
-                                        except:
-                                            companies = [companies]  # Handle single string format
-                                    user_companies.extend(companies)
-                            
-                            user_companies = list(set(user_companies))  # Remove duplicates
-                            
-                            # Update agent status
-                            agent_status.update({
-                                'is_active': is_user_active,  # Use the calculated active status
-                                'numero': agent_data.data[0].get('numero'),
-                                'aceite_termos': any(agent.get('aceite_termos', False) for agent in agent_data.data)
-                            })
-                            
-                            # Check if user is inactive and prevent login
-                            if not is_user_active:
-                                flash('Seu acesso está desativado. Entre em contato com o suporte.', 'error')
-                                return redirect(url_for('auth.acesso_negado'))
+                                # Processar dados do agente em um único loop
+                                for agent in agent_data.data:
+                                    # Verificar se usuário está ativo
+                                    agent_active = agent.get('usuario_ativo')
+                                    if agent_active is True or agent_active is None:  # None = ativo por padrão
+                                        is_user_active = True
+                                    
+                                    # Processar empresas
+                                    if agent.get('empresa'):
+                                        companies = agent['empresa']
+                                        if isinstance(companies, str):
+                                            try:
+                                                # Tentar converter string para lista
+                                                companies = eval(companies) if companies.startswith('[') else [companies]
+                                            except:
+                                                companies = [companies]
+                                        user_companies.extend(companies)
+                                
+                                # Remover duplicatas
+                                user_companies = list(set(user_companies)) if user_companies else []
+                                
+                                # Atualizar status do agente
+                                first_agent = agent_data.data[0]
+                                agent_status.update({
+                                    'is_active': is_user_active,
+                                    'numero': first_agent.get('numero'),
+                                    'aceite_termos': any(agent.get('aceite_termos', False) for agent in agent_data.data)
+                                })
+                                
+                                # Verificar se usuário está desativado
+                                if not is_user_active:
+                                    flash('Seu acesso está desativado. Entre em contato com o suporte.', 'error')
+                                    return redirect(url_for('auth.acesso_negado'))
+                        except Exception as agent_error:
+                            print(f"[AUTH] Erro ao buscar dados do agente: {agent_error}")
+                            # Em caso de erro, permitir login mas com dados limitados
+                            pass
                     
-                    # Store user info in session
-                    session.permanent = True  # Marcar sessão como permanente
-                    session['user'] = {
-                        'id': user_id,
-                        'email': user.get('email'),
-                        'role': user.get('role'),
-                        'agent_status': agent_status,
-                        'user_companies': user_companies
-                    }
+                    # Configurar sessão de forma otimizada
+                    session.permanent = True
+                    now_timestamp = datetime.now().timestamp()
                     
-                    # Marcar timestamp de criação da sessão
-                    session['created_at'] = datetime.now().timestamp()
-                    session['last_activity'] = datetime.now().timestamp()
-                    
-                    # Cache inicial das permissões para evitar consultas repetidas
-                    session['permissions_cache'] = {}
+                    session.update({
+                        'user': {
+                            'id': user_id,
+                            'email': user.get('email'),
+                            'name': user.get('name'),
+                            'role': user.get('role'),
+                            'agent_status': agent_status,
+                            'user_companies': user_companies
+                        },
+                        'created_at': now_timestamp,
+                        'last_activity': now_timestamp,
+                        'permissions_cache': {}  # Cache para otimizar verificações futuras
+                    })
                     
                     flash('Login realizado com sucesso!', 'success')
                     return redirect(url_for('dashboard.index'))
@@ -199,12 +203,14 @@ def login():
                 
         except Exception as e:
             error_message = str(e)
-            print(f"[DEBUG] Erro detalhado: {error_message}")
-            print(f"[DEBUG] Tipo do erro: {type(e)}")
+            print(f"[AUTH] Erro no login: {error_message}")
+            
             if "Invalid login credentials" in error_message:
                 flash('Email ou senha inválidos.', 'error')
+            elif "timeout" in error_message.lower():
+                flash('Erro de conexão. Tente novamente em alguns instantes.', 'error')
             else:
-                flash(f'Erro ao fazer login: {error_message}', 'error')
+                flash('Erro interno. Tente novamente.', 'error')
     
     return render_template('auth/login.html')
 

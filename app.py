@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, session
 from config import Config
 import os
+import signal
 from extensions import init_supabase
 from session_handler import init_session_handler
 
@@ -14,6 +15,10 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 app.config['SESSION_COOKIE_SECURE'] = False  # True apenas em HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Configurar timeout para requests em produção
+import requests
+requests.adapters.DEFAULT_TIMEOUT = Config.QUERY_TIMEOUT
 
 # Inicializar manipulador de sessão
 init_session_handler(app)
