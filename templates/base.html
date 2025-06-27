@@ -441,12 +441,13 @@
                class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>
                 <span class="sidebar-text">Dashboard</span>
-            </a>            <!-- OnePage -->
-            <a href="{{ url_for('onepage.index') }}" 
+            </a>           
+            <!-- OnePage -->
+            <!-- <a href="{{ url_for('onepage.index') }}" 
                class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
                 <i class="mdi mdi-file-document-multiple text-xl"></i>
                 <span class="sidebar-text">One Page</span>
-            </a>
+            </a> -->
 
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
             {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
