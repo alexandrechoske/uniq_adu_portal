@@ -15,6 +15,61 @@ import re
 
 bp = Blueprint('materiais', __name__)
 
+def get_user_companies():
+    """Get companies that the user has access to - cached from session"""
+    try:
+        # Verificar se a sessão e usuário existem
+        if 'user' not in session or not session['user']:
+            return []
+            
+        # Usar dados da sessão em vez de consultar o banco novamente
+        if session['user']['role'] == 'cliente_unique':
+            return session['user'].get('user_companies', [])
+        return []
+    except Exception as e:
+        print(f"[ERROR get_user_companies] {str(e)}")
+        return []
+
+def apply_company_filter(query):
+    """Apply company filter to query based on user role"""
+    try:
+        # Verificar se a sessão existe
+        if 'user' not in session or not session['user']:
+            print("[DEBUG apply_company_filter] Nenhum usuário na sessão")
+            return query
+            
+        # Obter empresas do usuário
+        user_companies = get_user_companies()
+        selected_company = request.args.get('empresa')
+        
+        # Aplicar filtros baseados no papel do usuário e empresa selecionada
+        if session['user']['role'] == 'cliente_unique':
+            if not user_companies:
+                # Se o cliente não tem empresas, retornar query que não encontra nada
+                print("[DEBUG apply_company_filter] Cliente sem empresas, filtrando tudo")
+                return query.eq('cliente_cpfcnpj', '___NENHUMA___')
+            
+            if selected_company and selected_company in user_companies:
+                # Filtrar por empresa específica selecionada
+                print(f"[DEBUG apply_company_filter] Filtrando por empresa específica: {selected_company}")
+                query = query.eq('cliente_cpfcnpj', selected_company)
+            else:
+                # Filtrar por todas as empresas do usuário
+                print(f"[DEBUG apply_company_filter] Filtrando por empresas do usuário: {user_companies}")
+                query = query.in_('cliente_cpfcnpj', user_companies)
+        elif selected_company:
+            # Para admin/interno, aplicar filtro da empresa selecionada se houver
+            print(f"[DEBUG apply_company_filter] Admin/interno filtrando por empresa: {selected_company}")
+            query = query.eq('cliente_cpfcnpj', selected_company)
+        else:
+            print("[DEBUG apply_company_filter] Admin/interno sem filtro específico")
+        
+        return query
+    except Exception as e:
+        print(f"[ERROR apply_company_filter] {str(e)}")
+        # Em caso de erro, retornar a query original
+        return query
+
 def format_value_smart(value, currency=False):
     """Format values with K, M, B abbreviations for better readability"""
     if not value or value == 0:
@@ -107,7 +162,10 @@ def get_kpis():
             'id, total_vmle_real, total_vmcv_real, cliente_cpfcnpj, situacao, di_modalidade_despacho, data_abertura'
         ).not_.is_('total_vmcv_real', 'null')
         
-        # Aplicar filtros
+        # Aplicar filtro de empresa baseado no usuário
+        query_builder = apply_company_filter(query_builder)
+        
+        # Aplicar filtros adicionais da requisição
         if data_inicio:
             query_builder = query_builder.gte('data_abertura', data_inicio)
         
@@ -216,8 +274,11 @@ def get_top_materiais():
         
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'id, total_vmcv_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial'
+            'id, total_vmcv_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial, cliente_cpfcnpj'
         )
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
         
         # Aplicar filtros do usuário
         if material_filter:
@@ -270,8 +331,11 @@ def get_evolucao_mensal():
         
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'data_abertura, total_vmcv_real, resumo_mercadoria'
+            'data_abertura, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj'
         )
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
         
         if material_filter:
             query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
@@ -316,7 +380,10 @@ def get_despesas_composicao():
         material_filter = request.args.get('material', '')
         
         # Buscar processos do material
-        query = supabase.table('importacoes_processos').select('id')
+        query = supabase.table('importacoes_processos').select('id, cliente_cpfcnpj')
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
         
         if material_filter:
             query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
@@ -375,8 +442,11 @@ def get_canal_parametrizacao():
     try:
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'resumo_mercadoria, diduimp_canal'
+            'resumo_mercadoria, diduimp_canal, cliente_cpfcnpj'
         )
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
         
         result = query.limit(1000).execute()
         processos = result.data or []
@@ -452,8 +522,11 @@ def get_clientes_por_material():
         
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'cliente_razaosocial, total_vmcv_real'
+            'cliente_razaosocial, total_vmcv_real, cliente_cpfcnpj'
         ).ilike('resumo_mercadoria', f'%{material_filter}%')
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
         
         result = query.limit(1000).execute()
         processos = result.data or []
@@ -491,8 +564,11 @@ def get_detalhamento():
         
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'id, numero, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria'
+            'id, numero, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj'
         )
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
         
         if material_filter:
             query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
@@ -523,77 +599,414 @@ def get_detalhamento():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@bp.route('/api/principais-materiais')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def get_principais_materiais():
+    """Resumo dos principais materiais ordenados por total de processos"""
+    try:
+        # Obter filtros da requisição
+        material_filter = request.args.get('material', '')
+        date_start = request.args.get('date_start', '')
+        date_end = request.args.get('date_end', '')
+        cliente_filter = request.args.get('cliente', '')
+        modal_filter = request.args.get('modal', '')
+        
+        # Construir query base
+        query = supabase.table('importacoes_processos').select(
+            'id, total_vmcv_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial, cliente_cpfcnpj'
+        )
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
+        
+        # Aplicar filtros do usuário
+        if material_filter:
+            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+        
+        if date_start:
+            query = query.gte('data_abertura', date_start)
+        
+        if date_end:
+            query = query.lte('data_abertura', date_end)
+            
+        if cliente_filter:
+            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
+            
+        if modal_filter:
+            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
+        
+        # Executar query principal
+        processos_result = query.limit(1000).execute()
+        processos = processos_result.data or []
+        
+        # Agrupar dados por material
+        materiais_data = defaultdict(lambda: {
+            'total_processos': 0,
+            'despesa_total': 0,
+            'data_chegada_mais_recente': None
+        })
+        
+        for p in processos:
+            material = normalize_material_name(p.get('resumo_mercadoria'))
+            vmcv = float(p.get('total_vmcv_real') or 0)
+            despesa = vmcv * 0.4  # Calcular despesas como 40% do VMCV
+            data_chegada = p.get('data_chegada')
+            
+            # Acumular dados por material
+            materiais_data[material]['total_processos'] += 1
+            materiais_data[material]['despesa_total'] += despesa
+            
+            # Atualizar data de chegada mais recente
+            if data_chegada:
+                try:
+                    data_chegada_dt = datetime.fromisoformat(data_chegada.replace('Z', '+00:00'))
+                    if (materiais_data[material]['data_chegada_mais_recente'] is None or 
+                        data_chegada_dt > materiais_data[material]['data_chegada_mais_recente']):
+                        materiais_data[material]['data_chegada_mais_recente'] = data_chegada_dt
+                except:
+                    pass
+        
+        # Converter para lista e ordenar por total de processos
+        principais_materiais = []
+        for material, data in materiais_data.items():
+            data_chegada_str = ''
+            if data['data_chegada_mais_recente']:
+                data_chegada_str = data['data_chegada_mais_recente'].strftime('%d/%m/%Y')
+            
+            principais_materiais.append({
+                'material': material,
+                'total_processos': data['total_processos'],
+                'despesa_total': data['despesa_total'],
+                'data_chegada': data_chegada_str,
+                'despesa_total_formatted': f"R$ {data['despesa_total']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            })
+        
+        # Ordenar por total de processos (decrescente) e pegar top 15
+        principais_materiais.sort(key=lambda x: x['total_processos'], reverse=True)
+        principais_materiais = principais_materiais[:15]
+        
+        return jsonify({
+            'success': True,
+            'data': principais_materiais
+        })
+        
+    except Exception as e:
+        print(f"[ERROR get_principais_materiais] {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @bp.route('/api/radar-cliente-material')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def get_radar_cliente_material():
-    """Gráfico de radar comparando clientes por materiais"""
+    """Gráfico de radar comparando performance de materiais por métricas normalizadas"""
     try:
-        material_filter = request.args.get('material', '')
+        print("\n[DEBUG RADAR] === INICIANDO ANÁLISE DO RADAR ===")
         
-        if not material_filter:
+        # Verificar se a sessão está válida
+        if 'user' not in session or not session['user']:
+            print("[DEBUG RADAR] ERRO: Sessão inválida")
+            return jsonify({
+                'status': 'error',
+                'message': 'Sessão inválida',
+                'data': {'labels': [], 'datasets': []}
+            }), 401
+        
+        print(f"[DEBUG RADAR] Usuário: {session['user'].get('role', 'Unknown')}")
+        
+        # Buscar todos os processos com dados necessários
+        query = supabase.table('importacoes_processos').select(
+            'resumo_mercadoria, total_vmcv_real, data_embarque, previsao_chegada, data_chegada, diduimp_canal, cliente_cpfcnpj'
+        )
+        
+        # Aplicar filtro de empresa baseado no usuário com tratamento de erro
+        try:
+            query = apply_company_filter(query)
+            print("[DEBUG RADAR] Filtro de empresa aplicado com sucesso")
+        except Exception as filter_error:
+            print(f"[DEBUG RADAR] Erro ao aplicar filtro de empresa: {filter_error}")
+            # Continuar sem o filtro em caso de erro
+        
+        result = query.limit(2000).execute()
+        processos = result.data or []
+        
+        print(f"[DEBUG RADAR] Processos encontrados: {len(processos)}")
+        
+        if not processos:
+            print("[DEBUG RADAR] ERRO: Nenhum processo encontrado na query inicial")
             return jsonify({
                 'status': 'success',
                 'data': {'labels': [], 'datasets': []}
             })
         
-        # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'cliente_razaosocial, total_vmcv_real, resumo_mercadoria'
-        ).ilike('resumo_mercadoria', f'%{material_filter}%')
+        # Debug dos primeiros processos
+        print(f"[DEBUG RADAR] Exemplo dos primeiros 3 processos:")
+        for i, p in enumerate(processos[:3]):
+            print(f"  Processo {i+1}:")
+            print(f"    Material: {p.get('resumo_mercadoria')}")
+            print(f"    VMCV: {p.get('total_vmcv_real')}")
+            print(f"    Data embarque: {p.get('data_embarque')}")
+            print(f"    Data chegada: {p.get('data_chegada')}")
+            print(f"    Canal: {p.get('diduimp_canal')}")
         
-        result = query.limit(1000).execute()
-        processos = result.data or []
-        
-        # Agrupar por cliente e material
-        cliente_material = defaultdict(lambda: defaultdict(float))
-        for p in processos:
-            cliente = p.get('cliente_razaosocial') or 'Não informado'
-            material = normalize_material_name(p.get('resumo_mercadoria'))
-            valor = float(p.get('total_vmcv_real') or 0)
-            cliente_material[cliente][material] += valor
-        
-        # Pegar top 5 clientes
-        totais_por_cliente = {cliente: sum(materiais.values()) for cliente, materiais in cliente_material.items()}
-        top_clientes = sorted(totais_por_cliente.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        # Obter todos os materiais únicos
-        todos_materiais = set()
-        for cliente, _ in top_clientes:
-            todos_materiais.update(cliente_material[cliente].keys())
-        
-        materiais_ordenados = sorted(list(todos_materiais))
-        
-        # Preparar dados para o radar
-        datasets = []
-        colors = ['rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)', 'rgba(255, 205, 86, 0.2)', 
-                 'rgba(75, 192, 192, 0.2)', 'rgba(153, 102, 255, 0.2)']
-        border_colors = ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 205, 86, 1)', 
-                        'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)']
-        
-        for i, (cliente, _) in enumerate(top_clientes):
-            valores = []
-            for material in materiais_ordenados:
-                valores.append(cliente_material[cliente].get(material, 0))
-            
-            datasets.append({
-                'label': cliente,
-                'data': valores,
-                'backgroundColor': colors[i % len(colors)],
-                'borderColor': border_colors[i % len(border_colors)],
-                'borderWidth': 2
-            })
-        
-        return jsonify({
-            'status': 'success',
-            'data': {
-                'labels': materiais_ordenados,
-                'datasets': datasets
-            }
+        # Agrupar dados por material
+        material_data = defaultdict(lambda: {
+            'valores': [],
+            'despesas': [],
+            'tempos_transito': [],
+            'processos_count': 0,
+            'inspecoes': 0
         })
         
+        processos_validos = 0
+        processos_sem_material = 0
+        processos_sem_vmcv = 0
+        
+        for p in processos:
+            material = normalize_material_name(p.get('resumo_mercadoria'))
+            if not material or material == 'Não informado':
+                processos_sem_material += 1
+                continue
+                
+            vmcv = float(p.get('total_vmcv_real') or 0)
+            if vmcv <= 0:
+                processos_sem_vmcv += 1
+                continue
+                
+            processos_validos += 1
+            
+            # Calcular despesas como 40% do VMCV
+            despesa = vmcv * 0.4
+            
+            # Calcular tempo de trânsito
+            tempo_transito = 0
+            data_embarque = p.get('data_embarque')
+            data_chegada = p.get('data_chegada') or p.get('previsao_chegada')
+            
+            if data_embarque and data_chegada:
+                try:
+                    embarque = datetime.fromisoformat(data_embarque.replace('Z', '+00:00'))
+                    chegada = datetime.fromisoformat(data_chegada.replace('Z', '+00:00'))
+                    tempo_transito = (chegada - embarque).days
+                    if tempo_transito < 0:
+                        tempo_transito = 0
+                except Exception as e:
+                    print(f"[DEBUG RADAR] Erro ao calcular tempo de trânsito: {e}")
+                    tempo_transito = 0
+            
+            # Verificar se houve inspeção (canal diferente de verde)
+            canal = p.get('diduimp_canal', '').lower()
+            tem_inspecao = canal not in ['verde', '', None]
+            
+            # Adicionar aos dados do material
+            material_data[material]['valores'].append(vmcv)
+            material_data[material]['despesas'].append(despesa)
+            if tempo_transito > 0:
+                material_data[material]['tempos_transito'].append(tempo_transito)
+            material_data[material]['processos_count'] += 1
+            if tem_inspecao:
+                material_data[material]['inspecoes'] += 1
+        
+        print(f"[DEBUG RADAR] Resumo do processamento:")
+        print(f"  Processos válidos: {processos_validos}")
+        print(f"  Processos sem material: {processos_sem_material}")
+        print(f"  Processos sem VMCV: {processos_sem_vmcv}")
+        print(f"  Materiais únicos encontrados: {len(material_data)}")
+        
+        # Debug dos materiais encontrados
+        print(f"[DEBUG RADAR] Top 10 materiais por quantidade de processos:")
+        materiais_por_qtd = sorted(material_data.items(), key=lambda x: x[1]['processos_count'], reverse=True)
+        for i, (material, data) in enumerate(materiais_por_qtd[:10]):
+            print(f"  {i+1}. {material}: {data['processos_count']} processos")
+        
+        # Calcular métricas agregadas por material
+        metricas_materiais = {}
+        materiais_filtrados = 0
+        for material, data in material_data.items():
+            # REDUZIR CRITÉRIO: aceitar materiais com pelo menos 1 processo (ao invés de 3)
+            if data['processos_count'] < 1:  # Filtrar materiais com nenhum processo
+                materiais_filtrados += 1
+                continue
+                
+            # Calcular médias e métricas
+            valor_medio = np.mean(data['valores']) if data['valores'] else 0
+            despesa_media = np.mean(data['despesas']) if data['despesas'] else 0
+            tempo_medio = np.mean(data['tempos_transito']) if data['tempos_transito'] else 30  # Default 30 dias se não há dados
+            volume_processos = data['processos_count']
+            taxa_inspecao = (data['inspecoes'] / data['processos_count']) * 100 if data['processos_count'] > 0 else 0
+            
+            metricas_materiais[material] = {
+                'valor_medio': valor_medio,
+                'despesa_media': despesa_media,
+                'tempo_medio': tempo_medio,
+                'volume_processos': volume_processos,
+                'taxa_inspecao': taxa_inspecao
+            }
+        
+        print(f"[DEBUG RADAR] Materiais filtrados (< 1 processo): {materiais_filtrados}")
+        print(f"[DEBUG RADAR] Materiais qualificados: {len(metricas_materiais)}")
+        
+        if not metricas_materiais:
+            print("[DEBUG RADAR] ERRO: Nenhum material qualificado após filtros")
+            return jsonify({
+                'status': 'success',
+                'data': {'labels': [], 'datasets': []},
+                'debug': 'Nenhum material com dados suficientes encontrado'
+            })
+        
+        # Debug das métricas dos materiais qualificados
+        print(f"[DEBUG RADAR] Métricas dos materiais qualificados:")
+        for material, metricas in list(metricas_materiais.items())[:5]:
+            print(f"  {material}:")
+            print(f"    Valor médio: R$ {metricas['valor_medio']:,.2f}")
+            print(f"    Despesa média: R$ {metricas['despesa_media']:,.2f}")
+            print(f"    Tempo médio: {metricas['tempo_medio']:.1f} dias")
+            print(f"    Volume: {metricas['volume_processos']} processos")
+            print(f"    Taxa inspeção: {metricas['taxa_inspecao']:.1f}%")
+        
+        # Selecionar top materiais por valor total (ajustar quantidade se necessário)
+        num_materiais = min(len(metricas_materiais), 6)  # Máximo 6 (todos os disponíveis)
+        totais_por_material = {}
+        for material, data in material_data.items():
+            if material in metricas_materiais:
+                totais_por_material[material] = sum(data['valores'])
+        
+        top_materiais = sorted(totais_por_material.items(), key=lambda x: x[1], reverse=True)[:num_materiais]
+        materiais_selecionados = [material for material, _ in top_materiais]
+        
+        print(f"[DEBUG RADAR] Top {num_materiais} materiais selecionados para o radar:")
+        for i, (material, valor_total) in enumerate(top_materiais):
+            print(f"  {i+1}. {material}: R$ {valor_total:,.2f}")
+        
+        if not materiais_selecionados:
+            print("[DEBUG RADAR] ERRO: Nenhum material selecionado para o top")
+            return jsonify({
+                'status': 'success',
+                'data': {'labels': [], 'datasets': []},
+                'debug': 'Nenhum material encontrado'
+            })
+        
+        # Extrair valores de cada métrica para normalização
+        valores_medios = [metricas_materiais[m]['valor_medio'] for m in materiais_selecionados]
+        despesas_medias = [metricas_materiais[m]['despesa_media'] for m in materiais_selecionados]
+        tempos_medios = [metricas_materiais[m]['tempo_medio'] for m in materiais_selecionados]
+        volumes_processos = [metricas_materiais[m]['volume_processos'] for m in materiais_selecionados]
+        taxas_inspecao = [metricas_materiais[m]['taxa_inspecao'] for m in materiais_selecionados]
+        
+        print(f"[DEBUG RADAR] Valores para normalização:")
+        print(f"  Valores médios: {valores_medios}")
+        print(f"  Despesas médias: {despesas_medias}")
+        print(f"  Tempos médios: {tempos_medios}")
+        print(f"  Volumes processos: {volumes_processos}")
+        print(f"  Taxas inspeção: {taxas_inspecao}")
+        
+        # Função para normalizar métricas (0-100)
+        def normalizar_metrica(valores, inverter=False):
+            if not valores or all(v == 0 for v in valores):
+                print(f"[DEBUG RADAR] Normalização: valores vazios ou todos zero")
+                return [0] * len(valores)
+            
+            min_val = min(valores)
+            max_val = max(valores)
+            
+            print(f"[DEBUG RADAR] Normalização: min={min_val}, max={max_val}, inverter={inverter}")
+            
+            if min_val == max_val:
+                print(f"[DEBUG RADAR] Normalização: todos valores iguais, retornando 50")
+                return [50] * len(valores)  # Valor médio se todos iguais
+            
+            normalized = []
+            for v in valores:
+                if inverter:  # Para métricas onde menor é melhor (tempo, despesa, inspeção)
+                    norm = 100 - ((v - min_val) / (max_val - min_val)) * 100
+                else:  # Para métricas onde maior é melhor (valor, volume)
+                    norm = ((v - min_val) / (max_val - min_val)) * 100
+                normalized.append(round(norm, 1))
+            
+            print(f"[DEBUG RADAR] Valores normalizados: {normalized}")
+            return normalized
+        
+        # Normalizar todas as métricas
+        print(f"[DEBUG RADAR] === INICIANDO NORMALIZAÇÃO ===")
+        valores_norm = normalizar_metrica(valores_medios, inverter=False)
+        despesas_norm = normalizar_metrica(despesas_medias, inverter=True)
+        tempos_norm = normalizar_metrica(tempos_medios, inverter=True)
+        volumes_norm = normalizar_metrica(volumes_processos, inverter=False)
+        inspecoes_norm = normalizar_metrica(taxas_inspecao, inverter=True)
+        
+        # Preparar dados para o radar
+        labels = ['Valor Médio', 'Eficiência Custo', 'Rapidez Trânsito', 'Volume Processos', 'Taxa Aprovação']
+        
+        print(f"[DEBUG RADAR] === MONTANDO DATASETS ===")
+        
+        datasets = []
+        colors = [
+            'rgba(79, 172, 254, 0.2)',   # Azul
+            'rgba(34, 197, 94, 0.2)',    # Verde
+            'rgba(251, 191, 36, 0.2)',   # Amarelo
+            'rgba(239, 68, 68, 0.2)',    # Vermelho
+            'rgba(168, 85, 247, 0.2)'    # Roxo
+        ]
+        border_colors = [
+            'rgba(79, 172, 254, 1)',
+            'rgba(34, 197, 94, 1)',
+            'rgba(251, 191, 36, 1)',
+            'rgba(239, 68, 68, 1)',
+            'rgba(168, 85, 247, 1)'
+        ]
+        
+        for i, material in enumerate(materiais_selecionados):
+            # Dados normalizados para cada material
+            data_points = [
+                valores_norm[i],    # Valor Médio
+                despesas_norm[i],   # Eficiência Custo (inverso da despesa)
+                tempos_norm[i],     # Rapidez Trânsito (inverso do tempo)
+                volumes_norm[i],    # Volume Processos
+                inspecoes_norm[i]   # Taxa Aprovação (inverso da inspeção)
+            ]
+            
+            print(f"[DEBUG RADAR] Material {i+1} - {material}:")
+            print(f"  Data points: {data_points}")
+            
+            datasets.append({
+                'label': material,
+                'data': data_points,
+                'backgroundColor': colors[i % len(colors)],
+                'borderColor': border_colors[i % len(border_colors)],
+                'borderWidth': 2,
+                'pointBackgroundColor': border_colors[i % len(border_colors)],
+                'pointBorderColor': '#fff',
+                'pointBorderWidth': 2,
+                'pointRadius': 4
+            })
+        
+        print(f"[DEBUG RADAR] === RESULTADO FINAL ===")
+        print(f"Labels: {labels}")
+        print(f"Datasets criados: {len(datasets)}")
+        
+        resposta_final = {
+            'status': 'success',
+            'data': {
+                'labels': labels,
+                'datasets': datasets
+            }
+        }
+        
+        print(f"[DEBUG RADAR] Resposta final: {resposta_final}")
+        print(f"[DEBUG RADAR] === FIM DA ANÁLISE DO RADAR ===\n")
+        
+        return jsonify(resposta_final)
+        
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        print(f"[ERROR RADAR] Erro geral no radar: {str(e)}")
+        import traceback
+        print(f"[ERROR RADAR] Traceback: {traceback.format_exc()}")
+        
+        return jsonify({
+            'status': 'error', 
+            'message': f'Erro no radar: {str(e)}',
+            'data': {'labels': [], 'datasets': []}
+        }), 500
 
 @bp.route('/api/materiais-opcoes')
 @login_required
@@ -602,8 +1015,12 @@ def get_materiais_opcoes():
     """Buscar todos os materiais únicos para o dropdown"""
     try:
         # Buscar todos os materiais únicos
-        query = supabase.table('importacoes_processos').select('resumo_mercadoria').limit(2000)
-        result = query.execute()
+        query = supabase.table('importacoes_processos').select('resumo_mercadoria, cliente_cpfcnpj')
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
+        
+        result = query.limit(2000).execute()
         processos = result.data or []
         
         # Normalizar e obter materiais únicos
@@ -637,9 +1054,14 @@ def get_linha_tempo_chegadas():
         data_limite = hoje + timedelta(days=dias_futuro)
         
         # Buscar processos com chegadas futuras usando Supabase diretamente
-        processos_result = supabase.table('importacoes_processos').select(
-            'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial, local_embarque, via_transporte_descricao, total_vmcv_real'
-        ).gte('data_chegada', str(hoje)).lte('data_chegada', str(data_limite)).order('data_chegada').limit(20).execute()
+        query = supabase.table('importacoes_processos').select(
+            'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial, local_embarque, via_transporte_descricao, total_vmcv_real, cliente_cpfcnpj'
+        ).gte('data_chegada', str(hoje)).lte('data_chegada', str(data_limite))
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
+        
+        processos_result = query.order('data_chegada').limit(20).execute()
         
         processos = processos_result.data or []
         
@@ -697,356 +1119,3 @@ def get_linha_tempo_chegadas():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
-# Funções de debug para testar sem login
-def debug_test_detalhamento():
-    """Função para testar o endpoint de detalhamento sem login"""
-    try:
-        print("\n=== DEBUG: Testando endpoint de detalhamento ===")
-        
-        # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'id, numero, nro_pedido, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria'
-        )
-        
-        # Aplicar paginação
-        result = query.range(0, 4).execute()  # Pegar apenas 5 registros para teste
-        processos = result.data or []
-        
-        print(f"Processos encontrados: {len(processos)}")
-        
-        if processos:
-            print("\nPrimeiro processo (raw data):")
-            primeiro = processos[0]
-            for key, value in primeiro.items():
-                print(f"  {key}: {value}")
-            
-            # Buscar despesas para cada processo
-            processo_ids = [p['id'] for p in processos]
-            despesas_result = supabase.table('importacoes_despesas').select(
-                'processo_id, valor_real'
-            ).in_('processo_id', processo_ids).execute()
-            
-            despesas = despesas_result.data or []
-            print(f"\nDespesas encontradas: {len(despesas)}")
-            
-            despesas_por_processo = defaultdict(float)
-            for d in despesas:
-                processo_id = d.get('processo_id')
-                valor = d.get('valor_real')
-                if processo_id and valor:
-                    try:
-                        despesas_por_processo[processo_id] += float(valor)
-                    except (ValueError, TypeError):
-                        continue
-            
-            # Adicionar total de despesas a cada processo
-            for p in processos:
-                p['total_despesas'] = despesas_por_processo.get(p['id'], 0)
-                # Normalizar nome do material
-                p['resumo_mercadoria'] = normalize_material_name(p.get('resumo_mercadoria'))
-            
-            print("\nPrimeiro processo (após processamento):")
-            primeiro_processado = processos[0]
-            for key, value in primeiro_processado.items():
-                print(f"  {key}: {value}")
-            
-            return {
-                'status': 'success',
-                'data': processos[:3],  # Retornar apenas 3 para debug
-                'pagination': {
-                    'page': 1,
-                    'per_page': 50,
-                    'has_more': len(processos) == 5
-                }
-            }
-        else:
-            print("Nenhum processo encontrado!")
-            return {'status': 'error', 'message': 'Nenhum processo encontrado'}
-            
-    except Exception as e:
-        print(f"Erro no debug_test_detalhamento: {str(e)}")
-        return {'status': 'error', 'message': str(e)}
-
-def debug_test_linha_tempo():
-    """Função para testar o endpoint de linha do tempo sem login"""
-    try:
-        print("\n=== DEBUG: Testando endpoint de linha do tempo ===")
-        dias_futuro = 30
-        
-        # Primeiro, vamos testar uma query mais simples
-        print("1. Testando query simples...")
-        simple_query = supabase.table('importacoes_processos').select(
-            'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial'
-        ).limit(10).execute()
-        
-        processos_simples = simple_query.data or []
-        print(f"Processos encontrados (query simples): {len(processos_simples)}")
-        
-        if processos_simples:
-            print("Exemplo de data_chegada:")
-            for i, p in enumerate(processos_simples[:3]):
-                print(f"  Processo {i+1}: data_chegada = {p.get('data_chegada')}")
-        
-        # Testar query com filtro de data
-        print("\n2. Testando com filtro de data...")
-        from datetime import datetime, timedelta
-        hoje = datetime.now().date()
-        futuro = hoje + timedelta(days=30)
-        
-        print(f"Hoje: {hoje}")
-        print(f"Futuro (30 dias): {futuro}")
-        
-        filtered_query = supabase.table('importacoes_processos').select(
-            'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial'
-        ).gte('data_chegada', str(hoje)).lte('data_chegada', str(futuro)).limit(10).execute()
-        
-        processos_filtrados = filtered_query.data or []
-        print(f"Processos com chegadas futuras: {len(processos_filtrados)}")
-        
-        # Se não há chegadas futuras, vamos testar com passado
-        if not processos_filtrados:
-            print("\n3. Testando com data passada (últimos 30 dias)...")
-            passado = hoje - timedelta(days=30)
-            
-            past_query = supabase.table('importacoes_processos').select(
-                'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial'
-            ).gte('data_chegada', str(passado)).lte('data_chegada', str(hoje)).limit(10).execute()
-            
-            processos_passados = past_query.data or []
-            print(f"Processos com chegadas passadas: {len(processos_passados)}")
-            
-            if processos_passados:
-                print("Exemplo de datas passadas:")
-                for i, p in enumerate(processos_passados[:3]):
-                    print(f"  Processo {i+1}: data_chegada = {p.get('data_chegada')}")
-        
-        # Agora vamos testar a query complexa
-        print("\n4. Testando query complexa original...")
-        
-        # Usar query mais simples para debug
-        debug_query = f"""
-        SELECT
-            p.id AS processo_id,
-            p.numero,
-            p.data_chegada,
-            p.resumo_mercadoria,
-            p.cliente_razaosocial,
-            p.local_embarque,
-            p.via_transporte_descricao,
-            p.total_vmcv_real
-        FROM
-            importacoes_processos p
-        WHERE
-            p.data_chegada IS NOT NULL
-        ORDER BY
-            p.data_chegada DESC
-        LIMIT 5
-        """
-        
-        result = supabase.rpc('execute_sql', {
-            'query': debug_query,
-            'params': []
-        }).execute()
-        
-        print(f"Resultado da query complexa: {result.data}")
-        
-        if result.data and result.data[0]['result']:
-            processos = result.data[0]['result']
-            print(f"Processos encontrados na query complexa: {len(processos)}")
-            
-            if processos:
-                print("Primeiro processo da query complexa:")
-                for key, value in processos[0].items():
-                    print(f"  {key}: {value}")
-            
-            return {
-                'status': 'success',
-                'data': processos
-            }
-        else:
-            return {
-                'status': 'success',
-                'data': []
-            }
-            
-    except Exception as e:
-        print(f"Erro no debug_test_linha_tempo: {str(e)}")
-        return {'status': 'error', 'message': str(e)}
-
-def debug_test_materiais_opcoes():
-    """Função para testar o endpoint de opções de materiais"""
-    try:
-        print("\n=== DEBUG: Testando endpoint de materiais opções ===")
-        
-        # Buscar todos os materiais únicos
-        query = supabase.table('importacoes_processos').select('resumo_mercadoria').limit(100)
-        result = query.execute()
-        processos = result.data or []
-        
-        print(f"Processos encontrados: {len(processos)}")
-        
-        if processos:
-            print("Primeiros 5 materiais (raw):")
-            for i, p in enumerate(processos[:5]):
-                print(f"  {i+1}: {p.get('resumo_mercadoria')}")
-        
-        # Normalizar e obter materiais únicos
-        materiais_set = set()
-        for p in processos:
-            material_raw = p.get('resumo_mercadoria')
-            material = normalize_material_name(material_raw)
-            print(f"Raw: '{material_raw}' -> Normalizado: '{material}'")
-            if material and material != 'Não informado':
-                materiais_set.add(material)
-        
-        # Ordenar alfabeticamente
-        materiais_ordenados = sorted(list(materiais_set))
-        
-        print(f"\nMateriais únicos encontrados: {len(materiais_ordenados)}")
-        print("Primeiros 10 materiais normalizados:")
-        for i, material in enumerate(materiais_ordenados[:10]):
-            print(f"  {i+1}: {material}")
-        
-        return {
-            'status': 'success',
-            'data': materiais_ordenados
-        }
-        
-    except Exception as e:
-        print(f"Erro no debug_test_materiais_opcoes: {str(e)}")
-        return {'status': 'error', 'message': str(e)}
-
-# Função principal para executar todos os testes
-def run_all_debug_tests():
-    """Executa todos os testes de debug"""
-    print("🚀 Iniciando testes de debug...")
-    
-    print("\n" + "="*50)
-    debug_test_materiais_opcoes()
-    
-    print("\n" + "="*50)
-    debug_test_detalhamento()
-    
-    print("\n" + "="*50)
-    debug_test_linha_tempo()
-    
-    print("\n🎉 Testes de debug concluídos!")
-
-# Endpoint temporário para bypass de autenticação durante debug
-@bp.route('/debug-test-endpoints')
-def debug_test_endpoints():
-    """Endpoint temporário para teste sem autenticação"""
-    try:
-        # Testar detalhamento
-        query = supabase.table('importacoes_processos').select(
-            'id, numero, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria'
-        ).limit(5).execute()
-        
-        processos = query.data or []
-        
-        # Testar linha do tempo
-        hoje = datetime.now().date()
-        futuro = hoje + timedelta(days=30)
-        
-        linha_tempo_query = supabase.table('importacoes_processos').select(
-            'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial'
-        ).gte('data_chegada', str(hoje)).lte('data_chegada', str(futuro)).limit(5).execute()
-        
-        linha_tempo = linha_tempo_query.data or []
-        
-        return jsonify({
-            'detalhamento': {
-                'count': len(processos),
-                'sample': processos[:2] if processos else []
-            },
-            'linha_tempo': {
-                'count': len(linha_tempo),
-                'sample': linha_tempo[:2] if linha_tempo else []
-            }
-        })
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/api/kpis-debug')
-def get_kpis_debug():
-    """API temporária para testar KPIs sem autenticação"""
-    try:
-        print("[DEBUG KPIS] Testando cálculo de KPIs...")
-        
-        # Buscar dados básicos diretamente do Supabase
-        query = supabase.table('importacoes_processos').select(
-            'id, total_vmle_real, total_vmcv_real, cliente_cpfcnpj'
-        ).not_.is_('total_vmcv_real', 'null').execute()
-        
-        if not query.data:
-            return jsonify({'success': False, 'error': 'Nenhum dado encontrado'})
-        
-        data = query.data
-        
-        # Calcular KPIs manualmente
-        total_processos = len(data)
-        total_vmle = sum(float(item.get('total_vmle_real', 0) or 0) for item in data)
-        total_vmcv = sum(float(item.get('total_vmcv_real', 0) or 0) for item in data)
-        total_despesas = total_vmcv * 0.4  # 40% do VMCV
-        total_com_despesas = total_vmcv + total_despesas
-        total_clientes = len(set(item.get('cliente_cpfcnpj') for item in data if item.get('cliente_cpfcnpj')))
-        valor_medio = total_vmle / total_processos if total_processos > 0 else 0
-        valor_medio_com_despesas = total_com_despesas / total_processos if total_processos > 0 else 0
-        
-        # Debug dos cálculos
-        print(f"[DEBUG KPIs] Total Processos: {total_processos}")
-        print(f"[DEBUG KPIs] Valor Comercial (VMCV): {total_vmcv}")
-        print(f"[DEBUG KPIs] Despesas Calculadas (40%): {total_despesas}")
-        print(f"[DEBUG KPIs] Valor Total com Despesas: {total_com_despesas}")
-        
-        # Preparar resposta
-        kpis = {
-            'total_processos': {
-                'value': total_processos,
-                'formatted': format_value_smart(total_processos),
-                'label': 'Total de Processos'
-            },
-            'valor_total': {
-                'value': total_vmle,
-                'formatted': format_value_smart(total_vmle, currency=True),
-                'label': 'Valor Total Mercadorias'
-            },
-            'valor_comercial': {
-                'value': total_vmcv,
-                'formatted': format_value_smart(total_vmcv, currency=True),
-                'label': 'Valor Comercial (VMCV)'
-            },
-            'total_despesas': {
-                'value': total_despesas,
-                'formatted': format_value_smart(total_despesas, currency=True),
-                'label': 'Despesas Totais (40% VMCV)'
-            },
-            'valor_total_com_despesas': {
-                'value': total_com_despesas,
-                'formatted': format_value_smart(total_com_despesas, currency=True),
-                'label': 'VMCV + Despesas'
-            },
-            'total_clientes': {
-                'value': total_clientes,
-                'formatted': format_value_smart(total_clientes),
-                'label': 'Clientes Únicos'
-            },
-            'valor_medio': {
-                'value': valor_medio,
-                'formatted': format_value_smart(valor_medio, currency=True),
-                'label': 'Valor Médio por Processo'
-            },
-            'valor_medio_com_despesas': {
-                'value': valor_medio_com_despesas,
-                'formatted': format_value_smart(valor_medio_com_despesas, currency=True),
-                'label': 'Valor Médio + Despesas'
-            }
-        }
-        
-        return jsonify({'success': True, 'data': kpis})
-        
-    except Exception as e:
-        print(f"[ERROR KPIs] {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
