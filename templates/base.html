@@ -441,7 +441,15 @@
                class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>
                 <span class="sidebar-text">Dashboard</span>
+            </a>
+
+            <!-- Dashboard de Materiais -->
+            <a href="{{ url_for('materiais.index') }}" 
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('materiais.') %}active{% endif %}">
+                <i class="mdi mdi-package-variant text-xl"></i>
+                <span class="sidebar-text">Análise de Materiais</span>
             </a>           
+            
             <!-- OnePage -->
             <!-- <a href="{{ url_for('onepage.index') }}" 
                class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
