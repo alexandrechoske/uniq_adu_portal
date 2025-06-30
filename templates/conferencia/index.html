@@ -1,64 +1,140 @@
 {% extends "base.html" %}
 
-{% block title %}Conferência Documental IA{% endblock %}
+{% block title %}Conferência Documental IA - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Estilos para a página de conferência */
-    .page-header {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem 2rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    /* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
+    :root {
+        /* Paleta de cores minimalista */
+        --color-background: #fafbfc;
+        --color-surface: #ffffff;
+        --color-surface-hover: #f8fafc;
+        --color-border: #e2e8f0;
+        --color-border-light: #f1f5f9;
+        
+        /* Textos */
+        --color-text-primary: #0f172a;
+        --color-text-secondary: #475569;
+        --color-text-muted: #64748b;
+        --color-text-light: #94a3b8;
+        
+        /* Cores de destaque elegantes */
+        --color-primary: #3b82f6;
+        --color-primary-light: #dbeafe;
+        --color-success: #10b981;
+        --color-success-light: #d1fae5;
+        --color-warning: #f59e0b;
+        --color-warning-light: #fef3c7;
+        --color-danger: #ef4444;
+        --color-danger-light: #fee2e2;
+        --color-info: #06b6d4;
+        --color-info-light: #cffafe;
+        
+        /* Sombras minimalistas */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        
+        /* Espacamentos consistentes */
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
+        
+        /* Bordas arredondadas */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        
+        /* Transições suaves */
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.3s ease;
     }
 
-    .page-title {
+    /* === HEADER DA PÁGINA (igual ao dashboard) === */
+    .page-header {
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border-light);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+
+    /* === CARDS DE CONTEÚDO === */
+    .main-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border-light);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-normal);
+    }
+
+    .main-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .card-title {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #1f2937;
-        margin: 0;
+        color: var(--color-text-primary);
+        margin: 0 0 var(--spacing-lg) 0;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
     }
 
+    .card-title .icon {
+        color: var(--color-primary);
+        font-size: 1.75rem;
+    }
+
+
+
+    /* === RADIO OPTIONS === */
     .radio-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
     }
 
     .radio-option {
         display: flex;
-        align-items: center;
-        background-color: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        padding: 1rem;
+        align-items: flex-start;
+        background: var(--color-surface);
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
         cursor: pointer;
-        transition: all 0.2s;
-        flex: 1;
-        min-width: 250px;
+        transition: all var(--transition-fast);
     }
 
     .radio-option:hover {
-        border-color: #3b82f6;
-        background-color: #f0f9ff;
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
     }
 
     .radio-option.selected {
-        border-color: #3b82f6;
-        background-color: #eff6ff;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     }
 
     .radio-option input[type="radio"] {
-        margin-right: 0.75rem;
+        margin-right: var(--spacing-md);
         width: 1.25rem;
         height: 1.25rem;
-        accent-color: #3b82f6;
+        accent-color: var(--color-primary);
+        margin-top: 0.125rem;
+        flex-shrink: 0;
     }
 
     .radio-option-info {
@@ -67,113 +143,175 @@
 
     .radio-option-title {
         font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 0.25rem;
+        font-size: 1.125rem;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-xs);
     }
 
     .radio-option-desc {
         font-size: 0.875rem;
-        color: #6b7280;
+        color: var(--color-text-secondary);
+        line-height: 1.5;
     }
 
+    /* === UPLOAD ZONE === */
     .upload-container {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--color-border-light);
     }
 
     .upload-title {
-        font-size: 1.125rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 1rem;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-lg);
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--spacing-sm);
     }
 
     .upload-title svg {
         width: 1.25rem;
         height: 1.25rem;
-        color: #3b82f6;
+        color: var(--color-primary);
     }
 
     .dropzone {
-        border: 2px dashed #cbd5e1;
-        border-radius: 0.5rem;
-        padding: 2rem;
+        border: 2px dashed var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-2xl);
         text-align: center;
-        transition: all 0.2s;
-        background-color: #f8fafc;
+        transition: all var(--transition-normal);
+        background: var(--color-surface-hover);
+        cursor: pointer;
     }
 
     .dropzone:hover, .dropzone.dragover {
-        border-color: #3b82f6;
-        background-color: #f0f9ff;
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+        transform: scale(1.01);
     }
 
     .dropzone-icon {
-        color: #64748b;
+        color: var(--color-text-muted);
         width: 3rem;
         height: 3rem;
-        margin: 0 auto 1rem;
+        margin: 0 auto var(--spacing-lg);
     }
 
     .dropzone-title {
-        font-size: 1.125rem;
-        font-weight: 500;
-        color: #334155;
-        margin-bottom: 0.5rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-xs);
     }
 
     .dropzone-subtitle {
-        color: #64748b;
-        margin-bottom: 1rem;
+        color: var(--color-text-secondary);
+        margin-bottom: var(--spacing-lg);
+        font-size: 0.875rem;
+    }
+
+    /* === BOTÕES === */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-sm) var(--spacing-lg);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all var(--transition-fast);
+        border: none;
+        cursor: pointer;
+        text-align: center;
+        justify-content: center;
     }
 
     .btn-primary {
-        background-color: #3b82f6;
+        background: var(--color-primary);
         color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        border-radius: var(--radius-md);
         font-weight: 500;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--spacing-xs);
         cursor: pointer;
         border: none;
-        transition: all 0.2s;
+        transition: all var(--transition-fast);
     }
 
-    .btn-primary:hover {
-        background-color: #2563eb;
+    .btn-primary:hover:not(:disabled) {
+        background: #2563eb;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
     }
 
+    .btn-primary:disabled {
+        background: var(--color-text-light);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 1px solid var(--color-border);
+        color: var(--color-text-secondary);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        transition: all var(--transition-fast);
+        cursor: pointer;
+    }
+
+    .btn-outline:hover {
+        background: var(--color-surface-hover);
+        border-color: var(--color-text-secondary);
+        color: var(--color-text-primary);
+    }
+
+    .btn-outline svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    /* === FILE LIST === */
     .file-list {
-        margin-top: 1.5rem;
+        margin-top: var(--spacing-lg);
     }
 
     .file-item {
         display: flex;
         align-items: center;
-        padding: 0.75rem;
-        background-color: #f8fafc;
-        border-radius: 0.375rem;
-        margin-bottom: 0.5rem;
-        transition: all 0.2s;
+        padding: var(--spacing-md);
+        background: var(--color-surface-hover);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-sm);
+        transition: all var(--transition-fast);
     }
 
     .file-item:hover {
-        background-color: #f0f9ff;
+        background: var(--color-primary-light);
+        border-color: var(--color-primary);
     }
 
     .file-icon {
         width: 2rem;
         height: 2rem;
-        margin-right: 1rem;
-        color: #64748b;
+        margin-right: var(--spacing-md);
+        color: var(--color-text-muted);
     }
 
     .file-info {
@@ -182,7 +320,7 @@
 
     .file-name {
         font-weight: 500;
-        color: #334155;
+        color: var(--color-text-primary);
         margin-bottom: 0.25rem;
         white-space: nowrap;
         overflow: hidden;
@@ -192,35 +330,42 @@
 
     .file-size {
         font-size: 0.75rem;
-        color: #64748b;
+        color: var(--color-text-muted);
     }
 
     .file-actions {
         display: flex;
-        gap: 0.5rem;
+        gap: var(--spacing-xs);
     }
 
     .file-action {
         border: none;
         background: none;
-        color: #64748b;
+        color: var(--color-text-muted);
         cursor: pointer;
-        transition: color 0.2s;
-        width: 1.25rem;
-        height: 1.25rem;
+        transition: all var(--transition-fast);
+        width: 1.5rem;
+        height: 1.5rem;
         padding: 0;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .file-action:hover {
-        color: #ef4444;
+        color: var(--color-danger);
+        background: var(--color-danger-light);
     }
 
+    /* === PROGRESS BAR === */
     .progress-container {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border-light);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--shadow-sm);
         display: none;
     }
 
@@ -228,124 +373,135 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: var(--spacing-lg);
     }
 
     .progress-title {
-        font-size: 1.125rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--spacing-xs);
     }
 
     .progress-title svg {
         width: 1.25rem;
         height: 1.25rem;
-        color: #3b82f6;
+        color: var(--color-primary);
     }
 
     .progress-info {
         font-size: 0.875rem;
-        color: #6b7280;
+        color: var(--color-text-secondary);
+        font-weight: 500;
     }
 
     .progress-bar-container {
-        height: 0.5rem;
-        background-color: #e5e7eb;
-        border-radius: 9999px;
+        height: 0.75rem;
+        background: var(--color-border-light);
+        border-radius: var(--radius-xl);
         overflow: hidden;
     }
 
     .progress-bar {
         height: 100%;
-        background-color: #3b82f6;
-        border-radius: 9999px;
+        background: linear-gradient(90deg, var(--color-primary), #2563eb);
+        border-radius: var(--radius-xl);
         transition: width 0.3s ease;
     }
 
+    /* === RESULTS === */
     .results-container {
         display: none;
     }
 
     .results-header {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--color-border-light);
     }
 
     .results-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 0.5rem;
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-xs);
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--spacing-sm);
     }
 
     .results-title svg {
         width: 1.5rem;
         height: 1.5rem;
+        color: var(--color-primary);
     }
 
     .results-summary {
         font-size: 0.875rem;
-        color: #6b7280;
+        color: var(--color-text-secondary);
     }
 
     .results-cards {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
     }
 
     .result-card {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-normal);
     }
 
     .result-card:hover {
+        box-shadow: var(--shadow-md);
         transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
     .result-card-header {
         display: flex;
         align-items: center;
-        margin-bottom: 1rem;
+        margin-bottom: var(--spacing-lg);
     }
 
     .result-card-icon {
-        width: 2.5rem;
-        height: 2.5rem;
-        background-color: #f0f9ff;
-        color: #3b82f6;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        margin-right: 1rem;
+        width: 3rem;
+        height: 3rem;
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: var(--spacing-md);
+        flex-shrink: 0;
     }
 
     .result-status-ok {
-        background-color: #dcfce7;
-        color: #16a34a;
+        background: var(--color-success-light);
+        color: var(--color-success);
     }
 
     .result-status-alerta {
-        background-color: #fef3c7;
-        color: #d97706;
+        background: var(--color-warning-light);
+        color: var(--color-warning);
     }
 
     .result-status-erro {
-        background-color: #fee2e2;
-        color: #dc2626;
+        background: var(--color-danger-light);
+        color: var(--color-danger);
+    }
+
+    .result-status-success {
+        background: var(--color-success-light);
+        color: var(--color-success);
     }
 
     .result-card-info {
@@ -358,21 +514,24 @@
         margin-bottom: 0.25rem;
         display: flex;
         align-items: center;
-        color: #1f2937;
+        color: var(--color-text-primary);
     }
 
     .result-card-summary {
         font-size: 0.75rem;
-        color: #6b7280;
+        color: var(--color-text-muted);
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: var(--spacing-lg);
+        flex-wrap: wrap;
     }
 
     .result-card-stat {
         display: flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: var(--spacing-xs);
+        font-size: 0.875rem;
+        font-weight: 500;
     }
 
     .result-card-stat-icon {
@@ -381,116 +540,56 @@
     }
 
     .stat-error {
-        color: #dc2626;
+        color: var(--color-danger);
     }
 
     .stat-warning {
-        color: #d97706;
+        color: var(--color-warning);
     }
 
     .stat-info {
-        color: #2563eb;
+        color: var(--color-info);
     }
 
     .result-card-actions {
         display: flex;
         justify-content: space-between;
-        margin-top: 1rem;
+        margin-top: var(--spacing-lg);
+        gap: var(--spacing-sm);
     }
 
+    /* === VALORES EXTRAÍDOS === */
     .valor-extraido {
-        background-color: #dcfce7;
-        color: #16a34a;
-        padding: 0.125rem 0.5rem;
-        border-radius: 0.25rem;
-        font-weight: 500;
+        background: var(--color-primary-light);
+        color: var(--color-primary);
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
         font-size: 0.875rem;
+        font-weight: 600;
+        border: 1px solid rgba(59, 130, 246, 0.3);
     }
 
     .valor-nao-encontrado {
-        background-color: #fee2e2;
-        color: #dc2626;
-        padding: 0.125rem 0.5rem;
-        border-radius: 0.25rem;
-        font-weight: 500;
-        font-size: 0.875rem;
-    }
-
-    .details-table tbody tr:nth-child(even) {
-        background-color: #f9fafb;
-    }
-
-    .details-table tbody tr:hover {
-        background-color: #f3f4f6;
-    }
-
-    .status-cell {
-        text-align: center;
-        width: 5%;
-    }
-
-    .status-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 50%;
-        font-weight: 600;
-    }
-
-    .status-ok {
-        background-color: #dcfce7;
-        color: #16a34a;
-    }
-
-    .status-alerta {
-        background-color: #fef3c7;
-        color: #d97706;
-    }
-
-    .status-erro {
-        background-color: #fee2e2;
-        color: #dc2626;
-    }
-
-    .result-status-success {
-        background-color: #dcfce7;
-        color: #16a34a;
-    }
-
-    .btn-outline {
-        background-color: transparent;
-        border: 1px solid #cbd5e1;
-        color: #64748b;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.375rem;
+        background: var(--color-danger-light);
+        color: var(--color-danger);
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-family: 'JetBrains Mono', 'Courier New', monospace;
         font-size: 0.875rem;
         font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        transition: all 0.2s;
-        cursor: pointer;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        font-style: italic;
     }
 
-    .btn-outline:hover {
-        background-color: #f8fafc;
-        border-color: #94a3b8;
-        color: #334155;
-    }
-
-    .btn-outline svg {
-        width: 1rem;
-        height: 1rem;
-    }
-
+    /* === DETAILS MODAL === */
     .details-container {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-top: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-xl);
+        margin-top: var(--spacing-xl);
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--color-border-light);
         display: none;
     }
 
@@ -498,28 +597,36 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: var(--spacing-xl);
+        padding-bottom: var(--spacing-lg);
+        border-bottom: 1px solid var(--color-border-light);
     }
 
     .details-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
+        margin: 0;
     }
 
     .details-close {
         background: none;
         border: none;
-        color: #64748b;
+        color: var(--color-text-muted);
         cursor: pointer;
-        transition: color 0.2s;
-        width: 1.5rem;
-        height: 1.5rem;
+        transition: all var(--transition-fast);
+        width: 2rem;
+        height: 2rem;
         padding: 0;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .details-close:hover {
-        color: #ef4444;
+        background: var(--color-surface-hover);
+        color: var(--color-text-secondary);
     }
 
     .details-table {
@@ -529,21 +636,24 @@
 
     .details-table th,
     .details-table td {
-        padding: 0.75rem 1rem;
+        padding: var(--spacing-md);
         text-align: left;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--color-border-light);
     }
 
     .details-table th {
-        background-color: #f8fafc;
+        background: var(--color-surface-hover);
         font-weight: 600;
-        color: #475569;
+        color: var(--color-text-secondary);
         font-size: 0.875rem;
+        position: sticky;
+        top: 0;
+        z-index: 1;
     }
 
     .details-table td {
         font-size: 0.875rem;
-        color: #334155;
+        color: var(--color-text-primary);
     }
 
     .details-table tr:last-child td {
@@ -551,93 +661,74 @@
     }
 
     .details-table tr:hover td {
-        background-color: #f8fafc;
+        background: var(--color-surface-hover);
     }
 
+    .details-table tbody tr:nth-child(even) {
+        background: var(--color-surface-hover);
+    }
+
+    /* === STATUS INDICATORS === */
     .status-icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 1.5rem;
         height: 1.5rem;
-        border-radius: 9999px;
+        border-radius: 50%;
     }
 
     .status-ok {
-        background-color: #dcfce7;
-        color: #16a34a;
+        background: var(--color-success-light);
+        color: var(--color-success);
     }
 
     .status-alerta {
-        background-color: #fef3c7;
-        color: #d97706;
+        background: var(--color-warning-light);
+        color: var(--color-warning);
     }
 
     .status-erro {
-        background-color: #fee2e2;
-        color: #dc2626;
+        background: var(--color-danger-light);
+        color: var(--color-danger);
     }
 
     .status-cell {
-        width: 1%;
+        text-align: center;
+        width: 5%;
         white-space: nowrap;
     }
 
-    /* Estilos para valores extraídos */
-    .valor-extraido {
-        background-color: #dbeafe;
-        color: #1d4ed8;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-family: 'Courier New', monospace;
-        font-size: 0.875rem;
-        font-weight: 600;
-        border: 1px solid #93c5fd;
-    }
-
-    .valor-nao-encontrado {
-        background-color: #fee2e2;
-        color: #dc2626;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-family: 'Courier New', monospace;
-        font-size: 0.875rem;
-        font-weight: 500;
-        border: 1px solid #fca5a5;
-        font-style: italic;
-    }
-
+    /* === LOADING OVERLAY === */
     .loading-overlay {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(255, 255, 255, 0.8);
+        inset: 0;
+        background: rgba(255, 255, 255, 0.9);
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 50;
-        backdrop-filter: blur(3px);
+        z-index: 60;
+        backdrop-filter: blur(4px);
     }
 
     .loading-content {
-        background-color: white;
-        border-radius: 0.75rem;
-        padding: 2rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-2xl);
+        box-shadow: var(--shadow-lg);
         display: flex;
         flex-direction: column;
         align-items: center;
         max-width: 90%;
+        text-align: center;
     }
 
     .loading-spinner {
-        margin-bottom: 1rem;
+        margin-bottom: var(--spacing-lg);
         width: 3rem;
         height: 3rem;
-        border: 4px solid #f3f4f6;
-        border-top: 4px solid #3b82f6;
+        border: 4px solid var(--color-border-light);
+        border-top: 4px solid var(--color-primary);
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -649,77 +740,140 @@
 
     .loading-message {
         font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    /* === FLASH MESSAGES === */
+    .flash-message {
+        position: fixed;
+        top: 8rem;
+        right: 1.5rem;
+        z-index: 50;
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-md);
+        margin-bottom: 0.5rem;
+        box-shadow: var(--shadow-lg);
+        color: white;
         font-weight: 500;
-        color: #1f2937;
+        font-size: 0.875rem;
+        max-width: 400px;
+        word-wrap: break-word;
+    }
+
+    .flash-success {
+        background: var(--color-success);
+    }
+
+    .flash-error {
+        background: var(--color-danger);
+    }
+
+    .flash-warning {
+        background: var(--color-warning);
+    }
+
+    .flash-info {
+        background: var(--color-info);
+    }
+
+    /* === RESPONSIVIDADE === */
+    @media (max-width: 1024px) {
+        .radio-container {
+            grid-template-columns: 1fr;
+        }
+
+        .results-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .result-card-summary {
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
     }
 
     @media (max-width: 768px) {
-        .radio-container {
-            flex-direction: column;
+        .main-card {
+            padding: var(--spacing-lg);
         }
-        .radio-option {
-            min-width: auto;
+
+        .dropzone {
+            padding: var(--spacing-lg);
         }
-        .results-cards {
-            grid-template-columns: 1fr;
+
+        .result-card {
+            padding: var(--spacing-lg);
+        }
+
+        .details-container {
+            padding: var(--spacing-lg);
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="p-6 bg-slate-50 min-h-screen">
+    <!-- Sistema de notificações flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
     <!-- Header da Página -->
     <div class="page-header">
-        <h1 class="page-title">Conferência Documental com IA</h1>
+        <h1 class="card-title">
+            <i class="mdi mdi-file-check icon"></i>
+            Conferência Documental com IA
+        </h1>
+    </div>
+
+    <!-- Seleção do Tipo de Conferência -->
+    <div class="main-card">
+        <h2 class="card-title">
+            <i class="mdi mdi-format-list-bulleted icon"></i>
+            Selecione o Tipo de Conferência
+        </h2>
+        
+        <div class="radio-container">
+            <label class="radio-option" data-tipo="invoice">
+                <input type="radio" name="tipo_conferencia" value="invoice" checked>
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Invoices</div>
+                    <div class="radio-option-desc">Verificação específica para invoices comerciais com análise de dados estruturados e validação de campos obrigatórios.</div>
+                </div>
+            </label>
+
+            <!-- Tipos futuros comentados para desenvolvimento posterior -->
+            <!-- 
+            <label class="radio-option" data-tipo="packlist">
+                <input type="radio" name="tipo_conferencia" value="packlist" disabled>
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Packlists</div>
+                    <div class="radio-option-desc">Verificação específica para packlists. (Em desenvolvimento)</div>
+                </div>
+            </label>
+
+            <label class="radio-option" data-tipo="conhecimento">
+                <input type="radio" name="tipo_conferencia" value="conhecimento" disabled>
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Conferência de Conhecimentos</div>
+                    <div class="radio-option-desc">Verificação específica para conhecimentos de embarque (BL/AWB). (Em desenvolvimento)</div>
+                </div>
+            </label>
+            -->
+        </div>
     </div>
 
     <!-- Formulário de Upload -->
-    <div class="upload-container">
-        <h2 class="upload-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
-            </svg>
-            Selecione o Tipo de Conferência
-        </h2>
-        <div class="radio-container">
-            <!-- <label class="radio-option" data-tipo="inconsistencias">
-            <input type="radio" name="tipo_conferencia" value="inconsistencias" disabled>
-            <div class="radio-option-info">
-                <div class="radio-option-title">Conferência de Inconsistências</div>
-                <div class="radio-option-desc">Verificação geral de inconsistências em todos os tipos de documentos. (Em desenvolvimento)</div>
-            </div>
-            </label> -->
-            
-            <label class="radio-option" data-tipo="invoice">
-            <input type="radio" name="tipo_conferencia" value="invoice" checked>
-            <div class="radio-option-info">
-                <div class="radio-option-title">Conferência de Invoices</div>
-                <div class="radio-option-desc">Verificação específica para invoices comerciais.</div>
-            </div>
-            </label>
-
-            <!-- <label class="radio-option" data-tipo="packlist">
-            <input type="radio" name="tipo_conferencia" value="packlist" disabled>
-            <div class="radio-option-info">
-                <div class="radio-option-title">Conferência de Packlists</div>
-                <div class="radio-option-desc">Verificação específica para packlists. (Em desenvolvimento)</div>
-            </div>
-            </label> -->
-
-            <!-- <label class="radio-option" data-tipo="conhecimento">
-            <input type="radio" name="tipo_conferencia" value="conhecimento" disabled>
-            <div class="radio-option-info">
-                <div class="radio-option-title">Conferência de Conhecimentos</div>
-                <div class="radio-option-desc">Verificação específica para conhecimentos de embarque (BL/AWB). (Em desenvolvimento)</div>
-            </div>
-            </label> -->
-        </div>
-
-        <h2 class="upload-title">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
+    <div class="main-card">
+        <h2 class="card-title">
+            <i class="mdi mdi-cloud-upload icon"></i>
             Upload de Documentos
         </h2>
 
@@ -731,21 +885,16 @@
             <div class="dropzone-subtitle">ou clique para selecionar arquivos</div>
             <input type="file" id="file-input" multiple accept=".pdf" class="hidden">
             <button type="button" class="btn-primary" id="select-files">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/>
-                </svg>
+                <i class="mdi mdi-plus"></i>
                 Selecionar Arquivos
             </button>
         </div>
 
         <div class="file-list" id="file-list"></div>
 
-        <div class="mt-4">
+        <div style="margin-top: 1.5rem;">
             <button type="button" class="btn-primary" id="upload-btn" style="display: none;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
-                </svg>
+                <i class="mdi mdi-upload"></i>
                 Iniciar Conferência
             </button>
         </div>
@@ -755,10 +904,7 @@
     <div class="progress-container" id="progress-container">
         <div class="progress-header">
             <div class="progress-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                </svg>
+                <i class="mdi mdi-cog-clockwise"></i>
                 Processamento em Andamento
             </div>
             <div class="progress-info" id="progress-info">0%</div>
@@ -772,10 +918,7 @@
     <div class="results-container" id="results-container">
         <div class="results-header">
             <h2 class="results-title">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
-                    <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/>
-                </svg>
+                <i class="mdi mdi-check-circle"></i>
                 Resultados da Conferência
             </h2>
             <div class="results-summary" id="results-summary"></div>
@@ -791,9 +934,7 @@
         <div class="details-header">
             <h3 class="details-title" id="details-title">Detalhes da Conferência</h3>
             <button type="button" class="details-close" id="details-close">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                </svg>
+                <i class="mdi mdi-close"></i>
             </button>
         </div>
         <div class="details-content" id="details-content">
@@ -820,7 +961,6 @@
             <div class="loading-message" id="loading-message">Processando arquivos...</div>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1042,18 +1182,14 @@
                 : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 
             fileItem.innerHTML = `
-                <svg class="file-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+                <i class="mdi mdi-file-pdf-box file-icon"></i>
                 <div class="file-info">
                     <div class="file-name">${file.name}</div>
                     <div class="file-size">${fileSize}</div>
                 </div>
                 <div class="file-actions">
                     <button type="button" class="file-action remove-file" data-filename="${file.name}" title="Remover arquivo">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                        </svg>
+                        <i class="mdi mdi-close"></i>
                     </button>
                 </div>
             `;
@@ -1295,35 +1431,24 @@
             card.innerHTML = `
                 <div class="result-card-header">
                     <div class="result-card-icon ${statusClass}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
+                        <i class="mdi mdi-file-document"></i>
                     </div>
                     <div class="result-card-info">
                         <div class="result-card-filename">${truncateFilename(filename, 20)}</div>
                         <div class="result-card-summary">
                             <div class="result-card-stat stat-error">
-                                <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
-                                </svg>
+                                <i class="mdi mdi-alert-circle result-card-stat-icon"></i>
                                 ${totalErros}
                             </div>
                             <div class="result-card-stat stat-warning">
-                                <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                    <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
-                                </svg>
+                                <i class="mdi mdi-alert result-card-stat-icon"></i>
                                 ${totalAlertas}
                             </div>
                             <div class="result-card-stat stat-info">
-                                <svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M8 15A7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                    <path d="M8.93 6.588-2.29.287-.082.38.45.083c0-.355.28-.65.63-.65.41 0 .72.22.87.628.7.99.54 1.3.54 2.31v.334c0 .308-.094.545-.281.75-.187.204-.378.333-.6.333-.577 0-1.004-.31-1.004-.803 0-.21.077-.412.23-.596C7.36 4.59 7.6 4.473 8 4.473c.252 0 .45.06.612.12.163.045.3.106.44.214.14.107.173.21.173.33"/>
-                                </svg>
+                                <i class="mdi mdi-information result-card-stat-icon"></i>
                                 ${totalObservacoes}
                             </div>
-                            ${hasAnalysisData ? '<div class="result-card-stat" style="color: #059669;"><svg class="result-card-stat-icon" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16"><path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/></svg>✓</div>' : ''}
+                            ${hasAnalysisData ? '<div class="result-card-stat" style="color: #059669;"><i class="mdi mdi-check-circle result-card-stat-icon"></i>✓</div>' : ''}
                         </div>
                     </div>
                 </div>
@@ -1332,17 +1457,11 @@
                 </div>
                 <div class="result-card-actions">
                     <button type="button" class="btn-outline download-pdf" data-filename="${filename}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                        </svg>
+                        <i class="mdi mdi-download"></i>
                         PDF
                     </button>
                     <button type="button" class="btn-outline view-details" data-filename="${filename}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
-                            <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
-                        </svg>
+                        <i class="mdi mdi-eye"></i>
                         Ver Detalhes
                     </button>
                 </div>
@@ -1431,10 +1550,7 @@
                 noDataRow.innerHTML = `
                     <td colspan="4" style="text-align: center; padding: 2rem; color: #6b7280;">
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16" style="color: #9ca3af;">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                            </svg>
+                            <i class="mdi mdi-information-outline" style="font-size: 3rem; color: #9ca3af;"></i>
                             <div>
                                 <div style="font-weight: 600; margin-bottom: 0.5rem;">Análise em Processamento</div>
                                 <div style="font-size: 0.875rem;">
@@ -1454,22 +1570,11 @@
         function getStatusIcon(status) {
             switch (status) {
                 case 'ok':
-                    return `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M10.97 4.97a.75.75 0 0 1 1.071 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.235.235 0 0 1 .02-.022z"/>
-                    `;
+                    return '<i class="mdi mdi-check-circle"></i>';
                 case 'alerta':
-                    return `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M7.005 3.1a1 1 0 1 1 1.99 0l-.388 6.35a.61.61 0 0 1-1.214 0L7.005 3.1ZM7 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0Z"/>
-                        </svg>
-                    `;
+                    return '<i class="mdi mdi-alert"></i>';
                 case 'erro':
-                    return `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                        </svg>
-                    `;
+                    return '<i class="mdi mdi-alert-circle"></i>';
                 default:
                     return '';
             }

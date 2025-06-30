@@ -256,23 +256,70 @@ def salvar(user_id=None):
 @login_required
 @role_required(['admin'])
 def excluir(user_id):
+    print(f"[DEBUG] Iniciando exclusão do usuário: {user_id}")
+    print(f"[DEBUG] Tipo do user_id: {type(user_id)}")
+    print(f"[DEBUG] Session user: {session.get('user')}")
+    
     try:
-        # Remover da tabela users
-        supabase.table('users').delete().eq('id', user_id).execute()
+        # Verificar se o usuário existe antes de excluir - USANDO CLIENTE ADMIN
+        print(f"[DEBUG] Verificando existência do usuário com cliente admin...")
+        user_check = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+        print(f"[DEBUG] Usuário encontrado (admin): {user_check.data}")
         
-        # Remover da tabela clientes_agentes se existir
-        supabase.table('clientes_agentes').delete().eq('user_id', user_id).execute()
+        if not user_check.data:
+            print(f"[DEBUG] Usuário {user_id} não encontrado no banco")
+            flash('Usuário não encontrado', 'error')
+            return redirect(url_for('usuarios.index'))
+        
+        user_to_delete = user_check.data[0]
+        print(f"[DEBUG] Dados do usuário a ser excluído: {user_to_delete}")
+        
+        # Remover da tabela users - USANDO CLIENTE ADMIN
+        print(f"[DEBUG] Removendo usuário da tabela users usando cliente admin...")
+        delete_response = supabase_admin.table('users').delete().eq('id', user_id).execute()
+        print(f"[DEBUG] Resposta da exclusão users: {delete_response}")
+        print(f"[DEBUG] Dados retornados pela exclusão: {delete_response.data}")
+        
+        # Verificar se a exclusão foi bem-sucedida
+        if delete_response.data:
+            print(f"[DEBUG] Exclusão confirmada: {len(delete_response.data)} registros removidos")
+        else:
+            print(f"[DEBUG] AVISO: Exclusão pode não ter funcionado - dados vazios retornados")
+        
+        # Remover da tabela clientes_agentes se existir - USANDO CLIENTE ADMIN
+        print(f"[DEBUG] Removendo vínculos da tabela clientes_agentes usando cliente admin...")
+        clientes_response = supabase_admin.table('clientes_agentes').delete().eq('user_id', user_id).execute()
+        print(f"[DEBUG] Resposta da exclusão clientes_agentes: {clientes_response}")
+        
+        # Verificar novamente se o usuário foi realmente excluído
+        print(f"[DEBUG] Verificando se o usuário foi realmente excluído...")
+        verification_check = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+        print(f"[DEBUG] Verificação pós-exclusão: {verification_check.data}")
+        
+        if verification_check.data:
+            print(f"[DEBUG] ERRO: Usuário ainda existe após tentativa de exclusão!")
+            flash('Erro: Usuário não foi excluído do banco de dados', 'error')
+            return redirect(url_for('usuarios.index'))
         
         # Remover do Auth (opcional)
         try:
-            supabase_admin.auth.admin.delete_user(user_id)
-        except:
+            print(f"[DEBUG] Tentando remover do Auth...")
+            auth_response = supabase_admin.auth.admin.delete_user(user_id)
+            print(f"[DEBUG] Resposta da exclusão auth: {auth_response}")
+        except Exception as auth_error:
+            print(f"[DEBUG] Erro ao deletar do auth (não crítico): {auth_error}")
             pass  # Se não conseguir deletar do auth, não é crítico
         
+        print(f"[DEBUG] Exclusão concluída com sucesso!")
         flash('Usuário excluído com sucesso!', 'success')
     except Exception as e:
+        print(f"[DEBUG] Erro durante exclusão: {str(e)}")
+        print(f"[DEBUG] Tipo do erro: {type(e)}")
+        import traceback
+        print(f"[DEBUG] Traceback completo: {traceback.format_exc()}")
         flash(f'Erro ao excluir usuário: {str(e)}', 'error')
     
+    print(f"[DEBUG] Redirecionando para index...")
     return redirect(url_for('usuarios.index'))
 
 @bp.route('/usuarios/pesquisar-empresa', methods=['POST'])
@@ -575,26 +622,49 @@ def criar():
         data = request.form.to_dict()
         print(f"[DEBUG] Dados recebidos do formulário: {data}")
         
+        # Validação básica dos campos obrigatórios
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        role = data.get('role', '').strip()
+        password = data.get('password', '').strip()
+        
+        print(f"[DEBUG] Campos extraídos - name: '{name}', email: '{email}', role: '{role}', password: '[PROTEGIDO]'")
+        
+        if not all([name, email, role, password]):
+            print("[DEBUG] Campos obrigatórios em branco")
+            flash('Nome, Email, Perfil e Senha são obrigatórios.', 'error')
+            return redirect(url_for('usuarios.novo'))
+        
         selected_companies = json.loads(data.get('selected_companies', '[]'))
         print(f"[DEBUG] Empresas selecionadas: {selected_companies}")
         
         # Validar role
-        if data['role'] not in VALID_ROLES:
-            print(f"[DEBUG] Role inválida: {data['role']}")
+        if role not in VALID_ROLES:
+            print(f"[DEBUG] Role inválida: {role}")
             flash('Role inválida', 'error')
             return redirect(url_for('usuarios.novo'))
         
         print(f"[DEBUG] Criando usuário no Auth do Supabase...")
-        # Criar usuário no Auth do Supabase
-        user_data = {
-            'email': data['email'],
-            'password': data['password'],
-            'email_confirm': True
-        }
-        print(f"[DEBUG] Dados para auth: {user_data}")
+        # Gerar um UUID para o novo usuário
+        new_user_uuid = str(uuid.uuid4())
         
-        auth_response = supabase_admin.auth.admin.create_user(user_data)
+        # Criar usuário no Auth do Supabase
+        # O trigger no banco de dados cuidará da inserção na tabela public.users
+        auth_response = supabase_admin.auth.admin.create_user({
+            'uid': new_user_uuid, # Passa o UUID gerado
+            'email': email,
+            'password': password,
+            'email_confirm': True, # Define como True para confirmar o email automaticamente
+            'user_metadata': { # Metadados que serão lidos pelo trigger
+                'name': name,
+                'role': role
+            }
+        })
         print(f"[DEBUG] Resposta do auth: {auth_response}")
+        
+        # Verificar se houve erro na resposta
+        if auth_response.get('error'):
+            raise Exception(f"Falha ao criar usuário na autenticação: {auth_response['error'].get('message', 'Erro desconhecido')}")
         
         if not auth_response.user:
             print("[DEBUG] Falha na criação do usuário no Auth")
@@ -604,17 +674,9 @@ def criar():
         user_id = auth_response.user.id
         print(f"[DEBUG] Usuário criado no Auth com ID: {user_id}")
         
-        # Adicionar informações adicionais na tabela users
-        user_metadata = {
-            'id': user_id,
-            'email': data['email'],
-            'role': data['role'],
-            'name': data['name'],
-            'created_at': datetime.datetime.utcnow().isoformat()        }
-        print(f"[DEBUG] Inserindo metadados do usuário: {user_metadata}")
-        
-        supabase_admin.table('users').insert(user_metadata).execute()
-        print("[DEBUG] Metadados do usuário inseridos com sucesso")
+        # Não é mais necessário inserir explicitamente na tabela 'users' aqui.
+        # O trigger 'on_auth_user_created' fará isso automaticamente.
+        print("[DEBUG] Aguardando trigger automático do banco inserir metadados do usuário")
           # Se houver empresas selecionadas, criar/atualizar o registro em clientes_agentes
         if selected_companies:
             print(f"[DEBUG] Criando registro em clientes_agentes...")
@@ -622,7 +684,7 @@ def criar():
             empresas_cnpjs = [empresa['cnpj'] for empresa in selected_companies]
             
             cliente_data = {
-                'user_id': user_id,
+                'user_id': new_user_uuid, # Usa o UUID do usuário recém-criado
                 'empresa': empresas_cnpjs,
                 'created_at': datetime.datetime.utcnow().isoformat(),
                 'numero': data.get('numero', ''),
@@ -633,11 +695,11 @@ def criar():
               # Inserir na tabela clientes_agentes
             supabase_admin.table('clientes_agentes').insert(cliente_data).execute()
             print("[DEBUG] Registro em clientes_agentes criado com sucesso")
-        elif data['role'] == 'cliente_unique':
+        elif role == 'cliente_unique':
             print("[DEBUG] Cliente unique sem empresas, criando registro vazio...")
             # Mesmo sem empresas selecionadas, criar registro para cliente_unique
             cliente_data = {
-                'user_id': user_id,
+                'user_id': new_user_uuid, # Usa o UUID do usuário recém-criado
                 'empresa': [],
                 'created_at': datetime.datetime.utcnow().isoformat(),
                 'numero': data.get('numero', ''),
@@ -653,6 +715,15 @@ def criar():
         
     except Exception as e:
         print(f"[DEBUG] Erro ao criar usuário: {str(e)}")
+        # Se houver erro na criação, tentar limpar o usuário recém-criado no Auth
+        try:
+            if 'new_user_uuid' in locals() and new_user_uuid:
+                supabase_admin.auth.admin.delete_user(new_user_uuid)
+                print(f"Usuário {new_user_uuid} excluído após erro na criação.")
+        except Exception as cleanup_error:
+            print(f"Erro ao tentar limpar usuário após falha: {str(cleanup_error)}")
+            pass # Ignora erros na limpeza para não mascarar o erro original
+            
         current_app.logger.error(f'Erro ao criar usuário: {str(e)}')
         flash(f'Erro ao criar usuário: {str(e)}', 'error')
         return redirect(url_for('usuarios.novo'))
