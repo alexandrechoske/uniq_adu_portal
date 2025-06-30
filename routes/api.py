@@ -192,4 +192,184 @@ def global_data():
             'message': f'Erro ao buscar dados globais: {str(e)}'
         }), 500
 
+@bp.route('/force-refresh', methods=['POST'])
+@login_required
+def force_refresh():
+    """
+    Endpoint para refresh forçado de todos os dados da aplicação
+    Limpa qualquer cache e busca os dados mais atualizados do banco
+    """
+    try:
+        logger.info("=== INICIANDO REFRESH FORÇADO ===")
+        
+        user_data = session.get('user')
+        user_role = user_data.get('role')
+        
+        # Forçar timestamp único para garantir cache bust
+        timestamp = datetime.now().isoformat()
+        
+        # Dados de retorno com estrutura expandida
+        refresh_data = {
+            'importacoes': [],
+            'usuarios': [],
+            'dashboard_stats': {},
+            'material_stats': {},
+            'currencies': {},
+            'companies': [],
+            'user_companies': [],
+            'refresh_timestamp': timestamp,
+            'total_records_updated': 0
+        }
+        
+        # 1. REFRESH FORÇADO DE IMPORTAÇÕES/PROCESSOS
+        try:
+            logger.info("🔄 Fazendo refresh forçado de importações...")
+            
+            # Query com ordenação para garantir dados mais recentes
+            query = supabase.table('importacoes_processos').select(
+                'id, numero, situacao, diduimp_canal, data_chegada, previsao_chegada, '
+                'total_vmle_real, total_vmcv_real, cliente_cpfcnpj, cliente_razaosocial, '
+                'created_at, updated_at, via_transporte_descricao, data_abertura, '
+                'carga_status, resumo_mercadoria, referencias, armazens, data_embarque, '
+                'local_embarque, tipo_operacao, di_modalidade_despacho, status_doc'
+            ).neq('situacao', 'Despacho Cancelado').order('updated_at', desc=True)
+            
+            # Aplicar filtros baseados no role do usuário
+            if user_role == 'cliente_unique':
+                user_companies = get_user_companies(user_data)
+                refresh_data['user_companies'] = user_companies
+                
+                if user_companies:
+                    query = query.in_('cliente_cpfcnpj', user_companies)
+                else:
+                    query = query.eq('cliente_cpfcnpj', 'NENHUMA_EMPRESA_ENCONTRADA')
+            
+            result = query.execute()
+            importacoes_data = result.data if result.data else []
+            refresh_data['total_records_updated'] += len(importacoes_data)
+            
+            # Processar dados com pandas para cálculos estatísticos
+            if importacoes_data:
+                df = pd.DataFrame(importacoes_data)
+                
+                # Converter colunas numéricas
+                df['total_vmle_real'] = pd.to_numeric(df['total_vmle_real'], errors='coerce').fillna(0)
+                df['total_vmcv_real'] = pd.to_numeric(df['total_vmcv_real'], errors='coerce').fillna(0)
+                
+                # Converter datas
+                date_columns = ['data_abertura', 'data_embarque', 'data_chegada', 'previsao_chegada']
+                for col in date_columns:
+                    if col in df.columns:
+                        df[col] = pd.to_datetime(df[col], errors='coerce')
+                
+                # Calcular estatísticas do dashboard
+                refresh_data['dashboard_stats'] = {
+                    'total_processos': len(df),
+                    'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
+                    'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
+                    'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
+                    'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
+                    'em_transito': len(df[df['carga_status'] == '2 - Em Trânsito']),
+                    'desembarcadas': len(df[df['carga_status'] == '3 - Desembarcada']),
+                    'vmcv_total': float(df['total_vmcv_real'].sum()),
+                    'vmle_total': float(df['total_vmle_real'].sum())
+                }
+                
+                # Calcular estatísticas de materiais
+                material_groups = df.groupby('resumo_mercadoria').agg({
+                    'numero': 'count',
+                    'total_vmcv_real': 'sum'
+                }).reset_index().sort_values('total_vmcv_real', ascending=False)
+                
+                refresh_data['material_stats'] = {
+                    'top_materials': [
+                        {
+                            'material': row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado',
+                            'quantidade': int(row['numero']),
+                            'valor_total': float(row['total_vmcv_real'])
+                        }
+                        for _, row in material_groups.head(10).iterrows()
+                    ],
+                    'total_materials': len(material_groups)
+                }
+                
+                # Converter de volta para JSON serializable
+                for col in date_columns:
+                    if col in df.columns:
+                        df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S').fillna('')
+                
+                refresh_data['importacoes'] = df.to_dict('records')
+                
+            logger.info(f"✅ Importações atualizadas: {len(importacoes_data)} registros")
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao fazer refresh de importações: {str(e)}")
+            refresh_data['importacoes'] = []
+            refresh_data['dashboard_stats'] = {}
+            refresh_data['material_stats'] = {}
+        
+        # 2. REFRESH FORÇADO DE USUÁRIOS (apenas admin/interno)
+        if user_role in ['admin', 'interno_unique']:
+            try:
+                logger.info("🔄 Fazendo refresh forçado de usuários...")
+                usuarios_response = supabase_admin.table('users').select('*').order('created_at', desc=True).execute()
+                refresh_data['usuarios'] = usuarios_response.data if usuarios_response.data else []
+                refresh_data['total_records_updated'] += len(refresh_data['usuarios'])
+                logger.info(f"✅ Usuários atualizados: {len(refresh_data['usuarios'])} registros")
+            except Exception as e:
+                logger.error(f"❌ Erro ao fazer refresh de usuários: {str(e)}")
+                refresh_data['usuarios'] = []
+        
+        # 3. REFRESH FORÇADO DE EMPRESAS
+        try:
+            logger.info("🔄 Fazendo refresh forçado de empresas...")
+            companies_query = supabase.table('importacoes_processos')\
+                .select('cliente_cpfcnpj, cliente_razaosocial')\
+                .neq('cliente_cpfcnpj', '')\
+                .not_.is_('cliente_cpfcnpj', 'null')\
+                .execute()
+            
+            if companies_query.data:
+                companies_df = pd.DataFrame(companies_query.data)
+                companies_unique = companies_df.drop_duplicates(subset=['cliente_cpfcnpj']).to_dict('records')
+                
+                # Filtrar empresas baseado no role do usuário
+                if user_role == 'cliente_unique' and refresh_data['user_companies']:
+                    companies_unique = [c for c in companies_unique if c['cliente_cpfcnpj'] in refresh_data['user_companies']]
+                
+                refresh_data['companies'] = companies_unique
+                refresh_data['total_records_updated'] += len(companies_unique)
+                logger.info(f"✅ Empresas atualizadas: {len(companies_unique)} registros")
+            
+        except Exception as e:
+            logger.error(f"❌ Erro ao fazer refresh de empresas: {str(e)}")
+            refresh_data['companies'] = []
+        
+        # 4. REFRESH FORÇADO DE CÂMBIO
+        try:
+            logger.info("🔄 Fazendo refresh forçado de câmbio...")
+            refresh_data['currencies'] = get_currencies()
+            logger.info("✅ Câmbio atualizado")
+        except Exception as e:
+            logger.error(f"❌ Erro ao fazer refresh de câmbio: {str(e)}")
+            refresh_data['currencies'] = get_currencies()
+        
+        logger.info(f"=== REFRESH FORÇADO CONCLUÍDO ===")
+        logger.info(f"📊 Total de registros atualizados: {refresh_data['total_records_updated']}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Refresh forçado concluído com sucesso. {refresh_data["total_records_updated"]} registros atualizados.',
+            'data': refresh_data,
+            'timestamp': timestamp
+        })
+        
+    except Exception as e:
+        logger.exception(f"❌ Erro crítico no refresh forçado: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Erro no refresh forçado: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 # Any other API endpoints can go here

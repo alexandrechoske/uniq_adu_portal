@@ -225,6 +225,108 @@
         }
     }
 
+    // Função para refresh forçado (acionado pelo botão)
+    async function performForceRefresh() {
+        if (isRefreshing) {
+            console.log('[GlobalRefresh] Refresh já em andamento, ignorando...');
+            showNotification('Atualização já em andamento...', 'warning');
+            return;
+        }
+
+        try {
+            isRefreshing = true;
+            console.log('[GlobalRefresh] Iniciando refresh FORÇADO...');
+            
+            // Feedback visual no botão
+            const refreshButton = document.getElementById('global-refresh-button');
+            const originalHtml = refreshButton ? refreshButton.innerHTML : '';
+            
+            if (refreshButton) {
+                refreshButton.innerHTML = '<i class="mdi mdi-loading mdi-spin text-sm"></i>';
+                refreshButton.disabled = true;
+                refreshButton.classList.add('opacity-50');
+            }
+            
+            // Mostrar notificação de início
+            showNotification('🔄 Iniciando atualização forçada dos dados...', 'info');
+            
+            // Verificar sessão primeiro
+            const sessionValid = await checkSession();
+            if (!sessionValid) {
+                return;
+            }
+
+            // Chamar endpoint de refresh forçado
+            console.log('[GlobalRefresh] Chamando API de refresh forçado...');
+            const response = await fetch('/api/force-refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro HTTP: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                // Atualizar cache global com dados forçados
+                globalDataCache = {
+                    ...globalDataCache,
+                    ...result.data,
+                    last_update: result.timestamp
+                };
+                
+                lastUpdateTime = new Date();
+                
+                // Resetar countdown
+                countdown = CONFIG.REFRESH_INTERVAL;
+                
+                // Emitir evento para páginas específicas
+                const refreshEvent = new CustomEvent('globalDataForceRefresh', {
+                    detail: { 
+                        data: result.data, 
+                        timestamp: result.timestamp,
+                        totalRecords: result.data.total_records_updated || 0
+                    }
+                });
+                eventEmitter.dispatchEvent(refreshEvent);
+                window.dispatchEvent(refreshEvent);
+                
+                // Notificação de sucesso
+                const totalRecords = result.data.total_records_updated || 0;
+                showNotification(
+                    `✅ Atualização forçada concluída! ${totalRecords} registros atualizados.`, 
+                    'success'
+                );
+                
+                console.log('[GlobalRefresh] Refresh forçado concluído com sucesso');
+                console.log(`[GlobalRefresh] Total de registros atualizados: ${totalRecords}`);
+                
+            } else {
+                throw new Error(result.message || 'Erro desconhecido no refresh forçado');
+            }
+            
+        } catch (error) {
+            console.error('[GlobalRefresh] Erro durante refresh forçado:', error);
+            showNotification('❌ Erro durante atualização forçada: ' + error.message, 'error');
+        } finally {
+            // Restaurar botão
+            const refreshButton = document.getElementById('global-refresh-button');
+            if (refreshButton) {
+                refreshButton.innerHTML = originalHtml;
+                refreshButton.disabled = false;
+                refreshButton.classList.remove('opacity-50');
+            }
+            
+            isRefreshing = false;
+        }
+    }
+
     // Função para inicializar o sistema
     function initializeGlobalRefresh() {
         console.log('[GlobalRefresh] Inicializando sistema de refresh global...');
@@ -281,9 +383,8 @@
         const globalRefreshButton = document.getElementById('global-refresh-button');
         if (globalRefreshButton) {
             globalRefreshButton.addEventListener('click', function() {
-                console.log('[GlobalRefresh] Refresh manual solicitado');
-                performGlobalRefresh();
-                countdown = CONFIG.REFRESH_INTERVAL; // Reset countdown
+                console.log('[GlobalRefresh] Refresh forçado solicitado');
+                performForceRefresh();
             });
         }
         
@@ -307,6 +408,7 @@
         start: initializeGlobalRefresh,
         stop: stopGlobalRefresh,
         refresh: performGlobalRefresh,
+        forceRefresh: performForceRefresh, // Nova função de refresh forçado
         
         // Acesso aos dados
         getData: function() {
@@ -340,6 +442,14 @@
         
         offDataUpdate: function(callback) {
             eventEmitter.removeEventListener('dataUpdated', callback);
+        },
+        
+        onForceRefresh: function(callback) {
+            eventEmitter.addEventListener('globalDataForceRefresh', callback);
+        },
+        
+        offForceRefresh: function(callback) {
+            eventEmitter.removeEventListener('globalDataForceRefresh', callback);
         }
     };
 

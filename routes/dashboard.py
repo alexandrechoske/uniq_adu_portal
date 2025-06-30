@@ -840,7 +840,7 @@ def index(**kwargs):
                 )
             )
             def clean_material_name(material_name):
-                """Limpa e normaliza nomes de materiais removendo acentos, caracteres especiais e espaços"""
+                """Limpa e normaliza nomes de materiais preservando o conteúdo original quando possível"""
                 
                 if not material_name or pd.isna(material_name):
                     return "Não Informado"
@@ -852,25 +852,9 @@ def index(**kwargs):
                 if not material:
                     return "Não Informado"
                 
-                # Remover acentos (normalizar unicode)
-                material = unicodedata.normalize('NFD', material)
-                material = ''.join(char for char in material if unicodedata.category(char) != 'Mn')
-                
-                # Converter para uppercase para padronizar
-                material = material.upper()
-                
-                # Remover caracteres especiais, mantendo apenas letras, números, espaços e hífen
-                material = re.sub(r'[^A-Z0-9\s\-]', '', material)
-                
-                # Normalizar espaços múltiplos
-                material = re.sub(r'\s+', ' ', material)
-                
-                # Trim final
-                material = material.strip()
-                
-                # Se ficou vazio após limpeza, retornar padrão
-                if not material:
-                    return "NAO INFORMADO"
+                # Apenas capitalizar corretamente, mantendo caracteres especiais e acentos
+                # Isso preserva "MANUTENÇÃO" como "Manutenção"
+                material = material.title()
                 
                 return material
 

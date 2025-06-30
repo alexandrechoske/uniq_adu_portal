@@ -1565,7 +1565,7 @@
             if (result.status === 'success' && result.data.length > 0) {
                 tbody.innerHTML = result.data.map(item => `
                     <tr>
-                        <td class="font-medium">${item.numero || 'N/A'}</td>
+                        <td class="font-medium">${item.nro_pedido || 'N/A'}</td>
                         <td>${item.cliente_razaosocial || 'N/A'}</td>
                         <td>${item.resumo_mercadoria || 'N/A'}</td>
                         <td>${formatDate(item.data_embarque)}</td>

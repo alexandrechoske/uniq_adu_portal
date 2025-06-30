@@ -105,24 +105,22 @@ def format_value_smart(value, currency=False):
     return f"R$ {value_str}" if currency else value_str
 
 def normalize_material_name(text):
-    """Normaliza o nome do material removendo acentos, caracteres especiais e fazendo trim"""
+    """Normaliza o nome do material preservando o conteúdo original quando possível"""
+    if not text or (isinstance(text, str) and not text.strip()):
+        return 'Não informado'
+    
+    # Converter para string e fazer trim básico
+    text = str(text).strip()
+    
+    # Se ainda está vazio após trim, retornar padrão
     if not text:
         return 'Não informado'
     
-    # Remover acentos
-    text = unicodedata.normalize('NFD', text)
-    text = ''.join(char for char in text if unicodedata.category(char) != 'Mn')
-    
-    # Remover caracteres especiais, manter apenas letras, números e espaços
-    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
-    
-    # Fazer trim e remover espaços duplos
-    text = ' '.join(text.split())
-    
-    # Capitalizar primeira letra de cada palavra
+    # Apenas capitalizar corretamente, mantendo caracteres especiais e acentos
+    # Isso preserva "MANUTENÇÃO" como "Manutenção"
     text = text.title()
     
-    return text if text else 'Não informado'
+    return text
 
 @bp.route('/')
 @login_required
@@ -160,7 +158,7 @@ def get_kpis():
         # Buscar dados básicos diretamente do Supabase com filtros
         query_builder = supabase.table('importacoes_processos').select(
             'id, total_vmle_real, total_vmcv_real, cliente_cpfcnpj, situacao, di_modalidade_despacho, data_abertura'
-        ).not_.is_('total_vmcv_real', 'null')
+        )
         
         # Aplicar filtro de empresa baseado no usuário
         query_builder = apply_company_filter(query_builder)
@@ -178,7 +176,7 @@ def get_kpis():
         if situacao and situacao != 'todas':
             query_builder = query_builder.eq('situacao', situacao)
         
-        result = query_builder.execute()
+        result = query_builder.limit(2000).execute()
         
         if not result.data:
             return jsonify({'success': False, 'error': 'Nenhum dado encontrado'})
@@ -297,7 +295,7 @@ def get_top_materiais():
             query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
         
         # Executar query principal
-        processos_result = query.limit(1000).execute()
+        processos_result = query.limit(2000).execute()
         processos = processos_result.data or []
         
         # Agrupar por material
@@ -340,7 +338,7 @@ def get_evolucao_mensal():
         if material_filter:
             query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
         
-        result = query.limit(1000).execute()
+        result = query.limit(2000).execute()
         processos = result.data or []
         
         # Agrupar por mês
@@ -388,7 +386,7 @@ def get_despesas_composicao():
         if material_filter:
             query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
         
-        processos_result = query.limit(1000).execute()
+        processos_result = query.limit(2000).execute()
         processos = processos_result.data or []
         
         if not processos:
@@ -448,7 +446,7 @@ def get_canal_parametrizacao():
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
         
-        result = query.limit(1000).execute()
+        result = query.limit(2000).execute()
         processos = result.data or []
         
         # Agrupar por material e canal
@@ -528,7 +526,7 @@ def get_clientes_por_material():
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
         
-        result = query.limit(1000).execute()
+        result = query.limit(2000).execute()
         processos = result.data or []
         
         # Agrupar por cliente
@@ -562,9 +560,9 @@ def get_detalhamento():
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 50))
         
-        # Construir query base
+        # Construir query base - incluindo campo referencias
         query = supabase.table('importacoes_processos').select(
-            'id, numero, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj'
+            'id, numero, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj, referencias'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -578,13 +576,41 @@ def get_detalhamento():
         result = query.range(offset, offset + per_page - 1).execute()
         processos = result.data or []
         
-        # Calcular despesas como 40% do VMCV para cada processo
+        # Calcular despesas e extrair número do pedido para cada processo
         for p in processos:
             vmcv = float(p.get('total_vmcv_real') or 0)
             # Calcular despesas como 40% do VMCV
             p['total_despesas'] = vmcv * 0.4
             # Normalizar nome do material
             p['resumo_mercadoria'] = normalize_material_name(p.get('resumo_mercadoria'))
+            
+            # Extrair número do pedido das referências (mesmo código do dashboard)
+            nro_pedido = ""
+            referencias = p.get('referencias', [])
+            try:
+                if referencias:
+                    if isinstance(referencias, str):
+                        # Se for string, tentar fazer parse do JSON
+                        import json
+                        referencias = json.loads(referencias)
+                    
+                    # Se for uma lista com dicionários
+                    if isinstance(referencias, list) and len(referencias) > 0:
+                        primeiro_item = referencias[0]
+                        if isinstance(primeiro_item, dict) and 'referencia' in primeiro_item:
+                            nro_pedido = str(primeiro_item['referencia'])
+                        elif primeiro_item:
+                            nro_pedido = str(primeiro_item)
+                    
+                    # Se for um dicionário direto
+                    elif isinstance(referencias, dict) and 'referencia' in referencias:
+                        nro_pedido = str(referencias['referencia'])
+                        
+            except (json.JSONDecodeError, TypeError, IndexError, KeyError):
+                nro_pedido = ""
+            
+            # Adicionar número do pedido ao processo
+            p['nro_pedido'] = nro_pedido
         
         return jsonify({
             'status': 'success',
@@ -637,7 +663,7 @@ def get_principais_materiais():
             query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
         
         # Executar query principal
-        processos_result = query.limit(1000).execute()
+        processos_result = query.limit(2000).execute()
         processos = processos_result.data or []
         
         # Agrupar dados por material
