@@ -150,31 +150,35 @@ def get_kpis():
         print(f"[DEBUG MATERIAIS API] Role: {session.get('user', {}).get('role')}")
         
         # Filtros da query
-        data_inicio = request.args.get('data_inicio')
-        data_fim = request.args.get('data_fim')
-        modalidade = request.args.get('modalidade')
-        situacao = request.args.get('situacao')
+        material_filter = request.args.get('material', '')
+        date_start = request.args.get('date_start', '')
+        date_end = request.args.get('date_end', '')
+        cliente_filter = request.args.get('cliente', '')
+        modal_filter = request.args.get('modal', '')
         
         # Buscar dados básicos diretamente do Supabase com filtros
         query_builder = supabase.table('importacoes_processos').select(
-            'id, total_vmle_real, total_vmcv_real, cliente_cpfcnpj, situacao, di_modalidade_despacho, data_abertura'
+            'id, total_vmle_real, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj, cliente_razaosocial, situacao, di_modalidade_despacho, data_abertura, via_transporte_descricao'
         )
         
         # Aplicar filtro de empresa baseado no usuário
         query_builder = apply_company_filter(query_builder)
         
         # Aplicar filtros adicionais da requisição
-        if data_inicio:
-            query_builder = query_builder.gte('data_abertura', data_inicio)
+        if material_filter:
+            query_builder = query_builder.ilike('resumo_mercadoria', f'%{material_filter}%')
         
-        if data_fim:
-            query_builder = query_builder.lte('data_abertura', data_fim)
+        if date_start:
+            query_builder = query_builder.gte('data_abertura', date_start)
+        
+        if date_end:
+            query_builder = query_builder.lte('data_abertura', date_end)
             
-        if modalidade and modalidade != 'todas':
-            query_builder = query_builder.eq('di_modalidade_despacho', modalidade)
+        if cliente_filter:
+            query_builder = query_builder.ilike('cliente_razaosocial', f'%{cliente_filter}%')
             
-        if situacao and situacao != 'todas':
-            query_builder = query_builder.eq('situacao', situacao)
+        if modal_filter:
+            query_builder = query_builder.ilike('via_transporte_descricao', f'%{modal_filter}%')
         
         result = query_builder.limit(2000).execute()
         
@@ -444,13 +448,36 @@ def get_despesas_composicao():
 def get_canal_parametrizacao():
     """Análise de canal por material"""
     try:
+        # Obter filtros da requisição
+        material_filter = request.args.get('material', '')
+        date_start = request.args.get('date_start', '')
+        date_end = request.args.get('date_end', '')
+        cliente_filter = request.args.get('cliente', '')
+        modal_filter = request.args.get('modal', '')
+        
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'resumo_mercadoria, diduimp_canal, cliente_cpfcnpj'
+            'resumo_mercadoria, diduimp_canal, cliente_cpfcnpj, cliente_razaosocial, data_abertura, via_transporte_descricao'
         )
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
+        
+        # Aplicar filtros do usuário
+        if material_filter:
+            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+        
+        if date_start:
+            query = query.gte('data_abertura', date_start)
+        
+        if date_end:
+            query = query.lte('data_abertura', date_end)
+            
+        if cliente_filter:
+            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
+            
+        if modal_filter:
+            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
         
         result = query.limit(2000).execute()
         processos = result.data or []
@@ -662,7 +689,7 @@ def get_principais_materiais():
         
         # Construir query base
         query = supabase.table('importacoes_processos').select(
-            'id, total_vmcv_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial, cliente_cpfcnpj'
+            'id, total_vmle_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial, cliente_cpfcnpj'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -691,19 +718,18 @@ def get_principais_materiais():
         # Agrupar dados por material
         materiais_data = defaultdict(lambda: {
             'total_processos': 0,
-            'despesa_total': 0,
+            'vmle_total': 0,
             'data_chegada_mais_recente': None
         })
         
         for p in processos:
             material = normalize_material_name(p.get('resumo_mercadoria'))
-            vmcv = float(p.get('total_vmcv_real') or 0)
-            despesa = vmcv * 0.4  # Calcular despesas como 40% do VMCV
+            vmle = float(p.get('total_vmle_real') or 0)
             data_chegada = p.get('data_chegada')
             
             # Acumular dados por material
             materiais_data[material]['total_processos'] += 1
-            materiais_data[material]['despesa_total'] += despesa
+            materiais_data[material]['vmle_total'] += vmle
             
             # Atualizar data de chegada mais recente
             if data_chegada:
@@ -725,9 +751,9 @@ def get_principais_materiais():
             principais_materiais.append({
                 'material': material,
                 'total_processos': data['total_processos'],
-                'despesa_total': data['despesa_total'],
+                'vmle_total': data['vmle_total'],
                 'data_chegada': data_chegada_str,
-                'despesa_total_formatted': f"R$ {data['despesa_total']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                'vmle_total_formatted': f"R$ {data['vmle_total']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
             })
         
         # Ordenar por total de processos (decrescente) e pegar top 15
@@ -1163,6 +1189,139 @@ def get_linha_tempo_chegadas():
         return jsonify({
             'status': 'success',
             'data': processos
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/api/material-modal')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def get_material_modal():
+    """Análise de material por modal de transporte"""
+    try:
+        # Obter filtros da requisição
+        material_filter = request.args.get('material', '')
+        date_start = request.args.get('date_start', '')
+        date_end = request.args.get('date_end', '')
+        cliente_filter = request.args.get('cliente', '')
+        modal_filter = request.args.get('modal', '')
+        
+        # Construir query base
+        query = supabase.table('importacoes_processos').select(
+            'resumo_mercadoria, via_transporte_descricao, cliente_cpfcnpj'
+        )
+        
+        # Aplicar filtro de empresa baseado no usuário
+        query = apply_company_filter(query)
+        
+        # Aplicar filtros do usuário
+        if material_filter:
+            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+        
+        if date_start:
+            query = query.gte('data_abertura', date_start)
+        
+        if date_end:
+            query = query.lte('data_abertura', date_end)
+            
+        if cliente_filter:
+            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
+            
+        if modal_filter:
+            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
+        
+        result = query.limit(2000).execute()
+        processos = result.data or []
+        
+        # Agrupar por material e modal
+        materiais_modal = defaultdict(lambda: defaultdict(int))
+        for p in processos:
+            material = normalize_material_name(p.get('resumo_mercadoria'))
+            modal = p.get('via_transporte_descricao') or 'Não informado'
+            
+            # Normalizar nomes dos modais
+            if modal == 'AEREA':
+                modal = 'Aéreo'
+            elif modal == 'MARITIMA':
+                modal = 'Marítimo'
+            elif modal == 'TERRESTRE':
+                modal = 'Terrestre'
+            else:
+                modal = 'Outros'
+                
+            materiais_modal[material][modal] += 1
+        
+        # Pegar top 5 materiais por total de processos
+        totais_por_material = {mat: sum(modais.values()) for mat, modais in materiais_modal.items()}
+        top_materiais = sorted(totais_por_material.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # Preparar dados para o gráfico com barras 100%
+        labels = [item[0] for item in top_materiais]
+        aereo = []
+        maritimo = []
+        rodoviario = []
+        outros = []
+        aereo_qtd = []
+        maritimo_qtd = []
+        rodoviario_qtd = []
+        outros_qtd = []
+        
+        for material in labels:
+            modais = materiais_modal[material]
+            total = sum(modais.values())
+            if total > 0:
+                aereo_count = modais.get('Aéreo', 0)
+                maritimo_count = modais.get('Marítimo', 0)
+                rodoviario_count = modais.get('Terrestre', 0)
+                outros_count = modais.get('Outros', 0)
+                
+                aereo_pct = (aereo_count / total * 100)
+                maritimo_pct = (maritimo_count / total * 100)
+                rodoviario_pct = (rodoviario_count / total * 100)
+                outros_pct = (outros_count / total * 100)
+                
+                # Garantir que a soma seja exatamente 100%
+                total_pct = aereo_pct + maritimo_pct + rodoviario_pct + outros_pct
+                if total_pct > 0:
+                    factor = 100 / total_pct
+                    aereo_pct *= factor
+                    maritimo_pct *= factor
+                    rodoviario_pct *= factor
+                    outros_pct *= factor
+                
+                aereo.append(aereo_pct)
+                maritimo.append(maritimo_pct)
+                rodoviario.append(rodoviario_pct)
+                outros.append(outros_pct)
+                aereo_qtd.append(aereo_count)
+                maritimo_qtd.append(maritimo_count)
+                rodoviario_qtd.append(rodoviario_count)
+                outros_qtd.append(outros_count)
+            else:
+                aereo.append(0)
+                maritimo.append(0)
+                rodoviario.append(0)
+                outros.append(0)
+                aereo_qtd.append(0)
+                maritimo_qtd.append(0)
+                rodoviario_qtd.append(0)
+                outros_qtd.append(0)
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'labels': labels,
+                'aereo': aereo,
+                'maritimo': maritimo,
+                'rodoviario': rodoviario,
+                'outros': outros,
+                'aereo_qtd': aereo_qtd,
+                'maritimo_qtd': maritimo_qtd,
+                'rodoviario_qtd': rodoviario_qtd,
+                'outros_qtd': outros_qtd,
+                'horizontal': True
+            }
         })
         
     except Exception as e:
