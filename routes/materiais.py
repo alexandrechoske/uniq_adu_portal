@@ -299,20 +299,24 @@ def get_top_materiais():
         processos = processos_result.data or []
         
         # Agrupar por material
-        materiais = defaultdict(float)
+        materiais = defaultdict(lambda: {'valor': 0, 'quantidade': 0})
         for p in processos:
             material = normalize_material_name(p.get('resumo_mercadoria'))
-            valor = float(p.get('total_vmcv_real') or 0)
-            materiais[material] += valor
+            # Calcular despesa (40% do valor total)
+            valor_total = float(p.get('total_vmcv_real') or 0)
+            despesa = valor_total * 0.4
+            materiais[material]['valor'] += despesa
+            materiais[material]['quantidade'] += 1
         
-        # Ordenar e pegar top 10
-        top_materiais = sorted(materiais.items(), key=lambda x: x[1], reverse=True)[:10]
+        # Ordenar por valor e pegar top 10
+        top_materiais = sorted(materiais.items(), key=lambda x: x[1]['valor'], reverse=False)[:10]
         
         return jsonify({
             'status': 'success',
             'data': {
                 'labels': [item[0] for item in top_materiais],
-                'values': [item[1] for item in top_materiais]
+                'values': [item[1]['valor'] for item in top_materiais],
+                'quantities': [item[1]['quantidade'] for item in top_materiais]
             }
         })
         
@@ -348,8 +352,10 @@ def get_evolucao_mensal():
                 try:
                     data = datetime.fromisoformat(p['data_abertura'].replace('Z', '+00:00'))
                     mes_ano = f"{data.year}-{data.month:02d}"
-                    valor = float(p.get('total_vmcv_real') or 0)
-                    meses[mes_ano]['valor'] += valor
+                    # Calcular despesa (40% do valor total)
+                    valor_total = float(p.get('total_vmcv_real') or 0)
+                    despesa = valor_total * 0.4
+                    meses[mes_ano]['valor'] += despesa
                     meses[mes_ano]['quantidade'] += 1
                 except:
                     continue
@@ -465,14 +471,21 @@ def get_canal_parametrizacao():
         verde = []
         amarelo = []
         vermelho = []
+        verde_qtd = []
+        amarelo_qtd = []
+        vermelho_qtd = []
         
         for material in labels:
             canais = materiais_canal[material]
             total = sum(canais.values())
             if total > 0:
-                verde_pct = (canais.get('VERDE', 0) / total * 100)
-                amarelo_pct = (canais.get('AMARELO', 0) / total * 100)
-                vermelho_pct = (canais.get('VERMELHO', 0) / total * 100)
+                verde_count = canais.get('VERDE', 0)
+                amarelo_count = canais.get('AMARELO', 0)
+                vermelho_count = canais.get('VERMELHO', 0)
+                
+                verde_pct = (verde_count / total * 100)
+                amarelo_pct = (amarelo_count / total * 100)
+                vermelho_pct = (vermelho_count / total * 100)
                 
                 # Garantir que a soma seja exatamente 100%
                 total_pct = verde_pct + amarelo_pct + vermelho_pct
@@ -485,10 +498,16 @@ def get_canal_parametrizacao():
                 verde.append(verde_pct)
                 amarelo.append(amarelo_pct)
                 vermelho.append(vermelho_pct)
+                verde_qtd.append(verde_count)
+                amarelo_qtd.append(amarelo_count)
+                vermelho_qtd.append(vermelho_count)
             else:
                 verde.append(0)
                 amarelo.append(0)
                 vermelho.append(0)
+                verde_qtd.append(0)
+                amarelo_qtd.append(0)
+                vermelho_qtd.append(0)
         
         return jsonify({
             'status': 'success',
@@ -497,6 +516,9 @@ def get_canal_parametrizacao():
                 'verde': verde,
                 'amarelo': amarelo,
                 'vermelho': vermelho,
+                'verde_qtd': verde_qtd,
+                'amarelo_qtd': amarelo_qtd,
+                'vermelho_qtd': vermelho_qtd,
                 'horizontal': True  # Flag para indicar que deve ser horizontal
             }
         })

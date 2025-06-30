@@ -1244,24 +1244,79 @@
             const result = await response.json();
 
             if (result.status === 'success' && result.data.labels.length > 0) {
-                const trace = {
+                const trace1 = {
                     type: 'bar',
                     x: result.data.values,
                     y: result.data.labels,
                     orientation: 'h',
+                    name: 'Despesas (R$)',
                     marker: {
+                        color: '#3b82f6'
+                    },
+                    text: result.data.values.map(value => formatMillions(value)),
+                    textposition: 'outside',
+                    textfont: {
+                        size: 10,
                         color: '#3b82f6'
                     }
                 };
 
-                const layout = {
-                    margin: { l: 200, r: 50, t: 20, b: 50 },
-                    xaxis: { title: 'Valor VMCV (R$)' },
-                    yaxis: { title: '' },
-                    font: { size: 12 }
+                const trace2 = {
+                    type: 'bar',
+                    x: result.data.quantities,
+                    y: result.data.labels,
+                    orientation: 'h',
+                    name: 'Quantidade',
+                    marker: {
+                        color: '#ef4444'
+                    },
+                    text: result.data.quantities.map(value => formatNumber(value)),
+                    textposition: 'outside',
+                    textfont: {
+                        size: 10,
+                        color: '#ef4444'
+                    },
+                    yaxis: 'y2'
                 };
 
-                Plotly.newPlot('chart-top-materiais', [trace], layout, {
+                const layout = {
+                    margin: { l: 100, r: 20, t: 10, b: 60 },
+                    xaxis: { 
+                        title: 'Despesas (R$)',
+                        showgrid: false,
+                        zeroline: false,
+                        side: 'bottom'
+                    },
+                    yaxis: { 
+                        title: '',
+                        showgrid: false,
+                        zeroline: false,
+                        automargin: true
+                    },
+                    yaxis2: {
+                        title: '',
+                        overlaying: 'y',
+                        side: 'right',
+                        showgrid: false,
+                        zeroline: false,
+                        automargin: true
+                    },
+                    font: { size: 10 },
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    showlegend: true,
+                    legend: {
+                        orientation: 'h',
+                        x: 0.5,
+                        xanchor: 'center',
+                        y: -0.15,
+                        font: { size: 10 }
+                    },
+                    autosize: true,
+                    barmode: 'group'
+                };
+
+                Plotly.newPlot('chart-top-materiais', [trace1, trace2], layout, {
                     responsive: true,
                     displayModeBar: false,
                     staticPlot: false
@@ -1273,6 +1328,7 @@
             console.error('Erro ao carregar top materiais:', error);
         }
     }
+
 
     // Carregar evolução mensal
     async function loadEvolucaoMensal() {
@@ -1286,8 +1342,14 @@
                     type: 'bar',
                     x: result.data.labels,
                     y: result.data.valores,
-                    name: 'Valor VMCV (R$)',
-                    marker: { color: '#3b82f6' }
+                    name: 'Despesas (R$)',
+                    marker: { color: '#3b82f6' },
+                    text: result.data.valores.map(value => formatMillions(value)),
+                    textposition: 'outside',
+                    textfont: {
+                        size: 11,
+                        color: '#3b82f6'
+                    }
                 };
 
                 const trace2 = {
@@ -1298,7 +1360,13 @@
                     name: 'Quantidade',
                     yaxis: 'y2',
                     line: { color: '#ef4444' },
-                    marker: { color: '#ef4444' }
+                    marker: { color: '#ef4444' },
+                    text: result.data.quantidades.map(value => formatNumber(value)),
+                    textposition: 'top center',
+                    textfont: {
+                        size: 10,
+                        color: '#ef4444'
+                    }
                 };
 
                 const layout = {
@@ -1345,45 +1413,6 @@
         }
     }
 
-    // Carregar composição das despesas
-    async function loadDespesasComposicao() {
-        try {
-            const params = new URLSearchParams();
-            if (currentMaterial) {
-                params.append('material', currentMaterial);
-            }
-            const response = await fetch(`/materiais/api/despesas-composicao?${params}`);
-            const result = await response.json();
-
-            if (result.status === 'success' && result.data.labels.length > 0) {
-                const trace = {
-                    type: 'pie',
-                    labels: result.data.labels,
-                    values: result.data.values,
-                    hole: 0.4
-                };
-
-                const layout = {
-                    margin: { l: 20, r: 20, t: 20, b: 20 },
-                    font: { size: 12 }
-                };
-
-                Plotly.newPlot('chart-despesas-composicao', [trace], layout, {
-                    responsive: true,
-                    displayModeBar: false,
-                    staticPlot: false
-                });
-            } else {
-                const message = currentMaterial ? 
-                    'Nenhuma despesa encontrada para este material' : 
-                    'Selecione um material para ver a composição das despesas';
-                document.getElementById('chart-despesas-composicao').innerHTML = `<div class="no-data">${message}</div>`;
-            }
-        } catch (error) {
-            console.error('Erro ao carregar composição das despesas:', error);
-            document.getElementById('chart-despesas-composicao').innerHTML = '<div class="no-data">Erro ao carregar dados</div>';
-        }
-    }
 
     // Carregar canal de parametrização
     async function loadCanalParametrizacao() {
@@ -1398,7 +1427,13 @@
                     x: result.data.verde,
                     name: 'Verde',
                     orientation: 'h',
-                    marker: { color: '#16a34a' }
+                    marker: { color: '#16a34a' },
+                    text: result.data.verde_qtd.map(value => value > 0 ? formatNumber(value) : ''),
+                    textposition: 'inside',
+                    textfont: {
+                        size: 10,
+                        color: 'white'
+                    }
                 };
 
                 const trace2 = {
@@ -1407,7 +1442,13 @@
                     x: result.data.amarelo,
                     name: 'Amarelo',
                     orientation: 'h',
-                    marker: { color: '#d97706' }
+                    marker: { color: '#d97706' },
+                    text: result.data.amarelo_qtd.map(value => value > 0 ? formatNumber(value) : ''),
+                    textposition: 'inside',
+                    textfont: {
+                        size: 10,
+                        color: 'white'
+                    }
                 };
 
                 const trace3 = {
@@ -1416,7 +1457,13 @@
                     x: result.data.vermelho,
                     name: 'Vermelho',
                     orientation: 'h',
-                    marker: { color: '#dc2626' }
+                    marker: { color: '#dc2626' },
+                    text: result.data.vermelho_qtd.map(value => value > 0 ? formatNumber(value) : ''),
+                    textposition: 'inside',
+                    textfont: {
+                        size: 10,
+                        color: 'white'
+                    }
                 };
 
                 const layout = {
@@ -1618,6 +1665,15 @@
             style: 'currency',
             currency: 'BRL'
         }).format(value);
+    }
+
+    function formatMillions(value) {
+        if (!value || isNaN(value)) return '0M';
+        const millions = value / 1000000;
+        if (millions < 0.1) {
+            return (millions * 1000).toFixed(0) + 'K';
+        }
+        return millions.toFixed(1) + 'M';
     }
 
     function formatNumber(value) {
