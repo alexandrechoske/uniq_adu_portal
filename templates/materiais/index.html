@@ -134,9 +134,12 @@
 
     .filters-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: var(--spacing-md);
+        grid-template-columns: 1.2fr 0.8fr 0.8fr 1.1fr 0.8fr 60px 60px;
+        gap: var(--spacing-sm);
         align-items: end;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
     }
 
     .filter-group {
@@ -166,6 +169,9 @@
         font-size: 0.875rem;
         color: var(--color-text-primary);
         transition: all var(--transition-fast);
+        width: 100%;
+        box-sizing: border-box;
+        min-width: 0;
     }
 
     .filter-input:focus {
@@ -605,6 +611,7 @@
         }
         .filters-grid {
             grid-template-columns: 1fr;
+            gap: var(--spacing-sm);
         }
         .filter-buttons {
             justify-content: center;
@@ -928,23 +935,21 @@
                 </div>
                 <div class="filter-group">
                     <label class="filter-label">Cliente</label>
-                    <input type="text" id="cliente-filter" class="filter-input" placeholder="Razão Social">
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label">Modal de Transporte</label>
-                    <select id="modal-filter" class="filter-input">
-                        <option value="">Todos</option>
-                        <option value="AEREO">Aéreo</option>
-                        <option value="MARITIMO">Marítimo</option>
-                        <option value="RODOVIARIO">Rodoviário</option>
+                    <select id="cliente-filter" class="filter-input">
+                        <option value="">Todos os clientes</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label">Ações</label>
-                    <div class="filter-buttons">
-                        <button class="btn-filter" onclick="applyFilters()">🔍 Filtrar</button>
-                        <button class="btn-clear" onclick="clearFilters()">🗑️ Limpar</button>
-                    </div>
+                    <label class="filter-label">Modal Transporte</label>
+                    <select id="modal-filter" class="filter-input">
+                        <option value="">Todos os modais</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <button class="btn-filter" onclick="applyFilters()">🔍</button>
+                </div>
+                <div class="filter-group">
+                    <button class="btn-clear" onclick="clearFilters()">🗑️</button>
                 </div>
             </div>
         </div>
@@ -1138,7 +1143,10 @@
     // Inicialização
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Inicializando Dashboard de Materiais...');
+        
         loadInitialData();
+        loadClientesOpcoes();
+        loadModaisOpcoes();
         
         // Adicionar listener para mudança no filtro de material
         document.getElementById('material-filter').addEventListener('change', function() {
@@ -1162,7 +1170,7 @@
             material: document.getElementById('material-filter').value.trim(),
             date_start: document.getElementById('date-start').value,
             date_end: document.getElementById('date-end').value,
-            cliente: document.getElementById('cliente-filter').value.trim(),
+            cliente: document.getElementById('cliente-filter').value,
             modal: document.getElementById('modal-filter').value
         };
 
@@ -1190,6 +1198,58 @@
         loadMateriaisOpcoes();
     }
 
+    // Carregar opções de clientes para o dropdown
+    async function loadClientesOpcoes() {
+        try {
+            const response = await fetch('/materiais/api/clientes-opcoes');
+            const result = await response.json();
+
+            if (result.success) {
+                const select = document.getElementById('cliente-filter');
+                // Limpar opções existentes (mantendo a primeira)
+                while (select.children.length > 1) {
+                    select.removeChild(select.lastChild);
+                }
+                
+                // Adicionar as opções
+                result.data.forEach(cliente => {
+                    const option = document.createElement('option');
+                    option.value = cliente.value;
+                    option.textContent = cliente.label;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao carregar opções de clientes:', error);
+        }
+    }
+
+    // Carregar opções de modais para o dropdown
+    async function loadModaisOpcoes() {
+        try {
+            const response = await fetch('/materiais/api/modais-opcoes');
+            const result = await response.json();
+
+            if (result.success) {
+                const select = document.getElementById('modal-filter');
+                // Limpar opções existentes (mantendo a primeira)
+                while (select.children.length > 1) {
+                    select.removeChild(select.lastChild);
+                }
+                
+                // Adicionar as opções
+                result.data.forEach(modal => {
+                    const option = document.createElement('option');
+                    option.value = modal.value;
+                    option.textContent = modal.label;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao carregar opções de modais:', error);
+        }
+    }
+
     // Carregar todos os dados
     function loadAllData() {
         showLoading();
@@ -1208,10 +1268,25 @@
         });
     }
 
+    // Função auxiliar para construir parâmetros de URL
+    function buildUrlParams() {
+        const params = new URLSearchParams();
+        
+        // Adicionar filtros básicos
+        if (currentFilters.material) params.append('material', currentFilters.material);
+        if (currentFilters.date_start) params.append('date_start', currentFilters.date_start);
+        if (currentFilters.date_end) params.append('date_end', currentFilters.date_end);
+        if (currentFilters.cliente) params.append('cliente', currentFilters.cliente);
+        if (currentFilters.modal) params.append('modal', currentFilters.modal);
+        
+        return params;
+    }
+
     // Carregar KPIs
     async function loadKPIs() {
         try {
-            const params = new URLSearchParams(currentFilters);
+            const params = buildUrlParams();
+            
             console.log('Carregando KPIs com filtros:', currentFilters); // Debug
             console.log('URL params:', params.toString()); // Debug
             const response = await fetch(`/materiais/api/kpis?${params}`);
@@ -1256,7 +1331,7 @@
     // Carregar gráfico Material x Modal
     async function loadMaterialModal() {
         try {
-            const params = new URLSearchParams(currentFilters);
+            const params = buildUrlParams();
             const response = await fetch(`/materiais/api/material-modal?${params}`);
             const result = await response.json();
 
@@ -1442,7 +1517,7 @@
     // Carregar gráfico de canal por Tipo de Material
     async function loadCanalParametrizacao() {
         try {
-            const params = new URLSearchParams(currentFilters);
+            const params = buildUrlParams();
             const response = await fetch(`/materiais/api/canal-parametrizacao?${params}`);
             const result = await response.json();
 
@@ -1543,7 +1618,7 @@
     // Carregar tabela de principais materiais
     async function loadPrincipaisMateriais() {
         try {
-            const params = new URLSearchParams(currentFilters);
+            const params = buildUrlParams();
             const response = await fetch(`/materiais/api/principais-materiais?${params}`);
             const result = await response.json();
 

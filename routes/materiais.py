@@ -175,10 +175,10 @@ def get_kpis():
             query_builder = query_builder.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query_builder = query_builder.ilike('cliente_razaosocial', f'%{cliente_filter}%')
-            
+            query_builder = query_builder.eq('cliente_cpfcnpj', cliente_filter)
+        
         if modal_filter:
-            query_builder = query_builder.ilike('via_transporte_descricao', f'%{modal_filter}%')
+            query_builder = query_builder.eq('via_transporte_descricao', modal_filter)
         
         result = query_builder.limit(2000).execute()
         
@@ -293,10 +293,10 @@ def get_top_materiais():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
-            
+            query = query.eq('cliente_cpfcnpj', cliente_filter)
+        
         if modal_filter:
-            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
+            query = query.eq('via_transporte_descricao', modal_filter)
         
         # Executar query principal
         processos_result = query.limit(2000).execute()
@@ -474,10 +474,10 @@ def get_canal_parametrizacao():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
-            
+            query = query.eq('cliente_cpfcnpj', cliente_filter)
+        
         if modal_filter:
-            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
+            query = query.eq('via_transporte_descricao', modal_filter)
         
         result = query.limit(2000).execute()
         processos = result.data or []
@@ -706,10 +706,10 @@ def get_principais_materiais():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
-            
+            query = query.eq('cliente_cpfcnpj', cliente_filter)
+        
         if modal_filter:
-            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
+            query = query.eq('via_transporte_descricao', modal_filter)
         
         # Executar query principal
         processos_result = query.limit(2000).execute()
@@ -1226,10 +1226,10 @@ def get_material_modal():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.ilike('cliente_razaosocial', f'%{cliente_filter}%')
-            
+            query = query.eq('cliente_cpfcnpj', cliente_filter)
+        
         if modal_filter:
-            query = query.ilike('via_transporte_descricao', f'%{modal_filter}%')
+            query = query.eq('via_transporte_descricao', modal_filter)
         
         result = query.limit(2000).execute()
         processos = result.data or []
@@ -1326,3 +1326,143 @@ def get_material_modal():
         
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/api/clientes-opcoes')
+@login_required
+def clientes_opcoes():
+    """Endpoint para buscar clientes para autocomplete"""
+    try:
+        search_term = request.args.get('search', '').strip()
+        
+        # Base query - usar a tabela correta de importações
+        query = supabase.table('importacoes_processos') \
+                        .select('cliente_razaosocial, cliente_cpfcnpj') \
+                        .not_.is_('cliente_razaosocial', 'null') \
+                        .not_.eq('cliente_razaosocial', '')
+        
+        # Aplicar filtros de empresa do usuário
+        query = apply_company_filter(query)
+        
+        # Aplicar filtro de busca se fornecido
+        if search_term:
+            query = query.ilike('cliente_razaosocial', f'%{search_term}%')
+        
+        # Buscar dados únicos
+        response = query.limit(100).execute()
+        
+        if response.data:
+            # Criar lista única de clientes
+            clientes_set = set()
+            for item in response.data:
+                if item.get('cliente_razaosocial'):
+                    clientes_set.add((item['cliente_razaosocial'], item['cliente_cpfcnpj']))
+            
+            # Converter para lista ordenada
+            clientes = [
+                {'label': cliente[0], 'value': cliente[1]} 
+                for cliente in sorted(clientes_set, key=lambda x: x[0])
+            ]
+            
+            return jsonify({
+                'success': True,
+                'data': clientes[:50]  # Limitar a 50 resultados
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': []
+        })
+        
+    except Exception as e:
+        print(f"[ERROR clientes_opcoes] {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@bp.route('/api/modais-opcoes')
+@login_required
+def modais_opcoes():
+    """Endpoint para buscar modais de transporte disponíveis"""
+    try:
+        # Base query - usar a tabela correta de importações
+        query = supabase.table('importacoes_processos') \
+                        .select('via_transporte_descricao') \
+                        .not_.is_('via_transporte_descricao', 'null') \
+                        .not_.eq('via_transporte_descricao', '')
+        
+        # Aplicar filtros de empresa do usuário
+        query = apply_company_filter(query)
+        
+        # Buscar dados únicos
+        response = query.limit(1000).execute()
+        
+        if response.data:
+            # Criar lista única de modais
+            modais_set = set()
+            for item in response.data:
+                if item.get('via_transporte_descricao'):
+                    modais_set.add(item['via_transporte_descricao'])
+            
+            # Converter para lista ordenada
+            modais = [
+                {'label': modal, 'value': modal} 
+                for modal in sorted(modais_set)
+            ]
+            
+            return jsonify({
+                'success': True,
+                'data': modais
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': []
+        })
+        
+    except Exception as e:
+        print(f"[ERROR modais_opcoes] {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+def get_multiple_filter_values(param_name):
+    """Get multiple values for a filter parameter"""
+    # Suporte para parâmetros múltiplos (ex: ?cliente=A&cliente=B)
+    values = request.args.getlist(param_name)
+    if values:
+        return [v.strip() for v in values if v.strip()]
+    
+    # Fallback para valor único
+    single_value = request.args.get(param_name, '').strip()
+    if single_value:
+        return [single_value]
+    
+    return []
+
+def apply_multiple_filter(query, field_name, values, filter_type='ilike'):
+    """Apply multiple values filter to a query"""
+    if not values:
+        return query
+    
+    if len(values) == 1:
+        # Single value
+        if filter_type == 'ilike':
+            return query.ilike(field_name, f'%{values[0]}%')
+        elif filter_type == 'eq':
+            return query.eq(field_name, values[0])
+    else:
+        # Multiple values - use OR condition
+        if filter_type == 'ilike':
+            # Para ilike, construir condição OR manualmente
+            conditions = []
+            for value in values:
+                conditions.append(f'{field_name}.ilike.%{value}%')
+            # Usar or_ para múltiplas condições
+            return query.or_(','.join(conditions))
+        elif filter_type == 'eq':
+            # Para eq, usar in_
+            return query.in_(field_name, values)
+    
+    return query
