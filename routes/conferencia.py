@@ -9,6 +9,9 @@ import time
 import tempfile
 import random
 import base64
+import threading
+import signal
+import functools
 from werkzeug.utils import secure_filename
 import asyncio
 import aiohttp
@@ -233,6 +236,9 @@ def upload():
             try:
                 print(f"DEBUG: Iniciando processamento assíncrono para job {job_id}")
                 
+                # Garantir que o job está na memória desde o início
+                jobs[job_id] = {**job_data}
+                
                 # Processar cada arquivo
                 for i, file_info in enumerate(saved_files):
                     try:
@@ -240,17 +246,18 @@ def upload():
                         file_path = file_info['path']
                         print(f"DEBUG: Processando arquivo {i+1}/{len(saved_files)}: {filename}")
                         
-                        # Atualizar progresso no banco
-                        progress = int((i / len(saved_files)) * 100)
-                        progress_data = {
-                            'progress': progress,
+                        # Atualizar progresso - sem a coluna 'progress' problemática
+                        update_data = {
                             'arquivos_processados': i,
                             'updated_at': datetime.now().isoformat()
                         }
                         try:
-                            supabase.table('conferencia_jobs').update(progress_data).eq('id', job_id).execute()
-                        except:
-                            pass  # Ignorar erros de atualização de progresso
+                            supabase.table('conferencia_jobs').update(update_data).eq('id', job_id).execute()
+                        except Exception as db_error:
+                            print(f"DEBUG: Erro ao atualizar progresso no banco: {db_error}")
+                            # Atualizar na memória
+                            if job_id in jobs:
+                                jobs[job_id].update(update_data)
                         
                         # Processar arquivo
                         if gemini_api_key:
@@ -264,6 +271,11 @@ def upload():
                         
                         file_info['status'] = 'completed'
                         file_info['result'] = result
+                        
+                        # Atualizar job na memória imediatamente
+                        if job_id in jobs:
+                            jobs[job_id]['arquivos'][i] = file_info
+                            jobs[job_id]['arquivos_processados'] = i + 1
                         
                         # Debug do resultado
                         if result and 'sumario' in result:
@@ -289,45 +301,65 @@ def upload():
                                     "status": "erro",
                                     "tipo": "erro_critico",
                                     "valor_extraido": None,
-                                    "descricao": f"Erro durante o processamento: {str(e)}"
+                                    "descricao": str(e)
                                 }
                             ]
                         }
+                        
                         file_info['status'] = 'error'
                         file_info['result'] = error_result
+                        
+                        # Atualizar job na memória
+                        if job_id in jobs:
+                            jobs[job_id]['arquivos'][i] = file_info
+                            jobs[job_id]['arquivos_processados'] = i + 1
                 
                 # Finalizar job
                 final_job_data = {
                     'status': 'completed',
-                    'progress': 100,
                     'arquivos_processados': len(saved_files),
                     'arquivos': saved_files,
                     'updated_at': datetime.now().isoformat()
                 }
                 
+                # Atualizar na memória primeiro
+                jobs[job_id].update(final_job_data)
+                
                 try:
                     supabase.table('conferencia_jobs').update(final_job_data).eq('id', job_id).execute()
                     print(f"DEBUG: Job {job_id} finalizado com sucesso no banco")
                 except Exception as e:
-                    jobs[job_id] = {**job_data, **final_job_data}
-                    print(f"DEBUG: Job finalizado em memória: {e}")
+                    print(f"DEBUG: Job finalizado em memória devido a erro no banco: {e}")
                 
                 print(f"DEBUG: Processamento assíncrono concluído para job {job_id}")
                 
             except Exception as e:
                 print(f"DEBUG: ERRO FATAL no processamento assíncrono: {str(e)}")
-                # Marcar job como erro
+                # Marcar job como erro na memória
                 error_job_data = {
                     'status': 'error',
-                    'progress': 0,
                     'error_message': str(e),
                     'updated_at': datetime.now().isoformat()
                 }
+                
+                if job_id in jobs:
+                    jobs[job_id].update(error_job_data)
+                else:
+                    jobs[job_id] = {**job_data, **error_job_data}
+                
                 try:
                     supabase.table('conferencia_jobs').update(error_job_data).eq('id', job_id).execute()
                 except:
-                    jobs[job_id] = {**job_data, **error_job_data}
+                    print(f"DEBUG: Erro também falhou ao salvar no banco")
         
+        # Iniciar thread daemon em background
+        import threading
+        background_thread = threading.Thread(target=background_process, daemon=True)
+        background_thread.start()
+        
+        print(f"DEBUG: Thread assíncrona iniciada, retornando resposta imediata")
+        
+        # Retornar resposta imediata para evitar timeout
         # Iniciar thread daemon em background
         import threading
         background_thread = threading.Thread(target=background_process, daemon=True)
@@ -1140,11 +1172,12 @@ def update_job_status(job_id, file_index, status, result):
 def get_status(job_id):
     """Endpoint para consultar o status de um job"""
     try:
-        # Buscar no Supabase
-        job_data = supabase.table('conferencia_jobs').select('id,status,total_arquivos,arquivos_processados,tipo_conferencia').eq('id', job_id).execute()
+        print(f"DEBUG: Consultando status do job: {job_id}")
         
-        if job_data.data:
-            job = job_data.data[0]
+        # Primeiro verificar na memória (onde jobs estão sendo salvos devido ao erro da coluna progress)
+        if job_id in jobs:
+            job = jobs[job_id]
+            print(f"DEBUG: Job encontrado na memória - Status: {job['status']}")
             return jsonify({
                 'status': 'success',
                 'job': {
@@ -1156,10 +1189,14 @@ def get_status(job_id):
                     'arquivos_processados': job['arquivos_processados']
                 }
             })
-        else:
-            # Fallback para armazenamento em memória
-            if job_id in jobs:
-                job = jobs[job_id]
+        
+        # Se não encontrou na memória, tentar no Supabase
+        try:
+            job_data = supabase.table('conferencia_jobs').select('id,status,total_arquivos,arquivos_processados,tipo_conferencia').eq('id', job_id).execute()
+            
+            if job_data.data:
+                job = job_data.data[0]
+                print(f"DEBUG: Job encontrado no banco - Status: {job['status']}")
                 return jsonify({
                     'status': 'success',
                     'job': {
@@ -1171,9 +1208,14 @@ def get_status(job_id):
                         'arquivos_processados': job['arquivos_processados']
                     }
                 })
-            else:
-                return jsonify({'status': 'error', 'message': 'Job não encontrado'}), 404
+        except Exception as db_error:
+            print(f"DEBUG: Erro ao consultar banco: {db_error}")
+        
+        print(f"DEBUG: Job {job_id} não encontrado em lugar algum")
+        return jsonify({'status': 'error', 'message': 'Job não encontrado'}), 404
+        
     except Exception as e:
+        print(f"DEBUG: Erro ao consultar status: {str(e)}")
         return jsonify({'status': 'error', 'message': f'Erro ao consultar status: {str(e)}'}), 500
 
 @bp.route('/result/<job_id>', methods=['GET'])
@@ -1204,43 +1246,45 @@ def get_result(job_id):
                 print(f"DEBUG: Arquivo de teste não encontrado: {test_file}")
                 return jsonify({'status': 'error', 'message': f'Dados de teste não encontrados para {scenario_name}'}), 404
         
-        # Buscar no Supabase
-        job_data = supabase.table('conferencia_jobs').select('*').eq('id', job_id).execute()
-        
-        if job_data.data:
-            job = job_data.data[0]
-            print(f"DEBUG: Job encontrado no banco - {len(job.get('arquivos', []))} arquivos")
+        # Primeiro verificar na memória (onde jobs estão sendo salvos devido ao erro da coluna progress)
+        if job_id in jobs:
+            job = jobs[job_id]
+            print(f"DEBUG: Job encontrado na memória - {len(job.get('arquivos', []))} arquivos")
             
             # Debug dos arquivos
             for i, arquivo in enumerate(job.get('arquivos', [])):
                 print(f"DEBUG: Arquivo {i+1}: {arquivo.get('filename')} - Status: {arquivo.get('status')}")
                 if arquivo.get('result'):
                     print(f"DEBUG: - Conclusão: {arquivo['result']['sumario']['conclusao']}")
-            
+                    
             return jsonify({
                 'status': 'success',
                 'job': job
             })
-        else:
-            print(f"DEBUG: Job não encontrado no banco, verificando memória")
-            # Fallback para armazenamento em memória
-            if job_id in jobs:
-                job = jobs[job_id]
-                print(f"DEBUG: Job encontrado na memória - {len(job.get('arquivos', []))} arquivos")
+        
+        # Se não encontrou na memória, tentar no Supabase
+        try:
+            job_data = supabase.table('conferencia_jobs').select('*').eq('id', job_id).execute()
+            
+            if job_data.data:
+                job = job_data.data[0]
+                print(f"DEBUG: Job encontrado no banco - {len(job.get('arquivos', []))} arquivos")
                 
                 # Debug dos arquivos
                 for i, arquivo in enumerate(job.get('arquivos', [])):
                     print(f"DEBUG: Arquivo {i+1}: {arquivo.get('filename')} - Status: {arquivo.get('status')}")
                     if arquivo.get('result'):
                         print(f"DEBUG: - Conclusão: {arquivo['result']['sumario']['conclusao']}")
-                        
+                
                 return jsonify({
                     'status': 'success',
-                    'job': jobs[job_id]
+                    'job': job
                 })
-            else:
-                print(f"DEBUG: Job {job_id} não encontrado em lugar algum")
-                return jsonify({'status': 'error', 'message': 'Job não encontrado'}), 404
+        except Exception as db_error:
+            print(f"DEBUG: Erro ao consultar banco: {db_error}")
+        
+        print(f"DEBUG: Job {job_id} não encontrado em lugar algum")
+        return jsonify({'status': 'error', 'message': 'Job não encontrado'}), 404
     except Exception as e:
         print(f"DEBUG: Erro ao consultar resultado: {str(e)}")
         return jsonify({'status': 'error', 'message': f'Erro ao consultar resultado: {str(e)}'}), 500
