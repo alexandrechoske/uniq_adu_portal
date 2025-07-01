@@ -223,9 +223,13 @@ def upload():
         try:
             supabase.table('conferencia_jobs').insert(job_data).execute()
         except Exception as e:
-            # Fallback para armazenamento em memória (apenas para desenvolvimento)
-            jobs[job_id] = job_data
-              # Obtém a API key do Gemini da configuração
+            print(f"DEBUG: Erro ao salvar no Supabase: {e}")
+        
+        # SEMPRE salvar na memória para garantir disponibilidade imediata
+        jobs[job_id] = job_data
+        print(f"DEBUG: Job {job_id} salvo na memória: {job_data['status']}")
+        
+        # Obtém a API key do Gemini da configuração
         gemini_api_key = current_app.config.get('GEMINI_API_KEY')
         
         # PROCESSAMENTO ASSÍNCRONO PARA EVITAR TIMEOUT NO HEROKU
@@ -236,8 +240,10 @@ def upload():
             try:
                 print(f"DEBUG: Iniciando processamento assíncrono para job {job_id}")
                 
-                # Garantir que o job está na memória desde o início
-                jobs[job_id] = {**job_data}
+                # Verificar se o job está na memória
+                if job_id not in jobs:
+                    print(f"DEBUG: ERRO - Job {job_id} não encontrado na memória ao iniciar processamento")
+                    return
                 
                 # Processar cada arquivo
                 for i, file_info in enumerate(saved_files):
@@ -361,19 +367,10 @@ def upload():
                     print(f"DEBUG: Erro também falhou ao salvar no banco")
         
         # Iniciar thread daemon em background
-        import threading
         background_thread = threading.Thread(target=background_process, daemon=True)
         background_thread.start()
         
-        print(f"DEBUG: Thread assíncrona iniciada, retornando resposta imediata")
-        
-        # Retornar resposta imediata para evitar timeout
-        # Iniciar thread daemon em background
-        import threading
-        background_thread = threading.Thread(target=background_process, daemon=True)
-        background_thread.start()
-        
-        print(f"DEBUG: Thread assíncrona iniciada, retornando resposta imediata")
+        print(f"DEBUG: Thread assíncrona iniciada para job {job_id}, retornando resposta imediata")
         
         # Retornar resposta imediata para evitar timeout
         return jsonify({
