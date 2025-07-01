@@ -598,23 +598,96 @@ def process_with_ai(text, prompt_template, model="gemini", api_key=None):
 
 def process_with_gemini(text, prompt_template, api_key):
     """
-    Process text with Google Gemini API.
+    Process text with Google Gemini API with timeout and retry logic.
     """
+    import time
+    import functools
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Timeout na requisição ao Gemini API")
+    
+    def with_timeout(timeout_seconds):
+        def decorator(func):
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                # Set the signal handler
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(timeout_seconds)
+                
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                finally:
+                    # Reset the alarm and restore the old handler
+                    signal.alarm(0)
+                    signal.signal(signal.SIGALRM, old_handler)
+            return wrapper
+        return decorator
+    
+    @with_timeout(60)  # 60 segundos de timeout
+    def _make_gemini_request(text, prompt_template, api_key):
+        try:
+            print(f"DEBUG: Configurando Gemini com API key...")
+            genai.configure(api_key=api_key)
+            
+            print(f"DEBUG: Criando modelo Gemini...")
+            # Usar configuração com timeout
+            generation_config = {
+                "temperature": 0.3,
+                "top_p": 0.8,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+            }
+            
+            model = genai.GenerativeModel(
+                model_name='gemini-2.5-flash-preview-04-17',
+                generation_config=generation_config
+            )
+            
+            # Preparar prompt completo - reduzir tamanho do texto se muito grande
+            text_limit = 15000  # Aumentar limite para documentos maiores
+            truncated_text = text[:text_limit]
+            if len(text) > text_limit:
+                truncated_text += "\n\n[TEXTO TRUNCADO - DOCUMENTO MUITO LONGO]"
+            
+            full_prompt = f"{prompt_template}\n\nDocumento para análise:\n{truncated_text}"
+            print(f"DEBUG: Enviando prompt para Gemini ({len(full_prompt)} caracteres)...")
+            
+            # Fazer requisição com retry
+            max_retries = 3
+            retry_delay = 2
+            
+            for attempt in range(max_retries):
+                try:
+                    print(f"DEBUG: Tentativa {attempt + 1} de {max_retries}")
+                    response = model.generate_content(full_prompt)
+                    
+                    if response and response.text:
+                        print(f"DEBUG: Resposta recebida do Gemini")
+                        return response.text
+                    else:
+                        raise Exception("Resposta vazia do Gemini")
+                        
+                except Exception as e:
+                    print(f"DEBUG: Erro na tentativa {attempt + 1}: {str(e)}")
+                    if attempt < max_retries - 1:
+                        print(f"DEBUG: Aguardando {retry_delay} segundos antes da próxima tentativa...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        raise e
+            
+            raise Exception("Todas as tentativas falharam")
+            
+        except Exception as e:
+            print(f"DEBUG: Erro na requisição Gemini: {str(e)}")
+            raise e
+    
     try:
-        print(f"DEBUG: Configurando Gemini com API key...")
-        genai.configure(api_key=api_key)
+        # Executar com timeout
+        result = _make_gemini_request(text, prompt_template, api_key)
         
-        print(f"DEBUG: Criando modelo Gemini...")
-        model = genai.GenerativeModel(model_name='gemini-2.5-flash-preview-04-17')
-        
-        # Preparar prompt completo
-        full_prompt = f"{prompt_template}\n\nDocumento para análise:\n{text[:8000]}"  # Limiting text size
-        print(f"DEBUG: Enviando prompt para Gemini ({len(full_prompt)} caracteres)...")
-        
-        response = model.generate_content(full_prompt)
-        
-        print(f"DEBUG: Resposta recebida do Gemini")
-        result = response.text
         print(f"DEBUG: Texto da resposta ({len(result)} caracteres): {result[:200]}...")
         
         # Try to extract JSON from the response
@@ -630,6 +703,26 @@ def process_with_gemini(text, prompt_template, api_key):
         print(f"DEBUG: JSON parseado com sucesso")
         return parsed_result
         
+    except TimeoutError as e:
+        print(f"DEBUG: Timeout na requisição ao Gemini: {str(e)}")
+        return {
+            "sumario": {
+                "status": "erro",
+                "total_erros_criticos": 1,
+                "total_observacoes": 0,
+                "total_alertas": 0,
+                "conclusao": "Timeout na análise: o processamento demorou mais que o esperado"
+            },
+            "itens": [
+                {
+                    "campo": "Processamento",
+                    "status": "erro",
+                    "tipo": "erro_critico",
+                    "valor_extraido": None,
+                    "descricao": f"Timeout na requisição à IA (mais de 60 segundos). Documento pode ser muito complexo."
+                }
+            ]
+        }
     except json.JSONDecodeError as e:
         print(f"DEBUG: Erro ao fazer parse do JSON: {str(e)}")
         print(f"DEBUG: Conteúdo que falhou no parse: {result[:500]}")
@@ -675,13 +768,17 @@ def process_with_gemini(text, prompt_template, api_key):
         }
 
 async def process_files(job_id, tipo_conferencia, files, api_key=None):
-    """Processa os arquivos em background"""
+    """Processa os arquivos em background com timeout adequado"""
+    from config import Config
+    
     prompt_template = PROMPTS[tipo_conferencia]
     
     # Usar ThreadPoolExecutor para operações de I/O-bound (leitura de arquivos, OCR)
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:  # Limitear workers para evitar sobrecarga
         for i, file_info in enumerate(files):
             try:
+                print(f"DEBUG: Processando arquivo {i+1}: {file_info['filename']}")
+                
                 # Atualiza status para processing
                 file_info['status'] = 'processing'
                 update_job_status(job_id, i, 'processing', None)
@@ -689,14 +786,26 @@ async def process_files(job_id, tipo_conferencia, files, api_key=None):
                 # Extract text from PDF
                 file_path = file_info['path']
                 
+                print(f"DEBUG: Extraindo texto do PDF...")
                 # Using executor for CPU-bound operations
                 text = await asyncio.get_event_loop().run_in_executor(
                     executor, extract_text_from_pdf, file_path
                 )
-                  # Process with Gemini AI exclusively
-                result = await asyncio.get_event_loop().run_in_executor(
-                    executor, process_with_ai, text, prompt_template, "gemini", api_key
+                
+                print(f"DEBUG: Texto extraído ({len(text)} caracteres)")
+                
+                # Process with Gemini AI exclusively com timeout aumentado
+                print(f"DEBUG: Iniciando processamento com IA...")
+                
+                # Usar timeout configurado para Gemini
+                result = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        executor, process_with_ai, text, prompt_template, "gemini", api_key
+                    ),
+                    timeout=Config.GEMINI_TIMEOUT  # Usar timeout configurado
                 )
+                
+                print(f"DEBUG: Processamento IA concluído")
                 
                 # Update file status
                 file_info['status'] = 'completed'
@@ -710,7 +819,37 @@ async def process_files(job_id, tipo_conferencia, files, api_key=None):
                 # Update job status
                 update_job_status(job_id, i, 'completed', result)
                 
+                print(f"DEBUG: Arquivo {file_info['filename']} processado com sucesso")
+                
+            except asyncio.TimeoutError as e:
+                print(f"DEBUG: Timeout no processamento do arquivo {file_info['filename']}")
+                logging.error(f"Timeout processing file {file_info['filename']}: {str(e)}")
+                # Return timeout error result
+                timeout_result = {
+                    "sumario": {
+                        "status": "erro",
+                        "total_erros_criticos": 1,
+                        "total_observacoes": 0,
+                        "total_alertas": 0,
+                        "conclusao": f"Timeout no processamento: análise demorou mais que {Config.GEMINI_TIMEOUT} segundos"
+                    },
+                    "itens": [
+                        {
+                            "campo": "Processamento",
+                            "status": "erro",
+                            "tipo": "erro_critico",
+                            "valor_extraido": None,
+                            "descricao": f"Timeout na análise IA. Documento pode ser muito complexo ou conexão lenta. Tempo limite: {Config.GEMINI_TIMEOUT}s"
+                        }
+                    ]
+                }
+                
+                file_info['status'] = 'error'
+                file_info['result'] = timeout_result
+                update_job_status(job_id, i, 'error', timeout_result)
+                
             except Exception as e:
+                print(f"DEBUG: Erro no processamento do arquivo {file_info['filename']}: {str(e)}")
                 logging.error(f"Error processing file {file_info['filename']}: {str(e)}")
                 # Return error result
                 error_result = {
@@ -726,6 +865,7 @@ async def process_files(job_id, tipo_conferencia, files, api_key=None):
                             "campo": "Processamento",
                             "status": "erro",
                             "tipo": "erro_critico",
+                            "valor_extraido": None,
                             "descricao": f"Ocorreu um erro durante o processamento: {str(e)}"
                         }
                     ]
@@ -733,7 +873,6 @@ async def process_files(job_id, tipo_conferencia, files, api_key=None):
                 
                 file_info['status'] = 'error'
                 file_info['result'] = error_result
-                  # Update job status
                 update_job_status(job_id, i, 'error', error_result)
 
 def update_job_status(job_id, file_index, status, result):

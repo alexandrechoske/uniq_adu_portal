@@ -16,9 +16,14 @@ app.config['SESSION_COOKIE_SECURE'] = False  # True apenas em HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# Configurar timeout para requests em produção
+# Configurações de timeout para diferentes operações
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(seconds=31536000)  # Cache para arquivos estáticos
+
+# Configurar timeout para requests em produção - diferentes para diferentes operações
 import requests
+# Timeout padrão para operações normais
 requests.adapters.DEFAULT_TIMEOUT = Config.QUERY_TIMEOUT
+# Note: Para operações específicas (como Gemini), usaremos timeouts personalizados no código
 
 # Inicializar manipulador de sessão
 init_session_handler(app)

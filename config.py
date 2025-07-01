@@ -16,7 +16,9 @@ class Config:
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
     # Performance Configuration
-    QUERY_TIMEOUT = int(os.getenv('QUERY_TIMEOUT', '15'))  # 15 segundos de timeout
+    QUERY_TIMEOUT = int(os.getenv('QUERY_TIMEOUT', '15'))  # 15 segundos de timeout para queries normais
+    GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '120'))  # 120 segundos para processamento IA
+    UPLOAD_TIMEOUT = int(os.getenv('UPLOAD_TIMEOUT', '300'))  # 300 segundos para upload/processamento
     MAX_ROWS_DASHBOARD = int(os.getenv('MAX_ROWS_DASHBOARD', '1000'))  # Máximo 1000 linhas no dashboard
     
     # Application Configuration
