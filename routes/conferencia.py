@@ -12,11 +12,11 @@ import base64
 import threading
 import signal
 import functools
+import logging
 from werkzeug.utils import secure_filename
 import asyncio
 import aiohttp
 from concurrent.futures import ThreadPoolExecutor
-import logging
 
 # Imports for PDF processing
 import PyPDF2
@@ -246,10 +246,9 @@ def upload():
                         file_path = file_info['path']
                         print(f"DEBUG: Processando arquivo {i+1}/{len(saved_files)}: {filename}")
                         
-                        # Atualizar progresso - sem a coluna 'progress' problemática
+                        # Atualizar progresso - usando apenas colunas que existem na tabela
                         update_data = {
-                            'arquivos_processados': i,
-                            'updated_at': datetime.now().isoformat()
+                            'arquivos_processados': i
                         }
                         try:
                             supabase.table('conferencia_jobs').update(update_data).eq('id', job_id).execute()
@@ -281,8 +280,19 @@ def upload():
                         if result and 'sumario' in result:
                             sumario = result['sumario']
                             print(f"DEBUG: Arquivo {filename} processado - Status: {sumario['status']}")
+                            print(f"DEBUG: Conclusão: {sumario.get('conclusao', 'N/A')}")
+                            print(f"DEBUG: Erros críticos: {sumario.get('total_erros_criticos', 0)}")
+                            print(f"DEBUG: Alertas: {sumario.get('total_alertas', 0)}")
+                            print(f"DEBUG: Observações: {sumario.get('total_observacoes', 0)}")
+                            
+                            # Mostrar alguns itens para debug
+                            if 'itens' in result:
+                                print(f"DEBUG: Total de itens analisados: {len(result['itens'])}")
+                                for idx, item in enumerate(result['itens'][:3]):  # Primeiros 3 itens
+                                    print(f"DEBUG: Item {idx+1}: {item.get('campo', 'N/A')} - {item.get('status', 'N/A')} - {item.get('descricao', 'N/A')[:100]}...")
                         else:
                             print(f"DEBUG: ERRO - Resultado inválido para {filename}")
+                            print(f"DEBUG: Resultado recebido: {str(result)[:500]}...")
                             
                     except Exception as e:
                         print(f"DEBUG: ERRO ao processar {filename}: {str(e)}")
@@ -314,12 +324,11 @@ def upload():
                             jobs[job_id]['arquivos'][i] = file_info
                             jobs[job_id]['arquivos_processados'] = i + 1
                 
-                # Finalizar job
+                # Finalizar job - usando apenas colunas que existem na tabela
                 final_job_data = {
                     'status': 'completed',
                     'arquivos_processados': len(saved_files),
-                    'arquivos': saved_files,
-                    'updated_at': datetime.now().isoformat()
+                    'arquivos': saved_files
                 }
                 
                 # Atualizar na memória primeiro
@@ -338,8 +347,7 @@ def upload():
                 # Marcar job como erro na memória
                 error_job_data = {
                     'status': 'error',
-                    'error_message': str(e),
-                    'updated_at': datetime.now().isoformat()
+                    'arquivos_processados': len(saved_files)  # Marcar como processados mesmo com erro
                 }
                 
                 if job_id in jobs:
@@ -689,16 +697,23 @@ def parse_gemini_json(response_text):
     Extrai e faz parse do JSON da resposta do Gemini.
     """
     try:
+        print(f"DEBUG: Parseando resposta do Gemini ({len(response_text)} chars)")
+        print(f"DEBUG: Primeiros 500 chars da resposta: {response_text[:500]}")
+        
         # Tentar extrair JSON de markdown
         json_match = re.search(r'```json\s+(.*?)\s+```', response_text, re.DOTALL)
         if json_match:
             response_text = json_match.group(1)
+            print(f"DEBUG: JSON extraído do markdown")
         else:
             # Buscar JSON entre chaves
             json_start = response_text.find('{')
             json_end = response_text.rfind('}') + 1
             if json_start != -1 and json_end > json_start:
                 response_text = response_text[json_start:json_end]
+                print(f"DEBUG: JSON extraído entre chaves")
+        
+        print(f"DEBUG: JSON a ser parseado: {response_text[:300]}...")
         
         # Parse JSON
         result = json.loads(response_text)
@@ -708,10 +723,14 @@ def parse_gemini_json(response_text):
             raise ValueError("JSON não contém campo 'sumario'")
         
         print(f"DEBUG: JSON parseado com sucesso")
+        print(f"DEBUG: Status do sumário: {result['sumario'].get('status', 'N/A')}")
+        print(f"DEBUG: Conclusão: {result['sumario'].get('conclusao', 'N/A')}")
+        
         return result
         
     except Exception as e:
         print(f"DEBUG: Erro no parse JSON: {str(e)}")
+        print(f"DEBUG: Texto que falhou no parse: {response_text[:200]}...")
         return create_error_result("Formato inválido retornado pela IA")
 
 def create_safety_filtered_result():
