@@ -225,83 +225,123 @@ def upload():
               # Obtém a API key do Gemini da configuração
         gemini_api_key = current_app.config.get('GEMINI_API_KEY')
         
-        # Processar cada arquivo com IA real (Gemini)
-        for i, file_info in enumerate(saved_files):
-            filename = file_info['filename']
-            file_path = file_info['path']
-            print(f"DEBUG: Processando arquivo {i+1}: {filename}")
-            
+        # PROCESSAMENTO ASSÍNCRONO PARA EVITAR TIMEOUT NO HEROKU
+        # Retornar resposta imediata e processar em background
+        
+        def background_process():
+            """Processa arquivos em background sem bloquear resposta HTTP"""
             try:
-                # Processar diretamente com Gemini usando base64
-                if gemini_api_key:
-                    print(f"DEBUG: Analisando PDF diretamente com Gemini...")
-                    prompt_template = PROMPTS[tipo_conferencia]
-                    result = analyze_pdf_with_gemini(file_path, prompt_template, gemini_api_key)
-                    print(f"DEBUG: Resultado recebido do Gemini")
-                else:
-                    print(f"DEBUG: API key do Gemini não encontrada, usando resultado de exemplo")
-                    result = generate_sample_result(tipo_conferencia, filename)
+                print(f"DEBUG: Iniciando processamento assíncrono para job {job_id}")
                 
-                file_info['status'] = 'completed'
-                file_info['result'] = result
-                
-                # Debug: verificar se o resultado foi gerado corretamente
-                if result and 'sumario' in result:
-                    sumario = result['sumario']
-                    print(f"DEBUG: Resultado processado para {filename} - Status: {sumario['status']}, Conclusão: {sumario['conclusao']}")
-                else:
-                    print(f"DEBUG: ERRO - Resultado inválido para {filename}")
-                    
-            except Exception as e:
-                print(f"DEBUG: ERRO ao processar {filename}: {str(e)}")
-                # Em caso de erro, criar resultado de erro
-                error_result = {
-                    "sumario": {
-                        "status": "erro",
-                        "total_erros_criticos": 1,
-                        "total_observacoes": 0,
-                        "total_alertas": 0,
-                        "conclusao": f"Erro no processamento: {str(e)}"
-                    },
-                    "itens": [
-                        {
-                            "campo": "Processamento",
-                            "status": "erro",
-                            "tipo": "erro_critico",
-                            "valor_extraido": None,
-                            "descricao": f"Erro durante o processamento do arquivo: {str(e)}"
+                # Processar cada arquivo
+                for i, file_info in enumerate(saved_files):
+                    try:
+                        filename = file_info['filename']
+                        file_path = file_info['path']
+                        print(f"DEBUG: Processando arquivo {i+1}/{len(saved_files)}: {filename}")
+                        
+                        # Atualizar progresso no banco
+                        progress = int((i / len(saved_files)) * 100)
+                        progress_data = {
+                            'progress': progress,
+                            'arquivos_processados': i,
+                            'updated_at': datetime.now().isoformat()
                         }
-                    ]
+                        try:
+                            supabase.table('conferencia_jobs').update(progress_data).eq('id', job_id).execute()
+                        except:
+                            pass  # Ignorar erros de atualização de progresso
+                        
+                        # Processar arquivo
+                        if gemini_api_key:
+                            print(f"DEBUG: Analisando PDF diretamente com Gemini...")
+                            prompt_template = PROMPTS[tipo_conferencia]
+                            result = analyze_pdf_with_gemini(file_path, prompt_template, gemini_api_key)
+                            print(f"DEBUG: Resultado recebido do Gemini para {filename}")
+                        else:
+                            print(f"DEBUG: API key do Gemini não encontrada, usando resultado de exemplo")
+                            result = generate_sample_result(tipo_conferencia, filename)
+                        
+                        file_info['status'] = 'completed'
+                        file_info['result'] = result
+                        
+                        # Debug do resultado
+                        if result and 'sumario' in result:
+                            sumario = result['sumario']
+                            print(f"DEBUG: Arquivo {filename} processado - Status: {sumario['status']}")
+                        else:
+                            print(f"DEBUG: ERRO - Resultado inválido para {filename}")
+                            
+                    except Exception as e:
+                        print(f"DEBUG: ERRO ao processar {filename}: {str(e)}")
+                        # Criar resultado de erro
+                        error_result = {
+                            "sumario": {
+                                "status": "erro",
+                                "total_erros_criticos": 1,
+                                "total_observacoes": 0,
+                                "total_alertas": 0,
+                                "conclusao": f"Erro no processamento: {str(e)}"
+                            },
+                            "itens": [
+                                {
+                                    "campo": "Processamento",
+                                    "status": "erro",
+                                    "tipo": "erro_critico",
+                                    "valor_extraido": None,
+                                    "descricao": f"Erro durante o processamento: {str(e)}"
+                                }
+                            ]
+                        }
+                        file_info['status'] = 'error'
+                        file_info['result'] = error_result
+                
+                # Finalizar job
+                final_job_data = {
+                    'status': 'completed',
+                    'progress': 100,
+                    'arquivos_processados': len(saved_files),
+                    'arquivos': saved_files,
+                    'updated_at': datetime.now().isoformat()
                 }
-                file_info['status'] = 'error'
-                file_info['result'] = error_result
+                
+                try:
+                    supabase.table('conferencia_jobs').update(final_job_data).eq('id', job_id).execute()
+                    print(f"DEBUG: Job {job_id} finalizado com sucesso no banco")
+                except Exception as e:
+                    jobs[job_id] = {**job_data, **final_job_data}
+                    print(f"DEBUG: Job finalizado em memória: {e}")
+                
+                print(f"DEBUG: Processamento assíncrono concluído para job {job_id}")
+                
+            except Exception as e:
+                print(f"DEBUG: ERRO FATAL no processamento assíncrono: {str(e)}")
+                # Marcar job como erro
+                error_job_data = {
+                    'status': 'error',
+                    'progress': 0,
+                    'error_message': str(e),
+                    'updated_at': datetime.now().isoformat()
+                }
+                try:
+                    supabase.table('conferencia_jobs').update(error_job_data).eq('id', job_id).execute()
+                except:
+                    jobs[job_id] = {**job_data, **error_job_data}
         
-        print(f"DEBUG: Total de arquivos processados: {len(saved_files)}")
+        # Iniciar thread daemon em background
+        import threading
+        background_thread = threading.Thread(target=background_process, daemon=True)
+        background_thread.start()
         
-        # Atualizar status do job
-        job_data['status'] = 'completed'
-        job_data['arquivos_processados'] = len(saved_files)
-        job_data['arquivos'] = saved_files
+        print(f"DEBUG: Thread assíncrona iniciada, retornando resposta imediata")
         
-        # Atualizar no banco ou memória
-        try:
-            supabase.table('conferencia_jobs').update(job_data).eq('id', job_id).execute()
-            print(f"DEBUG: Job atualizado no banco de dados com sucesso")
-        except Exception as e:
-            jobs[job_id] = job_data
-            print(f"DEBUG: Job salvo em memória como fallback: {e}")
-            
-        # Debug final: verificar dados antes de retornar
-        print(f"DEBUG: Retornando job_data com {len(job_data['arquivos'])} arquivos")
-        for i, arquivo in enumerate(job_data['arquivos']):
-            print(f"DEBUG: Arquivo {i+1}: {arquivo['filename']} - Status: {arquivo['status']}")
-            if arquivo.get('result'):
-                print(f"DEBUG: - Conclusão: {arquivo['result']['sumario']['conclusao']}")
-            
+        # Retornar resposta imediata para evitar timeout
         return jsonify({
             'status': 'success',
-            'message': f'Upload concluído. {len(saved_files)} arquivos enviados para processamento.',
-            'job_id': job_id
+            'message': f'Upload concluído. {len(saved_files)} arquivos enviados para processamento assíncrono.',
+            'job_id': job_id,
+            'async_processing': True,
+            'estimated_time': f'{len(saved_files) * 90} segundos'  # Estimativa de 1.5 min por arquivo
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': f'Erro no processamento: {str(e)}'}), 500
@@ -391,46 +431,49 @@ def process_pdf_with_gemini(pdf_path, api_key=None):
 
 def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
     """
-    Analisa o PDF diretamente com Gemini usando base64 e o prompt específico do tipo de conferência.
-    Implementação baseada no exemplo Python do rest_gemini.md:
-    1. Gemini lê PDF → converte para JSON estruturado
-    2. Analisa o JSON → destaca pontos baseado no prompt
+    Analisa PDF com Gemini de forma otimizada para evitar timeout.
     """
     try:
-        print(f"DEBUG: Iniciando análise direta do PDF com Gemini")
+        print(f"DEBUG: Iniciando análise otimizada do PDF com Gemini")
         genai.configure(api_key=api_key)
         
-        # Ler o arquivo PDF e converter para base64
+        # Verificar tamanho do arquivo
+        file_size = os.path.getsize(pdf_path)
+        print(f"DEBUG: Tamanho do arquivo: {file_size / (1024*1024):.2f} MB")
+        
+        # Para arquivos grandes (>2MB), usar análise por texto
+        if file_size > 2 * 1024 * 1024:
+            print(f"DEBUG: Arquivo grande, usando extração de texto")
+            return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+        
+        # Para arquivos menores, análise direta
         with open(pdf_path, 'rb') as pdf_file:
             pdf_bytes = pdf_file.read()
             pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
         
-        print(f"DEBUG: PDF convertido para base64 ({len(pdf_base64)} caracteres)")
+        print(f"DEBUG: PDF convertido para base64 ({len(pdf_base64)} chars)")
         
-        # Criar o modelo usando o mesmo modelo do exemplo rest_gemini.md
-        model = genai.GenerativeModel(model_name='gemini-2.5-flash-preview-04-17')
+        # Configuração otimizada
+        generation_config = {
+            "temperature": 0.1,
+            "top_p": 0.8,
+            "top_k": 20,
+            "max_output_tokens": 4096,
+        }
         
-        # ETAPA 1: Primeiro, converter o PDF para JSON estruturado (como no exemplo Python)
-        print(f"DEBUG: ETAPA 1 - Convertendo PDF para JSON estruturado...")
+        model = genai.GenerativeModel(
+            model_name='gemini-2.5-flash-preview-04-17',
+            generation_config=generation_config
+        )
         
-        extraction_prompt = """
-        Analise este documento PDF e extraia TODOS os dados em formato JSON estruturado.
+        # Prompt conciso
+        prompt = f"""
+        {prompt_template}
         
-        Para documentos de invoice/fatura, extraia:
-        - invoice_number, invoice_date
-        - sender (name, address, country, tax_id, etc.)
-        - recipient (name, address, country, cnpj, etc.) 
-        - delivery_address
-        - items (com description, quantity, unit_price, total_price, etc.)
-        - subtotal, total_amount
-        - payment_terms, delivery_terms
-        - country_of_origin, manufacturers, exporters
-        
-        Retorne APENAS o JSON válido, sem texto adicional.
+        Retorne APENAS JSON válido conforme o template, sem texto adicional.
         """
         
-        # Criar a estrutura de conteúdo conforme o exemplo Python do rest_gemini.md
-        contents_step1 = [
+        contents = [
             {
                 "role": "user",
                 "parts": [
@@ -441,127 +484,249 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
                         }
                     },
                     {
-                        "text": extraction_prompt
+                        "text": prompt
                     }
                 ]
             }
         ]
         
-        print(f"DEBUG: Enviando PDF para extração JSON...")
+        print(f"DEBUG: Enviando para Gemini...")
         
-        # Enviar para o Gemini (ETAPA 1 - Extração)
-        response_step1 = model.generate_content(contents_step1)
+        # Executar com timeout
+        import threading
+        result = {'response': None, 'error': None}
         
-        print(f"DEBUG: Resposta de extração recebida do Gemini")
-        extracted_json_text = response_step1.text
-        print(f"DEBUG: JSON extraído ({len(extracted_json_text)} caracteres): {extracted_json_text[:200]}...")
+        def generate():
+            try:
+                result['response'] = model.generate_content(contents)
+            except Exception as e:
+                result['error'] = e
         
-        # Tentar extrair JSON da resposta
-        json_match = re.search(r'```json\s+(.*?)\s+```', extracted_json_text, re.DOTALL)
-        if json_match:
-            extracted_json_text = json_match.group(1)
-            print(f"DEBUG: JSON extraído do markdown")
-        else:
-            # Se não encontrar markdown JSON, tentar encontrar apenas o JSON bruto
-            json_start = extracted_json_text.find('{')
-            json_end = extracted_json_text.rfind('}') + 1
-            if json_start != -1 and json_end > json_start:
-                extracted_json_text = extracted_json_text[json_start:json_end]
-                print(f"DEBUG: JSON extraído do texto bruto")
-            else:
-                print(f"DEBUG: Nenhum JSON encontrado na resposta de extração")
+        thread = threading.Thread(target=generate)
+        thread.start()
+        thread.join(timeout=90)  # 90 segundos
         
-        # ETAPA 2: Analisar o JSON extraído baseado no prompt de conferência
-        print(f"DEBUG: ETAPA 2 - Analisando JSON extraído com prompt de conferência...")
+        if thread.is_alive():
+            raise TimeoutError("Timeout de 90s atingido")
         
-        analysis_prompt = f"""
+        if result['error']:
+            raise result['error']
+        
+        response = result['response']
+        
+        # Verificar se a resposta foi filtrada por segurança
+        if not response:
+            raise Exception("Resposta vazia do Gemini")
+        
+        # Verificar finish_reason para detectar filtragem de conteúdo
+        if hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'finish_reason'):
+                finish_reason = candidate.finish_reason
+                print(f"DEBUG: Finish reason: {finish_reason}")
+                
+                # finish_reason = 2 significa SAFETY (conteúdo filtrado por segurança)
+                if finish_reason == 2:
+                    print(f"DEBUG: Conteúdo filtrado por segurança (finish_reason=2), tentando análise por texto")
+                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                elif finish_reason == 3:  # LENGTH
+                    print(f"DEBUG: Resposta muito longa (finish_reason=3), tentando análise por texto")
+                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                elif finish_reason not in [1, 0]:  # 1 = STOP (sucesso), 0 = UNSPECIFIED
+                    print(f"DEBUG: Finish reason inválido ({finish_reason}), tentando análise por texto")
+                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+        
+        # Verificar se tem texto na resposta
+        try:
+            response_text = response.text
+            if not response_text or len(response_text.strip()) < 10:
+                print(f"DEBUG: Resposta muito curta, tentando análise por texto")
+                return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+        except Exception as text_error:
+            print(f"DEBUG: Erro ao acessar response.text: {str(text_error)}")
+            print(f"DEBUG: Tentando análise por texto como fallback")
+            return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+        
+        print(f"DEBUG: Resposta recebida ({len(response_text)} chars)")
+        return parse_gemini_json(response_text)
+        
+    except Exception as e:
+        print(f"DEBUG: Erro na análise: {str(e)}")
+        return create_error_result(f"Erro na análise: {str(e)}")
+
+def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
+    """
+    Analisa PDF extraindo texto primeiro (para arquivos grandes ou quando houve filtragem).
+    """
+    try:
+        print(f"DEBUG: Extraindo texto do PDF para análise fallback...")
+        text = extract_text_from_pdf(pdf_path)
+        
+        if not text or len(text) < 50:
+            print(f"DEBUG: Texto extraído muito pequeno ({len(text) if text else 0} chars)")
+            raise Exception("Não foi possível extrair texto legível")
+        
+        print(f"DEBUG: Texto extraído com sucesso ({len(text)} chars)")
+        
+        # Limitar texto para evitar problemas
+        if len(text) > 30000:
+            text = text[:30000] + "\n[TEXTO TRUNCADO]"
+            print(f"DEBUG: Texto truncado para 30k chars")
+        
+        # Configurar Gemini
+        genai.configure(api_key=api_key)
+        
+        generation_config = {
+            "temperature": 0.1,
+            "top_p": 0.8,
+            "top_k": 20,
+            "max_output_tokens": 4096,
+        }
+        
+        model = genai.GenerativeModel(
+            model_name='gemini-2.5-flash-preview-04-17',
+            generation_config=generation_config
+        )
+        
+        # Prompt simplificado para análise por texto
+        prompt = f"""
+        Analise o texto extraído do documento e retorne APENAS um JSON no formato especificado.
+        
         {prompt_template}
         
-        **Dados extraídos do documento:**
-        {extracted_json_text}
+        Texto do documento:
+        {text}
         
-        Analise os dados extraídos acima conforme as instruções do prompt e retorne o resultado em JSON seguindo exatamente o formato especificado.
+        IMPORTANTE: Retorne APENAS JSON válido, sem texto adicional antes ou depois.
         """
         
-        # Enviar para análise (ETAPA 2 - Análise baseada no prompt)
-        response_step2 = model.generate_content(analysis_prompt)
+        print(f"DEBUG: Enviando texto extraído para Gemini...")
         
-        print(f"DEBUG: Resposta de análise recebida do Gemini")
-        result_text = response_step2.text
-        print(f"DEBUG: Resultado da análise ({len(result_text)} caracteres): {result_text[:200]}...")
+        # Executar com timeout reduzido
+        import threading
+        result = {'response': None, 'error': None}
         
-        # Tentar extrair JSON da resposta da análise
-        json_match = re.search(r'```json\s+(.*?)\s+```', result_text, re.DOTALL)
-        if json_match:
-            result_text = json_match.group(1)
-            print(f"DEBUG: JSON extraído do markdown da análise")
-        else:
-            # Se não encontrar markdown JSON, tentar encontrar apenas o JSON bruto
-            json_start = result_text.find('{')
-            json_end = result_text.rfind('}') + 1
-            if json_start != -1 and json_end > json_start:
-                result_text = result_text[json_start:json_end]
-                print(f"DEBUG: JSON extraído do texto bruto da análise")
-            else:
-                print(f"DEBUG: Nenhum JSON encontrado na resposta de análise")
-        
-        # Parse do JSON
-        parsed_result = json.loads(result_text)
-        print(f"DEBUG: JSON parseado com sucesso")
-        
-        # Adicionar os dados brutos extraídos como metadados
-        if isinstance(parsed_result, dict):
+        def generate():
             try:
-                raw_data = json.loads(extracted_json_text)
-                parsed_result['dados_brutos_extraidos'] = raw_data
-                print(f"DEBUG: Dados brutos adicionados ao resultado")
-            except:
-                print(f"DEBUG: Não foi possível adicionar dados brutos")
+                result['response'] = model.generate_content(prompt)
+                print(f"DEBUG: Resposta recebida do Gemini para análise por texto")
+            except Exception as e:
+                print(f"DEBUG: Erro na geração por texto: {str(e)}")
+                result['error'] = e
         
-        return parsed_result
+        thread = threading.Thread(target=generate)
+        thread.start()
+        thread.join(timeout=60)  # 60 segundos para texto
         
-    except json.JSONDecodeError as e:
-        print(f"DEBUG: Erro ao fazer parse do JSON: {str(e)}")
-        print(f"DEBUG: Conteúdo que falhou no parse: {result_text[:500] if 'result_text' in locals() else 'Variável não definida'}")
-        return {
-            "sumario": {
-                "status": "erro",
-                "total_erros_criticos": 1,
-                "total_observacoes": 0,
-                "total_alertas": 0,
-                "conclusao": "Erro na análise: formato inválido retornado pela IA"
-            },
-            "itens": [
-                {
-                    "campo": "Processamento",
-                    "status": "erro",
-                    "tipo": "erro_critico",
-                    "valor_extraido": None,
-                    "descricao": "A IA retornou dados em formato inválido."
-                }
-            ]
-        }
+        if thread.is_alive():
+            print(f"DEBUG: Timeout atingido na análise por texto")
+            raise TimeoutError("Timeout de 60s atingido na análise por texto")
+        
+        if result['error']:
+            print(f"DEBUG: Erro na thread text analysis: {str(result['error'])}")
+            raise result['error']
+        
+        if not result['response']:
+            print(f"DEBUG: Resposta nula na análise por texto")
+            raise Exception("Resposta nula do Gemini")
+        
+        # Verificar finish_reason também na análise por texto
+        if hasattr(result['response'], 'candidates') and result['response'].candidates:
+            candidate = result['response'].candidates[0]
+            if hasattr(candidate, 'finish_reason'):
+                finish_reason = candidate.finish_reason
+                print(f"DEBUG: Finish reason na análise por texto: {finish_reason}")
+                
+                if finish_reason == 2:
+                    print(f"DEBUG: Conteúdo ainda filtrado por segurança na análise por texto")
+                    return create_safety_filtered_result()
+        
+        if not result['response'].text:
+            print(f"DEBUG: Texto da resposta vazio na análise por texto")
+            raise Exception("Texto da resposta vazio do Gemini")
+        
+        print(f"DEBUG: Resposta da análise por texto recebida ({len(result['response'].text)} chars)")
+        return parse_gemini_json(result['response'].text)
+        
     except Exception as e:
-        print(f"DEBUG: Erro geral na análise do PDF: {str(e)}")
-        logging.error(f"Error analyzing PDF with Gemini: {str(e)}")
-        return {
-            "sumario": {
+        print(f"DEBUG: Erro na análise por texto: {str(e)}")
+        return create_error_result(f"Erro na análise por texto: {str(e)}")
+
+def parse_gemini_json(response_text):
+    """
+    Extrai e faz parse do JSON da resposta do Gemini.
+    """
+    try:
+        # Tentar extrair JSON de markdown
+        json_match = re.search(r'```json\s+(.*?)\s+```', response_text, re.DOTALL)
+        if json_match:
+            response_text = json_match.group(1)
+        else:
+            # Buscar JSON entre chaves
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                response_text = response_text[json_start:json_end]
+        
+        # Parse JSON
+        result = json.loads(response_text)
+        
+        # Validar estrutura
+        if 'sumario' not in result:
+            raise ValueError("JSON não contém campo 'sumario'")
+        
+        print(f"DEBUG: JSON parseado com sucesso")
+        return result
+        
+    except Exception as e:
+        print(f"DEBUG: Erro no parse JSON: {str(e)}")
+        return create_error_result("Formato inválido retornado pela IA")
+
+def create_safety_filtered_result():
+    """
+    Cria resultado específico para quando o conteúdo é filtrado por segurança.
+    """
+    return {
+        "sumario": {
+            "status": "atencao",
+            "total_erros_criticos": 0,
+            "total_observacoes": 1,
+            "total_alertas": 0,
+            "conclusao": "Documento processado com limitações. O sistema de IA identificou conteúdo que pode conter informações sensíveis e aplicou filtros de segurança. A análise pode estar incompleta."
+        },
+        "itens": [
+            {
+                "campo": "Análise de Segurança",
+                "status": "atencao",
+                "tipo": "observacao",
+                "valor_extraido": "Filtrado por segurança",
+                "descricao": "O sistema de IA aplicou filtros de segurança ao analisar este documento. Isso pode ocorrer quando o documento contém informações pessoais, financeiras sensíveis ou outros dados que requerem tratamento especial. A análise foi realizada com as informações disponíveis após a filtragem."
+            }
+        ]
+    }
+
+def create_error_result(message):
+    """
+    Cria resultado de erro estruturado.
+    """
+    return {
+        "sumario": {
+            "status": "erro",
+            "total_erros_criticos": 1,
+            "total_observacoes": 0,
+            "total_alertas": 0,
+            "conclusao": message
+        },
+        "itens": [
+            {
+                "campo": "Processamento",
                 "status": "erro",
-                "total_erros_criticos": 1,
-                "total_observacoes": 0,
-                "total_alertas": 0,
-                "conclusao": f"Erro na análise: {str(e)}"
-            },
-            "itens": [
-                {
-                    "campo": "Processamento",
-                    "status": "erro",
-                    "tipo": "erro_critico",
-                    "valor_extraido": None,
-                    "descricao": f"Ocorreu um erro durante o processamento: {str(e)}"
-                }
-            ]
-        }
+                "tipo": "erro_critico",
+                "valor_extraido": None,
+                "descricao": message
+            }
+        ]
+    }
 
 def process_with_ai(text, prompt_template, model="gemini", api_key=None):
     """

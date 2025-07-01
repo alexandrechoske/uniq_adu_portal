@@ -1703,28 +1703,45 @@
             showTimeline();
             
             // Oculta o painel de upload
-            showLoading('Processando arquivos...');
+            showLoading('Iniciando processamento assíncrono...');
             
             // Simular progresso inicial baseado nos logs reais
-            updatePopupTimelineStep('popup-step-uploaded', 'completed', 'Arquivo recebido');
+            updatePopupTimelineStep('popup-step-uploaded', 'completed', 'Arquivo recebido e salvo');
             
             setTimeout(() => {
-                updatePopupTimelineStep('popup-step-analyzing', 'active', 'Conectando com IA Gemini...');
-            }, 800);
+                updatePopupTimelineStep('popup-step-analyzing', 'active', 'Iniciando análise em background...');
+            }, 1000);
             
-            // Inicia o monitoramento do progresso
+            // Inicia o monitoramento do progresso com intervalo maior para jobs assíncronos
+            let checkCount = 0;
             checkStatusInterval = setInterval(() => {
-                checkJobStatus(jobId);
-            }, 3000); // Verifica a cada 3 segundos (aumentado devido ao processamento mais longo)
+                checkCount++;
+                checkJobStatus(jobId, checkCount);
+            }, 5000); // Verifica a cada 5 segundos para jobs assíncronos
+            
+            // Timeout de segurança para evitar polling infinito (10 minutos)
+            setTimeout(() => {
+                if (checkStatusInterval) {
+                    clearInterval(checkStatusInterval);
+                    updatePopupTimelineStep('popup-step-completed', 'error', 'Timeout no processamento - processo pode ainda estar executando');
+                    hideLoading();
+                    alert('O processamento está demorando mais que o esperado. O job pode ainda estar executando em background. Tente verificar os resultados em alguns minutos.');
+                }
+            }, 600000); // 10 minutos
         }
 
-        function checkJobStatus(jobId) {
+        function checkJobStatus(jobId, checkCount = 0) {
             const statusUrl = `/conferencia/status/${jobId}?t=${Date.now()}`;
-            console.log(`Verificando status: ${statusUrl}`);
+            console.log(`Verificando status (tentativa ${checkCount}): ${statusUrl}`);
+            
+            // Usar timeout maior para jobs assíncronos
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos para verificação de status
             
             // Usa a função safeFetch para evitar problemas de contexto
-            safeFetch(statusUrl)
+            safeFetch(statusUrl, { signal: controller.signal })
                 .then(response => {
+                    clearTimeout(timeoutId);
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
@@ -1733,65 +1750,99 @@
                 .then(data => {
                     if (data.status === 'success') {
                         const job = data.job;
-                        updateProgressWithJobData(job);
+                        updateProgressWithJobData(job, checkCount);
                         
                         if (job.status === 'completed') {
                             clearInterval(checkStatusInterval);
                             updatePopupTimelineStep('popup-step-completed', 'completed', 'Análise finalizada com sucesso');
                             setTimeout(() => {
                                 loadJobResults(jobId);
-                            }, 1000);
+                            }, 1500);
                         } else if (job.status === 'error') {
                             clearInterval(checkStatusInterval);
                             updatePopupTimelineStep('popup-step-completed', 'error', 'Erro durante o processamento');
                             hideLoading();
                             alert('Erro durante o processamento. Verifique os logs para mais detalhes.');
+                        } else if (job.status === 'processing') {
+                            // Job ainda está processando - atualizar mensagens baseadas no tempo
+                            updateProcessingMessages(checkCount);
                         }
                     } else {
-                        clearInterval(checkStatusInterval);
-                        hideLoading();
-                        updatePopupTimelineStep('popup-step-completed', 'error', 'Erro na verificação de status');
-                        alert(`Erro ao verificar status: ${data.message}`);
+                        if (checkCount < 3) {
+                            // Tentar novamente até 3 vezes antes de dar erro
+                            console.log(`Erro na verificação, tentando novamente... (${checkCount}/3)`);
+                        } else {
+                            clearInterval(checkStatusInterval);
+                            hideLoading();
+                            updatePopupTimelineStep('popup-step-completed', 'error', 'Erro na verificação de status');
+                            alert(`Erro ao verificar status após ${checkCount} tentativas: ${data.message}`);
+                        }
                     }
                 })
                 .catch(error => {
+                    clearTimeout(timeoutId);
                     console.error('Erro na verificação de status:', error);
                     
-                    // Se for timeout ou erro de rede, mostrar na timeline
-                    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                        updatePopupTimelineStep('popup-step-validating', 'error', 'Timeout na conexão - processamento pode estar demorado');
+                    // Se for timeout ou erro de rede, mostrar na timeline mas continuar tentando
+                    if (error.name === 'AbortError' || (error.name === 'TypeError' && error.message.includes('fetch'))) {
+                        updatePopupTimelineStep('popup-step-validating', 'active', `Processamento em andamento... (${Math.floor(checkCount * 5 / 60)}min ${(checkCount * 5) % 60}s)`);
+                        // Não parar o polling para timeouts de verificação
+                    } else if (checkCount < 5) {
+                        // Para outros erros, tentar algumas vezes antes de desistir
+                        console.log(`Erro na verificação, tentando novamente... (${checkCount}/5)`);
                     } else {
                         clearInterval(checkStatusInterval);
                         hideLoading();
-                        updatePopupTimelineStep('popup-step-completed', 'error', 'Erro de conexão');
-                        alert(`Erro na verificação de status: ${error.message}`);
+                        updatePopupTimelineStep('popup-step-completed', 'error', 'Erro persistente de conexão');
+                        alert(`Erro persistente na verificação de status após ${checkCount} tentativas: ${error.message}`);
                     }
                 });
         }
 
-        function updateProgressWithJobData(job) {
+        function updateProcessingMessages(checkCount) {
+            const elapsedMinutes = Math.floor(checkCount * 5 / 60);
+            const elapsedSeconds = (checkCount * 5) % 60;
+            const timeStr = elapsedMinutes > 0 ? `${elapsedMinutes}min ${elapsedSeconds}s` : `${elapsedSeconds}s`;
+            
+            if (checkCount <= 6) { // Primeiros 30 segundos
+                updatePopupTimelineStep('popup-step-analyzing', 'active', `Conectando com IA Gemini... (${timeStr})`);
+            } else if (checkCount <= 24) { // Até 2 minutos
+                updatePopupTimelineStep('popup-step-analyzing', 'active', `Processando documento com IA... (${timeStr})`);
+            } else if (checkCount <= 60) { // Até 5 minutos
+                updatePopupTimelineStep('popup-step-extracting', 'active', `Extraindo dados complexos... (${timeStr})`);
+            } else { // Mais de 5 minutos
+                updatePopupTimelineStep('popup-step-validating', 'active', `Finalizando análise detalhada... (${timeStr})`);
+            }
+        }
+
+        function updateProgressWithJobData(job, checkCount = 0) {
             const progress = job.progress || 0;
             const arquivosProcessados = job.arquivos_processados || 0;
             const totalArquivos = job.total_arquivos || 1;
+            const elapsedTime = Math.floor(checkCount * 5 / 60) > 0 ? `${Math.floor(checkCount * 5 / 60)}min` : `${(checkCount * 5) % 60}s`;
             
             // Atualizar timeline baseado no progresso real
             if (progress > 0 && progress < 25) {
-                updatePopupTimelineStep('popup-step-analyzing', 'active', 'Analisando documento com IA...');
+                updatePopupTimelineStep('popup-step-analyzing', 'active', `Analisando documento com IA... ${elapsedTime}`);
             } else if (progress >= 25 && progress < 50) {
                 updatePopupTimelineStep('popup-step-analyzing', 'completed', 'Análise concluída');
-                updatePopupTimelineStep('popup-step-extracting', 'active', 'Extraindo dados estruturados...');
+                updatePopupTimelineStep('popup-step-extracting', 'active', `Extraindo dados estruturados... ${elapsedTime}`);
             } else if (progress >= 50 && progress < 75) {
                 updatePopupTimelineStep('popup-step-extracting', 'completed', 'Dados extraídos');
-                updatePopupTimelineStep('popup-step-validating', 'active', 'Validando conformidade...');
+                updatePopupTimelineStep('popup-step-validating', 'active', `Validando conformidade... ${elapsedTime}`);
             } else if (progress >= 75 && progress < 100) {
                 updatePopupTimelineStep('popup-step-validating', 'completed', 'Validação concluída');
-                updatePopupTimelineStep('popup-step-completed', 'active', 'Finalizando análise...');
+                updatePopupTimelineStep('popup-step-completed', 'active', `Finalizando análise... ${elapsedTime}`);
             }
             
             // Atualizar loading message
             const loadingMsg = document.getElementById('loading-message');
             if (loadingMsg) {
-                loadingMsg.textContent = `Processando ${arquivosProcessados}/${totalArquivos} arquivos... (${progress}%)`;
+                if (checkCount > 12) { // Após 1 minuto
+                    loadingMsg.textContent = `Processamento assíncrono em andamento... (${elapsedTime})`;
+                } else {
+                    loadingMsg.textContent = `Processando ${arquivosProcessados}/${totalArquivos} arquivos... (${progress}%)`;
+                }
             }
         }
 
