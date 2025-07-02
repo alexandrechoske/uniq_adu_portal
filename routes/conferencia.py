@@ -44,8 +44,6 @@ def allowed_file(filename):
 def ensure_upload_folders():
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
-
-# Templates de prompts para cada tipo de conferência
 PROMPTS = {
     'inconsistencias': """
     Você é um sistema avançado de extração de dados, especializado em análise de documentos aduaneiros para identificar inconsistências gerais. Sua tarefa é analisar o documento fornecido e identificar possíveis problemas ou inconsistências.
@@ -84,34 +82,34 @@ PROMPTS = {
     **Instruções Detalhadas para Extração:**
 
     1.  **Número do documento (Invoice Number):**
-        * Procure por rótulos como "Invoice No.", "Fattura nr.", "Rechnung", "Belegnummer", "INVOICE #", "Number", "Invoice No.:", "Fattura n.".
-        * Seja flexível com prefixos e sufixos (ex: 'PI', 'INV-', 'S', 'FE/'). Extraia o identificador principal.
+        * Procure por rótulos como "Order","Order No","Invoice No.", "Fattura nr.", "Rechnung", "Belegnummer", "INVOICE #", "Number", "Invoice No.:", "Fattura n.", "Número", "INVOICE", "INVOICE#", "SHIPMENT NUMBER".
+        * Seja flexível com prefixos e sufixos (ex: 'PI', 'INV-', 'S', 'FE/', 'IT00125VEN', '1610743'). Extraia o identificador principal.
 
     2.  **Data de emissão (Issue Date):**
-        * Procure por "Date", "Data", "Datum".
+        * Procure por "Date", "Data", "Datum", "DATE".
 
     3.  **Exportador (Exporter/Shipper):**
-        * Procure por "Exporter", "Shipper", "From", "The Seller/Exporter", ou o nome da empresa no cabeçalho do documento. Extraia o nome e o endereço completos.
+        * Procure por "Exporter", "Shipper", "From", "The Seller/Exporter", "HEADQUARTER", "MANUFACTURER", ou o nome da empresa no cabeçalho do documento. Extraia o nome e o endereço completos.
 
     4.  **Importador (Importer/Consignee):**
-        * Procure por "Importer", "Consignee", "Bill to", "Ship to", "To", "MESSRS:", "Destinatario". Extraia o nome e o endereço completos.
+        * Procure por "Importer", "Consignee", "Bill to", "Ship to", "To", "MESSRS:", "Destinatario", "Buyer", "SOLD TO". Extraia o nome e o endereço completos.
 
     5.  **Itens da Fatura (Line Items):**
         * **Lógica de Agrupamento de Itens:** Documentos com tabelas ou grades complexas podem ter informações de um único item espalhadas por várias linhas. Agrupe de forma inteligente as linhas que pertencem ao mesmo item antes de extrair os dados.
         * **Para cada item na fatura, extraia os seguintes campos:**
-            * **descricao_completa:** Combine a descrição principal do produto, part number, códigos e outras especificações. Procure por colunas como "DESCRIPTION", "Descrizione", "Bezeichnung", "Description of goods".
-            * **quantidade_unidade:** Extraia a quantidade total de peças. Procure por "Q'TY", "QTY", "Quantity", "PCS", "NR", "Menge". A unidade (ex: "PCS") deve ser incluída se disponível.
-            * **preco_unitario:** Encontre o preço por unidade ou por milheiro (M). Procure por "UNIT PRICE", "Prezzo", "Preis", "USD/M". Pode ser indicado por um '@'.
-            * **valor_total_item:** O valor total para a linha do item. Procure por "AMOUNT", "Total", "Importo", "Summe".
+            * **descricao_completa:** Combine a descrição principal do produto, part number, códigos e outras especificações. Procure por colunas como "DESCRIPTION", "Descrizione", "Bezeichnung", "Description of goods", "Product".
+            * **quantidade_unidade:** Extraia a quantidade total de peças. Procure por "Q'TY", "QTY", "Quantity", "PCS", "NR", "Menge", "SHIPPED", "QTY PACKED". A unidade (ex: "PCS", "NR", "KG", "LBS", "m", "pce", "pc", "pcs", "unit", "unt", "kgs", "ltr", "l", "mtr", "gr", "box") deve ser incluída se disponível.
+            * **preco_unitario:** Encontre o preço por unidade ou por milheiro (M). Procure por "UNIT PRICE", "Prezzo", "Preis", "USD/M", "Gross price", "UNIT". Pode ser indicado por um '@'.
+            * **valor_total_item:** O valor total para a linha do item. Procure por "AMOUNT", "Total", "Importo", "Summe", "Total tax excluded", "EXTENDED".
 
     6.  **Incoterm:**
-        * Procure por termos como "INCOTERM", "PRICE TERM", "Delivery Terms". Extraia o termo e o local (ex: "FOB KAOHSIUNG TAIWAN").
+        * Procure por termos como "INCOTERM", "PRICE TERM", "Delivery Terms", "FREIGHT TERMS". Extraia o termo e o local (ex: "FOB KAOHSIUNG TAIWAN", "EXWORKS").
 
     7.  **País de Origem (Country of Origin):**
-        * Procure por "Country of Origin", "Made in". Se não estiver explícito, infira a partir do endereço do exportador.
+        * Procure por "Country of Origin", "Made in", "Origin". Se não estiver explícito, infira a partir do endereço do exportador.
 
     8.  **País de Aquisição (Country of Acquisition):**
-        * Procure por "Country of Acquisition". Se ausente, assuma que é o mesmo que o País de Origem.
+        * Procure por "Country of Acquisition", "COUNTRY OF ACQUISITION AND PROCEED". Se ausente, assuma que é o mesmo que o País de Origem.
 
     **Formato da Saída (JSON):**
     A saída DEVE ser um único objeto JSON válido, sem nenhum texto adicional antes ou depois. Para cada campo extraído, inclua um campo "valor_extraido" que mostra o texto exato do documento.
@@ -152,6 +150,7 @@ PROMPTS = {
     }
     """
 }
+
 
 
 @bp.route('/')
@@ -219,15 +218,17 @@ def upload():
             'arquivos': saved_files
         }
         
-        # Salva no Supabase
-        try:
-            supabase.table('conferencia_jobs').insert(job_data).execute()
-        except Exception as e:
-            print(f"DEBUG: Erro ao salvar no Supabase: {e}")
-        
-        # SEMPRE salvar na memória para garantir disponibilidade imediata
+        # SEMPRE salvar na memória primeiro (fonte primária)
         jobs[job_id] = job_data
         print(f"DEBUG: Job {job_id} salvo na memória: {job_data['status']}")
+        
+        # Tentar salvar no Supabase como backup (não crítico)
+        try:
+            supabase.table('conferencia_jobs').insert(job_data).execute()
+            print(f"DEBUG: Job {job_id} também salvo no Supabase")
+        except Exception as e:
+            print(f"DEBUG: Aviso - Não foi possível salvar no Supabase (usando memória): {e}")
+            # Isso não é crítico, o sistema continua funcionando com memória
         
         # Obtém a API key do Gemini da configuração
         gemini_api_key = current_app.config.get('GEMINI_API_KEY')
@@ -337,20 +338,22 @@ def upload():
                     'arquivos': saved_files
                 }
                 
-                # Atualizar na memória primeiro
+                # Atualizar na memória primeiro (fonte primária)
                 jobs[job_id].update(final_job_data)
+                print(f"DEBUG: Job {job_id} finalizado na memória")
                 
+                # Tentar atualizar no Supabase como backup (não crítico)
                 try:
                     supabase.table('conferencia_jobs').update(final_job_data).eq('id', job_id).execute()
-                    print(f"DEBUG: Job {job_id} finalizado com sucesso no banco")
+                    print(f"DEBUG: Job {job_id} também atualizado no Supabase")
                 except Exception as e:
-                    print(f"DEBUG: Job finalizado em memória devido a erro no banco: {e}")
+                    print(f"DEBUG: Aviso - Não foi possível atualizar no Supabase (job finalizado em memória): {e}")
                 
                 print(f"DEBUG: Processamento assíncrono concluído para job {job_id}")
                 
             except Exception as e:
                 print(f"DEBUG: ERRO FATAL no processamento assíncrono: {str(e)}")
-                # Marcar job como erro na memória
+                # Marcar job como erro na memória (fonte primária)
                 error_job_data = {
                     'status': 'error',
                     'arquivos_processados': len(saved_files)  # Marcar como processados mesmo com erro
@@ -361,10 +364,14 @@ def upload():
                 else:
                     jobs[job_id] = {**job_data, **error_job_data}
                 
+                print(f"DEBUG: Job {job_id} marcado como erro na memória")
+                
+                # Tentar salvar erro no Supabase como backup (não crítico)
                 try:
                     supabase.table('conferencia_jobs').update(error_job_data).eq('id', job_id).execute()
-                except:
-                    print(f"DEBUG: Erro também falhou ao salvar no banco")
+                    print(f"DEBUG: Status de erro também salvo no Supabase")
+                except Exception as db_error:
+                    print(f"DEBUG: Aviso - Erro não pôde ser salvo no Supabase: {db_error}")
         
         # Iniciar thread daemon em background
         background_thread = threading.Thread(target=background_process, daemon=True)
@@ -426,7 +433,7 @@ def process_pdf_with_gemini(pdf_path, api_key=None):
         print(f"DEBUG: PDF convertido para base64 ({len(pdf_base64)} caracteres)")
         
         # Criar o modelo
-        model = genai.GenerativeModel(model_name='gemini-2.5-flash-preview-04-17')
+        model = genai.GenerativeModel(model_name=os.getenv('GEMINI_MODEL'))
         
         # Criar a mensagem com o PDF em base64
         contents = [
@@ -499,7 +506,7 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
         }
         
         model = genai.GenerativeModel(
-            model_name='gemini-2.5-flash-preview-04-17',
+            model_name=os.getenv('GEMINI_MODEL'),
             generation_config=generation_config
         )
         
@@ -621,7 +628,7 @@ def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
         }
         
         model = genai.GenerativeModel(
-            model_name='gemini-2.5-flash-preview-04-17',
+            model_name=os.getenv('GEMINI_MODEL'),
             generation_config=generation_config
         )
         
@@ -854,7 +861,7 @@ def process_with_gemini(text, prompt_template, api_key):
             }
             
             model = genai.GenerativeModel(
-                model_name='gemini-2.5-flash-preview-04-17',
+                model_name=os.getenv('GEMINI_MODEL'),
                 generation_config=generation_config
             )
             

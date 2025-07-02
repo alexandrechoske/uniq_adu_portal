@@ -50,6 +50,17 @@ def format_value_smart(value, currency=False):
     
     return f"{value_str}" if currency else value_str
 
+def format_millions(value):
+    """Formatar valores em milhões/milhares (ex: 4.1M, 950K)"""
+    if value >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.1f}B"
+    elif value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    elif value >= 1_000:
+        return f"{value / 1_000:.0f}K"
+    else:
+        return f"{value:.0f}"
+
 def get_currencies():
     """Get latest USD and EUR exchange rates - CACHED para evitar lentidão"""
     # Usar valores fixos por enquanto para evitar timeout em APIs externas
@@ -495,7 +506,7 @@ def index(**kwargs):
             valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana) & (material_df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
             valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio) & (material_df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
             
-            percentual = (valor_total / total_vmcv_materials * 100) if total_vmcv_materials > 0 else 0
+            percentual = (valor_total / total_vmcv_materials * 100) if total_vmcv_materials > 0 else 0;
             
             material_analysis.append({
                 'material': material,
@@ -755,7 +766,7 @@ def index(**kwargs):
             # Ordenar por quantidade de processos e pegar top 6
             radar_data = radar_data.sort_values('numero', ascending=False).head(6)
             
-            # Preparar dados para o radar
+            # Preparar dados para o gráfico combinado
             categories = []
             values_qtd = []
             values_vmcv = []
@@ -773,71 +784,90 @@ def index(**kwargs):
                 values_qtd.append(quantidade)
                 values_vmcv.append(valor)
             
-            # Normalizar valores VMCV para ter escala comparável com quantidade
-            # Determinar o fator de escala com base no maior valor de cada série
-            max_qtd = max(values_qtd) if values_qtd else 1
-            max_vmcv = max(values_vmcv) if values_vmcv else 1
-            scale_factor = max_qtd / max_vmcv if max_vmcv > 0 else 1
+            # Reverter as listas para mostrar maior valor no topo
+            categories.reverse()
+            values_qtd.reverse()
+            values_vmcv.reverse()
             
-            normalized_vmcv = [v * scale_factor for v in values_vmcv]
-            
-            # Fechar o radar adicionando o primeiro valor no final
-            categories.append(categories[0])
-            values_qtd.append(values_qtd[0])
-            normalized_vmcv.append(normalized_vmcv[0])
-            
-            # Criar gráfico de radar
+            # Criar gráfico de barras horizontais agrupadas
             radar_chart = go.Figure()
             
-            # Adicionar primeira série (quantidade de processos)
-            radar_chart.add_trace(go.Scatterpolar(
-                r=values_qtd,
-                theta=categories,
-                fill='toself',
-                fillcolor='rgba(59, 130, 246, 0.2)',
-                line=dict(color='#3b82f6', width=2),
-                marker=dict(color='#3b82f6', size=6),
-                name='Qtd. Processos',
-                hovertemplate='<b>%{theta}</b><br>Processos: %{r}<extra></extra>'
+            # Trace 1: Quantidade de Processos (eixo X principal)
+            radar_chart.add_trace(go.Bar(
+                x=values_qtd,
+                y=categories,
+                orientation='h',
+                name='Qtd. de Processos',
+                marker=dict(
+                    color='#10b981',  # Verde
+                    line=dict(color='white', width=1)
+                ),
+                text=values_qtd,
+                textposition='inside',
+                insidetextanchor='middle',
+                textfont=dict(color='white', size=10),
+                hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
+                offsetgroup=1
             ))
             
-            # Adicionar segunda série (valores VMCV normalizados)
-            radar_chart.add_trace(go.Scatterpolar(
-                r=normalized_vmcv,
-                theta=categories,
-                fill='toself',
-                fillcolor='rgba(249, 115, 22, 0.2)',  # Laranja com transparência
-                line=dict(color='#f97316', width=2),
-                marker=dict(color='#f97316', size=6),
+            # Trace 2: Valor VMCV (eixo X secundário)
+            radar_chart.add_trace(go.Bar(
+                x=values_vmcv,
+                y=categories,
+                orientation='h',
                 name='Valor VMCV',
-                hovertemplate='<b>%{theta}</b><br>VMCV: R$ %{customdata:,.0f}<extra></extra>',
-                customdata=[[v] for v in values_vmcv + [values_vmcv[0]]]  # Adiciona os valores originais
+                marker=dict(
+                    color='#8b5cf6',  # Roxo
+                    line=dict(color='white', width=1)
+                ),
+                text=[format_millions(v) for v in values_vmcv],
+                textposition='inside',
+                insidetextanchor='middle',
+                textfont=dict(color='white', size=10),
+                hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
+                xaxis='x2',
+                offsetgroup=2
             ))
             
             radar_chart.update_layout(
-
-                polar=dict(
-                    radialaxis=dict(
-                        visible=True,
-                        range=[0, max(max(values_qtd[:-1]), max(normalized_vmcv[:-1])) * 1.1] if values_qtd else [0, 10],
-                        tickformat='.0f',
-                        tickfont=dict(size=9)
-                    ),
-                    angularaxis=dict(
-                        tickfont=dict(size=8)
-                    )
+                # Remover título (já está no card HTML)
+                title='',
+                # Configurar eixos (ocultar elementos visuais, manter apenas nomes das categorias)
+                xaxis=dict(
+                    showgrid=False,
+                    zeroline=False,
+                    showline=False,
+                    showticklabels=False
+                ),
+                xaxis2=dict(
+                    side='top',
+                    overlaying='x',
+                    showgrid=False,
+                    zeroline=False,
+                    showline=False,
+                    showticklabels=False
+                ),
+                yaxis=dict(
+                    tickfont=dict(size=10),
+                    showgrid=False,
+                    zeroline=False,
+                    showline=False
                 ),
                 template='plotly_white',
-                height=350,  # Ajustado para altura padrão
-                margin=dict(t=50, b=50, l=10, r=10),  # Margens ajustadas para acomodar legenda
+                height=350,
+                margin=dict(t=20, b=20, l=180, r=30),  # Reduzir margens e espaço à esquerda para nomes
                 showlegend=True,
                 legend=dict(
                     orientation="h",
-                    yanchor="bottom",
-                    y=-0.15,
+                    yanchor="top",
+                    y=-0.1,
                     xanchor="center",
                     x=0.5
-                )
+                ),
+                barmode='group',  # Barras agrupadas
+                bargap=0.3,  # Reduzir espaço entre grupos para ocupar melhor o espaço
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
             )
             def clean_material_name(material_name):
                 """Limpa e normaliza nomes de materiais preservando o conteúdo original quando possível"""
@@ -911,6 +941,7 @@ def index(**kwargs):
                         ),
                         text=[format_value_smart(val, currency=True) for val in values_valor],
                         textposition='inside',
+                        insidetextanchor='middle',
                         textfont=dict(color='white', size=10),
                         hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
                         offsetgroup=1  # Grupo para barras lado a lado
@@ -928,6 +959,7 @@ def index(**kwargs):
                         ),
                         text=[f'{val}' for val in values_quantidade],
                         textposition='inside',
+                        insidetextanchor='middle',
                         textfont=dict(color='white', size=10),
                         hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
                         xaxis='x2',  # Usar eixo X secundário
@@ -935,34 +967,42 @@ def index(**kwargs):
                     ))
                     
                     material_chart.update_layout(
+                        # Remover título (já está no card HTML)
+                        title='',
+                        # Configurar eixos (ocultar elementos visuais)
                         xaxis=dict(
-                            side='bottom',
-                            showticklabels=False,  # Remove labels para ficar mais limpo
-                            showgrid=True,
-                            gridcolor='rgba(139, 92, 246, 0.1)'  # Grid roxo claro
+                            showgrid=False,
+                            zeroline=False,
+                            showline=False,
+                            showticklabels=False
                         ),
                         xaxis2=dict(
                             side='top',
                             overlaying='x',
-                            showticklabels=False,  # Remove labels para ficar mais limpo
-                            showgrid=False
+                            showgrid=False,
+                            zeroline=False,
+                            showline=False,
+                            showticklabels=False
                         ),
                         yaxis=dict(
-                            title='',  # Remove título do eixo Y
-                            tickfont=dict(size=10)
+                            tickfont=dict(size=10),
+                            showgrid=False,
+                            zeroline=False,
+                            showline=False
                         ),
                         template='plotly_white',
                         height=350,
-                        margin=dict(t=60, b=60, l=180, r=30),  # Mais espaço à esquerda para nomes
+                        margin=dict(t=20, b=20, l=180, r=30),  # Reduzir margens superior e inferior
                         showlegend=True,
                         legend=dict(
                             orientation="h",
                             yanchor="top",
-                            y=-0.15,
+                            y=-0.1,
                             xanchor="center",
                             x=0.5
                         ),
-                        barmode='group'  # Barras agrupadas lado a lado
+                        barmode='group',  # Barras agrupadas lado a lado
+                        bargap=0.3  # Reduzir espaço entre grupos para ocupar melhor o espaço
                     )
 
 
