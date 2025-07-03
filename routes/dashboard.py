@@ -167,29 +167,37 @@ def index(**kwargs):
     proxima_semana_inicio = fim_semana + timedelta(days=1)
     proxima_semana_fim = proxima_semana_inicio + timedelta(days=6)
     
+    # Converter para Timestamp do pandas para comparações consistentes
+    inicio_semana_ts = pd.Timestamp(inicio_semana)
+    fim_semana_ts = pd.Timestamp(fim_semana)
+    inicio_mes_ts = pd.Timestamp(inicio_mes)
+    fim_mes_ts = pd.Timestamp(fim_mes)
+    proxima_semana_inicio_ts = pd.Timestamp(proxima_semana_inicio)
+    proxima_semana_fim_ts = pd.Timestamp(proxima_semana_fim)
+    
     # Métricas de VMCV
     vmcv_total = df['total_vmcv_real'].sum()
     vmcv_mes = df[df['data_abertura'].dt.month == hoje.month]['total_vmcv_real'].sum()
-    vmcv_semana = df[(df['data_abertura'] >= inicio_semana) & (df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
-    vmcv_proxima_semana = df[(df['data_abertura'] >= proxima_semana_inicio) & (df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
+    vmcv_semana = df[(df['data_abertura'] >= inicio_semana_ts) & (df['data_abertura'] <= fim_semana_ts)]['total_vmcv_real'].sum()
+    vmcv_proxima_semana = df[(df['data_abertura'] >= proxima_semana_inicio_ts) & (df['data_abertura'] <= proxima_semana_fim_ts)]['total_vmcv_real'].sum()
     
     # Métricas de processos por período
     processos_mes = len(df[df['data_abertura'].dt.month == hoje.month])
-    processos_semana = len(df[(df['data_abertura'] >= inicio_semana) & (df['data_abertura'] <= fim_semana)])
-    processos_proxima_semana = len(df[(df['data_abertura'] >= proxima_semana_inicio) & (df['data_abertura'] <= proxima_semana_fim)])
+    processos_semana = len(df[(df['data_abertura'] >= inicio_semana_ts) & (df['data_abertura'] <= fim_semana_ts)])
+    processos_proxima_semana = len(df[(df['data_abertura'] >= proxima_semana_inicio_ts) & (df['data_abertura'] <= proxima_semana_fim_ts)])
     
     # Processos a chegar
     a_chegar_semana = len(df[
-        ((df['previsao_chegada'] >= inicio_semana) & (df['previsao_chegada'] <= fim_semana)) |
-        ((df['data_chegada'] >= inicio_semana) & (df['data_chegada'] <= fim_semana))
+        ((df['previsao_chegada'] >= inicio_semana_ts) & (df['previsao_chegada'] <= fim_semana_ts)) |
+        ((df['data_chegada'] >= inicio_semana_ts) & (df['data_chegada'] <= fim_semana_ts))
     ])
     a_chegar_mes = len(df[
-        ((df['previsao_chegada'] >= inicio_mes) & (df['previsao_chegada'] <= fim_mes)) |
-        ((df['data_chegada'] >= inicio_mes) & (df['data_chegada'] <= fim_mes))
+        ((df['previsao_chegada'] >= inicio_mes_ts) & (df['previsao_chegada'] <= fim_mes_ts)) |
+        ((df['data_chegada'] >= inicio_mes_ts) & (df['data_chegada'] <= fim_mes_ts))
     ])
     a_chegar_proxima_semana = len(df[
-        ((df['previsao_chegada'] >= proxima_semana_inicio) & (df['previsao_chegada'] <= proxima_semana_fim)) |
-        ((df['data_chegada'] >= proxima_semana_inicio) & (df['data_chegada'] <= proxima_semana_fim))
+        ((df['previsao_chegada'] >= proxima_semana_inicio_ts) & (df['previsao_chegada'] <= proxima_semana_fim_ts)) |
+        ((df['data_chegada'] >= proxima_semana_inicio_ts) & (df['data_chegada'] <= proxima_semana_fim_ts))
     ])
     
     # Preparar dados para a tabela com as colunas solicitadas
@@ -359,23 +367,49 @@ def index(**kwargs):
         # Somar ao total
         despesas_total += despesas_processo
         
-        # Verificar se está no mês atual
+        # Para mês e semana atual, considerar TANTO data de abertura QUANTO data de chegada
+        # Isso permite que processos com chegada no período sejam incluídos mesmo que tenham sido abertos antes
+        
+        # Verificar se está no mês atual (por data de abertura OU chegada)
+        incluir_no_mes = False
         data_abertura = row.get('data_abertura')
         if pd.notna(data_abertura):
             data_abertura_dt = pd.to_datetime(data_abertura)
             if data_abertura_dt.month == hoje.month and data_abertura_dt.year == hoje.year:
-                despesas_mes += despesas_processo
-            
-            # Verificar se está na semana atual
-            if data_abertura_dt >= inicio_semana and data_abertura_dt <= fim_semana:
-                despesas_semana += despesas_processo
+                incluir_no_mes = True
         
-        # Para despesas da próxima semana, usar data de chegada prevista/real
+        # Verificar também por data de chegada (real ou prevista)
         data_chegada_display = get_arrival_date_display(row)
         if data_chegada_display and pd.notna(data_chegada_display):
             data_chegada_dt = pd.to_datetime(data_chegada_display)
-            if data_chegada_dt >= proxima_semana_inicio and data_chegada_dt <= proxima_semana_fim:
+            if data_chegada_dt.month == hoje.month and data_chegada_dt.year == hoje.year:
+                incluir_no_mes = True
+        
+        if incluir_no_mes:
+            despesas_mes += despesas_processo
+        
+        # Verificar se está na semana atual (por data de abertura OU chegada)
+        incluir_na_semana = False
+        if pd.notna(data_abertura):
+            data_abertura_dt = pd.to_datetime(data_abertura)
+            if data_abertura_dt >= inicio_semana_ts and data_abertura_dt <= fim_semana_ts:
+                incluir_na_semana = True
+        
+        if data_chegada_display and pd.notna(data_chegada_display):
+            data_chegada_dt = pd.to_datetime(data_chegada_display)
+            if data_chegada_dt >= inicio_semana_ts and data_chegada_dt <= fim_semana_ts:
+                incluir_na_semana = True
+        
+        if incluir_na_semana:
+            despesas_semana += despesas_processo
+        
+        # Para despesas da próxima semana, usar data de chegada prevista/real
+        if data_chegada_display and pd.notna(data_chegada_display):
+            data_chegada_dt = pd.to_datetime(data_chegada_display)
+            if data_chegada_dt >= proxima_semana_inicio_ts and data_chegada_dt <= proxima_semana_fim_ts:
                 despesas_proxima_semana += despesas_processo
+    
+
     
     # Calcular despesa média por processo
     despesa_media_processo = (despesas_total / total_operations) if total_operations > 0 else 0
@@ -445,8 +479,8 @@ def index(**kwargs):
             
             # Calcular valor da semana atual e próxima semana
             material_df = df[df['resumo_mercadoria'] == row['resumo_mercadoria']]
-            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana) & (material_df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
-            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio) & (material_df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
+            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana_ts) & (material_df['data_abertura'] <= fim_semana_ts)]['total_vmcv_real'].sum()
+            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio_ts) & (material_df['data_abertura'] <= proxima_semana_fim_ts)]['total_vmcv_real'].sum()
             
             analise_material.append({
                 'item_descricao': material_name,
@@ -492,8 +526,8 @@ def index(**kwargs):
             
             # Calcular valor da semana atual e próxima semana
             material_df = df[df['resumo_mercadoria'] == row['resumo_mercadoria']]
-            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana) & (material_df['data_abertura'] <= fim_semana)]['total_vmcv_real'].sum()
-            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio) & (material_df['data_abertura'] <= proxima_semana_fim)]['total_vmcv_real'].sum()
+            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana_ts) & (material_df['data_abertura'] <= fim_semana_ts)]['total_vmcv_real'].sum()
+            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio_ts) & (material_df['data_abertura'] <= proxima_semana_fim_ts)]['total_vmcv_real'].sum()
             
             percentual = (valor_total / total_vmcv_materials * 100) if total_vmcv_materials > 0 else 0
             

@@ -85,7 +85,145 @@
             border-radius: 1rem; /* Bordas mais arredondadas */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Sombra mais pronunciada */
             z-index: 1; /* Garante que o card fique na frente das formas */
-            padding: 2.5rem; /* Aumenta o padding interno */
+            padding: 2rem; /* Padding reduzido para melhor aproveitamento */
+            display: flex;
+            flex-direction: column;
+            min-height: auto;
+            width: 100%;
+            max-width: 900px; /* Aumentado para layout horizontal */
+        }
+
+        .login-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        /* Layout horizontal para telas médias e grandes */
+        @media (min-width: 768px) {
+            .login-content {
+                flex-direction: row;
+                align-items: stretch;
+                gap: 3rem;
+            }
+
+            .logo-section {
+                flex: 1;
+                justify-content: center;
+                border-right: 1px solid rgba(0, 0, 0, 0.1);
+                padding-right: 2rem;
+            }
+
+            .form-section {
+                flex: 1;
+                max-width: none;
+                padding-left: 2rem;
+                justify-content: center;
+            }
+        }
+
+        /* Ajustes para telas muito pequenas */
+        @media (max-height: 700px) {
+            .login-card {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+            
+            .logo-section h2 {
+                font-size: 1.5rem !important;
+                margin-top: 1rem !important;
+            }
+            
+            .logo-section img {
+                height: 3rem !important;
+            }
+        }
+
+        /* Container principal responsivo */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        /* Ajustes específicos para notebooks (telas pequenas) */
+        @media (max-height: 600px) {
+            .login-container {
+                align-items: flex-start;
+                padding: 0.5rem;
+                min-height: 100vh;
+            }
+            
+            .login-card {
+                padding: 1rem;
+                margin: 0.5rem 0;
+                min-height: auto;
+            }
+            
+            .login-content {
+                gap: 1rem;
+            }
+            
+            .logo-section h2 {
+                font-size: 1.25rem !important;
+                margin-top: 0.5rem !important;
+            }
+            
+            .logo-section img {
+                height: 8.5rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+            
+            .logo-section p {
+                display: none !important;
+            }
+            
+            .connection-status-box {
+                padding: 0.75rem;
+                font-size: 0.8rem;
+            }
+            
+            .submit-button {
+                padding: 0.5rem 1rem !important;
+            }
+        }
+
+        /* Layout vertical forçado em telas muito pequenas */
+        @media (max-width: 640px) {
+            .login-content {
+                flex-direction: column !important;
+            }
+            
+            .logo-section {
+                border-right: none !important;
+                padding-right: 0 !important;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                padding-bottom: 1rem;
+            }
+            
+            .form-section {
+                padding-left: 0 !important;
+                padding-top: 1rem;
+            }
         }
 
         .input-field {
@@ -164,7 +302,7 @@
 {% endblock %}
 
 {% block auth_content %}
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative bg-white"> {# Adicionado bg-white aqui #}
+<div class="login-container relative bg-white">
     {# Background Shapes #}
     <div class="background-shapes">
         <div class="shape shape-1"></div>
@@ -172,69 +310,81 @@
         <div class="shape shape-3"></div>
         <div class="shape shape-4"></div>
     </div>
+    <div class="login-card">
+        <div class="login-content">
+            {# Seção do Logo #}
+            <div class="logo-section">
+                <img class="h-24 w-auto mb-4" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900">
+                    Portal UniSystem
+                </h2>
+                <p class="mt-2 text-sm text-gray-600 hidden md:block">
+                    Acesse sua conta para gerenciar suas operações
+                </p>
+            </div>
 
-    <div class="max-w-md w-full space-y-8 login-card"> {# CLASSE login-card APLICADA AQUI #}
-        <div>
-            <img class="mx-auto h-16 w-auto" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Portal UniSystem
-            </h2>
-        </div>        {# Status da Conexão #}
-        <div id="connection-status" class="connection-status-box alert-info">
-            <div class="flex items-center">
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-                <span class="text-blue-700">Verificando conexão com o Banco de dados...</span>
+            {# Seção do Formulário #}
+            <div class="form-section">
+                {# Status da Conexão #}
+                <div id="connection-status" class="connection-status-box alert-info mb-4">
+                    <div class="flex items-center">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                        <span class="text-blue-700">Verificando conexão com o Banco de dados...</span>
+                    </div>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="rounded-md p-4 mb-4 {% if category == 'error' %}alert-danger{% else %}alert-success{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form class="space-y-4" method="POST" action="{{ url_for('auth.login') }}">
+                    <div class="space-y-3">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input id="email" name="email" type="email" required 
+                                   class="block w-full input-field"
+                                   placeholder="seu@email.com">
+                        </div>
+                        <div>
+                            <label for="senha" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                            <input id="senha" name="senha" type="password" required 
+                                   class="block w-full input-field"
+                                   placeholder="Digite sua senha">
+                        </div>
+                    </div>
+
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-unique-blue hover:text-unique-dark-blue">
+                            Esqueceu sua senha?
+                        </a>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="login-button"
+                                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white submit-button">
+                            <span id="login-text">Entrar</span>
+                            <span id="login-spinner" class="hidden">
+                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                            <span id="login-success" class="hidden">
+                                <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="rounded-md p-4 {% if category == 'error' %}alert-danger{% else %}alert-success{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <form class="mt-8 space-y-6" method="POST" action="{{ url_for('auth.login') }}">
-            <div class="rounded-md shadow-sm -space-y-px">
-                <div>
-                    <label for="email" class="sr-only">Email</label>
-                    <input id="email" name="email" type="email" required 
-                           class="relative block w-full input-field" {# CLASSE input-field APLICADA AQUI #}
-                           placeholder="Email">
-                </div>
-                <div>
-                    <label for="senha" class="sr-only">Senha</label>
-                    <input id="senha" name="senha" type="password" required 
-                           class="relative block w-full input-field mt-3" {# CLASSE input-field APLICADA AQUI #}
-                           placeholder="Senha">
-                </div>
-            </div>
-
-            <div class="text-sm">
-                <a href="#" class="font-medium text-unique-blue hover:text-unique-dark-blue">
-                    Esqueceu sua senha?
-                </a>
-            </div>            <div>
-                <button type="submit" id="login-button"
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white submit-button">
-                    <span id="login-text">Entrar</span>
-                    <span id="login-spinner" class="hidden">
-                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </span>
-                    <span id="login-success" class="hidden">
-                        <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                    </span>
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 

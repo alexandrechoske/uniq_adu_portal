@@ -342,6 +342,83 @@
         text-decoration: underline;
     }
 
+    /* === LISTA DE NÚMEROS CADASTRADOS === */
+    .numbers-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .number-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacing-md);
+        background: var(--color-surface-hover);
+        border: 1px solid var(--color-border-light);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+    }
+
+    .number-item:hover {
+        background: var(--color-surface);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .number-info {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .number-text {
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+        font-weight: 500;
+    }
+
+    .number-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        color: var(--color-success);
+        background: var(--color-success-light);
+        padding: 0.125rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .btn-remove {
+        background: transparent;
+        border: 1px solid var(--color-danger);
+        color: var(--color-danger);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        transition: all var(--transition-fast);
+    }
+
+    .btn-remove:hover {
+        background: var(--color-danger-light);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-xl);
+        color: var(--color-text-muted);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-md);
+        color: var(--color-text-light);
+    }
+
+    .section-divider {
+        border-top: 1px solid var(--color-border-light);
+        margin: var(--spacing-xl) 0;
+    }
+
     /* === GRID RESPONSIVO === */
     .content-grid {
         display: grid;
@@ -576,63 +653,108 @@
             <div class="form-card">
                 <h2 class="card-title">
                     <i class="mdi mdi-account-plus" style="margin-right: var(--spacing-xs); color: var(--color-primary);"></i>
-                    Aderência ao Agente Unique
+                    Adicionar Número ao Agente Unique
                 </h2>
                 
-                {% if existing %}
-                    <div class="status-card success">
-                        <div class="status-icon success">
-                            <i class="mdi mdi-check" style="font-size: 1.5rem;"></i>
+                <form method="POST" style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
+                    <div class="form-group">
+                        <label for="numero_whatsapp" class="form-label">Número do WhatsApp</label>
+                        <div class="input-icon">
+                            <i class="mdi mdi-whatsapp icon"></i>
+                            <input type="tel" 
+                                   id="numero_whatsapp" 
+                                   name="numero_whatsapp" 
+                                   required
+                                   class="form-input"
+                                   placeholder="5511999999999">
                         </div>
-                        <div class="status-content">
-                            <h4 class="status-title success">Você já está cadastrado!</h4>
-                            <p class="status-text success">Seu número: {{ existing.numero }}</p>
-                        </div>
+                        <p style="margin-top: var(--spacing-xs); font-size: 0.8rem; color: var(--color-text-muted);">
+                            Informe o número com DDD e código do país (ex: 5511999999999)
+                        </p>
                     </div>
                     
-                    <!-- Botão de Descadastro -->
-                    <div style="border-top: 1px solid var(--color-border-light); padding-top: var(--spacing-lg); margin-top: var(--spacing-lg);">
-                        <form action="{{ url_for('agente.descadastrar') }}" method="POST" onsubmit="return confirm('Tem certeza que deseja se descadastrar do Agente Unique?');">
-                            <button type="submit" class="btn btn-danger" style="width: 100%;">
-                                <i class="mdi mdi-delete"></i>
-                                Descadastrar do Agente Unique
+                    {% if not terms_accepted %}
+                    <div class="checkbox-group">
+                        <input id="aceite_terms" 
+                               name="aceite_terms" 
+                               type="checkbox" 
+                               required
+                               class="checkbox">
+                        <label for="aceite_terms" class="checkbox-label">
+                            Li e aceito os <button type="button" class="checkbox-link" onclick="document.getElementById('termsModal').classList.remove('hidden')">termos de uso</button> do Agente Unique
+                        </label>
+                    </div>
+                    {% else %}
+                    <div style="padding: var(--spacing-md); background: var(--color-success-light); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--spacing-sm);">
+                        <i class="mdi mdi-check-circle" style="color: var(--color-success);"></i>
+                        <span style="color: var(--color-success); font-size: 0.875rem; font-weight: 500;">
+                            Termos já aceitos para sua conta
+                        </span>
+                    </div>
+                    <input type="hidden" name="aceite_terms" value="on">
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="mdi mdi-plus"></i>
+                        Adicionar Número
+                    </button>
+                </form>
+
+                <!-- Seção de Números Cadastrados -->
+                {% if registered_numbers %}
+                <div class="section-divider"></div>
+                <div>
+                    <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--spacing-md);">
+                        <i class="mdi mdi-format-list-bulleted" style="margin-right: var(--spacing-xs); color: var(--color-success);"></i>
+                        Números Cadastrados ({{ registered_numbers|length }})
+                    </h3>
+                    
+                    <div class="numbers-list">
+                        {% for number in registered_numbers %}
+                        <div class="number-item">
+                            <div class="number-info">
+                                <i class="mdi mdi-whatsapp" style="color: var(--color-success);"></i>
+                                <span class="number-text">{{ number.numero }}</span>
+                                <span class="number-status">
+                                    <i class="mdi mdi-check-circle"></i>
+                                    Ativo
+                                </span>
+                            </div>
+                            <form method="POST" action="{{ url_for('agente.descadastrar') }}" style="display: inline;">
+                                <input type="hidden" name="numero_id" value="{{ number.id }}">
+                                <button type="submit" 
+                                        class="btn-remove"
+                                        onclick="return confirm('Tem certeza que deseja remover este número ({{ number.numero }})?')">
+                                    <i class="mdi mdi-trash-can"></i>
+                                    Remover
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Botão para remover todos -->
+                    <div style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--color-border-light);">
+                        <form method="POST" action="{{ url_for('agente.descadastrar') }}" style="display: inline;">
+                            <button type="submit" 
+                                    class="btn btn-danger" 
+                                    style="width: 100%;"
+                                    onclick="return confirm('Tem certeza que deseja remover TODOS os números do Agente Unique?')">
+                                <i class="mdi mdi-delete-sweep"></i>
+                                Remover Todos os Números
                             </button>
                         </form>
                     </div>
+                </div>
                 {% else %}
-                    <form method="POST" style="display: flex; flex-direction: column; gap: var(--spacing-lg);">
-                        <div class="form-group">
-                            <label for="numero_whatsapp" class="form-label">Número do WhatsApp</label>
-                            <div class="input-icon">
-                                <i class="mdi mdi-whatsapp icon"></i>
-                                <input type="tel" 
-                                       id="numero_whatsapp" 
-                                       name="numero_whatsapp" 
-                                       required
-                                       class="form-input"
-                                       placeholder="5511999999999">
-                            </div>
-                            <p style="margin-top: var(--spacing-xs); font-size: 0.8rem; color: var(--color-text-muted);">
-                                Informe o número com DDD e código do país (ex: 5511999999999)
-                            </p>
-                        </div>
-                        
-                        <div class="checkbox-group">
-                            <input id="aceite_terms" 
-                                   name="aceite_terms" 
-                                   type="checkbox" 
-                                   required
-                                   class="checkbox">
-                            <label for="aceite_terms" class="checkbox-label">
-                                Li e aceito os <button type="button" class="checkbox-link" onclick="document.getElementById('termsModal').classList.remove('hidden')">termos de uso</button> do Agente Unique
-                            </label>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">
-                            <i class="mdi mdi-robot-excited"></i>
-                            Ativar Agente Unique
-                        </button>
-                    </form>
+                <div class="section-divider"></div>
+                <div class="empty-state">
+                    <i class="mdi mdi-robot-confused empty-state-icon"></i>
+                    <p>Nenhum número cadastrado ainda</p>
+                    <p style="font-size: 0.875rem; margin-top: var(--spacing-xs);">
+                        Adicione seu primeiro número usando o formulário acima
+                    </p>
+                </div>
                 {% endif %}
             </div>
 
@@ -670,10 +792,16 @@
                     </li>
                 </ul>
                 
-                <p style="color: var(--color-text-secondary); margin-top: var(--spacing-lg); line-height: 1.6;">
-                    Utilize o formulário ao lado para ativar o serviço. Nossa equipe está pronta para ajudá-lo 
-                    com todas as suas necessidades relacionadas a comércio exterior.
-                </p>
+                <div style="margin-top: var(--spacing-xl); padding: var(--spacing-lg); background: var(--color-info-light); border-radius: var(--radius-md);">
+                    <h4 style="color: var(--color-info); margin: 0 0 var(--spacing-sm) 0; font-size: 1rem;">
+                        <i class="mdi mdi-lightbulb"></i>
+                        Múltiplos Números
+                    </h4>
+                    <p style="color: var(--color-text-secondary); margin: 0; font-size: 0.875rem; line-height: 1.5;">
+                        Você pode cadastrar múltiplos números de WhatsApp! Cada número terá acesso aos mesmos 
+                        dados e funcionalidades que você possui no portal.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
