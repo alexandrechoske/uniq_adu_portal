@@ -620,7 +620,8 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
         
         print(f"DEBUG: PDF convertido para base64 ({len(pdf_base64)} chars)")
         
-        # Configuração otimizada
+        # Configuração otimizada - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [MEGA-GRANULAR] Criando configuração do modelo...")
         generation_config = {
             "temperature": 0.1,
             "top_p": 0.8,
@@ -628,17 +629,47 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
             "max_output_tokens": 4096,
         }
         
+        print(f"DEBUG: [MEGA-GRANULAR] Verificando GEMINI_MODEL...")
+        gemini_model = os.getenv('GEMINI_MODEL')
+        print(f"DEBUG: [MEGA-GRANULAR] GEMINI_MODEL: {gemini_model}")
+        print(f"DEBUG: [MEGA-GRANULAR] GEMINI_MODEL é None: {gemini_model is None}")
+        
+        if gemini_model is None:
+            print(f"DEBUG: [MEGA-GRANULAR] ERRO - GEMINI_MODEL é None")
+            raise Exception("GEMINI_MODEL não está configurado")
+        
+        print(f"DEBUG: [MEGA-GRANULAR] Criando modelo GenerativeModel...")
         model = genai.GenerativeModel(
-            model_name=os.getenv('GEMINI_MODEL'),
+            model_name=gemini_model,
             generation_config=generation_config
         )
         
-        # Prompt conciso
+        print(f"DEBUG: [MEGA-GRANULAR] Modelo criado com sucesso: {type(model)}")
+        
+        # Prompt conciso - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [MEGA-GRANULAR] Criando prompt...")
+        print(f"DEBUG: [MEGA-GRANULAR] prompt_template tipo: {type(prompt_template)}")
+        print(f"DEBUG: [MEGA-GRANULAR] prompt_template é None: {prompt_template is None}")
+        
+        if prompt_template is None:
+            print(f"DEBUG: [MEGA-GRANULAR] ERRO - prompt_template é None")
+            raise Exception("prompt_template é None")
+        
         prompt = f"""
         {prompt_template}
         
         Retorne APENAS JSON válido conforme o template, sem texto adicional.
         """
+        
+        print(f"DEBUG: [MEGA-GRANULAR] Prompt criado com sucesso ({len(prompt)} chars)")
+        
+        print(f"DEBUG: [MEGA-GRANULAR] Criando contents...")
+        print(f"DEBUG: [MEGA-GRANULAR] pdf_base64 tipo: {type(pdf_base64)}")
+        print(f"DEBUG: [MEGA-GRANULAR] pdf_base64 é None: {pdf_base64 is None}")
+        
+        if pdf_base64 is None:
+            print(f"DEBUG: [MEGA-GRANULAR] ERRO - pdf_base64 é None")
+            raise Exception("pdf_base64 é None")
         
         contents = [
             {
@@ -656,6 +687,8 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
                 ]
             }
         ]
+        
+        print(f"DEBUG: [MEGA-GRANULAR] Contents criado com sucesso")
         
         print(f"DEBUG: Enviando para Gemini...")
         
@@ -699,14 +732,29 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
             raise Exception("Resposta vazia do Gemini")
         
         print(f"DEBUG: [ULTRA-GRANULAR] Verificando candidates...")
-        # Verificar finish_reason para detectar filtragem de conteúdo
+        # Verificar finish_reason para detectar filtragem de conteúdo - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [ULTRA-GRANULAR] Verificando se response tem atributo candidates...")
         if hasattr(response, 'candidates'):
-            print(f"DEBUG: [ULTRA-GRANULAR] Response tem candidates: {response.candidates is not None}")
-            if response.candidates:
+            print(f"DEBUG: [ULTRA-GRANULAR] Response tem atributo candidates")
+            candidates_value = response.candidates
+            print(f"DEBUG: [ULTRA-GRANULAR] candidates_value tipo: {type(candidates_value)}")
+            print(f"DEBUG: [ULTRA-GRANULAR] candidates_value é None: {candidates_value is None}")
+            print(f"DEBUG: [ULTRA-GRANULAR] Response tem candidates: {candidates_value is not None}")
+            
+            if candidates_value is not None and candidates_value:
                 print(f"DEBUG: [ULTRA-GRANULAR] Candidates não é vazio")
-                candidate = response.candidates[0]
-                print(f"DEBUG: [ULTRA-GRANULAR] Candidate obtido: {type(candidate)}")
-                if hasattr(candidate, 'finish_reason'):
+                print(f"DEBUG: [ULTRA-GRANULAR] Candidates tamanho: {len(candidates_value) if hasattr(candidates_value, '__len__') else 'N/A'}")
+                
+                # AQUI PODE ESTAR O ERRO: candidates_value[0] quando candidates_value é None
+                try:
+                    candidate = candidates_value[0]
+                    print(f"DEBUG: [ULTRA-GRANULAR] Candidate obtido: {type(candidate)}")
+                except (IndexError, TypeError) as candidate_error:
+                    print(f"DEBUG: [ULTRA-GRANULAR] ERRO ao acessar candidate[0]: {str(candidate_error)}")
+                    print(f"DEBUG: [ULTRA-GRANULAR] Tipo do erro candidate: {type(candidate_error)}")
+                    candidate = None
+                
+                if candidate and hasattr(candidate, 'finish_reason'):
                     finish_reason = candidate.finish_reason
                     print(f"DEBUG: Finish reason: {finish_reason}")
                     
@@ -721,11 +769,11 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
                         print(f"DEBUG: Finish reason inválido ({finish_reason}), tentando análise por texto")
                         return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
                 else:
-                    print(f"DEBUG: [ULTRA-GRANULAR] Candidate não tem finish_reason")
+                    print(f"DEBUG: [ULTRA-GRANULAR] Candidate não tem finish_reason ou é None")
             else:
-                print(f"DEBUG: [ULTRA-GRANULAR] Candidates é vazio")
+                print(f"DEBUG: [ULTRA-GRANULAR] Candidates é None ou vazio")
         else:
-            print(f"DEBUG: [ULTRA-GRANULAR] Response não tem candidates")
+            print(f"DEBUG: [ULTRA-GRANULAR] Response não tem atributo candidates")
         
         # Verificar se tem texto na resposta - PROTEÇÃO CONTRA NONES
         print(f"DEBUG: [ULTRA-GRANULAR] Tentando acessar response.text...")
