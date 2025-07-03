@@ -278,28 +278,95 @@ def upload():
                         file_info['status'] = 'completed'
                         file_info['result'] = result
                         
-                        # Atualizar job na memória imediatamente
-                        if job_id in jobs:
-                            jobs[job_id]['arquivos'][i] = file_info
-                            jobs[job_id]['arquivos_processados'] = i + 1
+                        # Atualizar job na memória imediatamente - PROTEÇÃO CONTRA NONES
+                        print(f"DEBUG: [GRANULAR] Atualizando job na memória após sucesso")
+                        print(f"DEBUG: [GRANULAR] job_id: {job_id}")
+                        print(f"DEBUG: [GRANULAR] job_id in jobs: {job_id in jobs}")
                         
-                        # Debug do resultado
-                        if result and 'sumario' in result and result['sumario']:
-                            sumario = result['sumario']
-                            print(f"DEBUG: Arquivo {filename} processado - Status: {sumario.get('status', 'N/A')}")
-                            print(f"DEBUG: Conclusão: {sumario.get('conclusao', 'N/A')}")
-                            print(f"DEBUG: Erros críticos: {sumario.get('total_erros_criticos', 0)}")
-                            print(f"DEBUG: Alertas: {sumario.get('total_alertas', 0)}")
-                            print(f"DEBUG: Observações: {sumario.get('total_observacoes', 0)}")
+                        if job_id in jobs:
+                            print(f"DEBUG: [GRANULAR] Jobs dict tipo: {type(jobs)}")
+                            print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo: {type(jobs[job_id])}")
+                            print(f"DEBUG: [GRANULAR] Jobs[job_id] é None: {jobs[job_id] is None}")
                             
-                            # Mostrar alguns itens para debug
-                            if 'itens' in result:
-                                print(f"DEBUG: Total de itens analisados: {len(result['itens'])}")
-                                for idx, item in enumerate(result['itens'][:3]):  # Primeiros 3 itens
-                                    print(f"DEBUG: Item {idx+1}: {item.get('campo', 'N/A')} - {item.get('status', 'N/A')} - {item.get('descricao', 'N/A')[:100]}...")
+                            if jobs[job_id] is not None:
+                                if 'arquivos' not in jobs[job_id]:
+                                    print(f"DEBUG: [GRANULAR] ERRO - 'arquivos' não está em jobs[job_id]")
+                                    jobs[job_id]['arquivos'] = []
+                                
+                                print(f"DEBUG: [GRANULAR] Atualizando arquivo {i} no job (sucesso)")
+                                print(f"DEBUG: [GRANULAR] Arquivos list tipo: {type(jobs[job_id]['arquivos'])}")
+                                print(f"DEBUG: [GRANULAR] Arquivos list tamanho: {len(jobs[job_id]['arquivos']) if jobs[job_id]['arquivos'] else 0}")
+                                
+                                if i < len(jobs[job_id]['arquivos']):
+                                    jobs[job_id]['arquivos'][i] = file_info
+                                    jobs[job_id]['arquivos_processados'] = i + 1
+                                    print(f"DEBUG: [GRANULAR] Arquivo {i} atualizado com sucesso")
+                                else:
+                                    print(f"DEBUG: [GRANULAR] ERRO - Índice {i} fora do range da lista arquivos")
+                            else:
+                                print(f"DEBUG: [GRANULAR] ERRO - jobs[job_id] é None")
+                        
+                        # Debug do resultado - PROTEÇÃO CONTRA NONES
+                        print(f"DEBUG: [GRANULAR] Verificando resultado para {filename}")
+                        print(f"DEBUG: [GRANULAR] Tipo do resultado: {type(result)}")
+                        print(f"DEBUG: [GRANULAR] Resultado é None: {result is None}")
+                        
+                        if result is None:
+                            print(f"DEBUG: [GRANULAR] ERRO - Resultado é None para {filename}")
+                        elif not isinstance(result, dict):
+                            print(f"DEBUG: [GRANULAR] ERRO - Resultado não é dict para {filename}: {type(result)}")
                         else:
-                            print(f"DEBUG: ERRO - Resultado inválido para {filename}")
-                            print(f"DEBUG: Resultado recebido: {str(result)[:500]}...")
+                            print(f"DEBUG: [GRANULAR] Resultado é dict válido")
+                            print(f"DEBUG: [GRANULAR] Chaves do resultado: {list(result.keys()) if result else 'N/A'}")
+                            
+                            # Verificar se 'sumario' está presente
+                            if 'sumario' not in result:
+                                print(f"DEBUG: [GRANULAR] ERRO - Chave 'sumario' não encontrada no resultado")
+                            else:
+                                sumario = result.get('sumario')
+                                print(f"DEBUG: [GRANULAR] Sumario extraído: {type(sumario)}")
+                                print(f"DEBUG: [GRANULAR] Sumario é None: {sumario is None}")
+                                
+                                if sumario is None:
+                                    print(f"DEBUG: [GRANULAR] ERRO - Sumario é None")
+                                elif not isinstance(sumario, dict):
+                                    print(f"DEBUG: [GRANULAR] ERRO - Sumario não é dict: {type(sumario)}")
+                                else:
+                                    print(f"DEBUG: [GRANULAR] Sumario é dict válido")
+                                    print(f"DEBUG: [GRANULAR] Chaves do sumario: {list(sumario.keys()) if sumario else 'N/A'}")
+                                    
+                                    # Agora acessar com segurança
+                                    status = sumario.get('status', 'N/A')
+                                    conclusao = sumario.get('conclusao', 'N/A')
+                                    total_erros = sumario.get('total_erros_criticos', 0)
+                                    total_alertas = sumario.get('total_alertas', 0)
+                                    total_obs = sumario.get('total_observacoes', 0)
+                                    
+                                    print(f"DEBUG: Arquivo {filename} processado - Status: {status}")
+                                    print(f"DEBUG: Conclusão: {conclusao}")
+                                    print(f"DEBUG: Erros críticos: {total_erros}")
+                                    print(f"DEBUG: Alertas: {total_alertas}")
+                                    print(f"DEBUG: Observações: {total_obs}")
+                            
+                            # Verificar itens com proteção
+                            if 'itens' in result and result['itens'] is not None:
+                                itens = result['itens']
+                                print(f"DEBUG: [GRANULAR] Itens encontrados: {type(itens)}")
+                                if isinstance(itens, list):
+                                    print(f"DEBUG: Total de itens analisados: {len(itens)}")
+                                    for idx, item in enumerate(itens[:3]):  # Primeiros 3 itens
+                                        if item and isinstance(item, dict):
+                                            campo = item.get('campo', 'N/A')
+                                            status_item = item.get('status', 'N/A')
+                                            descricao = item.get('descricao', 'N/A')
+                                            desc_preview = descricao[:100] if isinstance(descricao, str) else str(descricao)[:100]
+                                            print(f"DEBUG: Item {idx+1}: {campo} - {status_item} - {desc_preview}...")
+                                        else:
+                                            print(f"DEBUG: [GRANULAR] Item {idx+1} é inválido: {type(item)}")
+                                else:
+                                    print(f"DEBUG: [GRANULAR] ERRO - Itens não é uma lista: {type(itens)}")
+                            else:
+                                print(f"DEBUG: [GRANULAR] Nenhum item encontrado ou itens é None")
                             
                     except Exception as e:
                         print(f"DEBUG: ERRO ao processar {filename}: {str(e)}")
@@ -326,21 +393,78 @@ def upload():
                         file_info['status'] = 'error'
                         file_info['result'] = error_result
                         
-                        # Atualizar job na memória
+                        # Atualizar job na memória - PROTEÇÃO CONTRA NONES
+                        print(f"DEBUG: [GRANULAR] Atualizando job na memória após erro")
+                        print(f"DEBUG: [GRANULAR] job_id: {job_id}")
+                        print(f"DEBUG: [GRANULAR] job_id in jobs: {job_id in jobs}")
+                        
                         if job_id in jobs:
-                            jobs[job_id]['arquivos'][i] = file_info
-                            jobs[job_id]['arquivos_processados'] = i + 1
+                            print(f"DEBUG: [GRANULAR] Jobs dict tipo: {type(jobs)}")
+                            print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo: {type(jobs[job_id])}")
+                            print(f"DEBUG: [GRANULAR] Jobs[job_id] é None: {jobs[job_id] is None}")
+                            
+                            if jobs[job_id] is not None:
+                                if 'arquivos' not in jobs[job_id]:
+                                    print(f"DEBUG: [GRANULAR] ERRO - 'arquivos' não está em jobs[job_id]")
+                                    jobs[job_id]['arquivos'] = []
+                                
+                                print(f"DEBUG: [GRANULAR] Atualizando arquivo {i} no job")
+                                print(f"DEBUG: [GRANULAR] Arquivos list tipo: {type(jobs[job_id]['arquivos'])}")
+                                print(f"DEBUG: [GRANULAR] Arquivos list tamanho: {len(jobs[job_id]['arquivos']) if jobs[job_id]['arquivos'] else 0}")
+                                
+                                if i < len(jobs[job_id]['arquivos']):
+                                    jobs[job_id]['arquivos'][i] = file_info
+                                    jobs[job_id]['arquivos_processados'] = i + 1
+                                    print(f"DEBUG: [GRANULAR] Arquivo {i} atualizado com erro")
+                                else:
+                                    print(f"DEBUG: [GRANULAR] ERRO - Índice {i} fora do range da lista arquivos")
+                            else:
+                                print(f"DEBUG: [GRANULAR] ERRO - jobs[job_id] é None")
                 
-                # Finalizar job - usando apenas colunas que existem na tabela
+                # Finalizar job - usando apenas colunas que existem na tabela - PROTEÇÃO CONTRA NONES
+                print(f"DEBUG: [GRANULAR] Finalizando job {job_id}")
+                print(f"DEBUG: [GRANULAR] saved_files tipo: {type(saved_files)}")
+                print(f"DEBUG: [GRANULAR] saved_files tamanho: {len(saved_files) if saved_files else 0}")
+                
+                # Verificar se saved_files não foi corrompido
+                if saved_files is None:
+                    print(f"DEBUG: [GRANULAR] ERRO - saved_files é None ao finalizar")
+                    saved_files = []
+                elif not isinstance(saved_files, list):
+                    print(f"DEBUG: [GRANULAR] ERRO - saved_files não é lista: {type(saved_files)}")
+                    saved_files = []
+                
                 final_job_data = {
                     'status': 'completed',
                     'arquivos_processados': len(saved_files),
                     'arquivos': saved_files
                 }
                 
-                # Atualizar na memória primeiro (fonte primária)
-                jobs[job_id].update(final_job_data)
-                print(f"DEBUG: Job {job_id} finalizado na memória")
+                print(f"DEBUG: [GRANULAR] final_job_data criado: {list(final_job_data.keys())}")
+                
+                # Atualizar na memória primeiro (fonte primária) - PROTEÇÃO CONTRA NONES
+                print(f"DEBUG: [GRANULAR] Atualizando job finalizado na memória")
+                print(f"DEBUG: [GRANULAR] job_id in jobs: {job_id in jobs}")
+                
+                if job_id in jobs:
+                    print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo antes update: {type(jobs[job_id])}")
+                    print(f"DEBUG: [GRANULAR] Jobs[job_id] é None antes update: {jobs[job_id] is None}")
+                    
+                    if jobs[job_id] is not None:
+                        try:
+                            jobs[job_id].update(final_job_data)
+                            print(f"DEBUG: Job {job_id} finalizado na memória")
+                            print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo após update: {type(jobs[job_id])}")
+                        except Exception as update_error:
+                            print(f"DEBUG: [GRANULAR] ERRO ao atualizar job na memória: {str(update_error)}")
+                            print(f"DEBUG: [GRANULAR] Tipo do jobs[job_id]: {type(jobs[job_id])}")
+                            print(f"DEBUG: [GRANULAR] Valor do jobs[job_id]: {jobs[job_id]}")
+                    else:
+                        print(f"DEBUG: [GRANULAR] ERRO - jobs[job_id] é None, criando novo")
+                        jobs[job_id] = {**job_data, **final_job_data}
+                else:
+                    print(f"DEBUG: [GRANULAR] Job não encontrado na memória, criando")
+                    jobs[job_id] = {**job_data, **final_job_data}
                 
                 # Tentar atualizar no Supabase como backup (não crítico)
                 try:
@@ -704,30 +828,87 @@ def parse_gemini_json(response_text):
         print(f"DEBUG: Parseando resposta do Gemini ({len(response_text)} chars)")
         print(f"DEBUG: Primeiros 500 chars da resposta: {response_text[:500]}")
         
-        # Tentar extrair JSON de markdown
+        # Tentar extrair JSON de markdown - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [GRANULAR] Tentando extrair JSON do markdown...")
         json_match = re.search(r'```json\s+(.*?)\s+```', response_text, re.DOTALL)
         if json_match:
-            response_text = json_match.group(1)
+            extracted_json = json_match.group(1)
             print(f"DEBUG: JSON extraído do markdown")
+            print(f"DEBUG: [GRANULAR] JSON extraído tipo: {type(extracted_json)}")
+            print(f"DEBUG: [GRANULAR] JSON extraído é None: {extracted_json is None}")
+            print(f"DEBUG: [GRANULAR] JSON extraído tamanho: {len(extracted_json) if extracted_json else 0}")
+            if extracted_json:
+                response_text = extracted_json
+            else:
+                print(f"DEBUG: [GRANULAR] ERRO - JSON extraído é vazio/None")
         else:
+            print(f"DEBUG: [GRANULAR] Nenhum JSON encontrado em markdown")
             # Buscar JSON entre chaves
+            print(f"DEBUG: [GRANULAR] Tentando extrair JSON entre chaves...")
             json_start = response_text.find('{')
             json_end = response_text.rfind('}') + 1
+            print(f"DEBUG: [GRANULAR] json_start: {json_start}, json_end: {json_end}")
             if json_start != -1 and json_end > json_start:
-                response_text = response_text[json_start:json_end]
+                extracted_json = response_text[json_start:json_end]
                 print(f"DEBUG: JSON extraído entre chaves")
+                print(f"DEBUG: [GRANULAR] JSON extraído entre chaves tipo: {type(extracted_json)}")
+                print(f"DEBUG: [GRANULAR] JSON extraído entre chaves tamanho: {len(extracted_json) if extracted_json else 0}")
+                if extracted_json:
+                    response_text = extracted_json
+                else:
+                    print(f"DEBUG: [GRANULAR] ERRO - JSON extraído entre chaves é vazio")
+            else:
+                print(f"DEBUG: [GRANULAR] ERRO - Não foi possível extrair JSON entre chaves")
         
         print(f"DEBUG: JSON a ser parseado: {response_text[:300]}...")
         
         # Parse JSON
-        result = json.loads(response_text)
+        try:
+            print(f"DEBUG: [GRANULAR] Tentando fazer parse do JSON...")
+            result = json.loads(response_text)
+            print(f"DEBUG: [GRANULAR] Parse JSON bem-sucedido")
+            print(f"DEBUG: [GRANULAR] Tipo do resultado: {type(result)}")
+            print(f"DEBUG: [GRANULAR] Resultado é None: {result is None}")
+        except json.JSONDecodeError as json_error:
+            print(f"DEBUG: [GRANULAR] ERRO no parse JSON: {str(json_error)}")
+            raise json_error
         
-        # Validar estrutura
-        if 'sumario' not in result:
+        # Validar estrutura - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [GRANULAR] Validando estrutura do resultado...")
+        
+        if result is None:
+            print(f"DEBUG: [GRANULAR] ERRO - Resultado é None após parse")
+            raise ValueError("Resultado é None após parse JSON")
+        
+        if not isinstance(result, dict):
+            print(f"DEBUG: [GRANULAR] ERRO - Resultado não é dict: {type(result)}")
+            raise ValueError(f"Resultado não é dict: {type(result)}")
+        
+        print(f"DEBUG: [GRANULAR] Resultado é dict válido")
+        print(f"DEBUG: [GRANULAR] Chaves do resultado: {list(result.keys()) if result else 'N/A'}")
+        
+        # AQUI PODE ESTAR O ERRO: 'sumario' in result quando result pode ser None
+        print(f"DEBUG: [GRANULAR] Verificando se 'sumario' está no resultado...")
+        try:
+            has_sumario = 'sumario' in result
+            print(f"DEBUG: [GRANULAR] 'sumario' in result: {has_sumario}")
+        except TypeError as type_error:
+            print(f"DEBUG: [GRANULAR] ERRO TypeError ao verificar 'sumario' in result: {str(type_error)}")
+            print(f"DEBUG: [GRANULAR] Tipo do result durante erro: {type(result)}")
+            print(f"DEBUG: [GRANULAR] Value do result durante erro: {result}")
+            raise ValueError(f"Erro ao verificar 'sumario' in result: {str(type_error)}")
+        
+        if not has_sumario:
+            print(f"DEBUG: [GRANULAR] ERRO - JSON não contém campo 'sumario'")
             raise ValueError("JSON não contém campo 'sumario'")
         
         # Validar se sumario não é None
-        if result['sumario'] is None:
+        sumario_value = result.get('sumario')
+        print(f"DEBUG: [GRANULAR] Valor do sumario: {type(sumario_value)}")
+        print(f"DEBUG: [GRANULAR] Sumario é None: {sumario_value is None}")
+        
+        if sumario_value is None:
+            print(f"DEBUG: [GRANULAR] ERRO - Campo 'sumario' é None")
             raise ValueError("Campo 'sumario' é None")
         
         print(f"DEBUG: JSON parseado com sucesso")
@@ -914,17 +1095,54 @@ def process_with_gemini(text, prompt_template, api_key):
         
         print(f"DEBUG: Texto da resposta ({len(result)} caracteres): {result[:200]}...")
         
-        # Try to extract JSON from the response
+        # Try to extract JSON from the response - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [GRANULAR] Tentando extrair JSON da resposta do Gemini...")
+        print(f"DEBUG: [GRANULAR] Tipo do result: {type(result)}")
+        print(f"DEBUG: [GRANULAR] Result é None: {result is None}")
+        
+        if result is None:
+            print(f"DEBUG: [GRANULAR] ERRO - Result é None antes da extração JSON")
+            raise Exception("Resposta None do Gemini")
+        
+        if not isinstance(result, str):
+            print(f"DEBUG: [GRANULAR] ERRO - Result não é string: {type(result)}")
+            raise Exception(f"Resposta não é string: {type(result)}")
+        
         json_match = re.search(r'```json\s+(.*?)\s+```', result, re.DOTALL)
         if json_match:
-            result = json_match.group(1)
+            extracted_json = json_match.group(1)
             print(f"DEBUG: JSON extraído do markdown")
+            print(f"DEBUG: [GRANULAR] JSON extraído tipo: {type(extracted_json)}")
+            print(f"DEBUG: [GRANULAR] JSON extraído é None: {extracted_json is None}")
+            if extracted_json:
+                result = extracted_json
+            else:
+                print(f"DEBUG: [GRANULAR] ERRO - JSON extraído do markdown é None/vazio")
         else:
             print(f"DEBUG: Nenhum JSON encontrado em markdown, tentando parse direto")
         
-        # Parse the JSON result
-        parsed_result = json.loads(result)
-        print(f"DEBUG: JSON parseado com sucesso")
+        # Parse the JSON result - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [GRANULAR] Tentando fazer parse final do JSON...")
+        print(f"DEBUG: [GRANULAR] JSON final a ser parseado (200 chars): {result[:200] if result else 'None'}...")
+        
+        if not result:
+            print(f"DEBUG: [GRANULAR] ERRO - JSON final está vazio")
+            raise Exception("JSON final está vazio")
+        
+        try:
+            parsed_result = json.loads(result)
+            print(f"DEBUG: JSON parseado com sucesso")
+            print(f"DEBUG: [GRANULAR] Parsed result tipo: {type(parsed_result)}")
+            print(f"DEBUG: [GRANULAR] Parsed result é None: {parsed_result is None}")
+            if parsed_result and isinstance(parsed_result, dict):
+                print(f"DEBUG: [GRANULAR] Parsed result chaves: {list(parsed_result.keys())}")
+            else:
+                print(f"DEBUG: [GRANULAR] ERRO - Parsed result não é dict válido")
+        except json.JSONDecodeError as json_error:
+            print(f"DEBUG: [GRANULAR] ERRO no parse final do JSON: {str(json_error)}")
+            print(f"DEBUG: [GRANULAR] JSON que falhou: {result[:500] if result else 'None'}...")
+            raise json_error
+        
         return parsed_result
         
     except TimeoutError as e:
@@ -1124,19 +1342,71 @@ def update_job_status(job_id, file_index, status, result):
                 current_job['status'] = 'completed'
                 print(f"DEBUG: Job {job_id} marcado como completed - {current_job['arquivos_processados']}/{current_job['total_arquivos']} arquivos processados")
                 
-                # Calculate overall status based on results
+                # Calculate overall status based on results - PROTEÇÃO CONTRA NONES
                 has_error = False
                 has_alert = False
                 
-                for file in current_job['arquivos']:
+                print(f"DEBUG: [GRANULAR] Calculando status geral do job - {len(current_job['arquivos'])} arquivos")
+                
+                for file_idx, file in enumerate(current_job['arquivos']):
+                    print(f"DEBUG: [GRANULAR] Verificando arquivo {file_idx+1}")
+                    print(f"DEBUG: [GRANULAR] Tipo do file: {type(file)}")
+                    
+                    if file is None:
+                        print(f"DEBUG: [GRANULAR] ERRO - File {file_idx+1} é None")
+                        continue
+                    
+                    if not isinstance(file, dict):
+                        print(f"DEBUG: [GRANULAR] ERRO - File {file_idx+1} não é dict: {type(file)}")
+                        continue
+                    
                     file_result = file.get('result')
-                    if file_result and isinstance(file_result, dict) and 'sumario' in file_result:
-                        sumario = file_result.get('sumario')
-                        if sumario and isinstance(sumario, dict) and 'status' in sumario:
-                            if sumario['status'] == 'erro':
-                                has_error = True
-                            elif sumario['status'] == 'alerta' and not has_error:
-                                has_alert = True
+                    print(f"DEBUG: [GRANULAR] File result tipo: {type(file_result)}")
+                    print(f"DEBUG: [GRANULAR] File result é None: {file_result is None}")
+                    
+                    if file_result is None:
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} result é None, pulando")
+                        continue
+                    
+                    if not isinstance(file_result, dict):
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} result não é dict: {type(file_result)}")
+                        continue
+                    
+                    print(f"DEBUG: [GRANULAR] File {file_idx+1} result é dict válido")
+                    print(f"DEBUG: [GRANULAR] Chaves do result: {list(file_result.keys()) if file_result else 'N/A'}")
+                    
+                    if 'sumario' not in file_result:
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} não tem chave 'sumario'")
+                        continue
+                    
+                    sumario = file_result.get('sumario')
+                    print(f"DEBUG: [GRANULAR] Sumario tipo: {type(sumario)}")
+                    print(f"DEBUG: [GRANULAR] Sumario é None: {sumario is None}")
+                    
+                    if sumario is None:
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario é None")
+                        continue
+                    
+                    if not isinstance(sumario, dict):
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario não é dict: {type(sumario)}")
+                        continue
+                    
+                    print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario é dict válido")
+                    print(f"DEBUG: [GRANULAR] Chaves do sumario: {list(sumario.keys()) if sumario else 'N/A'}")
+                    
+                    if 'status' not in sumario:
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario não tem chave 'status'")
+                        continue
+                    
+                    status = sumario.get('status')
+                    print(f"DEBUG: [GRANULAR] File {file_idx+1} status: {status}")
+                    
+                    if status == 'erro':
+                        has_error = True
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} tem status de erro")
+                    elif status == 'alerta' and not has_error:
+                        has_alert = True
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} tem status de alerta")
                 
                 if has_error:
                     current_job['overall_status'] = 'erro'
@@ -1164,19 +1434,71 @@ def update_job_status(job_id, file_index, status, result):
                     jobs[job_id]['status'] = 'completed'
                     print(f"DEBUG: Job {job_id} marcado como completed na memória - {jobs[job_id]['arquivos_processados']}/{jobs[job_id]['total_arquivos']} arquivos processados")
                     
-                    # Calculate overall status based on results
+                    # Calculate overall status based on results - PROTEÇÃO CONTRA NONES
                     has_error = False
                     has_alert = False
                     
-                    for file in jobs[job_id]['arquivos']:
+                    print(f"DEBUG: [GRANULAR] Calculando status geral na memória - {len(jobs[job_id]['arquivos'])} arquivos")
+                    
+                    for file_idx, file in enumerate(jobs[job_id]['arquivos']):
+                        print(f"DEBUG: [GRANULAR] Verificando arquivo {file_idx+1} na memória")
+                        print(f"DEBUG: [GRANULAR] Tipo do file: {type(file)}")
+                        
+                        if file is None:
+                            print(f"DEBUG: [GRANULAR] ERRO - File {file_idx+1} é None na memória")
+                            continue
+                        
+                        if not isinstance(file, dict):
+                            print(f"DEBUG: [GRANULAR] ERRO - File {file_idx+1} não é dict na memória: {type(file)}")
+                            continue
+                        
                         file_result = file.get('result')
-                        if file_result and isinstance(file_result, dict) and 'sumario' in file_result:
-                            sumario = file_result.get('sumario')
-                            if sumario and isinstance(sumario, dict) and 'status' in sumario:
-                                if sumario['status'] == 'erro':
-                                    has_error = True
-                                elif sumario['status'] == 'alerta' and not has_error:
-                                    has_alert = True
+                        print(f"DEBUG: [GRANULAR] File result tipo na memória: {type(file_result)}")
+                        print(f"DEBUG: [GRANULAR] File result é None na memória: {file_result is None}")
+                        
+                        if file_result is None:
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} result é None na memória, pulando")
+                            continue
+                        
+                        if not isinstance(file_result, dict):
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} result não é dict na memória: {type(file_result)}")
+                            continue
+                        
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} result é dict válido na memória")
+                        print(f"DEBUG: [GRANULAR] Chaves do result na memória: {list(file_result.keys()) if file_result else 'N/A'}")
+                        
+                        if 'sumario' not in file_result:
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} não tem chave 'sumario' na memória")
+                            continue
+                        
+                        sumario = file_result.get('sumario')
+                        print(f"DEBUG: [GRANULAR] Sumario tipo na memória: {type(sumario)}")
+                        print(f"DEBUG: [GRANULAR] Sumario é None na memória: {sumario is None}")
+                        
+                        if sumario is None:
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario é None na memória")
+                            continue
+                        
+                        if not isinstance(sumario, dict):
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario não é dict na memória: {type(sumario)}")
+                            continue
+                        
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario é dict válido na memória")
+                        print(f"DEBUG: [GRANULAR] Chaves do sumario na memória: {list(sumario.keys()) if sumario else 'N/A'}")
+                        
+                        if 'status' not in sumario:
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} sumario não tem chave 'status' na memória")
+                            continue
+                        
+                        status = sumario.get('status')
+                        print(f"DEBUG: [GRANULAR] File {file_idx+1} status na memória: {status}")
+                        
+                        if status == 'erro':
+                            has_error = True
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} tem status de erro na memória")
+                        elif status == 'alerta' and not has_error:
+                            has_alert = True
+                            print(f"DEBUG: [GRANULAR] File {file_idx+1} tem status de alerta na memória")
                     
                     if has_error:
                         jobs[job_id]['overall_status'] = 'erro'
@@ -1286,17 +1608,62 @@ def get_result(job_id):
             job = jobs[job_id]
             print(f"DEBUG: Job encontrado na memória - {len(job.get('arquivos', []))} arquivos")
             
-            # Debug dos arquivos
+            # Debug dos arquivos - PROTEÇÃO CONTRA NONES
             for i, arquivo in enumerate(job.get('arquivos', [])):
-                print(f"DEBUG: Arquivo {i+1}: {arquivo.get('filename')} - Status: {arquivo.get('status')}")
-                if arquivo.get('result') and isinstance(arquivo.get('result'), dict):
-                    result = arquivo.get('result')
-                    if 'sumario' in result and result['sumario'] and 'conclusao' in result['sumario']:
-                        print(f"DEBUG: - Conclusão: {result['sumario']['conclusao']}")
-                    else:
-                        print(f"DEBUG: - Resultado sem sumário válido")
+                print(f"DEBUG: [GRANULAR] Verificando arquivo {i+1} no resultado")
+                print(f"DEBUG: [GRANULAR] Tipo do arquivo: {type(arquivo)}")
+                
+                if arquivo is None:
+                    print(f"DEBUG: [GRANULAR] ERRO - Arquivo {i+1} é None")
+                    continue
+                
+                if not isinstance(arquivo, dict):
+                    print(f"DEBUG: [GRANULAR] ERRO - Arquivo {i+1} não é dict: {type(arquivo)}")
+                    continue
+                
+                filename = arquivo.get('filename', 'N/A')
+                status = arquivo.get('status', 'N/A')
+                print(f"DEBUG: Arquivo {i+1}: {filename} - Status: {status}")
+                
+                arquivo_result = arquivo.get('result')
+                print(f"DEBUG: [GRANULAR] Arquivo {i+1} result tipo: {type(arquivo_result)}")
+                print(f"DEBUG: [GRANULAR] Arquivo {i+1} result é None: {arquivo_result is None}")
+                
+                if arquivo_result is None:
+                    print(f"DEBUG: - Sem resultado")
+                    continue
+                
+                if not isinstance(arquivo_result, dict):
+                    print(f"DEBUG: - Resultado inválido (tipo: {type(arquivo_result)})")
+                    continue
+                
+                print(f"DEBUG: [GRANULAR] Arquivo {i+1} result é dict válido")
+                print(f"DEBUG: [GRANULAR] Chaves do result: {list(arquivo_result.keys()) if arquivo_result else 'N/A'}")
+                
+                if 'sumario' not in arquivo_result:
+                    print(f"DEBUG: - Resultado sem sumário")
+                    continue
+                
+                sumario = arquivo_result.get('sumario')
+                print(f"DEBUG: [GRANULAR] Sumario tipo: {type(sumario)}")
+                print(f"DEBUG: [GRANULAR] Sumario é None: {sumario is None}")
+                
+                if sumario is None:
+                    print(f"DEBUG: - Sumário é None")
+                    continue
+                
+                if not isinstance(sumario, dict):
+                    print(f"DEBUG: - Sumário inválido (tipo: {type(sumario)})")
+                    continue
+                
+                print(f"DEBUG: [GRANULAR] Sumario é dict válido")
+                print(f"DEBUG: [GRANULAR] Chaves do sumario: {list(sumario.keys()) if sumario else 'N/A'}")
+                
+                if 'conclusao' not in sumario:
+                    print(f"DEBUG: - Sumário sem conclusão")
                 else:
-                    print(f"DEBUG: - Sem resultado ou resultado inválido")
+                    conclusao = sumario.get('conclusao')
+                    print(f"DEBUG: - Conclusão: {conclusao}")
                     
             return jsonify({
                 'status': 'success',
@@ -1311,17 +1678,62 @@ def get_result(job_id):
                 job = job_data.data[0]
                 print(f"DEBUG: Job encontrado no banco - {len(job.get('arquivos', []))} arquivos")
                 
-                # Debug dos arquivos
+                # Debug dos arquivos - PROTEÇÃO CONTRA NONES
                 for i, arquivo in enumerate(job.get('arquivos', [])):
-                    print(f"DEBUG: Arquivo {i+1}: {arquivo.get('filename')} - Status: {arquivo.get('status')}")
-                    if arquivo.get('result') and isinstance(arquivo.get('result'), dict):
-                        result = arquivo.get('result')
-                        if 'sumario' in result and result['sumario'] and 'conclusao' in result['sumario']:
-                            print(f"DEBUG: - Conclusão: {result['sumario']['conclusao']}")
-                        else:
-                            print(f"DEBUG: - Resultado sem sumário válido")
+                    print(f"DEBUG: [GRANULAR] Verificando arquivo {i+1} no banco")
+                    print(f"DEBUG: [GRANULAR] Tipo do arquivo: {type(arquivo)}")
+                    
+                    if arquivo is None:
+                        print(f"DEBUG: [GRANULAR] ERRO - Arquivo {i+1} é None no banco")
+                        continue
+                    
+                    if not isinstance(arquivo, dict):
+                        print(f"DEBUG: [GRANULAR] ERRO - Arquivo {i+1} não é dict no banco: {type(arquivo)}")
+                        continue
+                    
+                    filename = arquivo.get('filename', 'N/A')
+                    status = arquivo.get('status', 'N/A')
+                    print(f"DEBUG: Arquivo {i+1}: {filename} - Status: {status}")
+                    
+                    arquivo_result = arquivo.get('result')
+                    print(f"DEBUG: [GRANULAR] Arquivo {i+1} result tipo no banco: {type(arquivo_result)}")
+                    print(f"DEBUG: [GRANULAR] Arquivo {i+1} result é None no banco: {arquivo_result is None}")
+                    
+                    if arquivo_result is None:
+                        print(f"DEBUG: - Sem resultado no banco")
+                        continue
+                    
+                    if not isinstance(arquivo_result, dict):
+                        print(f"DEBUG: - Resultado inválido no banco (tipo: {type(arquivo_result)})")
+                        continue
+                    
+                    print(f"DEBUG: [GRANULAR] Arquivo {i+1} result é dict válido no banco")
+                    print(f"DEBUG: [GRANULAR] Chaves do result no banco: {list(arquivo_result.keys()) if arquivo_result else 'N/A'}")
+                    
+                    if 'sumario' not in arquivo_result:
+                        print(f"DEBUG: - Resultado sem sumário no banco")
+                        continue
+                    
+                    sumario = arquivo_result.get('sumario')
+                    print(f"DEBUG: [GRANULAR] Sumario tipo no banco: {type(sumario)}")
+                    print(f"DEBUG: [GRANULAR] Sumario é None no banco: {sumario is None}")
+                    
+                    if sumario is None:
+                        print(f"DEBUG: - Sumário é None no banco")
+                        continue
+                    
+                    if not isinstance(sumario, dict):
+                        print(f"DEBUG: - Sumário inválido no banco (tipo: {type(sumario)})")
+                        continue
+                    
+                    print(f"DEBUG: [GRANULAR] Sumario é dict válido no banco")
+                    print(f"DEBUG: [GRANULAR] Chaves do sumario no banco: {list(sumario.keys()) if sumario else 'N/A'}")
+                    
+                    if 'conclusao' not in sumario:
+                        print(f"DEBUG: - Sumário sem conclusão no banco")
                     else:
-                        print(f"DEBUG: - Sem resultado ou resultado inválido")
+                        conclusao = sumario.get('conclusao')
+                        print(f"DEBUG: - Conclusão: {conclusao}")
                 
                 return jsonify({
                     'status': 'success',
