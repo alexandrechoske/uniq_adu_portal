@@ -284,9 +284,9 @@ def upload():
                             jobs[job_id]['arquivos_processados'] = i + 1
                         
                         # Debug do resultado
-                        if result and 'sumario' in result:
+                        if result and 'sumario' in result and result['sumario']:
                             sumario = result['sumario']
-                            print(f"DEBUG: Arquivo {filename} processado - Status: {sumario['status']}")
+                            print(f"DEBUG: Arquivo {filename} processado - Status: {sumario.get('status', 'N/A')}")
                             print(f"DEBUG: Conclusão: {sumario.get('conclusao', 'N/A')}")
                             print(f"DEBUG: Erros críticos: {sumario.get('total_erros_criticos', 0)}")
                             print(f"DEBUG: Alertas: {sumario.get('total_alertas', 0)}")
@@ -726,6 +726,10 @@ def parse_gemini_json(response_text):
         if 'sumario' not in result:
             raise ValueError("JSON não contém campo 'sumario'")
         
+        # Validar se sumario não é None
+        if result['sumario'] is None:
+            raise ValueError("Campo 'sumario' é None")
+        
         print(f"DEBUG: JSON parseado com sucesso")
         print(f"DEBUG: Status do sumário: {result['sumario'].get('status', 'N/A')}")
         print(f"DEBUG: Conclusão: {result['sumario'].get('conclusao', 'N/A')}")
@@ -1118,17 +1122,21 @@ def update_job_status(job_id, file_index, status, result):
             # Check if job is complete
             if current_job['arquivos_processados'] >= current_job['total_arquivos']:
                 current_job['status'] = 'completed'
+                print(f"DEBUG: Job {job_id} marcado como completed - {current_job['arquivos_processados']}/{current_job['total_arquivos']} arquivos processados")
                 
                 # Calculate overall status based on results
                 has_error = False
                 has_alert = False
                 
                 for file in current_job['arquivos']:
-                    if file.get('result') and file.get('result').get('sumario'):
-                        if file['result']['sumario']['status'] == 'erro':
-                            has_error = True
-                        elif file['result']['sumario']['status'] == 'alerta' and not has_error:
-                            has_alert = True
+                    file_result = file.get('result')
+                    if file_result and isinstance(file_result, dict) and 'sumario' in file_result:
+                        sumario = file_result.get('sumario')
+                        if sumario and isinstance(sumario, dict) and 'status' in sumario:
+                            if sumario['status'] == 'erro':
+                                has_error = True
+                            elif sumario['status'] == 'alerta' and not has_error:
+                                has_alert = True
                 
                 if has_error:
                     current_job['overall_status'] = 'erro'
@@ -1154,17 +1162,21 @@ def update_job_status(job_id, file_index, status, result):
                 # Check if job is complete
                 if jobs[job_id]['arquivos_processados'] >= jobs[job_id]['total_arquivos']:
                     jobs[job_id]['status'] = 'completed'
+                    print(f"DEBUG: Job {job_id} marcado como completed na memória - {jobs[job_id]['arquivos_processados']}/{jobs[job_id]['total_arquivos']} arquivos processados")
                     
                     # Calculate overall status based on results
                     has_error = False
                     has_alert = False
                     
                     for file in jobs[job_id]['arquivos']:
-                        if file.get('result') and file.get('result').get('sumario'):
-                            if file['result']['sumario']['status'] == 'erro':
-                                has_error = True
-                            elif file['result']['sumario']['status'] == 'alerta' and not has_error:
-                                has_alert = True
+                        file_result = file.get('result')
+                        if file_result and isinstance(file_result, dict) and 'sumario' in file_result:
+                            sumario = file_result.get('sumario')
+                            if sumario and isinstance(sumario, dict) and 'status' in sumario:
+                                if sumario['status'] == 'erro':
+                                    has_error = True
+                                elif sumario['status'] == 'alerta' and not has_error:
+                                    has_alert = True
                     
                     if has_error:
                         jobs[job_id]['overall_status'] = 'erro'
@@ -1277,8 +1289,14 @@ def get_result(job_id):
             # Debug dos arquivos
             for i, arquivo in enumerate(job.get('arquivos', [])):
                 print(f"DEBUG: Arquivo {i+1}: {arquivo.get('filename')} - Status: {arquivo.get('status')}")
-                if arquivo.get('result'):
-                    print(f"DEBUG: - Conclusão: {arquivo['result']['sumario']['conclusao']}")
+                if arquivo.get('result') and isinstance(arquivo.get('result'), dict):
+                    result = arquivo.get('result')
+                    if 'sumario' in result and result['sumario'] and 'conclusao' in result['sumario']:
+                        print(f"DEBUG: - Conclusão: {result['sumario']['conclusao']}")
+                    else:
+                        print(f"DEBUG: - Resultado sem sumário válido")
+                else:
+                    print(f"DEBUG: - Sem resultado ou resultado inválido")
                     
             return jsonify({
                 'status': 'success',
@@ -1296,8 +1314,14 @@ def get_result(job_id):
                 # Debug dos arquivos
                 for i, arquivo in enumerate(job.get('arquivos', [])):
                     print(f"DEBUG: Arquivo {i+1}: {arquivo.get('filename')} - Status: {arquivo.get('status')}")
-                    if arquivo.get('result'):
-                        print(f"DEBUG: - Conclusão: {arquivo['result']['sumario']['conclusao']}")
+                    if arquivo.get('result') and isinstance(arquivo.get('result'), dict):
+                        result = arquivo.get('result')
+                        if 'sumario' in result and result['sumario'] and 'conclusao' in result['sumario']:
+                            print(f"DEBUG: - Conclusão: {result['sumario']['conclusao']}")
+                        else:
+                            print(f"DEBUG: - Resultado sem sumário válido")
+                    else:
+                        print(f"DEBUG: - Sem resultado ou resultado inválido")
                 
                 return jsonify({
                     'status': 'success',
