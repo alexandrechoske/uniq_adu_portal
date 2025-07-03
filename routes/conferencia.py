@@ -250,7 +250,7 @@ def upload():
                     try:
                         filename = file_info['filename']
                         file_path = file_info['path']
-                        print(f"DEBUG: Processando arquivo {i+1}/{len(saved_files)}: {filename}")
+                        print(f"DEBUG: Processando arquivo {i+1}/{len(files_to_process)}: {filename}")
                         
                         # Atualizar progresso - usando apenas colunas que existem na tabela
                         update_data = {
@@ -665,56 +665,99 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
         
         def generate():
             try:
+                print(f"DEBUG: [ULTRA-GRANULAR] Iniciando geração do conteúdo...")
                 result['response'] = model.generate_content(contents)
+                print(f"DEBUG: [ULTRA-GRANULAR] Geração concluída, verificando resposta...")
+                print(f"DEBUG: [ULTRA-GRANULAR] Response tipo: {type(result['response'])}")
+                print(f"DEBUG: [ULTRA-GRANULAR] Response é None: {result['response'] is None}")
             except Exception as e:
+                print(f"DEBUG: [ULTRA-GRANULAR] ERRO na geração: {str(e)}")
+                print(f"DEBUG: [ULTRA-GRANULAR] Tipo do erro: {type(e)}")
                 result['error'] = e
         
         thread = threading.Thread(target=generate)
         thread.start()
         thread.join(timeout=90)  # 90 segundos
         
+        print(f"DEBUG: [ULTRA-GRANULAR] Thread finalizada")
+        print(f"DEBUG: [ULTRA-GRANULAR] Thread is_alive: {thread.is_alive()}")
+        
         if thread.is_alive():
+            print(f"DEBUG: [ULTRA-GRANULAR] Timeout atingido")
             raise TimeoutError("Timeout de 90s atingido")
         
         if result['error']:
+            print(f"DEBUG: [ULTRA-GRANULAR] Erro detectado: {str(result['error'])}")
             raise result['error']
         
         response = result['response']
+        print(f"DEBUG: [ULTRA-GRANULAR] Response obtida: {type(response)}")
         
-        # Verificar se a resposta foi filtrada por segurança
+        # Verificar se a resposta foi filtrada por segurança - PROTEÇÃO CONTRA NONES
         if not response:
+            print(f"DEBUG: [ULTRA-GRANULAR] Response é falsy")
             raise Exception("Resposta vazia do Gemini")
         
+        print(f"DEBUG: [ULTRA-GRANULAR] Verificando candidates...")
         # Verificar finish_reason para detectar filtragem de conteúdo
-        if hasattr(response, 'candidates') and response.candidates:
-            candidate = response.candidates[0]
-            if hasattr(candidate, 'finish_reason'):
-                finish_reason = candidate.finish_reason
-                print(f"DEBUG: Finish reason: {finish_reason}")
-                
-                # finish_reason = 2 significa SAFETY (conteúdo filtrado por segurança)
-                if finish_reason == 2:
-                    print(f"DEBUG: Conteúdo filtrado por segurança (finish_reason=2), tentando análise por texto")
-                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-                elif finish_reason == 3:  # LENGTH
-                    print(f"DEBUG: Resposta muito longa (finish_reason=3), tentando análise por texto")
-                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-                elif finish_reason not in [1, 0]:  # 1 = STOP (sucesso), 0 = UNSPECIFIED
-                    print(f"DEBUG: Finish reason inválido ({finish_reason}), tentando análise por texto")
-                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+        if hasattr(response, 'candidates'):
+            print(f"DEBUG: [ULTRA-GRANULAR] Response tem candidates: {response.candidates is not None}")
+            if response.candidates:
+                print(f"DEBUG: [ULTRA-GRANULAR] Candidates não é vazio")
+                candidate = response.candidates[0]
+                print(f"DEBUG: [ULTRA-GRANULAR] Candidate obtido: {type(candidate)}")
+                if hasattr(candidate, 'finish_reason'):
+                    finish_reason = candidate.finish_reason
+                    print(f"DEBUG: Finish reason: {finish_reason}")
+                    
+                    # finish_reason = 2 significa SAFETY (conteúdo filtrado por segurança)
+                    if finish_reason == 2:
+                        print(f"DEBUG: Conteúdo filtrado por segurança (finish_reason=2), tentando análise por texto")
+                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                    elif finish_reason == 3:  # LENGTH
+                        print(f"DEBUG: Resposta muito longa (finish_reason=3), tentando análise por texto")
+                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                    elif finish_reason not in [1, 0]:  # 1 = STOP (sucesso), 0 = UNSPECIFIED
+                        print(f"DEBUG: Finish reason inválido ({finish_reason}), tentando análise por texto")
+                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                else:
+                    print(f"DEBUG: [ULTRA-GRANULAR] Candidate não tem finish_reason")
+            else:
+                print(f"DEBUG: [ULTRA-GRANULAR] Candidates é vazio")
+        else:
+            print(f"DEBUG: [ULTRA-GRANULAR] Response não tem candidates")
         
-        # Verificar se tem texto na resposta
+        # Verificar se tem texto na resposta - PROTEÇÃO CONTRA NONES
+        print(f"DEBUG: [ULTRA-GRANULAR] Tentando acessar response.text...")
         try:
-            response_text = response.text
-            if not response_text or len(response_text.strip()) < 10:
-                print(f"DEBUG: Resposta muito curta, tentando análise por texto")
-                return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+            print(f"DEBUG: [ULTRA-GRANULAR] Verificando se response.text existe...")
+            if hasattr(response, 'text'):
+                print(f"DEBUG: [ULTRA-GRANULAR] Response tem atributo text")
+                response_text = response.text
+                print(f"DEBUG: [ULTRA-GRANULAR] response.text acessado com sucesso")
+                print(f"DEBUG: [ULTRA-GRANULAR] response_text tipo: {type(response_text)}")
+                print(f"DEBUG: [ULTRA-GRANULAR] response_text é None: {response_text is None}")
+                if response_text is not None:
+                    print(f"DEBUG: [ULTRA-GRANULAR] response_text tamanho: {len(response_text)}")
+                    if not response_text or len(response_text.strip()) < 10:
+                        print(f"DEBUG: Resposta muito curta, tentando análise por texto")
+                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                else:
+                    print(f"DEBUG: [ULTRA-GRANULAR] response_text é None, tentando análise por texto")
+                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+            else:
+                print(f"DEBUG: [ULTRA-GRANULAR] Response NÃO tem atributo text")
+                print(f"DEBUG: [ULTRA-GRANULAR] Response attributes: {dir(response)}")
+                raise Exception("Response não tem atributo text")
         except Exception as text_error:
             print(f"DEBUG: Erro ao acessar response.text: {str(text_error)}")
+            print(f"DEBUG: [ULTRA-GRANULAR] Tipo do erro text: {type(text_error)}")
+            print(f"DEBUG: [ULTRA-GRANULAR] Args do erro: {text_error.args if hasattr(text_error, 'args') else 'N/A'}")
             print(f"DEBUG: Tentando análise por texto como fallback")
             return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
         
         print(f"DEBUG: Resposta recebida ({len(response_text)} chars)")
+        print(f"DEBUG: [ULTRA-GRANULAR] Chamando parse_gemini_json...")
         return parse_gemini_json(response_text)
         
     except Exception as e:
