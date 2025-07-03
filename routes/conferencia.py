@@ -17,12 +17,11 @@ from werkzeug.utils import secure_filename
 import asyncio
 import aiohttp
 from concurrent.futures import ThreadPoolExecutor
+import re
 
 # Imports for PDF processing
 import PyPDF2
 from pdf2image import convert_from_path
-import re
-import io
 
 # Import for Gemini AI integration - Implementação baseada no rest_gemini.md
 import google.generativeai as genai
@@ -236,7 +235,7 @@ def upload():
         # PROCESSAMENTO ASSÍNCRONO PARA EVITAR TIMEOUT NO HEROKU
         # Retornar resposta imediata e processar em background
         
-        def background_process():
+        def background_process(files_to_process):
             """Processa arquivos em background sem bloquear resposta HTTP"""
             try:
                 print(f"DEBUG: Iniciando processamento assíncrono para job {job_id}")
@@ -247,7 +246,7 @@ def upload():
                     return
                 
                 # Processar cada arquivo
-                for i, file_info in enumerate(saved_files):
+                for i, file_info in enumerate(files_to_process):
                     try:
                         filename = file_info['filename']
                         file_path = file_info['path']
@@ -423,21 +422,21 @@ def upload():
                 
                 # Finalizar job - usando apenas colunas que existem na tabela - PROTEÇÃO CONTRA NONES
                 print(f"DEBUG: [GRANULAR] Finalizando job {job_id}")
-                print(f"DEBUG: [GRANULAR] saved_files tipo: {type(saved_files)}")
-                print(f"DEBUG: [GRANULAR] saved_files tamanho: {len(saved_files) if saved_files else 0}")
+                print(f"DEBUG: [GRANULAR] files_to_process tipo: {type(files_to_process)}")
+                print(f"DEBUG: [GRANULAR] files_to_process tamanho: {len(files_to_process) if files_to_process else 0}")
                 
-                # Verificar se saved_files não foi corrompido
-                if saved_files is None:
-                    print(f"DEBUG: [GRANULAR] ERRO - saved_files é None ao finalizar")
-                    saved_files = []
-                elif not isinstance(saved_files, list):
-                    print(f"DEBUG: [GRANULAR] ERRO - saved_files não é lista: {type(saved_files)}")
-                    saved_files = []
+                # Verificar se files_to_process não foi corrompido
+                if files_to_process is None:
+                    print(f"DEBUG: [GRANULAR] ERRO - files_to_process é None ao finalizar")
+                    files_to_process = []
+                elif not isinstance(files_to_process, list):
+                    print(f"DEBUG: [GRANULAR] ERRO - files_to_process não é lista: {type(files_to_process)}")
+                    files_to_process = []
                 
                 final_job_data = {
                     'status': 'completed',
-                    'arquivos_processados': len(saved_files),
-                    'arquivos': saved_files
+                    'arquivos_processados': len(files_to_process),
+                    'arquivos': files_to_process
                 }
                 
                 print(f"DEBUG: [GRANULAR] final_job_data criado: {list(final_job_data.keys())}")
@@ -480,7 +479,7 @@ def upload():
                 # Marcar job como erro na memória (fonte primária)
                 error_job_data = {
                     'status': 'error',
-                    'arquivos_processados': len(saved_files)  # Marcar como processados mesmo com erro
+                    'arquivos_processados': len(files_to_process) if files_to_process else 0  # Marcar como processados mesmo com erro
                 }
                 
                 if job_id in jobs:
@@ -498,7 +497,7 @@ def upload():
                     print(f"DEBUG: Aviso - Erro não pôde ser salvo no Supabase: {db_error}")
         
         # Iniciar thread daemon em background
-        background_thread = threading.Thread(target=background_process, daemon=True)
+        background_thread = threading.Thread(target=background_process, args=(saved_files,), daemon=True)
         background_thread.start()
         
         print(f"DEBUG: Thread assíncrona iniciada para job {job_id}, retornando resposta imediata")
