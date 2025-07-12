@@ -94,7 +94,7 @@
         tableBody.innerHTML = recent.map(item => `
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-sm font-medium text-gray-900">${item.processo || ''}</td>
-                <td class="px-4 py-3 text-sm text-gray-600">${item.importador || ''}</td>
+                <td class="px-4 py-3 text-sm text-gray-600">${item.cliente_razaosocial || ''}</td>
                 <td class="px-4 py-3 text-sm text-gray-600">${item.data_embarque || ''}</td>
                 <td class="px-4 py-3 text-sm text-gray-600">${item.via_transporte_descricao || ''}</td>
                 <td class="px-4 py-3">

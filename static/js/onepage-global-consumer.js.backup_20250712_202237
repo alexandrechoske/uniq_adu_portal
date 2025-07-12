@@ -59,7 +59,7 @@
         
         let filteredData = tableData;
         if (selectedCompany) {
-            filteredData = tableData.filter(row => row.cnpj_importador === selectedCompany);
+            filteredData = tableData.filter(row => row.cliente_cpfcnpj === selectedCompany);
         }
 
         // Reconstruct table rows
@@ -67,7 +67,7 @@
             return `
                 <tr>
                     <td>${row.processo || ''}</td>
-                    <td>${row.importador || ''}</td>
+                    <td>${row.cliente_razaosocial || ''}</td>
                     <td>${row.data_embarque || ''}</td>
                     <td>${row.data_chegada || ''}</td>
                     <td>${row.via_transporte_descricao || ''}</td>

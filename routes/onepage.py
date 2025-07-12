@@ -130,7 +130,7 @@ def index():
 
     # Build initial query without sorting (will sort after date conversion)
     # Filtrar para excluir registros com "Despacho Cancelado"
-    query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado')
+    query = supabase.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
 
     # Apply filters based on user role and selected company
     if session['user']['role'] == 'cliente_unique':
@@ -161,12 +161,12 @@ def index():
 
         # Filter by user's companies
         if selected_company and selected_company in user_companies:
-            query = query.eq('cliente_cpfcnpj', selected_company)
+            query = query.eq('cnpj_importador', selected_company)
         else:
-            query = query.in_('cliente_cpfcnpj', user_companies)
+            query = query.in_('cnpj_importador', user_companies)
 
     elif selected_company:  # interno_unique with filter
-        query = query.eq('cliente_cpfcnpj', selected_company)
+        query = query.eq('cnpj_importador', selected_company)
 
     # Execute query and process data
     result = query.execute()
@@ -187,12 +187,12 @@ def index():
         # Calculate KPIs baseado na nova estrutura da tabela
         kpis = {
             'total': len(df),
-            'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
-            'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),  
-            'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
-            'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
-            'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-            'di_registrada': len(df[df['carga_status'] == '3 - Desembarcada'])  # Usando carga_status ao invés de status_doc
+            'aereo': len(df[df['modal'] == 'AEREA']),
+            'terrestre': len(df[df['modal'] == 'TERRESTRE']),  
+            'maritimo': len(df[df['modal'] == 'MARITIMA']),
+            'aguardando_chegada': len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)]),
+            'aguardando_embarque': len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)]),
+            'di_registrada': len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)])  # Usando status_processo ao invés de status_doc
         }
 
         # Prepare table data - usando campos que existem na tabela
@@ -213,13 +213,13 @@ def index():
         table_data = df.to_dict('records')
 
     # Get all available companies for filtering
-    companies_query = supabase.table('importacoes_processos').select('cliente_cpfcnpj', 'cliente_razaosocial').execute()
+    companies_query = supabase.table('importacoes_processos_aberta').select('cnpj_importador', 'importador').execute()
     all_companies = []
     if companies_query.data:
         companies_df = pd.DataFrame(companies_query.data)
         all_companies = [
-            {'cpfcnpj': row['cliente_cpfcnpj'], 'nome': row['cliente_razaosocial']}
-            for _, row in companies_df.drop_duplicates(subset=['cliente_cpfcnpj']).iterrows()
+            {'cpfcnpj': row['cnpj_importador'], 'nome': row['importador']}
+            for _, row in companies_df.drop_duplicates(subset=['cnpj_importador']).iterrows()
         ]
 
     # Filter companies based on user role
@@ -332,7 +332,7 @@ def page_data():
 
         # Build initial query without sorting (will sort after date conversion)
         # Filtrar para excluir registros com "Despacho Cancelado"
-        query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado')
+        query = supabase.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
 
         # Apply filters based on user role and selected company
         if session['user']['role'] == 'cliente_unique':
@@ -358,12 +358,12 @@ def page_data():
 
             # Filter by user's companies
             if selected_company and selected_company in user_companies:
-                query = query.eq('cliente_cpfcnpj', selected_company)
+                query = query.eq('cnpj_importador', selected_company)
             else:
-                query = query.in_('cliente_cpfcnpj', user_companies)
+                query = query.in_('cnpj_importador', user_companies)
 
         elif selected_company:  # interno_unique with filter
-            query = query.eq('cliente_cpfcnpj', selected_company)
+            query = query.eq('cnpj_importador', selected_company)
 
         # Execute query and process data
         result = query.execute()
@@ -384,12 +384,12 @@ def page_data():
             # Calculate KPIs - usando a estrutura atualizada da tabela
             kpis = {
                 'total': len(df),
-                'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
-                'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
-                'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
-                'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
-                'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-                'di_registrada': len(df[df['carga_status'] == '3 - Desembarcada'])  # Usando carga_status
+                'aereo': len(df[df['modal'] == 'AEREA']),
+                'terrestre': len(df[df['modal'] == 'TERRESTRE']),
+                'maritimo': len(df[df['modal'] == 'MARITIMA']),
+                'aguardando_chegada': len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)]),
+                'aguardando_embarque': len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)]),
+                'di_registrada': len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)])  # Usando carga_status
             }
 
             # Prepare table data - usando campos que existem na tabela
@@ -432,7 +432,7 @@ def get_importacoes_direct():
         logger.info("Utilizando método fallback para obtenção de dados")
           # Consulta direta à tabela de importações_processos
         # Filtrar para excluir registros com "Despacho Cancelado"
-        response = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado').execute()
+        response = supabase.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado').execute()
         
         if response.data:
             return True, "", len(response.data)

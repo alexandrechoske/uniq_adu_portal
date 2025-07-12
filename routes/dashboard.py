@@ -87,8 +87,8 @@ def get_arrival_date_display(row):
         if data_chegada <= hoje:
             return row['data_chegada']
     
-    if pd.notna(row['previsao_chegada']):
-        return row['previsao_chegada']
+    if pd.notna(row['data_chegada']):
+        return row['data_chegada']
     
     return ""
 
@@ -106,13 +106,12 @@ def index(**kwargs):
     currencies = get_currencies()
 
     # Build query with client filter - OTIMIZADO: campos corretos baseados no ddls.sql
-    query = supabase.table('importacoes_processos').select(
-        'id, numero, situacao, diduimp_canal, data_chegada, previsao_chegada, '
-        'total_vmle_real, total_vmcv_real, cliente_cpfcnpj, cliente_razaosocial, '
-        'created_at, updated_at, via_transporte_descricao, data_abertura, '
-        'carga_status, resumo_mercadoria, referencias, armazens, data_embarque, '
-        'local_embarque, tipo_operacao, di_modalidade_despacho, status_doc'
-    ).neq('situacao', 'Despacho Cancelado')\
+    query = supabase.table('importacoes_processos_aberta').select(
+        'id, numero_di, status_processo, canal, data_chegada, '
+        'valor_fob_real, valor_cif_real, cnpj_importador, importador, '
+        'created_at, updated_at, modal, data_abertura, '
+        'mercadoria, data_embarque, urf_entrada, ref_unique'
+    ).neq('status_processo', 'Despacho Cancelado')\
      .order('updated_at.desc')\
      .limit(Config.MAX_ROWS_DASHBOARD)
     
@@ -124,11 +123,11 @@ def index(**kwargs):
                                  currencies=currencies, last_update=last_update)
         
         if selected_company and selected_company in user_companies:
-            query = query.eq('cliente_cpfcnpj', selected_company)
+            query = query.eq('cnpj_importador', selected_company)
         else:
-            query = query.in_('cliente_cpfcnpj', user_companies)
+            query = query.in_('cnpj_importador', user_companies)
     elif selected_company:
-        query = query.eq('cliente_cpfcnpj', selected_company)
+        query = query.eq('cnpj_importador', selected_company)
     
     # Execute query
     operacoes = query.execute()
@@ -147,11 +146,11 @@ def index(**kwargs):
                              user_role=session['user']['role'])
 
     # Converter colunas numéricas
-    df['total_vmle_real'] = pd.to_numeric(df['total_vmle_real'], errors='coerce').fillna(0)
-    df['total_vmcv_real'] = pd.to_numeric(df['total_vmcv_real'], errors='coerce').fillna(0)
+    df['valor_fob_real'] = pd.to_numeric(df['valor_fob_real'], errors='coerce').fillna(0)
+    df['valor_cif_real'] = pd.to_numeric(df['valor_cif_real'], errors='coerce').fillna(0)
     
     # Converter datas
-    date_columns = ['data_abertura', 'data_embarque', 'data_chegada', 'previsao_chegada']
+    date_columns = ['data_abertura', 'data_embarque', 'data_chegada', 'data_chegada']
     for col in date_columns:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
@@ -160,14 +159,14 @@ def index(**kwargs):
     total_operations = len(df)
     
     # Métricas por modal de transporte
-    aereo = len(df[df['via_transporte_descricao'] == 'AEREA'])
-    terrestre = len(df[df['via_transporte_descricao'] == 'TERRESTRE'])
-    maritimo = len(df[df['via_transporte_descricao'] == 'MARITIMA'])
+    aereo = len(df[df['modal'] == 'AEREA'])
+    terrestre = len(df[df['modal'] == 'TERRESTRE'])
+    maritimo = len(df[df['modal'] == 'MARITIMA'])
     
     # Métricas por status
-    aguardando_embarque = len(df[df['carga_status'] == '1 - Aguardando Embarque'])
-    aguardando_chegada = len(df[df['carga_status'] == '2 - Em Trânsito'])
-    di_registrada = len(df[df['carga_status'] == '3 - Desembarcada'])
+    aguardando_embarque = len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)])
+    aguardando_chegada = len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)])
+    di_registrada = len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)])
     
     # Calcular períodos
     hoje = datetime.now()
@@ -187,10 +186,10 @@ def index(**kwargs):
     proxima_semana_fim_ts = pd.Timestamp(proxima_semana_fim)
     
     # Métricas de VMCV
-    vmcv_total = df['total_vmcv_real'].sum()
-    vmcv_mes = df[df['data_abertura'].dt.month == hoje.month]['total_vmcv_real'].sum()
-    vmcv_semana = df[(df['data_abertura'] >= inicio_semana_ts) & (df['data_abertura'] <= fim_semana_ts)]['total_vmcv_real'].sum()
-    vmcv_proxima_semana = df[(df['data_abertura'] >= proxima_semana_inicio_ts) & (df['data_abertura'] <= proxima_semana_fim_ts)]['total_vmcv_real'].sum()
+    vmcv_total = df['valor_cif_real'].sum()
+    vmcv_mes = df[df['data_abertura'].dt.month == hoje.month]['valor_cif_real'].sum()
+    vmcv_semana = df[(df['data_abertura'] >= inicio_semana_ts) & (df['data_abertura'] <= fim_semana_ts)]['valor_cif_real'].sum()
+    vmcv_proxima_semana = df[(df['data_abertura'] >= proxima_semana_inicio_ts) & (df['data_abertura'] <= proxima_semana_fim_ts)]['valor_cif_real'].sum()
     
     # Métricas de processos por período
     processos_mes = len(df[df['data_abertura'].dt.month == hoje.month])
@@ -199,71 +198,26 @@ def index(**kwargs):
     
     # Processos a chegar
     a_chegar_semana = len(df[
-        ((df['previsao_chegada'] >= inicio_semana_ts) & (df['previsao_chegada'] <= fim_semana_ts)) |
+        ((df['data_chegada'] >= inicio_semana_ts) & (df['data_chegada'] <= fim_semana_ts)) |
         ((df['data_chegada'] >= inicio_semana_ts) & (df['data_chegada'] <= fim_semana_ts))
     ])
     a_chegar_mes = len(df[
-        ((df['previsao_chegada'] >= inicio_mes_ts) & (df['previsao_chegada'] <= fim_mes_ts)) |
+        ((df['data_chegada'] >= inicio_mes_ts) & (df['data_chegada'] <= fim_mes_ts)) |
         ((df['data_chegada'] >= inicio_mes_ts) & (df['data_chegada'] <= fim_mes_ts))
     ])
     a_chegar_proxima_semana = len(df[
-        ((df['previsao_chegada'] >= proxima_semana_inicio_ts) & (df['previsao_chegada'] <= proxima_semana_fim_ts)) |
+        ((df['data_chegada'] >= proxima_semana_inicio_ts) & (df['data_chegada'] <= proxima_semana_fim_ts)) |
         ((df['data_chegada'] >= proxima_semana_inicio_ts) & (df['data_chegada'] <= proxima_semana_fim_ts))
     ])
     
     # Preparar dados para a tabela com as colunas solicitadas
     table_data = []
     for _, row in df.iterrows():
-        # Extrair referência correta
-        nro_pedido = ""
-        referencias = row.get('referencias', [])
-        try:
-            if referencias:
-                if isinstance(referencias, str):
-                    # Se for string, tentar fazer parse do JSON
-                    import json
-                    referencias = json.loads(referencias)
-                
-                # Se for uma lista com dicionários
-                if isinstance(referencias, list) and len(referencias) > 0:
-                    primeiro_item = referencias[0]
-                    if isinstance(primeiro_item, dict) and 'referencia' in primeiro_item:
-                        nro_pedido = str(primeiro_item['referencia'])
-                    elif primeiro_item:
-                        nro_pedido = str(primeiro_item)
-                
-                # Se for um dicionário direto
-                elif isinstance(referencias, dict) and 'referencia' in referencias:
-                    nro_pedido = str(referencias['referencia'])
-                    
-        except (json.JSONDecodeError, TypeError, IndexError, KeyError):
-            nro_pedido = ""
+        # Campo referencias não existe na nova tabela - usar ref_importador como alternativa
+        nro_pedido = row.get('ref_importador', '') or ''
         
-        # Extrair nome do armazém
-        armazem_nome = ""
-        armazens = row.get('armazens', [])
-        try:
-            if armazens:
-                if isinstance(armazens, str):
-                    # Se for string, tentar fazer parse do JSON
-                    import json
-
-                    armazens = json.loads(armazens)
-                
-                # Se for uma lista com dicionários
-                if isinstance(armazens, list) and len(armazens) > 0:
-                    primeiro_item = armazens[0]
-                    if isinstance(primeiro_item, dict) and 'nome' in primeiro_item:
-                        armazem_nome = str(primeiro_item['nome']).strip()
-                    elif primeiro_item:
-                        armazem_nome = str(primeiro_item).strip()
-                
-                # Se for um dicionário direto
-                elif isinstance(armazens, dict) and 'nome' in armazens:
-                    armazem_nome = str(armazens['nome']).strip()
-                    
-        except (json.JSONDecodeError, TypeError, IndexError, KeyError):
-            armazem_nome = ""
+        # Campo armazens não existe na nova tabela - usar URF como alternativa  
+        armazem_nome = row.get('urf_entrada', '') or 'Não Informado'
         
         # Calcular despesas usando nova lógica otimizada:
         # 1. Se tiver despesas na tabela importacoes_despesas, usar a soma (do mapa)
@@ -279,7 +233,7 @@ def index(**kwargs):
             else:
                 # Se não tiver despesas registradas, usar estimativa de 40% do VMCV
                 # Esta é a estimativa padrão de custos adicionais (impostos/taxas/honorários)
-                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                vmcv = float(row.get('valor_cif_real', 0) or 0)
                 if vmcv > 0:
                     despesas = vmcv * 0.4  # 40% do valor da mercadoria
                 
@@ -287,7 +241,7 @@ def index(**kwargs):
             # Em caso de erro, usar fallback para 40% do VMCV
             # Esta é a estimativa padrão de impostos/taxas/honorários
             try:
-                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                vmcv = float(row.get('valor_cif_real', 0) or 0)
                 despesas = vmcv * 0.4 if vmcv > 0 else 0.0  # 40% do valor da mercadoria
             except:
                 despesas = 0.0
@@ -305,13 +259,13 @@ def index(**kwargs):
             data_chegada_formatted = pd.to_datetime(data_chegada_display).strftime('%d/%m/%Y')
         
         table_data.append({
-            'cliente_razaosocial': row.get('cliente_razaosocial', ''),
+            'importador': row.get('importador', ''),
             'nro_pedido': nro_pedido,
             'data_embarque': data_embarque_formatted,
-            'local_embarque': row.get('local_embarque', ''),
-            'via_transporte_descricao': row.get('via_transporte_descricao', ''),
-            'carga_status': row.get('carga_status', ''),
-            'resumo_mercadoria': row.get('resumo_mercadoria', ''),
+            'urf_entrada': row.get('urf_entrada', ''),
+            'modal': row.get('modal', ''),
+            'status_processo': row.get('status_processo', ''),
+            'mercadoria': row.get('mercadoria', ''),
             'despesas': despesas,
             'armazem_nome': armazem_nome,
             'data_chegada': data_chegada_formatted
@@ -363,14 +317,14 @@ def index(**kwargs):
                 despesas_processo = despesas_map[str(processo_id)]
             else:
                 # Se não tiver despesas registradas, usar estimativa de 40% do VMCV
-                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                vmcv = float(row.get('valor_cif_real', 0) or 0)
                 if vmcv > 0:
                     despesas_processo = vmcv * 0.4  # 40% do valor da mercadoria
                     
         except Exception:
             # Em caso de erro, usar fallback para 40% do VMCV
             try:
-                vmcv = float(row.get('total_vmcv_real', 0) or 0)
+                vmcv = float(row.get('valor_cif_real', 0) or 0)
                 despesas_processo = vmcv * 0.4 if vmcv > 0 else 0.0
             except:
                 despesas_processo = 0.0
@@ -475,23 +429,23 @@ def index(**kwargs):
     # Análise por Material (Principal Tipos de Material)
     if not df.empty:
         # Agrupar por resumo_mercadoria
-        material_groups = df.groupby('resumo_mercadoria').agg({
-            'numero': 'count',
-            'total_vmcv_real': 'sum'
+        material_groups = df.groupby('mercadoria').agg({
+            'ref_unique': 'count',
+            'valor_cif_real': 'sum'
         }).reset_index()
         
-        material_groups = material_groups.sort_values('total_vmcv_real', ascending=False)
+        material_groups = material_groups.sort_values('valor_cif_real', ascending=False)
         
         # Pegar top 10 materiais para análise
         for _, row in material_groups.head(10).iterrows():
-            material_name = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
-            total_processos = int(row['numero'])
-            valor_total = float(row['total_vmcv_real'])
+            material_name = row['mercadoria'] if row['mercadoria'] else 'Não Informado'
+            total_processos = int(row['ref_unique'])
+            valor_total = float(row['valor_cif_real'])
             
             # Calcular valor da semana atual e próxima semana
-            material_df = df[df['resumo_mercadoria'] == row['resumo_mercadoria']]
-            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana_ts) & (material_df['data_abertura'] <= fim_semana_ts)]['total_vmcv_real'].sum()
-            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio_ts) & (material_df['data_abertura'] <= proxima_semana_fim_ts)]['total_vmcv_real'].sum()
+            material_df = df[df['mercadoria'] == row['mercadoria']]
+            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana_ts) & (material_df['data_abertura'] <= fim_semana_ts)]['valor_cif_real'].sum()
+            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio_ts) & (material_df['data_abertura'] <= proxima_semana_fim_ts)]['valor_cif_real'].sum()
             
             analise_material.append({
                 'item_descricao': material_name,
@@ -507,38 +461,38 @@ def index(**kwargs):
         # Preparar dados principais da tabela
         for _, row in df.iterrows():
             data.append({
-                'processo': row.get('numero', ''),
-                'empresa_nome': row.get('cliente_razaosocial', ''),
-                'modal': row.get('via_transporte_descricao', ''),
-                'local_embarque': row.get('local_embarque', ''),  # Campo correto
-                'carga_status': row.get('carga_status', ''),
-                'previsao_chegada': row.get('previsao_chegada') if pd.notna(row.get('previsao_chegada')) else None,
-                'valor_fob_reais': float(row.get('total_vmcv_real', 0) or 0),
-                'tipo_operacao': row.get('tipo_operacao', '')  # Campo disponível
+                'processo': row.get('ref_unique', ''),
+                'empresa_nome': row.get('importador', ''),
+                'modal': row.get('modal', ''),
+                'urf_entrada': row.get('urf_entrada', ''),  # Campo correto
+                'status_processo': row.get('status_processo', ''),
+                'data_chegada': row.get('data_chegada') if pd.notna(row.get('data_chegada')) else None,
+                'valor_fob_reais': float(row.get('valor_cif_real', 0) or 0),
+                'modal': row.get('modal', '')  # Usar modal em vez de tipo_operacao
             })
 
     # Análise por Material (Compatibilidade com template antigo)
     material_analysis = []
     if not df.empty:
         # Agrupar por resumo_mercadoria
-        material_groups = df.groupby('resumo_mercadoria').agg({
-            'numero': 'count',
-            'total_vmcv_real': 'sum'
+        material_groups = df.groupby('mercadoria').agg({
+            'ref_unique': 'count',
+            'valor_cif_real': 'sum'
         }).reset_index()
         
-        material_groups = material_groups.sort_values('total_vmcv_real', ascending=False)
-        total_vmcv_materials = material_groups['total_vmcv_real'].sum()
+        material_groups = material_groups.sort_values('valor_cif_real', ascending=False)
+        total_vmcv_materials = material_groups['valor_cif_real'].sum()
         
         # Pegar top 10 materiais
         for _, row in material_groups.head(10).iterrows():
-            material = row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado'
-            quantidade = int(row['numero'])
-            valor_total = float(row['total_vmcv_real'])
+            material = row['mercadoria'] if row['mercadoria'] else 'Não Informado'
+            quantidade = int(row['ref_unique'])
+            valor_total = float(row['valor_cif_real'])
             
             # Calcular valor da semana atual e próxima semana
-            material_df = df[df['resumo_mercadoria'] == row['resumo_mercadoria']]
-            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana_ts) & (material_df['data_abertura'] <= fim_semana_ts)]['total_vmcv_real'].sum()
-            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio_ts) & (material_df['data_abertura'] <= proxima_semana_fim_ts)]['total_vmcv_real'].sum()
+            material_df = df[df['mercadoria'] == row['mercadoria']]
+            valor_semana_atual = material_df[(material_df['data_abertura'] >= inicio_semana_ts) & (material_df['data_abertura'] <= fim_semana_ts)]['valor_cif_real'].sum()
+            valor_proxima_semana = material_df[(material_df['data_abertura'] >= proxima_semana_inicio_ts) & (material_df['data_abertura'] <= proxima_semana_fim_ts)]['valor_cif_real'].sum()
             
             percentual = (valor_total / total_vmcv_materials * 100) if total_vmcv_materials > 0 else 0;
             
@@ -560,8 +514,8 @@ def index(**kwargs):
         # Agrupar por dia
         df['data_abertura_day'] = df['data_abertura'].dt.date
         daily_data = df.groupby('data_abertura_day').agg({
-            'numero': 'count',  # Total de processos
-            'total_vmcv_real': 'sum'  # VMCV total
+            'ref_unique': 'count',  # Total de processos
+            'valor_cif_real': 'sum'  # VMCV total
         }).reset_index()
         
         # Converter para datetime
@@ -578,10 +532,10 @@ def index(**kwargs):
         # Barras para processos
         daily_chart.add_trace(go.Bar(
             x=daily_data['data'],
-            y=daily_data['numero'],
+            y=daily_data['ref_unique'],
             name='Processos por Dia',
             marker=dict(color='#3b82f6'),
-            text=daily_data['numero'],
+            text=daily_data['ref_unique'],
             textposition='outside',
             hovertemplate='<b>%{x}</b><br>Processos: %{y}<extra></extra>'
         ))
@@ -589,13 +543,13 @@ def index(**kwargs):
         # Linha para valor (eixo Y secundário)
         daily_chart.add_trace(go.Scatter(
             x=daily_data['data'],
-            y=daily_data['total_vmcv_real'] / 1000000,  # Converter para milhões
+            y=daily_data['valor_cif_real'] / 1000000,  # Converter para milhões
             mode='lines+markers',
             name='Valor VMCV/dia (M)',
             line=dict(color='#10b981', width=2, shape='spline'),
             marker=dict(size=4),
             yaxis='y2',
-            text=[f'{val/1000000:.1f}M' for val in daily_data['total_vmcv_real']],
+            text=[f'{val/1000000:.1f}M' for val in daily_data['valor_cif_real']],
             textposition='top center',
             hovertemplate='<b>%{x}</b><br>Valor: R$ %{text}<extra></extra>'
         ))
@@ -623,8 +577,8 @@ def index(**kwargs):
         # Agrupar por mês
         df['mes_ano'] = df['data_abertura'].dt.to_period('M')
         monthly_data = df.groupby('mes_ano').agg({
-            'numero': 'count',  # Total de processos
-            'total_vmcv_real': 'sum'  # VMCV total
+            'ref_unique': 'count',  # Total de processos
+            'valor_cif_real': 'sum'  # VMCV total
         }).reset_index()
         
         # Converter período para datetime para plotly
@@ -637,14 +591,14 @@ def index(**kwargs):
         # Série 1: Área para Nº de Processos
         monthly_chart.add_trace(go.Scatter(
             x=monthly_data['data'],
-            y=monthly_data['numero'],
+            y=monthly_data['ref_unique'],
             mode='lines+markers+text',
             name='Nº de Processos',
             fill='tozeroy',  # Preenche área até o zero
             fillcolor='rgba(255, 140, 0, 0.3)',  # Cor alaranjada com transparência
             line=dict(color="#0079A5", width=2, shape='spline'),  # Linha alaranjada suave
             marker=dict(color='#0079A5', size=6),
-            text=monthly_data['numero'],
+            text=monthly_data['ref_unique'],
             textposition='bottom center',  # Posição embaixo para evitar sobreposição
             textfont=dict(size=10, color='#0079A5'),
             hovertemplate='<b>%{x|%b %Y}</b><br>Processos: %{y}<extra></extra>'
@@ -653,12 +607,12 @@ def index(**kwargs):
         # Série 2: Linha para VMCV Total (eixo Y secundário)
         monthly_chart.add_trace(go.Scatter(
             x=monthly_data['data'],
-            y=monthly_data['total_vmcv_real'],
+            y=monthly_data['valor_cif_real'],
             mode='lines+markers+text',
             name='VMCV Total',
             line=dict(color='#8A2BE2', width=3, shape='spline'),  # Linha roxa suave
             marker=dict(color='#8A2BE2', size=6),
-            text=[f'R$ {val/1000000:.1f}M' for val in monthly_data['total_vmcv_real']],
+            text=[f'R$ {val/1000000:.1f}M' for val in monthly_data['valor_cif_real']],
             textposition='top center',  # Posição em cima para os valores
             textfont=dict(size=10, color='#8A2BE2'),
             yaxis='y2',
@@ -701,9 +655,9 @@ def index(**kwargs):
     canal_chart = None
     if not df.empty:
         # Agrupar por canal DI
-        canal_data = df.groupby('diduimp_canal').agg({
-            'numero': 'count',
-            'total_vmcv_real': 'sum'  
+        canal_data = df.groupby('canal').agg({
+            'ref_unique': 'count',
+            'valor_cif_real': 'sum'  
         }).reset_index()
         
         # Definir cores específicas para os canais DI
@@ -720,8 +674,8 @@ def index(**kwargs):
         colors = []
         
         for _, row in canal_data.iterrows():
-            canal = row['diduimp_canal'] if row['diduimp_canal'] else 'Não Informado'
-            quantidade = row['numero']
+            canal = row['canal'] if row['canal'] else 'Não Informado'
+            quantidade = row['ref_unique']
             
             labels.append(canal)
             values.append(quantidade)
@@ -755,50 +709,28 @@ def index(**kwargs):
         # Gráfico de radar por armazém
         radar_chart = None
         if not df.empty:
-            # Processar a coluna armazens para extrair nomes
+            # Campo armazens não existe na nova tabela - usando URF de entrada como alternativa
             df_armazens = df.copy()
             armazem_names = []
             
             for _, row in df_armazens.iterrows():
-                armazem_nome = ""
-                armazens = row.get('armazens', [])
-                try:
-                    if armazens:
-                        if isinstance(armazens, str):
-                            # Se for string, tentar fazer parse do JSON
-                            armazens = json.loads(armazens)
-                        
-                        # Se for uma lista com dicionários
-                        if isinstance(armazens, list) and len(armazens) > 0:
-                            primeiro_item = armazens[0]
-                            if isinstance(primeiro_item, dict) and 'nome' in primeiro_item:
-                                armazem_nome = str(primeiro_item['nome']).strip()
-                            elif primeiro_item:
-                                armazem_nome = str(primeiro_item).strip()
-                        
-                        # Se for um dicionário direto
-                        elif isinstance(armazens, dict) and 'nome' in armazens:
-                            armazem_nome = str(armazens['nome']).strip()
-                            
-                except (json.JSONDecodeError, TypeError, IndexError, KeyError):
+                # Usar URF de entrada como substituto para armazém
+                armazem_nome = row.get('urf_entrada', 'Não Informado')
+                if not armazem_nome or pd.isna(armazem_nome):
                     armazem_nome = "Não Informado"
-                
-                if not armazem_nome:
-                    armazem_nome = "Não Informado"
-                    
-                armazem_names.append(armazem_nome)
+                armazem_names.append(str(armazem_nome).strip())
             
             # Adicionar coluna de armazém processada
             df_armazens['armazem_nome'] = armazem_names
             
             # Agrupar por armazém e pegar top 6
             radar_data = df_armazens.groupby('armazem_nome').agg({
-                'numero': 'count',
-                'total_vmcv_real': 'sum'  
+                'ref_unique': 'count',
+                'valor_cif_real': 'sum'  
             }).reset_index()
             
             # Ordenar por quantidade de processos e pegar top 6
-            radar_data = radar_data.sort_values('numero', ascending=False).head(6)
+            radar_data = radar_data.sort_values('ref_unique', ascending=False).head(6)
             
             # Preparar dados para o gráfico combinado
             categories = []
@@ -807,8 +739,8 @@ def index(**kwargs):
             
             for _, row in radar_data.iterrows():
                 armazem = row['armazem_nome']
-                quantidade = row['numero']
-                valor = row['total_vmcv_real']
+                quantidade = row['ref_unique']
+                valor = row['valor_cif_real']
                 
                 # Truncar nome longo para melhor visualização
                 if len(armazem) > 20:
@@ -927,15 +859,15 @@ def index(**kwargs):
             if not df.empty:
                 # Limpar e agrupar materiais com nomes similares
                 df_materials = df.copy()
-                df_materials['material_limpo'] = df_materials['resumo_mercadoria'].apply(clean_material_name)
+                df_materials['material_limpo'] = df_materials['mercadoria'].apply(clean_material_name)
                 
                 # Agrupar por material limpo
                 material_groups_clean = df_materials.groupby('material_limpo').agg({
-                    'numero': 'count',
-                    'total_vmcv_real': 'sum'
+                    'ref_unique': 'count',
+                    'valor_cif_real': 'sum'
                 }).reset_index()
                 
-                material_groups_clean = material_groups_clean.sort_values('total_vmcv_real', ascending=False)
+                material_groups_clean = material_groups_clean.sort_values('valor_cif_real', ascending=False)
                 
                 # Pegar top 6 materiais para melhor visualização
                 top_materials_clean = material_groups_clean.head(6)
@@ -952,8 +884,8 @@ def index(**kwargs):
                             nome = nome[:30] + '...'
                         
                         labels.append(nome)
-                        values_valor.append(float(row['total_vmcv_real']))
-                        values_quantidade.append(int(row['numero']))
+                        values_valor.append(float(row['valor_cif_real']))
+                        values_quantidade.append(int(row['ref_unique']))
                     
                     # Reverter as listas para mostrar maior valor no topo
                     labels.reverse()
@@ -1041,17 +973,17 @@ def index(**kwargs):
 
 
     # Get all available companies for filtering - OTIMIZADO
-    companies_query = supabase.table('importacoes_processos')\
-        .select('cliente_cpfcnpj, cliente_razaosocial')\
-        .neq('cliente_cpfcnpj', '')\
-        .not_.is_('cliente_cpfcnpj', 'null')\
+    companies_query = supabase.table('importacoes_processos_aberta')\
+        .select('cnpj_importador, importador')\
+        .neq('cnpj_importador', '')\
+        .not_.is_('cnpj_importador', 'null')\
         .execute()
     all_companies = []
     if companies_query.data:
         companies_df = pd.DataFrame(companies_query.data)
         all_companies = [
-            {'cpfcnpj': row['cliente_cpfcnpj'], 'nome': row['cliente_razaosocial']}
-            for _, row in companies_df.drop_duplicates(subset=['cliente_cpfcnpj']).iterrows()
+            {'cpfcnpj': row['cnpj_importador'], 'nome': row['importador']}
+            for _, row in companies_df.drop_duplicates(subset=['cnpj_importador']).iterrows()
         ]
 
     # Filter companies based on user role

@@ -47,20 +47,20 @@ def apply_company_filter(query):
             if not user_companies:
                 # Se o cliente não tem empresas, retornar query que não encontra nada
                 print("[DEBUG apply_company_filter] Cliente sem empresas, filtrando tudo")
-                return query.eq('cliente_cpfcnpj', '___NENHUMA___')
+                return query.eq('cnpj_importador', '___NENHUMA___')
             
             if selected_company and selected_company in user_companies:
                 # Filtrar por empresa específica selecionada
                 print(f"[DEBUG apply_company_filter] Filtrando por empresa específica: {selected_company}")
-                query = query.eq('cliente_cpfcnpj', selected_company)
+                query = query.eq('cnpj_importador', selected_company)
             else:
                 # Filtrar por todas as empresas do usuário
                 print(f"[DEBUG apply_company_filter] Filtrando por empresas do usuário: {user_companies}")
-                query = query.in_('cliente_cpfcnpj', user_companies)
+                query = query.in_('cnpj_importador', user_companies)
         elif selected_company:
             # Para admin/interno, aplicar filtro da empresa selecionada se houver
             print(f"[DEBUG apply_company_filter] Admin/interno filtrando por empresa: {selected_company}")
-            query = query.eq('cliente_cpfcnpj', selected_company)
+            query = query.eq('cnpj_importador', selected_company)
         else:
             print("[DEBUG apply_company_filter] Admin/interno sem filtro específico")
         
@@ -157,8 +157,8 @@ def get_kpis():
         modal_filter = request.args.get('modal', '')
         
         # Buscar dados básicos diretamente do Supabase com filtros
-        query_builder = supabase.table('importacoes_processos').select(
-            'id, total_vmle_real, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj, cliente_razaosocial, situacao, di_modalidade_despacho, data_abertura, via_transporte_descricao'
+        query_builder = supabase.table('importacoes_processos_aberta').select(
+            'id, valor_fob_real, valor_cif_real, mercadoria, cnpj_importador, importador, status_processo, modal, data_abertura'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -166,7 +166,7 @@ def get_kpis():
         
         # Aplicar filtros adicionais da requisição
         if material_filter:
-            query_builder = query_builder.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query_builder = query_builder.ilike('mercadoria', f'%{material_filter}%')
         
         if date_start:
             query_builder = query_builder.gte('data_abertura', date_start)
@@ -175,10 +175,10 @@ def get_kpis():
             query_builder = query_builder.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query_builder = query_builder.eq('cliente_cpfcnpj', cliente_filter)
+            query_builder = query_builder.eq('cnpj_importador', cliente_filter)
         
         if modal_filter:
-            query_builder = query_builder.eq('via_transporte_descricao', modal_filter)
+            query_builder = query_builder.eq('modal', modal_filter)
         
         result = query_builder.limit(2000).execute()
         
@@ -189,16 +189,16 @@ def get_kpis():
         
         # Calcular KPIs manualmente
         total_processos = len(data)
-        total_vmle = sum(float(item.get('total_vmle_real', 0) or 0) for item in data)
-        total_vmcv = sum(float(item.get('total_vmcv_real', 0) or 0) for item in data)
+        total_vmle = sum(float(item.get('valor_fob_real', 0) or 0) for item in data)
+        total_vmcv = sum(float(item.get('valor_cif_real', 0) or 0) for item in data)
         total_despesas = total_vmcv * 0.4  # 40% do VMCV
         total_com_despesas = total_vmcv + total_despesas
-        total_clientes = len(set(item.get('cliente_cpfcnpj') for item in data if item.get('cliente_cpfcnpj')))
+        total_clientes = len(set(item.get('cnpj_importador') for item in data if item.get('cnpj_importador')))
         valor_medio = total_vmle / total_processos if total_processos > 0 else 0
         valor_medio_com_despesas = total_com_despesas / total_processos if total_processos > 0 else 0
         
         # Calcular processos em andamento
-        processos_andamento = len([item for item in data if item.get('situacao') in ['Em andamento', 'Aguardando']])
+        processos_andamento = len([item for item in data if item.get('status_processo') in ['Em andamento', 'Aguardando']])
         
         # Debug dos cálculos
         print(f"[DEBUG KPIs] Total Processos: {total_processos}")
@@ -275,8 +275,8 @@ def get_top_materiais():
         modal_filter = request.args.get('modal', '')
         
         # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'id, total_vmcv_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial, cliente_cpfcnpj'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'id, valor_cif_real, data_embarque, data_chegada, mercadoria, importador, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -284,7 +284,7 @@ def get_top_materiais():
         
         # Aplicar filtros do usuário
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         if date_start:
             query = query.gte('data_abertura', date_start)
@@ -293,10 +293,10 @@ def get_top_materiais():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.eq('cliente_cpfcnpj', cliente_filter)
+            query = query.eq('cnpj_importador', cliente_filter)
         
         if modal_filter:
-            query = query.eq('via_transporte_descricao', modal_filter)
+            query = query.eq('modal', modal_filter)
         
         # Executar query principal
         processos_result = query.limit(2000).execute()
@@ -305,9 +305,9 @@ def get_top_materiais():
         # Agrupar por material
         materiais = defaultdict(lambda: {'valor': 0, 'quantidade': 0})
         for p in processos:
-            material = normalize_material_name(p.get('resumo_mercadoria'))
+            material = normalize_material_name(p.get('mercadoria'))
             # Calcular despesa (40% do valor total)
-            valor_total = float(p.get('total_vmcv_real') or 0)
+            valor_total = float(p.get('valor_cif_real') or 0)
             despesa = valor_total * 0.4
             materiais[material]['valor'] += despesa
             materiais[material]['quantidade'] += 1
@@ -336,15 +336,15 @@ def get_evolucao_mensal():
         material_filter = request.args.get('material', '')
         
         # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'data_abertura, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'data_abertura, valor_cif_real, mercadoria, cliente_cpfcnpj'
         )
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
         
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         result = query.limit(2000).execute()
         processos = result.data or []
@@ -357,7 +357,7 @@ def get_evolucao_mensal():
                     data = datetime.fromisoformat(p['data_abertura'].replace('Z', '+00:00'))
                     mes_ano = f"{data.year}-{data.month:02d}"
                     # Calcular despesa (40% do valor total)
-                    valor_total = float(p.get('total_vmcv_real') or 0)
+                    valor_total = float(p.get('valor_cif_real') or 0)
                     despesa = valor_total * 0.4
                     meses[mes_ano]['valor'] += despesa
                     meses[mes_ano]['quantidade'] += 1
@@ -388,13 +388,13 @@ def get_despesas_composicao():
         material_filter = request.args.get('material', '')
         
         # Buscar processos do material
-        query = supabase.table('importacoes_processos').select('id, cliente_cpfcnpj')
+        query = supabase.table('importacoes_processos_aberta').select('id, cliente_cpfcnpj')
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
         
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         processos_result = query.limit(2000).execute()
         processos = processos_result.data or []
@@ -456,8 +456,8 @@ def get_canal_parametrizacao():
         modal_filter = request.args.get('modal', '')
         
         # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'resumo_mercadoria, diduimp_canal, cliente_cpfcnpj, cliente_razaosocial, data_abertura, via_transporte_descricao'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'mercadoria, canal, cnpj_importador, importador, data_abertura, via_transporte_descricao'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -465,7 +465,7 @@ def get_canal_parametrizacao():
         
         # Aplicar filtros do usuário
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         if date_start:
             query = query.gte('data_abertura', date_start)
@@ -474,10 +474,10 @@ def get_canal_parametrizacao():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.eq('cliente_cpfcnpj', cliente_filter)
+            query = query.eq('cnpj_importador', cliente_filter)
         
         if modal_filter:
-            query = query.eq('via_transporte_descricao', modal_filter)
+            query = query.eq('modal', modal_filter)
         
         result = query.limit(2000).execute()
         processos = result.data or []
@@ -485,8 +485,8 @@ def get_canal_parametrizacao():
         # Agrupar por material e canal
         materiais_canal = defaultdict(lambda: defaultdict(int))
         for p in processos:
-            material = normalize_material_name(p.get('resumo_mercadoria'))
-            canal = p.get('diduimp_canal') or 'Não informado'
+            material = normalize_material_name(p.get('mercadoria'))
+            canal = p.get('canal') or 'Não informado'
             materiais_canal[material][canal] += 1
         
         # Pegar top 5 materiais por total de processos
@@ -568,9 +568,9 @@ def get_clientes_por_material():
             })
         
         # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'cliente_razaosocial, total_vmcv_real, cliente_cpfcnpj'
-        ).ilike('resumo_mercadoria', f'%{material_filter}%')
+        query = supabase.table('importacoes_processos_aberta').select(
+            'cliente_razaosocial, valor_cif_real, cliente_cpfcnpj'
+        ).ilike('mercadoria', f'%{material_filter}%')
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
@@ -581,8 +581,8 @@ def get_clientes_por_material():
         # Agrupar por cliente
         clientes = defaultdict(float)
         for p in processos:
-            cliente = p.get('cliente_razaosocial') or 'Não informado'
-            valor = float(p.get('total_vmcv_real') or 0)
+            cliente = p.get('importador') or 'Não informado'
+            valor = float(p.get('valor_cif_real') or 0)
             clientes[cliente] += valor
         
         # Ordenar e pegar top 10
@@ -610,15 +610,15 @@ def get_detalhamento():
         per_page = int(request.args.get('per_page', 50))
         
         # Construir query base - incluindo campo referencias
-        query = supabase.table('importacoes_processos').select(
-            'id, numero, cliente_razaosocial, data_embarque, previsao_chegada, data_chegada, carga_status, diduimp_canal, total_vmcv_real, resumo_mercadoria, cliente_cpfcnpj, referencias'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'id, numero_di, importador, data_embarque, data_chegada, data_chegada, status_processo, canal, valor_cif_real, mercadoria, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
         
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         # Aplicar paginação
         offset = (page - 1) * per_page
@@ -627,36 +627,39 @@ def get_detalhamento():
         
         # Calcular despesas e extrair número do pedido para cada processo
         for p in processos:
-            vmcv = float(p.get('total_vmcv_real') or 0)
+            vmcv = float(p.get('valor_cif_real') or 0)
             # Calcular despesas como 40% do VMCV
             p['total_despesas'] = vmcv * 0.4
             # Normalizar nome do material
-            p['resumo_mercadoria'] = normalize_material_name(p.get('resumo_mercadoria'))
+            p['mercadoria'] = normalize_material_name(p.get('mercadoria'))
             
             # Extrair número do pedido das referências (mesmo código do dashboard)
             nro_pedido = ""
-            referencias = p.get('referencias', [])
-            try:
-                if referencias:
-                    if isinstance(referencias, str):
-                        # Se for string, tentar fazer parse do JSON
-                        import json
-                        referencias = json.loads(referencias)
-                    
-                    # Se for uma lista com dicionários
-                    if isinstance(referencias, list) and len(referencias) > 0:
-                        primeiro_item = referencias[0]
-                        if isinstance(primeiro_item, dict) and 'referencia' in primeiro_item:
-                            nro_pedido = str(primeiro_item['referencia'])
-                        elif primeiro_item:
-                            nro_pedido = str(primeiro_item)
-                    
-                    # Se for um dicionário direto
-                    elif isinstance(referencias, dict) and 'referencia' in referencias:
-                        nro_pedido = str(referencias['referencia'])
-                        
-            except (json.JSONDecodeError, TypeError, IndexError, KeyError):
-                nro_pedido = ""
+            # Campo referencias não existe na nova tabela - usando ref_importador como alternativa
+            nro_pedido = p.get('ref_importador', '') or ''
+            
+            # try:
+            #     if referencias:
+            #         if isinstance(referencias, str):
+            #             # Se for string, tentar fazer parse do JSON
+            #             import json
+            #             referencias = json.loads(referencias)
+            #         
+            #         # Se for uma lista com dicionários
+            #         if isinstance(referencias, list) and len(referencias) > 0:
+            #             primeiro_item = referencias[0]
+            #             if isinstance(primeiro_item, dict) and 'referencia' in primeiro_item:
+            #                 nro_pedido = str(primeiro_item['referencia'])
+            #             elif primeiro_item:
+            #                 nro_pedido = str(primeiro_item)
+            #         
+            #         # Se for um dicionário direto
+            #         elif isinstance(referencias, dict) and 'referencia' in referencias:
+            #             nro_pedido = str(referencias['referencia'])
+            #             
+            # except (json.JSONDecodeError, TypeError, IndexError, KeyError):
+            #     nro_pedido = ""
+            
             
             # Adicionar número do pedido ao processo
             p['nro_pedido'] = nro_pedido
@@ -688,8 +691,8 @@ def get_principais_materiais():
         modal_filter = request.args.get('modal', '')
         
         # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'id, total_vmle_real, data_embarque, data_chegada, resumo_mercadoria, cliente_razaosocial, cliente_cpfcnpj'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'id, valor_fob_real, data_embarque, data_chegada, mercadoria, importador, cliente_cpfcnpj'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -697,7 +700,7 @@ def get_principais_materiais():
         
         # Aplicar filtros do usuário
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         if date_start:
             query = query.gte('data_abertura', date_start)
@@ -706,10 +709,10 @@ def get_principais_materiais():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.eq('cliente_cpfcnpj', cliente_filter)
+            query = query.eq('cnpj_importador', cliente_filter)
         
         if modal_filter:
-            query = query.eq('via_transporte_descricao', modal_filter)
+            query = query.eq('modal', modal_filter)
         
         # Executar query principal
         processos_result = query.limit(2000).execute()
@@ -723,8 +726,8 @@ def get_principais_materiais():
         })
         
         for p in processos:
-            material = normalize_material_name(p.get('resumo_mercadoria'))
-            vmle = float(p.get('total_vmle_real') or 0)
+            material = normalize_material_name(p.get('mercadoria'))
+            vmle = float(p.get('valor_fob_real') or 0)
             data_chegada = p.get('data_chegada')
             
             # Acumular dados por material
@@ -789,8 +792,8 @@ def get_radar_cliente_material():
         print(f"[DEBUG RADAR] Usuário: {session['user'].get('role', 'Unknown')}")
         
         # Buscar todos os processos com dados necessários
-        query = supabase.table('importacoes_processos').select(
-            'resumo_mercadoria, total_vmcv_real, data_embarque, previsao_chegada, data_chegada, diduimp_canal, cliente_cpfcnpj'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'mercadoria, valor_cif_real, data_embarque, data_chegada, data_chegada, canal, cliente_cpfcnpj'
         )
         
         # Aplicar filtro de empresa baseado no usuário com tratamento de erro
@@ -817,11 +820,11 @@ def get_radar_cliente_material():
         print(f"[DEBUG RADAR] Exemplo dos primeiros 3 processos:")
         for i, p in enumerate(processos[:3]):
             print(f"  Processo {i+1}:")
-            print(f"    Material: {p.get('resumo_mercadoria')}")
-            print(f"    VMCV: {p.get('total_vmcv_real')}")
+            print(f"    Material: {p.get('mercadoria')}")
+            print(f"    VMCV: {p.get('valor_cif_real')}")
             print(f"    Data embarque: {p.get('data_embarque')}")
             print(f"    Data chegada: {p.get('data_chegada')}")
-            print(f"    Canal: {p.get('diduimp_canal')}")
+            print(f"    Canal: {p.get('canal')}")
         
         # Agrupar dados por material
         material_data = defaultdict(lambda: {
@@ -837,12 +840,12 @@ def get_radar_cliente_material():
         processos_sem_vmcv = 0
         
         for p in processos:
-            material = normalize_material_name(p.get('resumo_mercadoria'))
+            material = normalize_material_name(p.get('mercadoria'))
             if not material or material == 'Não informado':
                 processos_sem_material += 1
                 continue
                 
-            vmcv = float(p.get('total_vmcv_real') or 0)
+            vmcv = float(p.get('valor_cif_real') or 0)
             if vmcv <= 0:
                 processos_sem_vmcv += 1
                 continue
@@ -855,7 +858,7 @@ def get_radar_cliente_material():
             # Calcular tempo de trânsito
             tempo_transito = 0
             data_embarque = p.get('data_embarque')
-            data_chegada = p.get('data_chegada') or p.get('previsao_chegada')
+            data_chegada = p.get('data_chegada') or p.get('data_chegada')
             
             if data_embarque and data_chegada:
                 try:
@@ -869,7 +872,7 @@ def get_radar_cliente_material():
                     tempo_transito = 0
             
             # Verificar se houve inspeção (canal diferente de verde)
-            canal = p.get('diduimp_canal', '').lower()
+            canal = p.get('canal', '').lower()
             tem_inspecao = canal not in ['verde', '', None]
             
             # Adicionar aos dados do material
@@ -1089,7 +1092,7 @@ def get_materiais_opcoes():
     """Buscar todos os materiais únicos para o dropdown"""
     try:
         # Buscar todos os materiais únicos
-        query = supabase.table('importacoes_processos').select('resumo_mercadoria, cliente_cpfcnpj')
+        query = supabase.table('importacoes_processos_aberta').select('mercadoria, cliente_cpfcnpj')
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
@@ -1100,7 +1103,7 @@ def get_materiais_opcoes():
         # Normalizar e obter materiais únicos
         materiais_set = set()
         for p in processos:
-            material = normalize_material_name(p.get('resumo_mercadoria'))
+            material = normalize_material_name(p.get('mercadoria'))
             if material and material != 'Não informado':
                 materiais_set.add(material)
         
@@ -1128,8 +1131,8 @@ def get_linha_tempo_chegadas():
         data_limite = hoje + timedelta(days=dias_futuro)
         
         # Buscar processos com chegadas futuras usando Supabase diretamente
-        query = supabase.table('importacoes_processos').select(
-            'id, numero, data_chegada, resumo_mercadoria, cliente_razaosocial, local_embarque, via_transporte_descricao, total_vmcv_real, cliente_cpfcnpj'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'id, numero_di, data_chegada, mercadoria, importador, urf_entrada, modal, valor_cif_real, cliente_cpfcnpj'
         ).gte('data_chegada', str(hoje)).lte('data_chegada', str(data_limite))
         
         # Aplicar filtro de empresa baseado no usuário
@@ -1158,24 +1161,24 @@ def get_linha_tempo_chegadas():
         for d in despesas:
             processo_id = d.get('processo_id')
             valor = d.get('valor_real')
-            situacao = d.get('situacao_descricao', '').lower()
+            status_processo = d.get('situacao_descricao', '').lower()
             
             if processo_id and valor:
                 try:
                     valor_float = float(valor)
-                    if situacao == 'aprovado':
+                    if status_processo == 'aprovado':
                         despesas_por_processo[processo_id]['aprovadas'] += valor_float
-                    elif situacao == 'pendente':
+                    elif status_processo == 'pendente':
                         despesas_por_processo[processo_id]['pendentes'] += valor_float
                     
-                    if situacao in ['aprovado', 'pendente']:
+                    if status_processo in ['aprovado', 'pendente']:
                         despesas_por_processo[processo_id]['total'] += valor_float
                 except (ValueError, TypeError):
                     continue
         
         # Processar os dados para incluir material normalizado e despesas
         for processo in processos:
-            processo['resumo_mercadoria'] = normalize_material_name(processo.get('resumo_mercadoria'))
+            processo['mercadoria'] = normalize_material_name(processo.get('mercadoria'))
             
             # Adicionar dados de despesas
             despesas_info = despesas_por_processo.get(processo['id'], {'aprovadas': 0, 'pendentes': 0, 'total': 0})
@@ -1184,7 +1187,7 @@ def get_linha_tempo_chegadas():
             processo['total_despesas_previsto'] = despesas_info['total']
             
             # Garantir que valores numéricos não sejam None
-            processo['total_vmcv_real'] = float(processo.get('total_vmcv_real') or 0)
+            processo['valor_cif_real'] = float(processo.get('valor_cif_real') or 0)
         
         return jsonify({
             'status': 'success',
@@ -1208,8 +1211,8 @@ def get_material_modal():
         modal_filter = request.args.get('modal', '')
         
         # Construir query base
-        query = supabase.table('importacoes_processos').select(
-            'resumo_mercadoria, via_transporte_descricao, cliente_cpfcnpj'
+        query = supabase.table('importacoes_processos_aberta').select(
+            'mercadoria, modal, cliente_cpfcnpj'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -1217,7 +1220,7 @@ def get_material_modal():
         
         # Aplicar filtros do usuário
         if material_filter:
-            query = query.ilike('resumo_mercadoria', f'%{material_filter}%')
+            query = query.ilike('mercadoria', f'%{material_filter}%')
         
         if date_start:
             query = query.gte('data_abertura', date_start)
@@ -1226,10 +1229,10 @@ def get_material_modal():
             query = query.lte('data_abertura', date_end)
             
         if cliente_filter:
-            query = query.eq('cliente_cpfcnpj', cliente_filter)
+            query = query.eq('cnpj_importador', cliente_filter)
         
         if modal_filter:
-            query = query.eq('via_transporte_descricao', modal_filter)
+            query = query.eq('modal', modal_filter)
         
         result = query.limit(2000).execute()
         processos = result.data or []
@@ -1237,8 +1240,8 @@ def get_material_modal():
         # Agrupar por material e modal
         materiais_modal = defaultdict(lambda: defaultdict(int))
         for p in processos:
-            material = normalize_material_name(p.get('resumo_mercadoria'))
-            modal = p.get('via_transporte_descricao') or 'Não informado'
+            material = normalize_material_name(p.get('mercadoria'))
+            modal = p.get('modal') or 'Não informado'
             
             # Normalizar nomes dos modais
             if modal == 'AEREA':
@@ -1335,17 +1338,17 @@ def clientes_opcoes():
         search_term = request.args.get('search', '').strip()
         
         # Base query - usar a tabela correta de importações
-        query = supabase.table('importacoes_processos') \
+        query = supabase.table('importacoes_processos_aberta') \
                         .select('cliente_razaosocial, cliente_cpfcnpj') \
-                        .not_.is_('cliente_razaosocial', 'null') \
-                        .not_.eq('cliente_razaosocial', '')
+                        .not_.is_('importador', 'null') \
+                        .not_.eq('importador', '')
         
         # Aplicar filtros de empresa do usuário
         query = apply_company_filter(query)
         
         # Aplicar filtro de busca se fornecido
         if search_term:
-            query = query.ilike('cliente_razaosocial', f'%{search_term}%')
+            query = query.ilike('importador', f'%{search_term}%')
         
         # Buscar dados únicos
         response = query.limit(100).execute()
@@ -1354,8 +1357,8 @@ def clientes_opcoes():
             # Criar lista única de clientes
             clientes_set = set()
             for item in response.data:
-                if item.get('cliente_razaosocial'):
-                    clientes_set.add((item['cliente_razaosocial'], item['cliente_cpfcnpj']))
+                if item.get('importador'):
+                    clientes_set.add((item['importador'], item['cnpj_importador']))
             
             # Converter para lista ordenada
             clientes = [
@@ -1386,10 +1389,10 @@ def modais_opcoes():
     """Endpoint para buscar modais de transporte disponíveis"""
     try:
         # Base query - usar a tabela correta de importações
-        query = supabase.table('importacoes_processos') \
-                        .select('via_transporte_descricao') \
-                        .not_.is_('via_transporte_descricao', 'null') \
-                        .not_.eq('via_transporte_descricao', '')
+        query = supabase.table('importacoes_processos_aberta') \
+                        .select('modal') \
+                        .not_.is_('modal', 'null') \
+                        .not_.eq('modal', '')
         
         # Aplicar filtros de empresa do usuário
         query = apply_company_filter(query)
@@ -1401,8 +1404,8 @@ def modais_opcoes():
             # Criar lista única de modais
             modais_set = set()
             for item in response.data:
-                if item.get('via_transporte_descricao'):
-                    modais_set.add(item['via_transporte_descricao'])
+                if item.get('modal'):
+                    modais_set.add(item['modal'])
             
             # Converter para lista ordenada
             modais = [

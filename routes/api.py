@@ -78,7 +78,7 @@ def global_data():
         try:
             logger.info("Buscando dados de importações...")
             # Filtrar para excluir registros com "Despacho Cancelado"
-            query = supabase.table('importacoes_processos').select('*').neq('situacao', 'Despacho Cancelado')
+            query = supabase.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
             
             # Aplicar filtros baseados no role do usuário
             if user_role == 'cliente_unique':
@@ -87,10 +87,10 @@ def global_data():
                 
                 if user_companies:
                     # Filtrar por empresas do usuário
-                    query = query.in_('cliente_cpfcnpj', user_companies)
+                    query = query.in_('cnpj_importador', user_companies)
                 else:
                     # Se não tem empresas, retornar dados vazios para este usuário
-                    query = query.eq('cliente_cpfcnpj', 'NENHUMA_EMPRESA_ENCONTRADA')
+                    query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
             
             result = query.execute()
             importacoes_data = result.data if result.data else []
@@ -119,12 +119,12 @@ def global_data():
                 # Calcular estatísticas usando campos atualizados
                 global_data['dashboard_stats'] = {
                     'total_processos': len(df),
-                    'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
-                    'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
-                    'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
-                    'aguardando_chegada': len(df[df['carga_status'] == '2 - Em Trânsito']),
-                    'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-                    'di_registrada': len(df[df['carga_status'] == '3 - Desembarcada'])  # Usando carga_status
+                    'aereo': len(df[df['modal'] == 'AEREA']),
+                    'terrestre': len(df[df['modal'] == 'TERRESTRE']),
+                    'maritimo': len(df[df['modal'] == 'MARITIMA']),
+                    'aguardando_chegada': len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)]),
+                    'aguardando_embarque': len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)]),
+                    'di_registrada': len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)])  # Usando carga_status
                 }
             else:
                 global_data['dashboard_stats'] = {
@@ -152,15 +152,15 @@ def global_data():
         # 3. Buscar lista de empresas disponíveis
         try:
             logger.info("Buscando lista de empresas...")
-            companies_query = supabase.table('importacoes_processos').select('cliente_cpfcnpj', 'cliente_razaosocial').execute()
+            companies_query = supabase.table('importacoes_processos_aberta').select('cnpj_importador', 'importador').execute()
             
             if companies_query.data:
                 companies_df = pd.DataFrame(companies_query.data)
-                companies_unique = companies_df.drop_duplicates(subset=['cliente_cpfcnpj']).to_dict('records')
+                companies_unique = companies_df.drop_duplicates(subset=['cnpj_importador']).to_dict('records')
                 
                 # Filtrar empresas baseado no role do usuário
                 if user_role == 'cliente_unique' and global_data['user_companies']:
-                    companies_unique = [c for c in companies_unique if c['cliente_cpfcnpj'] in global_data['user_companies']]
+                    companies_unique = [c for c in companies_unique if c['cnpj_importador'] in global_data['user_companies']]
                 
                 global_data['companies'] = companies_unique
                 logger.info(f"Lista de empresas processada: {len(global_data['companies'])} empresas")
@@ -226,13 +226,15 @@ def force_refresh():
             logger.info("🔄 Fazendo refresh forçado de importações...")
             
             # Query com ordenação para garantir dados mais recentes
-            query = supabase.table('importacoes_processos').select(
-                'id, numero, situacao, diduimp_canal, data_chegada, previsao_chegada, '
-                'total_vmle_real, total_vmcv_real, cliente_cpfcnpj, cliente_razaosocial, '
-                'created_at, updated_at, via_transporte_descricao, data_abertura, '
-                'carga_status, resumo_mercadoria, referencias, armazens, data_embarque, '
-                'local_embarque, tipo_operacao, di_modalidade_despacho, status_doc'
-            ).neq('situacao', 'Despacho Cancelado').order('updated_at', desc=True)
+            query = supabase.table('importacoes_processos_aberta').select(
+                'id, ref_unique, status_processo, canal, data_chegada, '
+                'valor_fob_real, valor_cif_real, cnpj_importador, importador, '
+                'created_at, updated_at, modal, data_aberture, '
+                'mercadoria, data_embarque, urf_entrada, numero_di, data_registro, '
+                'peso_bruto, transit_time_real, exportador_fornecedor, fabricante, '
+                'presenca_carga, data_desembaraco, custo_total, firebird_di_codigo, '
+                'firebird_fat_codigo, container, urf_despacho'
+            ).neq('status_processo', 'Despacho Cancelado').order('updated_at', desc=True)
             
             # Aplicar filtros baseados no role do usuário
             if user_role == 'cliente_unique':
@@ -240,9 +242,9 @@ def force_refresh():
                 refresh_data['user_companies'] = user_companies
                 
                 if user_companies:
-                    query = query.in_('cliente_cpfcnpj', user_companies)
+                    query = query.in_('cnpj_importador', user_companies)
                 else:
-                    query = query.eq('cliente_cpfcnpj', 'NENHUMA_EMPRESA_ENCONTRADA')
+                    query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
             
             result = query.execute()
             importacoes_data = result.data if result.data else []
@@ -253,11 +255,11 @@ def force_refresh():
                 df = pd.DataFrame(importacoes_data)
                 
                 # Converter colunas numéricas
-                df['total_vmle_real'] = pd.to_numeric(df['total_vmle_real'], errors='coerce').fillna(0)
-                df['total_vmcv_real'] = pd.to_numeric(df['total_vmcv_real'], errors='coerce').fillna(0)
+                df['valor_fob_real'] = pd.to_numeric(df['valor_fob_real'], errors='coerce').fillna(0)
+                df['valor_cif_real'] = pd.to_numeric(df['valor_cif_real'], errors='coerce').fillna(0)
                 
                 # Converter datas
-                date_columns = ['data_abertura', 'data_embarque', 'data_chegada', 'previsao_chegada']
+                date_columns = ['data_abertura', 'data_embarque', 'data_chegada', 'data_chegada']
                 for col in date_columns:
                     if col in df.columns:
                         df[col] = pd.to_datetime(df[col], errors='coerce')
@@ -265,28 +267,28 @@ def force_refresh():
                 # Calcular estatísticas do dashboard
                 refresh_data['dashboard_stats'] = {
                     'total_processos': len(df),
-                    'aereo': len(df[df['via_transporte_descricao'] == 'AEREA']),
-                    'terrestre': len(df[df['via_transporte_descricao'] == 'TERRESTRE']),
-                    'maritimo': len(df[df['via_transporte_descricao'] == 'MARITIMA']),
-                    'aguardando_embarque': len(df[df['carga_status'] == '1 - Aguardando Embarque']),
-                    'em_transito': len(df[df['carga_status'] == '2 - Em Trânsito']),
-                    'desembarcadas': len(df[df['carga_status'] == '3 - Desembarcada']),
-                    'vmcv_total': float(df['total_vmcv_real'].sum()),
-                    'vmle_total': float(df['total_vmle_real'].sum())
+                    'aereo': len(df[df['modal'] == 'AEREA']),
+                    'terrestre': len(df[df['modal'] == 'TERRESTRE']),
+                    'maritimo': len(df[df['modal'] == 'MARITIMA']),
+                    'aguardando_embarque': len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)]),
+                    'em_transito': len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)]),
+                    'desembarcadas': len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)]),
+                    'vmcv_total': float(df['valor_cif_real'].sum()),
+                    'vmle_total': float(df['valor_fob_real'].sum())
                 }
                 
                 # Calcular estatísticas de materiais
-                material_groups = df.groupby('resumo_mercadoria').agg({
-                    'numero': 'count',
-                    'total_vmcv_real': 'sum'
-                }).reset_index().sort_values('total_vmcv_real', ascending=False)
+                material_groups = df.groupby('mercadoria').agg({
+                    'ref_unique': 'count',
+                    'valor_cif_real': 'sum'
+                }).reset_index().sort_values('valor_cif_real', ascending=False)
                 
                 refresh_data['material_stats'] = {
                     'top_materials': [
                         {
-                            'material': row['resumo_mercadoria'] if row['resumo_mercadoria'] else 'Não Informado',
-                            'quantidade': int(row['numero']),
-                            'valor_total': float(row['total_vmcv_real'])
+                            'material': row['mercadoria'] if row['mercadoria'] else 'Não Informado',
+                            'quantidade': int(row['ref_unique']),
+                            'valor_total': float(row['valor_cif_real'])
                         }
                         for _, row in material_groups.head(10).iterrows()
                     ],
@@ -323,19 +325,19 @@ def force_refresh():
         # 3. REFRESH FORÇADO DE EMPRESAS
         try:
             logger.info("🔄 Fazendo refresh forçado de empresas...")
-            companies_query = supabase.table('importacoes_processos')\
-                .select('cliente_cpfcnpj, cliente_razaosocial')\
-                .neq('cliente_cpfcnpj', '')\
-                .not_.is_('cliente_cpfcnpj', 'null')\
+            companies_query = supabase.table('importacoes_processos_aberta')\
+                .select('cnpj_importador, importador')\
+                .neq('cnpj_importador', '')\
+                .not_.is_('cnpj_importador', 'null')\
                 .execute()
             
             if companies_query.data:
                 companies_df = pd.DataFrame(companies_query.data)
-                companies_unique = companies_df.drop_duplicates(subset=['cliente_cpfcnpj']).to_dict('records')
+                companies_unique = companies_df.drop_duplicates(subset=['cnpj_importador']).to_dict('records')
                 
                 # Filtrar empresas baseado no role do usuário
                 if user_role == 'cliente_unique' and refresh_data['user_companies']:
-                    companies_unique = [c for c in companies_unique if c['cliente_cpfcnpj'] in refresh_data['user_companies']]
+                    companies_unique = [c for c in companies_unique if c['cnpj_importador'] in refresh_data['user_companies']]
                 
                 refresh_data['companies'] = companies_unique
                 refresh_data['total_records_updated'] += len(companies_unique)

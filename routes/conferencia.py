@@ -219,15 +219,13 @@ def upload():
         
         # SEMPRE salvar na memória primeiro (fonte primária)
         jobs[job_id] = job_data
-        print(f"DEBUG: Job {job_id} salvo na memória: {job_data['status']}")
         
         # Tentar salvar no Supabase como backup (não crítico)
         try:
             supabase.table('conferencia_jobs').insert(job_data).execute()
-            print(f"DEBUG: Job {job_id} também salvo no Supabase")
         except Exception as e:
-            print(f"DEBUG: Aviso - Não foi possível salvar no Supabase (usando memória): {e}")
             # Isso não é crítico, o sistema continua funcionando com memória
+            pass
         
         # Obtém a API key do Gemini da configuração
         gemini_api_key = current_app.config.get('GEMINI_API_KEY')
@@ -238,11 +236,8 @@ def upload():
         def background_process(files_to_process):
             """Processa arquivos em background sem bloquear resposta HTTP"""
             try:
-                print(f"DEBUG: Iniciando processamento assíncrono para job {job_id}")
-                
                 # Verificar se o job está na memória
                 if job_id not in jobs:
-                    print(f"DEBUG: ERRO - Job {job_id} não encontrado na memória ao iniciar processamento")
                     return
                 
                 # Processar cada arquivo
@@ -250,7 +245,6 @@ def upload():
                     try:
                         filename = file_info['filename']
                         file_path = file_info['path']
-                        print(f"DEBUG: Processando arquivo {i+1}/{len(files_to_process)}: {filename}")
                         
                         # Atualizar progresso - usando apenas colunas que existem na tabela
                         update_data = {
@@ -259,116 +253,66 @@ def upload():
                         try:
                             supabase.table('conferencia_jobs').update(update_data).eq('id', job_id).execute()
                         except Exception as db_error:
-                            print(f"DEBUG: Erro ao atualizar progresso no banco: {db_error}")
                             # Atualizar na memória
                             if job_id in jobs:
                                 jobs[job_id].update(update_data)
                         
                         # Processar arquivo
                         if gemini_api_key:
-                            print(f"DEBUG: Analisando PDF diretamente com Gemini...")
                             prompt_template = PROMPTS[tipo_conferencia]
                             result = analyze_pdf_with_gemini(file_path, prompt_template, gemini_api_key)
-                            print(f"DEBUG: Resultado recebido do Gemini para {filename}")
                         else:
-                            print(f"DEBUG: API key do Gemini não encontrada, usando resultado de exemplo")
                             result = generate_sample_result(tipo_conferencia, filename)
                         
                         file_info['status'] = 'completed'
                         file_info['result'] = result
                         
                         # Atualizar job na memória imediatamente - PROTEÇÃO CONTRA NONES
-                        print(f"DEBUG: [GRANULAR] Atualizando job na memória após sucesso")
-                        print(f"DEBUG: [GRANULAR] job_id: {job_id}")
-                        print(f"DEBUG: [GRANULAR] job_id in jobs: {job_id in jobs}")
-                        
                         if job_id in jobs:
-                            print(f"DEBUG: [GRANULAR] Jobs dict tipo: {type(jobs)}")
-                            print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo: {type(jobs[job_id])}")
-                            print(f"DEBUG: [GRANULAR] Jobs[job_id] é None: {jobs[job_id] is None}")
-                            
                             if jobs[job_id] is not None:
                                 if 'arquivos' not in jobs[job_id]:
-                                    print(f"DEBUG: [GRANULAR] ERRO - 'arquivos' não está em jobs[job_id]")
                                     jobs[job_id]['arquivos'] = []
-                                
-                                print(f"DEBUG: [GRANULAR] Atualizando arquivo {i} no job (sucesso)")
-                                print(f"DEBUG: [GRANULAR] Arquivos list tipo: {type(jobs[job_id]['arquivos'])}")
-                                print(f"DEBUG: [GRANULAR] Arquivos list tamanho: {len(jobs[job_id]['arquivos']) if jobs[job_id]['arquivos'] else 0}")
                                 
                                 if i < len(jobs[job_id]['arquivos']):
                                     jobs[job_id]['arquivos'][i] = file_info
                                     jobs[job_id]['arquivos_processados'] = i + 1
-                                    print(f"DEBUG: [GRANULAR] Arquivo {i} atualizado com sucesso")
-                                else:
-                                    print(f"DEBUG: [GRANULAR] ERRO - Índice {i} fora do range da lista arquivos")
-                            else:
-                                print(f"DEBUG: [GRANULAR] ERRO - jobs[job_id] é None")
                         
                         # Debug do resultado - PROTEÇÃO CONTRA NONES
-                        print(f"DEBUG: [GRANULAR] Verificando resultado para {filename}")
-                        print(f"DEBUG: [GRANULAR] Tipo do resultado: {type(result)}")
-                        print(f"DEBUG: [GRANULAR] Resultado é None: {result is None}")
-                        
                         if result is None:
-                            print(f"DEBUG: [GRANULAR] ERRO - Resultado é None para {filename}")
+                            pass  # log removido
                         elif not isinstance(result, dict):
-                            print(f"DEBUG: [GRANULAR] ERRO - Resultado não é dict para {filename}: {type(result)}")
+                            pass  # log removido
                         else:
-                            print(f"DEBUG: [GRANULAR] Resultado é dict válido")
-                            print(f"DEBUG: [GRANULAR] Chaves do resultado: {list(result.keys()) if result else 'N/A'}")
-                            
                             # Verificar se 'sumario' está presente
                             if 'sumario' not in result:
-                                print(f"DEBUG: [GRANULAR] ERRO - Chave 'sumario' não encontrada no resultado")
+                                pass  # log removido
                             else:
                                 sumario = result.get('sumario')
-                                print(f"DEBUG: [GRANULAR] Sumario extraído: {type(sumario)}")
-                                print(f"DEBUG: [GRANULAR] Sumario é None: {sumario is None}")
                                 
                                 if sumario is None:
-                                    print(f"DEBUG: [GRANULAR] ERRO - Sumario é None")
+                                    pass  # log removido
                                 elif not isinstance(sumario, dict):
-                                    print(f"DEBUG: [GRANULAR] ERRO - Sumario não é dict: {type(sumario)}")
+                                    pass  # log removido
                                 else:
-                                    print(f"DEBUG: [GRANULAR] Sumario é dict válido")
-                                    print(f"DEBUG: [GRANULAR] Chaves do sumario: {list(sumario.keys()) if sumario else 'N/A'}")
-                                    
                                     # Agora acessar com segurança
                                     status = sumario.get('status', 'N/A')
                                     conclusao = sumario.get('conclusao', 'N/A')
                                     total_erros = sumario.get('total_erros_criticos', 0)
                                     total_alertas = sumario.get('total_alertas', 0)
                                     total_obs = sumario.get('total_observacoes', 0)
-                                    
-                                    print(f"DEBUG: Arquivo {filename} processado - Status: {status}")
-                                    print(f"DEBUG: Conclusão: {conclusao}")
-                                    print(f"DEBUG: Erros críticos: {total_erros}")
-                                    print(f"DEBUG: Alertas: {total_alertas}")
-                                    print(f"DEBUG: Observações: {total_obs}")
                             
                             # Verificar itens com proteção
                             if 'itens' in result and result['itens'] is not None:
                                 itens = result['itens']
-                                print(f"DEBUG: [GRANULAR] Itens encontrados: {type(itens)}")
                                 if isinstance(itens, list):
-                                    print(f"DEBUG: Total de itens analisados: {len(itens)}")
                                     for idx, item in enumerate(itens[:3]):  # Primeiros 3 itens
                                         if item and isinstance(item, dict):
                                             campo = item.get('campo', 'N/A')
                                             status_item = item.get('status', 'N/A')
                                             descricao = item.get('descricao', 'N/A')
                                             desc_preview = descricao[:100] if isinstance(descricao, str) else str(descricao)[:100]
-                                            print(f"DEBUG: Item {idx+1}: {campo} - {status_item} - {desc_preview}...")
-                                        else:
-                                            print(f"DEBUG: [GRANULAR] Item {idx+1} é inválido: {type(item)}")
-                                else:
-                                    print(f"DEBUG: [GRANULAR] ERRO - Itens não é uma lista: {type(itens)}")
-                            else:
-                                print(f"DEBUG: [GRANULAR] Nenhum item encontrado ou itens é None")
                             
                     except Exception as e:
-                        print(f"DEBUG: ERRO ao processar {filename}: {str(e)}")
                         # Criar resultado de erro
                         error_result = {
                             "sumario": {
@@ -393,44 +337,20 @@ def upload():
                         file_info['result'] = error_result
                         
                         # Atualizar job na memória - PROTEÇÃO CONTRA NONES
-                        print(f"DEBUG: [GRANULAR] Atualizando job na memória após erro")
-                        print(f"DEBUG: [GRANULAR] job_id: {job_id}")
-                        print(f"DEBUG: [GRANULAR] job_id in jobs: {job_id in jobs}")
-                        
                         if job_id in jobs:
-                            print(f"DEBUG: [GRANULAR] Jobs dict tipo: {type(jobs)}")
-                            print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo: {type(jobs[job_id])}")
-                            print(f"DEBUG: [GRANULAR] Jobs[job_id] é None: {jobs[job_id] is None}")
-                            
                             if jobs[job_id] is not None:
                                 if 'arquivos' not in jobs[job_id]:
-                                    print(f"DEBUG: [GRANULAR] ERRO - 'arquivos' não está em jobs[job_id]")
                                     jobs[job_id]['arquivos'] = []
-                                
-                                print(f"DEBUG: [GRANULAR] Atualizando arquivo {i} no job")
-                                print(f"DEBUG: [GRANULAR] Arquivos list tipo: {type(jobs[job_id]['arquivos'])}")
-                                print(f"DEBUG: [GRANULAR] Arquivos list tamanho: {len(jobs[job_id]['arquivos']) if jobs[job_id]['arquivos'] else 0}")
                                 
                                 if i < len(jobs[job_id]['arquivos']):
                                     jobs[job_id]['arquivos'][i] = file_info
                                     jobs[job_id]['arquivos_processados'] = i + 1
-                                    print(f"DEBUG: [GRANULAR] Arquivo {i} atualizado com erro")
-                                else:
-                                    print(f"DEBUG: [GRANULAR] ERRO - Índice {i} fora do range da lista arquivos")
-                            else:
-                                print(f"DEBUG: [GRANULAR] ERRO - jobs[job_id] é None")
                 
                 # Finalizar job - usando apenas colunas que existem na tabela - PROTEÇÃO CONTRA NONES
-                print(f"DEBUG: [GRANULAR] Finalizando job {job_id}")
-                print(f"DEBUG: [GRANULAR] files_to_process tipo: {type(files_to_process)}")
-                print(f"DEBUG: [GRANULAR] files_to_process tamanho: {len(files_to_process) if files_to_process else 0}")
-                
                 # Verificar se files_to_process não foi corrompido
                 if files_to_process is None:
-                    print(f"DEBUG: [GRANULAR] ERRO - files_to_process é None ao finalizar")
                     files_to_process = []
                 elif not isinstance(files_to_process, list):
-                    print(f"DEBUG: [GRANULAR] ERRO - files_to_process não é lista: {type(files_to_process)}")
                     files_to_process = []
                 
                 final_job_data = {
@@ -439,43 +359,25 @@ def upload():
                     'arquivos': files_to_process
                 }
                 
-                print(f"DEBUG: [GRANULAR] final_job_data criado: {list(final_job_data.keys())}")
-                
                 # Atualizar na memória primeiro (fonte primária) - PROTEÇÃO CONTRA NONES
-                print(f"DEBUG: [GRANULAR] Atualizando job finalizado na memória")
-                print(f"DEBUG: [GRANULAR] job_id in jobs: {job_id in jobs}")
-                
                 if job_id in jobs:
-                    print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo antes update: {type(jobs[job_id])}")
-                    print(f"DEBUG: [GRANULAR] Jobs[job_id] é None antes update: {jobs[job_id] is None}")
-                    
                     if jobs[job_id] is not None:
                         try:
                             jobs[job_id].update(final_job_data)
-                            print(f"DEBUG: Job {job_id} finalizado na memória")
-                            print(f"DEBUG: [GRANULAR] Jobs[job_id] tipo após update: {type(jobs[job_id])}")
                         except Exception as update_error:
-                            print(f"DEBUG: [GRANULAR] ERRO ao atualizar job na memória: {str(update_error)}")
-                            print(f"DEBUG: [GRANULAR] Tipo do jobs[job_id]: {type(jobs[job_id])}")
-                            print(f"DEBUG: [GRANULAR] Valor do jobs[job_id]: {jobs[job_id]}")
+                            pass  # log removido
                     else:
-                        print(f"DEBUG: [GRANULAR] ERRO - jobs[job_id] é None, criando novo")
                         jobs[job_id] = {**job_data, **final_job_data}
                 else:
-                    print(f"DEBUG: [GRANULAR] Job não encontrado na memória, criando")
                     jobs[job_id] = {**job_data, **final_job_data}
                 
                 # Tentar atualizar no Supabase como backup (não crítico)
                 try:
                     supabase.table('conferencia_jobs').update(final_job_data).eq('id', job_id).execute()
-                    print(f"DEBUG: Job {job_id} também atualizado no Supabase")
                 except Exception as e:
-                    print(f"DEBUG: Aviso - Não foi possível atualizar no Supabase (job finalizado em memória): {e}")
-                
-                print(f"DEBUG: Processamento assíncrono concluído para job {job_id}")
+                    pass  # log removido
                 
             except Exception as e:
-                print(f"DEBUG: ERRO FATAL no processamento assíncrono: {str(e)}")
                 # Marcar job como erro na memória (fonte primária)
                 error_job_data = {
                     'status': 'error',
@@ -487,20 +389,15 @@ def upload():
                 else:
                     jobs[job_id] = {**job_data, **error_job_data}
                 
-                print(f"DEBUG: Job {job_id} marcado como erro na memória")
-                
                 # Tentar salvar erro no Supabase como backup (não crítico)
                 try:
                     supabase.table('conferencia_jobs').update(error_job_data).eq('id', job_id).execute()
-                    print(f"DEBUG: Status de erro também salvo no Supabase")
                 except Exception as db_error:
-                    print(f"DEBUG: Aviso - Erro não pôde ser salvo no Supabase: {db_error}")
+                    pass  # log removido
         
         # Iniciar thread daemon em background
         background_thread = threading.Thread(target=background_process, args=(saved_files,), daemon=True)
         background_thread.start()
-        
-        print(f"DEBUG: Thread assíncrona iniciada para job {job_id}, retornando resposta imediata")
         
         # Retornar resposta imediata para evitar timeout
         return jsonify({
@@ -542,18 +439,14 @@ def process_pdf_with_gemini(pdf_path, api_key=None):
     """
     try:
         if not api_key:
-            print(f"DEBUG: API key não fornecida para process_pdf_with_gemini")
             return "Texto de exemplo para demonstração. Este documento parece conter informações sobre uma importação de produtos eletrônicos da China, incluindo detalhes de fatura, conhecimento de embarque e lista de embalagem. Contém dados como valor, quantidade, peso e descrição dos produtos."
         
-        print(f"DEBUG: Iniciando processamento do PDF com Gemini via base64")
         genai.configure(api_key=api_key)
         
         # Ler o arquivo PDF e converter para base64
         with open(pdf_path, 'rb') as pdf_file:
             pdf_bytes = pdf_file.read()
             pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
-        
-        print(f"DEBUG: PDF convertido para base64 ({len(pdf_base64)} caracteres)")
         
         # Criar o modelo
         model = genai.GenerativeModel(model_name=os.getenv('GEMINI_MODEL'))
@@ -576,23 +469,17 @@ def process_pdf_with_gemini(pdf_path, api_key=None):
             }
         ]
         
-        print(f"DEBUG: Enviando PDF para análise do Gemini...")
-        
         # Enviar para o Gemini
         response = model.generate_content(contents)
         
-        print(f"DEBUG: Resposta recebida do Gemini")
         extracted_text = response.text
         
         if extracted_text and len(extracted_text.strip()) > 50:
-            print(f"DEBUG: Texto extraído com sucesso ({len(extracted_text)} caracteres)")
             return extracted_text
         else:
-            print(f"DEBUG: Texto extraído muito curto, usando fallback")
             return "Texto de exemplo para demonstração. Este documento parece conter informações sobre uma importação de produtos eletrônicos da China, incluindo detalhes de fatura, conhecimento de embarque e lista de embalagem. Contém dados como valor, quantidade, peso e descrição dos produtos."
             
     except Exception as e:
-        print(f"DEBUG: Erro no processamento do PDF com Gemini: {str(e)}")
         logging.error(f"Error processing PDF with Gemini: {str(e)}")
         return "Texto de exemplo para demonstração. Este documento parece conter informações sobre uma importação de produtos eletrônicos da China, incluindo detalhes de fatura, conhecimento de embarque e lista de embalagem. Contém dados como valor, quantidade, peso e descrição dos produtos."
 
@@ -601,16 +488,13 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
     Analisa PDF com Gemini de forma otimizada para evitar timeout.
     """
     try:
-        print(f"DEBUG: Iniciando análise otimizada do PDF com Gemini")
         genai.configure(api_key=api_key)
         
         # Verificar tamanho do arquivo
         file_size = os.path.getsize(pdf_path)
-        print(f"DEBUG: Tamanho do arquivo: {file_size / (1024*1024):.2f} MB")
         
         # Para arquivos grandes (>2MB), usar análise por texto
         if file_size > 2 * 1024 * 1024:
-            print(f"DEBUG: Arquivo grande, usando extração de texto")
             return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
         
         # Para arquivos menores, análise direta
@@ -618,10 +502,7 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
             pdf_bytes = pdf_file.read()
             pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
         
-        print(f"DEBUG: PDF convertido para base64 ({len(pdf_base64)} chars)")
-        
-        # Configuração otimizada - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [MEGA-GRANULAR] Criando configuração do modelo...")
+        # Configuração otimizada
         generation_config = {
             "temperature": 0.1,
             "top_p": 0.8,
@@ -629,47 +510,17 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
             "max_output_tokens": 4096,
         }
         
-        print(f"DEBUG: [MEGA-GRANULAR] Verificando GEMINI_MODEL...")
-        gemini_model = os.getenv('GEMINI_MODEL')
-        print(f"DEBUG: [MEGA-GRANULAR] GEMINI_MODEL: {gemini_model}")
-        print(f"DEBUG: [MEGA-GRANULAR] GEMINI_MODEL é None: {gemini_model is None}")
-        
-        if gemini_model is None:
-            print(f"DEBUG: [MEGA-GRANULAR] ERRO - GEMINI_MODEL é None")
-            raise Exception("GEMINI_MODEL não está configurado")
-        
-        print(f"DEBUG: [MEGA-GRANULAR] Criando modelo GenerativeModel...")
         model = genai.GenerativeModel(
-            model_name=gemini_model,
+            model_name=os.getenv('GEMINI_MODEL'),
             generation_config=generation_config
         )
         
-        print(f"DEBUG: [MEGA-GRANULAR] Modelo criado com sucesso: {type(model)}")
-        
-        # Prompt conciso - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [MEGA-GRANULAR] Criando prompt...")
-        print(f"DEBUG: [MEGA-GRANULAR] prompt_template tipo: {type(prompt_template)}")
-        print(f"DEBUG: [MEGA-GRANULAR] prompt_template é None: {prompt_template is None}")
-        
-        if prompt_template is None:
-            print(f"DEBUG: [MEGA-GRANULAR] ERRO - prompt_template é None")
-            raise Exception("prompt_template é None")
-        
+        # Prompt conciso
         prompt = f"""
         {prompt_template}
         
         Retorne APENAS JSON válido conforme o template, sem texto adicional.
         """
-        
-        print(f"DEBUG: [MEGA-GRANULAR] Prompt criado com sucesso ({len(prompt)} chars)")
-        
-        print(f"DEBUG: [MEGA-GRANULAR] Criando contents...")
-        print(f"DEBUG: [MEGA-GRANULAR] pdf_base64 tipo: {type(pdf_base64)}")
-        print(f"DEBUG: [MEGA-GRANULAR] pdf_base64 é None: {pdf_base64 is None}")
-        
-        if pdf_base64 is None:
-            print(f"DEBUG: [MEGA-GRANULAR] ERRO - pdf_base64 é None")
-            raise Exception("pdf_base64 é None")
         
         contents = [
             {
@@ -688,128 +539,57 @@ def analyze_pdf_with_gemini(pdf_path, prompt_template, api_key):
             }
         ]
         
-        print(f"DEBUG: [MEGA-GRANULAR] Contents criado com sucesso")
-        
-        print(f"DEBUG: Enviando para Gemini...")
-        
         # Executar com timeout
         import threading
         result = {'response': None, 'error': None}
         
         def generate():
             try:
-                print(f"DEBUG: [ULTRA-GRANULAR] Iniciando geração do conteúdo...")
                 result['response'] = model.generate_content(contents)
-                print(f"DEBUG: [ULTRA-GRANULAR] Geração concluída, verificando resposta...")
-                print(f"DEBUG: [ULTRA-GRANULAR] Response tipo: {type(result['response'])}")
-                print(f"DEBUG: [ULTRA-GRANULAR] Response é None: {result['response'] is None}")
             except Exception as e:
-                print(f"DEBUG: [ULTRA-GRANULAR] ERRO na geração: {str(e)}")
-                print(f"DEBUG: [ULTRA-GRANULAR] Tipo do erro: {type(e)}")
                 result['error'] = e
         
         thread = threading.Thread(target=generate)
         thread.start()
         thread.join(timeout=90)  # 90 segundos
         
-        print(f"DEBUG: [ULTRA-GRANULAR] Thread finalizada")
-        print(f"DEBUG: [ULTRA-GRANULAR] Thread is_alive: {thread.is_alive()}")
-        
         if thread.is_alive():
-            print(f"DEBUG: [ULTRA-GRANULAR] Timeout atingido")
             raise TimeoutError("Timeout de 90s atingido")
         
         if result['error']:
-            print(f"DEBUG: [ULTRA-GRANULAR] Erro detectado: {str(result['error'])}")
             raise result['error']
         
         response = result['response']
-        print(f"DEBUG: [ULTRA-GRANULAR] Response obtida: {type(response)}")
         
-        # Verificar se a resposta foi filtrada por segurança - PROTEÇÃO CONTRA NONES
+        # Verificar se a resposta foi filtrada por segurança
         if not response:
-            print(f"DEBUG: [ULTRA-GRANULAR] Response é falsy")
             raise Exception("Resposta vazia do Gemini")
         
-        print(f"DEBUG: [ULTRA-GRANULAR] Verificando candidates...")
-        # Verificar finish_reason para detectar filtragem de conteúdo - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [ULTRA-GRANULAR] Verificando se response tem atributo candidates...")
-        if hasattr(response, 'candidates'):
-            print(f"DEBUG: [ULTRA-GRANULAR] Response tem atributo candidates")
-            candidates_value = response.candidates
-            print(f"DEBUG: [ULTRA-GRANULAR] candidates_value tipo: {type(candidates_value)}")
-            print(f"DEBUG: [ULTRA-GRANULAR] candidates_value é None: {candidates_value is None}")
-            print(f"DEBUG: [ULTRA-GRANULAR] Response tem candidates: {candidates_value is not None}")
-            
-            if candidates_value is not None and candidates_value:
-                print(f"DEBUG: [ULTRA-GRANULAR] Candidates não é vazio")
-                print(f"DEBUG: [ULTRA-GRANULAR] Candidates tamanho: {len(candidates_value) if hasattr(candidates_value, '__len__') else 'N/A'}")
+        # Verificar finish_reason para detectar filtragem de conteúdo
+        if hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, 'finish_reason'):
+                finish_reason = candidate.finish_reason
                 
-                # AQUI PODE ESTAR O ERRO: candidates_value[0] quando candidates_value é None
-                try:
-                    candidate = candidates_value[0]
-                    print(f"DEBUG: [ULTRA-GRANULAR] Candidate obtido: {type(candidate)}")
-                except (IndexError, TypeError) as candidate_error:
-                    print(f"DEBUG: [ULTRA-GRANULAR] ERRO ao acessar candidate[0]: {str(candidate_error)}")
-                    print(f"DEBUG: [ULTRA-GRANULAR] Tipo do erro candidate: {type(candidate_error)}")
-                    candidate = None
-                
-                if candidate and hasattr(candidate, 'finish_reason'):
-                    finish_reason = candidate.finish_reason
-                    print(f"DEBUG: Finish reason: {finish_reason}")
-                    
-                    # finish_reason = 2 significa SAFETY (conteúdo filtrado por segurança)
-                    if finish_reason == 2:
-                        print(f"DEBUG: Conteúdo filtrado por segurança (finish_reason=2), tentando análise por texto")
-                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-                    elif finish_reason == 3:  # LENGTH
-                        print(f"DEBUG: Resposta muito longa (finish_reason=3), tentando análise por texto")
-                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-                    elif finish_reason not in [1, 0]:  # 1 = STOP (sucesso), 0 = UNSPECIFIED
-                        print(f"DEBUG: Finish reason inválido ({finish_reason}), tentando análise por texto")
-                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-                else:
-                    print(f"DEBUG: [ULTRA-GRANULAR] Candidate não tem finish_reason ou é None")
-            else:
-                print(f"DEBUG: [ULTRA-GRANULAR] Candidates é None ou vazio")
-        else:
-            print(f"DEBUG: [ULTRA-GRANULAR] Response não tem atributo candidates")
-        
-        # Verificar se tem texto na resposta - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [ULTRA-GRANULAR] Tentando acessar response.text...")
-        try:
-            print(f"DEBUG: [ULTRA-GRANULAR] Verificando se response.text existe...")
-            if hasattr(response, 'text'):
-                print(f"DEBUG: [ULTRA-GRANULAR] Response tem atributo text")
-                response_text = response.text
-                print(f"DEBUG: [ULTRA-GRANULAR] response.text acessado com sucesso")
-                print(f"DEBUG: [ULTRA-GRANULAR] response_text tipo: {type(response_text)}")
-                print(f"DEBUG: [ULTRA-GRANULAR] response_text é None: {response_text is None}")
-                if response_text is not None:
-                    print(f"DEBUG: [ULTRA-GRANULAR] response_text tamanho: {len(response_text)}")
-                    if not response_text or len(response_text.strip()) < 10:
-                        print(f"DEBUG: Resposta muito curta, tentando análise por texto")
-                        return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-                else:
-                    print(f"DEBUG: [ULTRA-GRANULAR] response_text é None, tentando análise por texto")
+                # finish_reason = 2 significa SAFETY (conteúdo filtrado por segurança)
+                if finish_reason == 2:
                     return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
-            else:
-                print(f"DEBUG: [ULTRA-GRANULAR] Response NÃO tem atributo text")
-                print(f"DEBUG: [ULTRA-GRANULAR] Response attributes: {dir(response)}")
-                raise Exception("Response não tem atributo text")
+                elif finish_reason == 3:  # LENGTH
+                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+                elif finish_reason not in [1, 0]:  # 1 = STOP (sucesso), 0 = UNSPECIFIED
+                    return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
+        
+        # Verificar se tem texto na resposta
+        try:
+            response_text = response.text
+            if not response_text or len(response_text.strip()) < 10:
+                return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
         except Exception as text_error:
-            print(f"DEBUG: Erro ao acessar response.text: {str(text_error)}")
-            print(f"DEBUG: [ULTRA-GRANULAR] Tipo do erro text: {type(text_error)}")
-            print(f"DEBUG: [ULTRA-GRANULAR] Args do erro: {text_error.args if hasattr(text_error, 'args') else 'N/A'}")
-            print(f"DEBUG: Tentando análise por texto como fallback")
             return analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key)
         
-        print(f"DEBUG: Resposta recebida ({len(response_text)} chars)")
-        print(f"DEBUG: [ULTRA-GRANULAR] Chamando parse_gemini_json...")
         return parse_gemini_json(response_text)
         
     except Exception as e:
-        print(f"DEBUG: Erro na análise: {str(e)}")
         return create_error_result(f"Erro na análise: {str(e)}")
 
 def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
@@ -817,19 +597,14 @@ def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
     Analisa PDF extraindo texto primeiro (para arquivos grandes ou quando houve filtragem).
     """
     try:
-        print(f"DEBUG: Extraindo texto do PDF para análise fallback...")
         text = extract_text_from_pdf(pdf_path)
         
         if not text or len(text) < 50:
-            print(f"DEBUG: Texto extraído muito pequeno ({len(text) if text else 0} chars)")
             raise Exception("Não foi possível extrair texto legível")
-        
-        print(f"DEBUG: Texto extraído com sucesso ({len(text)} chars)")
         
         # Limitar texto para evitar problemas
         if len(text) > 30000:
             text = text[:30000] + "\n[TEXTO TRUNCADO]"
-            print(f"DEBUG: Texto truncado para 30k chars")
         
         # Configurar Gemini
         genai.configure(api_key=api_key)
@@ -858,8 +633,6 @@ def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
         IMPORTANTE: Retorne APENAS JSON válido, sem texto adicional antes ou depois.
         """
         
-        print(f"DEBUG: Enviando texto extraído para Gemini...")
-        
         # Executar com timeout reduzido
         import threading
         result = {'response': None, 'error': None}
@@ -867,9 +640,7 @@ def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
         def generate():
             try:
                 result['response'] = model.generate_content(prompt)
-                print(f"DEBUG: Resposta recebida do Gemini para análise por texto")
             except Exception as e:
-                print(f"DEBUG: Erro na geração por texto: {str(e)}")
                 result['error'] = e
         
         thread = threading.Thread(target=generate)
@@ -877,15 +648,12 @@ def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
         thread.join(timeout=60)  # 60 segundos para texto
         
         if thread.is_alive():
-            print(f"DEBUG: Timeout atingido na análise por texto")
             raise TimeoutError("Timeout de 60s atingido na análise por texto")
         
         if result['error']:
-            print(f"DEBUG: Erro na thread text analysis: {str(result['error'])}")
             raise result['error']
         
         if not result['response']:
-            print(f"DEBUG: Resposta nula na análise por texto")
             raise Exception("Resposta nula do Gemini")
         
         # Verificar finish_reason também na análise por texto
@@ -893,21 +661,16 @@ def analyze_pdf_with_text_extraction(pdf_path, prompt_template, api_key):
             candidate = result['response'].candidates[0]
             if hasattr(candidate, 'finish_reason'):
                 finish_reason = candidate.finish_reason
-                print(f"DEBUG: Finish reason na análise por texto: {finish_reason}")
                 
                 if finish_reason == 2:
-                    print(f"DEBUG: Conteúdo ainda filtrado por segurança na análise por texto")
                     return create_safety_filtered_result()
         
         if not result['response'].text:
-            print(f"DEBUG: Texto da resposta vazio na análise por texto")
             raise Exception("Texto da resposta vazio do Gemini")
         
-        print(f"DEBUG: Resposta da análise por texto recebida ({len(result['response'].text)} chars)")
         return parse_gemini_json(result['response'].text)
         
     except Exception as e:
-        print(f"DEBUG: Erro na análise por texto: {str(e)}")
         return create_error_result(f"Erro na análise por texto: {str(e)}")
 
 def parse_gemini_json(response_text):
@@ -915,101 +678,52 @@ def parse_gemini_json(response_text):
     Extrai e faz parse do JSON da resposta do Gemini.
     """
     try:
-        print(f"DEBUG: Parseando resposta do Gemini ({len(response_text)} chars)")
-        print(f"DEBUG: Primeiros 500 chars da resposta: {response_text[:500]}")
-        
         # Tentar extrair JSON de markdown - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [GRANULAR] Tentando extrair JSON do markdown...")
         json_match = re.search(r'```json\s+(.*?)\s+```', response_text, re.DOTALL)
         if json_match:
             extracted_json = json_match.group(1)
-            print(f"DEBUG: JSON extraído do markdown")
-            print(f"DEBUG: [GRANULAR] JSON extraído tipo: {type(extracted_json)}")
-            print(f"DEBUG: [GRANULAR] JSON extraído é None: {extracted_json is None}")
-            print(f"DEBUG: [GRANULAR] JSON extraído tamanho: {len(extracted_json) if extracted_json else 0}")
             if extracted_json:
                 response_text = extracted_json
-            else:
-                print(f"DEBUG: [GRANULAR] ERRO - JSON extraído é vazio/None")
         else:
-            print(f"DEBUG: [GRANULAR] Nenhum JSON encontrado em markdown")
             # Buscar JSON entre chaves
-            print(f"DEBUG: [GRANULAR] Tentando extrair JSON entre chaves...")
             json_start = response_text.find('{')
             json_end = response_text.rfind('}') + 1
-            print(f"DEBUG: [GRANULAR] json_start: {json_start}, json_end: {json_end}")
             if json_start != -1 and json_end > json_start:
                 extracted_json = response_text[json_start:json_end]
-                print(f"DEBUG: JSON extraído entre chaves")
-                print(f"DEBUG: [GRANULAR] JSON extraído entre chaves tipo: {type(extracted_json)}")
-                print(f"DEBUG: [GRANULAR] JSON extraído entre chaves tamanho: {len(extracted_json) if extracted_json else 0}")
                 if extracted_json:
                     response_text = extracted_json
-                else:
-                    print(f"DEBUG: [GRANULAR] ERRO - JSON extraído entre chaves é vazio")
-            else:
-                print(f"DEBUG: [GRANULAR] ERRO - Não foi possível extrair JSON entre chaves")
-        
-        print(f"DEBUG: JSON a ser parseado: {response_text[:300]}...")
         
         # Parse JSON
         try:
-            print(f"DEBUG: [GRANULAR] Tentando fazer parse do JSON...")
             result = json.loads(response_text)
-            print(f"DEBUG: [GRANULAR] Parse JSON bem-sucedido")
-            print(f"DEBUG: [GRANULAR] Tipo do resultado: {type(result)}")
-            print(f"DEBUG: [GRANULAR] Resultado é None: {result is None}")
         except json.JSONDecodeError as json_error:
-            print(f"DEBUG: [GRANULAR] ERRO no parse JSON: {str(json_error)}")
             raise json_error
         
         # Validar estrutura - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [GRANULAR] Validando estrutura do resultado...")
-        
         if result is None:
-            print(f"DEBUG: [GRANULAR] ERRO - Resultado é None após parse")
             raise ValueError("Resultado é None após parse JSON")
         
         if not isinstance(result, dict):
-            print(f"DEBUG: [GRANULAR] ERRO - Resultado não é dict: {type(result)}")
             raise ValueError(f"Resultado não é dict: {type(result)}")
         
-        print(f"DEBUG: [GRANULAR] Resultado é dict válido")
-        print(f"DEBUG: [GRANULAR] Chaves do resultado: {list(result.keys()) if result else 'N/A'}")
-        
         # AQUI PODE ESTAR O ERRO: 'sumario' in result quando result pode ser None
-        print(f"DEBUG: [GRANULAR] Verificando se 'sumario' está no resultado...")
         try:
             has_sumario = 'sumario' in result
-            print(f"DEBUG: [GRANULAR] 'sumario' in result: {has_sumario}")
         except TypeError as type_error:
-            print(f"DEBUG: [GRANULAR] ERRO TypeError ao verificar 'sumario' in result: {str(type_error)}")
-            print(f"DEBUG: [GRANULAR] Tipo do result durante erro: {type(result)}")
-            print(f"DEBUG: [GRANULAR] Value do result durante erro: {result}")
             raise ValueError(f"Erro ao verificar 'sumario' in result: {str(type_error)}")
         
         if not has_sumario:
-            print(f"DEBUG: [GRANULAR] ERRO - JSON não contém campo 'sumario'")
             raise ValueError("JSON não contém campo 'sumario'")
         
         # Validar se sumario não é None
         sumario_value = result.get('sumario')
-        print(f"DEBUG: [GRANULAR] Valor do sumario: {type(sumario_value)}")
-        print(f"DEBUG: [GRANULAR] Sumario é None: {sumario_value is None}")
         
         if sumario_value is None:
-            print(f"DEBUG: [GRANULAR] ERRO - Campo 'sumario' é None")
             raise ValueError("Campo 'sumario' é None")
-        
-        print(f"DEBUG: JSON parseado com sucesso")
-        print(f"DEBUG: Status do sumário: {result['sumario'].get('status', 'N/A')}")
-        print(f"DEBUG: Conclusão: {result['sumario'].get('conclusao', 'N/A')}")
         
         return result
         
     except Exception as e:
-        print(f"DEBUG: Erro no parse JSON: {str(e)}")
-        print(f"DEBUG: Texto que falhou no parse: {response_text[:200]}...")
         return create_error_result("Formato inválido retornado pela IA")
 
 def create_safety_filtered_result():
@@ -1123,10 +837,8 @@ def process_with_gemini(text, prompt_template, api_key):
     @with_timeout(60)  # 60 segundos de timeout
     def _make_gemini_request(text, prompt_template, api_key):
         try:
-            print(f"DEBUG: Configurando Gemini com API key...")
             genai.configure(api_key=api_key)
             
-            print(f"DEBUG: Criando modelo Gemini...")
             # Usar configuração com timeout
             generation_config = {
                 "temperature": 0.3,
@@ -1147,7 +859,6 @@ def process_with_gemini(text, prompt_template, api_key):
                 truncated_text += "\n\n[TEXTO TRUNCADO - DOCUMENTO MUITO LONGO]"
             
             full_prompt = f"{prompt_template}\n\nDocumento para análise:\n{truncated_text}"
-            print(f"DEBUG: Enviando prompt para Gemini ({len(full_prompt)} caracteres)...")
             
             # Fazer requisição com retry
             max_retries = 3
@@ -1155,19 +866,15 @@ def process_with_gemini(text, prompt_template, api_key):
             
             for attempt in range(max_retries):
                 try:
-                    print(f"DEBUG: Tentativa {attempt + 1} de {max_retries}")
                     response = model.generate_content(full_prompt)
                     
                     if response and response.text:
-                        print(f"DEBUG: Resposta recebida do Gemini")
                         return response.text
                     else:
                         raise Exception("Resposta vazia do Gemini")
                         
                 except Exception as e:
-                    print(f"DEBUG: Erro na tentativa {attempt + 1}: {str(e)}")
                     if attempt < max_retries - 1:
-                        print(f"DEBUG: Aguardando {retry_delay} segundos antes da próxima tentativa...")
                         time.sleep(retry_delay)
                         retry_delay *= 2  # Exponential backoff
                     else:
@@ -1176,67 +883,39 @@ def process_with_gemini(text, prompt_template, api_key):
             raise Exception("Todas as tentativas falharam")
             
         except Exception as e:
-            print(f"DEBUG: Erro na requisição Gemini: {str(e)}")
             raise e
     
     try:
         # Executar com timeout
         result = _make_gemini_request(text, prompt_template, api_key)
         
-        print(f"DEBUG: Texto da resposta ({len(result)} caracteres): {result[:200]}...")
-        
         # Try to extract JSON from the response - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [GRANULAR] Tentando extrair JSON da resposta do Gemini...")
-        print(f"DEBUG: [GRANULAR] Tipo do result: {type(result)}")
-        print(f"DEBUG: [GRANULAR] Result é None: {result is None}")
-        
         if result is None:
-            print(f"DEBUG: [GRANULAR] ERRO - Result é None antes da extração JSON")
             raise Exception("Resposta None do Gemini")
         
         if not isinstance(result, str):
-            print(f"DEBUG: [GRANULAR] ERRO - Result não é string: {type(result)}")
             raise Exception(f"Resposta não é string: {type(result)}")
         
         json_match = re.search(r'```json\s+(.*?)\s+```', result, re.DOTALL)
         if json_match:
             extracted_json = json_match.group(1)
-            print(f"DEBUG: JSON extraído do markdown")
-            print(f"DEBUG: [GRANULAR] JSON extraído tipo: {type(extracted_json)}")
-            print(f"DEBUG: [GRANULAR] JSON extraído é None: {extracted_json is None}")
             if extracted_json:
                 result = extracted_json
-            else:
-                print(f"DEBUG: [GRANULAR] ERRO - JSON extraído do markdown é None/vazio")
-        else:
-            print(f"DEBUG: Nenhum JSON encontrado em markdown, tentando parse direto")
         
         # Parse the JSON result - PROTEÇÃO CONTRA NONES
-        print(f"DEBUG: [GRANULAR] Tentando fazer parse final do JSON...")
-        print(f"DEBUG: [GRANULAR] JSON final a ser parseado (200 chars): {result[:200] if result else 'None'}...")
-        
         if not result:
-            print(f"DEBUG: [GRANULAR] ERRO - JSON final está vazio")
             raise Exception("JSON final está vazio")
         
         try:
             parsed_result = json.loads(result)
-            print(f"DEBUG: JSON parseado com sucesso")
-            print(f"DEBUG: [GRANULAR] Parsed result tipo: {type(parsed_result)}")
-            print(f"DEBUG: [GRANULAR] Parsed result é None: {parsed_result is None}")
             if parsed_result and isinstance(parsed_result, dict):
-                print(f"DEBUG: [GRANULAR] Parsed result chaves: {list(parsed_result.keys())}")
-            else:
-                print(f"DEBUG: [GRANULAR] ERRO - Parsed result não é dict válido")
+                pass  # valid result
         except json.JSONDecodeError as json_error:
-            print(f"DEBUG: [GRANULAR] ERRO no parse final do JSON: {str(json_error)}")
-            print(f"DEBUG: [GRANULAR] JSON que falhou: {result[:500] if result else 'None'}...")
             raise json_error
         
         return parsed_result
         
     except TimeoutError as e:
-        print(f"DEBUG: Timeout na requisição ao Gemini: {str(e)}")
         return {
             "sumario": {
                 "status": "erro",
@@ -1256,8 +935,6 @@ def process_with_gemini(text, prompt_template, api_key):
             ]
         }
     except json.JSONDecodeError as e:
-        print(f"DEBUG: Erro ao fazer parse do JSON: {str(e)}")
-        print(f"DEBUG: Conteúdo que falhou no parse: {result[:500]}")
         # If failed to parse JSON, return error
         return {
             "sumario": {
@@ -1278,7 +955,6 @@ def process_with_gemini(text, prompt_template, api_key):
             ]
         }
     except Exception as e:
-        print(f"DEBUG: Erro geral no processamento Gemini: {str(e)}")
         logging.error(f"Error with Gemini processing: {str(e)}")
         return {
             "sumario": {

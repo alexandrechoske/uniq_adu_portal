@@ -225,12 +225,12 @@
     }
 
     /* Status colors */
-    .data-table td.status-aguardando-embarque {
+    .data-table td.status-em-processo {
         color: #d97706; /* yellow-600 */
         font-weight: 600;
     }
 
-    .data-table td.status-em-transito {
+    .data-table td.status-em-andamento {
         color: #2563eb; /* blue-600 */
         font-weight: 600;
     }
@@ -442,9 +442,9 @@
             <div class="metric-card p-4 flex items-center justify-between bg-white shadow-sm rounded-lg lg:col-span-1">
                 <div class="text-center w-full">
                     <p class="text-xs font-medium text-slate-500 metric-title mb-1">Aguard. Embarque</p>
-                    <p class="text-2xl font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
+                    <p class="text-2xl font-bold text-blue-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
                 </div>
-                <div class="p-2 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper ml-2">
+                <div class="p-2 rounded-full bg-orange-100 text-blue-600 metric-icon-wrapper ml-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                 </div>
             </div>
@@ -573,11 +573,11 @@
 
                 {# Aguardando Embarque #}
                 <div class="metric-card p-3 flex flex-col items-center bg-white shadow-sm rounded-lg">
-                    <div class="p-2 rounded-full bg-orange-100 text-orange-600 metric-icon-wrapper mb-1">
+                    <div class="p-2 rounded-full bg-orange-100 text-blue-600 metric-icon-wrapper mb-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     </div>
                     <p class="text-xs font-medium text-slate-500 metric-title mb-1 text-center">Aguard. Embarque</p>
-                    <p class="text-lg font-bold text-orange-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
+                    <p class="text-lg font-bold text-blue-600 metric-value">{{ kpis.aguardando_embarque if kpis.aguardando_embarque is defined else 0 }}</p>
                 </div>
 
                 {# DI Registrada #}
@@ -598,55 +598,55 @@
         <div class="overflow-x-auto table-scroll">            <table class="min-w-full divide-y divide-slate-200 data-table">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="numero">Nº DI <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="numero_di">Nº DI <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_embarque">EMBARQUE <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="via_transporte_descricao">MODAL <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="modal">MODAL <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_abertura">ABERTURA <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="carga_status">STATUS <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="diduimp_canal">CANAL <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="status_processo">STATUS <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="canal">CANAL <span class="sort-icon"></span></th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="data_chegada">CHEGADA <span class="sort-icon"></span></th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="cliente_razaosocial">CLIENTE <span class="sort-icon"></span></th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sortable" data-sort="importador">CLIENTE <span class="sort-icon"></span></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-slate-200">
                     {% for row in table_data %}
                     <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.numero or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.numero_di or ' ' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_embarque or ' ' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 img_modal">
-                            {% if row.via_transporte_descricao == 'AEREA' %}
+                            {% if row.modal == 'AEREA' %}
                                 <img src="{{ url_for('static', filename='medias/aereo.png') }}" alt="Aéreo" class="h-6 w-auto inline-block">
-                            {% elif row.via_transporte_descricao == 'TERRESTRE' %}
+                            {% elif row.modal == 'TERRESTRE' %}
                                 <img src="{{ url_for('static', filename='medias/terrestre.png') }}" alt="Terrestre" class="h-6 w-auto inline-block">
-                            {% elif row.via_transporte_descricao == 'MARITIMA' %}
+                            {% elif row.modal == 'MARITIMA' %}
                                 <img src="{{ url_for('static', filename='medias/maritimo.png') }}" alt="Marítimo" class="h-6 w-auto inline-block">
                             {% else %}
-                                {{ row.via_transporte_descricao or ' ' }}
+                                {{ row.modal or ' ' }}
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_abertura or ' ' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm 
-                            {% if row.carga_status == '1 - Aguardando Embarque' %}text-orange-600 font-semibold status-aguardando-embarque
-                            {% elif row.carga_status == '2 - Em Trânsito' %}text-blue-600 font-semibold status-em-transito
-                            {% elif row.carga_status == '3 - Desembarcada' %}text-green-600 font-semibold status-desembarcada
+                            {% if ('DECLARACAO' in str(row.status_processo).upper()) %}text-blue-600 font-semibold status-em-processo
+                            {% elif ('TRANSITO' in str(row.status_processo).upper()) %}text-blue-600 font-semibold status-em-andamento
+                            {% elif ('DESEMBARACADA' in str(row.status_processo).upper()) %}text-green-600 font-semibold status-desembarcada
                             {% endif %}">
-                            {{ row.carga_status or ' ' }}
+                            {{ row.status_processo or ' ' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            {% if row.diduimp_canal %}
+                            {% if row.canal %}
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {% if row.diduimp_canal.lower() == 'verde' %}bg-green-100 text-green-800 canal-verde
-                                {% elif row.diduimp_canal.lower() == 'amarelo' %}bg-yellow-100 text-yellow-800 canal-amarelo
-                                {% elif row.diduimp_canal.lower() == 'vermelho' %}bg-red-100 text-red-800 canal-vermelho
+                                {% if row.canal.lower() == 'verde' %}bg-green-100 text-green-800 canal-verde
+                                {% elif row.canal.lower() == 'amarelo' %}bg-yellow-100 text-yellow-800 canal-amarelo
+                                {% elif row.canal.lower() == 'vermelho' %}bg-red-100 text-red-800 canal-vermelho
                                 {% endif %}">
-                                {{ row.diduimp_canal or ' ' }}
+                                {{ row.canal or ' ' }}
                             </span>
                             {% else %}
                                 {# Você pode adicionar um placeholder ou deixar vazio se não houver canal disponível #}
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.data_chegada or ' ' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.cliente_razaosocial or ' ' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{{ row.importador or ' ' }}</td>
                     </tr>
                     {% else %}
                     <tr>

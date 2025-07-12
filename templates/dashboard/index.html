@@ -1278,13 +1278,13 @@
                 <table class="data-table" id="importacoes-table">
                     <thead>
                         <tr>
-                            <th class="sortable" data-sort="cliente_razaosocial">Cliente</th>
+                            <th class="sortable" data-sort="importador">Cliente</th>
                             <th class="sortable" data-sort="nro_pedido">Nº Pedido</th>
                             <th class="sortable" data-sort="data_embarque">Data Embarque</th>
-                            <th class="sortable mobile-hidden" data-sort="local_embarque">Local Embarque</th>
-                            <th class="sortable" data-sort="via_transporte_descricao">Modal</th>
-                            <th class="sortable" data-sort="carga_status">Status</th>
-                            <th class="sortable mobile-hidden" data-sort="resumo_mercadoria">Mercadoria</th>
+                            <th class="sortable mobile-hidden" data-sort="urf_entrada">Local Embarque</th>
+                            <th class="sortable" data-sort="modal">Modal</th>
+                            <th class="sortable" data-sort="status_processo">Status</th>
+                            <th class="sortable mobile-hidden" data-sort="mercadoria">Mercadoria</th>
                             <th class="sortable mobile-hidden" data-sort="despesas">Despesas</th>
                             <th class="sortable" data-sort="armazem_nome">Recinto</th>
                             <th class="sortable mobile-hidden" data-sort="data_chegada">Data Chegada</th>
@@ -1293,37 +1293,37 @@
                     <tbody>
                         {% for row in table_data %}
                         <tr>
-                            <td class="break-words" style="max-width: 150px;">{{ (row.cliente_razaosocial or '-')[:10] }}</td>
+                            <td class="break-words" style="max-width: 150px;">{{ (row.importador or '-')[:10] }}</td>
                             <td class="font-medium">{{ row.nro_pedido or '-' }}</td>
                             <td>{{ row.data_embarque or '-' }}</td>
-                            <td class="mobile-hidden break-words" style="max-width: 120px;">{{ row.local_embarque or '-' }}</td>
+                            <td class="mobile-hidden break-words" style="max-width: 120px;">{{ row.urf_entrada or '-' }}</td>
                             <td>
-                                {% if row.via_transporte_descricao == 'AEREA' %}
+                                {% if row.modal == 'AEREA' %}
                                     <span class="status-badge transit">✈️ AÉREO</span>
-                                {% elif row.via_transporte_descricao == 'MARITIMA' %}
+                                {% elif row.modal == 'MARITIMA' %}
                                     <span class="status-badge completed">🚢 MARÍTIMO</span>
-                                {% elif row.via_transporte_descricao == 'TERRESTRE' %}
+                                {% elif row.modal == 'TERRESTRE' %}
                                     <span class="status-badge pending">🚛 TERRESTRE</span>
                                 {% else %}
-                                    <span class="status-badge default">{{ row.via_transporte_descricao or '-' }}</span>
+                                    <span class="status-badge default">{{ row.modal or '-' }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if row.carga_status %}
-                                    {% if 'aguardando embarque' in row.carga_status.lower() %}
-                                        <span class="status-badge pending">{{ row.carga_status }}</span>
-                                    {% elif 'em transito' in row.carga_status.lower() or 'trânsito' in row.carga_status.lower() %}
-                                        <span class="status-badge transit">{{ row.carga_status }}</span>
-                                    {% elif 'desembarcada' in row.carga_status.lower() %}
-                                        <span class="status-badge completed">{{ row.carga_status }}</span>
+                                {% if row.status_processo %}
+                                    {% if 'aguardando embarque' in row.status_processo.lower() %}
+                                        <span class="status-badge pending">{{ row.status_processo }}</span>
+                                    {% elif 'em transito' in row.status_processo.lower() or 'trânsito' in row.status_processo.lower() %}
+                                        <span class="status-badge transit">{{ row.status_processo }}</span>
+                                    {% elif 'desembarcada' in row.status_processo.lower() %}
+                                        <span class="status-badge completed">{{ row.status_processo }}</span>
                                     {% else %}
-                                        <span class="status-badge default">{{ row.carga_status }}</span>
+                                        <span class="status-badge default">{{ row.status_processo }}</span>
                                     {% endif %}
                                 {% else %}
                                     <span class="status-badge default">N/A</span>
                                 {% endif %}
                             </td>
-                            <td class="mobile-hidden break-words" style="max-width: 200px;">{{ row.resumo_mercadoria or '-' }}</td>
+                            <td class="mobile-hidden break-words" style="max-width: 200px;">{{ row.mercadoria or '-' }}</td>
                             <td class="mobile-hidden text-right" data-sort-value="{{ row.despesas or 0 }}">
                                 <strong>R$ {{ "{:,.2f}".format(row.despesas or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</strong>
                             </td>
