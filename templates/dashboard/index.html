@@ -1131,23 +1131,49 @@
         };
     }
 </script>
+
+<!-- Dashboard Async Loading Script -->
+<script src="{{ url_for('static', filename='js/dashboard-async.js') }}"></script>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="dashboard-container" data-async-loading="{% if async_loading %}true{% else %}false{% endif %}">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <div class="mt-2">Carregando dados do dashboard...</div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" style="position: fixed; top: 20px; right: 20px; z-index: 9998; width: 350px;"></div>
+
     <!-- Header Modernizado -->
     <div class="dashboard-header">
         <div class="header-content">
             <div class="header-title-section">
                 <h1 class="header-title gradient-text">Dashboard Executivo</h1>
                 <p class="header-subtitle">
+                    <span id="period-info">Carregando dados...</span>
                 </p>
             </div>
             
-            <div class="header-controls">               
+            <div class="header-controls">
+                <!-- Filtro de Período -->
+                <select id="period-filter" class="company-filter me-2">
+                    <option value="30">📅 Últimos 30 dias</option>
+                    <option value="90">📅 Últimos 90 dias</option>
+                    <option value="180">📅 Últimos 6 meses</option>
+                    <option value="365">📅 Último ano</option>
+                    <option value="all">📅 Todos os dados</option>
+                </select>
+                
                 <!-- Filtro de Empresa -->
                 {% if user_role in ['interno_unique', 'admin','cliente_unique'] %}
-                <select class="company-filter" onchange="filterByCompany(this.value)">
+                <select id="company-filter" class="company-filter" onchange="filterByCompany(this.value)">
                     <option value="">🏢 Todas as empresas</option>
                     {% for company in companies %}
                     <option value="{{ company.cpfcnpj }}" {% if selected_company == company.cpfcnpj %}selected{% endif %}>
@@ -1156,6 +1182,12 @@
                     {% endfor %}
                 </select>
                 {% endif %}
+                
+                <!-- Botão de Refresh -->
+                <button id="refresh-data" class="btn btn-outline-primary btn-sm ms-2" title="Atualizar dados">
+                    <i class="fas fa-sync-alt"></i>
+                    <span class="loading-spinner spinner-border spinner-border-sm" style="display: none;"></span>
+                </button>
             </div>
         </div>
     </div>
@@ -1173,7 +1205,7 @@
                 </svg>
             </div>
             <div class="metric-content">
-                <div class="metric-value">
+                <div class="metric-value" id="total-processos">
                     {{ kpis.total or 0 }}
                     <div class="metric-trend">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1195,7 +1227,7 @@
                 </svg>
             </div>
             <div class="metric-content">
-                <div class="metric-value">{{ kpis.aguardando_embarque or 0 }}</div>
+                <div class="metric-value" id="aguardando-embarque">{{ kpis.aguardando_embarque or 0 }}</div>
                 <div class="metric-label">Agd Embarque</div>
             </div>
         </div>
@@ -1236,7 +1268,7 @@
                 </svg>
             </div>
             <div class="metric-content">
-                <div class="metric-value">{{ kpis.aereo or 0 }}</div>
+                <div class="metric-value" id="total-aereo">{{ kpis.aereo or 0 }}</div>
                 <div class="metric-label">Modal Aéreo</div>
             </div>
         </div>
@@ -1388,6 +1420,55 @@
                     </div>
                 </div>
                 <div class="metric-label">Despesas Semana Seguinte</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Análise de Materiais -->
+    <div class="materials-section mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Principais Materiais</h3>
+                <small class="text-muted">Top materiais por valor</small>
+            </div>
+            <div class="card-body">
+                <div id="material-analysis-container">
+                    <div class="text-center text-muted">Carregando análise de materiais...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Tabela de Dados -->
+    <div class="table-section mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title">Processos Recentes</h3>
+                    <small class="text-muted">Últimos 100 registros do período selecionado</small>
+                </div>
+                <small id="last-update" class="text-muted">Carregando...</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="dashboard-table" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Importador</th>
+                                <th>Modal</th>
+                                <th>URF</th>
+                                <th>Status</th>
+                                <th>Mercadoria</th>
+                                <th class="text-end">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Carregando dados...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
