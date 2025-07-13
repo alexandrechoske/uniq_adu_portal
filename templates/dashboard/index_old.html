@@ -1,0 +1,1356 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Executivo - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table-sort.css') }}">
+<style>
+    /* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
+    :root {
+        /* Paleta de cores minimalista */
+        --color-background: #fafbfc;
+        --color-surface: #ffffff;
+        --color-surface-hover: #f8fafc;
+        --color-border: #e2e8f0;
+        --color-border-light: #f1f5f9;
+        
+        /* Textos */
+        --color-text-primary: #0f172a;
+        --color-text-secondary: #475569;
+        --color-text-muted: #64748b;
+        --color-text-light: #94a3b8;
+        
+        /* Cores de destaque elegantes */
+        --color-primary: #3b82f6;
+        --color-primary-light: #dbeafe;
+        --color-success: #10b981;
+        --color-success-light: #d1fae5;
+        --color-warning: #f59e0b;
+        --color-warning-light: #fef3c7;
+        --color-danger: #ef4444;
+        --color-danger-light: #fee2e2;
+        --color-info: #06b6d4;
+        --color-info-light: #cffafe;
+        --color-purple: #8b5cf6;
+        --color-purple-light: #ede9fe;
+        
+        /* Sombras minimalistas */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        
+        /* Espacamentos consistentes */
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
+        
+        /* Bordas arredondadas */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        
+        /* Transições suaves */
+        --transition-fast: 0.15s ease;
+        --transition-normal: 0.3s ease;
+        --transition-slow: 0.5s ease;
+    }
+
+    /* === LAYOUT BASE === */
+    .dashboard-container {
+        background: var(--color-background);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        width: 100%;
+        box-sizing: border-box;
+        padding-top: 4rem; /* Compensar header fixo do base.html */
+    }
+
+    .main-content {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 var(--spacing-xl);
+        box-sizing: border-box;
+    }
+
+    /* === HEADER MODERNIZADO === */
+    .dashboard-header {
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border-light);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: var(--spacing-lg);
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .header-title-section {
+        flex: 1;
+    }
+
+    .header-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-text-primary);
+        margin: 0 0 var(--spacing-xs) 0;
+        letter-spacing: -0.02em;
+    }
+
+    .header-subtitle {
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+
+    .header-controls {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+
+    .period-selector {
+        display: flex;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 0.25rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .period-btn {
+        padding: var(--spacing-xs) var(--spacing-md);
+        border: none;
+        background: transparent;
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        white-space: nowrap;
+    }
+
+    .period-btn.active {
+        background: var(--color-primary);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .period-btn:hover:not(.active) {
+        background: var(--color-surface-hover);
+        color: var(--color-text-primary);
+    }
+
+    .company-filter {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+        min-width: 200px;
+        box-shadow: var(--shadow-sm);
+        transition: all var(--transition-fast);
+    }
+
+    .company-filter:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+
+    /* === [NOVO] LAYOUT COMPACTO PARA OS CARDS DE MÉTRICAS (MÁXIMO 2 LINHAS) === */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-2xl);
+    }
+
+    /* === [ALTERADO] LAYOUT INTERNO DO CARTÃO === */
+    .metric-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-border-light);
+        padding: var(--spacing-md);
+        transition: all var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+        grid-column: span 2;
+        min-height: 100px;
+        
+        /* Layout principal: Ícone ao lado do bloco de texto */
+        display: flex;
+        flex-direction: row; /* Eixo horizontal */
+        align-items: center;  /* Alinha o ícone e o conteúdo verticalmente */
+        gap: var(--spacing-sm);
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--metric-color, var(--color-primary));
+        opacity: 0.3;
+        transition: opacity var(--transition-normal);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--metric-color, var(--color-primary));
+    }
+
+    .metric-card:hover::before {
+        opacity: 1;
+    }
+
+    .metric-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--metric-bg, var(--color-primary-light));
+        color: var(--metric-color, var(--color-primary));
+        flex-shrink: 0;
+        /* margin-bottom foi removido */
+    }
+
+    .metric-content {
+        flex: 1; /* Ocupa o espaço restante */
+        min-width: 0;
+        display: flex;
+        flex-direction: column; /* Empilha valor e descritivo */
+        justify-content: center;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--color-text-primary);
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Empurra o trend para a direita */
+        width: 100%;
+    }
+
+    .metric-label {
+        font-size: 0.75rem;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+        margin: 0;
+        white-space: normal;
+        line-height: 1.3;
+    }
+
+    .metric-trend {
+        /* margin-left: auto foi removido */
+        display: inline-flex;
+        align-items: center;
+        gap: 0.125rem;
+        font-size: 0.625rem;
+        font-weight: 700;
+        padding: 0.125rem 0.25rem;
+        border-radius: var(--radius-sm);
+        background: var(--color-success-light);
+        color: var(--color-success);
+        white-space: nowrap;
+    }
+
+    .metric-trend.negative {
+        background: var(--color-danger-light);
+        color: var(--color-danger);
+    }
+
+    .metric-trend.neutral {
+        background: var(--color-border-light);
+        color: var(--color-text-muted);
+    }
+
+    .metric-trend svg {
+        width: 8px;
+        height: 8px;
+    }
+
+    /* Cores específicas para cada métrica */
+    .metric-card.operations { --metric-color: var(--color-primary); --metric-bg: var(--color-primary-light); }
+    .metric-card.pending { --metric-color: var(--color-warning); --metric-bg: var(--color-warning-light); }
+    .metric-card.transit { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
+    .metric-card.completed { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
+    .metric-card.air { --metric-color: var(--color-purple); --metric-bg: var(--color-purple-light); }
+    .metric-card.sea { --metric-color: var(--color-info); --metric-bg: var(--color-info-light); }
+    .metric-card.value { --metric-color: var(--color-success); --metric-bg: var(--color-success-light); }
+    .metric-card.expense { --metric-color: var(--color-danger); --metric-bg: var(--color-danger-light); }
+
+    /* === GRID DE GRÁFICOS MODERNO === */
+    .charts-section {
+        margin-bottom: var(--spacing-2xl);
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-2xl);
+    }
+
+    .chart-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+        transition: all var(--transition-normal);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-card:hover {
+        box-shadow: var(--shadow-lg);
+        border-color: var(--color-border);
+    }
+
+    .chart-header {
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--color-border-light);
+        background: var(--color-surface);
+    }
+
+    .chart-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+
+    .chart-subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+
+    .chart-content {
+        padding: var(--spacing-md);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 300px;
+    }
+
+    /* Grid layouts para gráficos */
+    .chart-large { grid-column: span 8; }
+    .chart-medium { grid-column: span 4; }
+    .chart-small { grid-column: span 6; }
+
+    /* === TABELA MODERNA === */
+    .table-card {
+        background: var(--color-surface);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-border-light);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .table-header {
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--color-border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+
+    .table-filters {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
+    }
+
+    .search-input {
+        background: var(--color-surface-hover);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: 0.875rem;
+        width: 250px;
+        transition: all var(--transition-fast);
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        background: var(--color-surface);
+        box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+
+    .search-input.searching {
+        border-color: var(--color-success);
+        background: var(--color-success-light);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem; /* Reduzido de 0.875rem para 0.8rem */
+    }
+
+    .data-table th {
+        background: var(--color-surface-hover);
+        padding: var(--spacing-sm) var(--spacing-md); /* Reduzido de md/lg para sm/md */
+        text-align: left;
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        border-bottom: 1px solid var(--color-border-light);
+        font-size: 0.7rem; /* Reduzido de 0.75rem para 0.7rem */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .data-table td {
+        padding: var(--spacing-sm) var(--spacing-md); /* Reduzido de md/lg para sm/md */
+        border-bottom: 1px solid var(--color-border-light);
+        color: var(--color-text-primary);
+        vertical-align: middle;
+    }
+
+    .data-table tbody tr.search-match {
+        background: var(--color-primary-light) !important;
+        border-left: 3px solid var(--color-primary);
+    }
+
+    .data-table tbody tr {
+        transition: background-color var(--transition-fast);
+    }
+
+    .data-table tbody tr:hover {
+        background: var(--color-surface-hover);
+    }
+
+    /* === STATUS BADGES MODERNOS === */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-lg);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-badge.pending {
+        background: var(--color-warning-light);
+        color: var(--color-warning);
+    }
+
+    .status-badge.transit {
+        background: var(--color-info-light);
+        color: var(--color-info);
+    }
+
+    .status-badge.completed {
+        background: var(--color-success-light);
+        color: var(--color-success);
+    }
+
+    .status-badge.default {
+        background: #f1f5f9;
+        color: var(--color-text-muted);
+    }
+
+    /* === RESPONSIVIDADE AVANÇADA === */
+
+    /* Ajustes gerais de espaçamento */
+    @media (max-width: 1200px) {
+        .main-content {
+            padding: 0 var(--spacing-lg);
+        }
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+        .chart-large, .chart-medium, .chart-small {
+            grid-column: span 1;
+        }
+    }
+
+    /* TABLETS MAIORES (ex: iPad Pro em paisagem) - 4 cartões por linha */
+    @media (max-width: 1200px) {
+        .metrics-grid {
+            grid-template-columns: repeat(8, 1fr);
+        }
+        .metric-card {
+            grid-column: span 2;
+        }
+    }
+
+    /* TABLETS (ex: iPad em retrato) - 3 cartões por linha */
+    @media (max-width: 992px) {
+        .metrics-grid {
+            grid-template-columns: repeat(6, 1fr);
+        }
+        .metric-card {
+            grid-column: span 2;
+        }
+    }
+
+
+    @media (max-width: 768px) {
+        .dashboard-header {
+            padding: var(--spacing-md);
+        }
+        .main-content {
+            padding: 0 var(--spacing-md);
+        }
+        .header-content {
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        .header-controls {
+            width: 100%;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        .period-selector {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .company-filter {
+            width: 100%;
+        }
+        .data-table th,
+        .data-table td {
+            padding: var(--spacing-xs) var(--spacing-sm); /* Ainda mais compacto no mobile */
+        }
+        .mobile-hidden {
+            display: none;
+        }
+    }
+
+    /* CELULARES (em paisagem e tablets menores) - 2 cartões por linha */
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-sm);
+        }
+        .metric-card {
+            grid-column: span 1;
+        }
+        .metric-value {
+        font-size: 1.375rem;
+        }
+    }
+
+    /* CELULARES (em retrato) - 1 cartão por linha */
+    @media (max-width: 480px) {
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+        .metric-card {
+            grid-column: span 1;
+            flex-direction: column; /* Em telas muito pequenas, volta ao layout vertical */
+            align-items: flex-start;
+        }
+    }
+
+
+    /* === ANIMAÇÕES E UTILITÁRIOS === */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: var(--radius-md);
+    }
+
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .break-words {
+        word-wrap: break-word;
+        word-break: break-word;
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* === FOOTER LEVE === */
+    .dashboard-footer {
+        background: var(--color-surface);
+        border-top: 1px solid var(--color-border-light);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        margin-top: var(--spacing-2xl);
+    }
+
+    .footer-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1400px;
+        margin: 0 auto;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+    }
+
+    .footer-info,
+    .footer-stats {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .footer-text,
+    .footer-stat {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary);
+        font-weight: 500;
+    }
+
+    .footer-stat {
+        color: var(--color-text-primary);
+        font-weight: 600;
+    }
+
+    .footer-divider {
+        color: var(--color-text-muted);
+        font-weight: 300;
+    }
+
+    /* Responsividade do footer */
+    @media (max-width: 768px) {
+        .dashboard-footer {
+            padding: var(--spacing-md);
+        }
+        
+        .footer-content {
+            flex-direction: column;
+            text-align: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .footer-info,
+        .footer-stats {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard-table-sort.js') }}"></script>
+<script>
+    // === FORMATAÇÃO DE VALORES ===
+    function formatValue(value, type = 'number') {
+        if (!value || value === 0) return type === 'currency' ? 'R$ 0' : '0';
+        
+        const num = parseFloat(value.toString().replace(/[R$\s.]/g, '').replace(',', '.'));
+        if (isNaN(num)) return type === 'currency' ? 'R$ 0' : '0';
+        
+        let formatted;
+        let suffix = '';
+        
+        if (num >= 1000000000) { // Bilhões
+            formatted = (num / 1000000000).toFixed(1);
+            suffix = 'B';
+        } else if (num >= 1000000) { // Milhões
+            formatted = (num / 1000000).toFixed(1);
+            suffix = 'M';
+        } else if (num >= 1000) { // Milhares
+            formatted = (num / 1000).toFixed(1);
+            suffix = 'K';
+        } else {
+            formatted = Math.round(num).toString();
+        }
+        
+        // Remove .0 desnecessário
+        if (formatted.endsWith('.0')) {
+            formatted = formatted.slice(0, -2);
+        }
+        
+        if (type === 'currency') {
+            return `R$ ${formatted}${suffix}`;
+        }
+        
+        return `${formatted}${suffix}`;
+    }
+    
+    // === INICIALIZAÇÃO DO DASHBOARD ===
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeDashboard();
+        // formatMetricValues(); // Removido: valores já vêm formatados do backend
+    });
+
+    function initializeDashboard() {
+        console.log('Inicializando dashboard...');
+        
+        // Animação de entrada staggered
+        const cards = document.querySelectorAll('.metric-card, .chart-card');
+        cards.forEach((card, index) => {
+            setTimeout(() => {
+                card.classList.add('animate-fade-in-up');
+            }, index * 30);
+        });
+
+        // Inicializar seletor de período
+        initializePeriodSelector();
+        
+        // Inicializar busca na tabela
+        console.log('Inicializando busca da tabela...');
+        initializeTableSearch();
+        
+        // Redimensionar gráficos quando necessário
+        window.addEventListener('resize', debounce(handleResize, 250));
+        
+        // Atualizar timestamps
+        updateTimestamps();
+        setInterval(updateTimestamps, 60000);
+        
+        console.log('Dashboard inicializado com sucesso!');
+    }
+
+    function formatMetricValues() {
+        // Os valores já vêm formatados do backend, apenas verificar se há elementos 
+        // específicos que precisam de formatação adicional (caso necessário no futuro)
+        console.log('Valores dos cartões já formatados pelo backend');
+    }
+
+    // Inicializar busca na tabela
+    function initializeTableSearch() {
+        // Aguardar um pouco para garantir que a página carregou completamente
+        setTimeout(() => {
+            const searchInput = document.getElementById('table-search');
+            const table = document.getElementById('importacoes-table');
+            
+            console.log('Elementos encontrados:', {
+                searchInput: !!searchInput,
+                table: !!table
+            });
+            
+            if (!searchInput || !table) {
+                console.error('Elementos de busca não encontrados');
+                return;
+            }
+
+            const tbody = table.querySelector('tbody');
+            if (!tbody) {
+                console.error('Tbody da tabela não encontrado');
+                return;
+            }
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            console.log('Inicializando busca com', rows.length, 'linhas');
+
+            // Remover listener anterior se existir
+            searchInput.removeEventListener('input', searchHandler);
+            
+            // Adicionar novo listener
+            searchInput.addEventListener('input', searchHandler);
+            
+            function searchHandler() {
+                const searchTerm = this.value.toLowerCase().trim();
+                console.log('Buscando por:', searchTerm);
+                
+                // Adicionar/remover classe de busca ativa
+                if (searchTerm === '') {
+                    searchInput.classList.remove('searching');
+                } else {
+                    searchInput.classList.add('searching');
+                }
+                
+                let visibleCount = 0;
+                
+                rows.forEach((row, index) => {
+                    // Remover classe de destaque anterior
+                    row.classList.remove('search-match');
+                    
+                    if (searchTerm === '') {
+                        row.style.display = '';
+                        visibleCount++;
+                        return;
+                    }
+
+                    // Buscar em todas as células da linha
+                    const cells = row.querySelectorAll('td');
+                    let found = false;
+
+                    cells.forEach(cell => {
+                        const cellText = cell.textContent.toLowerCase().trim();
+                        if (cellText.includes(searchTerm)) {
+                            found = true;
+                            console.log('Encontrado em:', cellText);
+                        }
+                    });
+
+                    if (found) {
+                        row.style.display = '';
+                        row.classList.add('search-match');
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Atualizar contador de resultados
+                console.log('Resultados visíveis:', visibleCount, 'de', rows.length);
+                updateSearchResults(searchTerm, visibleCount, rows.length);
+            }
+        }, 500); // Aguardar 500ms
+    }
+
+    // Atualizar contador de resultados da busca
+    function updateSearchResults(searchTerm, visibleCount, totalCount) {
+        const searchInput = document.getElementById('table-search');
+        
+        if (searchTerm === '') {
+            searchInput.placeholder = '🔍 Buscar operações...';
+        } else {
+            searchInput.placeholder = `📋 ${visibleCount} de ${totalCount} operações`;
+        }
+    }
+
+    function initializePeriodSelector() {
+        const periodBtns = document.querySelectorAll('.period-btn');
+        periodBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.dataset.period) { // Só para botões de período
+                    periodBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const period = this.dataset.period;
+                    console.log('Período selecionado:', period);
+                    // TODO: Implementar filtro por período
+                }
+            });
+        });
+    }
+
+    function handleResize() {
+        if (typeof Plotly !== 'undefined') {
+            const charts = ['monthly-chart', 'canal-chart', 'radar-chart', 'material-chart'];
+            charts.forEach(chartId => {
+                const element = document.getElementById(chartId);
+                if (element) {
+                    Plotly.Plots.resize(element);
+                }
+            });
+        }
+    }
+
+    function updateTimestamps() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const timestampElements = document.querySelectorAll('.timestamp');
+        timestampElements.forEach(el => {
+            el.textContent = `Atualizado às ${timeString}`;
+        });
+    }
+
+    // Filtro por empresa com animação
+    function filterByCompany(value) {
+        const tableBody = document.querySelector('.data-table tbody');
+        if (tableBody) {
+            tableBody.style.opacity = '0.5';
+        }
+        
+        const url = new URL(window.location);
+        if (value) {
+            url.searchParams.set('empresa', value);
+        } else {
+            url.searchParams.delete('empresa');
+        }
+        
+        setTimeout(() => {
+            window.location.href = url.toString();
+        }, 150);
+    }
+
+    // Utilitários
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header Modernizado -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-title-section">
+                <h1 class="header-title gradient-text">Dashboard Executivo</h1>
+                <p class="header-subtitle">
+                </p>
+            </div>
+            
+            <div class="header-controls">               
+                <!-- Filtro de Empresa -->
+                {% if user_role in ['interno_unique', 'admin','cliente_unique'] %}
+                <select class="company-filter" onchange="filterByCompany(this.value)">
+                    <option value="">🏢 Todas as empresas</option>
+                    {% for company in companies %}
+                    <option value="{{ company.cpfcnpj }}" {% if selected_company == company.cpfcnpj %}selected{% endif %}>
+                        {{ company.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-content">
+        <!-- Grid de Métricas Ultra Compacto -->
+        <div class="metrics-grid">
+        <!-- Total de Operações -->
+        <div class="metric-card operations">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3v18h18"/>
+                    <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.total or 0 }}
+                    <div class="metric-trend">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6l-6 6-4-4-6 6"/>
+                        </svg>
+                        +12%
+                    </div>
+                </div>
+                <div class="metric-label">Total de Operações</div>
+            </div>
+        </div>
+
+        <!-- Aguardando Embarque -->
+        <div class="metric-card pending">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.aguardando_embarque or 0 }}</div>
+                <div class="metric-label">Agd Embarque</div>
+            </div>
+        </div>
+
+        <!-- Em Trânsito -->
+        <div class="metric-card transit">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 3h5v5"/>
+                    <path d="M8 3H3v5"/>
+                    <path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.em_transito or 0 }}</div>
+                <div class="metric-label">Em Trânsito</div>
+            </div>
+        </div>
+
+        <!-- Desembarcadas -->
+        <div class="metric-card completed">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.desembarcadas or 0 }}</div>
+                <div class="metric-label">Desembarcadas</div>
+            </div>
+        </div>
+
+        <!-- Modal Aéreo -->
+        <div class="metric-card air">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.aereo or 0 }}</div>
+                <div class="metric-label">Modal Aéreo</div>
+            </div>
+        </div>
+
+        <!-- Modal Marítimo -->
+        <div class="metric-card sea">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 20a2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1 2.4 2.4 0 0 1 2-1 2.4 2.4 0 0 1 2 1 2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1 2.4 2.4 0 0 1 2-1 2.4 2.4 0 0 1 2 1 2.4 2.4 0 0 0 2 1 2.4 2.4 0 0 0 2-1"/>
+                    <path d="M8 19h8"/>
+                    <path d="M5 3l1.5 7h11L19 3"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.maritimo or 0 }}</div>
+                <div class="metric-label">Modal Marítimo</div>
+            </div>
+        </div>
+
+        <!-- Modal Terrestre
+        <div class="metric-card pending">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M8 6v6h8V6"/>
+                    <path d="M4 6h16"/>
+                    <path d="M6 2h12v4H6z"/>
+                    <circle cx="7" cy="17" r="2"/>
+                    <path d="M9 17h6"/>
+                    <circle cx="17" cy="17" r="2"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ kpis.terrestre or 0 }}</div>
+                <div class="metric-label">Modal Terrestre</div>
+            </div>
+        </div> -->
+
+        <!-- Total de Despesas -->
+        <div class="metric-card value">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                    <path d="M12 11h4"/>
+                    <path d="M12 16h4"/>
+                    <path d="M8 11h.01"/>
+                    <path d="M8 16h.01"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_total_formatted or "R$ 0" }}
+                    <div class="metric-trend">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6l-6 6-4-4-6 6"/>
+                        </svg>
+                        +15%
+                    </div>
+                </div>
+                <div class="metric-label">Total de Despesas</div>
+            </div>
+        </div>
+
+        <!-- Despesa Média por Processo -->
+        <div class="metric-card value">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    <path d="M15 2v6h6"/>
+                    <path d="M12 9v3l1.5 1.5"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesa_media_processo_formatted or "R$ 0" }}
+                </div>
+                <div class="metric-label">Despesa Média/Processo</div>
+            </div>
+        </div>
+
+        <!-- Despesas do Mês -->
+        <div class="metric-card expense">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <path d="M8 14h.01"/>
+                    <path d="M12 14h.01"/>
+                    <path d="M16 14h.01"/>
+                    <path d="M8 18h.01"/>
+                    <path d="M12 18h.01"/>
+                    <path d="M16 18h.01"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_mes_formatted or "R$ 0" }}
+                    <div class="metric-trend">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6l-6 6-4-4-6 6"/>
+                        </svg>
+                        +5%
+                    </div>
+                </div>
+                <div class="metric-label">Despesas neste Mês</div>
+            </div>
+        </div>
+
+        <!-- Despesas desta Semana -->
+        <div class="metric-card expense">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <rect x="8" y="14" width="8" height="4" rx="1"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_semana_formatted or "R$ 0" }}
+                </div>
+                <div class="metric-label">Despesas esta Semana</div>
+            </div>
+        </div>
+
+        <!-- Despesas Semana Seguinte -->
+        <div class="metric-card expense">
+            <div class="metric-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                    <path d="M9 16l2 2 4-4"/>
+                </svg>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">
+                    {{ kpis.despesas_proxima_semana_formatted or "R$ 0" }}
+                    <div class="metric-trend neutral">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 13l3 3 7-7"/>
+                        </svg>
+                        S+1
+                    </div>
+                </div>
+                <div class="metric-label">Despesas Semana Seguinte</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Gráficos -->
+    <div class="charts-section">
+        <div class="charts-grid">
+            <!-- Gráfico Mensal (8 colunas) -->
+            {% if monthly_chart %}
+            <div class="chart-card chart-large">
+                <div class="chart-header">
+                    <h3 class="chart-title">Evolução Mensal</h3>
+                    <p class="chart-subtitle">Processos e valores por mês</p>
+                </div>
+                <div class="chart-content">
+                    {{ monthly_chart|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Gráfico de Canal DI (4 colunas) -->
+            {% if canal_chart %}
+            <div class="chart-card chart-medium">
+                <div class="chart-header">
+                    <h3 class="chart-title">Distribuição por Canal DI</h3>
+                    <p class="chart-subtitle">Análise por canal de despacho</p>
+                </div>
+                <div class="chart-content">
+                    {{ canal_chart|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Gráfico Combinado (6 colunas) -->
+            {% if radar_chart %}
+            <div class="chart-card chart-small">
+                <div class="chart-header">
+                    <h3 class="chart-title">Top Armazéns por Volume e Valor</h3>
+                    <p class="chart-subtitle">Análise combinada de quantidade e valor VMCV</p>
+                </div>
+                <div class="chart-content">
+                    {{ radar_chart|safe }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Gráfico de Materiais (6 colunas) -->
+            {% if material_chart %}
+            <div class="chart-card chart-small">
+                <div class="chart-header">
+                    <h3 class="chart-title">Top Materiais</h3>
+                    <p class="chart-subtitle">Ranking por valor VMCV</p>
+                </div>
+                <div class="chart-content">
+                    {{ material_chart|safe }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tabela Principal -->
+    <div class="table-section">
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">Operações de Importação</h3>
+                <div class="table-filters">
+                    <input type="text" class="search-input" placeholder="🔍 Buscar operações..." id="table-search">
+                </div>
+            </div>
+            <div style="overflow-x: auto; max-height: 600px;">
+                <table class="data-table" id="importacoes-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="cliente_razaosocial">Cliente</th>
+                            <th class="sortable" data-sort="nro_pedido">Nº Pedido</th>
+                            <th class="sortable" data-sort="data_embarque">Data Embarque</th>
+                            <th class="sortable mobile-hidden" data-sort="local_embarque">Local Embarque</th>
+                            <th class="sortable" data-sort="via_transporte_descricao">Modal</th>
+                            <th class="sortable" data-sort="carga_status">Status</th>
+                            <th class="sortable mobile-hidden" data-sort="resumo_mercadoria">Mercadoria</th>
+                            <th class="sortable mobile-hidden" data-sort="despesas">Despesas</th>
+                            <th class="sortable" data-sort="armazem_nome">Recinto</th>
+                            <th class="sortable mobile-hidden" data-sort="data_chegada">Data Chegada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_data %}
+                        <tr>
+                            <td class="break-words" style="max-width: 150px;">{{ (row.cliente_razaosocial or '-')[:10] }}</td>
+                            <td class="font-medium">{{ row.nro_pedido or '-' }}</td>
+                            <td>{{ row.data_embarque or '-' }}</td>
+                            <td class="mobile-hidden break-words" style="max-width: 120px;">{{ row.local_embarque or '-' }}</td>
+                            <td>
+                                {% if row.via_transporte_descricao == 'AEREA' %}
+                                    <span class="status-badge transit">✈️ AÉREO</span>
+                                {% elif row.via_transporte_descricao == 'MARITIMA' %}
+                                    <span class="status-badge completed">🚢 MARÍTIMO</span>
+                                {% elif row.via_transporte_descricao == 'TERRESTRE' %}
+                                    <span class="status-badge pending">🚛 TERRESTRE</span>
+                                {% else %}
+                                    <span class="status-badge default">{{ row.via_transporte_descricao or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if row.carga_status %}
+                                    {% if 'aguardando embarque' in row.carga_status.lower() %}
+                                        <span class="status-badge pending">{{ row.carga_status }}</span>
+                                    {% elif 'em transito' in row.carga_status.lower() or 'trânsito' in row.carga_status.lower() %}
+                                        <span class="status-badge transit">{{ row.carga_status }}</span>
+                                    {% elif 'desembarcada' in row.carga_status.lower() %}
+                                        <span class="status-badge completed">{{ row.carga_status }}</span>
+                                    {% else %}
+                                        <span class="status-badge default">{{ row.carga_status }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="status-badge default">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="mobile-hidden break-words" style="max-width: 200px;">{{ row.resumo_mercadoria or '-' }}</td>
+                            <td class="mobile-hidden text-right" data-sort-value="{{ row.despesas or 0 }}">
+                                <strong>R$ {{ "{:,.2f}".format(row.despesas or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</strong>
+                            </td>
+                            <td>{{ row.armazem_nome or '-' }}</td>
+                            <td class="mobile-hidden">{{ row.data_chegada or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div> <!-- Fecha main-content -->
+    
+    <!-- Footer Leve -->
+    <footer class="dashboard-footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <span class="footer-text">Portal UniSystem - Dashboard Executivo</span>
+                <span class="footer-divider">•</span>
+                <span class="footer-text">{{ last_update }}</span>
+            </div>
+            <div class="footer-stats">
+                <span class="footer-stat">{{ kpis.total or 0 }} operações</span>
+                <span class="footer-divider">•</span>
+                <span class="footer-stat">{{ (table_data|length) or 0 }} registros exibidos</span>
+            </div>
+        </div>
+    </footer>
+</div> <!-- Fecha dashboard-container -->
+{% endblock %}

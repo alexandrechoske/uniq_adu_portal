@@ -3,16 +3,8 @@ from extensions import supabase
 from routes.auth import login_required, role_required
 from permissions import check_permission
 from config import Config
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
-import scipy.stats as stats
 from datetime import datetime, timedelta
-import json
-import requests
-import numpy as np
-import unicodedata
-import re
 
 bp = Blueprint('dashboard', __name__)
 
@@ -522,475 +514,6 @@ def index(**kwargs):
                 'percentual': round(percentual, 1)
             })
     
-    # Gráfico de linha com área: Processos por dia e valor
-    daily_chart = None
-    if not df.empty:
-        # Agrupar por dia
-        df['data_abertura_day'] = df['data_abertura'].dt.date
-        daily_data = df.groupby('data_abertura_day').agg({
-            'ref_unique': 'count',  # Total de processos
-            'valor_cif_real': 'sum'  # VMCV total
-        }).reset_index()
-        
-        # Converter para datetime
-        daily_data['data'] = pd.to_datetime(daily_data['data_abertura_day'])
-        daily_data = daily_data.sort_values('data')
-        
-        # Pegar últimos 60 dias
-        if len(daily_data) > 60:
-            daily_data = daily_data.tail(60)
-        
-        # Criar gráfico de linha com área
-        daily_chart = go.Figure()
-        
-        # Barras para processos
-        daily_chart.add_trace(go.Bar(
-            x=daily_data['data'],
-            y=daily_data['ref_unique'],
-            name='Processos por Dia',
-            marker=dict(color='#3b82f6'),
-            text=daily_data['ref_unique'],
-            textposition='outside',
-            hovertemplate='<b>%{x}</b><br>Processos: %{y}<extra></extra>'
-        ))
-        
-        # Linha para valor (eixo Y secundário)
-        daily_chart.add_trace(go.Scatter(
-            x=daily_data['data'],
-            y=daily_data['valor_cif_real'] / 1000000,  # Converter para milhões
-            mode='lines+markers',
-            name='Valor VMCV/dia (M)',
-            line=dict(color='#10b981', width=2, shape='spline'),
-            marker=dict(size=4),
-            yaxis='y2',
-            text=[f'{val/1000000:.1f}M' for val in daily_data['valor_cif_real']],
-            textposition='top center',
-            hovertemplate='<b>%{x}</b><br>Valor: R$ %{text}<extra></extra>'
-        ))
-        
-        daily_chart.update_layout(
-
-            hovermode='x unified',
-            template='plotly_white',
-            height=300,
-            margin=dict(t=50, b=50, l=40, r=40),
-            showlegend=True,
-            legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.15,
-                xanchor="center",
-                x=0.5
-            )
-        )
-
-
-    # Gráfico Mensal: Área + Linha (Processos e Valores Mensais)
-    monthly_chart = None
-    if not df.empty:
-        # Agrupar por mês - garantindo que seja apenas dos últimos 12 meses
-        df_filtered_12m = df[df['data_abertura'] >= pd.to_datetime(data_limite_12_meses)].copy()
-        df_filtered_12m['mes_ano'] = df_filtered_12m['data_abertura'].dt.to_period('M')
-        monthly_data = df_filtered_12m.groupby('mes_ano').agg({
-            'ref_unique': 'count',  # Total de processos
-            'valor_cif_real': 'sum'  # VMCV total
-        }).reset_index()
-        
-        # Converter período para datetime para plotly
-        monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
-        monthly_data = monthly_data.sort_values('data')
-        
-        # Limitar aos últimos 12 meses para garantir
-        if len(monthly_data) > 12:
-            monthly_data = monthly_data.tail(12)
-        
-        # Criar gráfico com área e linha
-        monthly_chart = go.Figure()
-        
-        # Série 1: Área para Nº de Processos
-        monthly_chart.add_trace(go.Scatter(
-            x=monthly_data['data'],
-            y=monthly_data['ref_unique'],
-            mode='lines+markers+text',
-            name='Nº de Processos',
-            fill='tozeroy',  # Preenche área até o zero
-            fillcolor='rgba(255, 140, 0, 0.3)',  # Cor alaranjada com transparência
-            line=dict(color="#0079A5", width=2, shape='spline'),  # Linha alaranjada suave
-            marker=dict(color='#0079A5', size=6),
-            text=monthly_data['ref_unique'],
-            textposition='bottom center',  # Posição embaixo para evitar sobreposição
-            textfont=dict(size=10, color='#0079A5'),
-            hovertemplate='<b>%{x|%b %Y}</b><br>Processos: %{y}<extra></extra>'
-        ))
-        
-        # Série 2: Linha para VMCV Total (eixo Y secundário)
-        monthly_chart.add_trace(go.Scatter(
-            x=monthly_data['data'],
-            y=monthly_data['valor_cif_real'],
-            mode='lines+markers+text',
-            name='VMCV Total',
-            line=dict(color='#8A2BE2', width=3, shape='spline'),  # Linha roxa suave
-            marker=dict(color='#8A2BE2', size=6),
-            text=[f'R$ {val/1000000:.1f}M' for val in monthly_data['valor_cif_real']],
-            textposition='top center',  # Posição em cima para os valores
-            textfont=dict(size=10, color='#8A2BE2'),
-            yaxis='y2',
-            hovertemplate='<b>%{x|%b %Y}</b><br>VMCV: R$ %{y:,.0f}<extra></extra>'
-        ))
-        
-        monthly_chart.update_layout(
-            yaxis=dict(
-                side='left',
-                showticklabels=False,  # Remove labels do eixo Y
-                title='',  # Remove título do eixo
-                showgrid=True,
-                gridcolor='rgba(0,0,0,0.1)'
-            ),
-            yaxis2=dict(
-                side='right', 
-                overlaying='y',
-                showticklabels=False,  # Remove labels do eixo Y secundário
-                title='',  # Remove título do eixo
-                showgrid=False
-            ),
-            xaxis=dict(
-                title='',  # Remove título do eixo X
-                showgrid=False
-            ),
-            hovermode='x unified',
-            template='plotly_white',
-            height=350,
-            margin=dict(t=30, b=50, l=30, r=30),  # Margens reduzidas
-            legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.15,
-                xanchor="center",
-                x=0.5
-            )
-        )
-    
-    # Gráfico de rosca por canal DI
-    canal_chart = None
-    if not df.empty:
-        # Agrupar por canal DI
-        canal_data = df.groupby('canal').agg({
-            'ref_unique': 'count',
-            'valor_cif_real': 'sum'  
-        }).reset_index()
-        
-        # Definir cores específicas para os canais DI
-        canal_colors = {
-            'Verde': '#10b981',     # Verde
-            'Amarelo': '#f59e0b',   # Amarelo
-            'Vermelho': '#ef4444',  # Vermelho
-            'Cinza': '#6b7280'      # Cinza para outros
-        }
-        
-        # Preparar dados para o gráfico
-        labels = []
-        values = []
-        colors = []
-        
-        for _, row in canal_data.iterrows():
-            canal = row['canal'] if row['canal'] else 'Não Informado'
-            quantidade = row['ref_unique']
-            
-            labels.append(canal)
-            values.append(quantidade)
-            colors.append(canal_colors.get(canal, '#6b7280'))
-        
-        # Criar gráfico de rosca (donut chart)
-        canal_chart = go.Figure(data=[go.Pie(
-            labels=labels,
-            values=values,
-            hole=0.4,  # Cria o buraco no meio (rosca)
-            marker=dict(
-                colors=colors,
-                line=dict(color='white', width=2)
-            ),
-            textinfo='label+value',  # Mostra label + quantidade
-            textposition='inside',  # Labels dentro dos segmentos
-            insidetextorientation='radial',  # Orientação dos textos
-            textfont=dict(color='white', size=12, family='Arial'),  # Texto branco e legível
-            hovertemplate='<b>%{label}</b><br>Processos: %{value}<br>Percentual: %{percent}<extra></extra>',
-            showlegend=False  # Remove as legendas externas
-        )])
-        
-        canal_chart.update_layout(
-
-            template='plotly_white',
-            height=350,
-            margin=dict(t=100, b=10, l=10, r=10),  # Mudança: aumenta margem superior
-        )
-
-
-        # Gráfico de radar por armazém
-        radar_chart = None
-        if not df.empty:
-            # Campo armazens não existe na nova tabela - usando URF de entrada como alternativa
-            df_armazens = df.copy()
-            armazem_names = []
-            
-            for _, row in df_armazens.iterrows():
-                # Usar URF de entrada como substituto para armazém
-                armazem_nome = row.get('urf_entrada', 'Não Informado')
-                if not armazem_nome or pd.isna(armazem_nome):
-                    armazem_nome = "Não Informado"
-                armazem_names.append(str(armazem_nome).strip())
-            
-            # Adicionar coluna de armazém processada
-            df_armazens['armazem_nome'] = armazem_names
-            
-            # Agrupar por armazém e pegar top 6
-            radar_data = df_armazens.groupby('armazem_nome').agg({
-                'ref_unique': 'count',
-                'valor_cif_real': 'sum'  
-            }).reset_index()
-            
-            # Ordenar por quantidade de processos e pegar top 6
-            radar_data = radar_data.sort_values('ref_unique', ascending=False).head(6)
-            
-            # Preparar dados para o gráfico combinado
-            categories = []
-            values_qtd = []
-            values_vmcv = []
-            
-            for _, row in radar_data.iterrows():
-                armazem = row['armazem_nome']
-                quantidade = row['ref_unique']
-                valor = row['valor_cif_real']
-                
-                # Truncar nome longo para melhor visualização
-                if len(armazem) > 20:
-                    armazem = armazem[:20] + '...'
-                
-                categories.append(armazem)
-                values_qtd.append(quantidade)
-                values_vmcv.append(valor)
-            
-            # Reverter as listas para mostrar maior valor no topo
-            categories.reverse()
-            values_qtd.reverse()
-            values_vmcv.reverse()
-            
-            # Criar gráfico de barras horizontais agrupadas
-            radar_chart = go.Figure()
-            
-            # Trace 1: Quantidade de Processos (eixo X principal)
-            radar_chart.add_trace(go.Bar(
-                x=values_qtd,
-                y=categories,
-                orientation='h',
-                name='Qtd. de Processos',
-                marker=dict(
-                    color='#10b981',  # Verde
-                    line=dict(color='white', width=1)
-                ),
-                text=values_qtd,
-                textposition='inside',
-                insidetextanchor='middle',
-                textfont=dict(color='white', size=10),
-                hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
-                offsetgroup=1
-            ))
-            
-            # Trace 2: Valor VMCV (eixo X secundário)
-            radar_chart.add_trace(go.Bar(
-                x=values_vmcv,
-                y=categories,
-                orientation='h',
-                name='Valor VMCV',
-                marker=dict(
-                    color='#8b5cf6',  # Roxo
-                    line=dict(color='white', width=1)
-                ),
-                text=[format_millions(v) for v in values_vmcv],
-                textposition='inside',
-                insidetextanchor='middle',
-                textfont=dict(color='white', size=10),
-                hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
-                xaxis='x2',
-                offsetgroup=2
-            ))
-            
-            radar_chart.update_layout(
-                # Remover título (já está no card HTML)
-                title='',
-                # Configurar eixos (ocultar elementos visuais, manter apenas nomes das categorias)
-                xaxis=dict(
-                    showgrid=False,
-                    zeroline=False,
-                    showline=False,
-                    showticklabels=False
-                ),
-                xaxis2=dict(
-                    side='top',
-                    overlaying='x',
-                    showgrid=False,
-                    zeroline=False,
-                    showline=False,
-                    showticklabels=False
-                ),
-                yaxis=dict(
-                    tickfont=dict(size=10),
-                    showgrid=False,
-                    zeroline=False,
-                    showline=False
-                ),
-                template='plotly_white',
-                height=350,
-                margin=dict(t=20, b=20, l=180, r=30),  # Reduzir margens e espaço à esquerda para nomes
-                showlegend=True,
-                legend=dict(
-                    orientation="h",
-                    yanchor="top",
-                    y=-0.1,
-                    xanchor="center",
-                    x=0.5
-                ),
-                barmode='group',  # Barras agrupadas
-                bargap=0.3,  # Reduzir espaço entre grupos para ocupar melhor o espaço
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
-            )
-            def clean_material_name(material_name):
-                """Limpa e normaliza nomes de materiais preservando o conteúdo original quando possível"""
-                
-                if not material_name or pd.isna(material_name):
-                    return "Não Informado"
-                
-                # Converter para string e fazer trim
-                material = str(material_name).strip()
-                
-                # Se ainda estiver vazio, retornar padrão
-                if not material:
-                    return "Não Informado"
-                
-                # Apenas capitalizar corretamente, mantendo caracteres especiais e acentos
-                # Isso preserva "MANUTENÇÃO" como "Manutenção"
-                material = material.title()
-                
-                return material
-
-            # Gráfico de barras por material - DUPLO (valor + quantidade)
-            material_chart = None
-            if not df.empty:
-                # Limpar e agrupar materiais com nomes similares
-                df_materials = df.copy()
-                df_materials['material_limpo'] = df_materials['mercadoria'].apply(clean_material_name)
-                
-                # Agrupar por material limpo
-                material_groups_clean = df_materials.groupby('material_limpo').agg({
-                    'ref_unique': 'count',
-                    'valor_cif_real': 'sum'
-                }).reset_index()
-                
-                material_groups_clean = material_groups_clean.sort_values('valor_cif_real', ascending=False)
-                
-                # Pegar top 6 materiais para melhor visualização
-                top_materials_clean = material_groups_clean.head(6)
-                
-                if not top_materials_clean.empty:
-                    labels = []
-                    values_valor = []
-                    values_quantidade = []
-                    
-                    for _, row in top_materials_clean.iterrows():
-                        # Truncar nome para melhor visualização
-                        nome = row['material_limpo']
-                        if len(nome) > 30:
-                            nome = nome[:30] + '...'
-                        
-                        labels.append(nome)
-                        values_valor.append(float(row['valor_cif_real']))
-                        values_quantidade.append(int(row['ref_unique']))
-                    
-                    # Reverter as listas para mostrar maior valor no topo
-                    labels.reverse()
-                    values_valor.reverse()
-                    values_quantidade.reverse()
-                    
-                    # Criar gráfico de barras horizontais duplas
-                    material_chart = go.Figure()
-                    
-                    # Barra 1: Valor VMCV
-                    material_chart.add_trace(go.Bar(
-                        x=values_valor,
-                        y=labels,
-                        orientation='h',
-                        name='Valor VMCV',
-                        marker=dict(
-                            color='#8b5cf6',  # Roxo
-                            line=dict(color='white', width=1)
-                        ),
-                        text=[format_value_smart(val, currency=True) for val in values_valor],
-                        textposition='inside',
-                        insidetextanchor='middle',
-                        textfont=dict(color='white', size=10),
-                        hovertemplate='<b>%{y}</b><br>Valor: R$ %{x:,.0f}<extra></extra>',
-                        offsetgroup=1  # Grupo para barras lado a lado
-                    ))
-                    
-                    # Barra 2: Quantidade de Processos (eixo secundário)
-                    material_chart.add_trace(go.Bar(
-                        x=values_quantidade,
-                        y=labels,
-                        orientation='h',
-                        name='Qtd. Processos',
-                        marker=dict(
-                            color='#10b981',  # Verde
-                            line=dict(color='white', width=1)
-                        ),
-                        text=[f'{val}' for val in values_quantidade],
-                        textposition='inside',
-                        insidetextanchor='middle',
-                        textfont=dict(color='white', size=10),
-                        hovertemplate='<b>%{y}</b><br>Processos: %{x}<extra></extra>',
-                        xaxis='x2',  # Usar eixo X secundário
-                        offsetgroup=2  # Grupo separado para barras lado a lado
-                    ))
-                    
-                    material_chart.update_layout(
-                        # Remover título (já está no card HTML)
-                        title='',
-                        # Configurar eixos (ocultar elementos visuais)
-                        xaxis=dict(
-                            showgrid=False,
-                            zeroline=False,
-                            showline=False,
-                            showticklabels=False
-                        ),
-                        xaxis2=dict(
-                            side='top',
-                            overlaying='x',
-                            showgrid=False,
-                            zeroline=False,
-                            showline=False,
-                            showticklabels=False
-                        ),
-                        yaxis=dict(
-                            tickfont=dict(size=10),
-                            showgrid=False,
-                            zeroline=False,
-                            showline=False
-                        ),
-                        template='plotly_white',
-                        height=350,
-                        margin=dict(t=20, b=20, l=180, r=30),  # Reduzir margens superior e inferior
-                        showlegend=True,
-                        legend=dict(
-                            orientation="h",
-                            yanchor="top",
-                            y=-0.1,
-                            xanchor="center",
-                            x=0.5
-                        ),
-                        barmode='group',  # Barras agrupadas lado a lado
-                        bargap=0.3  # Reduzir espaço entre grupos para ocupar melhor o espaço
-                    )
-
-
     # Get all available companies for filtering - OTIMIZADO com filtro de 12 meses
     companies_query = supabase.table('importacoes_processos_aberta')\
         .select('cnpj_importador, importador')\
@@ -1011,67 +534,13 @@ def index(**kwargs):
     if session['user']['role'] == 'cliente_unique' and user_companies:
         available_companies = [c for c in all_companies if c['cpfcnpj'] in user_companies]
 
-    # OTIMIZAÇÃO: Geração simplificada de gráficos para performance
-    # Para usuários admin, gerar apenas gráficos essenciais
-    daily_chart_html = None
-    monthly_chart_html = None
-    canal_chart_html = None
-    radar_chart_html = None
-    material_chart_html = None
-    
-    if current_role not in admin_roles or len(df) < 2000:  # Gerar gráficos completos apenas para datasets menores
-        print(f"[DEBUG DASHBOARD] Gerando gráficos completos...")
-        # Aqui você manteria a lógica original dos gráficos
-        # Por agora, vou simplificar para apenas os essenciais
-        
-        # Gráfico mensal simplificado
-        if not df.empty and len(df) < 1500:  # Só gerar se dataset for razoável
-            df_filtered_12m = df[df['data_abertura'] >= pd.to_datetime(data_limite_12_meses)].copy()
-            if not df_filtered_12m.empty:
-                df_filtered_12m['mes_ano'] = df_filtered_12m['data_abertura'].dt.to_period('M')
-                monthly_data = df_filtered_12m.groupby('mes_ano').agg({
-                    'ref_unique': 'count',
-                    'valor_cif_real': 'sum'
-                }).reset_index()
-                
-                if not monthly_data.empty:
-                    monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
-                    monthly_data = monthly_data.sort_values('data').tail(12)
-                    
-                    monthly_chart = go.Figure()
-                    monthly_chart.add_trace(go.Scatter(
-                        x=monthly_data['data'],
-                        y=monthly_data['ref_unique'],
-                        mode='lines+markers',
-                        name='Processos',
-                        line=dict(color="#0079A5", width=2)
-                    ))
-                    
-                    monthly_chart.update_layout(
-                        template='plotly_white',
-                        height=300,
-                        margin=dict(t=30, b=50, l=30, r=30)
-                    )
-                    
-                    chart_configs = {'displayModeBar': False, 'responsive': True}
-                    monthly_chart_html = monthly_chart.to_html(full_html=False, include_plotlyjs=False, div_id='monthly-chart', config=chart_configs)
-    else:
-        print(f"[DEBUG DASHBOARD] Pulando geração de gráficos para melhor performance (dataset grande: {len(df)} registros)")
-    
-    # Convert charts to HTML - simplificado
-    
-    # Preparar dados para template
+    # Preparar dados para template - SEM GRÁFICOS PLOTLY
     template_data = {
         'kpis': kpis,
         'analise_material': material_analysis,
         'material_analysis': material_analysis,
         'data': table_data,
         'table_data': table_data,
-        'daily_chart': daily_chart_html,
-        'monthly_chart': monthly_chart_html,
-        'canal_chart': canal_chart_html,
-        'radar_chart': radar_chart_html,
-        'material_chart': material_chart_html,
         'companies': available_companies,
         'selected_company': selected_company,
         'currencies': currencies,
@@ -1096,6 +565,7 @@ def dashboard_data_api():
         # Parâmetros da requisição
         periodo = request.args.get('periodo', '30')  # Padrão: 30 dias
         empresa = request.args.get('empresa')
+        charts_only = request.args.get('charts', '0') == '1'  # Novo parâmetro para dados de gráficos
         
         # Get user companies if client
         user_companies = get_user_companies()
@@ -1146,7 +616,8 @@ def dashboard_data_api():
                     'material_analysis': [],
                     'table_data': [],
                     'record_count': 0,
-                    'periodo_info': f"Últimos {periodo} dias" if periodo != 'all' else "Todos os registros"
+                    'periodo_info': f"Últimos {periodo} dias" if periodo != 'all' else "Todos os registros",
+                    'charts': {}
                 }
             })
         
@@ -1158,6 +629,66 @@ def dashboard_data_api():
         df['data_embarque'] = pd.to_datetime(df['data_embarque'], format='%d/%m/%Y', errors='coerce')
         df['data_chegada'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
         
+        # Se for apenas para gráficos, preparar dados Chart.js
+        charts_data = {}
+        if charts_only or True:  # Sempre incluir dados de gráficos
+            
+            # 1. Gráfico Mensal (Line Chart)
+            df_monthly = df.copy()
+            df_monthly['mes_ano'] = df_monthly['data_abertura'].dt.to_period('M')
+            monthly_data = df_monthly.groupby('mes_ano').agg({
+                'ref_unique': 'count',
+                'valor_cif_real': 'sum'
+            }).reset_index()
+            
+            monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
+            monthly_data = monthly_data.sort_values('data').tail(12)
+            
+            charts_data['monthly'] = {
+                'months': [d.strftime('%b %Y') for d in monthly_data['data']],
+                'processes': monthly_data['ref_unique'].tolist(),
+                'values': [round(v/1000000, 1) for v in monthly_data['valor_cif_real'].tolist()]
+            }
+            
+            # 2. Gráfico de Canal DI (Doughnut Chart)
+            canal_data = df['canal'].value_counts()
+            charts_data['canal'] = {
+                'labels': canal_data.index.tolist(),
+                'values': canal_data.values.tolist()
+            }
+            
+            # 3. Gráfico de Armazéns/URF (Horizontal Bar Chart)
+            armazem_data = df.groupby('urf_entrada').agg({
+                'ref_unique': 'count'
+            }).reset_index()
+            armazem_data = armazem_data.sort_values('ref_unique', ascending=True).tail(8)
+            
+            charts_data['armazem'] = {
+                'labels': [str(label)[:20] + '...' if len(str(label)) > 20 else str(label) 
+                          for label in armazem_data['urf_entrada'].tolist()],
+                'values': armazem_data['ref_unique'].tolist()
+            }
+            
+            # 4. Gráfico de Materiais (Horizontal Bar Chart)
+            material_data = df.groupby('mercadoria').agg({
+                'valor_cif_real': 'sum'
+            }).reset_index()
+            material_data = material_data.sort_values('valor_cif_real', ascending=True).tail(8)
+            
+            charts_data['material'] = {
+                'labels': [str(label)[:25] + '...' if len(str(label)) > 25 else str(label) 
+                          for label in material_data['mercadoria'].tolist()],
+                'values': [round(v/1000000, 1) for v in material_data['valor_cif_real'].tolist()]
+            }
+        
+        # Se for apenas para gráficos, retornar apenas os dados dos gráficos
+        if charts_only:
+            return jsonify({
+                'success': True,
+                'data': charts_data
+            })
+        
+        # Caso contrário, continuar com o processamento completo...
         # Calcular KPIs
         total_operations = len(df)
         
@@ -1243,7 +774,8 @@ def dashboard_data_api():
                 'table_data': table_data,
                 'record_count': total_operations,
                 'periodo_info': f"Últimos {periodo} dias" if periodo != 'all' else "Todos os registros",
-                'last_update': datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                'last_update': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                'charts': charts_data  # Incluir dados dos gráficos sempre
             }
         })
         
