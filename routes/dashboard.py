@@ -105,6 +105,10 @@ def index(**kwargs):
     # Get currency exchange rates
     currencies = get_currencies()
 
+    # Calcular data limite (12 meses atrás) para otimização
+    data_limite_12_meses = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    print(f"[DEBUG DASHBOARD] Filtrando processos dos últimos 12 meses (desde: {data_limite_12_meses})")
+
     # Build query with client filter - OTIMIZADO: campos corretos baseados no ddls.sql
     query = supabase.table('importacoes_processos_aberta').select(
         'id, numero_di, status_processo, canal, data_chegada, '
@@ -112,11 +116,26 @@ def index(**kwargs):
         'created_at, updated_at, modal, data_abertura, '
         'mercadoria, data_embarque, urf_entrada, ref_unique'
     ).neq('status_processo', 'Despacho Cancelado')\
-     .order('updated_at.desc')\
-     .limit(Config.MAX_ROWS_DASHBOARD)
+     .gte('data_abertura', data_limite_12_meses)\
+     .order('updated_at.desc')
+    
+    # Para usuários internos e admins, não limitar registros
+    # Para clientes, manter limite para performance
+    admin_roles = ['interno_unique', 'adm', 'admin', 'system']
+    current_role = session['user']['role']
+    print(f"[DEBUG DASHBOARD] Role do usuário: {current_role}")
+    print(f"[DEBUG DASHBOARD] É admin? {current_role in admin_roles}")
+    
+    if current_role not in admin_roles:
+        print(f"[DEBUG DASHBOARD] Aplicando limite de {Config.MAX_ROWS_DASHBOARD} registros")
+        query = query.limit(Config.MAX_ROWS_DASHBOARD)
+    else:
+        print("[DEBUG DASHBOARD] SEM LIMITE - usuário admin, definindo limite alto")
+        # Supabase tem limite padrão de 1000, então definimos um limite alto para admins
+        query = query.limit(25000)  # Limite alto o suficiente para pegar todos os registros
     
     # Apply filters based on user role and selected company
-    if session['user']['role'] == 'cliente_unique':
+    if current_role == 'cliente_unique':
         if not user_companies:
             return render_template('dashboard/index.html', 
                                  kpis={}, table_data=[], companies=[], 
@@ -132,6 +151,7 @@ def index(**kwargs):
     # Execute query
     operacoes = query.execute()
     data = operacoes.data if operacoes.data else []
+    print(f"[DEBUG DASHBOARD] Registros retornados: {len(data)}")
     df = pd.DataFrame(data)
 
     if df.empty:
@@ -158,10 +178,10 @@ def index(**kwargs):
     # Calcular métricas básicas (do OnePage)
     total_operations = len(df)
     
-    # Métricas por modal de transporte
-    aereo = len(df[df['modal'] == 'AEREA'])
-    terrestre = len(df[df['modal'] == 'TERRESTRE'])
-    maritimo = len(df[df['modal'] == 'MARITIMA'])
+    # Métricas por modal de transporte - CORRIGIDO para novos valores
+    aereo = len(df[df['modal'] == 'AÉREA'])
+    terrestre = len(df[df['modal'] == 'RODOVIÁRIA']) 
+    maritimo = len(df[df['modal'] == 'MARÍTIMA'])
     
     # Métricas por status
     aguardando_embarque = len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)])
@@ -251,8 +271,11 @@ def index(**kwargs):
         
         # Formatar datas para exibição
         data_embarque_formatted = ""
+        data_embarque_sort = None
         if pd.notna(row.get('data_embarque')):
-            data_embarque_formatted = pd.to_datetime(row['data_embarque']).strftime('%d/%m/%Y')
+            data_embarque_dt = pd.to_datetime(row['data_embarque'])
+            data_embarque_formatted = data_embarque_dt.strftime('%d/%m/%Y')
+            data_embarque_sort = data_embarque_dt
         
         data_chegada_formatted = ""
         if data_chegada_display and pd.notna(data_chegada_display):
@@ -262,6 +285,7 @@ def index(**kwargs):
             'importador': row.get('importador', ''),
             'nro_pedido': nro_pedido,
             'data_embarque': data_embarque_formatted,
+            'data_embarque_sort': data_embarque_sort,  # Para ordenação
             'urf_entrada': row.get('urf_entrada', ''),
             'modal': row.get('modal', ''),
             'status_processo': row.get('status_processo', ''),
@@ -270,6 +294,9 @@ def index(**kwargs):
             'armazem_nome': armazem_nome,
             'data_chegada': data_chegada_formatted
         })
+    
+    # Ordenar tabela por data de embarque (mais recente primeiro)
+    table_data.sort(key=lambda x: x['data_embarque_sort'] if x['data_embarque_sort'] is not None else pd.Timestamp.min, reverse=True)
     
     # Organizar KPIs para compatibilidade com o novo template
     valor_medio_processo = (vmcv_total / total_operations) if total_operations > 0 else 0
@@ -574,9 +601,10 @@ def index(**kwargs):
     # Gráfico Mensal: Área + Linha (Processos e Valores Mensais)
     monthly_chart = None
     if not df.empty:
-        # Agrupar por mês
-        df['mes_ano'] = df['data_abertura'].dt.to_period('M')
-        monthly_data = df.groupby('mes_ano').agg({
+        # Agrupar por mês - garantindo que seja apenas dos últimos 12 meses
+        df_filtered_12m = df[df['data_abertura'] >= pd.to_datetime(data_limite_12_meses)]
+        df_filtered_12m['mes_ano'] = df_filtered_12m['data_abertura'].dt.to_period('M')
+        monthly_data = df_filtered_12m.groupby('mes_ano').agg({
             'ref_unique': 'count',  # Total de processos
             'valor_cif_real': 'sum'  # VMCV total
         }).reset_index()
@@ -584,6 +612,10 @@ def index(**kwargs):
         # Converter período para datetime para plotly
         monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
         monthly_data = monthly_data.sort_values('data')
+        
+        # Limitar aos últimos 12 meses para garantir
+        if len(monthly_data) > 12:
+            monthly_data = monthly_data.tail(12)
         
         # Criar gráfico com área e linha
         monthly_chart = go.Figure()
@@ -662,10 +694,10 @@ def index(**kwargs):
         
         # Definir cores específicas para os canais DI
         canal_colors = {
-            'VERDE': '#10b981',     # Verde
-            'AMARELO': '#f59e0b',   # Amarelo
-            'VERMELHO': '#ef4444',  # Vermelho
-            'CINZA': '#6b7280'      # Cinza para outros
+            'Verde': '#10b981',     # Verde
+            'Amarelo': '#f59e0b',   # Amarelo
+            'Vermelho': '#ef4444',  # Vermelho
+            'Cinza': '#6b7280'      # Cinza para outros
         }
         
         # Preparar dados para o gráfico
@@ -972,11 +1004,12 @@ def index(**kwargs):
                     )
 
 
-    # Get all available companies for filtering - OTIMIZADO
+    # Get all available companies for filtering - OTIMIZADO com filtro de 12 meses
     companies_query = supabase.table('importacoes_processos_aberta')\
         .select('cnpj_importador, importador')\
         .neq('cnpj_importador', '')\
         .not_.is_('cnpj_importador', 'null')\
+        .gte('data_abertura', data_limite_12_meses)\
         .execute()
     all_companies = []
     if companies_query.data:

@@ -158,7 +158,7 @@ def get_kpis():
         
         # Buscar dados básicos diretamente do Supabase com filtros
         query_builder = supabase.table('importacoes_processos_aberta').select(
-            'id, valor_fob_real, valor_cif_real, mercadoria, cnpj_importador, importador, status_processo, modal, data_abertura'
+            'id, valor_fob_real, valor_cif_real, mercadoria, cnpj_importador, importador, status_processo, modal, data_abertura, transit_time_real'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -199,6 +199,10 @@ def get_kpis():
         
         # Calcular processos em andamento
         processos_andamento = len([item for item in data if item.get('status_processo') in ['Em andamento', 'Aguardando']])
+        
+        # Calcular tempo médio de trânsito usando transit_time_real
+        transit_times = [float(item.get('transit_time_real', 0) or 0) for item in data if item.get('transit_time_real') and float(item.get('transit_time_real', 0) or 0) > 0]
+        tempo_medio_transito = sum(transit_times) / len(transit_times) if transit_times else 24  # Default 24 dias se não há dados
         
         # Debug dos cálculos
         print(f"[DEBUG KPIs] Total Processos: {total_processos}")
@@ -252,6 +256,11 @@ def get_kpis():
                 'value': processos_andamento,
                 'formatted': format_value_smart(processos_andamento),
                 'label': 'Processos em Andamento'
+            },
+            'tempo_medio_transito': {
+                'value': tempo_medio_transito,
+                'formatted': f"{tempo_medio_transito:.0f} dias",
+                'label': 'Tempo Médio de Trânsito'
             }
         }
         
@@ -337,7 +346,7 @@ def get_evolucao_mensal():
         
         # Construir query base
         query = supabase.table('importacoes_processos_aberta').select(
-            'data_abertura, valor_cif_real, mercadoria, cliente_cpfcnpj'
+            'data_abertura, valor_cif_real, mercadoria, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -388,7 +397,7 @@ def get_despesas_composicao():
         material_filter = request.args.get('material', '')
         
         # Buscar processos do material
-        query = supabase.table('importacoes_processos_aberta').select('id, cliente_cpfcnpj')
+        query = supabase.table('importacoes_processos_aberta').select('id, cnpj_importador')
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
@@ -569,7 +578,7 @@ def get_clientes_por_material():
         
         # Construir query base
         query = supabase.table('importacoes_processos_aberta').select(
-            'cliente_razaosocial, valor_cif_real, cliente_cpfcnpj'
+            'importador, valor_cif_real, cnpj_importador'
         ).ilike('mercadoria', f'%{material_filter}%')
         
         # Aplicar filtro de empresa baseado no usuário
@@ -611,7 +620,7 @@ def get_detalhamento():
         
         # Construir query base - incluindo campo referencias
         query = supabase.table('importacoes_processos_aberta').select(
-            'id, numero_di, importador, data_embarque, data_chegada, data_chegada, status_processo, canal, valor_cif_real, mercadoria, cnpj_importador'
+            'id, numero_di, importador, data_embarque, data_chegada, status_processo, canal, valor_cif_real, mercadoria, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -692,7 +701,7 @@ def get_principais_materiais():
         
         # Construir query base
         query = supabase.table('importacoes_processos_aberta').select(
-            'id, valor_fob_real, data_embarque, data_chegada, mercadoria, importador, cliente_cpfcnpj'
+            'id, valor_fob_real, data_embarque, data_chegada, mercadoria, importador, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -793,7 +802,7 @@ def get_radar_cliente_material():
         
         # Buscar todos os processos com dados necessários
         query = supabase.table('importacoes_processos_aberta').select(
-            'mercadoria, valor_cif_real, data_embarque, data_chegada, data_chegada, canal, cliente_cpfcnpj'
+            'mercadoria, valor_cif_real, data_embarque, data_chegada, canal, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário com tratamento de erro
@@ -1092,7 +1101,7 @@ def get_materiais_opcoes():
     """Buscar todos os materiais únicos para o dropdown"""
     try:
         # Buscar todos os materiais únicos
-        query = supabase.table('importacoes_processos_aberta').select('mercadoria, cliente_cpfcnpj')
+        query = supabase.table('importacoes_processos_aberta').select('mercadoria, cnpj_importador')
         
         # Aplicar filtro de empresa baseado no usuário
         query = apply_company_filter(query)
@@ -1132,7 +1141,7 @@ def get_linha_tempo_chegadas():
         
         # Buscar processos com chegadas futuras usando Supabase diretamente
         query = supabase.table('importacoes_processos_aberta').select(
-            'id, numero_di, data_chegada, mercadoria, importador, urf_entrada, modal, valor_cif_real, cliente_cpfcnpj'
+            'id, numero_di, data_chegada, mercadoria, importador, urf_entrada, modal, valor_cif_real, cnpj_importador'
         ).gte('data_chegada', str(hoje)).lte('data_chegada', str(data_limite))
         
         # Aplicar filtro de empresa baseado no usuário
@@ -1212,7 +1221,7 @@ def get_material_modal():
         
         # Construir query base
         query = supabase.table('importacoes_processos_aberta').select(
-            'mercadoria, modal, cliente_cpfcnpj'
+            'mercadoria, modal, cnpj_importador'
         )
         
         # Aplicar filtro de empresa baseado no usuário
@@ -1339,7 +1348,7 @@ def clientes_opcoes():
         
         # Base query - usar a tabela correta de importações
         query = supabase.table('importacoes_processos_aberta') \
-                        .select('cliente_razaosocial, cliente_cpfcnpj') \
+                        .select('importador, cnpj_importador') \
                         .not_.is_('importador', 'null') \
                         .not_.eq('importador', '')
         

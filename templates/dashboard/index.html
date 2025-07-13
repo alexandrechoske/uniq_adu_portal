@@ -455,6 +455,72 @@
         background: var(--color-surface-hover);
     }
 
+    /* === PAGINAÇÃO === */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-lg) var(--spacing-xl);
+        border-top: 1px solid var(--color-border);
+        background: var(--color-surface);
+    }
+
+    .pagination-info {
+        color: var(--color-text-secondary);
+        font-size: 0.875rem;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .pagination-btn {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border: 1px solid var(--color-border);
+        background: var(--color-surface);
+        color: var(--color-text-secondary);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.875rem;
+        min-width: 36px;
+        text-align: center;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+    }
+
+    .pagination-btn.active {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .page-size-selector {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        margin-left: var(--spacing-lg);
+    }
+
+    .page-size-select {
+        padding: var(--spacing-xs);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-surface);
+        font-size: 0.875rem;
+    }
+
     /* === STATUS BADGES MODERNOS === */
     .status-badge {
         display: inline-flex;
@@ -764,6 +830,10 @@
         console.log('Inicializando busca da tabela...');
         initializeTableSearch();
         
+        // Inicializar paginação
+        console.log('Inicializando paginação...');
+        initializePagination();
+        
         // Redimensionar gráficos quando necessário
         window.addEventListener('resize', debounce(handleResize, 250));
         
@@ -859,6 +929,9 @@
                 // Atualizar contador de resultados
                 console.log('Resultados visíveis:', visibleCount, 'de', rows.length);
                 updateSearchResults(searchTerm, visibleCount, rows.length);
+                
+                // Atualizar paginação baseada nos resultados filtrados
+                updateFilteredRows();
             }
         }, 500); // Aguardar 500ms
     }
@@ -872,6 +945,117 @@
         } else {
             searchInput.placeholder = `📋 ${visibleCount} de ${totalCount} operações`;
         }
+    }
+
+    // === PAGINAÇÃO ===
+    let currentPage = 1;
+    let pageSize = 50;
+    let totalRows = 0;
+    let filteredRows = [];
+
+    function initializePagination() {
+        const table = document.getElementById('importacoes-table');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        const allRows = Array.from(tbody.querySelectorAll('tr'));
+        totalRows = allRows.length;
+        filteredRows = allRows;
+
+        // Event listeners para controles de paginação
+        document.getElementById('first-page').addEventListener('click', () => goToPage(1));
+        document.getElementById('prev-page').addEventListener('click', () => goToPage(currentPage - 1));
+        document.getElementById('next-page').addEventListener('click', () => goToPage(currentPage + 1));
+        document.getElementById('last-page').addEventListener('click', () => goToPage(getTotalPages()));
+
+        // Event listener para mudança de tamanho da página
+        document.getElementById('page-size').addEventListener('change', function() {
+            pageSize = parseInt(this.value);
+            currentPage = 1;
+            updatePagination();
+        });
+
+        updatePagination();
+    }
+
+    function getTotalPages() {
+        return Math.ceil(filteredRows.length / pageSize);
+    }
+
+    function goToPage(page) {
+        const totalPages = getTotalPages();
+        if (page < 1 || page > totalPages) return;
+        
+        currentPage = page;
+        updatePagination();
+    }
+
+    function updatePagination() {
+        const totalPages = getTotalPages();
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+
+        // Mostrar/ocultar linhas baseado na página atual
+        filteredRows.forEach((row, index) => {
+            if (index >= startIndex && index < endIndex) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Atualizar info de registros mostrados
+        const showingStart = filteredRows.length > 0 ? startIndex + 1 : 0;
+        const showingEnd = Math.min(endIndex, filteredRows.length);
+        document.getElementById('showing-info').textContent = 
+            `Mostrando ${showingStart}-${showingEnd} de ${filteredRows.length} registros`;
+
+        // Atualizar botões de navegação
+        document.getElementById('first-page').disabled = currentPage === 1;
+        document.getElementById('prev-page').disabled = currentPage === 1;
+        document.getElementById('next-page').disabled = currentPage === totalPages || totalPages === 0;
+        document.getElementById('last-page').disabled = currentPage === totalPages || totalPages === 0;
+
+        // Atualizar números das páginas
+        updatePageNumbers(totalPages);
+    }
+
+    function updatePageNumbers(totalPages) {
+        const pageNumbersContainer = document.getElementById('page-numbers');
+        pageNumbersContainer.innerHTML = '';
+
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        // Ajustar startPage se necessário
+        if (endPage - startPage < maxVisiblePages - 1) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.addEventListener('click', () => goToPage(i));
+            pageNumbersContainer.appendChild(pageBtn);
+        }
+    }
+
+    // Integrar paginação com busca
+    function updateFilteredRows() {
+        const table = document.getElementById('importacoes-table');
+        const tbody = table.querySelector('tbody');
+        const allRows = Array.from(tbody.querySelectorAll('tr'));
+        
+        // Obter apenas as linhas visíveis (não filtradas pela busca)
+        filteredRows = allRows.filter(row => row.style.display !== 'none');
+        
+        // Resetar para primeira página quando aplicar filtro
+        currentPage = 1;
+        updatePagination();
     }
 
     function initializePeriodSelector() {
@@ -1333,6 +1517,29 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Paginação -->
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <span id="showing-info">Mostrando 1-50 de {{ table_data|length }} registros</span>
+                    <div class="page-size-selector">
+                        <label for="page-size">Itens por página:</label>
+                        <select id="page-size" class="page-size-select">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="first-page" title="Primeira página">««</button>
+                    <button class="pagination-btn" id="prev-page" title="Página anterior">‹</button>
+                    <div id="page-numbers"></div>
+                    <button class="pagination-btn" id="next-page" title="Próxima página">›</button>
+                    <button class="pagination-btn" id="last-page" title="Última página">»»</button>
+                </div>
             </div>
         </div>
     </div> <!-- Fecha main-content -->
