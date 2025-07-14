@@ -137,7 +137,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>🔍 Filtros de Materiais</h2>
-                <span id="close-modal" class="close">&times;</span>
+                <span class="close">&times;</span>
             </div>
             <div class="modal-body">
                 <!-- Filtros de Data -->
@@ -207,30 +207,10 @@
                             <label for="modal-filter">Modal:</label>
                             <select id="modal-filter" name="modal" class="filter-select">
                                 <option value="">Todos os modais</option>
-                                <!-- Opções carregadas dinamicamente -->
+                                <option value="AÉREA">✈️ Aéreo</option>
+                                <option value="MARÍTIMA">🚢 Marítimo</option>
+                                <option value="TERRESTRE">🚛 Terrestre</option>
                             </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="canal-filter">Canal:</label>
-                            <select id="canal-filter" name="canal" class="filter-select">
-                                <option value="">Todos os canais</option>
-                                <!-- Opções carregadas dinamicamente -->
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Filtros de Valor -->
-                <div class="filter-section">
-                    <h4 class="filter-section-title">💰 Valor</h4>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="valor-min">Valor Mínimo (R$):</label>
-                            <input type="number" id="valor-min" name="valor_min" class="filter-input" placeholder="0,00" step="0.01">
-                        </div>
-                        <div class="filter-group">
-                            <label for="valor-max">Valor Máximo (R$):</label>
-                            <input type="number" id="valor-max" name="valor_max" class="filter-input" placeholder="999.999,99" step="0.01">
                         </div>
                     </div>
                 </div>

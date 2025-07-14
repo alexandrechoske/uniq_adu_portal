@@ -3,20 +3,20 @@
 {% block title %}Análise de Materiais - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/materiais-simple.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/materiais.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="materiais-container">
     <!-- Header -->
     <div class="materiais-header">
-        <div>
+        <div class="header-left">
             <h1 class="materiais-title">Análise de Materiais</h1>
             <p class="materiais-subtitle">Visão detalhada dos materiais importados</p>
         </div>
-        <div class="header-actions">
+        <div class="header-right">
             <button id="open-filters" class="btn btn-primary">🔍 Filtros</button>
-            <span id="last-update">Carregando...</span>
+            <span id="last-update" class="last-update">Carregando...</span>
         </div>
     </div>
     
@@ -54,7 +54,7 @@
         <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Top 10 Materiais por Quantidade</h2>
-                <div>
+                <div class="chart-controls">
                     <button id="refresh-chart" class="btn btn-secondary">🔄 Atualizar</button>
                 </div>
             </div>
@@ -136,8 +136,8 @@
     <div id="filter-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>🔍 Filtros de Materiais</h2>
-                <span id="close-modal" class="close">&times;</span>
+                <h2 class="modal-title">🔍 Filtros de Materiais</h2>
+                <span class="close" id="close-modal">&times;</span>
             </div>
             <div class="modal-body">
                 <!-- Filtros de Data -->
@@ -207,30 +207,10 @@
                             <label for="modal-filter">Modal:</label>
                             <select id="modal-filter" name="modal" class="filter-select">
                                 <option value="">Todos os modais</option>
-                                <!-- Opções carregadas dinamicamente -->
+                                <option value="AÉREA">✈️ Aéreo</option>
+                                <option value="MARÍTIMA">🚢 Marítimo</option>
+                                <option value="TERRESTRE">🚛 Terrestre</option>
                             </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="canal-filter">Canal:</label>
-                            <select id="canal-filter" name="canal" class="filter-select">
-                                <option value="">Todos os canais</option>
-                                <!-- Opções carregadas dinamicamente -->
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Filtros de Valor -->
-                <div class="filter-section">
-                    <h4 class="filter-section-title">💰 Valor</h4>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="valor-min">Valor Mínimo (R$):</label>
-                            <input type="number" id="valor-min" name="valor_min" class="filter-input" placeholder="0,00" step="0.01">
-                        </div>
-                        <div class="filter-group">
-                            <label for="valor-max">Valor Máximo (R$):</label>
-                            <input type="number" id="valor-max" name="valor_max" class="filter-input" placeholder="999.999,99" step="0.01">
                         </div>
                     </div>
                 </div>
@@ -285,5 +265,5 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-<script src="{{ url_for('static', filename='js/materiais-simple.js') }}"></script>
+<script src="{{ url_for('static', filename='js/materiais.js') }}"></script>
 {% endblock %}

@@ -449,13 +449,6 @@
                 <i class="mdi mdi-package-variant text-xl"></i>
                 <span class="sidebar-text">Análise de Materiais</span>
             </a>           
-            
-            <!-- OnePage -->
-            <!-- <a href="{{ url_for('onepage.index') }}" 
-               class="sidebar-item {% if request.endpoint == 'onepage.index' %}active{% endif %}">
-                <i class="mdi mdi-file-document-multiple text-xl"></i>
-                <span class="sidebar-text">One Page</span>
-            </a> -->
 
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
             {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}

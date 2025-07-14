@@ -12,7 +12,7 @@ bp = Blueprint('paginas', __name__, url_prefix='/paginas')
 @login_required
 def check_session():
     """
-    Endpoint para verificação de sessão usado pelo sistema de auto-refresh da OnePage
+    Endpoint para verificação de sessão usado pelo sistema de auto-refresh
     Retorna status da sessão atual do usuário
     """
     try:

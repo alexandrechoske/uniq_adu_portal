@@ -27,7 +27,7 @@ The system preloads 30 days of data during login and stores in `session['cached_
 ### 2. Blueprint Registration Order
 ```python
 # In app.py - import routes AFTER app initialization
-from routes import auth, dashboard, relatorios, usuarios, agente, api, onepage, conferencia
+from routes import auth, dashboard, relatorios, usuarios, agente, api, conferencia
 from routes import conferencia_pdf, debug, paginas, materiais, background_tasks
 ```
 
@@ -106,7 +106,6 @@ material_info = material_cleaner.clean_material(raw_material_text)
 ### Blueprint URL Prefixes
 - Materials: `/materiais/`
 - API: `/api/`
-- Onepage: `/onepage/`
 - Conferencia: `/conferencia/`
 - Debug: `/debug/`
 
@@ -136,3 +135,6 @@ material_info = material_cleaner.clean_material(raw_material_text)
 
 When implementing new features, always consider the cache-first architecture, role-based filtering, and Brazilian date format handling patterns established in the existing codebase.
 Se for testar, utilize método via API pois a página exige login.
+SEMPRE CRIE ARQUIVOS COM O PREFIXO `test_` PARA TESTES.
+SEMPRE DELETE OS ARQUIVOS QUE CRIOU PARA TESTAR. ( delete os arquivos com o PREFIXO `test_` )
+SEMPRE QUE FOR TESTAR, ADICIONE LOGS, E PEÇA PARA EU ENTRAR NA PÁGINA EM QUESTÃO, E VOCÊ VALIDA OS LOGS DE SAÍDA.

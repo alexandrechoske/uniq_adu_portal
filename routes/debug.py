@@ -34,6 +34,52 @@ def log_session():
         'session': session_data
     }
 
+@bp.route('/check-materiais-cache')
+def check_materiais_cache():
+    """
+    Verifica o estado do cache de materiais
+    """
+    from services.data_cache import data_cache
+    
+    try:
+        # Verificar se usuário está logado
+        user_id = session.get('user', {}).get('id')
+        user_role = session.get('user', {}).get('role')
+        
+        if not user_id:
+            return {
+                'status': 'error',
+                'message': 'Usuário não logado'
+            }
+        
+        # Verificar cache server-side
+        cached_data = data_cache.get_cache(user_id, 'raw_data')
+        
+        # Verificar cache da sessão
+        session_cache = session.get('cached_data', [])
+        
+        return {
+            'status': 'success',
+            'user_id': user_id,
+            'user_role': user_role,
+            'server_cache': {
+                'exists': cached_data is not None,
+                'type': type(cached_data).__name__,
+                'length': len(cached_data) if cached_data and isinstance(cached_data, list) else 0
+            },
+            'session_cache': {
+                'exists': len(session_cache) > 0,
+                'type': type(session_cache).__name__,
+                'length': len(session_cache) if isinstance(session_cache, list) else 0
+            }
+        }
+        
+    except Exception as e:
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+
 @bp.route('/check-paginas-table')
 def check_paginas_table():
     """

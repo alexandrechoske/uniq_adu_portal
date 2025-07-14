@@ -1,9 +1,8 @@
-from flask import Blueprint, render_template, session, request, jsonify
+from flask import Blueprint, render_template, session, jsonify
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
-from routes.api import get_user_companies  # corrigir import para obter empresas do usuário
+from routes.api import get_user_companies
 from permissions import check_permission
-from config import Config
 from services.data_cache import data_cache
 import pandas as pd
 from datetime import datetime, timedelta
@@ -61,13 +60,8 @@ def dashboard_data_api(permissions=None):
         # Verificar cache do servidor primeiro
         cached_data = data_cache.get_cache(user_id, 'raw_data')
         
-        print(f"[DASHBOARD] Status do cache para usuário {user_id}:")
-        print(f"[DASHBOARD] Cache encontrado: {cached_data is not None}")
-        print(f"[DASHBOARD] Cache é lista: {isinstance(cached_data, list) if cached_data else False}")
-        print(f"[DASHBOARD] Tamanho do cache: {len(cached_data) if cached_data and isinstance(cached_data, list) else 0}")
         
         if cached_data and isinstance(cached_data, list) and len(cached_data) > 0:
-            print(f"[DASHBOARD] Usando dados do cache do servidor - {len(cached_data)} registros")
             
             # Calcular KPIs a partir do cache
             df = pd.DataFrame(cached_data)
