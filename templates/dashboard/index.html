@@ -1634,19 +1634,29 @@
     // Função para criar gráfico de linha mensal
     function createMonthlyChart(data) {
         const ctx = document.getElementById('monthly-chart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('[Charts] Elemento monthly-chart não encontrado');
+            return;
+        }
 
         if (monthlyChart) {
+            console.log('[Charts] Destruindo gráfico existente: monthly-chart');
             monthlyChart.destroy();
+            monthlyChart = null;
         }
+
+        // Usar dados compatíveis com diferentes formatos
+        const labels = data.months || data.labels || [];
+        const processData = data.processes || data.data || [];
+        const valueData = data.values || [];
 
         monthlyChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.months || [],
+                labels: labels,
                 datasets: [{
                     label: 'Processos',
-                    data: data.processes || [],
+                    data: processData.map(value => isNaN(value) ? 0 : value),
                     borderColor: colorPalette.primary,
                     backgroundColor: `${colorPalette.primary}15`,
                     borderWidth: 3,
@@ -1659,7 +1669,7 @@
                     pointHoverRadius: 8
                 }, {
                     label: 'Valor (R$ Milhões)',
-                    data: data.values || [],
+                    data: valueData.map(value => isNaN(value) ? 0 : value),
                     borderColor: colorPalette.success,
                     backgroundColor: `${colorPalette.success}15`,
                     borderWidth: 3,
@@ -1745,10 +1755,15 @@
     // Função para criar gráfico de pizza para canais DI
     function createCanalChart(data) {
         const ctx = document.getElementById('canal-chart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('[Charts] Elemento canal-chart não encontrado');
+            return;
+        }
 
         if (canalChart) {
+            console.log('[Charts] Destruindo gráfico existente: canal-chart');
             canalChart.destroy();
+            canalChart = null;
         }
 
         const colors = {
@@ -1763,7 +1778,7 @@
             data: {
                 labels: data.labels || [],
                 datasets: [{
-                    data: data.values || [],
+                    data: data.values?.map(value => isNaN(value) ? 0 : value) || [],
                     backgroundColor: data.labels?.map(label => colors[label] || '#6b7280') || [],
                     borderColor: '#ffffff',
                     borderWidth: 3,
@@ -1794,11 +1809,9 @@
                         cornerRadius: 8,
                         callbacks: {
                             label: function(context) {
-                                const label = context.label || '';
-                                const value = context.parsed;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ${value} (${percentage}%)`;
+                                const percentage = ((context.raw / total) * 100).toFixed(1);
+                                return `${context.label}: ${context.raw} (${percentage}%)`;
                             }
                         }
                     },
@@ -1821,10 +1834,15 @@
     // Função para criar gráfico de barras horizontais para armazéns
     function createArmazemChart(data) {
         const ctx = document.getElementById('armazem-chart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('[Charts] Elemento armazem-chart não encontrado');
+            return;
+        }
 
         if (armazemChart) {
+            console.log('[Charts] Destruindo gráfico existente: armazem-chart');
             armazemChart.destroy();
+            armazemChart = null;
         }
 
         armazemChart = new Chart(ctx, {
@@ -1833,7 +1851,7 @@
                 labels: data.labels || [],
                 datasets: [{
                     label: 'Quantidade',
-                    data: data.values || [],
+                    data: (data.values || []).map(value => isNaN(value) ? 0 : value),
                     backgroundColor: colorPalette.gradient.slice(0, data.labels?.length || 0),
                     borderColor: colorPalette.gradient.slice(0, data.labels?.length || 0),
                     borderWidth: 1,
@@ -1892,10 +1910,15 @@
     // Função para criar gráfico de barras para materiais
     function createMaterialChart(data) {
         const ctx = document.getElementById('material-chart');
-        if (!ctx) return;
+        if (!ctx) {
+            console.warn('[Charts] Elemento material-chart não encontrado');
+            return;
+        }
 
         if (materialChart) {
+            console.log('[Charts] Destruindo gráfico existente: material-chart');
             materialChart.destroy();
+            materialChart = null;
         }
 
         materialChart = new Chart(ctx, {
@@ -1904,7 +1927,7 @@
                 labels: data.labels || [],
                 datasets: [{
                     label: 'Valor (R$ Milhões)',
-                    data: data.values || [],
+                    data: (data.values || []).map(value => isNaN(value) ? 0 : value),
                     backgroundColor: colorPalette.gradient.slice(0, data.labels?.length || 0),
                     borderColor: colorPalette.gradient.slice(0, data.labels?.length || 0),
                     borderWidth: 1,
@@ -1971,22 +1994,79 @@
         });
     }
 
-    // Função para carregar dados e criar todos os gráficos
+    // Função para limpar todos os gráficos
+    async function destroyAllCharts() {
+        console.log('[Charts] Iniciando limpeza de gráficos...');
+
+        if (monthlyChart) {
+            try {
+                monthlyChart.destroy();
+                console.log('[Charts] Gráfico monthly-chart destruído');
+            } catch (e) {
+                console.warn('[Charts] Erro ao destruir monthly-chart:', e);
+            }
+            monthlyChart = null;
+        }
+
+        if (canalChart) {
+            try {
+                canalChart.destroy();
+                console.log('[Charts] Gráfico canal-chart destruído');
+            } catch (e) {
+                console.warn('[Charts] Erro ao destruir canal-chart:', e);
+            }
+            canalChart = null;
+        }
+
+        if (armazemChart) {
+            try {
+                armazemChart.destroy();
+                console.log('[Charts] Gráfico armazem-chart destruído');
+            } catch (e) {
+                console.warn('[Charts] Erro ao destruir armazem-chart:', e);
+            }
+            armazemChart = null;
+        }
+
+        if (materialChart) {
+            try {
+                materialChart.destroy();
+                console.log('[Charts] Gráfico material-chart destruído');
+            } catch (e) {
+                console.warn('[Charts] Erro ao destruir material-chart:', e);
+            }
+            materialChart = null;
+        }
+
+        // Aguardar um pouco para garantir que a destruição foi processada
+        return new Promise(resolve => setTimeout(resolve, 300));
+    }
+
     async function loadAndCreateCharts() {
-        // Verificar cache primeiro
+        console.log('[Charts] Limpando gráficos existentes...');
+        await destroyAllCharts();
+
         let chartData = chartCache.get();
-        
+
         if (!chartData) {
             try {
                 console.log('[Charts] Carregando dados dos gráficos...');
                 const response = await fetch('/api/dashboard-data?charts=1');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
-                
+                console.log('[Charts] Resposta da API:', result);
+
                 if (result.success && result.data) {
                     chartData = result.data;
                     chartCache.set(chartData);
+                    console.log('[Charts] Dados carregados com sucesso:', chartData);
                 } else {
-                    console.error('[Charts] Erro ao carregar dados:', result.error);
+                    console.error('[Charts] Erro ao carregar dados:', result.error || 'Resposta inválida');
+                    console.error('[Charts] Resultado completo:', result);
                     return;
                 }
             } catch (error) {
@@ -1994,27 +2074,46 @@
                 return;
             }
         } else {
-            console.log('[Charts] Usando dados do cache');
+            console.log('[Charts] Usando dados do cache:', chartData);
         }
 
-        // Criar gráficos com os dados
-        if (chartData.monthly) {
-            createMonthlyChart(chartData.monthly);
-        }
-        
-        if (chartData.canal) {
-            createCanalChart(chartData.canal);
-        }
-        
-        if (chartData.armazem) {
-            createArmazemChart(chartData.armazem);
-        }
-        
-        if (chartData.material) {
-            createMaterialChart(chartData.material);
-        }
+        try {
+            if (chartData.monthly && chartData.monthly.months && chartData.monthly.processes) {
+                console.log('[Charts] Criando gráfico mensal com dados:', chartData.monthly);
+                createMonthlyChart(chartData.monthly);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } else {
+                console.warn('[Charts] Dados inválidos para gráfico mensal:', chartData.monthly);
+            }
 
-        console.log('[Charts] Todos os gráficos Chart.js criados com sucesso!');
+            if (chartData.canal && chartData.canal.labels && chartData.canal.values) {
+                console.log('[Charts] Criando gráfico de canal com dados:', chartData.canal);
+                createCanalChart(chartData.canal);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } else {
+                console.warn('[Charts] Dados inválidos para gráfico de canal:', chartData.canal);
+            }
+
+            if (chartData.armazem && chartData.armazem.labels && chartData.armazem.values) {
+                console.log('[Charts] Criando gráfico de armazéns com dados:', chartData.armazem);
+                createArmazemChart(chartData.armazem);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } else {
+                console.warn('[Charts] Dados inválidos para gráfico de armazéns:', chartData.armazem);
+            }
+
+            if (chartData.material && chartData.material.labels && chartData.material.values) {
+                console.log('[Charts] Criando gráfico de materiais com dados:', chartData.material);
+                createMaterialChart(chartData.material);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } else {
+                console.warn('[Charts] Dados inválidos para gráfico de materiais:', chartData.material);
+            }
+
+            console.log('[Charts] Todos os gráficos foram processados com sucesso!');
+        } catch (error) {
+            console.error('[Charts] Erro ao criar gráficos:', error);
+        }
     }
 
     // Função para atualizar gráficos (drill-down interativo)
@@ -2025,10 +2124,151 @@
         loadAndCreateCharts();
     };
 
+    // Teste simples para verificar se Chart.js funciona
+    function testSimpleChart() {
+        console.log('[Charts] Testando Chart.js com dados fixos...');
+        
+        const ctx = document.getElementById('monthly-chart');
+        if (!ctx) {
+            console.error('[Charts] Canvas monthly-chart não encontrado!');
+            return;
+        }
+        
+        // Destruir gráfico anterior se existir
+        if (monthlyChart) {
+            monthlyChart.destroy();
+        }
+        
+        // Criar gráfico de teste com dados fixos
+        monthlyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                datasets: [{
+                    label: 'Teste',
+                    data: [12, 19, 3, 5, 2, 3],
+                    borderColor: '#3b82f6',
+                    backgroundColor: '#3b82f615',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    x: {
+                        display: true
+                    },
+                    y: {
+                        display: true,
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        console.log('[Charts] Gráfico de teste criado com sucesso!');
+    }
+
     // Inicializar gráficos quando o dashboard estiver pronto
     document.addEventListener('DOMContentLoaded', function() {
-        // Aguardar um pouco para garantir que o layout está estável
-        setTimeout(loadAndCreateCharts, 500);
+        console.log('[Charts] DOM carregado, esperando 2 segundos...');
+        
+        // Aguardar um pouco para garantir que tudo carregou
+        setTimeout(() => {
+            console.log('[Charts] Inicializando teste...');
+            
+            // Primeiro, verificar se os canvas existem
+            const canvases = {
+                'monthly-chart': document.getElementById('monthly-chart'),
+                'canal-chart': document.getElementById('canal-chart'),
+                'armazem-chart': document.getElementById('armazem-chart'),
+                'material-chart': document.getElementById('material-chart')
+            };
+            
+            console.log('[Charts] Canvas encontrados:', canvases);
+            
+            // Verificar se Chart.js está disponível
+            if (typeof Chart === 'undefined') {
+                console.error('[Charts] Chart.js não está carregado!');
+                return;
+            }
+            
+            console.log('[Charts] Chart.js está disponível:', Chart.version);
+            
+            // Testar criação de gráfico simples
+            if (canvases['monthly-chart']) {
+                console.log('[Charts] Criando gráfico de teste...');
+                
+                try {
+                    const testChart = new Chart(canvases['monthly-chart'], {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai'],
+                            datasets: [{
+                                label: 'Teste',
+                                data: [10, 20, 30, 40, 50],
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log('[Charts] Gráfico de teste criado com sucesso!', testChart);
+                    
+                    // Aguardar 3 segundos e tentar carregar dados reais
+                    setTimeout(() => {
+                        console.log('[Charts] Testando API...');
+                        fetch('/api/dashboard-data?charts=1')
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('[Charts] Dados da API:', data);
+                                if (data.success && data.data) {
+                                    console.log('[Charts] API retornou dados válidos:', data.data);
+                                    
+                                    // Destruir gráfico de teste
+                                    testChart.destroy();
+                                    
+                                    // Criar gráficos reais
+                                    loadAndCreateCharts();
+                                } else {
+                                    console.error('[Charts] API retornou erro:', data.error);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('[Charts] Erro na API:', error);
+                            });
+                    }, 3000);
+                    
+                } catch (error) {
+                    console.error('[Charts] Erro ao criar gráfico de teste:', error);
+                }
+            } else {
+                console.error('[Charts] Canvas monthly-chart não encontrado!');
+            }
+        }, 2000);
     });
 
     // Recarregar gráficos quando os dados assíncronos forem atualizados

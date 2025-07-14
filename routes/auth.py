@@ -5,12 +5,36 @@ from extensions import supabase, supabase_admin
 from datetime import datetime
 import requests
 import json
+import os
+from services.data_cache import data_cache
 
 bp = Blueprint('auth', __name__)
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Verificar se é uma requisição com API key bypass
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        request_api_key = request.headers.get('X-API-Key')
+        
+        print(f"[AUTH DEBUG] API_BYPASS_KEY configurada: {bool(api_bypass_key)}")
+        print(f"[AUTH DEBUG] X-API-Key recebida: {bool(request_api_key)}")
+        print(f"[AUTH DEBUG] Chaves são iguais: {api_bypass_key == request_api_key}")
+        
+        if api_bypass_key and request_api_key == api_bypass_key:
+            print(f"[AUTH] Bypass de API detectado - permitindo acesso sem autenticação")
+            # Criar uma sessão temporária para o bypass
+            session['user'] = {
+                'id': 'api_bypass',
+                'email': 'api@bypass.com',
+                'role': 'admin',  # Acesso total para bypass
+                'name': 'API Bypass',
+                'user_companies': []  # Admin vê todas as empresas
+            }
+            session['created_at'] = datetime.now().timestamp()
+            session['last_activity'] = datetime.now().timestamp()
+            return f(*args, **kwargs)
+        
         # Verificar se existe usuário na sessão e se tem os dados mínimos necessários
         if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
             print(f"[AUTH] Redirecionando para login - usuário não encontrado na sessão")
@@ -43,6 +67,12 @@ def role_required(roles):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # Verificar se é uma requisição com API key bypass
+            api_bypass_key = os.getenv('API_BYPASS_KEY')
+            if api_bypass_key and request.headers.get('X-API-Key') == api_bypass_key:
+                print(f"[AUTH] Bypass de API detectado - permitindo acesso de role sem verificação")
+                return f(*args, **kwargs)
+            
             # Verificar se existe usuário na sessão
             if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
                 print(f"[AUTH] Redirecionando para login - usuário não encontrado na sessão")
@@ -191,11 +221,34 @@ def login():
                         },
                         'created_at': now_timestamp,
                         'last_activity': now_timestamp,
-                        'permissions_cache': {}  # Cache para otimizar verificações futuras
+                        'permissions_cache': {},  # Cache para otimizar verificações futuras
+                        'data_loading_status': 'loading'  # Status do carregamento de dados
                     })
                     
+                    # Pré-carregar dados em background
+                    try:
+                        print(f"[AUTH] Iniciando pré-carregamento de dados para usuário {user_id}")
+                        session['data_loading_status'] = 'loading'
+                        session['data_loading_step'] = 'Carregando dados do ano atual...'
+                        
+                        # Pré-carregar dados
+                        data_cache.preload_user_data(
+                            user_id=user_id,
+                            user_role=user.get('role'),
+                            user_companies=user_companies
+                        )
+                        
+                        session['data_loading_status'] = 'completed'
+                        session['data_loading_step'] = 'Dados carregados com sucesso!'
+                        print(f"[AUTH] Pré-carregamento concluído para usuário {user_id}")
+                        
+                    except Exception as preload_error:
+                        print(f"[AUTH] Erro no pré-carregamento: {preload_error}")
+                        session['data_loading_status'] = 'error'
+                        session['data_loading_step'] = 'Erro ao carregar dados, mas você pode continuar'
+                    
                     flash('Login realizado com sucesso!', 'success')
-                    return redirect(url_for('dashboard.index'))
+                    return redirect(url_for('auth.loading'))
                 else:
                     flash('Usuário não encontrado na base de dados.', 'error')
             else:
@@ -213,6 +266,46 @@ def login():
                 flash('Erro interno. Tente novamente.', 'error')
     
     return render_template('auth/login.html')
+
+@bp.route('/loading')
+@login_required
+def loading():
+    """Página de carregamento de dados"""
+    return render_template('auth/loading.html')
+
+@bp.route('/api/preload-data', methods=['POST'])
+@login_required
+def preload_data():
+    """API para pre-carregar dados do usuário"""
+    try:
+        # Pre-carrega os dados do usuário
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
+        
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Usuário não identificado'})
+            
+        # Executa o pre-loading
+        cache_data = data_cache.preload_user_data(
+            user_id=user_id,
+            user_role=user_data.get('role'),
+            user_companies=user_data.get('user_companies', [])
+        )
+        
+        # Salva na sessão
+        session['cached_data'] = cache_data
+        session['data_loaded'] = True
+        session['data_load_time'] = datetime.now().isoformat()
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Dados carregados com sucesso',
+            'redirect_url': url_for('dashboard.index')
+        })
+        
+    except Exception as e:
+        print(f"Erro ao pre-carregar dados: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/logout')
 def logout():

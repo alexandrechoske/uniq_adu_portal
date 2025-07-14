@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Carregando Dados - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<style>
+.loading-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 3rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 100%;
+}
+
+.loading-spinner {
+    width: 80px;
+    height: 80px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 2rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.loading-subtitle {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.loading-steps {
+    text-align: left;
+    margin-top: 2rem;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.step.completed {
+    background: rgba(34, 197, 94, 0.2);
+}
+
+.step.active {
+    background: rgba(59, 130, 246, 0.2);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.step-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step-text {
+    flex: 1;
+    font-size: 0.95rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    margin-top: 2rem;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #3b82f6);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+    width: 0%;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="loading-container">
+    <div class="loading-card">
+        <div class="loading-spinner"></div>
+        
+        <h1 class="loading-title">Preparando seus dados</h1>
+        <p class="loading-subtitle">Estamos otimizando sua experiência carregando os dados necessários</p>
+        
+        <div class="loading-steps">
+            <div class="step completed" id="step-auth">
+                <div class="step-icon">✓</div>
+                <div class="step-text">Usuário autenticado</div>
+            </div>
+            
+            <div class="step active" id="step-data">
+                <div class="step-icon">
+                    <div style="width: 12px; height: 12px; border: 2px solid currentColor; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                </div>
+                <div class="step-text">Carregando dados do ano atual</div>
+            </div>
+            
+            <div class="step" id="step-process">
+                <div class="step-icon">⏳</div>
+                <div class="step-text">Processando informações</div>
+            </div>
+            
+            <div class="step" id="step-complete">
+                <div class="step-icon">🚀</div>
+                <div class="step-text">Redirecionando para o dashboard</div>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function updateProgress() {
+    const progress = (currentStep / totalSteps) * 100;
+    document.getElementById('progress').style.width = progress + '%';
+}
+
+function completeStep(stepId, nextStepId) {
+    const step = document.getElementById(stepId);
+    const nextStep = document.getElementById(nextStepId);
+    
+    if (step) {
+        step.classList.remove('active');
+        step.classList.add('completed');
+        step.querySelector('.step-icon').innerHTML = '✓';
+    }
+    
+    if (nextStep) {
+        nextStep.classList.add('active');
+    }
+    
+    currentStep++;
+    updateProgress();
+}
+
+// Função para delay
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Processo de carregamento real
+async function startDataLoading() {
+    try {
+        // Passo 1: Dados
+        await sleep(1500);
+        completeStep('step-data', 'step-process');
+        
+        // Passo 2: Processamento - fazer chamada real para a API
+        const response = await fetch('/auth/api/preload-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        await sleep(1500);
+        completeStep('step-process', 'step-complete');
+        
+        if (result.success) {
+            // Passo 3: Completo
+            await sleep(1000);
+            completeStep('step-complete', null);
+            
+            // Redirecionar para o dashboard
+            window.location.href = result.redirect_url || '/dashboard';
+        } else {
+            throw new Error(result.error || 'Erro ao carregar dados');
+        }
+        
+    } catch (error) {
+        console.error('Erro no carregamento:', error);
+        
+        // Mesmo com erro, completar o processo e redirecionar
+        completeStep('step-process', 'step-complete');
+        await sleep(1000);
+        completeStep('step-complete', null);
+        await sleep(1000);
+        
+        // Redirecionar mesmo com erro
+        window.location.href = '/dashboard';
+    }
+}
+
+// Atualizar progresso inicial e iniciar carregamento
+updateProgress();
+startDataLoading();
+</script>
+{% endblock %}

@@ -3,7 +3,6 @@ from extensions import supabase
 from routes.auth import login_required, role_required
 from permissions import check_permission
 from config import Config
-from services.data_cache import data_cache
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -49,7 +48,7 @@ def format_value_smart(value, currency=False):
 @bp.route('/dashboard')
 @check_permission()
 def index(**kwargs):
-    """Dashboard principal com dados pré-carregados quando disponíveis"""
+    """Dashboard principal com carregamento inicial rápido e dados assíncronos"""
     # Get user companies if client
     user_companies = []
     if session['user']['role'] == 'cliente_unique':
@@ -67,89 +66,56 @@ def index(**kwargs):
         'last_updated': datetime.now().strftime('%Y-%m-%d')
     }
     
-    # Tentar usar dados em cache primeiro
-    cached_data = session.get('cached_data', {})
-    dashboard_data = cached_data.get('dashboard', {})
+    # Get all available companies for filtering
+    data_limite_companies = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+    companies_query = supabase.table('importacoes_processos_aberta')\
+        .select('cnpj_importador, importador')\
+        .neq('cnpj_importador', '')\
+        .not_.is_('cnpj_importador', 'null')\
+        .gte('data_abertura', data_limite_companies)\
+        .execute()
     
-    available_companies = []
+    all_companies = []
+    if companies_query.data:
+        companies_df = pd.DataFrame(companies_query.data)
+        all_companies = [
+            {'cpfcnpj': row['cnpj_importador'], 'nome': row['importador']}
+            for _, row in companies_df.drop_duplicates(subset=['cnpj_importador']).iterrows()
+        ]
     
-    # Se existem dados em cache, usar
-    if dashboard_data.get('companies'):
-        available_companies = dashboard_data['companies']
-        print("[DASHBOARD] Usando dados de empresas em cache")
-    else:
-        # Fallback: buscar dados do banco
-        print("[DASHBOARD] Cache não disponível, buscando dados do banco")
-        data_limite_companies = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
-        companies_query = supabase.table('importacoes_processos_aberta')\
-            .select('cnpj_importador, importador')\
-            .neq('cnpj_importador', '')\
-            .not_.is_('cnpj_importador', 'null')\
-            .gte('data_abertura', data_limite_companies)\
-            .execute()
-        
-        all_companies = []
-        if companies_query.data:
-            companies_df = pd.DataFrame(companies_query.data)
-            all_companies = [
-                {'cpfcnpj': row['cnpj_importador'], 'nome': row['importador']}
-                for _, row in companies_df.drop_duplicates(subset=['cnpj_importador']).iterrows()
-            ]
-        
-        # Filter companies based on user role
-        available_companies = all_companies
-        if session['user']['role'] == 'cliente_unique' and user_companies:
-            available_companies = [c for c in all_companies if c['cpfcnpj'] in user_companies]
+    # Filter companies based on user role
+    available_companies = all_companies
+    if session['user']['role'] == 'cliente_unique' and user_companies:
+        available_companies = [c for c in all_companies if c['cpfcnpj'] in user_companies]
     
-    # Determinar se temos dados completos em cache
-    has_cached_dashboard = bool(dashboard_data.get('stats') and dashboard_data.get('charts'))
-    
-    # Retornar página com dados pré-carregados quando disponíveis
-    return render_template('dashboard/index_simple.html', 
+    # Retornar página com estrutura básica - dados serão carregados via AJAX
+    return render_template('dashboard/index.html', 
+                         kpis={}, 
+                         analise_material=[],
+                         material_analysis=[],
+                         data=[],
+                         table_data=[], 
+                         daily_chart=None,
+                         monthly_chart=None,
+                         canal_chart=None,
+                         radar_chart=None,
+                         material_chart=None,
                          companies=available_companies,
                          selected_company=selected_company,
                          currencies=currencies, 
                          last_update=last_update,
                          user_role=session['user']['role'],
-                         cached_dashboard=dashboard_data if has_cached_dashboard else None,
-                         has_cache=has_cached_dashboard)
+                         async_loading=True)
 
 @bp.route('/api/dashboard-data')
 @check_permission()
 def dashboard_data_api():
-    """API endpoint para carregamento de dados do dashboard, usando cache quando disponível"""
+    """API endpoint para carregamento assíncrono de dados do dashboard"""
     try:
         # Parâmetros da requisição
         periodo = request.args.get('periodo', '30')  # Padrão: 30 dias
         empresa = request.args.get('empresa')
-        charts_only = request.args.get('charts', '0') == '1'
-        force_refresh = request.args.get('refresh', '0') == '1'  # Forçar atualização
-        
-        # Verificar se existem dados em cache
-        cached_data = session.get('cached_data', {})
-        dashboard_cache = cached_data.get('dashboard', {})
-        
-        # Se temos cache e não foi solicitado refresh, usar dados em cache
-        if dashboard_cache and not force_refresh and periodo == '30' and not empresa:
-            print("[DASHBOARD-API] Usando dados em cache")
-            
-            if charts_only:
-                return jsonify({
-                    'success': True,
-                    'charts': dashboard_cache.get('charts', {}),
-                    'source': 'cache'
-                })
-            else:
-                return jsonify({
-                    'success': True,
-                    'stats': dashboard_cache.get('stats', {}),
-                    'charts': dashboard_cache.get('charts', {}),
-                    'companies': dashboard_cache.get('companies', []),
-                    'source': 'cache'
-                })
-        
-        # Caso contrário, buscar dados do banco (código original)
-        print("[DASHBOARD-API] Buscando dados do banco")
+        charts_only = request.args.get('charts', '0') == '1'  # Novo parâmetro para dados de gráficos
         
         # Get user companies if client
         user_companies = []
@@ -230,20 +196,15 @@ def dashboard_data_api():
         monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
         monthly_data = monthly_data.sort_values('data').tail(12)
         
-        print(f"[DEBUG MONTHLY] Dados mensais processados: {len(monthly_data)} registros")
-        print(f"[DEBUG MONTHLY] Amostra: {monthly_data.head(3).to_dict()}")
-        
-        # Sanitizar valores para evitar NaN e garantir tipos corretos
-        processes_values = monthly_data['ref_unique'].fillna(0).astype(int).tolist()
-        value_values = monthly_data['valor_cif_real'].fillna(0).astype(float).tolist()
+        # Sanitizar valores para evitar NaN
+        processes_values = monthly_data['ref_unique'].fillna(0).tolist()
+        value_values = monthly_data['valor_cif_real'].fillna(0).tolist()
         
         charts_data['monthly'] = {
             'months': [d.strftime('%b %Y') for d in monthly_data['data']],
-            'processes': [max(0, int(v)) for v in processes_values],
-            'values': [max(0.0, round(float(v)/1000000, 1)) for v in value_values]
+            'processes': [int(v) for v in processes_values],
+            'values': [round(float(v)/1000000, 1) if v > 0 else 0.0 for v in value_values]
         }
-        
-        print(f"[DEBUG MONTHLY] Resultado final: {charts_data['monthly']}")
         
         # 2. Gráfico de Canal DI (Doughnut Chart)
         canal_data = df['canal'].value_counts()
@@ -254,39 +215,28 @@ def dashboard_data_api():
         
         # 3. Gráfico de Armazéns/URF (Horizontal Bar Chart)
         armazem_data = df.groupby('urf_entrada').agg({
-            'ref_unique': 'count',
-            'valor_cif_real': 'sum'
+            'ref_unique': 'count'
         }).reset_index()
-        armazem_data = armazem_data.sort_values('ref_unique', ascending=False).head(8)  # Ordem decrescente
-        
-        print(f"[DEBUG ARMAZEM] Dados processados: {len(armazem_data)} registros")
-        print(f"[DEBUG ARMAZEM] Amostra: {armazem_data.head(3).to_dict()}")
+        armazem_data = armazem_data.sort_values('ref_unique', ascending=True).tail(8)
         
         charts_data['armazem'] = {
-            'labels': [str(label)[:30] + '...' if len(str(label)) > 30 else str(label) 
+            'labels': [str(label)[:20] + '...' if len(str(label)) > 20 else str(label) 
                       for label in armazem_data['urf_entrada'].tolist()],
             'values': [int(v) for v in armazem_data['ref_unique'].fillna(0).tolist()]
         }
-        
-        print(f"[DEBUG ARMAZEM] Resultado final: {charts_data['armazem']}")
         
         # 4. Gráfico de Materiais (Horizontal Bar Chart)
         material_data = df.groupby('mercadoria').agg({
             'valor_cif_real': 'sum'
         }).reset_index()
-        material_data = material_data.sort_values('valor_cif_real', ascending=False).head(8)  # Ordem decrescente
-        
-        print(f"[DEBUG MATERIAL] Dados processados: {len(material_data)} registros")
-        print(f"[DEBUG MATERIAL] Amostra: {material_data.head(3).to_dict()}")
+        material_data = material_data.sort_values('valor_cif_real', ascending=True).tail(8)
         
         material_values = material_data['valor_cif_real'].fillna(0).tolist()
         charts_data['material'] = {
-            'labels': [str(label)[:35] + '...' if len(str(label)) > 35 else str(label) 
+            'labels': [str(label)[:25] + '...' if len(str(label)) > 25 else str(label) 
                       for label in material_data['mercadoria'].tolist()],
             'values': [round(float(v)/1000000, 1) if v > 0 else 0.0 for v in material_values]
         }
-        
-        print(f"[DEBUG MATERIAL] Resultado final: {charts_data['material']}")
         
         # Se for apenas para gráficos, retornar apenas os dados dos gráficos
         if charts_only:
@@ -359,20 +309,16 @@ def dashboard_data_api():
                     'percentual': round(percentual, 1)
                 })
         
-        # Dados da tabela (limitados para performance) - ordenados por data de abertura
-        df_sorted = df.sort_values('data_abertura', ascending=False)  # Mais recente primeiro
+        # Dados da tabela (limitados para performance)
         table_data = []
-        for _, row in df_sorted.head(100).iterrows():
+        for _, row in df.head(100).iterrows():
             table_data.append({
-                'numero_processo': row.get('ref_unique', ''),
-                'data_registro': row.get('data_abertura', ''),
-                'modal_descricao': row.get('modal', ''),
-                'canal_descricao': row.get('canal', ''),
-                'urf_entrada_descricao': row.get('urf_entrada', ''),
+                'importador': row.get('importador', ''),
+                'modal': row.get('modal', ''),
+                'urf_entrada': row.get('urf_entrada', ''),
+                'status_processo': row.get('status_processo', ''),
                 'mercadoria': row.get('mercadoria', ''),
                 'valor_cif_real': float(row.get('valor_cif_real', 0) or 0),
-                'importador': row.get('importador', ''),
-                'status_processo': row.get('status_processo', ''),
                 'valor_cif_formatted': format_value_smart(row.get('valor_cif_real', 0) or 0, currency=True)
             })
         
@@ -382,7 +328,6 @@ def dashboard_data_api():
                 'kpis': kpis,
                 'material_analysis': material_analysis,
                 'table_data': table_data,
-                'recent_operations': table_data,  # Alias para compatibilidade
                 'record_count': total_operations,
                 'periodo_info': f"Últimos {periodo} dias" if periodo != 'all' else "Todos os registros",
                 'last_update': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
