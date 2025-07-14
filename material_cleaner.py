@@ -14,6 +14,57 @@ class MaterialCleaner:
     """Classe para limpeza e normalização de dados de materiais"""
     
     def __init__(self):
+        # Dicionário de normalização de categorias
+        self.category_mappings = {
+            # Ferramentas
+            'FERRAMENTA': ['FERRAM', 'TOOL'],
+            
+            # Peças/Componentes
+            'PEÇA': ['PECA', 'PIECE', 'COMPONENT', 'PART', 'SPARE', 'REPOSICAO', 'REPOSIÇÃO'],
+            
+            # Equipamentos
+            'EQUIPAMENTO': ['EQUIPMENT', 'EQUIPAMENTO'],
+            
+            # Máquinas
+            'MÁQUINA': ['MAQUINA', 'MACHINE', 'MACHINERY'],
+            
+            # Filtros
+            'FILTRO': ['FILTER', 'FILTR'],
+            
+            # Motores
+            'MOTOR': ['MOTOR', 'ENGINE'],
+            
+            # Compressores
+            'COMPRESSOR': ['COMPRESS'],
+            
+            # Válvulas
+            'VÁLVULA': ['VALVULA', 'VALVE', 'VÁLVULAS'],
+            
+            # Rolamentos
+            'ROLAMENTO': ['BEARING', 'ROLAMENT'],
+            
+            # Vedações
+            'VEDAÇÃO': ['VEDACAO', 'SEAL', 'GAXETA', 'VEDAÇÕES'],
+            
+            # Parafusos/Fixadores
+            'PARAFUSO': ['SCREW', 'BOLT', 'FASTENER', 'FIXADOR', 'PARAFUSOS'],
+            
+            # Mangueiras
+            'MANGUEIRA': ['HOSE', 'TUBING', 'TUBE'],
+            
+            # Sensores
+            'SENSOR': ['TRANSMISSOR', 'DETECTOR', 'SENSORES'],
+            
+            # Abraçadeiras
+            'ABRAÇADEIRA': ['CLAMP', 'BRACKET'],
+            
+            # Eletrônicos
+            'ELETRÔNICO': ['ELECTRONIC', 'ELETRICO', 'ELECTRICAL', 'ELETRÔNICO'],
+            
+            # Hardware/Ferragens
+            'HARDWARE': ['HARDWARE', 'FASTENERS'],
+        }
+        
         # Padrões regex para identificar e extrair informações relevantes
         self.patterns = {
             # NFE/NF patterns - captura números de notas fiscais
@@ -46,6 +97,25 @@ class MaterialCleaner:
                 r'^\s*-\s*',              # Traços no início
             ]
         }
+    
+    def categorize_material(self, text: str) -> Optional[str]:
+        """
+        Identifica e normaliza a categoria do material baseado no texto
+        
+        Args:
+            text: Texto do material para análise
+            
+        Returns:
+            Categoria normalizada ou None se não identificada
+        """
+        text_upper = text.upper()
+        
+        for category, keywords in self.category_mappings.items():
+            for keyword in keywords:
+                if keyword in text_upper:
+                    return category
+        
+        return None
     
     def extract_supplier(self, text: str) -> Optional[str]:
         """Extrai o nome do fornecedor principal do texto"""
@@ -131,6 +201,7 @@ class MaterialCleaner:
         nfe_numbers = self.extract_nfe_numbers(raw_material)
         po_number = self.extract_po_number(raw_material)
         ac_codes = self.extract_ac_codes(raw_material)
+        category = self.categorize_material(raw_material)
         
         # Limpar o texto
         cleaned_text = self.remove_junk(raw_material)
@@ -157,6 +228,13 @@ class MaterialCleaner:
         if supplier and len(material_parts) > 0:
             material_parts.append(f"({supplier})")
         
+        # Adicionar categoria se identificada
+        if category:
+            if material_parts:
+                material_parts.insert(0, category)
+            else:
+                material_parts.append(category)
+        
         # Se não conseguiu extrair nada útil, usar texto limpo
         if not material_parts:
             material_limpo = cleaned_text[:100] + "..." if len(cleaned_text) > 100 else cleaned_text
@@ -165,6 +243,7 @@ class MaterialCleaner:
         
         return {
             'material_limpo': material_limpo,
+            'categoria': category,
             'fornecedor_principal': supplier,
             'numeros_nfe': nfe_numbers,
             'po_number': po_number,
@@ -192,6 +271,7 @@ def test_cleaner_with_samples():
             print(f"--- Amostra {i+1} ---")
             print(f"Original: {raw[:100]}...")
             print(f"Limpo: {result['material_limpo']}")
+            print(f"Categoria: {result['categoria']}")
             print(f"Fornecedor: {result['fornecedor_principal']}")
             print(f"NFEs: {result['numeros_nfe']}")
             print(f"PO: {result['po_number']}")
@@ -204,10 +284,14 @@ def test_cleaner_with_samples():
         
         # Dados de exemplo para teste
         samples = [
-            "NFE: 199329 - Fornecedor: GARDNER DENVER OY - Cod. Fornecedor: 4252\r\nNº Proc.: 0127/20\r\nDI: 20/0829584-1",
-            "PO 1607+1630.SUN.22",
-            "AC'S 20220052824\r\nAC'S 20220053006",
-            "OBS: Habilitação do Radar da paciente : ANA CAROLINA DE CAMPOS VIEIRA FORMAGGI CPF 16020021858"
+            "NFE: 199329 - Fornecedor: GARDNER DENVER OY - Ferramentas industriais",
+            "PO 1607+1630.SUN.22 - COMPRESSOR DE AR",
+            "AC'S 20220052824 - FILTRO DE AR",
+            "NFE: 123456 - MOTOR ELÉTRICO TRIFÁSICO",
+            "OBS: PEÇAS DE REPOSIÇÃO PARA MÁQUINA",
+            "VÁLVULAS HIDRÁULICAS - NFE: 789012",
+            "ROLAMENTOS E VEDAÇÕES INDUSTRIAIS",
+            "EQUIPAMENTO ELETRÔNICO DE MEDIÇÃO"
         ]
         
         for i, sample in enumerate(samples):

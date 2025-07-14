@@ -88,6 +88,8 @@ class MateriaisManager {
                 this.loadData();
             }
         });
+
+        // Event listener para limpar filtros ativos já existe acima
     }
 
     setupDefaultDates() {
@@ -132,6 +134,7 @@ class MateriaisManager {
                 break;
             case 'this-month':
                 dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                // Último dia do mês atual
                 dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
                 break;
             case '3-months':
@@ -163,6 +166,9 @@ class MateriaisManager {
         this.setActiveQuickFilter(period);
 
         // Aplicar filtros automaticamente
+        console.log(`📅 Filtro rápido aplicado: ${period}`);
+        console.log(`📅 Data início: ${dataInicio.toISOString().split('T')[0]}`);
+        console.log(`📅 Data fim: ${dataFim.toISOString().split('T')[0]}`);
         this.applyFilters();
     }
 
@@ -295,6 +301,7 @@ class MateriaisManager {
             filtros.push(`<strong>Modal:</strong> ${this.currentFilters.modal}`);
         }
 
+        // Atualizar conteúdo
         if (filtros.length > 0) {
             contentElement.innerHTML = filtros.join(' • ');
             summaryElement.style.display = 'block';
@@ -380,7 +387,7 @@ class MateriaisManager {
             const materiaisResponse = await fetch(`${this.apiBaseUrl}/filter-options/materiais`);
             if (materiaisResponse.ok) {
                 const materiais = await materiaisResponse.json();
-                this.populateSelect('material-filter', materiais, 'mercadoria');
+                this.populateMaterialSelect(materiais);
             }
 
             // Carregar clientes únicos
@@ -395,6 +402,27 @@ class MateriaisManager {
             console.warn('⚠️ Erro ao carregar opções dos filtros:', error);
             // Não é um erro crítico, apenas log de warning
         }
+    }
+
+    populateMaterialSelect(materiais) {
+        const select = document.getElementById('material-filter');
+        const optgroupDinamico = document.getElementById('materiais-dinamicos');
+        
+        if (!select || !materiais || !optgroupDinamico) return;
+
+        // Limpar apenas o optgroup dinâmico
+        optgroupDinamico.innerHTML = '';
+
+        // Adicionar materiais específicos (limitando a 50 para performance)
+        const limitedMaterials = materiais.slice(0, 50);
+        limitedMaterials.forEach(material => {
+            const optionElement = document.createElement('option');
+            optionElement.value = material.mercadoria;
+            optionElement.textContent = material.mercadoria;
+            optgroupDinamico.appendChild(optionElement);
+        });
+
+        console.log(`🎯 Carregados ${limitedMaterials.length} materiais específicos`);
     }
 
     populateSelect(selectId, options, valueField) {

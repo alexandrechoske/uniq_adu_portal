@@ -35,7 +35,20 @@
                             <label for="material-filter">Material:</label>
                             <select id="material-filter" name="material" class="filter-select">
                                 <option value="">Todos os materiais</option>
+                                <!-- Categorias principais -->
+                                <optgroup label="📂 Categorias">
+                                    <option value="FERRAMENTA">🔧 Ferramentas</option>
+                                    <option value="COMPRESSOR">🔩 Compressores</option>
+                                    <option value="MOTOR">⚡ Motores</option>
+                                    <option value="FILTRO">🔽 Filtros</option>
+                                    <option value="PEÇA">🔧 Peças/Componentes</option>
+                                    <option value="VÁLVULA">🔘 Válvulas</option>
+                                    <option value="ROLAMENTO">⚙️ Rolamentos</option>
+                                    <option value="EQUIPAMENTO">📦 Equipamentos</option>
+                                </optgroup>
                                 <!-- Opções carregadas dinamicamente -->
+                                <optgroup label="📋 Materiais Específicos" id="materiais-dinamicos">
+                                </optgroup>
                             </select>
                         </div>
                         <div class="filter-group">

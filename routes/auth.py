@@ -7,6 +7,7 @@ import requests
 import json
 import os
 from services.data_cache import data_cache
+import re  # para normalização de CNPJ
 
 bp = Blueprint('auth', __name__)
 
@@ -141,6 +142,14 @@ def login():
             
             if auth_response.user:
                 user_id = auth_response.user.id
+                # Armazenar JWT para RLS e configurar supabase client
+                # Session object não é subscriptable, usar atributo
+                session['access_token'] = getattr(auth_response.session, 'access_token', None)
+                # Ajustar supabase client para usar token do usuário (RLS)
+                try:
+                    supabase.auth.set_session(auth_response.session)
+                except Exception:
+                    pass
                 
                 # Buscar dados do usuário na tabela users com uma única consulta
                 user_data = supabase_admin.table('users').select('id, email, role, name').eq('id', user_id).single().execute()
@@ -188,6 +197,11 @@ def login():
                                 
                                 # Remover duplicatas
                                 user_companies = list(set(user_companies)) if user_companies else []
+                                print(f"[AUTH] Empresas antes da normalização: {user_companies}")
+                                
+                                # Normalizar CNPJs para dígitos puros
+                                user_companies = [re.sub(r'\D', '', c) for c in user_companies]
+                                print(f"[AUTH] Empresas após normalização: {user_companies}")
                                 
                                 # Atualizar status do agente
                                 first_agent = agent_data.data[0]
@@ -231,16 +245,25 @@ def login():
                         session['data_loading_status'] = 'loading'
                         session['data_loading_step'] = 'Carregando dados do ano atual...'
                         
-                        # Pré-carregar dados
-                        data_cache.preload_user_data(
+                        # Pré-carregar dados APENAS no cache do servidor (não na sessão)
+                        raw_data = data_cache.preload_user_data(
                             user_id=user_id,
                             user_role=user.get('role'),
                             user_companies=user_companies
                         )
                         
+                        # NÃO armazenar na sessão (muito grande para cookies)
+                        # Os dados ficam apenas no cache do servidor
                         session['data_loading_status'] = 'completed'
                         session['data_loading_step'] = 'Dados carregados com sucesso!'
-                        print(f"[AUTH] Pré-carregamento concluído para usuário {user_id}")
+                        session['cache_ready'] = True  # Flag para indicar que o cache está pronto
+                        print(f"[AUTH] Pré-carregamento concluído para usuário {user_id} - {len(raw_data)} registros em cache")
+                        
+                    except Exception as preload_error:
+                        print(f"[AUTH] Erro no pré-carregamento: {preload_error}")
+                        session['data_loading_status'] = 'error'
+                        session['data_loading_step'] = 'Erro ao carregar dados, mas você pode continuar'
+                        session['cache_ready'] = False
                         
                     except Exception as preload_error:
                         print(f"[AUTH] Erro no pré-carregamento: {preload_error}")
@@ -248,7 +271,7 @@ def login():
                         session['data_loading_step'] = 'Erro ao carregar dados, mas você pode continuar'
                     
                     flash('Login realizado com sucesso!', 'success')
-                    return redirect(url_for('auth.loading'))
+                    return redirect(url_for('dashboard.index'))
                 else:
                     flash('Usuário não encontrado na base de dados.', 'error')
             else:
@@ -266,12 +289,6 @@ def login():
                 flash('Erro interno. Tente novamente.', 'error')
     
     return render_template('auth/login.html')
-
-@bp.route('/loading')
-@login_required
-def loading():
-    """Página de carregamento de dados"""
-    return render_template('auth/loading.html')
 
 @bp.route('/api/preload-data', methods=['POST'])
 @login_required
@@ -292,9 +309,11 @@ def preload_data():
             user_companies=user_data.get('user_companies', [])
         )
         
-        # Salva na sessão
-        session['cached_data'] = cache_data
+        # NÃO armazenar na sessão (muito grande para cookies)
+        # Os dados ficam apenas no cache do servidor
+        session['cache_ready'] = True if cache_data else False
         session['data_loaded'] = True
+        print(f"[AUTH API] Cache atualizado: {len(cache_data) if cache_data else 0} registros")
         session['data_load_time'] = datetime.now().isoformat()
         
         return jsonify({

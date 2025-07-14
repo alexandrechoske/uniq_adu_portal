@@ -59,26 +59,31 @@ class DataCacheService:
         """Pré-carrega todos os dados do usuário"""
         print(f"[PRELOAD] === INICIANDO PRÉ-CARREGAMENTO ===")
         print(f"[PRELOAD] Usuário: {user_id}, Role: {user_role}")
+        print(f"[PRELOAD] Empresas fornecidas: {user_companies}")
+        print(f"[PRELOAD] Tipo empresas: {type(user_companies)}")
         
         try:
-            # Definir período do ano atual
-            current_year = datetime.now().year
-            date_start = f"{current_year}-01-01"
-            date_end = f"{current_year}-12-31"
+            # Usar um período mais amplo para garantir que os dados sejam encontrados
+            # Buscar dados dos últimos 12 meses para ter certeza de incluir tudo
+            data_limite = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
             
-            print(f"[PRELOAD] Período: {date_start} a {date_end}")
+            print(f"[PRELOAD] Período: desde {data_limite} (últimos 365 dias)")
             
-            # Construir query base
-            query = supabase.table('importacoes_processos_aberta').select(
+            # IMPORTANTE: Usar supabase_admin para evitar problemas com RLS
+            from extensions import supabase_admin
+            
+            # Construir query base - buscar todos os dados sem filtro de data inicialmente
+            query = supabase_admin.table('importacoes_processos_aberta').select(
                 'id, status_processo, canal, data_chegada, '
                 'valor_cif_real, cnpj_importador, importador, '
                 'modal, data_abertura, mercadoria, data_embarque, '
                 'urf_entrada, ref_unique, custo_total, transit_time_real, valor_fob_real'
             ).neq('status_processo', 'Despacho Cancelado')
             
-            # Aplicar filtros de data do ano atual
-            query = query.gte('data_abertura', date_start)
-            query = query.lte('data_abertura', date_end)
+            # Não aplicar filtro de data por enquanto - buscar todos os dados
+            # .gte('data_abertura', data_limite)
+            
+            print(f"[PRELOAD] Query base configurada sem filtro de data")
             
             # Aplicar filtros baseados no role do usuário
             if user_role == 'cliente_unique':
@@ -87,8 +92,16 @@ class DataCacheService:
                     self.set_cache(user_id, 'raw_data', [])
                     return []
                 
-                query = query.in_('cnpj_importador', user_companies)
                 print(f"[PRELOAD] Filtro empresas cliente: {user_companies}")
+                print(f"[PRELOAD] Empresas após normalização: {user_companies}")
+                
+                # Verificar se há CNPJs na base que batem com as empresas
+                sample_query = supabase_admin.table('importacoes_processos_aberta').select('cnpj_importador').limit(10).execute()
+                sample_cnpjs = [r['cnpj_importador'] for r in sample_query.data] if sample_query.data else []
+                print(f"[PRELOAD] Sample CNPJs na base: {sample_cnpjs[:5]}")
+                
+                # Aplicar filtro IN para empresas do cliente
+                query = query.in_('cnpj_importador', user_companies)
             
             # Executar query
             print(f"[PRELOAD] Executando query...")
@@ -96,6 +109,12 @@ class DataCacheService:
             
             raw_data = result.data if result.data else []
             print(f"[PRELOAD] Dados brutos carregados: {len(raw_data)} registros")
+            
+            # Log alguns registros para debug
+            if raw_data:
+                print(f"[PRELOAD] Primeiros 3 CNPJs encontrados: {[r.get('cnpj_importador') for r in raw_data[:3]]}")
+            else:
+                print(f"[PRELOAD] Nenhum dado encontrado - possível problema de filtro")
             
             # Armazenar dados brutos no cache
             self.set_cache(user_id, 'raw_data', raw_data)

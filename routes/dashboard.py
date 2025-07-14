@@ -1,13 +1,37 @@
 from flask import Blueprint, render_template, session, request, jsonify
-from extensions import supabase
+from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+from routes.api import get_user_companies  # corrigir import para obter empresas do usuário
 from permissions import check_permission
 from config import Config
 from services.data_cache import data_cache
 import pandas as pd
 from datetime import datetime, timedelta
+import numpy as np
 
 bp = Blueprint('dashboard', __name__)
+
+def clean_data_for_json(data):
+    """Remove valores NaN e converte para tipos JSON-safe"""
+    if isinstance(data, dict):
+        return {k: clean_data_for_json(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [clean_data_for_json(item) for item in data]
+    elif pd.isna(data) or data is None or (isinstance(data, float) and np.isnan(data)):
+        return 0
+    elif isinstance(data, (np.integer, np.floating)):
+        if np.isnan(data) or np.isinf(data):
+            return 0
+        return int(data) if isinstance(data, np.integer) else float(data)
+    else:
+        return data
+
+@bp.route('/')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def index():
+    """Página principal do dashboard"""
+    return render_template('dashboard/index_simple.html')
 
 def format_value_smart(value, currency=False):
     """Format values with K, M, B abbreviations for better readability"""
@@ -22,376 +46,654 @@ def format_value_smart(value, currency=False):
         return "0" if currency else "0"
     
     # Determine suffix and divide accordingly
-    if abs(num) >= 1_000_000_000:  # Bilhões
-        formatted = num / 1_000_000_000
-        suffix = "B"
-    elif abs(num) >= 1_000_000:  # Milhões
-        formatted = num / 1_000_000
-        suffix = "M"
-    elif abs(num) >= 1_000:  # Milhares
-        formatted = num / 1_000
-        suffix = "K"
-    else:
-        formatted = num
-        suffix = ""
-    
-    # Format to 1 decimal place, remove .0 if not needed
-    if suffix:
-        if formatted == int(formatted):
-            value_str = f"{int(formatted)}{suffix}"
-        else:
-            value_str = f"{formatted:.1f}{suffix}"
-    else:
-        value_str = f"{int(formatted)}" if formatted == int(formatted) else f"{formatted:.1f}"
-    
-    return f"{value_str}" if currency else value_str
-
-@bp.route('/dashboard')
-@check_permission()
-def index(**kwargs):
-    """Dashboard principal com dados pré-carregados quando disponíveis"""
-    # Get user companies if client
-    user_companies = []
-    if session['user']['role'] == 'cliente_unique':
-        user_companies = session['user'].get('user_companies', [])
-    
-    selected_company = request.args.get('empresa')
-    
-    # Timestamp da última atualização
-    last_update = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    
-    # Get currency exchange rates
-    currencies = {
-        'USD': 5.50,  # Valor estimado
-        'EUR': 6.00,  # Valor estimado
-        'last_updated': datetime.now().strftime('%Y-%m-%d')
-    }
-    
-    # Tentar usar dados em cache primeiro
-    cached_data = session.get('cached_data', {})
-    dashboard_data = cached_data.get('dashboard', {})
-    
-    available_companies = []
-    
-    # Se existem dados em cache, usar
-    if dashboard_data.get('companies'):
-        available_companies = dashboard_data['companies']
-        print("[DASHBOARD] Usando dados de empresas em cache")
-    else:
-        # Fallback: buscar dados do banco
-        print("[DASHBOARD] Cache não disponível, buscando dados do banco")
-        data_limite_companies = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
-        companies_query = supabase.table('importacoes_processos_aberta')\
-            .select('cnpj_importador, importador')\
-            .neq('cnpj_importador', '')\
-            .not_.is_('cnpj_importador', 'null')\
-            .gte('data_abertura', data_limite_companies)\
-            .execute()
-        
-        all_companies = []
-        if companies_query.data:
-            companies_df = pd.DataFrame(companies_query.data)
-            all_companies = [
-                {'cpfcnpj': row['cnpj_importador'], 'nome': row['importador']}
-                for _, row in companies_df.drop_duplicates(subset=['cnpj_importador']).iterrows()
-            ]
-        
-        # Filter companies based on user role
-        available_companies = all_companies
-        if session['user']['role'] == 'cliente_unique' and user_companies:
-            available_companies = [c for c in all_companies if c['cpfcnpj'] in user_companies]
-    
-    # Determinar se temos dados completos em cache
-    has_cached_dashboard = bool(dashboard_data.get('stats') and dashboard_data.get('charts'))
-    
-    # Retornar página com dados pré-carregados quando disponíveis
-    return render_template('dashboard/index_simple.html', 
-                         companies=available_companies,
-                         selected_company=selected_company,
-                         currencies=currencies, 
-                         last_update=last_update,
-                         user_role=session['user']['role'],
-                         cached_dashboard=dashboard_data if has_cached_dashboard else None,
-                         has_cache=has_cached_dashboard)
-
 @bp.route('/api/dashboard-data')
 @check_permission()
-def dashboard_data_api():
-    """API endpoint para carregamento de dados do dashboard, usando cache quando disponível"""
+def dashboard_data_api(permissions=None):
+    """API endpoint para carregamento de dados do dashboard - Cache First Architecture"""
     try:
-        # Parâmetros da requisição
-        periodo = request.args.get('periodo', '30')  # Padrão: 30 dias
-        empresa = request.args.get('empresa')
-        charts_only = request.args.get('charts', '0') == '1'
-        force_refresh = request.args.get('refresh', '0') == '1'  # Forçar atualização
+        # Obter dados do usuário para acessar o cache do servidor
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
         
-        # Verificar se existem dados em cache
-        cached_data = session.get('cached_data', {})
-        dashboard_cache = cached_data.get('dashboard', {})
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Usuário não identificado'}), 401
         
-        # Se temos cache e não foi solicitado refresh, usar dados em cache
-        if dashboard_cache and not force_refresh and periodo == '30' and not empresa:
-            print("[DASHBOARD-API] Usando dados em cache")
+        # Verificar cache do servidor primeiro
+        cached_data = data_cache.get_cache(user_id, 'raw_data')
+        
+        print(f"[DASHBOARD] Status do cache para usuário {user_id}:")
+        print(f"[DASHBOARD] Cache encontrado: {cached_data is not None}")
+        print(f"[DASHBOARD] Cache é lista: {isinstance(cached_data, list) if cached_data else False}")
+        print(f"[DASHBOARD] Tamanho do cache: {len(cached_data) if cached_data and isinstance(cached_data, list) else 0}")
+        
+        if cached_data and isinstance(cached_data, list) and len(cached_data) > 0:
+            print(f"[DASHBOARD] Usando dados do cache do servidor - {len(cached_data)} registros")
             
-            if charts_only:
-                return jsonify({
-                    'success': True,
-                    'charts': dashboard_cache.get('charts', {}),
-                    'source': 'cache'
-                })
-            else:
-                return jsonify({
-                    'success': True,
-                    'stats': dashboard_cache.get('stats', {}),
-                    'charts': dashboard_cache.get('charts', {}),
-                    'companies': dashboard_cache.get('companies', []),
-                    'source': 'cache'
-                })
-        
-        # Caso contrário, buscar dados do banco (código original)
-        print("[DASHBOARD-API] Buscando dados do banco")
-        
-        # Get user companies if client
-        user_companies = []
-        if session['user']['role'] == 'cliente_unique':
-            user_companies = session['user'].get('user_companies', [])
-        
-        current_role = session['user']['role']
-        admin_roles = ['interno_unique', 'adm', 'admin', 'system']
-        
-        # Calcular data limite baseada no período
-        if periodo == 'all':
-            data_limite = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-        else:
-            dias = int(periodo) if periodo.isdigit() else 30
-            data_limite = (datetime.now() - timedelta(days=dias)).strftime('%Y-%m-%d')
-        
-        print(f"[DEBUG DASHBOARD API] Carregando dados para período: {periodo} dias (desde: {data_limite})")
-        
-        # Build query
-        query = supabase.table('importacoes_processos_aberta').select(
-            'id, status_processo, canal, data_chegada, '
-            'valor_cif_real, cnpj_importador, importador, '
-            'modal, data_abertura, mercadoria, data_embarque, '
-            'urf_entrada, ref_unique'
-        ).neq('status_processo', 'Despacho Cancelado')\
-         .gte('data_abertura', data_limite)\
-         .order('data_abertura.desc')
-        
-        # Apply filters based on user role and selected company
-        if current_role == 'cliente_unique':
-            if not user_companies:
-                return jsonify({'error': 'Nenhuma empresa associada ao usuário'})
+            # Calcular KPIs a partir do cache
+            df = pd.DataFrame(cached_data)
             
-            if empresa and empresa in user_companies:
-                query = query.eq('cnpj_importador', empresa)
-            else:
-                query = query.in_('cnpj_importador', user_companies)
-        elif empresa:
-            query = query.eq('cnpj_importador', empresa)
-        
-        # Execute query
-        operacoes = query.execute()
-        data = operacoes.data if operacoes.data else []
-        print(f"[DEBUG DASHBOARD API] Registros retornados: {len(data)}")
-        
-        if not data:
-            return jsonify({
-                'success': True,
-                'data': {
-                    'kpis': {},
-                    'material_analysis': [],
-                    'table_data': [],
-                    'record_count': 0,
-                    'periodo_info': f"Últimos {periodo} dias" if periodo != 'all' else "Todos os registros",
-                    'charts': {}
-                }
-            })
-        
-        df = pd.DataFrame(data)
-        
-        # Processamento rápido dos dados
-        df['valor_cif_real'] = pd.to_numeric(df['valor_cif_real'], errors='coerce').fillna(0)
-        df['data_abertura'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
-        df['data_embarque'] = pd.to_datetime(df['data_embarque'], format='%d/%m/%Y', errors='coerce')
-        df['data_chegada'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
-        
-        # Preparar dados Chart.js
-        charts_data = {}
-        
-        # 1. Gráfico Mensal (Line Chart)
-        df_monthly = df.copy()
-        df_monthly['mes_ano'] = df_monthly['data_abertura'].dt.to_period('M')
-        monthly_data = df_monthly.groupby('mes_ano').agg({
-            'ref_unique': 'count',
-            'valor_cif_real': 'sum'
-        }).reset_index()
-        
-        monthly_data['data'] = monthly_data['mes_ano'].dt.to_timestamp()
-        monthly_data = monthly_data.sort_values('data').tail(12)
-        
-        print(f"[DEBUG MONTHLY] Dados mensais processados: {len(monthly_data)} registros")
-        print(f"[DEBUG MONTHLY] Amostra: {monthly_data.head(3).to_dict()}")
-        
-        # Sanitizar valores para evitar NaN e garantir tipos corretos
-        processes_values = monthly_data['ref_unique'].fillna(0).astype(int).tolist()
-        value_values = monthly_data['valor_cif_real'].fillna(0).astype(float).tolist()
-        
-        charts_data['monthly'] = {
-            'months': [d.strftime('%b %Y') for d in monthly_data['data']],
-            'processes': [max(0, int(v)) for v in processes_values],
-            'values': [max(0.0, round(float(v)/1000000, 1)) for v in value_values]
-        }
-        
-        print(f"[DEBUG MONTHLY] Resultado final: {charts_data['monthly']}")
-        
-        # 2. Gráfico de Canal DI (Doughnut Chart)
-        canal_data = df['canal'].value_counts()
-        charts_data['canal'] = {
-            'labels': canal_data.index.tolist(),
-            'values': [int(v) for v in canal_data.values.tolist()]
-        }
-        
-        # 3. Gráfico de Armazéns/URF (Horizontal Bar Chart)
-        armazem_data = df.groupby('urf_entrada').agg({
-            'ref_unique': 'count',
-            'valor_cif_real': 'sum'
-        }).reset_index()
-        armazem_data = armazem_data.sort_values('ref_unique', ascending=False).head(8)  # Ordem decrescente
-        
-        print(f"[DEBUG ARMAZEM] Dados processados: {len(armazem_data)} registros")
-        print(f"[DEBUG ARMAZEM] Amostra: {armazem_data.head(3).to_dict()}")
-        
-        charts_data['armazem'] = {
-            'labels': [str(label)[:30] + '...' if len(str(label)) > 30 else str(label) 
-                      for label in armazem_data['urf_entrada'].tolist()],
-            'values': [int(v) for v in armazem_data['ref_unique'].fillna(0).tolist()]
-        }
-        
-        print(f"[DEBUG ARMAZEM] Resultado final: {charts_data['armazem']}")
-        
-        # 4. Gráfico de Materiais (Horizontal Bar Chart)
-        material_data = df.groupby('mercadoria').agg({
-            'valor_cif_real': 'sum'
-        }).reset_index()
-        material_data = material_data.sort_values('valor_cif_real', ascending=False).head(8)  # Ordem decrescente
-        
-        print(f"[DEBUG MATERIAL] Dados processados: {len(material_data)} registros")
-        print(f"[DEBUG MATERIAL] Amostra: {material_data.head(3).to_dict()}")
-        
-        material_values = material_data['valor_cif_real'].fillna(0).tolist()
-        charts_data['material'] = {
-            'labels': [str(label)[:35] + '...' if len(str(label)) > 35 else str(label) 
-                      for label in material_data['mercadoria'].tolist()],
-            'values': [round(float(v)/1000000, 1) if v > 0 else 0.0 for v in material_values]
-        }
-        
-        print(f"[DEBUG MATERIAL] Resultado final: {charts_data['material']}")
-        
-        # Se for apenas para gráficos, retornar apenas os dados dos gráficos
-        if charts_only:
-            return jsonify({
-                'success': True,
-                'data': charts_data
-            })
-        
-        # Calcular KPIs
-        total_operations = len(df)
-        
-        # Métricas por modal
-        modal_counts = df['modal'].value_counts()
-        aereo = modal_counts.get('AÉREA', 0)
-        terrestre = modal_counts.get('RODOVIÁRIA', 0)
-        maritimo = modal_counts.get('MARÍTIMA', 0)
-        
-        # Métricas por status
-        aguardando_embarque = len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)])
-        aguardando_chegada = len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)])
-        di_registrada = len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)])
-        
-        # Métricas de VMCV
-        vmcv_total = df['valor_cif_real'].sum()
-        valor_medio_processo = vmcv_total / total_operations if total_operations > 0 else 0
-        despesas_total = vmcv_total * 0.4
-        despesa_media_processo = despesas_total / total_operations if total_operations > 0 else 0
-        
-        # KPIs response
-        kpis = {
-            'total': int(total_operations),
-            'aereo': int(aereo),
-            'terrestre': int(terrestre),
-            'maritimo': int(maritimo),
-            'aguardando_embarque': int(aguardando_embarque),
-            'aguardando_chegada': int(aguardando_chegada),
-            'di_registrada': int(di_registrada),
-            'vmcv_total': float(vmcv_total),
-            'valor_total_formatted': format_value_smart(vmcv_total, currency=True),
-            'valor_medio_processo': float(valor_medio_processo),
-            'valor_medio_processo_formatted': format_value_smart(valor_medio_processo, currency=True),
-            'despesas_total': float(despesas_total),
-            'despesas_total_formatted': format_value_smart(despesas_total, currency=True),
-            'despesa_media_processo': float(despesa_media_processo),
-            'despesa_media_processo_formatted': format_value_smart(despesa_media_processo, currency=True)
-        }
-        
-        # Análise de materiais (top 10)
-        material_analysis = []
-        if not df.empty:
-            material_groups = df.groupby('mercadoria').agg({
-                'ref_unique': 'count',
-                'valor_cif_real': 'sum'
-            }).reset_index()
-            
-            material_groups = material_groups.sort_values('valor_cif_real', ascending=False)
-            total_vmcv_materials = material_groups['valor_cif_real'].sum()
-            
-            for _, row in material_groups.head(10).iterrows():
-                material = row['mercadoria'] if row['mercadoria'] else 'Não Informado'
-                quantidade = int(row['ref_unique'])
-                valor_total = float(row['valor_cif_real'])
-                percentual = (valor_total / total_vmcv_materials * 100) if total_vmcv_materials > 0 else 0
+            if not df.empty:
+                # Se usuário for cliente_unique, normalizar e filtrar apenas suas empresas
+                user_data = session.get('user', {})
+                if user_data.get('role') == 'cliente_unique':
+                    companies = user_data.get('user_companies', [])
+                    # Normalizar cnpj_importador no DataFrame para dígitos puros
+                    df['cnpj_importador'] = (
+                        df['cnpj_importador']
+                        .astype(str)
+                        .str.replace(r'\D', '', regex=True)
+                    )
+                    if companies:
+                        df = df[df['cnpj_importador'].isin(companies)]
                 
-                material_analysis.append({
-                    'material': material,
-                    'quantidade': quantidade,
-                    'valor_total': valor_total,
-                    'valor_total_formatado': format_value_smart(valor_total, currency=True),
-                    'percentual': round(percentual, 1)
-                })
+                # Preparar dados para análise
+                df['data_abertura'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+                df['valor_total'] = pd.to_numeric(df.get('custo_total', 0), errors='coerce').fillna(0)
+                
+                # Filtrar último mês
+                hoje = datetime.now()
+                inicio_mes = hoje.replace(day=1)
+                inicio_mes_anterior = (inicio_mes - timedelta(days=1)).replace(day=1)
+                
+                df_mes_atual = df[df['data_abertura'] >= inicio_mes]
+                df_mes_anterior = df[(df['data_abertura'] >= inicio_mes_anterior) & (df['data_abertura'] < inicio_mes)]
+                
+                # KPIs calculados do cache
+                total_processos = len(df)
+                processos_mes_atual = len(df_mes_atual)
+                processos_mes_anterior = len(df_mes_anterior)
+                valor_total = df['valor_total'].sum()
+                valor_mes_atual = df_mes_atual['valor_total'].sum()
+                valor_mes_anterior = df_mes_anterior['valor_total'].sum()
+                
+                # Taxa de crescimento
+                if processos_mes_anterior > 0:
+                    taxa_crescimento = ((processos_mes_atual - processos_mes_anterior) / processos_mes_anterior) * 100
+                else:
+                    taxa_crescimento = 0
+                
+                # Contagem por modal
+                modal_counts = df['modal'].value_counts()
+                
+                # Garantir que todos os valores são números válidos
+                total_processos = int(total_processos) if not pd.isna(total_processos) else 0
+                valor_total = float(valor_total) if not pd.isna(valor_total) else 0.0
+                valor_mes_atual = float(valor_mes_atual) if not pd.isna(valor_mes_atual) else 0.0
+                
+                kpis = {
+                    'total_processos': total_processos,
+                    'total_despesas': valor_total,
+                    'modal_aereo': int(modal_counts.get('AEREA', 0)),
+                    'modal_maritimo': int(modal_counts.get('MARITIMA', 0)),
+                    'em_transito': int(len(df[df.get('status_processo', '') == 'Em andamento'])),
+                    'di_registrada': int(len(df[df.get('status_processo', '') == 'Finalizada'])),
+                    'despesa_media_por_processo': valor_total / total_processos if total_processos > 0 else 0.0,
+                    'despesa_mes_atual': valor_mes_atual
+                }
+                
+                # Gráficos baseados no cache
+                charts = {}
+                
+                # Evolução Mensal do cache
+                df_valid_dates = df.dropna(subset=['data_abertura'])
+                if not df_valid_dates.empty:
+                    df_monthly = df_valid_dates.groupby(df_valid_dates['data_abertura'].dt.to_period('M')).agg({
+                        'id': 'count',
+                        'valor_total': 'sum'
+                    }).reset_index()
+                    
+                    charts['monthly'] = {
+                        'periods': [str(p) for p in df_monthly['data_abertura']],
+                        'processes': [int(x) if not pd.isna(x) else 0 for x in df_monthly['id'].tolist()],
+                        'values': [float(x) if not pd.isna(x) else 0.0 for x in df_monthly['valor_total'].tolist()]
+                    }
+                    
+                    print(f"[DASHBOARD] Monthly chart data: {len(charts['monthly']['periods'])} periods")
+                else:
+                    charts['monthly'] = {'periods': [], 'processes': [], 'values': []}
+                
+                # Evolução Semanal do cache
+                if not df_valid_dates.empty:
+                    df_weekly = df_valid_dates.groupby(df_valid_dates['data_abertura'].dt.to_period('W')).agg({
+                        'id': 'count',
+                        'valor_total': 'sum'
+                    }).reset_index().tail(12)  # Últimas 12 semanas
+                    
+                    charts['weekly'] = {
+                        'periods': [str(p) for p in df_weekly['data_abertura']],
+                        'processes': [int(x) if not pd.isna(x) else 0 for x in df_weekly['id'].tolist()],
+                        'values': [float(x) if not pd.isna(x) else 0.0 for x in df_weekly['valor_total'].tolist()]
+                    }
+                else:
+                    charts['weekly'] = {'periods': [], 'processes': [], 'values': []}
+                
+                # Distribuição por Modal
+                if 'modal' in df.columns:
+                    modal_dist = df['modal'].value_counts().head(10)
+                    print(f"[DASHBOARD] Modal distribution: {modal_dist.to_dict()}")
+                    charts['canal'] = {
+                        'labels': [str(x) for x in modal_dist.index.tolist()],
+                        'values': [int(x) if not pd.isna(x) else 0 for x in modal_dist.values.tolist()]
+                    }
+                    print(f"[DASHBOARD] Canal chart data: {charts['canal']}")
+                else:
+                    charts['canal'] = {'labels': [], 'values': []}
+                
+                # Top URF Despacho
+                if 'urf_entrada' in df.columns:
+                    urf_dist = df['urf_entrada'].value_counts().head(10)
+                    charts['urf'] = {
+                        'labels': [str(x) for x in urf_dist.index.tolist()],
+                        'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                    }
+                else:
+                    charts['urf'] = {'labels': [], 'values': []}
+                
+                # Top Mercadoria
+                if 'mercadoria' in df.columns:
+                    # Filtrar materiais válidos (não nulos, não vazios, não "não informado")
+                    df_materiais = df[df['mercadoria'].notna()]
+                    df_materiais = df_materiais[df_materiais['mercadoria'].str.strip() != '']
+                    df_materiais = df_materiais[~df_materiais['mercadoria'].str.lower().str.contains('não informado|nao informado|n/a|vazio', na=False)]
+                    
+                    if not df_materiais.empty:
+                        merc_dist = df_materiais['mercadoria'].value_counts().head(10)
+                        charts['top_material'] = {
+                            'labels': [str(x) for x in merc_dist.index.tolist()],
+                            'values': [int(x) if not pd.isna(x) else 0 for x in merc_dist.values.tolist()]
+                        }
+                    else:
+                        charts['top_material'] = {'labels': [], 'values': []}
+                else:
+                    charts['top_material'] = {'labels': [], 'values': []}
+                
+                # Últimas Operações
+                df_sorted = df.sort_values('data_abertura', ascending=False)
+                # Limpar DataFrame antes de converter para dict
+                # Permitir até 1000 registros para tabela (pode ser paginado no frontend)
+                df_clean = df_sorted.head(1000).fillna('')  # Substituir NaN por string vazia
+                
+                # Mapear campos para compatibilidade com o frontend
+                recent_ops_data = []
+                for _, row in df_clean.iterrows():
+                    op = {
+                        'cliente': str(row.get('importador', '') or ''),
+                        'numero_pedido': str(row.get('ref_importador', '') or row.get('numero_processo', '') or row.get('processo', '') or ''),
+                        'data_embarque': str(row.get('data_abertura', '') or row.get('data_registro', '') or ''),
+                        'local_embarque': str(row.get('urf_despacho', '') or row.get('urf_entrada', '') or row.get('urf_entrada_descricao', '') or ''),
+                        'modal': str(row.get('modal', '') or row.get('modal_descricao', '') or ''),
+                        'status': str(row.get('canal', '') or row.get('canal_di', '') or row.get('canal_descricao', '') or 'N/D'),
+                        'mercadoria': str(row.get('material', '') or row.get('mercadoria', '') or ''),
+                        'despesas': float(row.get('valor', 0) or row.get('valor_cif_real', 0) or row.get('valor_cif', 0) or 0) if pd.notna(row.get('valor', 0) or row.get('valor_cif_real', 0) or row.get('valor_cif', 0) or 0) else 0,
+                        'recinto': '',  # Não disponível no cache
+                        'data_chegada': ''  # Não disponível no cache
+                    }
+                    recent_ops_data.append(op)
+                
+                recent_ops = recent_ops_data
+                
+            else:
+                print("[DASHBOARD] DataFrame vazio, não há dados para processar")
+                # Cache vazio, usar valores padrão
+                kpis = {
+                    'total_processos': 0, 'total_despesas': 0, 'modal_aereo': 0,
+                    'modal_maritimo': 0, 'em_transito': 0, 'di_registrada': 0,
+                    'despesa_media_por_processo': 0, 'despesa_mes_atual': 0
+                }
+                charts = {
+                    'monthly': {'periods': [], 'processes': [], 'values': []},
+                    'weekly': {'periods': [], 'processes': [], 'values': []},
+                    'canal': {'labels': [], 'values': []},
+                    'urf': {'labels': [], 'values': []},
+                    'top_material': {'labels': [], 'values': []}
+                }
+                recent_ops = []
+                
+        else:
+            print("[DASHBOARD] Cache não disponível, tentando recarregar...")
+            
+            # Tentar recarregar o cache antes de usar fallback
+            try:
+                # usar data_cache global em vez de import interno
+                cache_reloaded = data_cache.preload_user_data(user_id, user_data)
+                if cache_reloaded:
+                    cached_data = data_cache.get_cache(user_id, 'raw_data')
+                    print(f"[DASHBOARD] Cache recarregado com sucesso: {len(cached_data) if cached_data else 0} registros")
+                    
+                    if cached_data and isinstance(cached_data, list) and len(cached_data) > 0:
+                        # Processar cache recarregado igual ao processo normal do cache
+                        df = pd.DataFrame(cached_data)
+                        
+                        if not df.empty:
+                            # Mesma lógica de processamento do cache
+                            df['data_abertura'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+                            df['valor_total'] = pd.to_numeric(df.get('custo_total', 0), errors='coerce').fillna(0)
+                            
+                            # KPIs básicos
+                            kpis = {
+                                'total_processos': len(df),
+                                'total_despesas': df['valor_total'].sum(),
+                                'modal_aereo': len(df[df['modal'] == 'AEREA']) if 'modal' in df.columns else 0,
+                                'modal_maritimo': len(df[df['modal'] == 'MARITIMA']) if 'modal' in df.columns else 0,
+                                'em_transito': int(len(df[df.get('status_processo', '') == 'Em andamento'])),
+                                'di_registrada': int(len(df[df.get('status_processo', '') == 'Finalizada'])),
+                                'despesa_media_por_processo': df['valor_total'].mean() if len(df) > 0 else 0,
+                                'despesa_mes_atual': 0
+                            }
+                            
+                            # Gráficos do cache recarregado
+                            charts = {}
+                            
+                            # Distribuição por Modal
+                            if 'modal' in df.columns:
+                                modal_dist = df['modal'].value_counts().head(10)
+                                print(f"[DASHBOARD] Reloaded cache modal distribution: {modal_dist.to_dict()}")
+                                charts['canal'] = {
+                                    'labels': [str(x) for x in modal_dist.index.tolist()],
+                                    'values': [int(x) if not pd.isna(x) else 0 for x in modal_dist.values.tolist()]
+                                }
+                                print(f"[DASHBOARD] Reloaded cache canal chart: {charts['canal']}")
+                            else:
+                                charts['canal'] = {'labels': [], 'values': []}
+                            
+                            # URF
+                            if 'urf_entrada' in df.columns:
+                                urf_dist = df['urf_entrada'].value_counts().head(10)
+                                charts['urf'] = {
+                                    'labels': [str(x) for x in urf_dist.index.tolist()],
+                                    'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                                }
+                            else:
+                                charts['urf'] = {'labels': [], 'values': []}
+                            
+                            # Materiais
+                            if 'mercadoria' in df.columns:
+                                df_materiais = df[df['mercadoria'].notna()]
+                                df_materiais = df_materiais[df_materiais['mercadoria'].str.strip() != '']
+                                df_materiais = df_materiais[~df_materiais['mercadoria'].str.lower().str.contains('não informado|nao informado|n/a|vazio', na=False)]
+                                
+                                if not df_materiais.empty:
+                                    merc_dist = df_materiais['mercadoria'].value_counts().head(10)
+                                    charts['top_material'] = {
+                                        'labels': [str(x) for x in merc_dist.index.tolist()],
+                                        'values': [int(x) if not pd.isna(x) else 0 for x in merc_dist.values.tolist()]
+                                    }
+                                else:
+                                    charts['top_material'] = {'labels': [], 'values': []}
+                            else:
+                                charts['top_material'] = {'labels': [], 'values': []}
+                            
+                            # Outros gráficos vazios por simplicidade
+                            charts['monthly'] = {'periods': [], 'processes': [], 'values': []}
+                            charts['weekly'] = {'periods': [], 'processes': [], 'values': []}
+                            
+                            # Últimas operações
+                            df_sorted = df.sort_values('data_abertura', ascending=False)
+                            df_clean = df_sorted.head(1000).fillna('')
+                            
+                            recent_ops_data = []
+                            for _, row in df_clean.iterrows():
+                                op = {
+                                    'cliente': str(row.get('importador', '') or ''),
+                                    'numero_pedido': str(row.get('ref_importador', '') or row.get('numero_processo', '') or row.get('processo', '') or ''),
+                                    'data_embarque': str(row.get('data_abertura', '') or row.get('data_registro', '') or ''),
+                                    'local_embarque': str(row.get('urf_despacho', '') or row.get('urf_entrada', '') or row.get('urf_entrada_descricao', '') or ''),
+                                    'modal': str(row.get('modal', '') or row.get('modal_descricao', '') or ''),
+                                    'status': str(row.get('canal', '') or row.get('canal_di', '') or row.get('canal_descricao', '') or 'N/D'),
+                                    'mercadoria': str(row.get('material', '') or row.get('mercadoria', '') or ''),
+                                    'despesas': float(row.get('valor', 0) or row.get('valor_cif_real', 0) or row.get('valor_cif', 0) or 0) if pd.notna(row.get('valor', 0) or row.get('valor_cif_real', 0) or row.get('valor_cif', 0) or 0) else 0,
+                                    'recinto': '',
+                                    'data_chegada': ''
+                                }
+                                recent_ops_data.append(op)
+                            recent_ops = recent_ops_data
+                            
+                            # Retornar dados do cache recarregado
+                            dashboard_data = {
+                                'kpis': clean_data_for_json(kpis),
+                                'charts': clean_data_for_json(charts),
+                                'recent_operations': clean_data_for_json(recent_ops)
+                            }
+                            
+                            return jsonify({
+                                'success': True,
+                                'data': dashboard_data,
+                                'source': 'cache_reloaded'
+                            })
+                        
+            except Exception as reload_error:
+                print(f"[DASHBOARD] Erro ao recarregar cache: {reload_error}")
+            
+            print("[DASHBOARD] Cache não disponível, buscando dados diretamente do Supabase")
+            try:
+                # Buscar dados diretamente da tabela principal usando supabase_admin
+                # para evitar problemas com RLS
+                user_role = user_data.get('role')
+                print(f"[DASHBOARD] User role: {user_role}")
+                
+                query = supabase_admin.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
+                
+                # Aplicar filtros baseados no role do usuário
+                if user_role == 'cliente_unique':
+                    # Obter lista de empresas do cliente via API utility
+                    from routes.api import get_user_companies
+                    user_companies = get_user_companies(user_data)
+                    print(f"[DASHBOARD] Empresas do cliente: {user_companies}")
+                    
+                    if user_companies:
+                        print(f"[DASHBOARD] Aplicando filtro IN para empresas: {user_companies}")
+                        query = query.in_('cnpj_importador', user_companies)
+                    else:
+                        print("[DASHBOARD] Nenhuma empresa encontrada, aplicando filtro impossível")
+                        query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                else:
+                    print("[DASHBOARD] Usuário não é cliente_unique, sem filtro de empresa")
+                
+                result = query.execute()
+                fresh_data = result.data if result.data else []
+                print(f"[DASHBOARD] Dados frescos obtidos: {len(fresh_data)} registros")
+                
+                # Log alguns CNPJs para debug
+                if fresh_data:
+                    cnpjs_encontrados = [r.get('cnpj_importador') for r in fresh_data[:5]]
+                    print(f"[DASHBOARD] Primeiros 5 CNPJs encontrados: {cnpjs_encontrados}")
+                else:
+                    print("[DASHBOARD] Nenhum dado encontrado - possível problema de filtro")
+                
+                if fresh_data:
+                    print(f"[DASHBOARD] Dados frescos obtidos: {len(fresh_data)} registros")
+                    # Processar dados frescos igual ao cache
+                    df = pd.DataFrame(fresh_data)
+                    
+                    # Preparar dados para análise
+                    df['data_abertura'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+                    df['valor_total'] = pd.to_numeric(df.get('custo_total', 0), errors='coerce').fillna(0)
+                    
+                    # Calcular KPIs básicos
+                    kpis = {
+                        'total_processos': len(df),
+                        'total_despesas': df['valor_total'].sum(),
+                        'modal_aereo': len(df[df['modal'] == 'AEREA']) if 'modal' in df.columns else 0,
+                        'modal_maritimo': len(df[df['modal'] == 'MARITIMA']) if 'modal' in df.columns else 0,
+                        'em_transito': 0,  # Simplificado
+                        'di_registrada': 0,  # Simplificado 
+                        'despesa_media_por_processo': df['valor_total'].mean() if len(df) > 0 else 0,
+                        'despesa_mes_atual': 0  # Simplificado
+                    }
+                    
+                    # Gráficos básicos
+                    charts = {}
+                    
+                    # Distribuição por Modal
+                    if 'modal' in df.columns:
+                        modal_dist = df['modal'].value_counts().head(10)
+                        print(f"[DASHBOARD] Fresh data modal distribution: {modal_dist.to_dict()}")
+                        charts['canal'] = {
+                            'labels': [str(x) for x in modal_dist.index.tolist()],
+                            'values': [int(x) if not pd.isna(x) else 0 for x in modal_dist.values.tolist()]
+                        }
+                        print(f"[DASHBOARD] Fresh data canal chart: {charts['canal']}")
+                    else:
+                        charts['canal'] = {'labels': [], 'values': []}
+                    
+                    # URF
+                    if 'urf_entrada' in df.columns:
+                        urf_dist = df['urf_entrada'].value_counts().head(10)
+                        charts['urf'] = {
+                            'labels': [str(x) for x in urf_dist.index.tolist()],
+                            'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                        }
+                    else:
+                        charts['urf'] = {'labels': [], 'values': []}
+                    
+                    # Material (com filtro)
+                    if 'mercadoria' in df.columns:
+                        df_materiais = df[df['mercadoria'].notna()]
+                        df_materiais = df_materiais[df_materiais['mercadoria'].str.strip() != '']
+                        df_materiais = df_materiais[~df_materiais['mercadoria'].str.lower().str.contains('não informado|nao informado|n/a|vazio', na=False)]
+                        
+                        if not df_materiais.empty:
+                            merc_dist = df_materiais['mercadoria'].value_counts().head(10)
+                            charts['top_material'] = {
+                                'labels': [str(x) for x in merc_dist.index.tolist()],
+                                'values': [int(x) if not pd.isna(x) else 0 for x in merc_dist.values.tolist()]
+                            }
+                        else:
+                            charts['top_material'] = {'labels': [], 'values': []}
+                    else:
+                        charts['top_material'] = {'labels': [], 'values': []}
+                    
+                    # Evolução mensal simplificada
+                    charts['monthly'] = {'periods': [], 'processes': [], 'values': []}
+                    charts['weekly'] = {'periods': [], 'processes': [], 'values': []}
+                    
+                    # Últimas operações
+                    df_sorted = df.sort_values('data_abertura', ascending=False, na_position='last')
+                    recent_ops_data = []
+                    # Permitir até 1000 registros para tabela (pode ser paginado no frontend)
+                    for _, row in df_sorted.head(1000).iterrows():
+                        op = {
+                            'cliente': str(row.get('importador', '') or ''),
+                            'numero_pedido': str(row.get('ref_importador', '') or row.get('numero_processo', '') or row.get('processo', '') or ''),
+                            'data_embarque': str(row.get('data_abertura', '') or row.get('data_registro', '') or ''),
+                            'local_embarque': str(row.get('urf_despacho', '') or row.get('urf_entrada', '') or row.get('urf_entrada_descricao', '') or ''),
+                            'modal': str(row.get('modal', '') or row.get('modal_descricao', '') or ''),
+                            'status': str(row.get('canal', '') or row.get('canal_di', '') or row.get('canal_descricao', '') or 'N/D'),
+                            'mercadoria': str(row.get('material', '') or row.get('mercadoria', '') or ''),
+                            'despesas': float(row.get('valor', 0) or row.get('valor_cif_real', 0) or row.get('valor_cif', 0) or 0) if pd.notna(row.get('valor', 0) or row.get('valor_cif_real', 0) or row.get('valor_cif', 0) or 0) else 0,
+                            'recinto': '',  # Não disponível no cache
+                            'data_chegada': ''  # Não disponível no cache
+                        }
+                        recent_ops_data.append(op)
+                    recent_ops = recent_ops_data
+                    
+                else:
+                    print("[DASHBOARD] Nenhum dado encontrado na tabela")
+                    # Usar fallback das views antigas
+                    raise Exception("Sem dados frescos, usar views")
+                    
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar dados frescos ou fallback para views: {e}")
+                # Usar fallback das views antigas
+            # Fallback para views do banco (mantém funcionamento atual)
+            try:
+                stats = supabase.table('vw_dashboard_kpis').select('*').limit(1).execute().data
+                stats = stats[0] if stats else {}
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar KPIs: {e}")
+                stats = {}
+            
+            kpis = {
+                'total_processos': stats.get('total_processos', 0),
+                'total_despesas': stats.get('total_despesas', 0),
+                'modal_aereo': stats.get('modal_aereo', 0),
+                'modal_maritimo': stats.get('modal_maritimo', 0),
+                'em_transito': stats.get('em_transito', 0),
+                'di_registrada': stats.get('di_registrada', 0),
+                'despesa_media_por_processo': stats.get('despesa_media_por_processo', 0),
+                'despesa_mes_atual': stats.get('despesa_mes_atual', 0)
+            }
+            
+            # Gráficos das views
+            charts = {}
+            # Evolução Mensal
+            try:
+                mensal = supabase.table('vw_dashboard_evolucao_mensal')\
+                    .select('periodo, total_processos, total_despesas')\
+                    .order('periodo').execute().data or []
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar evolução mensal: {e}")
+                mensal = []
+            charts['monthly'] = {
+                'periods': [r.get('periodo') for r in mensal],
+                'processes': [r.get('total_processos') for r in mensal],
+                'values': [r.get('total_despesas') for r in mensal]
+            }
+            
+            # Gráfico de Canal (Modal) a partir da tabela principal
+            try:
+                print("[DASHBOARD] Buscando dados de modal para gráfico de canal...")
+                user_role = user_data.get('role')
+                print(f"[DASHBOARD] User role para modal: {user_role}")
+                
+                modal_query = supabase_admin.table('importacoes_processos_aberta').select('modal').neq('status_processo', 'Despacho Cancelado')
+                
+                # Aplicar filtros baseados no role do usuário
+                if user_role == 'cliente_unique':
+                    user_companies = get_user_companies(user_data)
+                    print(f"[DASHBOARD] Empresas para modal: {user_companies}")
+                    
+                    if user_companies:
+                        modal_query = modal_query.in_('cnpj_importador', user_companies)
+                    else:
+                        modal_query = modal_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                
+                modal_result = modal_query.execute()
+                modal_data = modal_result.data if modal_result.data else []
+                print(f"[DASHBOARD] Dados de modal obtidos: {len(modal_data)} registros")
+                
+                if modal_data:
+                    # Processar dados de modal
+                    df_modal = pd.DataFrame(modal_data)
+                    modal_dist = df_modal['modal'].value_counts().head(10)
+                    print(f"[DASHBOARD] Views modal distribution: {modal_dist.to_dict()}")
+                    charts['canal'] = {
+                        'labels': [str(x) for x in modal_dist.index.tolist()],
+                        'values': [int(x) if not pd.isna(x) else 0 for x in modal_dist.values.tolist()]
+                    }
+                    print(f"[DASHBOARD] Views canal chart: {charts['canal']}")
+                else:
+                    charts['canal'] = {'labels': [], 'values': []}
+                    print("[DASHBOARD] Nenhum dado de modal encontrado")
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar dados de modal: {e}")
+                charts['canal'] = {'labels': [], 'values': []}
+            
+            # Gráfico de URF a partir da tabela principal
+            try:
+                print("[DASHBOARD] Buscando dados de URF...")
+                urf_query = supabase_admin.table('importacoes_processos_aberta').select('urf_entrada').neq('status_processo', 'Despacho Cancelado')
+                
+                # Aplicar filtros baseados no role do usuário
+                if user_role == 'cliente_unique':
+                    from routes.api import get_user_companies
+                    user_companies = get_user_companies(user_data)
+                    print(f"[DASHBOARD] Empresas para URF: {user_companies}")
+                    
+                    if user_companies:
+                        urf_query = urf_query.in_('cnpj_importador', user_companies)
+                    else:
+                        urf_query = urf_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                
+                urf_result = urf_query.execute()
+                urf_data = urf_result.data if urf_result.data else []
+                print(f"[DASHBOARD] Dados de URF obtidos: {len(urf_data)} registros")
+                
+                if urf_data:
+                    df_urf = pd.DataFrame(urf_data)
+                    df_urf = df_urf[df_urf['urf_entrada'].notna()]
+                    urf_dist = df_urf['urf_entrada'].value_counts().head(10)
+                    charts['urf'] = {
+                        'labels': [str(x) for x in urf_dist.index.tolist()],
+                        'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                    }
+                else:
+                    charts['urf'] = {'labels': [], 'values': []}
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar dados de URF: {e}")
+                charts['urf'] = {'labels': [], 'values': []}
+            
+            # Gráfico de Materiais a partir da tabela principal
+            try:
+                print("[DASHBOARD] Buscando dados de materiais...")
+                material_query = supabase_admin.table('importacoes_processos_aberta').select('mercadoria').neq('status_processo', 'Despacho Cancelado')
+                
+                # Aplicar filtros baseados no role do usuário
+                if user_role == 'cliente_unique':
+                    from routes.api import get_user_companies
+                    user_companies = get_user_companies(user_data)
+                    print(f"[DASHBOARD] Empresas para materiais: {user_companies}")
+                    
+                    if user_companies:
+                        material_query = material_query.in_('cnpj_importador', user_companies)
+                    else:
+                        material_query = material_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                
+                material_result = material_query.execute()
+                material_data = material_result.data if material_result.data else []
+                print(f"[DASHBOARD] Dados de materiais obtidos: {len(material_data)} registros")
+                
+                if material_data:
+                    df_materiais = pd.DataFrame(material_data)
+                    df_materiais = df_materiais[df_materiais['mercadoria'].notna()]
+                    df_materiais = df_materiais[df_materiais['mercadoria'].str.strip() != '']
+                    df_materiais = df_materiais[~df_materiais['mercadoria'].str.lower().str.contains('não informado|nao informado|n/a|vazio', na=False)]
+                    
+                    if not df_materiais.empty:
+                        merc_dist = df_materiais['mercadoria'].value_counts().head(10)
+                        charts['top_material'] = {
+                            'labels': [str(x) for x in merc_dist.index.tolist()],
+                            'values': [int(x) if not pd.isna(x) else 0 for x in merc_dist.values.tolist()]
+                        }
+                    else:
+                        charts['top_material'] = {'labels': [], 'values': []}
+                else:
+                    charts['top_material'] = {'labels': [], 'values': []}
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar dados de materiais: {e}")
+                charts['top_material'] = {'labels': [], 'values': []}
+            
+            # Evolução semanal vazia para manter compatibilidade
+            charts['weekly'] = {'periods': [], 'processes': [], 'values': []}
+            
+            try:
+                recent_ops = supabase.table('vw_dashboard_ultimas_operacoes')\
+                    .select('*').order('data_abertura', desc=True).execute().data or []
+                
+                # Mapear campos da view para o formato esperado pelo frontend
+                if recent_ops:
+                    mapped_ops = []
+                    for op in recent_ops:
+                        mapped_op = {
+                            'cliente': str(op.get('cliente', '') or ''),
+                            'numero_pedido': str(op.get('numero_pedido', '') or ''),
+                            'data_embarque': str(op.get('data_embarque', '') or ''),
+                            'local_embarque': str(op.get('local_embarque', '') or ''),
+                            'modal': str(op.get('modal', '') or ''),
+                            'status': str(op.get('status', '') or ''),
+                            'mercadoria': str(op.get('mercadoria', '') or ''),
+                            'despesas': float(op.get('despesas', 0) or 0) if op.get('despesas') else 0,
+                            'recinto': str(op.get('recinto', '') or ''),
+                            'data_chegada': str(op.get('data_chegada', '') or '')
+                        }
+                        mapped_ops.append(mapped_op)
+                    recent_ops = mapped_ops
+                    
+            except Exception as e:
+                print(f"[DASHBOARD] Erro ao buscar últimas operações: {e}")
+                recent_ops = []
         
-        # Dados da tabela (limitados para performance) - ordenados por data de abertura
-        df_sorted = df.sort_values('data_abertura', ascending=False)  # Mais recente primeiro
-        table_data = []
-        for _, row in df_sorted.head(100).iterrows():
-            table_data.append({
-                'numero_processo': row.get('ref_unique', ''),
-                'data_registro': row.get('data_abertura', ''),
-                'modal_descricao': row.get('modal', ''),
-                'canal_descricao': row.get('canal', ''),
-                'urf_entrada_descricao': row.get('urf_entrada', ''),
-                'mercadoria': row.get('mercadoria', ''),
-                'valor_cif_real': float(row.get('valor_cif_real', 0) or 0),
-                'importador': row.get('importador', ''),
-                'status_processo': row.get('status_processo', ''),
-                'valor_cif_formatted': format_value_smart(row.get('valor_cif_real', 0) or 0, currency=True)
-            })
+        # Estruturar dados no formato esperado pelo JavaScript
+        dashboard_data = {
+            'kpis': clean_data_for_json(kpis),
+            'charts': clean_data_for_json(charts),
+            'recent_operations': clean_data_for_json(recent_ops)
+        }
         
         return jsonify({
             'success': True,
-            'data': {
-                'kpis': kpis,
-                'material_analysis': material_analysis,
-                'table_data': table_data,
-                'recent_operations': table_data,  # Alias para compatibilidade
-                'record_count': total_operations,
-                'periodo_info': f"Últimos {periodo} dias" if periodo != 'all' else "Todos os registros",
-                'last_update': datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                'charts': charts_data
-            }
+            'data': dashboard_data,
+            'source': 'cache' if cached_data else 'views'
         })
         
     except Exception as e:
-        print(f"[ERROR DASHBOARD API] {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"[DASHBOARD] Erro na API dashboard-data: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {
+                'kpis': {},
+                'charts': {},
+                'recent_operations': []
+            }
+        }), 500

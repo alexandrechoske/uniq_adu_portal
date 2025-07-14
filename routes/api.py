@@ -2,14 +2,45 @@ from flask import Blueprint, request, jsonify, session
 from extensions import supabase, supabase_admin
 from routes.auth import login_required
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import requests
 import logging
+import re
 
 # Configurar logging
 logger = logging.getLogger(__name__)
 
 bp = Blueprint('api', __name__)
+
+def clean_data_for_json(data):
+    """
+    Limpa dados removendo valores NaN, NaT e outros valores problemáticos para JSON
+    """
+    if isinstance(data, dict):
+        return {key: clean_data_for_json(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [clean_data_for_json(item) for item in data]
+    elif isinstance(data, pd.Series):
+        return clean_data_for_json(data.to_dict())
+    elif isinstance(data, pd.DataFrame):
+        # Converter DataFrame para dict e limpar
+        df_clean = data.copy()
+        # Substituir NaN, NaT e infinity por valores apropriados
+        df_clean = df_clean.replace([np.nan, np.inf, -np.inf], None)
+        # Converter datas NaT para string vazia
+        for col in df_clean.columns:
+            if df_clean[col].dtype.name.startswith('datetime'):
+                df_clean[col] = df_clean[col].dt.strftime('%d/%m/%Y').fillna('')
+        return clean_data_for_json(df_clean.to_dict('records'))
+    elif pd.isna(data) or data is pd.NaT:
+        return None
+    elif isinstance(data, (np.integer, np.floating)):
+        if np.isnan(data) or np.isinf(data):
+            return None
+        return float(data) if isinstance(data, np.floating) else int(data)
+    else:
+        return data
 
 def get_currencies():
     """Get latest USD and EUR exchange rates"""
@@ -39,17 +70,48 @@ def get_currencies():
 
 def get_user_companies(user_data):
     """Get companies that the user has access to"""
+    print(f"[API] get_user_companies chamado para usuário: {user_data.get('id')}")
+    print(f"[API] User role: {user_data.get('role')}")
+    
     if user_data['role'] == 'cliente_unique':
         try:
-            agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_data['id']).execute()
+            user_id = user_data['id']
+            print(f"[API] Buscando empresas para user_id: {user_id}")
+            
+            agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+            print(f"[API] Resposta da query clientes_agentes: {agent_response.data}")
+            
             if agent_response.data and agent_response.data[0].get('empresa'):
                 companies = agent_response.data[0].get('empresa')
+                print(f"[API] Empresas brutas encontradas: {companies}")
+                print(f"[API] Tipo das empresas: {type(companies)}")
+                
                 if isinstance(companies, str):
                     companies = [companies]
-                return companies
+                
+                print(f"[API] Empresas processadas: {companies}")
+                
+                # Normalizar CNPJs (remover formatação)
+                normalized_companies = []
+                for company in companies:
+                    if company:
+                        normalized = re.sub(r'\D', '', str(company))
+                        normalized_companies.append(normalized)
+                        print(f"[API] CNPJ normalizado: {company} -> {normalized}")
+                
+                print(f"[API] Empresas normalizadas finais: {normalized_companies}")
+                return normalized_companies
+            else:
+                print(f"[API] Nenhuma empresa encontrada para o usuário")
+                return []
+                
         except Exception as e:
+            print(f"[API] Erro ao buscar empresas do usuário: {str(e)}")
             logger.error(f"Erro ao buscar empresas do usuário: {str(e)}")
-    return []
+            return []
+    else:
+        print(f"[API] Usuário não é cliente_unique, retornando lista vazia")
+        return []
 
 @bp.route('/global-data')
 @login_required
@@ -179,9 +241,12 @@ def global_data():
         
         logger.info("Dados globais coletados com sucesso")
         
+        # Limpar dados para evitar problemas de serialização JSON
+        global_data_clean = clean_data_for_json(global_data)
+        
         return jsonify({
             'status': 'success',
-            'data': global_data,
+            'data': global_data_clean,
             'timestamp': datetime.now().isoformat()
         })
         

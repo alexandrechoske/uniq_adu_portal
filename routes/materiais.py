@@ -1,21 +1,40 @@
 from flask import Blueprint, render_template, session, request, jsonify
-from extensions import supabase
-from routes.auth import login_required, role_required
-from permissions import check_permission
 from datetime import datetime, timedelta
-from collections import defaultdict
 import traceback
-import sys
-import os
+from extensions import supabase
 
-# Adicionar o diretório raiz ao path para importar o material_cleaner
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from services.data_cache import DataCacheService
 from material_cleaner import MaterialCleaner
+from routes.auth import login_required, role_required
 
-# Instância global do limpador
+# Initialize services
+data_cache = DataCacheService()
 material_cleaner = MaterialCleaner()
 
-bp = Blueprint('materiais', __name__)
+bp = Blueprint('materiais', __name__, url_prefix='/materiais')
+
+def filter_by_date_python(item_date, data_inicio, data_fim):
+    """Filtrar data usando Python (formato brasileiro DD/MM/YYYY)"""
+    try:
+        if not item_date:
+            return False
+        
+        # Converter data do item (DD/MM/YYYY para YYYY-MM-DD)
+        if '/' in item_date:
+            day, month, year = item_date.split('/')
+            item_date_iso = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        else:
+            item_date_iso = item_date
+        
+        # Converter para datetime
+        item_dt = datetime.strptime(item_date_iso, '%Y-%m-%d')
+        inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
+        fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
+        
+        return inicio_dt <= item_dt <= fim_dt
+    except:
+        return False
 
 @bp.route('/')
 @login_required
@@ -28,14 +47,25 @@ def index():
 @login_required  
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def materiais_data():
-    """API para obter dados dos materiais (KPIs e gráficos)"""
+    """API para obter dados dos materiais (KPIs e gráficos) - usando cache"""
     try:
-        # Get user companies if client
-        user_companies = []
-        current_role = session['user']['role']
-        
-        if current_role == 'cliente_unique':
-            user_companies = session['user'].get('user_companies', [])
+        print("[MATERIAIS API] Iniciando busca de dados no cache server-side")
+        # Recuperar cache server-side pelo user_id
+        user_id = session.get('user', {}).get('id')
+        cached_data = data_cache.get_cache(user_id, 'raw_data')
+        print(f"[MATERIAIS API] Cache server-side retornado: {type(cached_data)}")
+
+        # Fallback vazio se cache não existir
+        if not cached_data:
+            print("[MATERIAIS API] Cache server-side vazio ou expirado")
+            return jsonify({
+                'total_processos': 0,
+                'total_materiais': 0,
+                'valor_total': 0,
+                'custo_total': 0,
+                'ticket_medio': 0,
+                'transit_time_medio': 0
+            })
         
         # Obter parâmetros de filtro da requisição
         data_inicio = request.args.get('data_inicio')
@@ -47,82 +77,81 @@ def materiais_data():
         
         print(f"[MATERIAIS API] Filtros recebidos - Início: {data_inicio}, Fim: {data_fim}, Material: {material}, Cliente: {cliente}, Modal: {modal}, Refresh: {force_refresh}")
         
-        # Verificar se existem dados em cache primeiro (só se não forçar refresh e não houver filtros)
-        if not force_refresh and not any([data_inicio, data_fim, material, cliente, modal]):
-            cached_data = session.get('cached_data', {})
-            materiais_cache = cached_data.get('materiais', {})
+        # Usar os dados brutos do cache da sessão (mesmo que o dashboard)
+        raw_data = cached_data
+        
+        if not raw_data or not isinstance(raw_data, list):
+            print(f"[MATERIAIS API] Dados brutos inválidos no cache: {type(raw_data)}")
+            return jsonify({
+                'total_processos': 0,
+                'total_materiais': 0,
+                'valor_total': 0,
+                'custo_total': 0,
+                'ticket_medio': 0,
+                'transit_time_medio': 0
+            })
+        
+        print(f"[MATERIAIS API] Dados do cache carregados: {len(raw_data)} registros")
+        
+        # Se não há filtros de data específicos, aplicar filtro de 30 dias (igual ao dashboard)
+        if not data_inicio and not data_fim:
+            # Usar mesma lógica do dashboard: últimos 30 dias
+            data_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            data_inicio = data_limite
+            data_fim = datetime.now().strftime('%Y-%m-%d')
+            print(f"[MATERIAIS API] Aplicando filtro padrão (30 dias): {data_inicio} a {data_fim}")
+        
+        # Aplicar filtros em Python nos dados do cache
+        filtered_data = []
+        for item in raw_data:
+            # Filtrar apenas registros com material
+            if not item.get('mercadoria') or not item.get('mercadoria').strip():
+                continue
+                
+            # Filtrar por modal se especificado
+            if modal and modal != 'Todos':
+                if item.get('modal') != modal:
+                    continue
+                    
+            # Filtrar por cliente se especificado
+            if cliente:
+                importador = item.get('importador', '')
+                if cliente.lower() not in importador.lower():
+                    continue
             
-            if materiais_cache:
-                print("[MATERIAIS API] Usando dados em cache")
-                return jsonify(materiais_cache)
-        
-        print("[MATERIAIS API] Buscando dados do banco")
-        
-        # Buscar dados base de processos com filtros de data
-        # Se não há filtros específicos, usar lógica do dashboard (só data mínima)
-        if data_inicio and data_fim:
-            # Filtros específicos - converter datas para formato brasileiro
-            try:
-                # Converter de YYYY-MM-DD para DD/MM/YYYY
-                data_inicio_obj = datetime.strptime(data_inicio, '%Y-%m-%d')
-                data_fim_obj = datetime.strptime(data_fim, '%Y-%m-%d')
-                data_limite_inicio = data_inicio_obj.strftime('%d/%m/%Y')
-                data_limite_fim = data_fim_obj.strftime('%d/%m/%Y')
+            # Filtrar por material se especificado
+            if material:
+                # Busca inteligente - mapear categoria para busca por palavra-chave
+                material_upper = material.upper()
+                busca_aplicada = False
                 
-                print(f"[MATERIAIS API] Período específico: {data_limite_inicio} até {data_limite_fim}")
+                # Verificar se o termo de busca corresponde a uma categoria
+                for categoria, keywords in material_cleaner.category_mappings.items():
+                    if categoria in material_upper or any(keyword in material_upper for keyword in keywords):
+                        # Verificar se o material do item contém algum keyword da categoria
+                        mercadoria = item.get('mercadoria', '').upper()
+                        if any(keyword in mercadoria for keyword in keywords):
+                            busca_aplicada = True
+                            break
                 
-                query = supabase.table('importacoes_processos_aberta').select(
-                    'id, mercadoria, custo_total, valor_cif_real, valor_fob_real, '
-                    'transit_time_real, data_abertura, cnpj_importador, importador, '
-                    'modal, canal, status_processo'
-                ).neq('status_processo', 'Despacho Cancelado').gte('data_abertura', data_limite_inicio).lte('data_abertura', data_limite_fim)
-                
-            except ValueError as e:
-                print(f"[MATERIAIS API] Erro na conversão de datas: {e}")
-                return jsonify({'error': 'Formato de data inválido'}), 400
-        else:
-            # Sem filtros específicos - usar lógica do dashboard (só data mínima)
-            data_limite = (datetime.now() - timedelta(days=30)).strftime('%d/%m/%Y')
-            print(f"[MATERIAIS API] Período padrão (últimos 30 dias): desde {data_limite}")
+                if not busca_aplicada:
+                    # Busca normal no texto original
+                    mercadoria = item.get('mercadoria', '')
+                    if material.lower() not in mercadoria.lower():
+                        continue
             
-            query = supabase.table('importacoes_processos_aberta').select(
-                'id, mercadoria, custo_total, valor_cif_real, valor_fob_real, '
-                'transit_time_real, data_abertura, cnpj_importador, importador, '
-                'modal, canal, status_processo'
-            ).gte('data_abertura', data_limite).neq('status_processo', 'Despacho Cancelado')
+            # Aplicar filtro de data em Python para maior precisão
+            if data_inicio and data_fim:
+                item_date = item.get('data_abertura', '')
+                if not filter_by_date_python(item_date, data_inicio, data_fim):
+                    continue
+            
+            filtered_data.append(item)
         
-        # Aplicar filtros de busca
-        if material:
-            query = query.ilike('mercadoria', f'%{material}%')
-        
-        if cliente:
-            query = query.ilike('importador', f'%{cliente}%')
-        
-        if modal and modal != 'Todos':
-            query = query.eq('modal', modal)
-        
-        # Aplicar filtros baseados no usuário
-        if current_role == 'cliente_unique':
-            if user_companies:
-                query = query.in_('cnpj_importador', user_companies)
-            else:
-                # Cliente sem empresas - retornar dados vazios
-                return jsonify({
-                    'total_processos': 0,
-                    'total_materiais': 0,
-                    'valor_total': 0,
-                    'custo_total': 0,
-                    'ticket_medio': 0,
-                    'transit_time_medio': 0
-                })
-        
-        result = query.execute()
-        processos = result.data or []
-        
-        print(f"[MATERIAIS API] Encontrados {len(processos)} processos")
+        print(f"[MATERIAIS API] Dados após filtros: {len(filtered_data)} registros")
         
         # Calcular KPIs
-        kpis = calculate_materiais_kpis(processos)
+        kpis = calculate_materiais_kpis(filtered_data)
         
         # Retornar KPIs diretamente
         return jsonify(kpis)
@@ -207,28 +236,26 @@ def calculate_materiais_kpis(processos):
 @login_required  
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def filter_options_materiais():
-    """API para obter lista de materiais únicos para filtros"""
+    """API para obter lista de materiais únicos para filtros - usando cache"""
     try:
-        user_companies = []
-        current_role = session['user']['role']
+        print("[MATERIAIS FILTER] Carregando materiais do cache")
         
-        if current_role == 'cliente_unique':
-            user_companies = session['user'].get('user_companies', [])
+        # Verificar se os dados estão no cache da sessão
+        cached_data = session.get('cached_data')
+        if not cached_data:
+            print("[MATERIAIS FILTER] Cache não encontrado na sessão")
+            return jsonify([])
         
-        query = supabase.table('importacoes_processos_aberta').select('mercadoria').neq('status_processo', 'Despacho Cancelado')
+        # Usar os dados brutos do cache da sessão
+        raw_data = cached_data
         
-        # Aplicar filtros baseados no usuário
-        if current_role == 'cliente_unique':
-            if user_companies:
-                query = query.in_('cnpj_importador', user_companies)
-            else:
-                return jsonify([])
-        
-        response = query.execute()
+        if not raw_data or not isinstance(raw_data, list):
+            print("[MATERIAIS FILTER] Dados brutos inválidos no cache")
+            return jsonify([])
         
         # Extrair materiais únicos, limpar e ordenar
         materiais_set = set()
-        for item in response.data:
+        for item in raw_data:
             mercadoria = item.get('mercadoria')
             if mercadoria and mercadoria.strip():
                 # Limpar material usando o MaterialCleaner
@@ -251,28 +278,26 @@ def filter_options_materiais():
 @login_required  
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def filter_options_clientes():
-    """API para obter lista de clientes únicos para filtros"""
+    """API para obter lista de clientes únicos para filtros - usando cache"""
     try:
-        user_companies = []
-        current_role = session['user']['role']
+        print("[MATERIAIS FILTER] Carregando clientes do cache")
         
-        if current_role == 'cliente_unique':
-            user_companies = session['user'].get('user_companies', [])
+        # Verificar se os dados estão no cache da sessão
+        cached_data = session.get('cached_data')
+        if not cached_data:
+            print("[MATERIAIS FILTER] Cache não encontrado na sessão")
+            return jsonify([])
         
-        query = supabase.table('importacoes_processos_aberta').select('importador').neq('status_processo', 'Despacho Cancelado')
+        # Usar os dados brutos do cache da sessão
+        raw_data = cached_data
         
-        # Aplicar filtros baseados no usuário
-        if current_role == 'cliente_unique':
-            if user_companies:
-                query = query.in_('cnpj_importador', user_companies)
-            else:
-                return jsonify([])
-        
-        response = query.execute()
+        if not raw_data or not isinstance(raw_data, list):
+            print("[MATERIAIS FILTER] Dados brutos inválidos no cache")
+            return jsonify([])
         
         # Extrair clientes únicos e ordenar
         clientes_set = set()
-        for item in response.data:
+        for item in raw_data:
             importador = item.get('importador')
             if importador and importador.strip():
                 clientes_set.add(importador.strip())
