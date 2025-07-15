@@ -1938,3 +1938,160 @@ def bypass_filter_options():
             'modais': [],
             'canais': []
         })
+
+@bp.route('/bypass-principais-materiais')
+def bypass_principais_materiais():
+    """Endpoint para obter principais materiais sem autenticação"""
+    try:
+        # Obter dados do cache
+        from extensions import supabase
+        cached_data = session.get('cached_data', [])
+        
+        if not cached_data:
+            # Fallback para dados diretos
+            response = supabase.table('importacoes_processos').select('*').limit(200).execute()
+            cached_data = response.data if response.data else []
+        
+        # Aplicar filtros
+        filtered_data = apply_filters_to_query(cached_data, request.args)
+        
+        # Agrupar por material
+        material_stats = {}
+        for item in filtered_data:
+            material = material_cleaner.clean_material(item.get('resumo_mercadoria', ''))
+            material_nome = material.get('material_limpo', 'Não informado')
+            
+            if material_nome not in material_stats:
+                material_stats[material_nome] = {
+                    'material': material_nome,
+                    'qtde_processos': 0,
+                    'custo_total': 0,
+                    'proxima_chegada': None
+                }
+            
+            material_stats[material_nome]['qtde_processos'] += 1
+            
+            # Custo total
+            if item.get('custo_total'):
+                try:
+                    material_stats[material_nome]['custo_total'] += float(item.get('custo_total', 0))
+                except:
+                    pass
+        
+        # Ordenar por quantidade e pegar top 10
+        principais = sorted(material_stats.values(), key=lambda x: x['qtde_processos'], reverse=True)[:10]
+        
+        return jsonify(principais)
+        
+    except Exception as e:
+        print(f"[MATERIAIS] Erro ao buscar principais materiais: {e}")
+        return jsonify([])
+
+@bp.route('/bypass-detalhamento-processos')
+def bypass_detalhamento_processos():
+    """Endpoint para obter detalhamento dos processos sem autenticação"""
+    try:
+        # Obter dados do cache
+        from extensions import supabase
+        cached_data = session.get('cached_data', [])
+        
+        if not cached_data:
+            # Fallback para dados diretos
+            response = supabase.table('importacoes_processos').select('*').limit(200).execute()
+            cached_data = response.data if response.data else []
+        
+        # Aplicar filtros
+        filtered_data = apply_filters_to_query(cached_data, request.args)
+        
+        # Processar dados para detalhamento
+        detalhamento = []
+        for item in filtered_data:
+            material_info = material_cleaner.clean_material(item.get('resumo_mercadoria', ''))
+            
+            detalhamento.append({
+                'data_abertura': item.get('data_abertura'),
+                'numero_pedido': item.get('ref_unique'),
+                'cliente': item.get('cliente_razaosocial'),
+                'material': material_info.get('material_limpo', 'Não informado'),
+                'data_embarque': item.get('data_embarque'),
+                'data_chegada': item.get('data_chegada'),
+                'status_carga': item.get('status_processo'),
+                'canal': item.get('diduimp_canal'),
+                'custo_total': item.get('custo_total', 0)
+            })
+        
+        # Limitar a 100 registros para performance
+        return jsonify(detalhamento[:100])
+        
+    except Exception as e:
+        print(f"[MATERIAIS] Erro ao buscar detalhamento: {e}")
+        return jsonify([])
+
+@bp.route('/bypass-transit-time')
+def bypass_transit_time():
+    """Endpoint para obter transit time por material sem autenticação"""
+    try:
+        # Obter dados do cache
+        from extensions import supabase
+        cached_data = session.get('cached_data', [])
+        
+        if not cached_data:
+            # Fallback para dados diretos
+            response = supabase.table('importacoes_processos').select('*').limit(200).execute()
+            cached_data = response.data if response.data else []
+        
+        # Aplicar filtros
+        filtered_data = apply_filters_to_query(cached_data, request.args)
+        
+        # Calcular transit time por material
+        material_transit = {}
+        for item in filtered_data:
+            material_info = material_cleaner.clean_material(item.get('resumo_mercadoria', ''))
+            material_nome = material_info.get('material_limpo', 'Não informado')
+            
+            # Calcular transit time se as datas existirem
+            data_embarque = item.get('data_embarque')
+            data_chegada = item.get('data_chegada')
+            
+            if data_embarque and data_chegada:
+                try:
+                    # Tentar diferentes formatos de data
+                    dt_embarque = None
+                    dt_chegada = None
+                    
+                    # Formato ISO (2017-03-20T00:00:00)
+                    if 'T' in str(data_embarque):
+                        dt_embarque = datetime.fromisoformat(str(data_embarque).replace('T', ' ').replace('Z', ''))
+                        dt_chegada = datetime.fromisoformat(str(data_chegada).replace('T', ' ').replace('Z', ''))
+                    else:
+                        # Formato brasileiro (DD/MM/YYYY)
+                        dt_embarque = datetime.strptime(str(data_embarque), '%d/%m/%Y')
+                        dt_chegada = datetime.strptime(str(data_chegada), '%d/%m/%Y')
+                    
+                    transit_days = (dt_chegada - dt_embarque).days
+                    
+                    if transit_days > 0:  # Apenas valores positivos
+                        if material_nome not in material_transit:
+                            material_transit[material_nome] = []
+                        material_transit[material_nome].append(transit_days)
+                except Exception as e:
+                    print(f"[TRANSIT TIME] Erro ao processar datas {data_embarque} -> {data_chegada}: {e}")
+                    pass
+        
+        # Calcular média por material
+        result = []
+        for material, days_list in material_transit.items():
+            if days_list:
+                avg_days = sum(days_list) / len(days_list)
+                result.append({
+                    'categoria_material': material,
+                    'transit_time_medio': round(avg_days, 1)
+                })
+        
+        # Ordenar por transit time e pegar top 10
+        result.sort(key=lambda x: x['transit_time_medio'], reverse=True)
+        return jsonify(result[:10])
+        
+    except Exception as e:
+        print(f"[MATERIAIS] Erro ao buscar transit time: {e}")
+        return jsonify([])

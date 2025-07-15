@@ -11,10 +11,27 @@ let materiaisCharts = {};
 let currentFilters = {};
 let isLoading = false;
 
+// Variáveis de paginação
+let currentPage = 1;
+let pageSize = 10;
+let totalRecords = 0;
+let totalPages = 0;
+let originalTableData = [];
+
 // =============================================================================
 // INICIALIZAÇÃO
 // =============================================================================
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[MATERIAIS] Inicializando página de materiais...');
+    
+    // Registrar plugin de data labels se disponível
+    if (typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+        console.log('[MATERIAIS] Plugin ChartDataLabels registrado');
+    } else {
+        console.warn('[MATERIAIS] Plugin ChartDataLabels não encontrado');
+    }
     console.log('[MATERIAIS] Inicializando página de materiais...');
     
     // Inicializar componentes
@@ -141,7 +158,10 @@ function loadInitialData() {
     
     Promise.all([
         loadFilterOptions(),
-        loadMateriaisData()
+        loadMateriaisData(),
+        loadPrincipaisMateriais(),
+        loadDetalhamentoProcessos(),
+        loadTransitTime()
     ]).then(() => {
         console.log('[MATERIAIS] Todos os dados carregados com sucesso');
         hideLoadingOverlay();
@@ -208,8 +228,8 @@ function updateKPIs(data) {
     const kpis = [
         { id: 'kpi-total-processos', value: data.total_processos, format: 'number' },
         { id: 'kpi-total-materiais', value: data.total_materiais, format: 'number' },
-        { id: 'kpi-valor-total', value: data.valor_total, format: 'currency' },
-        { id: 'kpi-custo-total', value: data.custo_total, format: 'currency' },
+        { id: 'kpi-valor-total', value: data.valor_total, format: 'currency-thousands' },
+        { id: 'kpi-custo-total', value: data.custo_total, format: 'currency-thousands' },
         { id: 'kpi-ticket-medio', value: data.ticket_medio, format: 'currency' },
         { id: 'kpi-transit-time', value: data.transit_time_medio, format: 'days' }
     ];
@@ -304,8 +324,20 @@ function loadCanalDistribution() {
 }
 
 function loadTransitTime() {
-    console.log('[MATERIAIS] Pulando carregamento de transit time por enquanto...');
-    return Promise.resolve();
+    console.log('[MATERIAIS] Carregando transit time...');
+    const params = new URLSearchParams(currentFilters);
+    
+    return fetch(`/materiais/bypass-transit-time?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('[MATERIAIS] Transit time carregado:', data.length);
+            createTransitTimeChart(data);
+        })
+        .catch(error => {
+            console.error('[MATERIAIS] Erro ao carregar transit time:', error);
+            // Criar gráfico vazio em caso de erro
+            createTransitTimeChart([]);
+        });
 }
 
 // =============================================================================
@@ -350,6 +382,13 @@ function createTopMateriaisChart(data) {
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y} processos`;
+                        }
+                    }
                 }
             }
         }
@@ -372,16 +411,26 @@ function createEvolucaoMensalChart(data) {
         materialData[item.categoria_material][item.mes] = item.qtde;
     });
     
+    // Calcular total por material e pegar top 3
+    const materialTotals = {};
+    Object.keys(materialData).forEach(material => {
+        materialTotals[material] = Object.values(materialData[material]).reduce((a, b) => a + b, 0);
+    });
+    
+    const top3Materials = Object.entries(materialTotals)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3)
+        .map(([material]) => material);
+    
     // Obter meses únicos
     const months = [...new Set(data.map(item => item.mes))].sort();
     
-    // Criar datasets
+    // Criar datasets apenas para top 3
     const datasets = [];
-    const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
-    let colorIndex = 0;
+    const colors = ['#3498db', '#e74c3c', '#2ecc71'];
     
-    Object.keys(materialData).forEach(material => {
-        const color = colors[colorIndex % colors.length];
+    top3Materials.forEach((material, index) => {
+        const color = colors[index];
         datasets.push({
             label: material,
             data: months.map(month => materialData[material][month] || 0),
@@ -391,7 +440,6 @@ function createEvolucaoMensalChart(data) {
             fill: false,
             tension: 0.4
         });
-        colorIndex++;
     });
     
     materiaisCharts.evolucaoMensal = new Chart(ctx, {
@@ -419,6 +467,13 @@ function createEvolucaoMensalChart(data) {
             plugins: {
                 legend: {
                     position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y} processos`;
+                        }
+                    }
                 }
             }
         }
@@ -432,19 +487,26 @@ function createModalChart(data) {
         materiaisCharts.modal.destroy();
     }
     
-    materiaisCharts.modal = new Chart(ctx, {
+    // Cores específicas para modais
+    const modalColors = {
+        'AEREA': '#3498db',      // Azul
+        'AÉREA': '#3498db',      // Azul
+        'MARITIMA': '#2ecc71',   // Verde
+        'MARÍTIMA': '#2ecc71',   // Verde
+        'TERRESTRE': '#f39c12',  // Laranja
+        'Nao informado': '#95a5a6' // Cinza
+    };
+    
+    const colors = data.map(item => modalColors[item.modal] || '#e74c3c');
+    
+    // Configuração base do gráfico
+    const chartConfig = {
         type: 'doughnut',
         data: {
             labels: data.map(item => item.modal),
             datasets: [{
                 data: data.map(item => item.total),
-                backgroundColor: [
-                    '#3498db',
-                    '#e74c3c',
-                    '#2ecc71',
-                    '#f39c12',
-                    '#9b59b6'
-                ],
+                backgroundColor: colors,
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -455,10 +517,38 @@ function createModalChart(data) {
             plugins: {
                 legend: {
                     position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
-    });
+    };
+    
+    // Adicionar plugin de data labels se disponível
+    if (typeof ChartDataLabels !== 'undefined') {
+        chartConfig.options.plugins.datalabels = {
+            display: true,
+            color: '#fff',
+            font: {
+                weight: 'bold',
+                size: 12
+            },
+            formatter: (value, ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return percentage > 5 ? percentage + '%' : ''; // Só mostra se > 5%
+            }
+        };
+    }
+    
+    materiaisCharts.modal = new Chart(ctx, chartConfig);
 }
 
 function createCanalChart(data) {
@@ -468,19 +558,29 @@ function createCanalChart(data) {
         materiaisCharts.canal.destroy();
     }
     
-    materiaisCharts.canal = new Chart(ctx, {
+    // Cores específicas para canais baseadas nos nomes
+    const canalColors = {
+        'VERDE': '#2ecc71',      // Verde
+        'Verde': '#2ecc71',      // Verde
+        'AMARELO': '#f1c40f',    // Amarelo
+        'Amarelo': '#f1c40f',    // Amarelo
+        'VERMELHO': '#e74c3c',   // Vermelho
+        'Vermelho': '#e74c3c',   // Vermelho
+        'AZUL': '#3498db',       // Azul
+        'Azul': '#3498db',       // Azul
+        'Não Informado': '#95a5a6' // Cinza
+    };
+    
+    const colors = data.map(item => canalColors[item.canal] || '#95a5a6');
+    
+    // Configuração base do gráfico
+    const chartConfig = {
         type: 'doughnut',
         data: {
             labels: data.map(item => item.canal),
             datasets: [{
                 data: data.map(item => item.total),
-                backgroundColor: [
-                    '#2ecc71',
-                    '#e74c3c',
-                    '#f39c12',
-                    '#9b59b6',
-                    '#3498db'
-                ],
+                backgroundColor: colors,
                 borderWidth: 2,
                 borderColor: '#fff'
             }]
@@ -491,10 +591,38 @@ function createCanalChart(data) {
             plugins: {
                 legend: {
                     position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentage}%)`;
+                        }
+                    }
                 }
             }
         }
-    });
+    };
+    
+    // Adicionar plugin de data labels se disponível
+    if (typeof ChartDataLabels !== 'undefined') {
+        chartConfig.options.plugins.datalabels = {
+            display: true,
+            color: '#fff',
+            font: {
+                weight: 'bold',
+                size: 12
+            },
+            formatter: (value, ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return percentage > 5 ? percentage + '%' : ''; // Só mostra se > 5%
+            }
+        };
+    }
+    
+    materiaisCharts.canal = new Chart(ctx, chartConfig);
 }
 
 function createTransitTimeChart(data) {
@@ -536,6 +664,13 @@ function createTransitTimeChart(data) {
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} dias`;
+                        }
+                    }
                 }
             }
         }
@@ -546,13 +681,33 @@ function createTransitTimeChart(data) {
 // CARREGAMENTO DE TABELAS
 // =============================================================================
 function loadPrincipaisMateriais() {
-    console.log('[MATERIAIS] Pulando carregamento de principais materiais por enquanto...');
-    return Promise.resolve();
+    console.log('[MATERIAIS] Carregando principais materiais...');
+    const params = new URLSearchParams(currentFilters);
+    
+    return fetch(`/materiais/bypass-principais-materiais?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('[MATERIAIS] Principais materiais carregados:', data.length);
+            populatePrincipaisMateriaisTable(data);
+        })
+        .catch(error => {
+            console.error('[MATERIAIS] Erro ao carregar principais materiais:', error);
+        });
 }
 
 function loadDetalhamentoProcessos() {
-    console.log('[MATERIAIS] Pulando carregamento de detalhamento por enquanto...');
-    return Promise.resolve();
+    console.log('[MATERIAIS] Carregando detalhamento de processos...');
+    const params = new URLSearchParams(currentFilters);
+    
+    return fetch(`/materiais/bypass-detalhamento-processos?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('[MATERIAIS] Detalhamento carregado:', data.length);
+            populateDetalhamentoTable(data);
+        })
+        .catch(error => {
+            console.error('[MATERIAIS] Erro ao carregar detalhamento:', error);
+        });
 }
 
 function populatePrincipaisMateriaisTable(data) {
@@ -571,26 +726,58 @@ function populatePrincipaisMateriaisTable(data) {
     });
 }
 
-function populateDetalhamentoTable(data) {
-    const tbody = document.querySelector('#detalhamento-table tbody');
-    tbody.innerHTML = '';
+function formatDate(dateString) {
+    if (!dateString || dateString === 'null' || dateString === null) {
+        return 'N/A';
+    }
     
-    // Limitar a 100 registros para performance
-    data.slice(0, 100).forEach(item => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${item.data_abertura}</td>
-            <td>${item.numero_pedido}</td>
-            <td>${item.cliente}</td>
-            <td>${item.material}</td>
-            <td>${item.data_embarque}</td>
-            <td>${item.data_chegada}</td>
-            <td>${item.status_carga}</td>
-            <td>${item.canal}</td>
-            <td>${formatValue(item.custo_total, 'currency')}</td>
-        `;
-        tbody.appendChild(row);
-    });
+    // Se já está no formato brasileiro DD/MM/YYYY, retornar como está
+    if (dateString.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        return dateString;
+    }
+    
+    // Se está no formato ISO (2017-05-05T00:00:00), converter
+    if (dateString.includes('T')) {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        } catch (e) {
+            return 'N/A';
+        }
+    }
+    
+    // Se está no formato YYYY-MM-DD, converter
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        try {
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        } catch (e) {
+            return 'N/A';
+        }
+    }
+    
+    return dateString || 'N/A';
+}
+
+function formatNullValue(value) {
+    if (value === null || value === 'null' || value === undefined || value === '') {
+        return 'N/A';
+    }
+    return value;
+}
+
+function populateDetalhamentoTable(data) {
+    console.log('[MATERIAIS] Populando tabela de detalhamento com paginação...');
+    
+    // Configurar paginação
+    calculatePagination(data);
+    renderTablePage();
+    renderPagination();
+    
+    // Garantir que os listeners estão configurados
+    setTimeout(() => {
+        attachPaginationListeners();
+    }, 100);
 }
 
 // =============================================================================
@@ -876,6 +1063,18 @@ function formatValue(value, type) {
                 style: 'currency',
                 currency: 'BRL'
             }).format(value);
+        case 'currency-thousands':
+            // Formatação em milhares para valores grandes
+            if (value >= 1000000) {
+                return `R$ ${(value / 1000000).toFixed(1)}M`;
+            } else if (value >= 1000) {
+                return `R$ ${(value / 1000).toFixed(1)}K`;
+            } else {
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(value);
+            }
         case 'number':
             return new Intl.NumberFormat('pt-BR').format(value);
         case 'days':
@@ -922,6 +1121,129 @@ function exportData() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// =============================================================================
+// FUNÇÕES DE PAGINAÇÃO
+// =============================================================================
+function calculatePagination(data) {
+    originalTableData = data;
+    totalRecords = data.length;
+    totalPages = Math.ceil(totalRecords / pageSize);
+    
+    // Garantir que currentPage não seja maior que totalPages
+    if (currentPage > totalPages) {
+        currentPage = 1;
+    }
+    
+    console.log(`[MATERIAIS] Paginação calculada: ${totalRecords} registros, ${totalPages} páginas`);
+}
+
+function renderPagination() {
+    const paginationContainer = document.getElementById('pagination-container');
+    if (!paginationContainer) return;
+    
+    // Atualizar informações da página
+    const pageInfo = document.getElementById('page-info');
+    if (pageInfo) {
+        const startRecord = (currentPage - 1) * pageSize + 1;
+        const endRecord = Math.min(currentPage * pageSize, totalRecords);
+        pageInfo.textContent = `${startRecord}-${endRecord} de ${totalRecords}`;
+    }
+    
+    // Atualizar controles de paginação
+    const paginationControls = document.getElementById('pagination-controls');
+    if (!paginationControls) return;
+    
+    paginationControls.innerHTML = '';
+    
+    // Botão "Anterior"
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'pagination-btn';
+    prevBtn.textContent = '‹';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTablePage();
+            renderPagination();
+        }
+    });
+    paginationControls.appendChild(prevBtn);
+    
+    // Botões de páginas
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = 'pagination-btn';
+        pageBtn.textContent = i;
+        pageBtn.classList.toggle('active', i === currentPage);
+        pageBtn.addEventListener('click', () => {
+            currentPage = i;
+            renderTablePage();
+            renderPagination();
+        });
+        paginationControls.appendChild(pageBtn);
+    }
+    
+    // Botão "Próximo"
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'pagination-btn';
+    nextBtn.textContent = '›';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderTablePage();
+            renderPagination();
+        }
+    });
+    paginationControls.appendChild(nextBtn);
+}
+
+function renderTablePage() {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const pageData = originalTableData.slice(startIndex, endIndex);
+    
+    const tbody = document.querySelector('#detalhamento-table tbody');
+    tbody.innerHTML = '';
+    
+    pageData.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${formatDate(item.data_abertura)}</td>
+            <td>${formatNullValue(item.numero_pedido)}</td>
+            <td>${formatNullValue(item.cliente)}</td>
+            <td>${formatNullValue(item.material)}</td>
+            <td>${formatDate(item.data_embarque)}</td>
+            <td>${formatDate(item.data_chegada)}</td>
+            <td>${formatNullValue(item.status_carga)}</td>
+            <td>${formatNullValue(item.canal)}</td>
+            <td>${formatValue(item.custo_total, 'currency')}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function attachPaginationListeners() {
+    const pageSizeSelect = document.getElementById('page-size-select');
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', (e) => {
+            pageSize = parseInt(e.target.value);
+            currentPage = 1;
+            calculatePagination(originalTableData);
+            renderTablePage();
+            renderPagination();
+        });
+    }
 }
 
 // =============================================================================

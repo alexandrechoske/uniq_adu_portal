@@ -11,12 +11,13 @@
     <!-- Header -->
     <div class="materiais-header">
         <div>
-            <h1 class="materiais-title">Análise de Materiais</h1>
+            <h1 class="materiais-title">📊 Análise de Materiais</h1>
             <p class="materiais-subtitle">Visão detalhada dos materiais importados</p>
         </div>
-        <div class="header-actions">
+        <div class="header-controls">
             <button id="open-filters" class="btn btn-primary">🔍 Filtros</button>
-            <span id="last-update">Carregando...</span>
+            <button id="export-data" class="btn btn-secondary">📊 Exportar</button>
+            <span id="last-update" class="last-update">Carregando...</span>
         </div>
     </div>
     
@@ -270,6 +271,25 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Controles de Paginação -->
+        <div id="pagination-container" class="pagination-container">
+            <div class="pagination-info">
+                <span id="page-info">0-0 de 0</span>
+                <div class="page-size-selector">
+                    <label for="page-size-select">Itens por página:</label>
+                    <select id="page-size-select" class="page-size-select">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+            <div id="pagination-controls" class="pagination-controls">
+                <!-- Botões de paginação gerados dinamicamente -->
+            </div>
+        </div>
     </div>
     
     <!-- Loading Overlay -->
@@ -283,7 +303,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-<script src="{{ url_for('static', filename='js/materiais-simple.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="{{ url_for('static', filename='js/materiais.js') }}"></script>
 {% endblock %}

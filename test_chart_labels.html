@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste ChartDataLabels</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .chart-container { width: 400px; height: 400px; margin: 20px auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Teste de ChartDataLabels</h1>
+    
+    <div id="status" class="status">Carregando...</div>
+    
+    <div class="chart-container">
+        <canvas id="testChart"></canvas>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    
+    <script>
+        // Testar se o plugin está disponível
+        const statusDiv = document.getElementById('status');
+        
+        if (typeof ChartDataLabels !== 'undefined') {
+            statusDiv.className = 'status success';
+            statusDiv.textContent = '✅ ChartDataLabels carregado com sucesso!';
+            
+            // Registrar plugin
+            Chart.register(ChartDataLabels);
+            
+            // Criar gráfico de teste
+            const ctx = document.getElementById('testChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aérea', 'Marítima', 'Terrestre'],
+                    datasets: [{
+                        data: [30, 50, 20],
+                        backgroundColor: ['#3498db', '#2ecc71', '#f39c12'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        datalabels: {
+                            display: true,
+                            color: '#fff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: (value, ctx) => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return percentage + '%';
+                            }
+                        }
+                    }
+                }
+            });
+            
+        } else {
+            statusDiv.className = 'status error';
+            statusDiv.textContent = '❌ ChartDataLabels não foi carregado';
+        }
+    </script>
+</body>
+</html>
