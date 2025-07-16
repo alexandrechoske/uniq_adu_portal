@@ -437,17 +437,10 @@
             <!-- Navigation menu -->
             <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
             <!-- Dashboard -->
-            <a href="{{ url_for('dashboard.index') }}" 
-               class="sidebar-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+            <a href="{{ url_for('dashboard_v2.index') }}" 
+               class="sidebar-item {% if request.endpoint == 'dashboard_v2.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>
-                <span class="sidebar-text">Dashboard</span>
-            </a>
-
-            <!-- Dashboard de Materiais -->
-            <a href="{{ url_for('materiais.index') }}" 
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('materiais.') %}active{% endif %}">
-                <i class="mdi mdi-package-variant text-xl"></i>
-                <span class="sidebar-text">Análise de Materiais</span>
+                <span class="sidebar-text">Dashboard Executivo</span>
             </a>           
 
             <!-- Conferência Documental (apenas para admin e interno_unique) -->

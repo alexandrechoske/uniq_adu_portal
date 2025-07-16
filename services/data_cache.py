@@ -12,7 +12,7 @@ class DataCacheService:
     def __init__(self):
         self.cache = {}
         self.cache_timestamp = {}
-        self.cache_duration = 300  # 5 minutos
+        self.cache_duration = 1800  # 30 minutos (mais tempo para navegação entre abas)
     
     def get_cache_key(self, user_id, data_type):
         """Gera chave única para o cache"""
@@ -39,10 +39,18 @@ class DataCacheService:
         cache_key = self.get_cache_key(user_id, data_type)
         
         if self.is_cache_valid(cache_key):
-            print(f"[CACHE] Cache válido encontrado: {cache_key}")
+            print(f"[CACHE] Cache válido encontrado: {cache_key} - {len(self.cache[cache_key]) if isinstance(self.cache[cache_key], list) else 'dict'} registros")
             return self.cache[cache_key]
         
-        print(f"[CACHE] Cache não encontrado ou expirado: {cache_key}")
+        # Log mais detalhado para debug
+        if cache_key in self.cache_timestamp:
+            cache_time = self.cache_timestamp[cache_key]
+            now = datetime.now()
+            elapsed = (now - cache_time).seconds
+            print(f"[CACHE] Cache expirado: {cache_key} - Tempo decorrido: {elapsed}s (limite: {self.cache_duration}s)")
+        else:
+            print(f"[CACHE] Cache não encontrado: {cache_key}")
+        
         return None
     
     def clear_user_cache(self, user_id):

@@ -54,7 +54,7 @@ from session_handler import init_session_handler
 # Import routes after app initialization to avoid circular imports
 from routes import auth, dashboard, relatorios, usuarios, agente, api,conferencia
 from routes import conferencia_pdf, debug, paginas, materiais
-from routes import background_tasks
+from routes import background_tasks, dashboard_v2, materiais_v2
 
 # Register blueprints
 app.register_blueprint(auth.bp)
@@ -69,6 +69,8 @@ app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
 app.register_blueprint(paginas.bp)  # Registrando o blueprint de Páginas
 app.register_blueprint(materiais.bp, url_prefix='/materiais')  # Registrando o blueprint de Materiais
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
+app.register_blueprint(dashboard_v2.bp)  # Registrando o blueprint de Dashboard V2
+app.register_blueprint(materiais_v2.bp)  # Registrando o blueprint de Materiais V2
 
 # Debug das rotas registradas
 print("\n[DEBUG] ===== Rotas Registradas =====")
@@ -88,7 +90,7 @@ def not_found_error(error):
 @app.route('/')
 def index():
     if 'user' in session:
-        return redirect(url_for('dashboard.index'))
+        return redirect(url_for('dashboard_v2.index'))
     return redirect(url_for('auth.login'))
 
 if __name__ == '__main__':

@@ -8,9 +8,9 @@ This is a Flask-based customs management portal with a **cache-first architectur
 
 - **Flask App**: Modular blueprint-based structure with 12+ specialized modules
 - **Database**: Supabase (PostgreSQL) with dual client setup (`supabase` for regular ops, `supabase_admin` for privileged operations)
-- **Caching**: Session-based memory cache with `DataCacheService` for performance optimization
-- **Authentication**: Role-based access (`admin`, `interno_unique`, `cliente_unique`) with company filtering
-- **Material Processing**: Intelligent categorization system via `MaterialCleaner` class
+- **Caching**: Hybrid caching system - session-based memory cache + server-side `DataCacheService` for performance optimization
+- **Authentication**: Role-based access (`admin`, `interno_unique`, `cliente_unique`) with company filtering and API bypass capability
+- **Material Processing**: Intelligent categorization system via `MaterialCleaner` class with 15+ predefined categories
 
 ## Critical Architectural Patterns
 
@@ -19,21 +19,29 @@ This is a Flask-based customs management portal with a **cache-first architectur
 # ALWAYS check session cache first before database queries
 cached_data = session.get('cached_data')
 if not cached_data:
-    # Fallback to database only if cache miss
+    # Fallback to server-side DataCacheService
+    cached_data = data_cache.get_cache(user_id, 'raw_data')
+    if not cached_data:
+        # Last resort: direct database query
 ```
 
-The system preloads 30 days of data during login and stores in `session['cached_data']`. All data-heavy operations (dashboard, materials analytics) use this cache, not direct DB queries.
+The system preloads 30-365 days of data during login and stores in both `session['cached_data']` and server-side cache. All data-heavy operations (dashboard, materials analytics) use this cache, not direct DB queries.
 
-### 2. Blueprint Registration Order
+### 2. Dual Client Authentication Pattern
 ```python
-# In app.py - import routes AFTER app initialization
-from routes import auth, dashboard, relatorios, usuarios, agente, api, conferencia
-from routes import conferencia_pdf, debug, paginas, materiais, background_tasks
+# Regular client (RLS-enabled) for user operations
+from extensions import supabase
+# Admin client (service key) for privileged operations and data preloading
+from extensions import supabase_admin
 ```
 
-### 3. Dual Supabase Client Pattern
-- `supabase`: Regular client for user operations (RLS-enabled)
-- `supabase_admin`: Service key client for admin operations, user management, data preloading
+### 3. API Bypass for Testing
+```python
+# Test APIs without authentication using X-API-Key header
+api_bypass_key = os.getenv('API_BYPASS_KEY')
+if request.headers.get('X-API-Key') == api_bypass_key:
+    # Bypass authentication for testing
+```
 
 ### 4. Role-Based Data Filtering
 ```python
@@ -42,11 +50,19 @@ if user_role == 'cliente_unique':
     query = query.in_('cnpj_importador', user_companies)
 ```
 
+### 5. Blueprint Registration Order (Critical)
+```python
+# In app.py - import routes AFTER app initialization to avoid circular imports
+from routes import auth, dashboard, relatorios, usuarios, agente, api, conferencia
+from routes import conferencia_pdf, debug, paginas, materiais, background_tasks
+```
+
 ## Essential Development Workflows
 
 ### Running the Application
 ```bash
 python app.py  # Debug mode enabled by default
+# OR use VS Code task: "Run Flask Development Server"
 ```
 
 ### Environment Setup
@@ -57,9 +73,17 @@ SUPABASE_KEY=your_anon_key
 SUPABASE_SERVICE_KEY=your_service_key
 SECRET_KEY=your_secret_key
 GEMINI_API_KEY=your_gemini_key  # For AI document processing
+API_BYPASS_KEY=your_test_key    # For testing without authentication
 ```
 
-### Database Date Format Handling
+### Testing Strategy (Project-Specific)
+1. **Test APIs without authentication**: Use `X-API-Key` header with `API_BYPASS_KEY`
+2. **Always prefix test files with `test_`** for easy identification and cleanup
+3. **Use debug endpoints**: `/debug/`, `/materiais/debug-*`, `/materiais/test-*`
+4. **Session testing**: `/debug/log-session` for session state inspection
+5. **Cache testing**: `/materiais/test-cache` for cache validation
+
+### Database Date Format Handling (Critical)
 The system uses **Brazilian date format (DD/MM/YYYY)** in database but **ISO format (YYYY-MM-DD)** for filtering. Always use the `filter_by_date_python()` function in `routes/materiais.py` for date comparisons.
 
 ### Material Categorization
@@ -86,6 +110,7 @@ material_info = material_cleaner.clean_material(raw_material_text)
 - Login triggers data preloading via `data_cache.preload_user_data()`
 - Session management with 12-hour expiration
 - Company association for `cliente_unique` users
+- API bypass mode for testing: `X-API-Key` header bypasses authentication
 
 ### API Endpoints (`routes/api.py`)
 - `/api/global-data`: Comprehensive data endpoint with role-based filtering
