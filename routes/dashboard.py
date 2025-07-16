@@ -265,7 +265,7 @@ def dashboard_data_api(permissions=None):
                             
                             # KPIs básicos
                             kpis = {
-                                'total_processos': len(df),
+                                'total_processos': len(df['ref_unique'].unique()),
                                 'total_despesas': df['valor_total'].sum(),
                                 'modal_aereo': len(df[df['modal'] == 'AEREA']) if 'modal' in df.columns else 0,
                                 'modal_maritimo': len(df[df['modal'] == 'MARITIMA']) if 'modal' in df.columns else 0,
@@ -407,8 +407,8 @@ def dashboard_data_api(permissions=None):
                     kpis = {
                         'total_processos': len(df),
                         'total_despesas': df['valor_total'].sum(),
-                        'modal_aereo': len(df[df['modal'] == 'AEREA']) if 'modal' in df.columns else 0,
-                        'modal_maritimo': len(df[df['modal'] == 'MARITIMA']) if 'modal' in df.columns else 0,
+                        'modal_aereo': len(df[df['modal'] == 'AÉREA']) if 'modal' in df.columns else 0,
+                        'modal_maritimo': len(df[df['modal'] == 'MARÍTIMA']) if 'modal' in df.columns else 0,
                         'em_transito': 0,  # Simplificado
                         'di_registrada': 0,  # Simplificado 
                         'despesa_media_por_processo': df['valor_total'].mean() if len(df) > 0 else 0,

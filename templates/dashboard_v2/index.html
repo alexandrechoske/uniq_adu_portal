@@ -131,6 +131,23 @@
                 <div id="mat-transit-time" class="kpi-value">-</div>
                 <div class="kpi-label">Transit Time Médio (dias)</div>
             </div>
+            <!-- Novas métricas: KPIs mês/semana -->
+            <div class="kpi-card kpi-new">
+                <div id="mat-processos-mes" class="kpi-value">-</div>
+                <div class="kpi-label">Processos no Mês</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="mat-custo-mes" class="kpi-value">-</div>
+                <div class="kpi-label">Custo no Mês (R$)</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="mat-processos-semana" class="kpi-value">-</div>
+                <div class="kpi-label">Processos na Semana</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="mat-custo-semana" class="kpi-value">-</div>
+                <div class="kpi-label">Custo na Semana (R$)</div>
+            </div>
         </div>
         
         <!-- Materiais Filters -->
@@ -562,11 +579,31 @@ function updateDashboardKPIs(kpis) {
 function updateMateriaisKPIs(kpis) {
     document.getElementById('mat-total-processos').textContent = formatNumber(kpis.total_processos);
     document.getElementById('mat-total-materiais').textContent = formatNumber(kpis.total_materiais);
-    document.getElementById('mat-valor-total').textContent = formatCurrency(kpis.valor_total);
-    document.getElementById('mat-custo-total').textContent = formatCurrency(kpis.custo_total);
-    document.getElementById('mat-ticket-medio').textContent = formatCurrency(kpis.ticket_medio);
+    document.getElementById('mat-valor-total').textContent = formatCurrencyCompact(kpis.valor_total);
+    document.getElementById('mat-custo-total').textContent = formatCurrencyCompact(kpis.custo_total);
+    document.getElementById('mat-ticket-medio').textContent = formatCurrencyCompact(kpis.ticket_medio);
     document.getElementById('mat-transit-time').textContent = formatNumber(kpis.transit_time, 1) + ' dias';
+
+    // Novos KPIs mês/semana (nomes alinhados ao backend)
+    document.getElementById('mat-processos-mes').textContent = formatNumber(kpis.total_processos_mes);
+    document.getElementById('mat-custo-mes').textContent = formatCurrencyCompact(kpis.custo_total_mes);
+    document.getElementById('mat-processos-semana').textContent = formatNumber(kpis.total_processos_semana);
+    document.getElementById('mat-custo-semana').textContent = formatCurrencyCompact(kpis.custo_total_semana);
 }
+
+// Formatação monetária compacta (ex: 706k)
+function formatCurrencyCompact(value) {
+    if (!value || value === 0) return 'R$ 0,00';
+    const abs = Math.abs(value);
+    if (abs >= 1e6) {
+        return 'R$ ' + (value / 1e6).toFixed(1).replace('.0','') + 'M';
+    } else if (abs >= 1e3) {
+        return 'R$ ' + (value / 1e3).toFixed(0) + 'k';
+    } else {
+        return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+}
+
 
 function createDashboardCharts(charts) {
     // Monthly Chart

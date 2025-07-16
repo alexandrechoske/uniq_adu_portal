@@ -198,9 +198,9 @@ def dashboard_charts():
         else:
             modal_chart = {'labels': [], 'values': []}
         
-        # Gráfico URF
-        if 'urf_entrada' in df.columns:
-            urf_data = df['urf_entrada'].value_counts().head(10)
+        # Gráfico URF (usando coluna normalizada)
+        if 'urf_entrada_normalizado' in df.columns:
+            urf_data = df['urf_entrada_normalizado'].value_counts().head(10)
             urf_chart = {
                 'labels': urf_data.index.tolist(),
                 'values': urf_data.values.tolist()
@@ -208,9 +208,9 @@ def dashboard_charts():
         else:
             urf_chart = {'labels': [], 'values': []}
         
-        # Gráfico Materiais
-        if 'mercadoria' in df.columns:
-            material_data = df['mercadoria'].value_counts().head(10)
+        # Gráfico Materiais (usando coluna normalizada)
+        if 'mercadoria_normalizado' in df.columns:
+            material_data = df['mercadoria_normalizado'].value_counts().head(10)
             material_chart = {
                 'labels': material_data.index.tolist(),
                 'values': material_data.values.tolist()
@@ -267,15 +267,32 @@ def recent_operations():
         else:
             df_sorted = df.head(50)
         
-        # Selecionar colunas relevantes
+        # Selecionar colunas relevantes (priorizando normalizadas)
         relevant_columns = [
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
-            'modal', 'status_processo', 'mercadoria', 'custo_total', 
-            'urf_entrada', 'data_chegada'
+            'modal', 'status_processo', 'custo_total', 'data_chegada'
         ]
+        
+        # Adicionar colunas normalizadas se disponíveis, senão usar originais
+        if 'mercadoria_normalizado' in df_sorted.columns:
+            relevant_columns.append('mercadoria_normalizado')
+        elif 'mercadoria' in df_sorted.columns:
+            relevant_columns.append('mercadoria')
+            
+        if 'urf_entrada_normalizado' in df_sorted.columns:
+            relevant_columns.append('urf_entrada_normalizado')
+        elif 'urf_entrada' in df_sorted.columns:
+            relevant_columns.append('urf_entrada')
         
         available_columns = [col for col in relevant_columns if col in df_sorted.columns]
         operations_data = df_sorted[available_columns].to_dict('records')
+        
+        # Renomear colunas normalizadas para exibição
+        for record in operations_data:
+            if 'mercadoria_normalizado' in record:
+                record['mercadoria'] = record.pop('mercadoria_normalizado')
+            if 'urf_entrada_normalizado' in record:
+                record['urf_entrada'] = record.pop('urf_entrada_normalizado')
         
         return jsonify({
             'success': True,

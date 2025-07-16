@@ -111,7 +111,7 @@ def materiais_kpis():
         custos_processos = []
         
         for _, row in df.iterrows():
-            mercadoria = str(row.get('mercadoria', '')).strip().lower()
+            mercadoria = str(row.get('mercadoria_normalizado', '')).strip().lower()
             if mercadoria and mercadoria not in ['', 'não informado', 'nan', 'none']:
                 materiais_unicos.add(mercadoria)
             
@@ -145,15 +145,46 @@ def materiais_kpis():
             if transit_times:
                 transit_time = sum(transit_times) / len(transit_times)
         
+        # KPIs de processos a chegar este mês/semana e custos
+        hoje = datetime.now()
+        primeiro_dia_mes = hoje.replace(day=1)
+        inicio_semana = hoje - timedelta(days=hoje.weekday())
+
+        processos_mes = 0
+        processos_semana = 0
+        custo_total_mes = 0
+        custo_total_semana = 0
+
+        for _, row in df.iterrows():
+            # Data chegada (DD/MM/YYYY)
+            data_chegada = row.get('data_chegada', '')
+            custo = float(row.get('custo_total', 0)) if pd.notna(row.get('custo_total', 0)) else 0
+            try:
+                if data_chegada and '/' in data_chegada:
+                    chegada_dt = datetime.strptime(data_chegada, '%d/%m/%Y')
+                    if chegada_dt >= primeiro_dia_mes and chegada_dt <= hoje:
+                        processos_mes += 1
+                        custo_total_mes += custo
+                    if chegada_dt >= inicio_semana and chegada_dt <= hoje:
+                        processos_semana += 1
+                        custo_total_semana += custo
+            except Exception as e:
+                continue
+
         kpis = {
             'total_processos': total_processos,
             'total_materiais': total_materiais,
             'valor_total': valor_total,
             'custo_total': custo_total,
             'ticket_medio': ticket_medio,
-            'transit_time': transit_time
+            'transit_time': transit_time,
+            # Novos KPIs
+            'total_processos_mes': processos_mes,
+            'total_processos_semana': processos_semana,
+            'custo_total_mes': custo_total_mes,
+            'custo_total_semana': custo_total_semana
         }
-        
+
         return jsonify({
             'success': True,
             'kpis': clean_data_for_json(kpis)
@@ -191,9 +222,9 @@ def api_top_materiais():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria' in df.columns:
+        if 'mercadoria_normalizado' in df.columns:
             # Limpar e agrupar materiais
-            df['mercadoria_clean'] = df['mercadoria'].astype(str).str.strip().str.lower()
+            df['mercadoria_clean'] = df['mercadoria_normalizado'].astype(str).str.strip().str.lower()
             df_filtered = df[~df['mercadoria_clean'].isin(['', 'não informado', 'nan', 'none'])]
             
             top_materiais = df_filtered['mercadoria_clean'].value_counts().head(10)
@@ -242,9 +273,9 @@ def api_evolucao_mensal():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria' in df.columns and 'data_abertura' in df.columns:
+        if 'mercadoria_normalizado' in df.columns and 'data_abertura' in df.columns:
             # Obter top 3 materiais
-            df['mercadoria_clean'] = df['mercadoria'].astype(str).str.strip().str.lower()
+            df['mercadoria_clean'] = df['mercadoria_normalizado'].astype(str).str.strip().str.lower()
             df_filtered = df[~df['mercadoria_clean'].isin(['', 'não informado', 'nan', 'none'])]
             
             top_3_materiais = df_filtered['mercadoria_clean'].value_counts().head(3).index.tolist()
@@ -398,13 +429,13 @@ def api_transit_time_por_material():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria' in df.columns and 'data_embarque' in df.columns and 'data_chegada' in df.columns:
+        if 'mercadoria_normalizado' in df.columns and 'data_embarque' in df.columns and 'data_chegada' in df.columns:
             # Calcular transit time por material
             transit_times = []
             
             for _, row in df.iterrows():
                 try:
-                    mercadoria = str(row.get('mercadoria', '')).strip().lower()
+                    mercadoria = str(row.get('mercadoria_normalizado', '')).strip().lower()
                     if not mercadoria or mercadoria in ['', 'não informado', 'nan', 'none']:
                         continue
                     
@@ -523,8 +554,8 @@ def api_filter_options():
         options = {}
         
         # Materiais
-        if 'mercadoria' in df.columns:
-            materiais = df['mercadoria'].dropna().unique()
+        if 'mercadoria_normalizado' in df.columns:
+            materiais = df['mercadoria_normalizado'].dropna().unique()
             options['materiais'] = [mat for mat in materiais if str(mat).strip() not in ['', 'não informado']]
         
         # Clientes
@@ -579,7 +610,7 @@ def apply_filters(data):
         if material:
             filtered_data = [
                 item for item in filtered_data
-                if material.lower() in str(item.get('mercadoria', '')).lower()
+                if material.lower() in str(item.get('mercadoria_normalizado', '')).lower()
             ]
         
         # Filtrar por cliente
