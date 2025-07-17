@@ -67,7 +67,7 @@ def load_data():
         
         # Filtrar por empresa se for cliente
         if user_role == 'cliente_unique':
-            user_companies = get_user_companies()
+            user_companies = get_user_companies(user_data)
             if user_companies:
                 query = query.in_('cnpj_importador', user_companies)
         
@@ -126,16 +126,47 @@ def dashboard_kpis():
         
         df = pd.DataFrame(data)
         
-        # Calcular KPIs básicos
+        # Calcular KPIs executivos
+        total_processos = len(df)
+        total_despesas = df['custo_total'].sum() if 'custo_total' in df.columns else 0
+        ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
+        em_transito = len(df[df['status_processo'].str.contains('trânsito', case=False, na=False)]) if 'status_processo' in df.columns else 0
+        desembaraçados = len(df[df['status_processo'].str.contains('desembaracada', case=False, na=False)]) if 'status_processo' in df.columns else 0
+        perc_desembaraçados = (desembaraçados / total_processos * 100) if total_processos > 0 else 0
+        # Transit time médio
+        transit_time = 0
+        if 'data_embarque' in df.columns and 'data_chegada' in df.columns:
+            datas_validas = df.dropna(subset=['data_embarque', 'data_chegada'])
+            if not datas_validas.empty:
+                datas_validas['embarque_dt'] = pd.to_datetime(datas_validas['data_embarque'], format='%d/%m/%Y', errors='coerce')
+                datas_validas['chegada_dt'] = pd.to_datetime(datas_validas['data_chegada'], format='%d/%m/%Y', errors='coerce')
+                datas_validas = datas_validas.dropna(subset=['embarque_dt', 'chegada_dt'])
+                if not datas_validas.empty:
+                    transit_time = (datas_validas['chegada_dt'] - datas_validas['embarque_dt']).dt.days.mean()
+        # Processos médios por mês/semana
+        if 'data_abertura' in df.columns:
+            datas = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+            datas = datas.dropna()
+            if not datas.empty:
+                min_data = datas.min()
+                max_data = datas.max()
+                total_meses = max(1, ((max_data.year - min_data.year) * 12 + (max_data.month - min_data.month) + 1))
+                total_semanas = max(1, int((max_data - min_data).days / 7) + 1)
+                processos_mes = total_processos / total_meses
+                processos_semana = total_processos / total_semanas
+            else:
+                processos_mes = processos_semana = 0
+        else:
+            processos_mes = processos_semana = 0
         kpis = {
-            'total_processos': len(df),
-            'total_despesas': df['custo_total'].sum() if 'custo_total' in df.columns else 0,
-            'modal_aereo': len(df[df['modal'] == 'Aérea']) if 'modal' in df.columns else 0,
-            'modal_maritimo': len(df[df['modal'] == 'Marítima']) if 'modal' in df.columns else 0,
-            'em_transito': len(df[df['status_processo'].str.contains('trânsito', case=False, na=False)]) if 'status_processo' in df.columns else 0,
-            'di_registrada': len(df[df['status_processo'].str.contains('registrada', case=False, na=False)]) if 'status_processo' in df.columns else 0,
-            'despesa_media_por_processo': df['custo_total'].mean() if 'custo_total' in df.columns else 0,
-            'despesa_mes_atual': df[df['data_abertura'].str.contains(datetime.now().strftime('%m/%Y'), na=False)]['custo_total'].sum() if 'data_abertura' in df.columns and 'custo_total' in df.columns else 0
+            'total_processos': total_processos,
+            'total_despesas': total_despesas,
+            'ticket_medio': ticket_medio,
+            'perc_desembaraçados': perc_desembaraçados,
+            'em_transito': em_transito,
+            'transit_time': transit_time,
+            'processos_mes': processos_mes,
+            'processos_semana': processos_semana
         }
         
         return jsonify({
@@ -172,14 +203,13 @@ def dashboard_charts():
         
         df = pd.DataFrame(data)
         
-        # Gráfico Evolução Mensal
+        # Gráfico Evolução Mensal (mantido)
         if 'data_abertura' in df.columns and 'custo_total' in df.columns:
             df['mes_ano'] = df['data_abertura'].apply(lambda x: x.split('/')[1] + '/' + x.split('/')[2] if '/' in str(x) else '')
             monthly_data = df.groupby('mes_ano').agg({
                 'ref_unique': 'count',
                 'custo_total': 'sum'
             }).reset_index()
-            
             monthly_chart = {
                 'periods': monthly_data['mes_ano'].tolist(),
                 'processes': monthly_data['ref_unique'].tolist(),
@@ -187,17 +217,31 @@ def dashboard_charts():
             }
         else:
             monthly_chart = {'periods': [], 'processes': [], 'values': []}
-        
-        # Gráfico Modal
-        if 'modal' in df.columns:
-            modal_data = df['modal'].value_counts().head(10)
-            modal_chart = {
-                'labels': modal_data.index.tolist(),
-                'values': modal_data.values.tolist()
+
+        # Gráfico de Status do Processo
+        if 'status_processo' in df.columns:
+            status_data = df['status_processo'].value_counts()
+            status_chart = {
+                'labels': status_data.index.tolist(),
+                'values': status_data.values.tolist()
             }
         else:
-            modal_chart = {'labels': [], 'values': []}
-        
+            status_chart = {'labels': [], 'values': []}
+
+        # Gráfico de Barras Agrupadas: Processos e Custo Total por Modal
+        if 'modal' in df.columns and 'custo_total' in df.columns:
+            modal_group = df.groupby('modal').agg({
+                'ref_unique': 'count',
+                'custo_total': 'sum'
+            }).reset_index()
+            grouped_modal_chart = {
+                'labels': modal_group['modal'].tolist(),
+                'processes': modal_group['ref_unique'].tolist(),
+                'values': modal_group['custo_total'].tolist()
+            }
+        else:
+            grouped_modal_chart = {'labels': [], 'processes': [], 'values': []}
+
         # Gráfico URF (usando coluna normalizada)
         if 'urf_entrada_normalizado' in df.columns:
             urf_data = df['urf_entrada_normalizado'].value_counts().head(10)
@@ -207,7 +251,7 @@ def dashboard_charts():
             }
         else:
             urf_chart = {'labels': [], 'values': []}
-        
+
         # Gráfico Materiais (usando coluna normalizada)
         if 'mercadoria_normalizado' in df.columns:
             material_data = df['mercadoria_normalizado'].value_counts().head(10)
@@ -217,10 +261,11 @@ def dashboard_charts():
             }
         else:
             material_chart = {'labels': [], 'values': []}
-        
+
         charts = {
             'monthly': monthly_chart,
-            'modal': modal_chart,
+            'status': status_chart,
+            'grouped_modal': grouped_modal_chart,
             'urf': urf_chart,
             'material': material_chart
         }

@@ -37,23 +37,31 @@
             </div>
             <div class="kpi-card">
                 <div id="kpi-total-despesas" class="kpi-value">-</div>
-                <div class="kpi-label">Total Despesas (R$)</div>
+                <div class="kpi-label">Custo Total (R$)</div>
             </div>
             <div class="kpi-card">
-                <div id="kpi-modal-aereo" class="kpi-value">-</div>
-                <div class="kpi-label">Modal Aéreo</div>
+                <div id="kpi-ticket-medio" class="kpi-value">-</div>
+                <div class="kpi-label">Ticket Médio (R$)</div>
             </div>
             <div class="kpi-card">
-                <div id="kpi-modal-maritimo" class="kpi-value">-</div>
-                <div class="kpi-label">Modal Marítimo</div>
+                <div id="kpi-perc-desemb" class="kpi-value">-</div>
+                <div class="kpi-label">% Desembaraçados</div>
             </div>
             <div class="kpi-card">
                 <div id="kpi-em-transito" class="kpi-value">-</div>
                 <div class="kpi-label">Em Trânsito</div>
             </div>
             <div class="kpi-card">
-                <div id="kpi-di-registrada" class="kpi-value">-</div>
-                <div class="kpi-label">DI Registrada</div>
+                <div id="kpi-transit-time" class="kpi-value">-</div>
+                <div class="kpi-label">Transit Time Médio (dias)</div>
+            </div>
+            <div class="kpi-card">
+                <div id="kpi-proc-mes" class="kpi-value">-</div>
+                <div class="kpi-label">Processos Médios/Mês</div>
+            </div>
+            <div class="kpi-card">
+                <div id="kpi-proc-semana" class="kpi-value">-</div>
+                <div class="kpi-label">Processos Médios/Semana</div>
             </div>
         </div>
         
@@ -64,16 +72,12 @@
                 <canvas id="monthly-chart"></canvas>
             </div>
             <div class="chart-container">
-                <h3>Distribuição por Modal</h3>
-                <canvas id="modal-chart"></canvas>
+                <h3>Status dos Processos</h3>
+                <canvas id="status-chart"></canvas>
             </div>
             <div class="chart-container">
-                <h3>Top URFs</h3>
-                <canvas id="urf-chart"></canvas>
-            </div>
-            <div class="chart-container">
-                <h3>Top Materiais</h3>
-                <canvas id="material-chart"></canvas>
+                <h3>Processos e Custo Total por Modal</h3>
+                <canvas id="grouped-modal-chart"></canvas>
             </div>
         </div>
         
@@ -116,10 +120,6 @@
                 <div class="kpi-label">Tipos de Materiais</div>
             </div>
             <div class="kpi-card">
-                <div id="mat-valor-total" class="kpi-value">-</div>
-                <div class="kpi-label">Valor Total CIF (R$)</div>
-            </div>
-            <div class="kpi-card">
                 <div id="mat-custo-total" class="kpi-value">-</div>
                 <div class="kpi-label">Custo Total (R$)</div>
             </div>
@@ -151,9 +151,54 @@
         </div>
         
         <!-- Materiais Filters -->
+        <!-- Filtros rápidos de período -->
+        <div style="margin-bottom: 10px; text-align: right;">
+            <span style="font-weight: bold; margin-right: 10px;">Período rápido:</span>
+            <button class="quick-period-btn" onclick="setQuickPeriod(7)">7 dias</button>
+            <button class="quick-period-btn" onclick="setQuickPeriod(30)">30 dias</button>
+            <button class="quick-period-btn" onclick="setQuickPeriod(90)">90 dias</button>
+            <button class="quick-period-btn" onclick="setQuickPeriod(365)">365 dias</button>
+        </div>
         <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
             <h4>Filtros</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+<style>
+    .quick-period-btn {
+        background: #e9ecef;
+        color: #333;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 6px 14px;
+        margin-right: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+    .quick-period-btn:hover, .quick-period-btn.active {
+        background: #007bff;
+        color: #fff;
+        border-color: #007bff;
+    }
+</style>
+<script>
+function setQuickPeriod(days) {
+    // Define data de fim como hoje, início como hoje - days
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (days - 1));
+    document.getElementById('filter-data-inicio').value = start.toISOString().slice(0, 10);
+    document.getElementById('filter-data-fim').value = end.toISOString().slice(0, 10);
+    // Destacar botão ativo
+    document.querySelectorAll('.quick-period-btn').forEach(btn => btn.classList.remove('active'));
+    const btns = document.querySelectorAll('.quick-period-btn');
+    if (days === 7) btns[0].classList.add('active');
+    if (days === 30) btns[1].classList.add('active');
+    if (days === 90) btns[2].classList.add('active');
+    if (days === 365) btns[3].classList.add('active');
+    // Aplicar filtro
+    applyFilters();
+}
+</script>
                 <div>
                     <label>Data Início:</label>
                     <input type="date" id="filter-data-inicio" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
@@ -220,6 +265,9 @@
         <!-- Materiais Table -->
         <div style="margin-bottom: 30px;">
             <h3>Detalhamento dos Processos</h3>
+            <div style="margin-bottom:10px; text-align:right;">
+                <input id="detalhamento-global-filter" type="text" placeholder="Filtrar qualquer coluna..." style="padding:4px 8px; width:220px; border-radius:4px; border:1px solid #ccc;">
+            </div>
             <div id="materiais-table">
                 <table id="detalhamento-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
@@ -239,6 +287,7 @@
                         </tr>
                     </tbody>
                 </table>
+                <div id="detalhamento-pagination" style="margin-top:10px; text-align:right;"></div>
             </div>
         </div>
     </div>
@@ -570,16 +619,17 @@ function populateSelect(elementId, options) {
 function updateDashboardKPIs(kpis) {
     document.getElementById('kpi-total-processos').textContent = formatNumber(kpis.total_processos);
     document.getElementById('kpi-total-despesas').textContent = formatCurrency(kpis.total_despesas);
-    document.getElementById('kpi-modal-aereo').textContent = formatNumber(kpis.modal_aereo);
-    document.getElementById('kpi-modal-maritimo').textContent = formatNumber(kpis.modal_maritimo);
+    document.getElementById('kpi-ticket-medio').textContent = formatCurrency(kpis.ticket_medio);
+    document.getElementById('kpi-perc-desemb').textContent = (kpis.perc_desembaraçados || 0).toFixed(1) + '%';
     document.getElementById('kpi-em-transito').textContent = formatNumber(kpis.em_transito);
-    document.getElementById('kpi-di-registrada').textContent = formatNumber(kpis.di_registrada);
+    document.getElementById('kpi-transit-time').textContent = formatNumber(kpis.transit_time_medio, 1) + ' dias';
+    document.getElementById('kpi-proc-mes').textContent = formatNumber(kpis.processos_mes);
+    document.getElementById('kpi-proc-semana').textContent = formatNumber(kpis.processos_semana);
 }
 
 function updateMateriaisKPIs(kpis) {
     document.getElementById('mat-total-processos').textContent = formatNumber(kpis.total_processos);
     document.getElementById('mat-total-materiais').textContent = formatNumber(kpis.total_materiais);
-    document.getElementById('mat-valor-total').textContent = formatCurrencyCompact(kpis.valor_total);
     document.getElementById('mat-custo-total').textContent = formatCurrencyCompact(kpis.custo_total);
     document.getElementById('mat-ticket-medio').textContent = formatCurrencyCompact(kpis.ticket_medio);
     document.getElementById('mat-transit-time').textContent = formatNumber(kpis.transit_time, 1) + ' dias';
@@ -610,20 +660,13 @@ function createDashboardCharts(charts) {
     if (charts.monthly) {
         createMonthlyChart(charts.monthly);
     }
-    
-    // Modal Chart
-    if (charts.modal) {
-        createModalChart(charts.modal);
+    // Status Chart
+    if (charts.status) {
+        createStatusChart(charts.status);
     }
-    
-    // URF Chart
-    if (charts.urf) {
-        createUrfChart(charts.urf);
-    }
-    
-    // Material Chart
-    if (charts.material) {
-        createMaterialChart(charts.material);
+    // Grouped Modal Chart
+    if (charts.grouped_modal) {
+        createGroupedModalChart(charts.grouped_modal);
     }
 }
 
@@ -675,32 +718,66 @@ function createMonthlyChart(data) {
     });
 }
 
-function createModalChart(data) {
-    const ctx = document.getElementById('modal-chart').getContext('2d');
-    
-    if (dashboardCharts.modal) {
-        dashboardCharts.modal.destroy();
+
+function createStatusChart(data) {
+    const ctx = document.getElementById('status-chart').getContext('2d');
+    if (dashboardCharts.status) {
+        dashboardCharts.status.destroy();
     }
-    
-    dashboardCharts.modal = new Chart(ctx, {
-        type: 'pie',
+    dashboardCharts.status = new Chart(ctx, {
+        type: 'bar',
         data: {
             labels: data.labels,
             datasets: [{
+                label: 'Processos',
                 data: data.values,
-                backgroundColor: [
-                    '#FF6384',
-                    '#36A2EB',
-                    '#FFCE56',
-                    '#4BC0C0',
-                    '#9966FF',
-                    '#FF9F40'
-                ]
+                backgroundColor: '#36A2EB',
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function createGroupedModalChart(data) {
+    const ctx = document.getElementById('grouped-modal-chart').getContext('2d');
+    if (dashboardCharts.grouped_modal) {
+        dashboardCharts.grouped_modal.destroy();
+    }
+    dashboardCharts.grouped_modal = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Processos',
+                    data: data.processos,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                },
+                {
+                    label: 'Custo Total (R$)',
+                    data: data.custos,
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
         }
     });
 }
@@ -765,15 +842,12 @@ function createMaterialChart(data) {
 
 function createTopMateriaisChart(data) {
     const ctx = document.getElementById('top-materiais-chart').getContext('2d');
-    
-    if (materiaisCharts.topMateriais) {
-        materiaisCharts.topMateriais.destroy();
-    }
-    
+    if (materiaisCharts.topMateriais) materiaisCharts.topMateriais.destroy();
+    // Usar mercadoria_normalizado
     materiaisCharts.topMateriais = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.labels,
+            labels: data.labels, // backend já retorna mercadoria_normalizado
             datasets: [{
                 label: 'Quantidade',
                 data: data.values,
@@ -783,30 +857,22 @@ function createTopMateriaisChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+            scales: { y: { beginAtZero: true } }
         }
     });
 }
 
 function createEvolucaoMensalChart(data) {
     const ctx = document.getElementById('evolucao-mensal-chart').getContext('2d');
-    
-    if (materiaisCharts.evolucaoMensal) {
-        materiaisCharts.evolucaoMensal.destroy();
-    }
-    
+    if (materiaisCharts.evolucaoMensal) materiaisCharts.evolucaoMensal.destroy();
+    // Usar mercadoria_normalizado
     const datasets = data.map((item, index) => ({
-        label: item.material,
+        label: item.material, // backend já retorna mercadoria_normalizado
         data: item.values,
         borderColor: `hsl(${index * 120}, 70%, 50%)`,
         backgroundColor: `hsla(${index * 120}, 70%, 50%, 0.1)`,
         tension: 0.1
     }));
-    
     materiaisCharts.evolucaoMensal = new Chart(ctx, {
         type: 'line',
         data: {
@@ -816,66 +882,62 @@ function createEvolucaoMensalChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+            scales: { y: { beginAtZero: true } }
         }
     });
 }
 
 function createMatModalChart(data) {
-    const ctx = document.getElementById('mat-modal-chart').getContext('2d');
-    
-    if (materiaisCharts.matModal) {
-        materiaisCharts.matModal.destroy();
+    // Substituir gráfico por tabela com ícones, garantindo que o container exista
+    let chartEl = document.getElementById('mat-modal-chart');
+    let container = chartEl ? chartEl.parentElement : null;
+    if (!container) {
+        // Recria o container se necessário
+        const chartsGrid = document.querySelector('#materiais-content .chart-container');
+        if (chartsGrid) {
+            container = document.createElement('div');
+            container.className = 'chart-container';
+            container.innerHTML = '<h3>Distribuição por Modal</h3><div id="mat-modal-chart"></div>';
+            chartsGrid.parentElement.appendChild(container);
+        } else {
+            return; // Não há onde renderizar
+        }
     }
-    
-    materiaisCharts.matModal = new Chart(ctx, {
+    // Renderiza a tabela
+    container.innerHTML = `<h3>Distribuição por Modal</h3>
+        <table style="width:100%; text-align:center; border-collapse:collapse;">
+            <thead><tr><th>Modal</th><th>Qtd</th></tr></thead>
+            <tbody>
+                ${data.labels.map((label, i) => {
+                    let icon = '';
+                    if (label.toUpperCase().includes('AÉR')) icon = '✈️';
+                    else if (label.toUpperCase().includes('MAR')) icon = '🚢';
+                    else if (label.toUpperCase().includes('TER')) icon = '🚚';
+                    else icon = '📦';
+                    return `<tr><td>${icon} ${label}</td><td>${data.values[i]}</td></tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
+
+function createCanalChart(data) {
+    const ctx = document.getElementById('canal-chart').getContext('2d');
+    if (materiaisCharts.canal) materiaisCharts.canal.destroy();
+    // Rosca com cores específicas
+    const canalColors = data.labels.map(label => {
+        if (label.toUpperCase().includes('VERDE')) return '#4CAF50';
+        if (label.toUpperCase().includes('AMARELO')) return '#FFEB3B';
+        if (label.toUpperCase().includes('VERMELHO')) return '#F44336';
+        if (label.toUpperCase().includes('CINZA')) return '#9E9E9E';
+        return '#2196F3';
+    });
+    materiaisCharts.canal = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: data.labels,
             datasets: [{
                 data: data.values,
-                backgroundColor: [
-                    '#FF6384',
-                    '#36A2EB',
-                    '#FFCE56',
-                    '#4BC0C0',
-                    '#9966FF',
-                    '#FF9F40'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-}
-
-function createCanalChart(data) {
-    const ctx = document.getElementById('canal-chart').getContext('2d');
-    
-    if (materiaisCharts.canal) {
-        materiaisCharts.canal.destroy();
-    }
-    
-    materiaisCharts.canal = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                backgroundColor: [
-                    '#FF6384',
-                    '#36A2EB',
-                    '#FFCE56',
-                    '#4BC0C0',
-                    '#9966FF',
-                    '#FF9F40'
-                ]
+                backgroundColor: canalColors
             }]
         },
         options: {
@@ -887,15 +949,12 @@ function createCanalChart(data) {
 
 function createTransitTimeChart(data) {
     const ctx = document.getElementById('transit-time-chart').getContext('2d');
-    
-    if (materiaisCharts.transitTime) {
-        materiaisCharts.transitTime.destroy();
-    }
-    
+    if (materiaisCharts.transitTime) materiaisCharts.transitTime.destroy();
+    // Usar mercadoria_normalizado
     materiaisCharts.transitTime = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.labels,
+            labels: data.labels, // backend já retorna mercadoria_normalizado
             datasets: [{
                 label: 'Dias',
                 data: data.values,
@@ -905,11 +964,7 @@ function createTransitTimeChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+            scales: { y: { beginAtZero: true } }
         }
     });
 }
@@ -933,11 +988,33 @@ function updateRecentOperations(operations) {
     });
 }
 
+let detalhamentoTableData = [];
+let detalhamentoCurrentPage = 1;
+let detalhamentoPageSize = 15;
+let detalhamentoTotalPages = 1;
+let detalhamentoGlobalFilter = '';
+
 function updateMateriaisTable(data) {
+    detalhamentoTableData = data;
+    detalhamentoCurrentPage = 1;
+    renderDetalhamentoTable();
+    renderDetalhamentoPagination();
+}
+
+function renderDetalhamentoTable() {
     const tbody = document.getElementById('detalhamento-tbody');
     tbody.innerHTML = '';
-    
-    data.forEach(item => {
+    let filtered = detalhamentoTableData;
+    if (detalhamentoGlobalFilter) {
+        const filter = detalhamentoGlobalFilter.toLowerCase();
+        filtered = detalhamentoTableData.filter(item =>
+            Object.values(item).some(val => (val + '').toLowerCase().includes(filter))
+        );
+    }
+    detalhamentoTotalPages = Math.ceil(filtered.length / detalhamentoPageSize) || 1;
+    const start = (detalhamentoCurrentPage - 1) * detalhamentoPageSize;
+    const end = start + detalhamentoPageSize;
+    filtered.slice(start, end).forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${item.ref_unique || '-'}</td>
@@ -951,6 +1028,35 @@ function updateMateriaisTable(data) {
         tbody.appendChild(row);
     });
 }
+
+function renderDetalhamentoPagination() {
+    const container = document.getElementById('detalhamento-pagination');
+    container.innerHTML = '';
+    if (detalhamentoTotalPages <= 1) return;
+    for (let i = 1; i <= detalhamentoTotalPages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = 'pagination-btn' + (i === detalhamentoCurrentPage ? ' active' : '');
+        btn.onclick = () => {
+            detalhamentoCurrentPage = i;
+            renderDetalhamentoTable();
+            renderDetalhamentoPagination();
+        };
+        container.appendChild(btn);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const filterInput = document.getElementById('detalhamento-global-filter');
+    if (filterInput) {
+        filterInput.addEventListener('input', function() {
+            detalhamentoGlobalFilter = this.value;
+            detalhamentoCurrentPage = 1;
+            renderDetalhamentoTable();
+            renderDetalhamentoPagination();
+        });
+    }
+});
 
 function applyFilters() {
     console.log('[DASHBOARD_V2] Aplicando filtros...');
