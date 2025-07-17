@@ -112,7 +112,7 @@ def materiais_kpis():
         custos_processos = []
         
         for _, row in df.iterrows():
-            mercadoria = str(row.get('mercadoria_normalizado', '')).strip().lower()
+            mercadoria = str(row.get('mercadoria', '')).strip().lower()
             if mercadoria and mercadoria not in ['', 'não informado', 'nan', 'none']:
                 materiais_unicos.add(mercadoria)
             
@@ -223,9 +223,9 @@ def api_top_materiais():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria_normalizado' in df.columns:
+        if 'mercadoria' in df.columns:
             # Limpar e agrupar materiais
-            df['mercadoria_clean'] = df['mercadoria_normalizado'].astype(str).str.strip().str.lower()
+            df['mercadoria_clean'] = df['mercadoria'].astype(str).str.strip().str.lower()
             df_filtered = df[~df['mercadoria_clean'].isin(['', 'não informado', 'nan', 'none'])]
             
             top_materiais = df_filtered['mercadoria_clean'].value_counts().head(10)
@@ -274,9 +274,9 @@ def api_evolucao_mensal():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria_normalizado' in df.columns and 'data_abertura' in df.columns:
+        if 'mercadoria' in df.columns and 'data_abertura' in df.columns:
             # Obter top 3 materiais
-            df['mercadoria_clean'] = df['mercadoria_normalizado'].astype(str).str.strip().str.lower()
+            df['mercadoria_clean'] = df['mercadoria'].astype(str).str.strip().str.lower()
             df_filtered = df[~df['mercadoria_clean'].isin(['', 'não informado', 'nan', 'none'])]
             
             top_3_materiais = df_filtered['mercadoria_clean'].value_counts().head(3).index.tolist()
@@ -525,13 +525,13 @@ def api_transit_time_por_material():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria_normalizado' in df.columns and 'data_embarque' in df.columns and 'data_chegada' in df.columns:
+        if 'mercadoria' in df.columns and 'data_embarque' in df.columns and 'data_chegada' in df.columns:
             # Calcular transit time por material
             transit_times = []
             
             for _, row in df.iterrows():
                 try:
-                    mercadoria = str(row.get('mercadoria_normalizado', '')).strip().lower()
+                    mercadoria = str(row.get('mercadoria', '')).strip().lower()
                     if not mercadoria or mercadoria in ['', 'não informado', 'nan', 'none']:
                         continue
                     
@@ -650,8 +650,8 @@ def api_filter_options():
         options = {}
         
         # Materiais
-        if 'mercadoria_normalizado' in df.columns:
-            materiais = df['mercadoria_normalizado'].dropna().unique()
+        if 'mercadoria' in df.columns:
+            materiais = df['mercadoria'].dropna().unique()
             options['materiais'] = [mat for mat in materiais if str(mat).strip() not in ['', 'não informado']]
         
         # Clientes
@@ -706,7 +706,7 @@ def apply_filters(data):
         if material:
             filtered_data = [
                 item for item in filtered_data
-                if material.lower() in str(item.get('mercadoria_normalizado', '')).lower()
+                if material.lower() in str(item.get('mercadoria', '')).lower()
             ]
         
         # Filtrar por cliente

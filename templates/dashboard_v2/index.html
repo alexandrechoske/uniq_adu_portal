@@ -862,11 +862,11 @@ function createMaterialChart(data) {
 function createTopMateriaisChart(data) {
     const ctx = document.getElementById('top-materiais-chart').getContext('2d');
     if (materiaisCharts.topMateriais) materiaisCharts.topMateriais.destroy();
-    // Usar mercadoria_normalizado
+    // Usar mercadoria
     materiaisCharts.topMateriais = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.labels, // backend já retorna mercadoria_normalizado
+            labels: data.labels, // backend já retorna mercadoria
             datasets: [{
                 label: 'Quantidade',
                 data: data.values,
@@ -884,9 +884,9 @@ function createTopMateriaisChart(data) {
 function createEvolucaoMensalChart(data) {
     const ctx = document.getElementById('evolucao-mensal-chart').getContext('2d');
     if (materiaisCharts.evolucaoMensal) materiaisCharts.evolucaoMensal.destroy();
-    // Usar mercadoria_normalizado
+    // Usar mercadoria
     const datasets = data.map((item, index) => ({
-        label: item.material, // backend já retorna mercadoria_normalizado
+        label: item.material, // backend já retorna mercadoria
         data: item.values,
         borderColor: `hsl(${index * 120}, 70%, 50%)`,
         backgroundColor: `hsla(${index * 120}, 70%, 50%, 0.1)`,
@@ -999,11 +999,11 @@ function createCanalChart(data) {
 function createTransitTimeChart(data) {
     const ctx = document.getElementById('transit-time-chart').getContext('2d');
     if (materiaisCharts.transitTime) materiaisCharts.transitTime.destroy();
-    // Usar mercadoria_normalizado
+    // Usar mercadoria
     materiaisCharts.transitTime = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.labels, // backend já retorna mercadoria_normalizado
+            labels: data.labels, // backend já retorna mercadoria
             datasets: [{
                 label: 'Dias',
                 data: data.values,

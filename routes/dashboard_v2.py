@@ -266,8 +266,8 @@ def dashboard_charts():
             urf_chart = {'labels': [], 'values': []}
 
         # Gráfico Materiais (usando coluna normalizada)
-        if 'mercadoria_normalizado' in df.columns:
-            material_data = df['mercadoria_normalizado'].value_counts().head(10)
+        if 'mercadoria' in df.columns:
+            material_data = df['mercadoria'].value_counts().head(10)
             material_chart = {
                 'labels': material_data.index.tolist(),
                 'values': material_data.values.tolist()
@@ -332,8 +332,8 @@ def recent_operations():
         ]
         
         # Adicionar colunas normalizadas se disponíveis, senão usar originais
-        if 'mercadoria_normalizado' in df_sorted.columns:
-            relevant_columns.append('mercadoria_normalizado')
+        if 'mercadoria' in df_sorted.columns:
+            relevant_columns.append('mercadoria')
         elif 'mercadoria' in df_sorted.columns:
             relevant_columns.append('mercadoria')
             
@@ -347,8 +347,8 @@ def recent_operations():
         
         # Renomear colunas normalizadas para exibição
         for record in operations_data:
-            if 'mercadoria_normalizado' in record:
-                record['mercadoria'] = record.pop('mercadoria_normalizado')
+            if 'mercadoria' in record:
+                record['mercadoria'] = record.pop('mercadoria')
             if 'urf_entrada_normalizado' in record:
                 record['urf_entrada'] = record.pop('urf_entrada_normalizado')
         
