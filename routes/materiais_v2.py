@@ -3,15 +3,12 @@ from datetime import datetime, timedelta
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
 from routes.api import get_user_companies
-from material_cleaner import MaterialCleaner
 from services.data_cache import DataCacheService
 import pandas as pd
 import numpy as np
 import pandas as pd
 import numpy as np
 
-# Initialize services
-material_cleaner = MaterialCleaner()
 data_cache = DataCacheService()
 
 bp = Blueprint('materiais_v2', __name__, url_prefix='/materiais-v2')
