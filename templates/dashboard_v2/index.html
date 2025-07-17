@@ -888,22 +888,11 @@ function createEvolucaoMensalChart(data) {
 }
 
 function createMatModalChart(data) {
-    // Substituir gráfico por tabela com ícones, garantindo que o container exista
-    let chartEl = document.getElementById('mat-modal-chart');
-    let container = chartEl ? chartEl.parentElement : null;
-    if (!container) {
-        // Recria o container se necessário
-        const chartsGrid = document.querySelector('#materiais-content .chart-container');
-        if (chartsGrid) {
-            container = document.createElement('div');
-            container.className = 'chart-container';
-            container.innerHTML = '<h3>Distribuição por Modal</h3><div id="mat-modal-chart"></div>';
-            chartsGrid.parentElement.appendChild(container);
-        } else {
-            return; // Não há onde renderizar
-        }
-    }
-    // Renderiza a tabela
+    // Sempre renderiza apenas dentro do chart-container original
+    const chartEl = document.getElementById('mat-modal-chart');
+    if (!chartEl) return;
+    const container = chartEl.parentElement;
+    if (!container) return;
     container.innerHTML = `<h3>Distribuição por Modal</h3>
         <table style="width:100%; text-align:center; border-collapse:collapse;">
             <thead><tr><th>Modal</th><th>Qtd</th></tr></thead>
