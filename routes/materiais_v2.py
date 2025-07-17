@@ -317,6 +317,9 @@ def api_evolucao_mensal():
 def api_modal_distribution():
     """Distribuição por modal de transporte"""
     try:
+        # Debug: imprimir parâmetros recebidos
+        print(f"[MATERIAIS_V2] Modal Distribution - Parâmetros recebidos: {dict(request.args)}")
+        
         # Obter dados do cache ou recarregar
         user_data = session.get('user', {})
         user_id = user_data.get('id')
@@ -331,19 +334,34 @@ def api_modal_distribution():
                 'data': []
             })
         
+        print(f"[MATERIAIS_V2] Modal Distribution - Total de registros no cache: {len(data)}")
+        
         # Aplicar filtros
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
+        print(f"[MATERIAIS_V2] Modal Distribution - Registros após filtros: {len(filtered_data)}")
+        
         if 'modal' in df.columns:
             modal_counts = df['modal'].value_counts()
             
+            # Calcular custo total por modal
+            modal_custos = {}
+            if 'custo_total' in df.columns:
+                modal_custos = df.groupby('modal')['custo_total'].sum().to_dict()
+            
+            print(f"[MATERIAIS_V2] Modal Distribution - Distribuição: {modal_counts.to_dict()}")
+            print(f"[MATERIAIS_V2] Modal Distribution - Custos por modal: {modal_custos}")
+            
             result = {
                 'labels': modal_counts.index.tolist(),
-                'values': modal_counts.values.tolist()
+                'values': modal_counts.values.tolist(),
+                'custos': [modal_custos.get(modal, 0) for modal in modal_counts.index.tolist()]
             }
         else:
-            result = {'labels': [], 'values': []}
+            result = {'labels': [], 'values': [], 'custos': []}
+        
+        print(f"[MATERIAIS_V2] Modal Distribution - Resultado final: {result}")
         
         return jsonify({
             'success': True,
@@ -356,6 +374,83 @@ def api_modal_distribution():
             'success': False,
             'error': str(e),
             'data': []
+        }), 500
+
+@bp.route('/api/bypass-modal-distribution')
+def api_bypass_modal_distribution():
+    """Distribuição por modal de transporte - SEM autenticação para testes"""
+    try:
+        # Debug: imprimir parâmetros recebidos
+        print(f"[MATERIAIS_V2] Bypass Modal Distribution - Parâmetros recebidos: {dict(request.args)}")
+        
+        # Obter dados direto do Supabase para teste
+        from extensions import supabase_admin
+        
+        # Obter filtros da requisição
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        
+        # Query base - pegar todos os dados primeiro
+        query = supabase_admin.table('vw_importacoes_6_meses').select('*')
+        
+        # Não aplicar filtros de data no Supabase, pois o formato é DD/MM/YYYY
+        # Vamos filtrar em Python depois
+        
+        result = query.limit(2000).execute()
+        data = result.data if result.data else []
+        
+        print(f"[MATERIAIS_V2] Bypass Modal Distribution - Total de registros: {len(data)}")
+        
+        # Aplicar filtros de data em Python se fornecidos
+        if data_inicio and data_fim:
+            filtered_data = []
+            for item in data:
+                if filter_by_date_python(item.get('data_abertura', ''), data_inicio, data_fim):
+                    filtered_data.append(item)
+            data = filtered_data
+            print(f"[MATERIAIS_V2] Bypass Modal Distribution - Após filtro de data: {len(data)} registros")
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Nenhum dado encontrado.',
+                'data': {'labels': [], 'values': [], 'custos': []}
+            })
+        
+        df = pd.DataFrame(data)
+        
+        if 'modal' in df.columns:
+            modal_counts = df['modal'].value_counts()
+            
+            # Calcular custo total por modal
+            modal_custos = {}
+            if 'custo_total' in df.columns:
+                modal_custos = df.groupby('modal')['custo_total'].sum().to_dict()
+            
+            print(f"[MATERIAIS_V2] Bypass Modal Distribution - Distribuição: {modal_counts.to_dict()}")
+            print(f"[MATERIAIS_V2] Bypass Modal Distribution - Custos por modal: {modal_custos}")
+            
+            result = {
+                'labels': modal_counts.index.tolist(),
+                'values': modal_counts.values.tolist(),
+                'custos': [modal_custos.get(modal, 0) for modal in modal_counts.index.tolist()]
+            }
+        else:
+            result = {'labels': [], 'values': [], 'custos': []}
+        
+        print(f"[MATERIAIS_V2] Bypass Modal Distribution - Resultado final: {result}")
+        
+        return jsonify({
+            'success': True,
+            'data': clean_data_for_json(result)
+        })
+        
+    except Exception as e:
+        print(f"[MATERIAIS_V2] Erro ao obter distribuição modal bypass: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': [], 'custos': []}
         }), 500
 
 @bp.route('/api/canal-distribution')

@@ -228,15 +228,23 @@ def dashboard_charts():
         else:
             status_chart = {'labels': [], 'values': []}
 
-        # Gráfico de Barras Agrupadas: Processos e Custo Total por Modal
+        # Gráfico de Barras Agrupadas: Processos e Custo Total por Modal (corrigido)
         if 'modal' in df.columns and 'custo_total' in df.columns:
-            modal_group = df.groupby('modal').agg({
-                'ref_unique': 'count',
-                'custo_total': 'sum'
-            }).reset_index()
+            # Filtrar modais válidos
+            df_modais = df.copy()
+            df_modais['modal'] = df_modais['modal'].astype(str).str.strip().str.upper()
+            df_modais = df_modais[~df_modais['modal'].isin(['', 'NÃO INFORMADO', 'NAN', 'NONE'])]
+            # Garantir custo_total numérico
+            df_modais['custo_total'] = pd.to_numeric(df_modais['custo_total'], errors='coerce').fillna(0)
+            # Contar processos por modal
+            modal_group = df_modais.groupby('modal').agg({
+                'custo_total': 'sum',
+                # Conta o número de linhas/processos
+                'modal': 'count'
+            }).rename(columns={'modal': 'processos'}).reset_index()
             grouped_modal_chart = {
                 'labels': modal_group['modal'].tolist(),
-                'processes': modal_group['ref_unique'].tolist(),
+                'processes': modal_group['processos'].tolist(),
                 'values': modal_group['custo_total'].tolist()
             }
         else:

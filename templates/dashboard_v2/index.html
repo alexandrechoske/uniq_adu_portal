@@ -561,8 +561,11 @@ async function loadMateriaisCharts(queryString) {
         // Modal Distribution
         const modalResponse = await fetch('/materiais-v2/api/modal-distribution?' + queryString);
         const modalResult = await modalResponse.json();
+        console.log('[MATERIAIS_V2] Modal Distribution Response:', modalResult);
         if (modalResult.success) {
             createMatModalChart(modalResult.data);
+        } else {
+            console.error('[MATERIAIS_V2] Modal Distribution Error:', modalResult.error);
         }
         
         // Canal Distribution
@@ -888,25 +891,66 @@ function createEvolucaoMensalChart(data) {
 }
 
 function createMatModalChart(data) {
-    // Sempre renderiza apenas dentro do chart-container original
-    const chartEl = document.getElementById('mat-modal-chart');
-    if (!chartEl) return;
-    const container = chartEl.parentElement;
-    if (!container) return;
+    // Buscar o container diretamente pelo ID ou usar um container específico
+    let container = document.getElementById('mat-modal-chart');
+    
+    // Se não encontrou o canvas, pode ser que tenha sido removido por uma chamada anterior
+    // Vamos buscar o container pai pelo ID do chart container
+    if (!container) {
+        // Procurar por um container que tenha o canvas ou criar um novo
+        const chartContainers = document.querySelectorAll('.chart-container');
+        for (let cont of chartContainers) {
+            if (cont.textContent.includes('Distribuição por Modal') || 
+                cont.querySelector('#mat-modal-chart') || 
+                cont.innerHTML.includes('mat-modal-chart')) {
+                container = cont;
+                break;
+            }
+        }
+    } else {
+        container = container.parentElement;
+    }
+    
+    if (!container) {
+        console.error('[MATERIAIS_V2] createMatModalChart - Container não encontrado!');
+        return;
+    }
+    
+    console.log('[MATERIAIS_V2] createMatModalChart - Dados recebidos:', data);
+    
+    // data.values = quantidade (processos), data.custos = custo total por modal
+    const processos = data.values || [];
+    const custos = data.custos || [];
+    const labels = data.labels || [];
+    
+    console.log('[MATERIAIS_V2] createMatModalChart - Processando:', {
+        labels: labels,
+        processos: processos,
+        custos: custos
+    });
+    
     container.innerHTML = `<h3>Distribuição por Modal</h3>
         <table style="width:100%; text-align:center; border-collapse:collapse;">
-            <thead><tr><th>Modal</th><th>Qtd</th></tr></thead>
+            <thead><tr><th>Modal</th><th>Qtd</th><th>Custo Total (R$)</th></tr></thead>
             <tbody>
-                ${data.labels.map((label, i) => {
+                ${labels.map((label, i) => {
                     let icon = '';
                     if (label.toUpperCase().includes('AÉR')) icon = '✈️';
                     else if (label.toUpperCase().includes('MAR')) icon = '🚢';
                     else if (label.toUpperCase().includes('TER')) icon = '🚚';
                     else icon = '📦';
-                    return `<tr><td>${icon} ${label}</td><td>${data.values[i]}</td></tr>`;
+                    
+                    const qtd = processos[i] || 0;
+                    const custo = custos[i] || 0;
+                    
+                    console.log(`[MATERIAIS_V2] createMatModalChart - ${label}: qtd=${qtd}, custo=${custo}`);
+                    
+                    return `<tr><td>${icon} ${label}</td><td>${qtd}</td><td>${formatCurrency(custo)}</td></tr>`;
                 }).join('')}
             </tbody>
         </table>`;
+    
+    console.log('[MATERIAIS_V2] createMatModalChart - Tabela atualizada!');
 }
 
 function createCanalChart(data) {

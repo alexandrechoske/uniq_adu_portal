@@ -1775,28 +1775,36 @@ def bypass_modal_distribution():
         
         # Remover filtros vazios
         filters = {k: v for k, v in filters.items() if v and v.strip()}
-        
+
+        # Debug: print received filters
+        print(f"[BYPASS MODAL DISTRIBUTION] Filtros recebidos: {filters}")
+
         # Se não há filtros de data, usar últimos 30 dias
         if not filters.get('data_inicio') and not filters.get('data_fim'):
             from datetime import datetime, timedelta
             data_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
             filters['data_inicio'] = data_limite
-        
+
         # Construir query com filtros
         query = supabase.table('importacoes_processos').select('*')
         query = apply_filters_to_query(query, filters)
-        
+
         response = query.limit(500).execute()
         cached_data = response.data if response.data else []
-        
+
+        # Debug: print count of records after filtering
+        print(f"[BYPASS MODAL DISTRIBUTION] Registros retornados após filtro: {len(cached_data)}")
+
         if not cached_data:
             return jsonify([])
-        
+
         # Filtrar dados com material
         filtered_data = []
         for item in cached_data:
             if item.get('resumo_mercadoria') and item.get('resumo_mercadoria').strip():
                 filtered_data.append(item)
+        # Debug: print count after material filter
+        print(f"[BYPASS MODAL DISTRIBUTION] Registros após filtro de material: {len(filtered_data)}")
         
         # Agrupar por modal
         modal_counts = {}
