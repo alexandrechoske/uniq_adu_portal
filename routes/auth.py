@@ -271,7 +271,7 @@ def login():
                         session['data_loading_step'] = 'Erro ao carregar dados, mas você pode continuar'
                     
                     flash('Login realizado com sucesso!', 'success')
-                    return redirect(url_for('dashboard.index'))
+                    return redirect(url_for('dashboard_v2.index'))
                 else:
                     flash('Usuário não encontrado na base de dados.', 'error')
             else:
@@ -283,8 +283,7 @@ def login():
             
             if "Invalid login credentials" in error_message:
                 flash('Email ou senha inválidos.', 'error')
-            elif "timeout" in error_message.lower():
-                flash('Erro de conexão. Tente novamente em alguns instantes.', 'error')
+                return redirect(url_for('auth.login'))
             else:
                 flash('Erro interno. Tente novamente.', 'error')
     

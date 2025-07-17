@@ -763,12 +763,14 @@ function createGroupedModalChart(data) {
                 {
                     label: 'Processos',
                     data: data.processos,
-                    backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    yAxisID: 'y',
                 },
                 {
                     label: 'Custo Total (R$)',
                     data: data.custos,
-                    backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    yAxisID: 'y1',
                 }
             ]
         },
@@ -779,7 +781,21 @@ function createGroupedModalChart(data) {
                 legend: { position: 'top' }
             },
             scales: {
-                y: { beginAtZero: true }
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Processos' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'Custo Total (R$)' }
+                }
             }
         }
     });

@@ -228,27 +228,32 @@ def dashboard_charts():
         else:
             status_chart = {'labels': [], 'values': []}
 
-        # Gráfico de Barras Agrupadas: Processos e Custo Total por Modal (corrigido)
+        # Gráfico de Barras Agrupadas: Processos e Custo Total por Modal
+        print(f"[DASHBOARD_V2] Grouped Modal Chart - Colunas disponíveis: {df.columns.tolist()}")
+        print(f"[DASHBOARD_V2] Grouped Modal Chart - Verificando colunas: modal={('modal' in df.columns)}, custo_total={('custo_total' in df.columns)}")
+        
         if 'modal' in df.columns and 'custo_total' in df.columns:
-            # Filtrar modais válidos
-            df_modais = df.copy()
-            df_modais['modal'] = df_modais['modal'].astype(str).str.strip().str.upper()
-            df_modais = df_modais[~df_modais['modal'].isin(['', 'NÃO INFORMADO', 'NAN', 'NONE'])]
-            # Garantir custo_total numérico
-            df_modais['custo_total'] = pd.to_numeric(df_modais['custo_total'], errors='coerce').fillna(0)
-            # Contar processos por modal
-            modal_group = df_modais.groupby('modal').agg({
-                'custo_total': 'sum',
-                # Conta o número de linhas/processos
-                'modal': 'count'
-            }).rename(columns={'modal': 'processos'}).reset_index()
+            print(f"[DASHBOARD_V2] Grouped Modal Chart - Valores únicos de modal: {df['modal'].unique()}")
+            print(f"[DASHBOARD_V2] Grouped Modal Chart - Valores de custo_total (primeiros 5): {df['custo_total'].head().tolist()}")
+            print(f"[DASHBOARD_V2] Grouped Modal Chart - Total de registros: {len(df)}")
+            
+            modal_group = df.groupby('modal').agg({
+                'ref_unique': 'count',
+                'custo_total': 'sum'
+            }).reset_index()
+            
+            print(f"[DASHBOARD_V2] Grouped Modal Chart - Resultado do groupby: {modal_group.to_dict('records')}")
+            
             grouped_modal_chart = {
                 'labels': modal_group['modal'].tolist(),
-                'processes': modal_group['processos'].tolist(),
-                'values': modal_group['custo_total'].tolist()
+                'processos': modal_group['ref_unique'].tolist(),
+                'custos': modal_group['custo_total'].tolist()
             }
+            
+            print(f"[DASHBOARD_V2] Grouped Modal Chart - Dados finais: {grouped_modal_chart}")
         else:
-            grouped_modal_chart = {'labels': [], 'processes': [], 'values': []}
+            print(f"[DASHBOARD_V2] Grouped Modal Chart - Colunas não encontradas, retornando vazio")
+            grouped_modal_chart = {'labels': [], 'processos': [], 'custos': []}
 
         # Gráfico URF (usando coluna normalizada)
         if 'urf_entrada_normalizado' in df.columns:
