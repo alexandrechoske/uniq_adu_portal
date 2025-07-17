@@ -7,6 +7,8 @@ from material_cleaner import MaterialCleaner
 from services.data_cache import DataCacheService
 import pandas as pd
 import numpy as np
+import pandas as pd
+import numpy as np
 
 # Initialize services
 material_cleaner = MaterialCleaner()
@@ -27,7 +29,9 @@ def get_or_reload_cache(user_id, user_role):
         query = supabase_admin.table('vw_importacoes_6_meses').select('*')
         
         if user_role == 'cliente_unique':
-            user_companies = get_user_companies()
+            # Obter dados do usuário da sessão para passar para get_user_companies
+            user_data = session.get('user', {})
+            user_companies = get_user_companies(user_data)
             if user_companies:
                 query = query.in_('cnpj_importador', user_companies)
         

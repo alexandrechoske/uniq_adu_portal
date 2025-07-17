@@ -6,8 +6,8 @@ from datetime import datetime
 import requests
 import json
 import os
-from services.data_cache import data_cache
 import re  # para normalização de CNPJ
+from services.data_cache import data_cache
 
 bp = Blueprint('auth', __name__)
 
@@ -90,7 +90,7 @@ def role_required(roles):
             # Verificar se o role tem permissão
             if user_data['role'] not in roles:
                 flash('Acesso não autorizado.', 'error')
-                return redirect(url_for('dashboard.index'))
+                return redirect(url_for('dashboard_v2.index'))
             
             # Verificar integridade da sessão
             if 'created_at' not in session:
@@ -264,11 +264,6 @@ def login():
                         session['data_loading_status'] = 'error'
                         session['data_loading_step'] = 'Erro ao carregar dados, mas você pode continuar'
                         session['cache_ready'] = False
-                        
-                    except Exception as preload_error:
-                        print(f"[AUTH] Erro no pré-carregamento: {preload_error}")
-                        session['data_loading_status'] = 'error'
-                        session['data_loading_step'] = 'Erro ao carregar dados, mas você pode continuar'
                     
                     flash('Login realizado com sucesso!', 'success')
                     return redirect(url_for('dashboard_v2.index'))
@@ -283,7 +278,8 @@ def login():
             
             if "Invalid login credentials" in error_message:
                 flash('Email ou senha inválidos.', 'error')
-                return redirect(url_for('auth.login'))
+            elif "timeout" in error_message.lower():
+                flash('Erro de conexão. Tente novamente em alguns instantes.', 'error')
             else:
                 flash('Erro interno. Tente novamente.', 'error')
     
@@ -318,7 +314,7 @@ def preload_data():
         return jsonify({
             'success': True, 
             'message': 'Dados carregados com sucesso',
-            'redirect_url': url_for('dashboard.index')
+            'redirect_url': url_for('dashboard_v2.index')
         })
         
     except Exception as e:
