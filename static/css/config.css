@@ -1,0 +1,300 @@
+/* CSS básico para páginas de configuração */
+/* Garantir que não interfira com a sidebar */
+
+.main-content .config-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.config-header {
+    margin-bottom: 24px;
+}
+
+.config-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1F2937;
+    margin-bottom: 8px;
+}
+
+.config-description {
+    color: #6B7280;
+    font-size: 0.875rem;
+}
+
+.config-actions {
+    margin-bottom: 24px;
+}
+
+.btn-primary {
+    background-color: #2563EB;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #1D4ED8;
+}
+
+.btn-secondary {
+    background-color: #E5E7EB;
+    color: #374151;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #D1D5DB;
+}
+
+.btn-danger {
+    color: #DC2626;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    padding: 4px 8px;
+    transition: color 0.2s;
+}
+
+.btn-danger:hover {
+    color: #B91C1C;
+}
+
+.btn-edit {
+    color: #2563EB;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    padding: 4px 8px;
+    transition: color 0.2s;
+}
+
+.btn-edit:hover {
+    color: #1D4ED8;
+}
+
+.config-table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.config-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.config-table th {
+    background-color: #F9FAFB;
+    padding: 12px 24px;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.config-table td {
+    padding: 16px 24px;
+    border-bottom: 1px solid #E5E7EB;
+    font-size: 0.875rem;
+}
+
+.config-table tr:hover {
+    background-color: #F9FAFB;
+}
+
+.config-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.config-modal.hidden {
+    display: none;
+}
+
+.config-modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+    margin: 16px;
+}
+
+.config-modal-header {
+    padding: 24px 24px 0 24px;
+}
+
+.config-modal-title {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #1F2937;
+    margin-bottom: 16px;
+}
+
+.config-modal-body {
+    padding: 0 24px;
+}
+
+.config-modal-footer {
+    padding: 16px 24px 24px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #DC2626;
+}
+
+.form-input {
+    width: 100%;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+    background-color: #FFFFFF;
+}
+
+/* Select específico para dropdowns */
+select.form-input {
+    cursor: pointer;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+select.form-input option {
+    padding: 8px 12px;
+    background-color: #FFFFFF;
+    color: #374151;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-help {
+    font-size: 0.75rem;
+    color: #6B7280;
+    margin-top: 4px;
+}
+
+.preview-container {
+    margin-bottom: 16px;
+}
+
+.preview-image {
+    max-width: 64px;
+    max-height: 64px;
+    object-fit: contain;
+    border: 1px solid #D1D5DB;
+    border-radius: 4px;
+}
+
+.icon-preview {
+    max-width: 32px;
+    max-height: 32px;
+    object-fit: contain;
+    border: 1px solid #D1D5DB;
+    border-radius: 4px;
+}
+
+.logo-placeholder,
+.icon-placeholder {
+    background-color: #F3F4F6;
+    border: 1px solid #D1D5DB;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+    font-size: 0.75rem;
+}
+
+.logo-placeholder {
+    width: 48px;
+    height: 48px;
+}
+
+.icon-placeholder {
+    width: 32px;
+    height: 32px;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-gray-500 {
+    color: #6B7280;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Responsividade básica */
+@media (max-width: 768px) {
+    .config-container {
+        padding: 16px;
+    }
+    
+    .config-modal-content {
+        margin: 8px;
+    }
+    
+    .config-table {
+        font-size: 0.75rem;
+    }
+    
+    .config-table th,
+    .config-table td {
+        padding: 8px 12px;
+    }
+}

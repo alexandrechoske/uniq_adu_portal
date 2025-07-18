@@ -25,11 +25,11 @@ def clean_data_for_json(data):
     else:
         return data
 
-@bp.route('/')
+@bp.route('/dashboard')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def index():
-    """Página principal do dashboard"""
+    """Página principal do dashboard (dashboard antigo)"""
     return render_template('dashboard/index_simple.html')
 
 def format_value_smart(value, currency=False):

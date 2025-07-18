@@ -62,7 +62,7 @@ def carregar_usuarios():
                         for cnpj in empresas:
                             if isinstance(cnpj, str):
                                 try:
-                                    empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                                    empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                                     if empresa_info.data and len(empresa_info.data) > 0:
                                         empresa_data = empresa_info.data[0]
                                         empresas_detalhadas.append({
@@ -333,7 +333,7 @@ def pesquisar_empresa():
         if not cnpj:
             return jsonify({'success': False, 'message': 'CNPJ não informado'})
         
-        empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+        empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
         
         print(f"[DEBUG] Resultado da busca de empresa: {empresa_info.data}")
         
@@ -436,7 +436,7 @@ def get_empresas_detalhadas(user_id):
             # Buscar detalhes de cada empresa
             for cnpj in empresas_array:
                 if isinstance(cnpj, str):
-                    empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                    empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                     
                     if empresa_info.data:
                         empresas_detalhadas.append({
@@ -558,7 +558,7 @@ def listar_empresas(user_id):
         # Buscar detalhes de cada empresa
         empresas_detalhadas = []
         for cnpj in empresas:
-            empresa_info = supabase_admin.table('importacoes_clientes').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+            empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
             if empresa_info.data:
                 empresas_detalhadas.append({
                     'cnpj': cnpj,

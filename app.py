@@ -53,7 +53,7 @@ from session_handler import init_session_handler
 
 # Import routes after app initialization to avoid circular imports
 from routes import auth, dashboard, relatorios, usuarios, agente, api,conferencia
-from routes import conferencia_pdf, debug, paginas
+from routes import conferencia_pdf, debug, paginas, config
 from routes import background_tasks, dashboard_v2, materiais_v2
 
 # Register blueprints
@@ -67,6 +67,7 @@ app.register_blueprint(conferencia.bp)  # Registrando o blueprint de Conferênci
 app.register_blueprint(conferencia_pdf.bp)  # Registrando o blueprint de PDF anotado para Conferência
 app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
 app.register_blueprint(paginas.bp)  # Registrando o blueprint de Páginas
+app.register_blueprint(config.bp)  # Registrando o blueprint de Configurações
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
 app.register_blueprint(dashboard_v2.bp)  # Registrando o blueprint de Dashboard V2
 app.register_blueprint(materiais_v2.bp)  # Registrando o blueprint de Materiais V2

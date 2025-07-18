@@ -24,12 +24,21 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('sidebarExpanded', sidebarExpanded);
     }
     
-    // Apply initial state - SEMPRE COLAPSADA
+    // Apply initial state - SEMPRE COLAPSADA MAS VISÍVEL
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.getElementById('main-content');
     
-    sidebar.classList.add('collapsed');
-    mainContent.classList.add('sidebar-collapsed');
+    if (sidebar && mainContent) {
+        sidebar.classList.add('collapsed');
+        mainContent.classList.add('sidebar-collapsed');
+        
+        // Garantir que a sidebar seja visível em desktop
+        if (window.innerWidth >= 1024) {
+            sidebar.classList.remove('hidden');
+        } else {
+            sidebar.classList.add('hidden');
+        }
+    }
     
     // Add event listener to hamburger button
     document.getElementById('sidebar-toggle')?.addEventListener('click', toggleSidebar);

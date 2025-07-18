@@ -317,6 +317,63 @@
         }
         
         /* Tooltip para itens quando sidebar está recolhida */
+        .sidebar.collapsed .sidebar-item {
+            position: relative;
+        }
+        
+        .sidebar.collapsed .sidebar-item:hover::after {
+            content: attr(title);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 8px;
+            padding: 8px 12px;
+            background-color: #1f2937;
+            color: white;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            white-space: nowrap;
+            z-index: 9999;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+        }
+        
+        /* Tooltip específico para seção Configurações quando colapsada */
+        .sidebar.collapsed .sidebar-section {
+            position: relative;
+        }
+        
+        .sidebar.collapsed .sidebar-section-title {
+            display: none;
+        }
+        
+        .sidebar.collapsed .sidebar-section:hover::before {
+            content: "Configurações";
+            position: absolute;
+            left: 100%;
+            top: 0;
+            margin-left: 8px;
+            padding: 6px 10px;
+            background-color: var(--color-primary);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 9999;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Separador visual para seção Configurações quando colapsada */
+        .sidebar.collapsed .sidebar-section {
+            border-top: 1px solid #e5e7eb;
+            margin-top: 16px;
+            padding-top: 16px;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -463,11 +520,37 @@
 
             <!-- Usuários (apenas para admins) -->
             {% if session.get('user', {}).get('role') == 'admin' %}
-            <a href="{{ url_for('usuarios.index') }}" 
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}">
-                <i class="mdi mdi-account-group text-xl"></i>
-                <span class="sidebar-text">Usuários</span>
-            </a>
+            
+            <!-- Seção Configurações -->
+            <div class="sidebar-section" style="margin-top: 20px;">
+                <div class="sidebar-section-title" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Configurações
+                </div>
+                
+                <!-- Usuários -->
+                <a href="{{ url_for('usuarios.index') }}" 
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}"
+                   title="Gerenciar Usuários">
+                    <i class="mdi mdi-account-group text-xl"></i>
+                    <span class="sidebar-text">Usuários</span>
+                </a>
+                
+                <!-- Logos Clientes -->
+                <a href="{{ url_for('config.logos_clientes') }}" 
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
+                   title="Gerenciar Logos de Clientes">
+                    <i class="mdi mdi-domain text-xl"></i>
+                    <span class="sidebar-text">Logos Clientes</span>
+                </a>
+                
+                <!-- Ícones Materiais -->
+                <a href="{{ url_for('config.icones_materiais') }}" 
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.icones') %}active{% endif %}"
+                   title="Gerenciar Ícones de Materiais">
+                    <i class="mdi mdi-image-multiple text-xl"></i>
+                    <span class="sidebar-text">Ícones Materiais</span>
+                </a>
+            </div>
             {% endif %}
             </nav>
         </aside>

@@ -609,7 +609,9 @@ def api_tabela_materiais():
         materiais_info = []
         
         # Limpar dados de materiais (remover vazios/inválidos)
+        # Normalizar mercadoria para lowercase para fazer match com cad_materiais
         df['mercadoria_clean'] = df['mercadoria'].astype(str).str.strip().str.lower()
+        df['mercadoria_normalizada'] = df['mercadoria_clean'].str.normalize('NFD').str.replace(r'[\u0300-\u036f]', '', regex=True).str.replace(r'[^a-z0-9\s]', '', regex=True).str.replace(r'\s+', ' ', regex=True).str.strip()
         df_filtered = df[~df['mercadoria_clean'].isin(['', 'não informado', 'nan', 'none'])]
         
         if df_filtered.empty:
@@ -642,12 +644,26 @@ def api_tabela_materiais():
                     except Exception as e:
                         print(f"[MATERIAIS_V2] Erro ao converter data para material {material}: {e}")
             
-            # Obter ícone do material (pegar o primeiro registro que tenha ícone)
+            # Obter ícone do material usando a versão normalizada para match com cad_materiais
             icone_url = None
             if 'icone_url' in material_data.columns:
                 icones = material_data['icone_url'].dropna()
                 if not icones.empty:
                     icone_url = icones.iloc[0]
+            
+            # Se não encontrou ícone via JOIN, tentar buscar manualmente na tabela cad_materiais
+            if not icone_url:
+                try:
+                    # Usar mercadoria normalizada para buscar na tabela cad_materiais
+                    mercadoria_normalizada = material_data['mercadoria_normalizada'].iloc[0]
+                    icone_response = supabase_admin.table('cad_materiais').select('icone_url').eq('nome_normalizado', mercadoria_normalizada).execute()
+                    
+                    if icone_response.data and len(icone_response.data) > 0:
+                        icone_url = icone_response.data[0].get('icone_url')
+                        print(f"[MATERIAIS_V2] Ícone encontrado para {material} -> {mercadoria_normalizada}: {icone_url}")
+                    
+                except Exception as e:
+                    print(f"[MATERIAIS_V2] Erro ao buscar ícone para {material}: {e}")
             
             # Usar nome original do material (não a versão limpa)
             nome_original = material_data['mercadoria'].iloc[0]
