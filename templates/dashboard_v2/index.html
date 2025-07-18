@@ -260,6 +260,27 @@ function setQuickPeriod(days) {
                 <h3>Transit Time por Material</h3>
                 <canvas id="transit-time-chart"></canvas>
             </div>
+            <div class="chart-container">
+                <h3>Resumo de Materiais</h3>
+                <div id="materiais-summary-table">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Imagem</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Material</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: right;">Valor Total</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Qtd Processos</th>
+                                <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Próxima Chegada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materiais-summary-tbody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px; color: #666;">Carregando dados...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
         
         <!-- Materiais Table -->
@@ -529,6 +550,14 @@ async function loadMateriaisData() {
         // Load Charts
         await loadMateriaisCharts(queryString);
         
+        // Load Materiais Summary Table
+        const summaryResponse = await fetch('/materiais-v2/api/tabela-materiais?' + queryString);
+        const summaryResult = await summaryResponse.json();
+        
+        if (summaryResult.success) {
+            updateMateriaisSummaryTable(summaryResult.data);
+        }
+        
         // Load Table
         const tableResponse = await fetch('/materiais-v2/api/detalhamento-processos?' + queryString);
         const tableResult = await tableResponse.json();
@@ -580,6 +609,13 @@ async function loadMateriaisCharts(queryString) {
         const transitResult = await transitResponse.json();
         if (transitResult.success) {
             createTransitTimeChart(transitResult.data);
+        }
+        
+        // Materiais Summary Table
+        const summaryResponse = await fetch('/materiais-v2/api/materiais-summary?' + queryString);
+        const summaryResult = await summaryResponse.json();
+        if (summaryResult.success) {
+            updateMateriaisSummaryTable(summaryResult.data);
         }
         
     } catch (error) {
@@ -1048,6 +1084,95 @@ function updateMateriaisTable(data) {
     detalhamentoCurrentPage = 1;
     renderDetalhamentoTable();
     renderDetalhamentoPagination();
+}
+
+function updateMateriaisSummaryTable(data) {
+    const tbody = document.getElementById('materiais-summary-tbody');
+    tbody.innerHTML = '';
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">Nenhum material encontrado</td></tr>';
+        return;
+    }
+    
+    data.forEach(material => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #ddd';
+        
+        // Imagem do Material
+        const imagemCell = document.createElement('td');
+        imagemCell.style.padding = '8px';
+        imagemCell.style.textAlign = 'center';
+        imagemCell.style.width = '60px';
+        
+        if (material.icone_url) {
+            imagemCell.innerHTML = `<img src="${material.icone_url}" alt="${material.material}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div style="display: none; width: 32px; height: 32px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666;">📦</div>`;
+        } else {
+            imagemCell.innerHTML = '<div style="width: 32px; height: 32px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #666;">📦</div>';
+        }
+        
+        // Material
+        const materialCell = document.createElement('td');
+        materialCell.style.padding = '8px';
+        materialCell.style.maxWidth = '200px';
+        materialCell.style.overflow = 'hidden';
+        materialCell.style.textOverflow = 'ellipsis';
+        materialCell.style.whiteSpace = 'nowrap';
+        materialCell.textContent = material.material || 'Não informado';
+        materialCell.title = material.material || 'Não informado';
+        
+        // Valor Total
+        const valorCell = document.createElement('td');
+        valorCell.style.padding = '8px';
+        valorCell.style.textAlign = 'right';
+        valorCell.style.fontWeight = 'bold';
+        valorCell.style.color = '#007bff';
+        valorCell.textContent = formatCurrency(material.valor_total || 0);
+        
+        // Quantidade de Processos
+        const qtdCell = document.createElement('td');
+        qtdCell.style.padding = '8px';
+        qtdCell.style.textAlign = 'center';
+        qtdCell.style.fontWeight = 'bold';
+        qtdCell.textContent = material.qtd_processos || 0;
+        
+        // Próxima Chegada
+        const chegadaCell = document.createElement('td');
+        chegadaCell.style.padding = '8px';
+        chegadaCell.style.textAlign = 'center';
+        chegadaCell.style.fontSize = '0.9rem';
+        
+        if (material.proxima_chegada) {
+            chegadaCell.textContent = material.proxima_chegada;
+            
+            // Colorir com base na data
+            const hoje = new Date();
+            const chegada = new Date(material.proxima_chegada.split('/').reverse().join('-'));
+            
+            if (chegada < hoje) {
+                chegadaCell.style.color = '#dc3545'; // Vermelho - atrasado
+            } else {
+                const diasRestantes = Math.ceil((chegada - hoje) / (1000 * 60 * 60 * 24));
+                if (diasRestantes <= 7) {
+                    chegadaCell.style.color = '#fd7e14'; // Laranja - próximo
+                } else {
+                    chegadaCell.style.color = '#28a745'; // Verde - no prazo
+                }
+            }
+        } else {
+            chegadaCell.textContent = 'N/A';
+            chegadaCell.style.color = '#6c757d';
+        }
+        
+        row.appendChild(imagemCell);
+        row.appendChild(materialCell);
+        row.appendChild(valorCell);
+        row.appendChild(qtdCell);
+        row.appendChild(chegadaCell);
+        
+        tbody.appendChild(row);
+    });
 }
 
 function renderDetalhamentoTable() {

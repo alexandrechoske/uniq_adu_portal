@@ -574,6 +574,111 @@ def api_transit_time_por_material():
             'data': []
         }), 500
 
+@bp.route('/api/tabela-materiais')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def api_tabela_materiais():
+    """Tabela de materiais com ícone, nome, valor total, quantidade de processos e próxima chegada"""
+    try:
+        # Obter dados do cache ou recarregar
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
+        user_role = user_data.get('role')
+        
+        data = get_or_reload_cache(user_id, user_role)
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Dados não encontrados.',
+                'data': []
+            })
+        
+        # Aplicar filtros
+        filtered_data = apply_filters(data)
+        df = pd.DataFrame(filtered_data)
+        
+        if 'mercadoria' not in df.columns:
+            return jsonify({
+                'success': False,
+                'error': 'Coluna mercadoria não encontrada.',
+                'data': []
+            })
+        
+        # Agrupar por material e calcular métricas
+        materiais_info = []
+        
+        # Limpar dados de materiais (remover vazios/inválidos)
+        df['mercadoria_clean'] = df['mercadoria'].astype(str).str.strip().str.lower()
+        df_filtered = df[~df['mercadoria_clean'].isin(['', 'não informado', 'nan', 'none'])]
+        
+        if df_filtered.empty:
+            return jsonify({
+                'success': True,
+                'data': []
+            })
+        
+        # Agrupar por material
+        for material in df_filtered['mercadoria_clean'].unique():
+            material_data = df_filtered[df_filtered['mercadoria_clean'] == material]
+            
+            # Calcular métricas
+            valor_total = material_data['custo_total'].sum() if 'custo_total' in material_data.columns else 0
+            qtd_processos = len(material_data)
+            
+            # Próxima chegada (data máxima de chegada)
+            proxima_chegada = None
+            if 'data_chegada' in material_data.columns:
+                datas_chegada = material_data['data_chegada'].dropna()
+                if not datas_chegada.empty:
+                    try:
+                        # Converter datas do formato DD/MM/YYYY para datetime
+                        datas_convertidas = pd.to_datetime(datas_chegada, format='%d/%m/%Y', errors='coerce')
+                        datas_convertidas = datas_convertidas.dropna()
+                        if not datas_convertidas.empty:
+                            # Encontrar a data máxima
+                            data_maxima = datas_convertidas.max()
+                            proxima_chegada = data_maxima.strftime('%d/%m/%Y')
+                    except Exception as e:
+                        print(f"[MATERIAIS_V2] Erro ao converter data para material {material}: {e}")
+            
+            # Obter ícone do material (pegar o primeiro registro que tenha ícone)
+            icone_url = None
+            if 'icone_url' in material_data.columns:
+                icones = material_data['icone_url'].dropna()
+                if not icones.empty:
+                    icone_url = icones.iloc[0]
+            
+            # Usar nome original do material (não a versão limpa)
+            nome_original = material_data['mercadoria'].iloc[0]
+            
+            materiais_info.append({
+                'material': nome_original,
+                'icone_url': icone_url,
+                'valor_total': valor_total,
+                'qtd_processos': qtd_processos,
+                'proxima_chegada': proxima_chegada
+            })
+        
+        # Ordenar por valor total (decrescente)
+        materiais_info.sort(key=lambda x: x['valor_total'], reverse=True)
+        
+        # Limitar a 20 materiais
+        materiais_info = materiais_info[:20]
+        
+        return jsonify({
+            'success': True,
+            'data': clean_data_for_json(materiais_info)
+        })
+        
+    except Exception as e:
+        print(f"[MATERIAIS_V2] Erro ao obter tabela de materiais: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': []
+        }), 500
+
 @bp.route('/api/detalhamento-processos')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
