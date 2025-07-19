@@ -1,3 +1,15 @@
+from flask import Blueprint, render_template, session, jsonify, request
+from extensions import supabase, supabase_admin
+from routes.auth import login_required, role_required
+from routes.api import get_user_companies
+from permissions import check_permission
+from datetime import datetime, timedelta
+import pandas as pd
+import numpy as np
+from services.data_cache import DataCacheService
+
+bp = Blueprint('dashboard_v2', __name__, url_prefix='/dashboard-v2')
+
 @bp.route('/api/monthly-chart')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
@@ -39,17 +51,6 @@ def monthly_chart():
     except Exception as e:
         print(f"[DASHBOARD_V2] Erro ao gerar monthly_chart: {str(e)}")
         return jsonify({'success': False, 'error': str(e), 'data': {}}), 500
-from flask import Blueprint, render_template, session, jsonify, request
-from extensions import supabase, supabase_admin
-from routes.auth import login_required, role_required
-from routes.api import get_user_companies
-from permissions import check_permission
-from datetime import datetime, timedelta
-import pandas as pd
-import numpy as np
-from services.data_cache import DataCacheService
-
-bp = Blueprint('dashboard_v2', __name__, url_prefix='/dashboard-v2')
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
