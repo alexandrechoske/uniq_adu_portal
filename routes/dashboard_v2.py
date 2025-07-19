@@ -173,8 +173,33 @@ def dashboard_kpis():
         total_despesas = df['custo_total'].sum() if 'custo_total' in df.columns else 0
         ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
         em_transito = len(df[df['status_processo'].str.contains('trânsito', case=False, na=False)]) if 'status_processo' in df.columns else 0
-        desembaraçados = len(df[df['status_processo'].str.contains('desembaracada', case=False, na=False)]) if 'status_processo' in df.columns else 0
-        perc_desembaraçados = (desembaraçados / total_processos * 100) if total_processos > 0 else 0
+
+        # Total Agd Embarque: status_processo contém 'aguardando embarque'
+        total_agd_embarque = len(df[df['status_processo'].str.contains('aguardando embarque', case=False, na=False)]) if 'status_processo' in df.columns else 0
+        # Total Ag Chegada: status_processo contém 'aguardando chegada'
+        total_ag_chegada = len(df[df['status_processo'].str.contains('aguardando chegada', case=False, na=False)]) if 'status_processo' in df.columns else 0
+
+        # Chegando este mês/semana (quantidade e custo)
+        hoje = pd.Timestamp.now().normalize()
+        primeiro_dia_mes = hoje.replace(day=1)
+        inicio_semana = hoje - pd.Timedelta(days=hoje.dayofweek)
+        chegando_mes = 0
+        chegando_mes_custo = 0
+        chegando_semana = 0
+        chegando_semana_custo = 0
+        if 'data_chegada' in df.columns:
+            df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
+            for _, row in df.iterrows():
+                chegada = row.get('chegada_dt')
+                custo = row.get('custo_total', 0)
+                if pd.notnull(chegada):
+                    if chegada >= primeiro_dia_mes and chegada <= hoje + pd.Timedelta(days=31):
+                        chegando_mes += 1
+                        chegando_mes_custo += custo if pd.notnull(custo) else 0
+                    if chegada >= inicio_semana and chegada <= hoje + pd.Timedelta(days=7):
+                        chegando_semana += 1
+                        chegando_semana_custo += custo if pd.notnull(custo) else 0
+
         # Transit time médio
         transit_time = 0
         if 'data_embarque' in df.columns and 'data_chegada' in df.columns:
@@ -204,9 +229,14 @@ def dashboard_kpis():
             'total_processos': total_processos,
             'total_despesas': total_despesas,
             'ticket_medio': ticket_medio,
-            'perc_desembaraçados': perc_desembaraçados,
             'em_transito': em_transito,
-            'transit_time': transit_time,
+            'total_agd_embarque': total_agd_embarque,
+            'total_ag_chegada': total_ag_chegada,
+            'chegando_mes': chegando_mes,
+            'chegando_mes_custo': chegando_mes_custo,
+            'chegando_semana': chegando_semana,
+            'chegando_semana_custo': chegando_semana_custo,
+            'transit_time_medio': transit_time,
             'processos_mes': processos_mes,
             'processos_semana': processos_semana
         }

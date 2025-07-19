@@ -37,15 +37,35 @@
             </div>
             <div class="kpi-card">
                 <div id="kpi-total-despesas" class="kpi-value">-</div>
-                <div class="kpi-label">Custo Total (R$)</div>
+                <div class="kpi-label">Custo Total (K/M)</div>
             </div>
             <div class="kpi-card">
                 <div id="kpi-ticket-medio" class="kpi-value">-</div>
-                <div class="kpi-label">Ticket Médio (R$)</div>
+                <div class="kpi-label">Ticket Médio (K/M)</div>
             </div>
             <div class="kpi-card">
-                <div id="kpi-perc-desemb" class="kpi-value">-</div>
-                <div class="kpi-label">% Desembaraçados</div>
+                <div id="kpi-total-agd-embarque" class="kpi-value">-</div>
+                <div class="kpi-label">Total Agd Embarque</div>
+            </div>
+            <div class="kpi-card">
+                <div id="kpi-total-ag-chegada" class="kpi-value">-</div>
+                <div class="kpi-label">Total Ag Chegada</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="kpi-chegando-mes" class="kpi-value">-</div>
+                <div class="kpi-label">Chegando este mês</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="kpi-chegando-mes-custo" class="kpi-value">-</div>
+                <div class="kpi-label">Custo Chegando mês</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="kpi-chegando-semana" class="kpi-value">-</div>
+                <div class="kpi-label">Chegando semana</div>
+            </div>
+            <div class="kpi-card kpi-new">
+                <div id="kpi-chegando-semana-custo" class="kpi-value">-</div>
+                <div class="kpi-label">Custo Chegando semana</div>
             </div>
             <div class="kpi-card">
                 <div id="kpi-em-transito" class="kpi-value">-</div>
@@ -684,11 +704,28 @@ function populateSelect(elementId, options) {
     });
 }
 
+function formatCurrencyCompact(value) {
+    if (!value || value === 0) return 'R$ 0,00';
+    const abs = Math.abs(value);
+    if (abs >= 1e6) {
+        return (value / 1e6).toFixed(1).replace('.0','') + 'M';
+    } else if (abs >= 1e3) {
+        return (value / 1e3).toFixed(1).replace('.0','') + 'K';
+    } else {
+        return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+}
+
 function updateDashboardKPIs(kpis) {
     document.getElementById('kpi-total-processos').textContent = formatNumber(kpis.total_processos);
-    document.getElementById('kpi-total-despesas').textContent = formatCurrency(kpis.total_despesas);
-    document.getElementById('kpi-ticket-medio').textContent = formatCurrency(kpis.ticket_medio);
-    document.getElementById('kpi-perc-desemb').textContent = (kpis.perc_desembaraçados || 0).toFixed(1) + '%';
+    document.getElementById('kpi-total-despesas').textContent = formatCurrencyCompact(kpis.total_despesas);
+    document.getElementById('kpi-ticket-medio').textContent = formatCurrencyCompact(kpis.ticket_medio);
+    document.getElementById('kpi-total-agd-embarque').textContent = formatNumber(kpis.total_agd_embarque || 0);
+    document.getElementById('kpi-total-ag-chegada').textContent = formatNumber(kpis.total_ag_chegada || 0);
+    document.getElementById('kpi-chegando-mes').textContent = formatNumber(kpis.chegando_mes || 0);
+    document.getElementById('kpi-chegando-mes-custo').textContent = formatCurrencyCompact(kpis.chegando_mes_custo || 0);
+    document.getElementById('kpi-chegando-semana').textContent = formatNumber(kpis.chegando_semana || 0);
+    document.getElementById('kpi-chegando-semana-custo').textContent = formatCurrencyCompact(kpis.chegando_semana_custo || 0);
     document.getElementById('kpi-em-transito').textContent = formatNumber(kpis.em_transito);
     document.getElementById('kpi-transit-time').textContent = formatNumber(kpis.transit_time_medio, 1) + ' dias';
     document.getElementById('kpi-proc-mes').textContent = formatNumber(kpis.processos_mes);
