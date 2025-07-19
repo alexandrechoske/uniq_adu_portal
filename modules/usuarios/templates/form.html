@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if user %}Editar{% else %}Novo{% endif %} Usuário - Portal UniSystem
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
+<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/form.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-title-section">
+                <h1 class="header-title">
+                    {% if user %}Editar Usuário{% else %}Novo Usuário{% endif %}
+                </h1>
+                <p class="header-subtitle">
+                    <i class="mdi mdi-account-edit"></i>
+                    {% if user %}
+                        Atualize as informações do usuário
+                    {% else %}
+                        Preencha os dados para criar um novo usuário
+                    {% endif %}
+                </p>
+            </div>
+            <div class="header-controls">
+                <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline">
+                    <i class="mdi mdi-arrow-left"></i>
+                    Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="form-container">
+            <!-- Formulário Principal -->
+            <div class="form-card">
+                <div class="form-header">
+                    <div class="form-icon">
+                        <i class="mdi mdi-account-plus"></i>
+                    </div>
+                    <h2 class="form-title">
+                        {% if user %}Editar Usuário{% else %}Criar Novo Usuário{% endif %}
+                    </h2>
+                    <p class="form-subtitle">
+                        {% if user %}
+                            Atualize as informações abaixo para modificar o usuário
+                        {% else %}
+                            Preencha as informações abaixo para criar um novo usuário
+                        {% endif %}
+                    </p>
+                </div>
+
+                <form id="userForm" 
+                      method="POST" 
+                      action="{% if user %}{{ url_for('usuarios.salvar', user_id=user.id) }}{% else %}{{ url_for('usuarios.salvar') }}{% endif %}"
+                      {% if user %}data-user-id="{{ user.id }}"{% endif %}>
+                    
+                    <div class="form-grid">
+                        <!-- Linha 1: Nome e Email -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="name" class="form-label required">
+                                    <i class="mdi mdi-account"></i>
+                                    Nome Completo
+                                </label>
+                                <input type="text" 
+                                       id="name" 
+                                       name="name" 
+                                       class="form-input" 
+                                       value="{{ user.name if user else '' }}" 
+                                       required
+                                       placeholder="Digite o nome completo">
+                                <div class="form-help">Nome que será exibido no sistema</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email" class="form-label required">
+                                    <i class="mdi mdi-email"></i>
+                                    Email
+                                </label>
+                                <input type="email" 
+                                       id="email" 
+                                       name="email" 
+                                       class="form-input" 
+                                       value="{{ user.email if user else '' }}" 
+                                       required
+                                       placeholder="usuario@exemplo.com">
+                                <div class="form-help">Email utilizado para login no sistema</div>
+                            </div>
+                        </div>
+
+                        <!-- Linha 2: Role e Status -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="role" class="form-label required">
+                                    <i class="mdi mdi-shield-account"></i>
+                                    Nível de Acesso
+                                </label>
+                                <select id="role" name="role" class="form-select" required>
+                                    <option value="">Selecione o nível de acesso</option>
+                                    <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>
+                                        Administrador - Acesso total ao sistema
+                                    </option>
+                                    <option value="interno_unique" {% if user and user.role == 'interno_unique' %}selected{% endif %}>
+                                        Equipe Interna - Acesso aos módulos operacionais
+                                    </option>
+                                    <option value="cliente_unique" {% if user and user.role == 'cliente_unique' %}selected{% endif %}>
+                                        Cliente - Acesso limitado aos dados da empresa
+                                    </option>
+                                </select>
+                                <div class="form-help">Define quais funcionalidades o usuário pode acessar</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="mdi mdi-account-check"></i>
+                                    Status da Conta
+                                </label>
+                                <div class="form-switch">
+                                    <input type="checkbox" 
+                                           id="is_active" 
+                                           name="is_active" 
+                                           class="switch-input"
+                                           value="true"
+                                           {% if not user or user.is_active %}checked{% endif %}>
+                                    <label for="is_active" class="switch-label">
+                                        Conta ativa no sistema
+                                    </label>
+                                </div>
+                                <div class="form-help">Usuários inativos não conseguem fazer login</div>
+                            </div>
+                        </div>
+
+                        <!-- Seção de Empresas (apenas para clientes) -->
+                        <div id="empresas-section" class="form-group full-width" 
+                             style="{% if not user or user.role != 'cliente_unique' %}display: none;{% endif %}">
+                            <div class="empresas-section">
+                                <div class="empresas-header">
+                                    <h3 class="empresas-title">
+                                        <i class="mdi mdi-domain"></i>
+                                        Empresas Associadas
+                                    </h3>
+                                    <button type="button" id="load-empresas-btn" class="btn btn-outline">
+                                        <i class="mdi mdi-refresh"></i>
+                                        Carregar Empresas
+                                    </button>
+                                </div>
+                                
+                                <div class="form-help" style="margin-bottom: var(--spacing-md);">
+                                    Selecione as empresas que este usuário cliente pode visualizar dados.
+                                    O usuário só terá acesso aos dados das empresas selecionadas.
+                                </div>
+                                
+                                <div id="empresas-grid" class="empresas-grid">
+                                    <div class="empresas-loading">
+                                        <i class="mdi mdi-information-outline" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                                        <div>Clique em "Carregar Empresas" para ver as opções disponíveis</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ações do Formulário -->
+                    <div class="form-actions">
+                        <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline">
+                            <i class="mdi mdi-close"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-check"></i>
+                            {% if user %}Atualizar{% else %}Criar{% endif %} Usuário
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Card de Informações -->
+            <div class="form-card">
+                <h3 style="margin: 0 0 var(--spacing-md) 0; color: var(--color-text-primary);">
+                    <i class="mdi mdi-information"></i>
+                    Informações Importantes
+                </h3>
+                
+                <div style="display: grid; gap: var(--spacing-md);">
+                    <div style="padding: var(--spacing-md); background: var(--color-info-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
+                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-info); font-size: 0.875rem;">
+                            <i class="mdi mdi-shield-account"></i>
+                            Níveis de Acesso
+                        </h4>
+                        <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--color-text-secondary); font-size: 0.875rem;">
+                            <li><strong>Administrador:</strong> Acesso completo a todas as funcionalidades</li>
+                            <li><strong>Equipe Interna:</strong> Acesso aos módulos operacionais e relatórios</li>
+                            <li><strong>Cliente:</strong> Acesso limitado apenas aos dados de suas empresas</li>
+                        </ul>
+                    </div>
+
+                    <div style="padding: var(--spacing-md); background: var(--color-warning-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-warning);">
+                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-warning); font-size: 0.875rem;">
+                            <i class="mdi mdi-domain"></i>
+                            Associação de Empresas
+                        </h4>
+                        <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
+                            Usuários do tipo "Cliente" devem ter pelo menos uma empresa associada para visualizar dados no sistema.
+                            A associação define quais informações o cliente pode acessar.
+                        </p>
+                    </div>
+
+                    {% if user %}
+                    <div style="padding: var(--spacing-md); background: var(--color-success-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-success);">
+                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-success); font-size: 0.875rem;">
+                            <i class="mdi mdi-calendar"></i>
+                            Última Atualização
+                        </h4>
+                        <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
+                            Este usuário foi atualizado pela última vez em: 
+                            <strong>{{ user.updated_at.strftime('%d/%m/%Y às %H:%M') if user.updated_at else 'Não informado' }}</strong>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('usuarios.static', filename='js/form.js') }}"></script>
+{% endblock %}

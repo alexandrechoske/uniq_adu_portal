@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-title-section">
+                <h1 class="header-title">Gerenciar Usuários</h1>
+                <p class="header-subtitle">
+                    <i class="mdi mdi-account-group"></i>
+                    Controle de acesso e permissões do sistema
+                </p>
+            </div>
+            <div class="header-controls">
+                <a href="{{ url_for('usuarios.refresh') }}" class="btn btn-outline">
+                    <i class="mdi mdi-refresh"></i>
+                    Atualizar
+                </a>
+                <a href="{{ url_for('usuarios.novo') }}" class="btn btn-primary">
+                    <i class="mdi mdi-plus"></i>
+                    Novo Usuário
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Métricas -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon" style="background: var(--color-danger-light); color: #dc2626;">
+                    <i class="mdi mdi-shield-crown"></i>
+                </div>
+                <div class="metric-content">
+                    <p class="metric-label">Administradores</p>
+                    <p class="metric-value">{{ users | selectattr("role", "equalto", "admin") | list | length }}</p>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-icon" style="background: var(--color-primary-light); color: #2563eb;">
+                    <i class="mdi mdi-account-tie"></i>
+                </div>
+                <div class="metric-content">
+                    <p class="metric-label">Equipe Interna</p>
+                    <p class="metric-value">{{ users | selectattr("role", "equalto", "interno_unique") | list | length }}</p>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-icon" style="background: var(--color-success-light); color: #059669;">
+                    <i class="mdi mdi-account-multiple"></i>
+                </div>
+                <div class="metric-content">
+                    <p class="metric-label">Clientes</p>
+                    <p class="metric-value">{{ users | selectattr("role", "equalto", "cliente_unique") | list | length }}</p>
+                </div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-icon" style="background: var(--color-purple-light); color: #7c3aed;">
+                    <i class="mdi mdi-account"></i>
+                </div>
+                <div class="metric-content">
+                    <p class="metric-label">Total de Usuários</p>
+                    <p class="metric-value">{{ users | length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-section">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label" for="search-input">Buscar usuário</label>
+                    <input type="text" id="search-input" class="filter-input" 
+                           placeholder="Nome ou email...">
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="role-filter">Filtrar por role</label>
+                    <select id="role-filter" class="filter-input">
+                        <option value="">Todas as roles</option>
+                        <option value="admin">Administrador</option>
+                        <option value="interno_unique">Equipe Interna</option>
+                        <option value="cliente_unique">Cliente</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label" for="empresa-filter">Filtrar por empresa</label>
+                    <input type="text" id="empresa-filter" class="filter-input" 
+                           placeholder="CNPJ ou razão social...">
+                </div>
+                
+                <div class="filter-group">
+                    <button type="button" id="clear-filters" class="btn btn-outline" style="margin-top: auto;">
+                        <i class="mdi mdi-filter-remove"></i>
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção: Administradores -->
+        <div class="users-section" data-role="admin">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--color-danger-light); color: #dc2626;">
+                    <i class="mdi mdi-shield-crown"></i>
+                </div>
+                <h2 class="section-title">Administradores</h2>
+                <span class="section-count" id="admin-section-count">
+                    {{ users | selectattr("role", "equalto", "admin") | list | length }} usuários
+                </span>
+            </div>
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            {% if user.role == 'admin' %}
+                                <tr class="user-row" 
+                                    data-user-id="{{ user.id }}"
+                                    data-name="{{ user.name | lower }}" 
+                                    data-email="{{ user.email | lower }}" 
+                                    data-role="{{ user.role }}"
+                                    data-empresas="">
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div style="width: 32px; height: 32px; background: var(--color-danger-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #dc2626;">
+                                                <i class="mdi mdi-shield-crown" style="font-size: 1rem;"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600;">{{ user.name }}</div>
+                                                <div class="role-badge role-admin">Administrador</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="status-badge status-active">
+                                                <span class="status-dot"></span>
+                                                Ativo
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-inactive">
+                                                <span class="status-dot"></span>
+                                                Inativo
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                <i class="mdi mdi-pencil"></i> Editar
+                                            </a>
+                                            <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                <i class="mdi mdi-delete"></i> Excluir
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Seção: Equipe Interna -->
+        <div class="users-section" data-role="interno_unique">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--color-primary-light); color: #2563eb;">
+                    <i class="mdi mdi-account-tie"></i>
+                </div>
+                <h2 class="section-title">Equipe Interna</h2>
+                <span class="section-count" id="interno-section-count">
+                    {{ users | selectattr("role", "equalto", "interno_unique") | list | length }} usuários
+                </span>
+            </div>
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            {% if user.role == 'interno_unique' %}
+                                <tr class="user-row" 
+                                    data-user-id="{{ user.id }}"
+                                    data-name="{{ user.name | lower }}" 
+                                    data-email="{{ user.email | lower }}" 
+                                    data-role="{{ user.role }}"
+                                    data-empresas="">
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div style="width: 32px; height: 32px; background: var(--color-primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #2563eb;">
+                                                <i class="mdi mdi-account-tie" style="font-size: 1rem;"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600;">{{ user.name }}</div>
+                                                <div class="role-badge role-interno">Equipe Interna</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="status-badge status-active">
+                                                <span class="status-dot"></span>
+                                                Ativo
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-inactive">
+                                                <span class="status-dot"></span>
+                                                Inativo
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                <i class="mdi mdi-pencil"></i> Editar
+                                            </a>
+                                            <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                <i class="mdi mdi-delete"></i> Excluir
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Seção: Clientes -->
+        <div class="users-section" data-role="cliente_unique">
+            <div class="section-header">
+                <div class="section-icon" style="background: var(--color-success-light); color: #059669;">
+                    <i class="mdi mdi-account-multiple"></i>
+                </div>
+                <h2 class="section-title">Clientes</h2>
+                <span class="section-count" id="cliente-section-count">
+                    {{ users | selectattr("role", "equalto", "cliente_unique") | list | length }} usuários
+                </span>
+            </div>
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Empresas Associadas</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            {% if user.role == 'cliente_unique' %}
+                                {% set empresas_text = user.agent_info.empresas | map(attribute='cnpj') | join(' ') + ' ' + user.agent_info.empresas | map(attribute='razao_social') | join(' ') %}
+                                <tr class="user-row" 
+                                    data-user-id="{{ user.id }}"
+                                    data-name="{{ user.name | lower }}" 
+                                    data-email="{{ user.email | lower }}" 
+                                    data-role="{{ user.role }}"
+                                    data-empresas="{{ empresas_text | lower }}">
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div style="width: 32px; height: 32px; background: var(--color-success-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #059669;">
+                                                <i class="mdi mdi-account-multiple" style="font-size: 1rem;"></i>
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 600;">{{ user.name }}</div>
+                                                <div class="role-badge role-cliente">Cliente</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.agent_info and user.agent_info.empresas %}
+                                            <div class="empresas-list">
+                                                {% for empresa in user.agent_info.empresas[:3] %}
+                                                    <div class="empresa-item">
+                                                        <div class="empresa-cnpj">{{ empresa.cnpj }}</div>
+                                                        <div class="empresa-razao">{{ empresa.razao_social }}</div>
+                                                    </div>
+                                                {% endfor %}
+                                                {% if user.agent_info.empresas | length > 3 %}
+                                                    <div class="empresa-item">
+                                                        <div class="empresa-cnpj">+ {{ user.agent_info.empresas | length - 3 }} empresas</div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span style="color: var(--color-text-muted); font-style: italic;">
+                                                Nenhuma empresa associada
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                <i class="mdi mdi-pencil"></i> Editar
+                                            </a>
+                                            <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                                <i class="mdi mdi-delete"></i> Excluir
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon">
+                <i class="mdi mdi-alert"></i>
+            </div>
+            <h3 class="modal-title">Confirmar Exclusão</h3>
+        </div>
+        
+        <div class="modal-body">
+            <p class="modal-text">
+                Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
+            </p>
+            
+            <div class="modal-user-info">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                    <span id="delete-user-name"></span>
+                </div>
+                <div style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 0.25rem;">
+                    <span id="delete-user-email"></span>
+                </div>
+                <div style="color: var(--color-text-muted); font-size: 0.875rem;">
+                    Role: <span id="delete-user-role"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-actions">
+            <button type="button" onclick="closeDeleteModal()" class="btn btn-outline">
+                <i class="mdi mdi-close"></i>
+                Cancelar
+            </button>
+            <form id="deleteForm" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-danger">
+                    <i class="mdi mdi-delete"></i>
+                    Confirmar Exclusão
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('usuarios.static', filename='js/usuarios.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('relatorios.static', filename='css/relatorios.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="relatorios-container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="page-header">
+                <h2><i class="fas fa-chart-bar me-2"></i>Relatórios</h2>
+                <p class="text-muted">Visualize e exporte relatórios de operações aduaneiras</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filter-card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="filter-form">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="start_date" class="form-label">Data Inicial</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ start_date if start_date }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="end_date" class="form-label">Data Final</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ end_date if end_date }}">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-search me-1"></i>Filtrar
+                                </button>
+                                <a href="{{ url_for('relatorios.generate_pdf') }}{% if start_date %}?start_date={{ start_date }}{% endif %}{% if end_date %}{% if start_date %}&{% else %}?{% endif %}end_date={{ end_date }}{% endif %}" 
+                                   class="btn btn-outline-danger" target="_blank">
+                                    <i class="fas fa-file-pdf me-1"></i>Gerar PDF
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operações -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card operations-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Operações</h5>
+                    <div class="operations-count">
+                        <span class="badge bg-primary">{{ operacoes|length }} operação(ões)</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if operacoes %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover operations-table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th><i class="fas fa-calendar me-1"></i>Data</th>
+                                        <th><i class="fas fa-tag me-1"></i>Tipo</th>
+                                        <th><i class="fas fa-building me-1"></i>Cliente</th>
+                                        <th><i class="fas fa-info-circle me-1"></i>Detalhes</th>
+                                        <th><i class="fas fa-tools me-1"></i>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for op in operacoes %}
+                                    <tr>
+                                        <td>
+                                            <span class="operation-date">{{ op.data }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge operation-type-{{ op.tipo|lower }}">{{ op.tipo }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="client-name">{{ op.cliente_nome or 'N/A' }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="operation-details">{{ op.detalhes or 'Sem detalhes' }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <a href="{{ url_for('relatorios.generate_pdf', operacao_id=op.id) }}" 
+                                                   class="btn btn-sm btn-outline-danger" 
+                                                   target="_blank" 
+                                                   title="Gerar PDF">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        title="Ver Detalhes">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                            <h4>Nenhuma operação encontrada</h4>
+                            <p class="text-muted">
+                                {% if start_date or end_date %}
+                                    Não encontramos operações para os filtros selecionados.
+                                {% else %}
+                                    Não há operações registradas no sistema.
+                                {% endif %}
+                            </p>
+                            {% if start_date or end_date %}
+                            <a href="{{ url_for('relatorios.index') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-refresh me-1"></i>Limpar Filtros
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('relatorios.static', filename='js/relatorios.js') }}"></script>
+{% endblock %}

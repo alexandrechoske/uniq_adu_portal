@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard de Materiais - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_materiais.static', filename='css/materiais.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="materiais-container">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="materiais-header">
+        <div class="header-left">
+            <h1 class="materiais-title">Dashboard de Materiais</h1>
+            <p class="materiais-subtitle">Análise detalhada dos materiais importados</p>
+        </div>
+        <div class="header-right">
+            <button id="open-filters" class="btn btn-primary">🔍 Filtros</button>
+            <button id="refresh-data" class="btn btn-secondary">🔄 Atualizar</button>
+            <span id="last-update" class="last-update">Carregando...</span>
+        </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-total-processos">-</div>
+            <div class="kpi-label">Total de Processos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-total-materiais">-</div>
+            <div class="kpi-label">Tipos de Materiais</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-valor-total">-</div>
+            <div class="kpi-label">Valor Total CIF (R$)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-custo-total">-</div>
+            <div class="kpi-label">Custo Total (R$)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-ticket-medio">-</div>
+            <div class="kpi-label">Ticket Médio (R$)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-transit-time">-</div>
+            <div class="kpi-label">Transit Time Médio</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-processos-mes">-</div>
+            <div class="kpi-label">Chegando Este Mês</div>
+            <div class="kpi-sub-value" id="mat-custo-mes">-</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="mat-processos-semana">-</div>
+            <div class="kpi-label">Chegando Esta Semana</div>
+            <div class="kpi-sub-value" id="mat-custo-semana">-</div>
+        </div>
+    </div>
+    
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <!-- Top Materiais Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Top 10 Materiais por Quantidade</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="top-materiais-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Evolução Mensal Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Evolução Mensal - Top 3 Materiais</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="evolucao-mensal-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Modal Distribution Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Distribuição por Modal</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="modal-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Canal Distribution Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Distribuição por Canal</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="canal-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Transit Time por Material Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Transit Time por Material</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="transit-time-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Principais Materiais Table -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Principais Materiais</h2>
+            </div>
+            <div class="table-container">
+                <table id="principais-materiais-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Qtd Processos</th>
+                            <th>Custo Total (R$)</th>
+                            <th>Próxima Chegada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dados carregados dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Modal -->
+    <div id="filter-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔍 Filtros de Materiais</h2>
+                <span class="close" id="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- Filtros de Data -->
+                <div class="filter-section">
+                    <h4 class="filter-section-title">📅 Período</h4>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="data-inicio">Data Início:</label>
+                            <input type="date" id="data-inicio" name="data_inicio" class="filter-input">
+                        </div>
+                        <div class="filter-group">
+                            <label for="data-fim">Data Fim:</label>
+                            <input type="date" id="data-fim" name="data_fim" class="filter-input">
+                        </div>
+                    </div>
+                    
+                    <!-- Filtros Rápidos -->
+                    <div class="quick-filters">
+                        <span class="quick-filters-label">Filtros rápidos:</span>
+                        <button type="button" class="btn btn-quick" data-period="7">7 dias</button>
+                        <button type="button" class="btn btn-quick" data-period="30">30 dias</button>
+                        <button type="button" class="btn btn-quick" data-period="90">90 dias</button>
+                        <button type="button" class="btn btn-quick" data-period="365">1 ano</button>
+                    </div>
+                </div>
+                
+                <!-- Filtros de Busca -->
+                <div class="filter-section">
+                    <h4 class="filter-section-title">🔍 Filtros de Busca</h4>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="material-filter">Material:</label>
+                            <select id="material-filter" name="material" class="filter-select">
+                                <option value="">Todos os materiais</option>
+                                <!-- Opções carregadas dinamicamente -->
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="cliente-filter">Cliente:</label>
+                            <select id="cliente-filter" name="cliente" class="filter-select">
+                                <option value="">Todos os clientes</option>
+                                <!-- Opções carregadas dinamicamente -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filtros de Logística -->
+                <div class="filter-section">
+                    <h4 class="filter-section-title">🚚 Logística</h4>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="modal-filter">Modal:</label>
+                            <select id="modal-filter" name="modal" class="filter-select">
+                                <option value="">Todos os modais</option>
+                                <option value="AÉREA">✈️ Aéreo</option>
+                                <option value="MARÍTIMA">🚢 Marítimo</option>
+                                <option value="TERRESTRE">🚛 Terrestre</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="canal-filter">Canal:</label>
+                            <select id="canal-filter" name="canal" class="filter-select">
+                                <option value="">Todos os canais</option>
+                                <!-- Opções carregadas dinamicamente -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="clear-filters" class="btn btn-outline">Limpar Filtros</button>
+                <button id="apply-filters" class="btn btn-primary">Aplicar Filtros</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Detalhamento -->
+    <div class="table-section">
+        <div class="table-header">
+            <h2 class="table-title">Detalhamento dos Processos</h2>
+            <div class="table-controls">
+                <button id="export-data" class="btn btn-secondary">📊 Exportar</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="detalhamento-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data Abertura</th>
+                        <th>Número Pedido</th>
+                        <th>Cliente</th>
+                        <th>Material</th>
+                        <th>Data Embarque</th>
+                        <th>Data Chegada</th>
+                        <th>Status</th>
+                        <th>Canal</th>
+                        <th>Valor (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="{{ url_for('dashboard_materiais.static', filename='js/materiais.js') }}"></script>
+{% endblock %}

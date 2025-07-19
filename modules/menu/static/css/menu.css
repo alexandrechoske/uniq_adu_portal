@@ -1,0 +1,46 @@
+.menu-container {
+    max-width: 700px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    padding: 32px 24px;
+    text-align: center;
+}
+.menu-container h1 {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: #1F406F;
+}
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 24px;
+}
+.menu-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 32px 0;
+    font-size: 1.1rem;
+    color: #1F406F;
+    text-decoration: none;
+    font-weight: 500;
+    box-shadow: 0 1px 4px rgba(31,64,111,0.07);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.menu-card:hover {
+    background: #3498DB;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(52,152,219,0.13);
+}
+.menu-card.logout {
+    background: #ffeaea;
+    color: #c0392b;
+}
+.menu-card.logout:hover {
+    background: #c0392b;
+    color: #fff;
+}

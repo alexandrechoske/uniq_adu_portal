@@ -56,21 +56,77 @@ from routes import auth, dashboard, relatorios, usuarios, agente, api,conferenci
 from routes import conferencia_pdf, debug, paginas, config
 from routes import background_tasks, dashboard_v2, materiais_v2
 
+# Import modular dashboard blueprints
+from modules.dashboard_executivo import routes as dashboard_executivo
+from modules.dashboard_materiais import routes as dashboard_materiais
+
+# Import modular users blueprint
+from modules.usuarios import routes as usuarios_modular
+
+# Import modular agente blueprint
+from modules.agente import routes as agente_modular
+
+# Import modular auth blueprint
+from modules.auth.routes import bp as auth_bp
+
+# Import modular relatorios blueprint
+from modules.relatorios.routes import relatorios_bp
+
+# Import modular conferencia blueprint
+from modules.conferencia.routes import conferencia_bp as conferencia_modular_bp
+
+# Import modular config blueprint
+from modules.config.routes import config_bp
+
+# Import modular paginas blueprint
+from modules.paginas.routes import paginas_bp
+
+# Import modular menu blueprint
+from modules.menu.routes import bp as menu_bp
+
 # Register blueprints
-app.register_blueprint(auth.bp)
+# app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
-app.register_blueprint(relatorios.bp)
-app.register_blueprint(usuarios.bp)
-app.register_blueprint(agente.bp)
+# app.register_blueprint(relatorios.bp)  # Comentado - usando versão modular
+# app.register_blueprint(usuarios.bp)  # Comentado - usando versão modular
+# app.register_blueprint(agente.bp)  # Comentado - usando versão modular
 app.register_blueprint(api.bp, url_prefix='/api')  # Registrando o blueprint da API com prefixo
-app.register_blueprint(conferencia.bp)  # Registrando o blueprint de Conferência Documental IA
+# app.register_blueprint(conferencia.bp)  # Comentado - usando versão modular
 app.register_blueprint(conferencia_pdf.bp)  # Registrando o blueprint de PDF anotado para Conferência
 app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
-app.register_blueprint(paginas.bp)  # Registrando o blueprint de Páginas
-app.register_blueprint(config.bp)  # Registrando o blueprint de Configurações
+# app.register_blueprint(paginas.bp)  # Comentado - usando versão modular
+# app.register_blueprint(config.bp)  # Comentado - usando versão modular
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
 app.register_blueprint(dashboard_v2.bp)  # Registrando o blueprint de Dashboard V2
 app.register_blueprint(materiais_v2.bp)  # Registrando o blueprint de Materiais V2
+
+# Register modular dashboard blueprints
+app.register_blueprint(dashboard_executivo.bp)  # Dashboard Executivo modular
+app.register_blueprint(dashboard_materiais.bp)  # Dashboard Materiais modular
+
+# Register modular users blueprint
+app.register_blueprint(usuarios_modular.bp)  # Usuários modular
+
+# Register modular agente blueprint
+app.register_blueprint(agente_modular.bp)  # Agente modular
+
+# Register modular auth blueprint
+app.register_blueprint(auth_bp)  # Auth modular
+
+# Register modular relatorios blueprint
+app.register_blueprint(relatorios_bp)  # Relatórios modular
+
+# Register modular conferencia blueprint
+app.register_blueprint(conferencia_modular_bp)  # Conferência modular
+
+# Register modular config blueprint
+app.register_blueprint(config_bp)  # Config modular
+
+# Register modular paginas blueprint
+app.register_blueprint(paginas_bp)  # Páginas modular
+
+# Register modular menu blueprint
+app.register_blueprint(menu_bp)  # Menu modular
 
 # Debug das rotas registradas
 print("\n[DEBUG] ===== Rotas Registradas =====")
@@ -90,7 +146,7 @@ def not_found_error(error):
 @app.route('/')
 def index():
     if 'user' in session:
-        return redirect(url_for('dashboard_v2.index'))
+        return redirect(url_for('dashboard_executivo.index'))
     return redirect(url_for('auth.login'))
 
 if __name__ == '__main__':

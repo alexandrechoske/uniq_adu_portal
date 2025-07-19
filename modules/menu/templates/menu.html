@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Menu - Portal UniSystem{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
+{% endblock %}
+{% block content %}
+<div class="menu-container">
+    <h1>Bem-vindo ao Menu Principal</h1>
+    <div class="menu-grid">
+        <a href="/dashboard-v2/" class="menu-card">Dashboard</a>
+        <a href="/dashboard-v2/?tab=materiais" class="menu-card">Materiais</a>
+        <a href="/relatorios/" class="menu-card">Relatórios</a>
+        <a href="/usuarios/" class="menu-card">Usuários</a>
+        <a href="/config/" class="menu-card">Configurações</a>
+        <a href="/logout" class="menu-card logout">Sair</a>
+    </div>
+</div>
+<script src="{{ url_for('menu.static', filename='js/menu.js') }}"></script>
+{% endblock %}

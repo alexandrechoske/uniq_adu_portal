@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Agente Unique - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('agente.static', filename='css/agente.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="agent-container">
+    <!-- Header -->
+    <div class="agent-header">
+        <div class="header-content">
+            <div>
+                <h1 class="header-title">Agente Unique</h1>
+                <p class="header-subtitle">
+                    <i class="mdi mdi-robot"></i>
+                    Configure seu assistente inteligente no WhatsApp
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% if user_data and user_data.usuario_ativo %}
+            <!-- Agente Ativo -->
+            <div class="agent-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="mdi mdi-robot"></i>
+                    </div>
+                    <h2 class="card-title">Agente Configurado</h2>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Número do WhatsApp</div>
+                        <div class="info-value">{{ user_data.numero }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value">
+                            <span class="status-badge status-active">
+                                <span class="status-dot"></span>
+                                Ativo
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if user_data.empresa %}
+                    <div class="info-item">
+                        <div class="info-label">Empresas Associadas</div>
+                        <div class="info-value">{{ user_data.empresa | length }} empresa(s)</div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-md);">
+                    <form method="POST" action="{{ url_for('agente.cadastrar') }}" style="display: inline;">
+                        <input type="hidden" name="numero_whatsapp" value="{{ user_data.numero }}">
+                        <input type="hidden" name="aceite_terms" value="on">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="mdi mdi-refresh"></i>
+                            Atualizar Configuração
+                        </button>
+                    </form>
+                    
+                    <form method="POST" action="{{ url_for('agente.desativar') }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja desativar o agente?')">
+                            <i class="mdi mdi-stop"></i>
+                            Desativar Agente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <!-- Configurar Agente -->
+            <div class="agent-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="mdi mdi-robot-outline"></i>
+                    </div>
+                    <h2 class="card-title">Configurar Agente</h2>
+                </div>
+                
+                <form method="POST" action="{{ url_for('agente.cadastrar') }}">
+                    <div class="form-group">
+                        <label for="numero_whatsapp" class="form-label">
+                            <i class="mdi mdi-whatsapp"></i>
+                            Número do WhatsApp
+                        </label>
+                        <input type="text" 
+                               id="numero_whatsapp" 
+                               name="numero_whatsapp" 
+                               class="form-input" 
+                               placeholder="Ex: 5511999999999" 
+                               value="{{ user_data.numero if user_data else '' }}"
+                               required>
+                        <div class="form-help">
+                            Digite seu número completo com código do país (55) e DDD
+                        </div>
+                    </div>
+                    
+                    <div class="terms-section">
+                        <h3 class="terms-title">
+                            <i class="mdi mdi-file-document"></i>
+                            Termos de Uso
+                        </h3>
+                        <p class="terms-text">
+                            Ao ativar o Agente Unique, você concorda que poderemos enviar mensagens 
+                            automatizadas para o número informado com informações sobre seus processos 
+                            de importação. Você pode desativar o serviço a qualquer momento.
+                        </p>
+                        
+                        <div class="checkbox-group">
+                            <input type="checkbox" 
+                                   id="aceite_terms" 
+                                   name="aceite_terms" 
+                                   class="checkbox-input"
+                                   {% if user_data and user_data.aceite_termos %}checked{% endif %}
+                                   required>
+                            <label for="aceite_terms" class="checkbox-label">
+                                Eu aceito os termos de uso do Agente Unique
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="mdi mdi-check"></i>
+                        Ativar Agente
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+        
+        <!-- Informações sobre o Agente -->
+        <div class="agent-card">
+            <div class="card-header">
+                <div class="card-icon" style="background: var(--color-info-light); color: var(--color-info);">
+                    <i class="mdi mdi-information"></i>
+                </div>
+                <h2 class="card-title">Como Funciona</h2>
+            </div>
+            
+            <div style="display: grid; gap: var(--spacing-md);">
+                <div style="padding: var(--spacing-md); background: var(--color-background); border-radius: var(--radius-md); border-left: 3px solid var(--color-success);">
+                    <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-success);">
+                        <i class="mdi mdi-message-text"></i>
+                        Notificações Automáticas
+                    </h4>
+                    <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
+                        Receba alertas instantâneos sobre atualizações em seus processos de importação.
+                    </p>
+                </div>
+                
+                <div style="padding: var(--spacing-md); background: var(--color-background); border-radius: var(--radius-md); border-left: 3px solid var(--color-primary);">
+                    <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-primary);">
+                        <i class="mdi mdi-chat"></i>
+                        Consultas Inteligentes
+                    </h4>
+                    <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
+                        Faça perguntas sobre seus processos e receba respostas detalhadas na hora.
+                    </p>
+                </div>
+                
+                <div style="padding: var(--spacing-md); background: var(--color-background); border-radius: var(--radius-md); border-left: 3px solid var(--color-warning);">
+                    <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-warning);">
+                        <i class="mdi mdi-security"></i>
+                        Seguro e Privado
+                    </h4>
+                    <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
+                        Todas as informações são transmitidas de forma segura e você pode desativar a qualquer momento.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        {% if session.user.role == 'admin' %}
+        <!-- Link para área administrativa -->
+        <div class="agent-card">
+            <div class="card-header">
+                <div class="card-icon" style="background: var(--color-purple-light); color: var(--color-purple);">
+                    <i class="mdi mdi-shield-crown"></i>
+                </div>
+                <h2 class="card-title">Área Administrativa</h2>
+            </div>
+            
+            <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-lg);">
+                Como administrador, você pode visualizar e gerenciar todos os agentes cadastrados no sistema.
+            </p>
+            
+            <a href="{{ url_for('agente.admin') }}" class="btn btn-primary">
+                <i class="mdi mdi-cog"></i>
+                Gerenciar Agentes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

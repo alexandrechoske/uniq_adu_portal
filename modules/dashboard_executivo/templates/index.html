@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Executivo - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-left">
+            <h1 class="dashboard-title">Dashboard Executivo</h1>
+            <p class="dashboard-subtitle">Visão geral dos processos de importação</p>
+        </div>
+        <div class="header-right">
+            <button id="refresh-data" class="btn btn-primary">🔄 Atualizar Dados</button>
+            <span id="last-update" class="last-update">Carregando...</span>
+        </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-total-processos">-</div>
+            <div class="kpi-label">Total de Processos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-total-despesas">-</div>
+            <div class="kpi-label">Total de Despesas</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-ticket-medio">-</div>
+            <div class="kpi-label">Ticket Médio</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-em-transito">-</div>
+            <div class="kpi-label">Em Trânsito</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-total-agd-embarque">-</div>
+            <div class="kpi-label">Aguardando Embarque</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-total-ag-chegada">-</div>
+            <div class="kpi-label">Aguardando Chegada</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-chegando-mes">-</div>
+            <div class="kpi-label">Chegando Este Mês</div>
+            <div class="kpi-sub-value" id="kpi-chegando-mes-custo">-</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-chegando-semana">-</div>
+            <div class="kpi-label">Chegando Esta Semana</div>
+            <div class="kpi-sub-value" id="kpi-chegando-semana-custo">-</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-transit-time">-</div>
+            <div class="kpi-label">Transit Time Médio</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-proc-mes">-</div>
+            <div class="kpi-label">Processos/Mês</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value" id="kpi-proc-semana">-</div>
+            <div class="kpi-label">Processos/Semana</div>
+        </div>
+    </div>
+    
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <!-- Monthly Evolution Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Evolução Mensal</h2>
+                <div class="period-controls">
+                    <button class="period-btn active" data-period="mensal">Mensal</button>
+                    <button class="period-btn" data-period="semanal">Semanal</button>
+                    <button class="period-btn" data-period="diario">Diário</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="monthly-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Status Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Distribuição por Status</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="status-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Modal Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Processos e Custos por Modal</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="grouped-modal-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- URF Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Top 10 URFs</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="urf-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+        
+        <!-- Material Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Top 10 Materiais</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="material-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Operations Table -->
+    <div class="table-section">
+        <div class="table-header">
+            <h2 class="table-title">Operações Recentes</h2>
+            <div class="table-controls">
+                <button id="export-data" class="btn btn-secondary">📊 Exportar</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="recent-operations-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Ref. Unique</th>
+                        <th>Importador</th>
+                        <th>Data Abertura</th>
+                        <th>Exportador</th>
+                        <th>Modal</th>
+                        <th>Status</th>
+                        <th>Custo Total</th>
+                        <th>Data Chegada</th>
+                        <th>Material</th>
+                        <th>URF</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

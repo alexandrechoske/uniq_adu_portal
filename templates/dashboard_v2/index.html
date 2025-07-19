@@ -471,6 +471,14 @@ let monthlyChartPeriod = 'mensal';
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_V2] Inicializando...');
+    // Checar parâmetro de tab na URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'materiais') {
+        showTab('materiais');
+    } else {
+        showTab('dashboard');
+    }
     loadInitialData();
     setupDefaultDateFilters();
     setMonthlyChartPeriod('mensal');

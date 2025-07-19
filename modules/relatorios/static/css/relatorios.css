@@ -1,0 +1,248 @@
+/* Relatórios - CSS Modular */
+
+/* Container principal */
+.relatorios-container {
+    padding: 1rem;
+}
+
+/* Header da página */
+.page-header {
+    margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    color: #6c757d;
+    margin-bottom: 0;
+    font-size: 1rem;
+}
+
+/* Card de filtros */
+.filter-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.filter-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    border: none;
+}
+
+.filter-form .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.filter-form .form-control {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    transition: all 0.2s ease-in-out;
+}
+
+.filter-form .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Card de operações */
+.operations-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.operations-card .card-header {
+    background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    border: none;
+}
+
+.operations-count .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Tabela de operações */
+.operations-table {
+    margin-bottom: 0;
+}
+
+.operations-table th {
+    background: #495057 !important;
+    color: white;
+    font-weight: 600;
+    border: none;
+    vertical-align: middle;
+}
+
+.operations-table td {
+    vertical-align: middle;
+    border-color: #e9ecef;
+}
+
+.operations-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Dados da operação */
+.operation-date {
+    font-weight: 600;
+    color: #495057;
+}
+
+.operation-type-importacao {
+    background-color: #28a745;
+    color: white;
+}
+
+.operation-type-exportacao {
+    background-color: #007bff;
+    color: white;
+}
+
+.operation-type-transito {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.client-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.operation-details {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Botões de ação */
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.action-buttons .btn {
+    border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+}
+
+.action-buttons .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Estado vazio */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.empty-state h4 {
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .relatorios-container {
+        padding: 0.5rem;
+    }
+    
+    .filter-form .row {
+        gap: 1rem;
+    }
+    
+    .filter-form .col-md-4 {
+        margin-bottom: 1rem;
+    }
+    
+    .operations-table {
+        font-size: 0.875rem;
+    }
+    
+    .operations-table .operation-details {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+    
+    .action-buttons .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Animações */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.operations-card {
+    animation: slideIn 0.3s ease-out;
+}
+
+.filter-card {
+    animation: slideIn 0.2s ease-out;
+}
+
+/* Loading state */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

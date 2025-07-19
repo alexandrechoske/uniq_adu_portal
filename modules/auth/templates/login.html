@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('auth.static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block auth_content %}
+<div class="login-container relative bg-white">
+    {# Background Shapes #}
+    <div class="background-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+    </div>
+    <div class="login-card">
+        <div class="login-content">
+            {# Seção do Logo #}
+            <div class="logo-section">
+                <img class="h-24 w-auto mb-4" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900">
+                    Portal UniSystem
+                </h2>
+                <p class="mt-2 text-sm text-gray-600 hidden md:block">
+                    Acesse sua conta para gerenciar suas operações
+                </p>
+            </div>
+
+            {# Seção do Formulário #}
+            <div class="form-section">
+                {# Status da Conexão #}
+                <div id="connection-status" class="connection-status-box alert-info mb-4">
+                    <div class="flex items-center">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                        <span class="text-blue-700">Verificando conexão com o Banco de dados...</span>
+                    </div>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="rounded-md p-4 mb-4 {% if category == 'error' %}alert-danger{% else %}alert-success{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form id="login-form" class="space-y-4" method="POST" action="{{ url_for('auth.login') }}">
+                    <div class="space-y-3">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input id="email" name="email" type="email" required 
+                                   class="block w-full input-field"
+                                   placeholder="seu@email.com">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                            <input id="password" name="password" type="password" required 
+                                   class="block w-full input-field"
+                                   placeholder="Digite sua senha">
+                        </div>
+                    </div>
+
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-unique-blue hover:text-unique-dark-blue">
+                            Esqueceu sua senha?
+                        </a>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="login-button"
+                                class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white submit-button">
+                            <span id="login-text">Entrar</span>
+                            <span id="login-spinner" class="hidden">
+                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                            <span id="login-success" class="hidden">
+                                <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="{{ url_for('auth.static', filename='js/auth.js') }}"></script>
+
+{% endblock %}
