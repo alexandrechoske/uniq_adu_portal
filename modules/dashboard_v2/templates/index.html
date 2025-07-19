@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Unificado - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_v2.static', filename='css/dashboard.css') }}">
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tab-bar {
+    display: flex;
+    margin-bottom: 30px;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #007bff;
+    background: #f8f9fa;
+    border: 1px solid #007bff;
+    border-radius: 5px 5px 0 0;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.tab-button.active {
+    background: #007bff;
+    color: white;
+}
+
+.tab-button:hover {
+    background: #0056b3;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    border: 1px solid #007bff;
+    border-radius: 0 0 5px 5px;
+    background: white;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content.active {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Dashboard Unificado</h1>
+    <div class="tab-bar">
+        <button id="tab-executivo" class="tab-button active" onclick="showTab('executivo')">Executivo</button>
+        <button id="tab-materiais" class="tab-button" onclick="showTab('materiais')">Materiais</button>
+    </div>
+    <div id="executivo-content" class="tab-content active">
+        <!-- Conteúdo será carregado via AJAX das APIs do dashboard_executivo -->
+        <div id="executivo-dashboard"></div>
+    </div>
+    <div id="materiais-content" class="tab-content">
+        <!-- Conteúdo será carregado via AJAX das APIs do dashboard_materiais -->
+        <div id="materiais-dashboard"></div>
+    </div>
+</div>
+<script src="{{ url_for('dashboard_v2.static', filename='js/dashboard-v2.js') }}"></script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(tab) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show the selected tab content
+    document.getElementById(tab + '-content').classList.add('active');
+    
+    // Add active class to the clicked tab button
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// Load executive dashboard data
+function loadExecutiveDashboard() {
+    fetch('{{ url_for("dashboard_executivo.api_data") }}')
+        .then(response => response.json())
+        .then(data => {
+            // Render executive dashboard data
+            document.getElementById('executivo-dashboard').innerHTML = JSON.stringify(data);
+        })
+        .catch(error => console.error('Error loading executive dashboard data:', error));
+}
+
+// Load materials dashboard data
+function loadMaterialsDashboard() {
+    fetch('{{ url_for("dashboard_materiais.api_data") }}')
+        .then(response => response.json())
+        .then(data => {
+            // Render materials dashboard data
+            document.getElementById('materiais-dashboard').innerHTML = JSON.stringify(data);
+        })
+        .catch(error => console.error('Error loading materials dashboard data:', error));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[DASHBOARD_UNIFICADO] Portal carregado');
+    
+    // Load data for active tab on initial load
+    if (document.getElementById('executivo-content').classList.contains('active')) {
+        loadExecutiveDashboard();
+    } else {
+        loadMaterialsDashboard();
+    }
+});
+</script>
+{% endblock %}

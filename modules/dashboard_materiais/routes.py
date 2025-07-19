@@ -128,7 +128,7 @@ def apply_filters(data):
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def index():
     """Página principal do Dashboard de Materiais"""
-    return render_template('index.html')
+    return render_template('dashboard_materiais.html')
 
 @bp.route('/api/kpis')
 @login_required

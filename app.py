@@ -54,7 +54,7 @@ from session_handler import init_session_handler
 # Import routes after app initialization to avoid circular imports
 from routes import auth, dashboard, relatorios, usuarios, agente, api,conferencia
 from routes import conferencia_pdf, debug, paginas, config
-from routes import background_tasks, dashboard_v2, materiais_v2
+from routes import background_tasks, materiais_v2
 
 # Import modular dashboard blueprints
 from modules.dashboard_executivo import routes as dashboard_executivo
@@ -97,7 +97,8 @@ app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
 # app.register_blueprint(paginas.bp)  # Comentado - usando versão modular
 # app.register_blueprint(config.bp)  # Comentado - usando versão modular
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
-app.register_blueprint(dashboard_v2.bp)  # Registrando o blueprint de Dashboard V2
+from modules.dashboard_v2.routes import bp as dashboard_v2_bp
+app.register_blueprint(dashboard_v2_bp)  # Registrando o blueprint modularizado de Dashboard V2
 app.register_blueprint(materiais_v2.bp)  # Registrando o blueprint de Materiais V2
 
 # Register modular dashboard blueprints

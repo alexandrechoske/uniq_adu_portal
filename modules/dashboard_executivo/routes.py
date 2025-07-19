@@ -38,7 +38,7 @@ def clean_data_for_json(data):
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def index():
     """Página principal do Dashboard Executivo"""
-    return render_template('index.html')
+    return render_template('dashboard_executivo.html')
 
 @bp.route('/api/load-data')
 @login_required
