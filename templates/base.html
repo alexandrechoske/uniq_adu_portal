@@ -493,6 +493,13 @@
         <aside id="sidebar" class="sidebar hidden lg:block">
             <!-- Navigation menu -->
             <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
+            <!-- Home/Menu -->
+            <a href="{{ url_for('menu.menu_home') }}" 
+               class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}">
+                <i class="mdi mdi-home text-xl"></i>
+                <span class="sidebar-text">Menu Principal</span>
+            </a>
+            
             <!-- Dashboard -->
             <a href="{{ url_for('dashboard_executivo.index') }}" 
                class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">

@@ -92,7 +92,7 @@ def index():
         empresas_response = supabase.table('vw_aux_cnpj_importador').select('cnpj, razao_social').execute()
         empresas_disponiveis = empresas_response.data if empresas_response.data else []
     
-    return render_template('index.html', 
+    return render_template('agente.html', 
                          user_data=user_data, 
                          empresas_disponiveis=empresas_disponiveis)
 

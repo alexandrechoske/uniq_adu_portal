@@ -105,10 +105,10 @@ def carregar_usuarios():
 def index():
     try:
         users = carregar_usuarios()
-        return render_template('index.html', users=users)
+        return render_template('usuarios.html', users=users)
     except Exception as e:
         flash(f'Erro ao carregar usuários: {str(e)}', 'error')
-        return render_template('index.html', users=[])
+        return render_template('usuarios.html', users=[])
 
 @bp.route('/refresh')
 @login_required

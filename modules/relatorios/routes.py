@@ -43,7 +43,7 @@ def index():
                              end_date=end_date,
                              generated_at=datetime.now().strftime('%d/%m/%Y %H:%M'))
           
-    return render_template('index.html',
+    return render_template('relatorios.html',
                          operacoes=operacoes.data if operacoes.data else [],
                          start_date=start_date,
                          end_date=end_date)
