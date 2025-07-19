@@ -1,3 +1,44 @@
+@bp.route('/api/monthly-chart')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def monthly_chart():
+    """Retorna dados do gráfico de evolução por granularidade (mensal, semanal, diário)"""
+    try:
+        granularidade = request.args.get('granularidade', 'mensal')
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
+        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
+        if not data:
+            return jsonify({'success': False, 'error': 'Dados não encontrados.', 'data': {}})
+        df = pd.DataFrame(data)
+        # Garantir colunas necessárias
+        if 'data_abertura' not in df.columns or 'custo_total' not in df.columns:
+            return jsonify({'success': False, 'error': 'Colunas necessárias não encontradas.', 'data': {}})
+        # Converter datas
+        df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+        df = df.dropna(subset=['data_abertura_dt'])
+        if granularidade == 'mensal':
+            df['periodo'] = df['data_abertura_dt'].dt.strftime('%m/%Y')
+        elif granularidade == 'semanal':
+            # Agrupar por ano-semana
+            df['periodo'] = df['data_abertura_dt'].dt.strftime('%Y-%U')
+        elif granularidade == 'diario':
+            df['periodo'] = df['data_abertura_dt'].dt.strftime('%d/%m/%Y')
+        else:
+            df['periodo'] = df['data_abertura_dt'].dt.strftime('%m/%Y')
+        grouped = df.groupby('periodo').agg({
+            'ref_unique': 'count',
+            'custo_total': 'sum'
+        }).reset_index().sort_values('periodo')
+        chart_data = {
+            'periods': grouped['periodo'].tolist(),
+            'processes': grouped['ref_unique'].tolist(),
+            'values': grouped['custo_total'].tolist()
+        }
+        return jsonify({'success': True, 'data': clean_data_for_json(chart_data)})
+    except Exception as e:
+        print(f"[DASHBOARD_V2] Erro ao gerar monthly_chart: {str(e)}")
+        return jsonify({'success': False, 'error': str(e), 'data': {}}), 500
 from flask import Blueprint, render_template, session, jsonify, request
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
