@@ -425,7 +425,7 @@ function createTopMateriaisChart(data) {
     }
     
     materiaisCharts.topMateriais = new Chart(ctx, {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
             labels: data.labels || [],
             datasets: [{
@@ -435,6 +435,7 @@ function createTopMateriaisChart(data) {
             }]
         },
         options: {
+            indexAxis: 'y', // Faz o gráfico ser horizontal
             responsive: true,
             maintainAspectRatio: false,
             scales: {
