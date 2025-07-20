@@ -23,7 +23,7 @@
 
     <div class="main-content">
         {% if user_data and user_data.usuario_ativo %}
-            <!-- Agente Ativo -->
+            <!-- Agente Ativo CRUD AJAX -->
             <div class="agent-card">
                 <div class="card-header">
                     <div class="card-icon">
@@ -31,13 +31,28 @@
                     </div>
                     <h2 class="card-title">Agente Configurado</h2>
                 </div>
-                
                 <div class="info-grid">
                     <div class="info-item">
-                        <div class="info-label">Número do WhatsApp</div>
-                        <div class="info-value">{{ user_data.numero }}</div>
+                        <div class="info-label">Números do WhatsApp</div>
+                        <div class="info-value">
+                            <ul id="numeros-list" style="list-style:none; padding:0; margin:0;">
+                                {% for numero in user_data.numero %}
+                                <li style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                    <span>{{ numero }}</span>
+                                    <button class="btn btn-danger btn-sm btn-remove-numero" data-numero="{{ numero }}" title="Remover número">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <input type="text" id="novo-numero" class="form-input" placeholder="Ex: 5511999999999">
+                                <button class="btn btn-success" id="btn-add-numero">
+                                    <i class="mdi mdi-plus"></i> Adicionar
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    
                     <div class="info-item">
                         <div class="info-label">Status</div>
                         <div class="info-value">
@@ -47,7 +62,6 @@
                             </span>
                         </div>
                     </div>
-                    
                     {% if user_data.empresa %}
                     <div class="info-item">
                         <div class="info-label">Empresas Associadas</div>
@@ -55,25 +69,68 @@
                     </div>
                     {% endif %}
                 </div>
-                
                 <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-md);">
-                    <form method="POST" action="{{ url_for('agente.cadastrar') }}" style="display: inline;">
-                        <input type="hidden" name="numero_whatsapp" value="{{ user_data.numero }}">
-                        <input type="hidden" name="aceite_terms" value="on">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="mdi mdi-refresh"></i>
-                            Atualizar Configuração
-                        </button>
-                    </form>
-                    
-                    <form method="POST" action="{{ url_for('agente.desativar') }}" style="display: inline;">
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja desativar o agente?')">
-                            <i class="mdi mdi-stop"></i>
-                            Desativar Agente
-                        </button>
-                    </form>
+                    <button class="btn btn-danger" id="btn-cancelar-adesao">
+                        <i class="mdi mdi-stop"></i> Cancelar Adesão
+                    </button>
                 </div>
             </div>
+{% block extra_js %}
+<script>
+// Adicionar número via AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('btn-add-numero');
+    const input = document.getElementById('novo-numero');
+    if (addBtn && input) {
+        addBtn.onclick = function(e) {
+            e.preventDefault();
+            const numero = input.value.trim();
+            if (!numero) return;
+            fetch('{{ url_for('agente.ajax_add_numero') }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({numero})
+            })
+            .then(r => r.json())
+            .then(data => { window.location.reload(); })
+            .catch(() => alert('Erro ao adicionar número.'));
+        };
+    }
+    // Remover número via AJAX
+    document.querySelectorAll('.btn-remove-numero').forEach(btn => {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            const numero = this.dataset.numero;
+            if (!numero) return;
+            if (!confirm('Remover este número?')) return;
+            fetch('{{ url_for('agente.ajax_remove_numero') }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({numero})
+            })
+            .then(r => r.json())
+            .then(data => { window.location.reload(); })
+            .catch(() => alert('Erro ao remover número.'));
+        };
+    });
+    // Cancelar adesão via AJAX
+    const cancelarBtn = document.getElementById('btn-cancelar-adesao');
+    if (cancelarBtn) {
+        cancelarBtn.onclick = function(e) {
+            e.preventDefault();
+            if (!confirm('Tem certeza que deseja cancelar a adesão?')) return;
+            fetch('{{ url_for('agente.ajax_cancelar_adesao') }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+            })
+            .then(r => r.json())
+            .then(data => { window.location.reload(); })
+            .catch(() => alert('Erro ao cancelar adesão.'));
+        };
+    }
+});
+</script>
+{% endblock %}
         {% else %}
             <!-- Configurar Agente -->
             <div class="agent-card">

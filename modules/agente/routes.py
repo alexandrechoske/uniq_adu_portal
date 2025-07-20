@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+# --- IMPORTS E BLUEPRINT NO TOPO ---
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from extensions import supabase
 from routes.auth import login_required, role_required
 import requests
@@ -10,6 +11,79 @@ bp = Blueprint('agente', __name__,
                template_folder='templates',
                static_folder='static',
                static_url_path='/agente/static')
+
+# --- AJAX: Adicionar número ---
+@bp.route('/ajax_add_numero', methods=['POST'])
+@login_required
+@role_required(['cliente_unique', 'admin'])
+def ajax_add_numero():
+    user_id = session['user']['id']
+    data = request.get_json()
+    numero = data.get('numero')
+    if not numero:
+        return jsonify({'success': False, 'error': 'Número não informado.'}), 400
+    try:
+        # Buscar registro do usuário
+        user_record = supabase.table('clientes_agentes').select('numero').eq('user_id', user_id).eq('usuario_ativo', True).execute()
+        if user_record.data:
+            numeros = user_record.data[0].get('numero') or []
+            if numero in numeros:
+                return jsonify({'success': False, 'error': 'Número já cadastrado.'}), 400
+            numeros.append(numero)
+            supabase.table('clientes_agentes').update({'numero': numeros}).eq('user_id', user_id).execute()
+        else:
+            # Novo registro
+            supabase.table('clientes_agentes').insert({
+                'user_id': user_id,
+                'numero': [numero],
+                'usuario_ativo': True,
+                'aceite_termos': True
+            }).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"[ERROR] AJAX add numero: {str(e)}")
+        return jsonify({'success': False, 'error': 'Erro interno.'}), 500
+
+# --- AJAX: Remover número ---
+@bp.route('/ajax_remove_numero', methods=['POST'])
+@login_required
+@role_required(['cliente_unique', 'admin'])
+def ajax_remove_numero():
+    user_id = session['user']['id']
+    data = request.get_json()
+    numero = data.get('numero')
+    if not numero:
+        return jsonify({'success': False, 'error': 'Número não informado.'}), 400
+    try:
+        user_record = supabase.table('clientes_agentes').select('numero').eq('user_id', user_id).eq('usuario_ativo', True).execute()
+        if not user_record.data:
+            return jsonify({'success': False, 'error': 'Registro não encontrado.'}), 404
+        numeros = user_record.data[0].get('numero') or []
+        if numero not in numeros:
+            return jsonify({'success': False, 'error': 'Número não encontrado.'}), 404
+        numeros = [n for n in numeros if n != numero]
+        supabase.table('clientes_agentes').update({'numero': numeros}).eq('user_id', user_id).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"[ERROR] AJAX remove numero: {str(e)}")
+        return jsonify({'success': False, 'error': 'Erro interno.'}), 500
+
+# --- AJAX: Cancelar adesão ---
+@bp.route('/ajax_cancelar_adesao', methods=['POST'])
+@login_required
+@role_required(['cliente_unique', 'admin'])
+def ajax_cancelar_adesao():
+    user_id = session['user']['id']
+    try:
+        supabase.table('clientes_agentes').update({
+            'usuario_ativo': False,
+            'numero': [],
+            'aceite_termos': False
+        }).eq('user_id', user_id).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"[ERROR] AJAX cancelar adesao: {str(e)}")
+        return jsonify({'success': False, 'error': 'Erro interno.'}), 500
 
 def notificar_cadastro_n8n(numero_zap):
     """Envia notificação para o webhook do N8N para acionar o fluxo de mensagem no WhatsApp"""
