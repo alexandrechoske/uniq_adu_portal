@@ -146,22 +146,32 @@
                                         <i class="mdi mdi-domain"></i>
                                         Empresas Associadas
                                     </h3>
-                                    <button type="button" id="load-empresas-btn" class="btn btn-outline">
-                                        <i class="mdi mdi-refresh"></i>
-                                        Carregar Empresas
+                                    <button type="button" id="open-empresas-modal" class="btn btn-outline">
+                                        <i class="mdi mdi-pencil"></i>
+                                        Editar Empresas
                                     </button>
                                 </div>
-                                
-                                <div class="form-help" style="margin-bottom: var(--spacing-md);">
-                                    Selecione as empresas que este usuário cliente pode visualizar dados.
-                                    O usuário só terá acesso aos dados das empresas selecionadas.
+                                <div id="empresas-list-crud" class="empresas-list-crud" style="margin-bottom:12px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Modal de CRUD de Empresas -->
+                        <div id="empresas-modal" class="modal" style="display:none;">
+                            <div class="modal-content" style="max-width:400px;">
+                                <div class="modal-header">
+                                    <h3 class="modal-title"><i class="mdi mdi-domain"></i> Editar Empresas Associadas</h3>
+                                    <button type="button" id="close-empresas-modal" class="btn btn-outline" style="float:right;">
+                                        <i class="mdi mdi-close"></i>
+                                    </button>
                                 </div>
-                                
-                                <div id="empresas-grid" class="empresas-grid">
-                                    <div class="empresas-loading">
-                                        <i class="mdi mdi-information-outline" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
-                                        <div>Clique em "Carregar Empresas" para ver as opções disponíveis</div>
+                                <div class="modal-body">
+                                    <div style="display:flex; gap:8px; margin-bottom:12px;">
+                                        <input type="text" id="novo-cnpj" class="form-input" placeholder="Adicionar CNPJ manualmente">
+                                        <button type="button" class="btn btn-success" id="btn-add-empresa">
+                                            <i class="mdi mdi-plus"></i> Adicionar
+                                        </button>
                                     </div>
+                                    <div id="empresas-list-modal" class="empresas-list-crud" style="margin-bottom:12px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -233,4 +243,84 @@
 
 {% block extra_js %}
 <script src="{{ url_for('usuarios.static', filename='js/form.js') }}"></script>
+<script>
+// CRUD AJAX de empresas associadas em modal
+document.addEventListener('DOMContentLoaded', function() {
+    const userId = document.getElementById('userForm')?.dataset?.userId;
+    const empresasListCrud = document.getElementById('empresas-list-crud');
+    const openEmpresasModalBtn = document.getElementById('open-empresas-modal');
+    const empresasModal = document.getElementById('empresas-modal');
+    const closeEmpresasModalBtn = document.getElementById('close-empresas-modal');
+    const empresasListModal = document.getElementById('empresas-list-modal');
+    const addEmpresaBtn = document.getElementById('btn-add-empresa');
+    const novoCnpjInput = document.getElementById('novo-cnpj');
+
+    function renderEmpresasCrud(target) {
+        fetch(`/usuarios/${userId}/empresas-detalhadas`)
+            .then(r => r.json())
+            .then(data => {
+                const html = (data.empresas && data.empresas.length > 0)
+                    ? data.empresas.map(emp => `
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span style="font-weight:600;">${emp.cnpj}</span>
+                            <button class="btn btn-danger btn-sm btn-remove-empresa" data-cnpj="${emp.cnpj}" title="Remover empresa"><i class="mdi mdi-delete"></i></button>
+                        </div>
+                    `).join('')
+                    : '<span style="color:var(--color-text-muted); font-style:italic;">Nenhuma empresa associada</span>';
+                if (target) target.innerHTML = html;
+            });
+    }
+    if (userId && empresasListCrud) {
+        renderEmpresasCrud(empresasListCrud);
+    }
+    if (openEmpresasModalBtn && empresasModal && empresasListModal) {
+        openEmpresasModalBtn.onclick = function() {
+            empresasModal.style.display = 'flex';
+            renderEmpresasCrud(empresasListModal);
+        };
+        closeEmpresasModalBtn.onclick = function() {
+            empresasModal.style.display = 'none';
+        };
+        empresasModal.onclick = function(e) {
+            if (e.target === empresasModal) empresasModal.style.display = 'none';
+        };
+    }
+    if (addEmpresaBtn && novoCnpjInput && empresasListModal) {
+        addEmpresaBtn.onclick = function() {
+            const cnpj = novoCnpjInput.value.trim();
+            if (!cnpj) return;
+            fetch(`/usuarios/${userId}/empresas`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({cnpj})
+            })
+            .then(r => r.json())
+            .then(data => {
+                novoCnpjInput.value = '';
+                renderEmpresasCrud(empresasListModal);
+                renderEmpresasCrud(empresasListCrud);
+            });
+        };
+    }
+    if (empresasListModal) {
+        empresasListModal.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-remove-empresa')) {
+                const cnpj = e.target.dataset.cnpj;
+                if (!cnpj) return;
+                if (!confirm('Remover esta empresa?')) return;
+                fetch(`/usuarios/${userId}/empresas/remover`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({cnpj})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    renderEmpresasCrud(empresasListModal);
+                    renderEmpresasCrud(empresasListCrud);
+                });
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

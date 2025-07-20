@@ -166,9 +166,9 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                            <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="mdi mdi-pencil"></i> Editar
-                                            </a>
+                                            </button>
                                             <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="mdi mdi-delete"></i> Excluir
                                             </button>
@@ -239,9 +239,9 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                            <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="mdi mdi-pencil"></i> Editar
-                                            </a>
+                                            </button>
                                             <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="mdi mdi-delete"></i> Excluir
                                             </button>
@@ -321,9 +321,9 @@
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="{{ url_for('usuarios.editar', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                            <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="mdi mdi-pencil"></i> Editar
-                                            </a>
+                                            </button>
                                             <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                                                 <i class="mdi mdi-delete"></i> Excluir
                                             </button>
@@ -340,6 +340,90 @@
 </div>
 
 <!-- Modal de Confirmação de Exclusão -->
+<!-- Modal de Edição -->
+<div id="editModal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="mdi mdi-pencil"></i>
+                Editar Usuário
+            </h3>
+            <button type="button" onclick="closeEditModal()" class="modal-close">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <form id="editUserForm" method="POST">
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="edit-name">Nome *</label>
+                        <input type="text" id="edit-name" name="name" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="edit-email">Email *</label>
+                        <input type="email" id="edit-email" name="email" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="edit-role">Role *</label>
+                        <select id="edit-role" name="role" class="form-input" required>
+                            <option value="">Selecione uma role</option>
+                            <option value="admin">Administrador</option>
+                            <option value="interno_unique">Equipe Interna</option>
+                            <option value="cliente_unique">Cliente</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="edit-is_active">Status</label>
+                        <select id="edit-is_active" name="is_active" class="form-input">
+                            <option value="true">Ativo</option>
+                            <option value="false">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Seção de empresas para clientes -->
+                <div id="edit-empresas-section" class="empresas-section" style="display: none;">
+                    <div class="section-header" style="margin-bottom: 1rem;">
+                        <h4 style="margin: 0; color: var(--color-text-primary);">
+                            <i class="mdi mdi-domain"></i>
+                            Empresas Associadas
+                        </h4>
+                    </div>
+                    
+                    <div class="empresas-controls" style="margin-bottom: 1rem;">
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <input type="text" id="edit-cnpj-search" class="form-input" placeholder="Digite o CNPJ para buscar...">
+                        </div>
+                        <button type="button" id="edit-btn-buscar-empresa" class="btn btn-outline">
+                            <i class="mdi mdi-magnify"></i>
+                            Buscar Empresa
+                        </button>
+                    </div>
+                    
+                    <div id="edit-empresas-list" class="empresas-list">
+                        <!-- Lista de empresas será carregada aqui -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" onclick="closeEditModal()" class="btn btn-outline">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="mdi mdi-check"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">

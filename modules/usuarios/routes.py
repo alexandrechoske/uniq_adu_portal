@@ -137,6 +137,26 @@ def editar(user_id):
         user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
         if user_response.data:
             user = user_response.data[0]
+            # Buscar empresas associadas se for cliente_unique
+            if user.get('role') == 'cliente_unique':
+                agent_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
+                user['agent_info'] = {'empresas': []}
+                if agent_response.data and len(agent_response.data) > 0 and agent_response.data[0].get('empresa'):
+                    empresas = agent_response.data[0].get('empresa', [])
+                    if isinstance(empresas, str):
+                        try:
+                            empresas = json.loads(empresas)
+                        except json.JSONDecodeError:
+                            empresas = [empresas] if empresas else []
+                    elif not isinstance(empresas, list):
+                        empresas = []
+                    empresas_detalhadas = []
+                    for cnpj in empresas:
+                        if isinstance(cnpj, str):
+                            empresas_detalhadas.append({'cnpj': cnpj})
+                    user['agent_info']['empresas'] = empresas_detalhadas
+            else:
+                user['agent_info'] = {'empresas': []}
             return render_template('form.html', user=user)
         else:
             flash('Usuário não encontrado', 'error')
@@ -369,4 +389,191 @@ def obter_empresas_usuario(user_id):
             
     except Exception as e:
         print(f"[DEBUG] Erro ao obter empresas do usuário: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/api/empresas/buscar', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def buscar_empresa():
+    """Buscar empresa por CNPJ"""
+    try:
+        data = request.get_json()
+        cnpj = data.get('cnpj', '').strip()
+        
+        if not cnpj:
+            return jsonify({'success': False, 'error': 'CNPJ não informado'})
+        
+        print(f"[DEBUG] Buscando empresa com CNPJ: {cnpj}")
+        
+        # Buscar empresa na view
+        empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+        
+        if empresa_response.data and len(empresa_response.data) > 0:
+            empresa = empresa_response.data[0]
+            return jsonify({
+                'success': True,
+                'empresa': {
+                    'cnpj': empresa['cnpj'],
+                    'razao_social': empresa['razao_social']
+                }
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Empresa não encontrada'})
+            
+    except Exception as e:
+        print(f"[DEBUG] Erro ao buscar empresa: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<user_id>/empresas/adicionar', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def adicionar_empresa_usuario(user_id):
+    """Adicionar empresa a um usuário"""
+    try:
+        data = request.get_json()
+        cnpj = data.get('cnpj', '').strip()
+        
+        if not cnpj:
+            return jsonify({'success': False, 'error': 'CNPJ não informado'})
+        
+        print(f"[DEBUG] Adicionando empresa {cnpj} ao usuário {user_id}")
+        
+        # Verificar se o usuário é cliente_unique
+        user_response = supabase_admin.table('users').select('role').eq('id', user_id).execute()
+        if not user_response.data or user_response.data[0]['role'] != 'cliente_unique':
+            return jsonify({'success': False, 'error': 'Usuário deve ser do tipo cliente_unique'})
+        
+        # Buscar empresas atuais
+        empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        empresas = []
+        if empresas_response.data and empresas_response.data[0].get('empresa'):
+            empresas = empresas_response.data[0]['empresa']
+            if isinstance(empresas, str):
+                try:
+                    empresas = json.loads(empresas)
+                except json.JSONDecodeError:
+                    empresas = [empresas] if empresas else []
+            elif not isinstance(empresas, list):
+                empresas = []
+        
+        # Verificar se empresa já está associada
+        if cnpj in empresas:
+            return jsonify({'success': False, 'error': 'Empresa já está associada ao usuário'})
+        
+        # Adicionar nova empresa
+        empresas.append(cnpj)
+        
+        # Atualizar no banco
+        if empresas_response.data:
+            # Atualizar registro existente
+            supabase_admin.table('clientes_agentes').update({
+                'empresa': empresas,
+                'updated_at': datetime.datetime.now().isoformat()
+            }).eq('user_id', user_id).execute()
+        else:
+            # Criar novo registro
+            supabase_admin.table('clientes_agentes').insert({
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'empresa': empresas,
+                'created_at': datetime.datetime.now().isoformat(),
+                'updated_at': datetime.datetime.now().isoformat()
+            }).execute()
+        
+        return jsonify({'success': True, 'message': 'Empresa adicionada com sucesso'})
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao adicionar empresa: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<user_id>/empresas/remover', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def remover_empresa_usuario(user_id):
+    """Remover empresa de um usuário"""
+    try:
+        data = request.get_json()
+        cnpj = data.get('cnpj', '').strip()
+        
+        if not cnpj:
+            return jsonify({'success': False, 'error': 'CNPJ não informado'})
+        
+        print(f"[DEBUG] Removendo empresa {cnpj} do usuário {user_id}")
+        
+        # Buscar empresas atuais
+        empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        if not empresas_response.data:
+            return jsonify({'success': False, 'error': 'Usuário não possui empresas associadas'})
+        
+        empresas = empresas_response.data[0].get('empresa', [])
+        if isinstance(empresas, str):
+            try:
+                empresas = json.loads(empresas)
+            except json.JSONDecodeError:
+                empresas = [empresas] if empresas else []
+        elif not isinstance(empresas, list):
+            empresas = []
+        
+        # Verificar se empresa está na lista
+        if cnpj not in empresas:
+            return jsonify({'success': False, 'error': 'Empresa não está associada ao usuário'})
+        
+        # Remover empresa
+        empresas.remove(cnpj)
+        
+        # Atualizar no banco
+        supabase_admin.table('clientes_agentes').update({
+            'empresa': empresas,
+            'updated_at': datetime.datetime.now().isoformat()
+        }).eq('user_id', user_id).execute()
+        
+        return jsonify({'success': True, 'message': 'Empresa removida com sucesso'})
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao remover empresa: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<user_id>/dados', methods=['GET'])
+@login_required
+@role_required(['admin'])
+def obter_dados_usuario(user_id):
+    """Obter dados completos de um usuário para edição"""
+    try:
+        print(f"[DEBUG] Buscando dados do usuário: {user_id}")
+        
+        # Buscar dados básicos do usuário
+        user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+        
+        if not user_response.data:
+            print(f"[DEBUG] Usuário {user_id} não encontrado")
+            return jsonify({'success': False, 'error': 'Usuário não encontrado'})
+        
+        user = user_response.data[0]
+        print(f"[DEBUG] Dados do usuário encontrados: {user}")
+        
+        # Se for cliente_unique, buscar empresas associadas
+        if user.get('role') == 'cliente_unique':
+            empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+            
+            empresas = []
+            if empresas_response.data and empresas_response.data[0].get('empresa'):
+                empresas = empresas_response.data[0]['empresa']
+                if isinstance(empresas, str):
+                    try:
+                        empresas = json.loads(empresas)
+                    except json.JSONDecodeError:
+                        empresas = [empresas] if empresas else []
+                elif not isinstance(empresas, list):
+                    empresas = []
+            
+            user['empresas'] = empresas
+        else:
+            user['empresas'] = []
+        
+        return jsonify({'success': True, 'user': user})
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao obter dados do usuário: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})

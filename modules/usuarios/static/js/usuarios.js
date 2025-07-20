@@ -15,6 +15,261 @@ document.addEventListener('DOMContentLoaded', function() {
         clearButton
     });
 
+    // === MODAL DE EDIÇÃO ===
+    let currentEditUserId = null;
+    let currentEditUserData = null;
+
+    window.openEditModal = function(userId) {
+        console.log('[DEBUG] Abrindo modal de edição para usuário:', userId);
+        
+        currentEditUserId = userId;
+        
+        // Buscar dados do usuário via AJAX
+        fetch(`/usuarios/${userId}/dados`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentEditUserData = data.user;
+                    populateEditForm(data.user);
+                    
+                    // Mostrar modal
+                    const modal = document.getElementById('editModal');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                    }
+                } else {
+                    console.error('[DEBUG] Erro ao buscar dados do usuário:', data.error);
+                    alert('Erro ao carregar dados do usuário: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('[DEBUG] Erro na requisição:', error);
+                alert('Erro ao carregar dados do usuário');
+            });
+    };
+
+    window.closeEditModal = function() {
+        console.log('[DEBUG] Fechando modal de edição');
+        
+        const modal = document.getElementById('editModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        
+        // Limpar dados
+        currentEditUserId = null;
+        currentEditUserData = null;
+        
+        // Limpar formulário
+        document.getElementById('editUserForm').reset();
+        
+        // Esconder seção de empresas
+        const empresasSection = document.getElementById('edit-empresas-section');
+        if (empresasSection) {
+            empresasSection.style.display = 'none';
+        }
+    };
+
+    function populateEditForm(user) {
+        console.log('[DEBUG] Preenchendo formulário com dados:', user);
+        
+        // Preencher campos básicos
+        document.getElementById('edit-name').value = user.name || '';
+        document.getElementById('edit-email').value = user.email || '';
+        document.getElementById('edit-role').value = user.role || '';
+        document.getElementById('edit-is_active').value = user.is_active ? 'true' : 'false';
+        
+        // Configurar action do formulário
+        const form = document.getElementById('editUserForm');
+        form.action = `/usuarios/${user.id}/editar`;
+        
+        // Mostrar/esconder seção de empresas
+        const empresasSection = document.getElementById('edit-empresas-section');
+        if (user.role === 'cliente_unique') {
+            empresasSection.style.display = 'block';
+            loadUserEmpresas(user.id, user.empresas || []);
+        } else {
+            empresasSection.style.display = 'none';
+        }
+    }
+
+    function loadUserEmpresas(userId, empresas) {
+        console.log('[DEBUG] Carregando empresas do usuário:', empresas);
+        
+        const empresasList = document.getElementById('edit-empresas-list');
+        empresasList.innerHTML = '';
+        
+        if (empresas.length === 0) {
+            empresasList.innerHTML = '<p style="color: var(--color-text-muted); font-style: italic;">Nenhuma empresa associada</p>';
+            return;
+        }
+        
+        empresas.forEach(empresa => {
+            // Suporte para array de CNPJ ou objeto { cnpj, razao_social }
+            let cnpj = empresa;
+            let razao = '';
+            if (typeof empresa === 'object' && empresa !== null) {
+                cnpj = empresa.cnpj || '';
+                razao = empresa.razao_social || '';
+            }
+            const empresaItem = document.createElement('div');
+            empresaItem.className = 'empresa-item';
+            empresaItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--color-bg-secondary); border-radius: 6px; margin-bottom: 0.5rem;">
+                    <div>
+                        <div style="font-weight: 600;">${cnpj}</div>
+                        ${razao ? `<div style=\"color: var(--color-text-muted); font-size: 0.875rem;\">${razao}</div>` : ''}
+                    </div>
+                    <button type="button" onclick="removeEmpresaFromUser('${userId}', '${cnpj}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                        <i class="mdi mdi-delete"></i>
+                    </button>
+                </div>
+            `;
+            empresasList.appendChild(empresaItem);
+        });
+    }
+
+    // Função para buscar empresa
+    window.buscarEmpresaEdit = function() {
+        const cnpjInput = document.getElementById('edit-cnpj-search');
+        const cnpj = cnpjInput.value.trim();
+        
+        if (!cnpj) {
+            alert('Digite um CNPJ para buscar');
+            return;
+        }
+        
+        console.log('[DEBUG] Buscando empresa:', cnpj);
+        
+        fetch('/usuarios/api/empresas/buscar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cnpj: cnpj })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Adicionar empresa ao usuário
+                addEmpresaToUser(currentEditUserId, cnpj);
+                cnpjInput.value = '';
+            } else {
+                alert('Erro ao buscar empresa: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro ao buscar empresa:', error);
+            alert('Erro ao buscar empresa');
+        });
+    };
+
+    function addEmpresaToUser(userId, cnpj) {
+        console.log('[DEBUG] Adicionando empresa ao usuário:', userId, cnpj);
+        
+        fetch(`/usuarios/${userId}/empresas/adicionar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cnpj: cnpj })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recarregar lista de empresas
+                if (currentEditUserData) {
+                    if (!currentEditUserData.empresas) {
+                        currentEditUserData.empresas = [];
+                    }
+                    currentEditUserData.empresas.push(cnpj);
+                    loadUserEmpresas(userId, currentEditUserData.empresas);
+                }
+            } else {
+                alert('Erro ao adicionar empresa: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro ao adicionar empresa:', error);
+            alert('Erro ao adicionar empresa');
+        });
+    }
+
+    window.removeEmpresaFromUser = function(userId, cnpj) {
+        console.log('[DEBUG] Removendo empresa do usuário:', userId, cnpj);
+        
+        if (!confirm('Tem certeza que deseja remover esta empresa?')) {
+            return;
+        }
+        
+        fetch(`/usuarios/${userId}/empresas/remover`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cnpj: cnpj })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remover da lista local e recarregar
+                if (currentEditUserData && currentEditUserData.empresas) {
+                    currentEditUserData.empresas = currentEditUserData.empresas.filter(e => e !== cnpj);
+                    loadUserEmpresas(userId, currentEditUserData.empresas);
+                }
+            } else {
+                alert('Erro ao remover empresa: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro ao remover empresa:', error);
+            alert('Erro ao remover empresa');
+        });
+    };
+
+    // Event listener para botão de buscar empresa
+    const btnBuscarEmpresa = document.getElementById('edit-btn-buscar-empresa');
+    if (btnBuscarEmpresa) {
+        btnBuscarEmpresa.addEventListener('click', buscarEmpresaEdit);
+    }
+
+    // Event listener para mudança de role
+    const editRoleSelect = document.getElementById('edit-role');
+    if (editRoleSelect) {
+        editRoleSelect.addEventListener('change', function() {
+            const empresasSection = document.getElementById('edit-empresas-section');
+            if (this.value === 'cliente_unique') {
+                empresasSection.style.display = 'block';
+            } else {
+                empresasSection.style.display = 'none';
+            }
+        });
+    }
+
+    // Event listener para fechar modal ao clicar fora
+    const editModal = document.getElementById('editModal');
+    if (editModal) {
+        editModal.addEventListener('click', function(e) {
+            if (e.target === editModal) {
+                closeEditModal();
+            }
+        });
+    }
+
+    // Event listener para fechar modal com ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const editModal = document.getElementById('editModal');
+            if (editModal && editModal.style.display !== 'none') {
+                closeEditModal();
+            }
+            const deleteModal = document.getElementById('deleteModal');
+            if (deleteModal && deleteModal.classList.contains('show')) {
+                closeDeleteModal();
+            }
+        }
+    });
+
     // === MODAL DE EXCLUSÃO ===
     let currentDeleteUserId = null;
     let currentDeleteUserName = null;

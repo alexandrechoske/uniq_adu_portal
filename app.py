@@ -52,7 +52,7 @@ except Exception as e:
 from session_handler import init_session_handler
 
 # Import routes after app initialization to avoid circular imports
-from routes import auth, dashboard, relatorios, usuarios, agente, api,conferencia
+from routes import dashboard, api
 from routes import conferencia_pdf, debug, paginas
 from routes import background_tasks, materiais_v2
 

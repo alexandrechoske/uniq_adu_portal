@@ -1,19 +1,150 @@
 {% extends "base.html" %}
-{% block title %}Menu - Portal UniSystem{% endblock %}
+
+{% block title %}Menu Principal - Portal UniSystem{% endblock %}
+
 {% block extra_css %}
-    <link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
+<link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
 {% endblock %}
+
 {% block content %}
-<div class="menu-container">
-    <h1>Bem-vindo ao Menu Principal</h1>
-    <div class="menu-grid">
-        <a href="/dashboard-executivo/" class="menu-card">Dashboard</a>
-        <a href="/dashboard-materiais/" class="menu-card">Materiais</a>
-        <a href="/relatorios/" class="menu-card">Relatórios</a>
-        <a href="/usuarios/" class="menu-card">Usuários</a>
-        <a href="/config/" class="menu-card">Configurações</a>
-        <a href="/logout" class="menu-card logout">Sair</a>
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <div class="header-title-section">
+                <h1 class="header-title">Menu Principal</h1>
+                <p class="header-subtitle">
+                    <i class="mdi mdi-view-dashboard"></i>
+                    Acesse todas as funcionalidades do sistema
+                </p>
+            </div>
+            <div class="header-controls">
+                <div class="user-welcome">
+                    <i class="mdi mdi-account-circle"></i>
+                    Bem-vindo, {{ session.user.name if session.user else 'Usuário' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Menu Grid -->
+        <div class="menu-grid">
+            <!-- Dashboard Cards -->
+            <div class="menu-section">
+                <h3 class="section-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Dashboards
+                </h3>
+                <div class="cards-grid">
+                    <a href="/dashboard-executivo/" class="menu-card dashboard">
+                        <div class="card-icon">
+                            <i class="mdi mdi-chart-box"></i>
+                        </div>
+                        <div class="card-content">
+                            <h4 class="card-title">Dashboard Executivo</h4>
+                            <p class="card-description">Visão geral dos indicadores</p>
+                        </div>
+                    </a>
+                    
+                    <a href="/dashboard-materiais/" class="menu-card materials">
+                        <div class="card-icon">
+                            <i class="mdi mdi-package-variant"></i>
+                        </div>
+                        <div class="card-content">
+                            <h4 class="card-title">Dashboard Materiais</h4>
+                            <p class="card-description">Análise de materiais importados</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Operations Cards -->
+            <div class="menu-section">
+                <h3 class="section-title">
+                    <i class="mdi mdi-cog"></i>
+                    Operações
+                </h3>
+                <div class="cards-grid">
+                    <a href="/relatorios/" class="menu-card reports">
+                        <div class="card-icon">
+                            <i class="mdi mdi-file-document-multiple"></i>
+                        </div>
+                        <div class="card-content">
+                            <h4 class="card-title">Relatórios</h4>
+                            <p class="card-description">Gerar e visualizar relatórios</p>
+                        </div>
+                    </a>
+                    
+                    <a href="/materiais-v2/" class="menu-card materials-v2">
+                        <div class="card-icon">
+                            <i class="mdi mdi-archive"></i>
+                        </div>
+                        <div class="card-content">
+                            <h4 class="card-title">Materiais V2</h4>
+                            <p class="card-description">Gestão avançada de materiais</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Administration Cards -->
+            {% if session.user and session.user.role in ['admin', 'interno_unique'] %}
+            <div class="menu-section">
+                <h3 class="section-title">
+                    <i class="mdi mdi-shield-account"></i>
+                    Administração
+                </h3>
+                <div class="cards-grid">
+                    <a href="/usuarios/" class="menu-card admin">
+                        <div class="card-icon">
+                            <i class="mdi mdi-account-group"></i>
+                        </div>
+                        <div class="card-content">
+                            <h4 class="card-title">Usuários</h4>
+                            <p class="card-description">Gerenciar usuários do sistema</p>
+                        </div>
+                    </a>
+                    
+                    <a href="/config/" class="menu-card config">
+                        <div class="card-icon">
+                            <i class="mdi mdi-cog-outline"></i>
+                        </div>
+                        <div class="card-content">
+                            <h4 class="card-title">Configurações</h4>
+                            <p class="card-description">Configurações do sistema</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="menu-section">
+                <h3 class="section-title">
+                    <i class="mdi mdi-lightning-bolt"></i>
+                    Ações Rápidas
+                </h3>
+                <div class="quick-actions">
+                    <a href="/api/force-refresh" class="quick-action refresh">
+                        <i class="mdi mdi-refresh"></i>
+                        <span>Atualizar Cache</span>
+                    </a>
+                    
+                    <a href="/debug/" class="quick-action debug">
+                        <i class="mdi mdi-bug"></i>
+                        <span>Debug</span>
+                    </a>
+                    
+                    <a href="/logout" class="quick-action logout">
+                        <i class="mdi mdi-logout"></i>
+                        <span>Sair</span>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
 <script src="{{ url_for('menu.static', filename='js/menu.js') }}"></script>
 {% endblock %}
