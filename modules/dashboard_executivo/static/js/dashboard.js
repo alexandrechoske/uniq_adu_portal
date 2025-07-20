@@ -351,7 +351,7 @@ function createUrfChart(data) {
     }
     
     dashboardCharts.urf = new Chart(ctx, {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
             labels: data.labels || [],
             datasets: [{
@@ -361,6 +361,7 @@ function createUrfChart(data) {
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             scales: {
@@ -385,7 +386,7 @@ function createMaterialChart(data) {
     }
     
     dashboardCharts.material = new Chart(ctx, {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
             labels: data.labels || [],
             datasets: [{
@@ -395,6 +396,7 @@ function createMaterialChart(data) {
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             scales: {

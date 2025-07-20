@@ -35,31 +35,9 @@ def init_session_handler(app):
                 last_activity = datetime.fromtimestamp(session['last_activity'])
                 time_diff = datetime.now() - last_activity
                 hours_diff = time_diff.total_seconds() / 3600
-                
                 if DEBUG_SESSION:
                     print(f"[SESSION] Última atividade há {hours_diff:.2f} horas")
-                    
-                if hours_diff > 12:  # Aumentado de 8 para 12 horas
-                    if DEBUG_SESSION:
-                        print(f"[SESSION] Sessão expirada após {hours_diff:.2f} horas sem atividade")
-                    session.clear()
-                    
-                    # Se for uma requisição AJAX, retornar 401
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-                        return jsonify({
-                            'status': 'error', 
-                            'message': 'Sessão expirada', 
-                            'code': 'session_expired'
-                        }), 401
-                        
-                    # Se for uma rota protegida, redirecionar para login
-                    if not request.path.startswith('/login') and not request.path.startswith('/static/'):
-                        from flask import redirect, url_for
-                        return redirect(url_for('auth.login'))
-                        
-                    return None
-                
-                # Atualizar timestamp de atividade apenas em rotas não estáticas
+                # NÃO limpar a sessão automaticamente, apenas atualizar timestamp se necessário
                 if not (request.path.endswith('/check-session') or 
                        request.path.startswith('/static/') or 
                        request.path.startswith('/api/health')):
@@ -67,29 +45,23 @@ def init_session_handler(app):
                     session.permanent = True  # Renovar permanência da sessão
                     if DEBUG_SESSION:
                         print(f"[SESSION] Timestamp atualizado para {session['last_activity']}")
-                
                 # Verificar integridade básica da sessão - mais permissivo
                 user_data = session.get('user', {})
                 if not isinstance(user_data, dict):
                     if DEBUG_SESSION:
                         print(f"[SESSION] Sessão corrompida, user não é um dict")
-                    session.clear()
+                    # NÃO limpar a sessão automaticamente
                 elif not user_data.get('id'):
                     if DEBUG_SESSION:
                         print(f"[SESSION] Sessão corrompida, user.id não existe")
-                    # Apenas limpar se realmente estiver corrompida (sem ID)
-                    session.clear()
+                    # NÃO limpar a sessão automaticamente
                 else:
-                    # Sessão válida, apenas verificar se tem os campos essenciais
                     if not all(k in user_data for k in ['email', 'role']):
                         if DEBUG_SESSION:
                             print(f"[SESSION] Sessão incompleta mas válida, mantendo...")
-                        # Não limpar, apenas deixar aviso - o decorador login_required vai lidar com isso
-                    
             except (ValueError, TypeError, OSError) as e:
                 if DEBUG_SESSION:
                     print(f"[SESSION] Erro ao processar timestamp: {e}")
-                # Recriar timestamp se estiver corrompido
                 session['last_activity'] = datetime.now().timestamp()
                 session.permanent = True
             
