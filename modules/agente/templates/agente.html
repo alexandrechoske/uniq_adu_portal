@@ -21,60 +21,70 @@
         </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content agent-grid">
         {% if user_data and user_data.usuario_ativo %}
-            <!-- Agente Ativo CRUD AJAX -->
-            <div class="agent-card">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <i class="mdi mdi-robot"></i>
-                    </div>
-                    <h2 class="card-title">Agente Configurado</h2>
+        <!-- Grid: Agente Configurado | Como Funciona -->
+        <div class="agent-card agent-main-card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="mdi mdi-robot"></i>
                 </div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Números do WhatsApp</div>
-                        <div class="info-value">
-                            <ul id="numeros-list" style="list-style:none; padding:0; margin:0;">
-                                {% for numero in user_data.numero %}
-                                <li style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                    <span>{{ numero }}</span>
-                                    <button class="btn btn-danger btn-sm btn-remove-numero" data-numero="{{ numero }}" title="Remover número">
-                                        <i class="mdi mdi-delete"></i>
-                                    </button>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            <div style="display:flex; gap:8px; margin-top:8px;">
-                                <input type="text" id="novo-numero" class="form-input" placeholder="Ex: 5511999999999">
-                                <button class="btn btn-success" id="btn-add-numero">
-                                    <i class="mdi mdi-plus"></i> Adicionar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Status</div>
-                        <div class="info-value">
-                            <span class="status-badge status-active">
-                                <span class="status-dot"></span>
-                                Ativo
-                            </span>
-                        </div>
-                    </div>
-                    {% if user_data.empresa %}
-                    <div class="info-item">
-                        <div class="info-label">Empresas Associadas</div>
-                        <div class="info-value">{{ user_data.empresa | length }} empresa(s)</div>
-                    </div>
-                    {% endif %}
-                </div>
-                <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-md);">
-                    <button class="btn btn-danger" id="btn-cancelar-adesao">
-                        <i class="mdi mdi-stop"></i> Cancelar Adesão
-                    </button>
-                </div>
+                <h2 class="card-title">Agente Configurado</h2>
             </div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Números do WhatsApp</div>
+                    <div class="info-value">
+                        <ul id="numeros-list" style="list-style:none; padding:0; margin:0;">
+                            {% for numero in user_data.numero %}
+                            <li style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span>{{ numero }}</span>
+                                <button class="btn btn-danger btn-sm btn-remove-numero" data-numero="{{ numero }}" title="Remover número">
+                                    <i class="mdi mdi-delete"></i>
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <input type="text" id="novo-numero" class="form-input" placeholder="Ex: 5511999999999">
+                            <button class="btn btn-success" id="btn-add-numero">
+                                <i class="mdi mdi-plus"></i> Adicionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">
+                        <span class="status-badge status-active">
+                            <span class="status-dot"></span>
+                            Ativo
+                        </span>
+                    </div>
+                </div>
+                {% if user_data.empresa %}
+                <div class="info-item">
+                    <div class="info-label">Empresas Associadas</div>
+                    <div class="info-value">
+                        <ul style="margin:0; padding:0; list-style:none;">
+                        {% for empresa in user_data.empresa %}
+                            <li style="margin-bottom:4px;">
+                                <span style="font-weight:600;">{{ empresa.cnpj if empresa.cnpj else empresa }}</span>
+                                {% if empresa.razao_social %}<span style="color:var(--color-text-secondary);"> - {{ empresa.razao_social }}</span>{% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-md);">
+                <button class="btn btn-danger" id="btn-cancelar-adesao">
+                    <i class="mdi mdi-stop"></i> Cancelar Adesão
+                </button>
+            </div>
+        </div>
+        <!-- O card 'Como Funciona' já está presente no layout horizontal acima -->
 {% block extra_js %}
 <script>
 // Adicionar número via AJAX
@@ -86,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const numero = input.value.trim();
             if (!numero) return;
-            fetch('{{ url_for('agente.ajax_add_numero') }}', {
+            fetch("{{ url_for('agente.ajax_add_numero') }}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({numero})
@@ -103,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const numero = this.dataset.numero;
             if (!numero) return;
             if (!confirm('Remover este número?')) return;
-            fetch('{{ url_for('agente.ajax_remove_numero') }}', {
+            fetch("{{ url_for('agente.ajax_remove_numero') }}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({numero})
@@ -119,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelarBtn.onclick = function(e) {
             e.preventDefault();
             if (!confirm('Tem certeza que deseja cancelar a adesão?')) return;
-            fetch('{{ url_for('agente.ajax_cancelar_adesao') }}', {
+            fetch("{{ url_for('agente.ajax_cancelar_adesao') }}", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
             })
@@ -201,16 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             
             <div style="display: grid; gap: var(--spacing-md);">
-                <div style="padding: var(--spacing-md); background: var(--color-background); border-radius: var(--radius-md); border-left: 3px solid var(--color-success);">
-                    <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-success);">
-                        <i class="mdi mdi-message-text"></i>
-                        Notificações Automáticas
-                    </h4>
-                    <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
-                        Receba alertas instantâneos sobre atualizações em seus processos de importação.
-                    </p>
-                </div>
-                
+               
                 <div style="padding: var(--spacing-md); background: var(--color-background); border-radius: var(--radius-md); border-left: 3px solid var(--color-primary);">
                     <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-primary);">
                         <i class="mdi mdi-chat"></i>

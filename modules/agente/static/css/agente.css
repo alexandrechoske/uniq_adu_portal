@@ -1,3 +1,41 @@
+/* === LAYOUT HORIZONTAL AGENTE === */
+.main-content.agent-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr;
+    gap: var(--spacing-xl);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+@media (max-width: 900px) {
+    .main-content.agent-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+        padding: var(--spacing-md);
+    }
+}
+
+.agent-main-card {
+    min-width: 320px;
+    flex: 2;
+}
+.agent-side-card {
+    min-width: 260px;
+    flex: 1;
+}
+
+/* Grid de informações dentro do card principal */
+.agent-main-card .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+@media (max-width: 700px) {
+    .agent-main-card .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
 /* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
 :root {
     /* Paleta de cores minimalista */
