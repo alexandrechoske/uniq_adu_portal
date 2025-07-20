@@ -70,20 +70,19 @@ def carregar_usuarios():
                                     empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
                                     if empresa_info.data and len(empresa_info.data) > 0:
                                         empresa_data = empresa_info.data[0]
+                                        razao = empresa_data.get('razao_social')
                                         empresas_detalhadas.append({
                                             'cnpj': empresa_data.get('cnpj'),
-                                            'razao_social': empresa_data.get('razao_social', 'Não informado')
+                                            'razao_social': razao if razao else None
                                         })
                                     else:
                                         empresas_detalhadas.append({
-                                            'cnpj': cnpj,
-                                            'razao_social': 'Empresa não encontrada'
+                                            'cnpj': cnpj
                                         })
                                 except Exception as empresa_error:
                                     print(f"[DEBUG] Erro ao buscar dados da empresa {cnpj}: {str(empresa_error)}")
                                     empresas_detalhadas.append({
-                                        'cnpj': cnpj,
-                                        'razao_social': 'Erro ao carregar dados'
+                                        'cnpj': cnpj
                                     })
                         user['agent_info']['empresas'] = empresas_detalhadas
                 except Exception as e:
@@ -553,10 +552,9 @@ def obter_dados_usuario(user_id):
         user = user_response.data[0]
         print(f"[DEBUG] Dados do usuário encontrados: {user}")
         
-        # Se for cliente_unique, buscar empresas associadas
+        # Se for cliente_unique, buscar empresas associadas e detalhar com razão social
         if user.get('role') == 'cliente_unique':
             empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
-            
             empresas = []
             if empresas_response.data and empresas_response.data[0].get('empresa'):
                 empresas = empresas_response.data[0]['empresa']
@@ -567,11 +565,26 @@ def obter_dados_usuario(user_id):
                         empresas = [empresas] if empresas else []
                 elif not isinstance(empresas, list):
                     empresas = []
-            
-            user['empresas'] = empresas
+            empresas_detalhadas = []
+            for cnpj in empresas:
+                if isinstance(cnpj, str):
+                    try:
+                        empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                        if empresa_info.data and len(empresa_info.data) > 0:
+                            empresa_data = empresa_info.data[0]
+                            razao = empresa_data.get('razao_social')
+                            empresas_detalhadas.append({
+                                'cnpj': empresa_data.get('cnpj'),
+                                'razao_social': razao if razao else None
+                            })
+                        else:
+                            empresas_detalhadas.append({'cnpj': cnpj})
+                    except Exception as empresa_error:
+                        print(f"[DEBUG] Erro ao buscar dados da empresa {cnpj}: {str(empresa_error)}")
+                        empresas_detalhadas.append({'cnpj': cnpj})
+            user['empresas'] = empresas_detalhadas
         else:
             user['empresas'] = []
-        
         return jsonify({'success': True, 'user': user})
         
     except Exception as e:
