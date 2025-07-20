@@ -108,42 +108,10 @@ class SessionHandler {
     }
     
     handleSessionExpired() {
-        this.isActive = false;
-        
-        // Mostrar aviso ao usuário
-        this.showExpiredMessage();
-        
-        // Redirecionar para login após um breve delay
-        setTimeout(() => {
-            window.location.href = '/login';
-        }, 3000);
+        // Não faz nada: não mostra aviso, não desativa sessão, não redireciona
     }
     
-    showExpiredMessage() {
-        // Remover mensagens anteriores
-        const existingAlert = document.getElementById('session-expired-alert');
-        if (existingAlert) {
-            existingAlert.remove();
-        }
-        
-        // Criar nova mensagem
-        const alert = document.createElement('div');
-        alert.id = 'session-expired-alert';
-        alert.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50';
-        alert.innerHTML = `
-            <div class="flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                </svg>
-                <div>
-                    <p class="font-semibold">Sessão Expirada</p>
-                    <p class="text-sm">Você será redirecionado para o login...</p>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(alert);
-    }
+    // showExpiredMessage removido: não exibe mais aviso visual
     
     clearWarnings() {
         const existingAlert = document.getElementById('session-warning-alert');

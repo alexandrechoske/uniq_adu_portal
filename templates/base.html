@@ -507,6 +507,13 @@
                 <span class="sidebar-text">Dashboard Executivo</span>
             </a>           
 
+            <!-- Dashboard Materiais -->
+            <a href="{{ url_for('dashboard_materiais.index') }}"
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('dashboard_materiais.') %}active{% endif %}">
+                <i class="mdi mdi-package-variant-closed text-xl"></i>
+                <span class="sidebar-text">Dashboard Materiais</span>
+            </a>
+
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
             {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
             <a href="{{ url_for('conferencia.index') }}" 
