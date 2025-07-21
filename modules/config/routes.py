@@ -144,16 +144,16 @@ def api_mercadorias_options():
 @login_required
 @role_required(['admin'])
 def api_icones_materiais():
-    """API para listar ícones de materiais"""
+    """API para listar materiais disponíveis para cadastro de ícones"""
     try:
-        response = supabase_admin.table('cad_icones_materiais').select('*').order('material').execute()
-        
+        # Buscar lista de materiais da view vw_aux_mercadorias (coluna mercadoria)
+        response = supabase_admin.table('vw_aux_mercadorias').select('mercadoria').order('mercadoria').execute()
         return jsonify({
             'success': True,
             'data': response.data or []
         })
     except Exception as e:
-        print(f"[CONFIG] Erro ao buscar ícones de materiais: {e}")
+        print(f"[CONFIG] Erro ao buscar materiais: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -163,29 +163,28 @@ def api_icones_materiais():
 @login_required
 @role_required(['admin'])
 def api_create_icone_material():
-    """API para criar novo ícone de material"""
+    """API para cadastrar novo material com ícone"""
     try:
         data = request.get_json()
-        
         # Validar dados obrigatórios
-        required_fields = ['material', 'icone']
+        required_fields = ['nome_normalizado', 'icone_url']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({
                     'success': False,
                     'error': f'Campo {field} é obrigatório'
                 }), 400
-        
-        # Inserir no banco
-        response = supabase_admin.table('cad_icones_materiais').insert(data).execute()
-        
+        # Inserir na tabela cad_materiais
+        response = supabase_admin.table('cad_materiais').insert({
+            'nome_normalizado': data['nome_normalizado'],
+            'icone_url': data['icone_url']
+        }).execute()
         return jsonify({
             'success': True,
             'data': response.data[0] if response.data else None
         })
-        
     except Exception as e:
-        print(f"[CONFIG] Erro ao criar ícone de material: {e}")
+        print(f"[CONFIG] Erro ao cadastrar material: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
