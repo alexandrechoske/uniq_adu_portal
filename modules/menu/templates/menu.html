@@ -59,7 +59,7 @@
                 </div>
             </div>
 
-            <!-- Operations Cards -->
+            <!-- Operations Cards
             <div class="menu-section">
                 <h3 class="section-title">
                     <i class="mdi mdi-cog"></i>
@@ -86,7 +86,7 @@
                         </div>
                     </a>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Administration Cards -->
             {% if session.user and session.user.role in ['admin', 'interno_unique'] %}
@@ -126,16 +126,16 @@
                     Ações Rápidas
                 </h3>
                 <div class="quick-actions">
-                    <a href="/api/force-refresh" class="quick-action refresh">
+                    <!-- <a href="/api/force-refresh" class="quick-action refresh">
                         <i class="mdi mdi-refresh"></i>
                         <span>Atualizar Cache</span>
-                    </a>
+                    </a> -->
                     
-                    <a href="/debug/" class="quick-action debug">
+                    <!-- <a href="/debug/" class="quick-action debug">
                         <i class="mdi mdi-bug"></i>
                         <span>Debug</span>
                     </a>
-                    
+                     -->
                     <a href="/logout" class="quick-action logout">
                         <i class="mdi mdi-logout"></i>
                         <span>Sair</span>
