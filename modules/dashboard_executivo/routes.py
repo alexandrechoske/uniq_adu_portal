@@ -290,11 +290,19 @@ def dashboard_charts():
                 'datasets': [
                     {
                         'label': 'Quantidade de Processos',
-                        'data': modal_grouped['ref_unique'].tolist()
+                        'data': modal_grouped['ref_unique'].tolist(),
+                        'type': 'bar',
+                        'backgroundColor': 'rgba(54, 162, 235, 0.6)',
+                        'borderColor': 'rgba(54, 162, 235, 1)',
+                        'yAxisID': 'y1'
                     },
                     {
                         'label': 'Custo Total (R$)',
-                        'data': modal_grouped['custo_total'].tolist()
+                        'data': modal_grouped['custo_total'].tolist(),
+                        'type': 'bar',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.6)',
+                        'borderColor': 'rgba(255, 99, 132, 1)',
+                        'yAxisID': 'y'
                     }
                 ]
             }

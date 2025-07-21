@@ -1,6 +1,12 @@
 /**
  * Dashboard Executivo - JavaScript Module
  * Handles all dashboard executive functionality
+ * 
+ * MELHORIAS IMPLEMENTADAS:
+ * - Gráfico Evolução Mensal: rótulos, linhas suaves, layout 70%
+ * - Gráfico Modal: eixos separados, rótulos, layout 30%
+ * - Gráficos URF e Material: rótulos de dados
+ * - Layout responsivo com CSS Grid
  */
 
 // Global variables
@@ -11,7 +17,25 @@ let monthlyChartPeriod = 'mensal';
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
-    initializeDashboard();
+    
+    // Simple initialization - wait a bit for scripts to load
+    setTimeout(() => {
+        console.log('[DASHBOARD_EXECUTIVO] Chart.js disponível:', typeof Chart !== 'undefined');
+        if (typeof Chart !== 'undefined') {
+            // Register ChartDataLabels plugin if available
+            if (typeof ChartDataLabels !== 'undefined') {
+                try {
+                    Chart.register(ChartDataLabels);
+                    console.log('[DASHBOARD_EXECUTIVO] ChartDataLabels plugin registrado');
+                } catch (error) {
+                    console.warn('[DASHBOARD_EXECUTIVO] Erro ao registrar plugin:', error);
+                }
+            }
+            initializeDashboard();
+        } else {
+            console.error('[DASHBOARD_EXECUTIVO] Chart.js não foi carregado');
+        }
+    }, 1000);
 });
 
 /**
@@ -184,30 +208,35 @@ function updateKPIValue(elementId, value) {
  * Create dashboard charts
  */
 function createDashboardCharts(charts) {
-    console.log('[DASHBOARD_EXECUTIVO] Criando gráficos...', charts);
+    console.log('[DASHBOARD_EXECUTIVO] Criando gráficos (versão simplificada)...', charts);
     
     // Create monthly chart
     if (charts.monthly) {
+        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico mensal...');
         createMonthlyChart(charts.monthly);
     }
     
     // Create status chart
     if (charts.status) {
+        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico de status...');
         createStatusChart(charts.status);
     }
     
     // Create grouped modal chart
     if (charts.grouped_modal) {
+        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico modal...');
         createGroupedModalChart(charts.grouped_modal);
     }
     
     // Create URF chart
     if (charts.urf) {
+        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico URF...');
         createUrfChart(charts.urf);
     }
     
     // Create material chart
     if (charts.material) {
+        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico material...');
         createMaterialChart(charts.material);
     }
 }
@@ -217,52 +246,138 @@ function createDashboardCharts(charts) {
  */
 function createMonthlyChart(data) {
     const ctx = document.getElementById('monthly-chart');
-    if (!ctx) return;
-    
+    if (!ctx) {
+        console.error('[DASHBOARD_EXECUTIVO] Canvas monthly-chart não encontrado');
+        return;
+    }
+
+    if (typeof Chart === 'undefined') {
+        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
+        return;
+    }
+
     // Destroy existing chart
     if (dashboardCharts.monthly) {
         dashboardCharts.monthly.destroy();
     }
-    
-    dashboardCharts.monthly = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels || [],
-            datasets: data.datasets || []
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Evolução Mensal de Processos e Custos'
-                },
-                legend: {
-                    position: 'top'
-                }
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: {
-                        drawOnChartArea: false,
+
+    try {
+        // Adiciona área ao dataset de custo (área sob a linha)
+        const datasets = (data.datasets || []).map((ds, idx) => {
+            // O dataset de custo é o segundo (idx === 1)
+            if (idx === 1) {
+                return {
+                    ...ds,
+                    fill: {
+                        target: 'origin',
+                        above: 'rgba(40, 167, 69, 0.08)', // verde claro
                     },
+                    pointBackgroundColor: ds.borderColor,
+                };
+            }
+            // O dataset de processos é o primeiro (idx === 0)
+            return {
+                ...ds,
+                fill: false,
+                pointBackgroundColor: ds.borderColor,
+            };
+        });
+
+        dashboardCharts.monthly = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels || [],
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    datalabels: {
+                        display: true,
+                        align: function(context) {
+                            // Primeiro dataset (processos): label em cima
+                            // Segundo dataset (custo): label embaixo
+                            return context.datasetIndex === 0 ? 'top' : 'bottom';
+                        },
+                        anchor: function(context) {
+                            return context.datasetIndex === 0 ? 'end' : 'start';
+                        },
+                        backgroundColor: function(context) {
+                            // Fundo igual à cor da linha/barra
+                            return context.dataset.borderColor || 'rgba(0,0,0,0.1)';
+                        },
+                        borderRadius: 4,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        padding: {top: 2, bottom: 2, left: 6, right: 6},
+                        formatter: function(value, context) {
+                            // Formatação diferente para cada dataset
+                            if (context.datasetIndex === 0) {
+                                // Processos
+                                return value;
+                            } else {
+                                // Custo
+                                if (typeof value === 'number') {
+                                    if (value >= 1e6) {
+                                        return 'R$ ' + (value / 1e6).toFixed(1).replace('.0', '') + 'M';
+                                    } else if (value >= 1e3) {
+                                        return 'R$ ' + (value / 1e3).toFixed(0) + 'k';
+                                    }
+                                    return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0});
+                                }
+                                return value;
+                            }
+                        },
+                        z: 10
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Custo Total (R$)'
+                        },
+                        grid: {
+                            drawOnChartArea: true,
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Quantidade de Processos'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
                 }
             },
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            }
-        }
-    });
+            plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
+        });
+        console.log('[DASHBOARD_EXECUTIVO] Gráfico mensal criado com sucesso');
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico mensal:', error);
+    }
 }
 
 /**
@@ -307,35 +422,103 @@ function createStatusChart(data) {
  */
 function createGroupedModalChart(data) {
     const ctx = document.getElementById('grouped-modal-chart');
-    if (!ctx) return;
-    
+    if (!ctx) {
+        console.error('[DASHBOARD_EXECUTIVO] Canvas grouped-modal-chart não encontrado');
+        return;
+    }
+
+    if (typeof Chart === 'undefined') {
+        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
+        return;
+    }
+
     // Destroy existing chart
     if (dashboardCharts.groupedModal) {
         dashboardCharts.groupedModal.destroy();
     }
-    
-    dashboardCharts.groupedModal = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels || [],
-            datasets: data.datasets || []
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Processos e Custos por Modal de Transporte'
+
+    try {
+        dashboardCharts.groupedModal = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: (data.datasets || []).map(ds => ({
+                    ...ds,
+                    datalabels: {
+                        display: true
+                    }
+                }))
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Processos e Custos por Modal de Transporte'
+                    },
+                    datalabels: {
+                        display: true,
+                        backgroundColor: function(context) {
+                            return context.dataset.backgroundColor || 'rgba(0,0,0,0.1)';
+                        },
+                        borderRadius: 4,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        padding: {top: 2, bottom: 2, left: 6, right: 6},
+                        formatter: function(value, context) {
+                            // Se o dataset for de custo, formata como moeda compacta
+                            if (context.dataset.label && context.dataset.label.toLowerCase().includes('custo')) {
+                                if (typeof value === 'number') {
+                                    if (value >= 1e6) {
+                                        return 'R$ ' + (value / 1e6).toFixed(1).replace('.0', '') + 'M';
+                                    } else if (value >= 1e3) {
+                                        return 'R$ ' + (value / 1e3).toFixed(0) + 'k';
+                                    }
+                                    return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0});
+                                }
+                                return value;
+                            }
+                            // Caso contrário, mostra número formatado
+                            return Number(value).toLocaleString('pt-BR');
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Custo Total (R$)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantidade de Processos'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        }
+                    }
                 }
             },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
+            plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
+        });
+        console.log('[DASHBOARD_EXECUTIVO] Gráfico modal criado com sucesso');
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico modal:', error);
+    }
 }
 
 /**
@@ -343,34 +526,84 @@ function createGroupedModalChart(data) {
  */
 function createUrfChart(data) {
     const ctx = document.getElementById('urf-chart');
-    if (!ctx) return;
-    
+    if (!ctx) {
+        console.error('[DASHBOARD_EXECUTIVO] Canvas urf-chart não encontrado');
+        return;
+    }
+
+    if (typeof Chart === 'undefined') {
+        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
+        return;
+    }
+
     // Destroy existing chart
     if (dashboardCharts.urf) {
         dashboardCharts.urf.destroy();
     }
-    
-    dashboardCharts.urf = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels || [],
-            datasets: [{
-                label: 'Quantidade de Processos',
-                data: data.data || [],
-                backgroundColor: '#36A2EB'
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    beginAtZero: true
+
+    try {
+        // Quebra de linha nos labels longos (máx 12 chars por linha)
+        const breakLabel = label => {
+            if (!label) return '';
+            // Quebra em espaços, tenta não cortar palavras
+            const words = label.split(' ');
+            let lines = [];
+            let current = '';
+            words.forEach(word => {
+                if ((current + ' ' + word).trim().length > 14) {
+                    if (current) lines.push(current.trim());
+                    current = word;
+                } else {
+                    current += ' ' + word;
                 }
-            }
-        }
-    });
+            });
+            if (current) lines.push(current.trim());
+            return lines;
+        };
+
+        dashboardCharts.urf = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: (data.labels || []).map(breakLabel),
+                datasets: [{
+                    label: 'Quantidade de Processos',
+                    data: data.data || [],
+                    backgroundColor: '#36A2EB',
+                    borderColor: '#36A2EB'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: {
+                        display: true,
+                        color: '#fff', // Branco para contraste
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        backgroundColor: '#36A2EB',
+                        borderRadius: 4,
+                        padding: {top: 2, bottom: 2, left: 6, right: 6},
+                        formatter: function(value) {
+                            return Number(value).toLocaleString('pt-BR');
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            },
+            plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
+        });
+        console.log('[DASHBOARD_EXECUTIVO] Gráfico URF criado com sucesso');
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico URF:', error);
+    }
 }
 
 /**
@@ -378,34 +611,48 @@ function createUrfChart(data) {
  */
 function createMaterialChart(data) {
     const ctx = document.getElementById('material-chart');
-    if (!ctx) return;
+    if (!ctx) {
+        console.error('[DASHBOARD_EXECUTIVO] Canvas material-chart não encontrado');
+        return;
+    }
+    
+    if (typeof Chart === 'undefined') {
+        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
+        return;
+    }
     
     // Destroy existing chart
     if (dashboardCharts.material) {
         dashboardCharts.material.destroy();
     }
     
-    dashboardCharts.material = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels || [],
-            datasets: [{
-                label: 'Quantidade de Processos',
-                data: data.data || [],
-                backgroundColor: '#4BC0C0'
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    beginAtZero: true
+    try {
+        dashboardCharts.material = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'Quantidade de Processos',
+                    data: data.data || [],
+                    backgroundColor: '#4BC0C0',
+                    borderColor: '#4BC0C0'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
                 }
             }
-        }
-    });
+        });
+        console.log('[DASHBOARD_EXECUTIVO] Gráfico material criado com sucesso');
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico material:', error);
+    }
 }
 
 /**
@@ -444,14 +691,17 @@ async function loadMonthlyChart(granularidade) {
                         type: 'line',
                         borderColor: '#007bff',
                         backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        yAxisID: 'y1'
+                        yAxisID: 'y1',
+                        tension: 0.4 // Smooth curves
                     },
                     {
                         label: 'Custo Total (R$)',
                         data: result.data.values,
-                        type: 'bar',
-                        backgroundColor: 'rgba(0, 123, 255, 0.6)',
-                        yAxisID: 'y'
+                        type: 'line', // Changed from 'bar' to 'line'
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        yAxisID: 'y',
+                        tension: 0.4 // Smooth curves
                     }
                 ]
             });

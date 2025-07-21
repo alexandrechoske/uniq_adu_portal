@@ -162,9 +162,55 @@
 /* Charts Grid */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    grid-template-columns: 1fr 1fr 1fr; /* 3 colunas iguais */
+    grid-template-areas: 
+        "monthly monthly modal"
+        "status urf material";
     gap: 30px;
     margin-bottom: 40px;
+}
+
+/* Specific chart positioning */
+.chart-section:nth-child(1) { 
+    grid-area: monthly; 
+}
+
+.chart-section:nth-child(2) { 
+    grid-area: status; 
+}
+
+.chart-section:nth-child(3) { 
+    grid-area: modal; 
+}
+
+.chart-section:nth-child(4) { 
+    grid-area: urf; 
+}
+
+.chart-section:nth-child(5) { 
+    grid-area: material; 
+}
+
+@media (max-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: 
+            "monthly monthly"
+            "modal status"
+            "urf material";
+    }
+}
+
+@media (max-width: 768px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+            "monthly"
+            "modal"
+            "status"
+            "urf"
+            "material";
+    }
 }
 
 .chart-section {

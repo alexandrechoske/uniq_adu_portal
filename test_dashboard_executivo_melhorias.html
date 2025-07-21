@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Dashboard Executivo - Melhorias</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .improvement-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .improvement-list li {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .improvement-list li.completed {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .api-test {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .code-block {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🚀 Dashboard Executivo - Melhorias Implementadas</h1>
+        <p><strong>Data:</strong> <span id="current-date"></span></p>
+        
+        <div class="test-section">
+            <h2 class="test-title">📈 Gráfico de Evolução Mensal - Melhorias</h2>
+            <ul class="improvement-list">
+                <li class="completed">✅ Rótulos de dados nos pontos (um acima e outro abaixo)</li>
+                <li class="completed">✅ Transformação de barras em linhas para o Custo Total</li>
+                <li class="completed">✅ Linhas suaves (tension: 0.4) ao invés de retas</li>
+                <li class="completed">✅ Layout ocupando 70% do grid horizontal</li>
+                <li class="completed">✅ Dual Y-axis com títulos adequados</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">🚚 Gráfico Processos e Custos por Modal - Melhorias</h2>
+            <ul class="improvement-list">
+                <li class="completed">✅ Eixos Y separados para Quantidade e Custo</li>
+                <li class="completed">✅ Rótulos de dados nas barras com formatação adequada</li>
+                <li class="completed">✅ Layout ocupando 30% do grid horizontal</li>
+                <li class="completed">✅ Cores diferentes para cada dataset</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">🏛️ Gráfico Top 10 URFs - Melhorias</h2>
+            <ul class="improvement-list">
+                <li class="completed">✅ Rótulos de dados nas barras</li>
+                <li class="completed">✅ Estilo aprimorado dos rótulos</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">📦 Gráfico Top 10 Materiais - Melhorias</h2>
+            <ul class="improvement-list">
+                <li class="completed">✅ Rótulos de dados nas barras</li>
+                <li class="completed">✅ Estilo aprimorado dos rótulos</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">🎨 Melhorias de Layout e CSS</h2>
+            <ul class="improvement-list">
+                <li class="completed">✅ Grid CSS responsivo com áreas nomeadas</li>
+                <li class="completed">✅ Layout 70/30 para Evolução Mensal e Modal</li>
+                <li class="completed">✅ Breakpoints responsivos para tablets e mobile</li>
+                <li class="completed">✅ Plugin ChartDataLabels carregado globalmente</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">🔧 Configurações Técnicas Implementadas</h2>
+            <div class="code-block">
+// Exemplo das configurações aplicadas:<br>
+- tension: 0.4 (linhas suaves)<br>
+- datalabels com positioning inteligente<br>
+- yAxisID: 'y' e 'y1' para dual axis<br>
+- formatação de moeda brasileira<br>
+- cores específicas por dataset<br>
+- responsive grid com grid-areas
+            </div>
+        </div>
+
+        <div class="api-test">
+            <h3>🧪 Como Testar:</h3>
+            <ol>
+                <li>Acesse: <code>/dashboard-executivo/</code></li>
+                <li>Aguarde o carregamento dos dados</li>
+                <li>Observe os gráficos com as melhorias aplicadas</li>
+                <li>Teste a responsividade redimensionando a janela</li>
+                <li>Teste os botões de período (Mensal, Semanal, Diário)</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">📋 Checklist de Validação</h2>
+            <ul class="improvement-list">
+                <li>□ Gráfico mensal com duas linhas suaves</li>
+                <li>□ Rótulos de dados visíveis e bem posicionados</li>
+                <li>□ Gráfico modal com eixos Y separados</li>
+                <li>□ Layout 70/30 funcionando corretamente</li>
+                <li>□ Todos os gráficos com rótulos de dados</li>
+                <li>□ Design responsivo funcionando</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('pt-BR');
+        
+        // Log das melhorias implementadas
+        console.log('=== MELHORIAS DASHBOARD EXECUTIVO ===');
+        console.log('1. Gráfico Evolução Mensal:');
+        console.log('   - Rótulos de dados nos pontos');
+        console.log('   - Custo Total em linha (não barra)');
+        console.log('   - Linhas suaves (tension: 0.4)');
+        console.log('   - Layout 70% do grid');
+        console.log('');
+        console.log('2. Gráfico Modal:');
+        console.log('   - Eixos Y separados');
+        console.log('   - Rótulos nas barras');
+        console.log('   - Layout 30% do grid');
+        console.log('');
+        console.log('3. Gráficos URF e Material:');
+        console.log('   - Rótulos de dados incluídos');
+        console.log('');
+        console.log('4. Layout:');
+        console.log('   - Grid CSS responsivo');
+        console.log('   - Plugin ChartDataLabels ativo');
+    </script>
+</body>
+</html>
