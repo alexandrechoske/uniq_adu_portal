@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Navegação - Portal UniSystem</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        .nav-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #3b82f6;
+            background: #f8fafc;
+        }
+        .nav-section h2 {
+            margin: 0 0 10px 0;
+            color: #1f406f;
+        }
+        .nav-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .nav-link:hover {
+            background: #2563eb;
+        }
+        .instructions {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #f59e0b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Navegação - Sistema de Breadcrumbs</h1>
+        
+        <div class="instructions">
+            <strong>📋 Instruções de Teste:</strong><br>
+            1. Faça login no sistema usando as credenciais administrativas<br>
+            2. Teste os links abaixo para verificar a navegação<br>
+            3. Verifique se os breadcrumbs estão funcionando corretamente<br>
+            4. Confirme se as permissões de acesso estão corretas
+        </div>
+
+        <div class="nav-section">
+            <h2>🏠 Menu Principal</h2>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5000/menu/" class="nav-link">Menu Principal</a>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <h2>📊 Seções de Navegação</h2>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5000/menu/dashboards" class="nav-link">Dashboards</a>
+                <a href="http://127.0.0.1:5000/menu/ferramentas" class="nav-link">Ferramentas</a>
+                <a href="http://127.0.0.1:5000/menu/configuracoes" class="nav-link">Configurações</a>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <h2>📈 Dashboards</h2>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5000/dashboard-executivo/" class="nav-link">Dashboard Executivo</a>
+                <a href="http://127.0.0.1:5000/dashboard-materiais/" class="nav-link">Dashboard Materiais</a>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <h2>🛠️ Ferramentas</h2>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5000/agente/" class="nav-link">Agente IA</a>
+                <a href="http://127.0.0.1:5000/conferencia/" class="nav-link">Conferência Documental</a>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <h2>⚙️ Configurações (Admin)</h2>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5000/usuarios/" class="nav-link">Usuários</a>
+                <a href="http://127.0.0.1:5000/config/logos-clientes" class="nav-link">Logos de Clientes</a>
+                <a href="http://127.0.0.1:5000/config/icones-materiais" class="nav-link">Ícones de Materiais</a>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <h2>🔍 Testes de Breadcrumb</h2>
+            <div class="nav-links">
+                <a href="http://127.0.0.1:5000/usuarios/form" class="nav-link">Novo Usuário (4 níveis)</a>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <strong>✅ Checklist de Validação ATUALIZADO V2:</strong><br>
+            □ Breadcrumb integrado no actions-bar de todas as páginas<br>
+            □ Layout "[breadcrumb][espaçamento][botões]" funcionando<br>
+            □ Breadcrumb removido de baixo do top-navbar<br>
+            □ Actions-bar com layout space-between (breadcrumb à esquerda, ações à direita)<br>
+            □ Dashboards com breadcrumb + botões organizados<br>
+            □ Páginas de configuração com breadcrumb + botões de ação<br>
+            □ Páginas do menu com breadcrumb simples<br>
+            □ Navegação hierárquica funcionando corretamente<br>
+            □ Responsive design mantido em todas as páginas
+        </div>
+    </div>
+</body>
+</html>

@@ -1,23 +1,25 @@
 {% extends "base.html" %}
-{% block content %}
-<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
 
+{% block title %}Ícones de Materiais - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
+{% endblock %}
+
+{% block content %}
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <div class="header-content">
-            <div class="header-title-section">
-                <h1 class="header-title">Ícones de Materiais</h1>
-                <p class="header-subtitle">
-                    <i class="mdi mdi-cube"></i>
-                    Gerencie os ícones dos materiais utilizados no sistema
-                </p>
-            </div>
-            <div class="header-controls">
-                <button id="btn-adicionar" class="btn btn-primary">
-                    <i class="mdi mdi-plus"></i>
-                    Novo Material
-                </button>
-            </div>
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
+                {'name': 'Ícones de Materiais', 'icon': 'mdi mdi-image-multiple'}
+            ]) }}
+            <button id="btn-adicionar" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Novo Material
+            </button>
         </div>
     </div>
 

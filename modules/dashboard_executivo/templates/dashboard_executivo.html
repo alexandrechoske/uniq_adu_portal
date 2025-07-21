@@ -16,15 +16,17 @@
         </div>
     </div>
 
-    <!-- Header -->
-    <div class="dashboard-header">
-        <div class="header-left">
-            <h1 class="dashboard-title">Dashboard Executivo</h1>
-            <p class="dashboard-subtitle">Visão geral dos processos de importação</p>
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
+                {'name': 'Dashboard Executivo', 'icon': 'mdi mdi-chart-line'}
+            ]) }}
         </div>
-        <div class="header-right">
-            <button id="refresh-data" class="btn btn-primary">🔄 Atualizar Dados</button>
-            <span id="last-update" class="last-update">Carregando...</span>
+        <div class="actions-right">
+            <!-- Botões de ação podem ser adicionados aqui se necessário -->
         </div>
     </div>
     

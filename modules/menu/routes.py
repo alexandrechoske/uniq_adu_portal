@@ -9,3 +9,15 @@ bp = Blueprint('menu', __name__,
 @bp.route('/')
 def menu_home():
     return render_template('menu.html')
+
+@bp.route('/dashboards')
+def dashboards():
+    return render_template('dashboards.html')
+
+@bp.route('/ferramentas')
+def ferramentas():
+    return render_template('ferramentas.html')
+
+@bp.route('/configuracoes')
+def configuracoes():
+    return render_template('configuracoes.html')

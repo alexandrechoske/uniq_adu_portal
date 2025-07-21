@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Configurações', 'icon': 'mdi mdi-cog'}
+            ]) }}
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Configuration Section -->
+        <div class="menu-section">
+            <h3 class="section-title">
+                <i class="mdi mdi-cog"></i>
+                Configurações do Sistema
+            </h3>
+            
+            {% if session.user.role in ['admin', 'interno_unique'] %}
+            <div class="cards-grid">
+                <a href="{{ url_for('usuarios.index') }}" class="menu-card config">
+                    <div class="card-icon">
+                        <i class="mdi mdi-account-group"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Gerenciar Usuários</h4>
+                        <p class="card-description">Cadastro e gerenciamento de usuários</p>
+                    </div>
+                </a>
+                
+                <a href="{{ url_for('config.logos_clientes') }}" class="menu-card config">
+                    <div class="card-icon">
+                        <i class="mdi mdi-domain"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Logos de Clientes</h4>
+                        <p class="card-description">Gerenciar logos das empresas</p>
+                    </div>
+                </a>
+                
+                <a href="{{ url_for('config.icones_materiais') }}" class="menu-card config">
+                    <div class="card-icon">
+                        <i class="mdi mdi-image-multiple"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Ícones de Materiais</h4>
+                        <p class="card-description">Configurar ícones para categorias</p>
+                    </div>
+                </a>
+                
+                <!-- Placeholder para futuras configurações -->
+                <div class="menu-card placeholder">
+                    <div class="card-icon">
+                        <i class="mdi mdi-plus"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Novas Configurações</h4>
+                        <p class="card-description">Em breve, mais opções estarão disponíveis</p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="access-denied">
+                <div class="access-denied-icon">
+                    <i class="mdi mdi-lock"></i>
+                </div>
+                <h3>Acesso Restrito</h3>
+                <p>Apenas administradores e usuários internos podem acessar as configurações do sistema.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

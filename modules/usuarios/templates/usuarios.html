@@ -1,5 +1,23 @@
-{% extends "base.html" %}
-
+{% exten{% block content %}
+<div class="dashboard-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
+                {'name': 'Gerenciar Usuários', 'icon': 'mdi mdi-account-group'}
+            ]) }}
+            <a href="{{ url_for('usuarios.refresh') }}" class="btn btn-outline">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </a>
+            <a href="{{ url_for('usuarios.form') }}" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Novo Usuário
+            </a>
+        </div>
+    </div>
 {% block title %}Usuários - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
@@ -8,26 +26,24 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Header -->
-    <div class="dashboard-header">
-        <div class="header-content">
-            <div class="header-title-section">
-                <h1 class="header-title">Gerenciar Usuários</h1>
-                <p class="header-subtitle">
-                    <i class="mdi mdi-account-group"></i>
-                    Controle de acesso e permissões do sistema
-                </p>
-            </div>
-            <div class="header-controls">
-                <a href="{{ url_for('usuarios.refresh') }}" class="btn btn-outline">
-                    <i class="mdi mdi-refresh"></i>
-                    Atualizar
-                </a>
-                <a href="{{ url_for('usuarios.novo') }}" class="btn btn-primary">
-                    <i class="mdi mdi-plus"></i>
-                    Novo Usuário
-                </a>
-            </div>
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
+                {'name': 'Gerenciar Usuários', 'icon': 'mdi mdi-account-group'}
+            ]) }}
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('usuarios.refresh') }}" class="btn btn-outline">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </a>
+            <a href="{{ url_for('usuarios.novo') }}" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Novo Usuário
+            </a>
         </div>
     </div>
 

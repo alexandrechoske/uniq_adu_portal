@@ -7,17 +7,18 @@
 {% endblock %}
 
 {% block content %}
-<div class="agent-container">
-    <!-- Header -->
-    <div class="agent-header">
-        <div class="header-content">
-            <div>
-                <h1 class="header-title">Agente Unique</h1>
-                <p class="header-subtitle">
-                    <i class="mdi mdi-robot"></i>
-                    Configure seu assistente inteligente no WhatsApp
-                </p>
-            </div>
+<div class="dashboard-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Ferramentas', 'icon': 'mdi mdi-tools', 'url': url_for('menu.ferramentas')},
+                {'name': 'Agente Unique', 'icon': 'mdi mdi-robot'}
+            ]) }}
+        </div>
+        <div class="actions-right">
+            <!-- Botões de ação podem ser adicionados aqui se necessário -->
         </div>
     </div>
 
@@ -257,3 +258,4 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 {% endblock %}
+

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboards - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard'}
+            ]) }}
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Dashboard Section -->
+        <div class="menu-section">
+            <h3 class="section-title">
+                <i class="mdi mdi-chart-line"></i>
+                Dashboards Disponíveis
+            </h3>
+            <div class="cards-grid">
+                <a href="{{ url_for('dashboard_executivo.index') }}" class="menu-card dashboard">
+                    <div class="card-icon">
+                        <i class="mdi mdi-chart-box"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Dashboard Executivo</h4>
+                        <p class="card-description">Visão geral dos indicadores de importação</p>
+                    </div>
+                </a>
+                
+                <a href="{{ url_for('dashboard_materiais.index') }}" class="menu-card materials">
+                    <div class="card-icon">
+                        <i class="mdi mdi-package-variant"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Dashboard Materiais</h4>
+                        <p class="card-description">Análise detalhada de materiais importados</p>
+                    </div>
+                </a>
+                
+                <!-- Placeholder para futuros dashboards -->
+                <div class="menu-card placeholder">
+                    <div class="card-icon">
+                        <i class="mdi mdi-plus"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Novos Dashboards</h4>
+                        <p class="card-description">Em breve, mais dashboards estarão disponíveis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Ferramentas - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Ferramentas', 'icon': 'mdi mdi-tools'}
+            ]) }}
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Tools Section -->
+        <div class="menu-section">
+            <h3 class="section-title">
+                <i class="mdi mdi-tools"></i>
+                Ferramentas Disponíveis
+            </h3>
+            <div class="cards-grid">
+                <a href="{{ url_for('agente.index') }}" class="menu-card tools">
+                    <div class="card-icon">
+                        <i class="mdi mdi-robot"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Agente IA</h4>
+                        <p class="card-description">Assistente inteligente para consultas</p>
+                    </div>
+                </a>
+                
+                {% if session.user.role in ['admin', 'interno_unique'] %}
+                <a href="{{ url_for('conferencia.index') }}" class="menu-card tools">
+                    <div class="card-icon">
+                        <i class="mdi mdi-file-document-check"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Conferência Documental</h4>
+                        <p class="card-description">Análise e validação de documentos</p>
+                    </div>
+                </a>
+                {% endif %}
+                
+                <!-- Placeholder para futuras ferramentas -->
+                <div class="menu-card placeholder">
+                    <div class="card-icon">
+                        <i class="mdi mdi-plus"></i>
+                    </div>
+                    <div class="card-content">
+                        <h4 class="card-title">Novas Ferramentas</h4>
+                        <p class="card-description">Em breve, mais ferramentas estarão disponíveis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

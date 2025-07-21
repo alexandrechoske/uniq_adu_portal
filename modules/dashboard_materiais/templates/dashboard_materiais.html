@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="materiais-container">
+<div class="dashboard-container">
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-spinner">
@@ -16,16 +16,20 @@
         </div>
     </div>
 
-    <!-- Header -->
-    <div class="materiais-header">
-        <div class="header-left">
-            <h1 class="materiais-title">Dashboard de Materiais</h1>
-            <p class="materiais-subtitle">Análise detalhada dos materiais importados</p>
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
+                {'name': 'Dashboard de Materiais', 'icon': 'mdi mdi-package-variant-closed'}
+            ]) }}
         </div>
-        <div class="header-right">
-            <button id="open-filters" class="btn btn-primary">🔍 Filtros</button>
-            <button id="refresh-data" class="btn btn-secondary">🔄 Atualizar</button>
-            <span id="last-update" class="last-update">Carregando...</span>
+        <div class="actions-right">
+            <button id="open-filters" class="btn btn-primary">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
         </div>
     </div>
     

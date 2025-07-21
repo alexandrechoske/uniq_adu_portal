@@ -73,63 +73,6 @@
     box-sizing: border-box;
 }
 
-/* === HEADER MODERNIZADO === */
-.dashboard-header {
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border-light);
-    padding: var(--spacing-lg) var(--spacing-xl);
-    margin-bottom: var(--spacing-xl);
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--spacing-lg);
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-.header-title-section {
-    flex: 1;
-}
-
-.header-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin: 0 0 var(--spacing-xs) 0;
-    letter-spacing: -0.02em;
-}
-
-.header-subtitle {
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-}
-
-.user-welcome {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    color: var(--color-text-secondary);
-    font-size: 0.875rem;
-    font-weight: 500;
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--color-surface-hover);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border-light);
-}
-
 /* === MENU GRID === */
 .menu-grid {
     display: flex;
@@ -329,20 +272,6 @@
         padding: 0 var(--spacing-md);
     }
     
-    .dashboard-header {
-        padding: var(--spacing-md);
-    }
-    
-    .header-content {
-        flex-direction: column;
-        gap: var(--spacing-md);
-        align-items: flex-start;
-    }
-    
-    .header-title {
-        font-size: 1.5rem;
-    }
-    
     .menu-section {
         padding: var(--spacing-lg);
     }
@@ -376,4 +305,51 @@
     .quick-actions {
         grid-template-columns: 1fr;
     }
+}
+
+/* === ESTILOS PARA PÁGINAS DE SEÇÃO === */
+.access-denied {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.access-denied-icon {
+    margin-bottom: var(--spacing-lg);
+}
+
+.access-denied-icon i {
+    font-size: 3rem;
+    color: var(--color-text-muted);
+}
+
+.access-denied h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.access-denied p {
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.menu-card.placeholder {
+    opacity: 0.6;
+    cursor: default;
+    border: 2px dashed var(--color-border);
+}
+
+.menu-card.placeholder:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    background: var(--color-surface);
+}
+
+.menu-card.placeholder .card-icon {
+    background: var(--color-text-light);
+    color: var(--color-surface);
 }
