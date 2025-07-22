@@ -910,7 +910,16 @@ function openProcessModal(operationIndex) {
     }
     
     const operation = window.currentOperations[operationIndex];
-    console.log('[DASHBOARD_EXECUTIVO] Dados da operação:', operation);
+    console.log('[DASHBOARD_EXECUTIVO] Dados da operação completos:', operation);
+    
+    // Debug específico dos campos problemáticos
+    console.log('[MODAL_DEBUG] ref_importador:', operation.ref_importador);
+    console.log('[MODAL_DEBUG] cnpj_importador:', operation.cnpj_importador);
+    console.log('[MODAL_DEBUG] status_macro:', operation.status_macro);
+    console.log('[MODAL_DEBUG] data_embarque:', operation.data_embarque);
+    console.log('[MODAL_DEBUG] peso_bruto:', operation.peso_bruto);
+    console.log('[MODAL_DEBUG] urf_despacho:', operation.urf_despacho);
+    console.log('[MODAL_DEBUG] urf_despacho_normalizado:', operation.urf_despacho_normalizado);
     
     // Update modal title
     const modalTitle = document.getElementById('modal-title');
@@ -918,15 +927,17 @@ function openProcessModal(operationIndex) {
         modalTitle.textContent = `Detalhes do Processo ${operation.ref_unique || 'N/A'}`;
     }
     
-    // Update timeline
-    updateProcessTimeline(operation.status_macro || 1);
+    // Update timeline - extract numeric value from status_macro like "5 - AG REGISTRO"
+    const statusMacroNumber = extractStatusMacroNumber(operation.status_macro);
+    console.log('[MODAL_DEBUG] Status macro extraído:', statusMacroNumber);
+    updateProcessTimeline(statusMacroNumber);
     
     // Update general information
     updateElementValue('detail-ref-unique', operation.ref_unique);
     updateElementValue('detail-ref-importador', operation.ref_importador);
     updateElementValue('detail-data-abertura', operation.data_abertura);
     updateElementValue('detail-importador', operation.importador);
-    updateElementValue('detail-cnpj', operation.cnpj_importador);
+    updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
     updateElementValue('detail-status', operation.status_processo);
     
     // Update cargo and transport details
@@ -943,7 +954,7 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-canal', operation.canal);
     updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
     updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
-    updateElementValue('detail-urf-despacho', operation.urf_despacho);
+    updateElementValue('detail-urf-despacho', operation.urf_despacho_normalizado || operation.urf_despacho);
     
     // Update financial summary
     updateElementValue('detail-valor-cif', formatCurrency(operation.valor_cif_real || 0));
@@ -981,19 +992,54 @@ function closeProcessModal() {
 }
 
 /**
+ * Extract numeric value from status_macro like "5 - AG REGISTRO"
+ */
+function extractStatusMacroNumber(statusMacro) {
+    if (!statusMacro) return 1;
+    
+    // Extract the first number from strings like "5 - AG REGISTRO"
+    const match = statusMacro.toString().match(/^(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+}
+
+/**
+ * Format CNPJ for display
+ */
+function formatCNPJ(cnpj) {
+    if (!cnpj) return '-';
+    
+    // Remove non-digits
+    const cleanCNPJ = cnpj.replace(/\D/g, '');
+    
+    // Format as XX.XXX.XXX/XXXX-XX
+    if (cleanCNPJ.length === 14) {
+        return cleanCNPJ.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    }
+    
+    return cnpj;
+}
+
+/**
  * Update process timeline based on status_macro
  */
 function updateProcessTimeline(statusMacro) {
+    console.log('[TIMELINE_DEBUG] Atualizando timeline com status:', statusMacro);
+    
     const timelineSteps = document.querySelectorAll('.timeline-step');
+    console.log('[TIMELINE_DEBUG] Steps encontrados:', timelineSteps.length);
     
     timelineSteps.forEach((step, index) => {
         const stepNumber = index + 1;
         step.classList.remove('completed', 'active');
         
+        console.log(`[TIMELINE_DEBUG] Step ${stepNumber}: status=${statusMacro}`);
+        
         if (stepNumber < statusMacro) {
             step.classList.add('completed');
+            console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como completed`);
         } else if (stepNumber === statusMacro) {
             step.classList.add('active');
+            console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como active`);
         }
     });
 }
@@ -1004,7 +1050,11 @@ function updateProcessTimeline(statusMacro) {
 function updateElementValue(elementId, value) {
     const element = document.getElementById(elementId);
     if (element) {
-        element.textContent = value || '-';
+        const displayValue = value || '-';
+        element.textContent = displayValue;
+        console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com: "${displayValue}"`);
+    } else {
+        console.warn(`[MODAL_DEBUG] Elemento ${elementId} não encontrado no DOM`);
     }
 }
 

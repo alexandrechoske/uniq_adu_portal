@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Modal - Debug</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+        .test-container {
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .test-icon {
+            font-size: 24px;
+            margin: 10px;
+        }
+        
+        .status-macro-test {
+            border: 1px solid #007bff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Teste Modal - Debug Dashboard Executivo</h1>
+        
+        <h2>1. Teste de Ícones MDI</h2>
+        <div class="debug-info">
+            <p>Ícones da Timeline:</p>
+            <div>
+                <i class="mdi mdi-file-document-outline test-icon"></i> Abertura
+                <i class="mdi mdi-ship test-icon"></i> Embarque  
+                <i class="mdi mdi-airplane-landing test-icon"></i> Chegada
+                <i class="mdi mdi-check-circle-outline test-icon"></i> Desembaraço
+                <i class="mdi mdi-flag-checkered test-icon"></i> Finalizado
+            </div>
+        </div>
+        
+        <h2>2. Teste de Parsing do Status Macro</h2>
+        <div class="debug-info">
+            <div class="status-macro-test">
+                <strong>Entrada:</strong> "5 - AG REGISTRO"<br>
+                <strong>Resultado esperado:</strong> 5<br>
+                <strong>Resultado real:</strong> <span id="status-result"></span>
+            </div>
+        </div>
+        
+        <h2>3. Teste de Formatação CNPJ</h2>
+        <div class="debug-info">
+            <div class="status-macro-test">
+                <strong>Entrada:</strong> "11568948000164"<br>
+                <strong>Resultado esperado:</strong> 11.568.948/0001-64<br>
+                <strong>Resultado real:</strong> <span id="cnpj-result"></span>
+            </div>
+        </div>
+        
+        <h2>4. Dados de Exemplo do Modal</h2>
+        <div class="debug-info">
+            <h3>Dados que devem aparecer no modal:</h3>
+            <ul>
+                <li><strong>Ref. Unique:</strong> UN25/6517</li>
+                <li><strong>Ref. Importador:</strong> AZ8584/25/MP (não "-")</li>
+                <li><strong>CNPJ:</strong> 11.568.948/0001-64 (não "-")</li>
+                <li><strong>Data Embarque:</strong> 11/07/2025 (não "-")</li>
+                <li><strong>URF Despacho:</strong> ITAJAÍ (não "-")</li>
+                <li><strong>Peso Bruto:</strong> 320.000 Kg (não "-")</li>
+                <li><strong>Transit Time:</strong> 5 dias (não "-")</li>
+            </ul>
+            
+            <h3>Timeline deve mostrar:</h3>
+            <ul>
+                <li>Status Macro = "5 - AG REGISTRO" → Step 5 ativo</li>
+                <li>Steps 1-4 completados (verde)</li>
+                <li>Step 5 ativo (azul pulsando)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Teste das funções do modal
+        function extractStatusMacroNumber(statusMacro) {
+            if (!statusMacro) return 1;
+            
+            // Extract the first number from strings like "5 - AG REGISTRO"
+            const match = statusMacro.toString().match(/^(\d+)/);
+            return match ? parseInt(match[1]) : 1;
+        }
+
+        function formatCNPJ(cnpj) {
+            if (!cnpj) return '-';
+            
+            // Remove non-digits
+            const cleanCNPJ = cnpj.replace(/\D/g, '');
+            
+            // Format as XX.XXX.XXX/XXXX-XX
+            if (cleanCNPJ.length === 14) {
+                return cleanCNPJ.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+            }
+            
+            return cnpj;
+        }
+        
+        // Executar testes
+        document.addEventListener('DOMContentLoaded', function() {
+            // Teste status macro
+            const statusResult = extractStatusMacroNumber("5 - AG REGISTRO");
+            document.getElementById('status-result').textContent = statusResult;
+            
+            // Teste CNPJ
+            const cnpjResult = formatCNPJ("11568948000164");
+            document.getElementById('cnpj-result').textContent = cnpjResult;
+            
+            // Log para debug
+            console.log('Status Macro Test: "5 - AG REGISTRO" -> ', statusResult);
+            console.log('CNPJ Test: "11568948000164" -> ', cnpjResult);
+        });
+    </script>
+</body>
+</html>

@@ -423,10 +423,18 @@ def recent_operations():
         else:
             df_sorted = df.head(50)
         
-        # Selecionar colunas relevantes
+        # Selecionar colunas relevantes para a tabela E modal
         relevant_columns = [
+            # Colunas para a tabela
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
-            'modal', 'status_processo', 'custo_total', 'data_chegada'
+            'modal', 'status_processo', 'custo_total', 'data_chegada',
+            
+            # Colunas adicionais para o modal
+            'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque',
+            'peso_bruto', 'urf_despacho', 'urf_despacho_normalizado', 'container',
+            'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
+            'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',
+            'canal', 'data_desembaraco'
         ]
         
         # Adicionar colunas normalizadas se disponíveis
@@ -438,7 +446,14 @@ def recent_operations():
             relevant_columns.append('urf_entrada')
         
         available_columns = [col for col in relevant_columns if col in df_sorted.columns]
+        print(f"[DASHBOARD_EXECUTIVO] Colunas disponíveis: {available_columns}")
+        print(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
+        
         operations_data = df_sorted[available_columns].to_dict('records')
+        
+        # Debug: mostrar dados de uma operação de exemplo
+        if operations_data:
+            print(f"[DASHBOARD_EXECUTIVO] Exemplo de operação (keys): {list(operations_data[0].keys())}")
         
         return jsonify({
             'success': True,
