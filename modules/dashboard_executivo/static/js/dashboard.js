@@ -79,6 +79,37 @@ function setupEventListeners() {
     if (exportBtn) {
         exportBtn.addEventListener('click', exportData);
     }
+
+    // Modal event listeners
+    setupModalEventListeners();
+}
+
+/**
+ * Setup modal event listeners
+ */
+function setupModalEventListeners() {
+    // Close modal button
+    const modalClose = document.getElementById('modal-close');
+    if (modalClose) {
+        modalClose.addEventListener('click', closeProcessModal);
+    }
+
+    // Close modal when clicking outside
+    const modalOverlay = document.getElementById('process-modal');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                closeProcessModal();
+            }
+        });
+    }
+
+    // Close modal with ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeProcessModal();
+        }
+    });
 }
 
 /**
@@ -715,14 +746,21 @@ async function loadMonthlyChart(granularidade) {
  * Update recent operations table
  */
 function updateRecentOperationsTable(operations) {
+    console.log('[DASHBOARD_EXECUTIVO] Atualizando tabela com', operations.length, 'operações');
+    
     const tableBody = document.querySelector('#recent-operations-table tbody');
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
     
-    operations.forEach(operation => {
+    operations.forEach((operation, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
+            <td>
+                <button class="action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
+                    <i class="mdi mdi-eye-outline"></i>
+                </button>
+            </td>
             <td>${operation.ref_unique || '-'}</td>
             <td>${operation.importador || '-'}</td>
             <td>${operation.data_abertura || '-'}</td>
@@ -736,6 +774,10 @@ function updateRecentOperationsTable(operations) {
         `;
         tableBody.appendChild(row);
     });
+    
+    // Store operations data globally for modal access
+    window.currentOperations = operations;
+    console.log('[DASHBOARD_EXECUTIVO] Operações armazenadas globalmente:', window.currentOperations.length);
 }
 
 /**
@@ -854,4 +896,171 @@ function formatCurrencyCompact(value) {
     } else {
         return formatCurrency(value);
     }
+}
+
+/**
+ * Open process details modal
+ */
+function openProcessModal(operationIndex) {
+    console.log('[DASHBOARD_EXECUTIVO] Abrindo modal para processo:', operationIndex);
+    
+    if (!window.currentOperations || !window.currentOperations[operationIndex]) {
+        console.error('[DASHBOARD_EXECUTIVO] Operação não encontrada:', operationIndex);
+        return;
+    }
+    
+    const operation = window.currentOperations[operationIndex];
+    console.log('[DASHBOARD_EXECUTIVO] Dados da operação:', operation);
+    
+    // Update modal title
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = `Detalhes do Processo ${operation.ref_unique || 'N/A'}`;
+    }
+    
+    // Update timeline
+    updateProcessTimeline(operation.status_macro || 1);
+    
+    // Update general information
+    updateElementValue('detail-ref-unique', operation.ref_unique);
+    updateElementValue('detail-ref-importador', operation.ref_importador);
+    updateElementValue('detail-data-abertura', operation.data_abertura);
+    updateElementValue('detail-importador', operation.importador);
+    updateElementValue('detail-cnpj', operation.cnpj_importador);
+    updateElementValue('detail-status', operation.status_processo);
+    
+    // Update cargo and transport details
+    updateElementValue('detail-modal', operation.modal);
+    updateElementValue('detail-container', operation.container);
+    updateElementValue('detail-data-embarque', operation.data_embarque);
+    updateElementValue('detail-data-chegada', operation.data_chegada);
+    updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : '-');
+    updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : '-');
+    
+    // Update customs information
+    updateElementValue('detail-numero-di', operation.numero_di);
+    updateElementValue('detail-data-registro', operation.data_registro);
+    updateElementValue('detail-canal', operation.canal);
+    updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
+    updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
+    updateElementValue('detail-urf-despacho', operation.urf_despacho);
+    
+    // Update financial summary
+    updateElementValue('detail-valor-cif', formatCurrency(operation.valor_cif_real || 0));
+    updateElementValue('detail-frete-inter', formatCurrency(operation.custo_frete_inter || 0));
+    updateElementValue('detail-armazenagem', formatCurrency(operation.custo_armazenagem || 0));
+    updateElementValue('detail-honorarios', formatCurrency(operation.custo_honorarios || 0));
+    
+    // Calculate other expenses
+    const otherExpenses = calculateOtherExpenses(operation);
+    updateElementValue('detail-outras-despesas', formatCurrency(otherExpenses));
+    updateElementValue('detail-custo-total', formatCurrency(operation.custo_total || 0));
+    
+    // Update documents (placeholder for now)
+    updateDocumentsList(operation);
+    
+    // Show modal
+    const modal = document.getElementById('process-modal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+/**
+ * Close process details modal
+ */
+function closeProcessModal() {
+    console.log('[DASHBOARD_EXECUTIVO] Fechando modal');
+    
+    const modal = document.getElementById('process-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Update process timeline based on status_macro
+ */
+function updateProcessTimeline(statusMacro) {
+    const timelineSteps = document.querySelectorAll('.timeline-step');
+    
+    timelineSteps.forEach((step, index) => {
+        const stepNumber = index + 1;
+        step.classList.remove('completed', 'active');
+        
+        if (stepNumber < statusMacro) {
+            step.classList.add('completed');
+        } else if (stepNumber === statusMacro) {
+            step.classList.add('active');
+        }
+    });
+}
+
+/**
+ * Update element value safely
+ */
+function updateElementValue(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value || '-';
+    }
+}
+
+/**
+ * Calculate other expenses
+ */
+function calculateOtherExpenses(operation) {
+    const expenseFields = [
+        'custo_ii', 'custo_ipi', 'custo_pis', 'custo_cofins', 'custo_icms',
+        'custo_afrmm', 'custo_seguro', 'custo_adicional_frete', 'custo_taxa_siscomex',
+        'custo_licenca_importacao', 'custo_taxa_utilizacao_siscomex', 'custo_multa',
+        'custo_juros_mora', 'custo_outros'
+    ];
+    
+    let total = 0;
+    expenseFields.forEach(field => {
+        const value = operation[field];
+        if (value && !isNaN(value)) {
+            total += Number(value);
+        }
+    });
+    
+    return total;
+}
+
+/**
+ * Update documents list (placeholder)
+ */
+function updateDocumentsList(operation) {
+    const documentsList = document.getElementById('documents-list');
+    if (!documentsList) return;
+    
+    // For now, show placeholder message
+    // In the future, this would fetch documents from an API endpoint
+    documentsList.innerHTML = '<p class="no-documents">Funcionalidade de documentos será implementada em breve</p>';
+    
+    // Example of how documents could be displayed:
+    /*
+    const documents = [
+        { name: 'Fatura Comercial.pdf', size: '1.2 MB', type: 'pdf' },
+        { name: 'Conhecimento de Embarque.pdf', size: '856 KB', type: 'pdf' },
+        { name: 'Packing List.xlsx', size: '245 KB', type: 'excel' }
+    ];
+    
+    if (documents.length > 0) {
+        documentsList.innerHTML = documents.map(doc => `
+            <div class="document-item">
+                <i class="document-icon mdi mdi-file-document-outline"></i>
+                <div class="document-info">
+                    <div class="document-name">${doc.name}</div>
+                    <div class="document-size">${doc.size}</div>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        documentsList.innerHTML = '<p class="no-documents">Nenhum documento disponível</p>';
+    }
+    */
 }
