@@ -57,16 +57,6 @@
             </div>
         </div>
         
-        <div class="kpi-card kpi-success">
-            <div class="kpi-icon">
-                <i class="mdi mdi-currency-brl"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Valor Total CIF (R$)</p>
-                <p class="kpi-value" id="mat-valor-total">-</p>
-            </div>
-        </div>
-        
         <div class="kpi-card kpi-warning">
             <div class="kpi-icon">
                 <i class="mdi mdi-cash-multiple"></i>
@@ -122,75 +112,56 @@
     
     <!-- Charts Grid -->
     <div class="charts-grid">
-        <!-- Top Materiais Chart -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Top 10 Materiais por Quantidade</h2>
+        <div class="chart-row">
+            <!-- Top 10 Materiais Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h2 class="chart-title">Top 10 Materiais por Quantidade</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="top-materiais-chart" class="chart-canvas"></canvas>
+                </div>
             </div>
-            <div class="chart-container">
-                <canvas id="top-materiais-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-        
-        <!-- Evolução Mensal Chart - SUBSTITUÍDO POR MODAL ROSCA -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Total Processos por Modal</h2>
-            </div>
-            <div class="chart-container">
-                <canvas id="processos-modal-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-        
-        <!-- Modal Distribution Chart -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Distribuição por Modal</h2>
-            </div>
-            <div class="chart-container">
-                <canvas id="modal-chart" class="chart-canvas"></canvas>
+            <!-- Total Processos por Modal Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h2 class="chart-title">Total Processos por Modal</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="processos-modal-chart" class="chart-canvas"></canvas>
+                </div>
             </div>
         </div>
-        
-        <!-- Canal Distribution Chart -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Distribuição por Canal</h2>
+        <div class="chart-row">
+            <!-- Principais Materiais Table -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h2 class="chart-title">TOP 10 Principais Materiais</h2>
+                </div>
+                <div class="table-container">
+                    <table id="principais-materiais-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Qtd Processos</th>
+                                <th>Custo Próxima Chegada (R$)</th>
+                                <th>Próxima Chegada</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="chart-container">
-                <canvas id="canal-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-        
-        <!-- Transit Time por Material Chart -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Transit Time por Material</h2>
-            </div>
-            <div class="chart-container">
-                <canvas id="transit-time-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-        
-        <!-- Principais Materiais Table -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Principais Materiais</h2>
-            </div>
-            <div class="table-container">
-                <table id="principais-materiais-table" class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Material</th>
-                            <th>Qtd Processos</th>
-                            <th>Custo Total (R$)</th>
-                            <th>Próxima Chegada</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Dados carregados dinamicamente -->
-                    </tbody>
-                </table>
+            <!-- Transit Time por Material Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h2 class="chart-title">Transit Time por Material</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="transit-time-chart" class="chart-canvas"></canvas>
+                </div>
             </div>
         </div>
     </div>

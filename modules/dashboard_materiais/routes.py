@@ -162,6 +162,11 @@ def materiais_kpis():
         valores_processos = []
         custos_processos = []
         
+        print(f"[DASHBOARD_MATERIAIS] DEBUG: Total de registros no df: {len(df)}")
+        if len(df) > 0:
+            print(f"[DASHBOARD_MATERIAIS] DEBUG: Colunas disponíveis: {df.columns.tolist()}")
+            print(f"[DASHBOARD_MATERIAIS] DEBUG: Exemplo primeiro registro: {df.iloc[0].to_dict()}")
+        
         for _, row in df.iterrows():
             mercadoria = str(row.get('mercadoria', '')).strip().lower()
             if mercadoria and mercadoria not in ['', 'não informado', 'nan', 'none', 'null']:
@@ -169,14 +174,33 @@ def materiais_kpis():
             
             # Usar os campos corretos da view
             valor_cif = float(row.get('valor_cif_real', 0) or 0)
-            custo_total_item = float(row.get('custo_total', 0) or 0)
+            
+            # Debug e tratamento do custo_total
+            custo_raw = row.get('custo_total', 0)
+            print(f"[DASHBOARD_MATERIAIS] DEBUG: Custo raw para {row.get('mercadoria', 'N/A')}: {custo_raw} (tipo: {type(custo_raw)})")
+            
+            # Tratar valores None, empty ou não numéricos
+            try:
+                if pd.isna(custo_raw) or custo_raw is None or custo_raw == '' or str(custo_raw).lower() in ['nan', 'none', 'null']:
+                    custo_total_item = 0.0
+                else:
+                    custo_total_item = float(custo_raw)
+                    if pd.isna(custo_total_item):
+                        custo_total_item = 0.0
+            except (ValueError, TypeError):
+                custo_total_item = 0.0
+                
             valores_processos.append(valor_cif)
             custos_processos.append(custo_total_item)
         
         total_materiais = len(materiais_unicos)
         valor_total = sum(valores_processos)
         custo_total_soma = sum(custos_processos)
-        ticket_medio = valor_total / total_processos if total_processos > 0 else 0
+        ticket_medio = custo_total_soma / total_processos if total_processos > 0 else 0  # Mudança: usar custo ao invés de valor para ticket médio
+        
+        print(f"[DASHBOARD_MATERIAIS] DEBUG: Valor total calculado: {valor_total}")
+        print(f"[DASHBOARD_MATERIAIS] DEBUG: Custo total calculado: {custo_total_soma}")
+        print(f"[DASHBOARD_MATERIAIS] DEBUG: Ticket médio calculado: {ticket_medio}")
         
         # Transit time médio
         transit_time = 0
@@ -537,63 +561,88 @@ def api_tabela_materiais():
         if 'mercadoria' in df.columns:
             # Agrupar por material
             materiais_grouped = df.groupby('mercadoria').agg({
-                'custo_total': 'sum',
-                'ref_unique': 'count',
-                'data_chegada': lambda x: x.dropna().min() if not x.dropna().empty else None
+                'ref_unique': 'count',  # Quantidade de processos
+                'data_chegada': lambda x: x.dropna().max() if not x.dropna().empty else None,  # MÁXIMA data de chegada
+                'custo_total': 'sum'  # Soma total dos custos do material
             }).reset_index()
             
-            materiais_grouped.columns = ['material', 'custo_total', 'qtd_processos', 'proxima_chegada']
+            materiais_grouped.columns = ['material', 'qtd_processos', 'proxima_chegada', 'custo_total']
             
-            # Adicionar indicativo para chegadas dentro de 7 dias
+            # Para cada material, buscar o custo do processo da próxima chegada
+            for idx, row in materiais_grouped.iterrows():
+                material = row['material']
+                proxima_chegada = row['proxima_chegada']
+                
+                if proxima_chegada and not pd.isna(proxima_chegada):
+                    # Buscar o custo do processo que tem essa data de chegada para este material
+                    processo_proxima_chegada = df[
+                        (df['mercadoria'] == material) & 
+                        (df['data_chegada'] == proxima_chegada)
+                    ]['custo_total'].iloc[0] if len(df[
+                        (df['mercadoria'] == material) & 
+                        (df['data_chegada'] == proxima_chegada)
+                    ]) > 0 else 0
+                    
+                    materiais_grouped.at[idx, 'custo_proxima_chegada'] = processo_proxima_chegada
+                else:
+                    materiais_grouped.at[idx, 'custo_proxima_chegada'] = 0
+            
+            # Adicionar indicativo para chegadas dentro de 5 dias (conforme solicitado)
             hoje = datetime.now()
-            sete_dias = hoje + timedelta(days=7)
+            cinco_dias_futuro = hoje + timedelta(days=5)
             
             def adicionar_indicativo(row):
                 if pd.isna(row['proxima_chegada']) or row['proxima_chegada'] is None:
                     return {
                         'material': row['material'],
                         'qtd_processos': int(row['qtd_processos']),
-                        'custo_total': float(row['custo_total']),
+                        'custo_total_material': float(row['custo_total']),  # Custo total do material
+                        'custo_proxima_chegada': float(row.get('custo_proxima_chegada', 0)),  # Custo do próximo processo
                         'proxima_chegada': None,
                         'urgente': False,
-                        'data_ordenacao': datetime(9999, 12, 31)  # Para ordenação: sem data vai para o final
+                        'data_ordenacao': datetime(1900, 1, 1)  # Sem data vai para o final (mais antiga)
                     }
                 
                 try:
                     data_chegada = datetime.strptime(row['proxima_chegada'], '%d/%m/%Y')
-                    urgente = data_chegada <= sete_dias
+                    
+                    # Marca como urgente se a data for FUTURA e dentro de 5 dias
+                    urgente = data_chegada > hoje and data_chegada <= cinco_dias_futuro
                     
                     return {
                         'material': row['material'],
                         'qtd_processos': int(row['qtd_processos']),
-                        'custo_total': float(row['custo_total']),
+                        'custo_total_material': float(row['custo_total']),  # Custo total do material
+                        'custo_proxima_chegada': float(row.get('custo_proxima_chegada', 0)),  # Custo do próximo processo
                         'proxima_chegada': row['proxima_chegada'],
                         'urgente': urgente,
                         'data_ordenacao': data_chegada
                     }
-                except:
+                except Exception as e:
+                    print(f"[DASHBOARD_MATERIAIS] Erro ao processar data {row['proxima_chegada']}: {e}")
                     return {
                         'material': row['material'],
                         'qtd_processos': int(row['qtd_processos']),
-                        'custo_total': float(row['custo_total']),
+                        'custo_total_material': float(row['custo_total']),
+                        'custo_proxima_chegada': float(row.get('custo_proxima_chegada', 0)),
                         'proxima_chegada': row['proxima_chegada'],
                         'urgente': False,
-                        'data_ordenacao': datetime(9999, 12, 31)
+                        'data_ordenacao': datetime(1900, 1, 1)
                     }
             
-            # Aplicar a função e ordenar por data de chegada (mais recente primeiro)
+            # Aplicar a função
             result_list = []
             for _, row in materiais_grouped.iterrows():
                 result_list.append(adicionar_indicativo(row))
             
-            # Ordenar: urgentes primeiro, depois por data de chegada (mais próxima primeiro)
-            result_list.sort(key=lambda x: (not x['urgente'], x['data_ordenacao']))
+            # Ordenar: da mais recente para mais antiga (decrescente)
+            result_list.sort(key=lambda x: x['data_ordenacao'], reverse=True)
             
             # Remover campo de ordenação antes de retornar
             for item in result_list:
                 del item['data_ordenacao']
             
-            result = result_list[:15]  # Top 15 materiais
+            result = result_list[:10]  # TOP 10 materiais conforme solicitado
         else:
             result = []
         

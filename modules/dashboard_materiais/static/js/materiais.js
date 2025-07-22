@@ -263,7 +263,6 @@ async function loadMateriaisCharts(queryString) {
         await Promise.all([
             loadTopMateriaisChart(queryString),
             loadProcessosModalChart(queryString),
-            loadModalDistributionChart(queryString),
             loadCanalDistributionChart(queryString),
             loadTransitTimeChart(queryString)
         ]);
@@ -420,8 +419,14 @@ function createTopMateriaisChart(data) {
     const ctx = document.getElementById('top-materiais-chart');
     if (!ctx) return;
     
+    // Garantir destruição completa do gráfico anterior
     if (materiaisCharts.topMateriais) {
-        materiaisCharts.topMateriais.destroy();
+        try {
+            materiaisCharts.topMateriais.destroy();
+            materiaisCharts.topMateriais = null;
+        } catch (error) {
+            console.warn('[DASHBOARD_MATERIAIS] Erro ao destruir gráfico anterior:', error);
+        }
     }
     
     materiaisCharts.topMateriais = new Chart(ctx, {
@@ -447,9 +452,30 @@ function createTopMateriaisChart(data) {
                 },
                 datalabels: {
                     display: true,
-                    anchor: 'end',
-                    align: 'right',
-                    color: '#ffffff',
+                    anchor: function(context) {
+                        if (!context.parsed || context.parsed.x === undefined) return 'center';
+                        const value = context.parsed.x;
+                        const max = Math.max(...context.dataset.data);
+                        return value < max * 0.3 ? 'end' : 'center';
+                    },
+                    align: function(context) {
+                        if (!context.parsed || context.parsed.x === undefined) return 'center';
+                        const value = context.parsed.x;
+                        const max = Math.max(...context.dataset.data);
+                        return value < max * 0.3 ? 'right' : 'center';
+                    },
+                    color: function(context) {
+                        if (!context.parsed || context.parsed.x === undefined) return '#ffffff';
+                        const value = context.parsed.x;
+                        const max = Math.max(...context.dataset.data);
+                        return value < max * 0.3 ? '#333333' : '#ffffff';
+                    },
+                    offset: function(context) {
+                        if (!context.parsed || context.parsed.x === undefined) return 0;
+                        const value = context.parsed.x;
+                        const max = Math.max(...context.dataset.data);
+                        return value < max * 0.3 ? 10 : 0;
+                    },
                     font: {
                         weight: 'bold',
                         size: 12
@@ -483,11 +509,17 @@ function createTopMateriaisChart(data) {
 function createProcessosModalChart(data) {
     const ctx = document.getElementById('processos-modal-chart');
     if (!ctx) return;
-    
+
+    // Garantir destruição completa do gráfico anterior
     if (materiaisCharts.processosModal) {
-        materiaisCharts.processosModal.destroy();
+        try {
+            materiaisCharts.processosModal.destroy();
+            materiaisCharts.processosModal = null;
+        } catch (error) {
+            console.warn('[DASHBOARD_MATERIAIS] Erro ao destruir gráfico processos modal:', error);
+        }
     }
-    
+
     const colors = [
         '#007bff', // Azul
         '#28a745', // Verde
@@ -495,7 +527,7 @@ function createProcessosModalChart(data) {
         '#dc3545', // Vermelho
         '#6c757d'  // Cinza
     ];
-    
+
     materiaisCharts.processosModal = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -517,16 +549,46 @@ function createProcessosModalChart(data) {
                     position: 'right'
                 },
                 datalabels: {
-                    display: true,
-                    color: '#ffffff',
+                    display: function(context) {
+                        // Exibe sempre, mas ajusta anchor/align para valores pequenos
+                        return true;
+                    },
+                    anchor: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, coloca o rótulo fora
+                        return percentage < 7 ? 'end' : 'center';
+                    },
+                    align: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, alinha para fora
+                        return percentage < 7 ? 'end' : 'center';
+                    },
+                    color: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, cor escura, senão branca
+                        return percentage < 7 ? '#333333' : '#ffffff';
+                    },
                     font: {
                         weight: 'bold',
-                        size: 14
+                        size: 12
                     },
                     formatter: function(value, context) {
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const percentage = ((value / total) * 100).toFixed(1);
                         return `${value}\n(${percentage}%)`;
+                    },
+                    offset: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, afasta mais o rótulo
+                        return percentage < 7 ? 16 : 0;
                     }
                 }
             }
@@ -541,11 +603,17 @@ function createProcessosModalChart(data) {
 function createModalChart(data) {
     const ctx = document.getElementById('modal-chart');
     if (!ctx) return;
-    
+
+    // Garantir destruição completa do gráfico anterior
     if (materiaisCharts.modal) {
-        materiaisCharts.modal.destroy();
+        try {
+            materiaisCharts.modal.destroy();
+            materiaisCharts.modal = null;
+        } catch (error) {
+            console.warn('[DASHBOARD_MATERIAIS] Erro ao destruir gráfico modal:', error);
+        }
     }
-    
+
     const colors = [
         '#007bff', // Azul
         '#28a745', // Verde
@@ -553,7 +621,7 @@ function createModalChart(data) {
         '#dc3545', // Vermelho
         '#6c757d'  // Cinza
     ];
-    
+
     materiaisCharts.modal = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -576,7 +644,27 @@ function createModalChart(data) {
                 },
                 datalabels: {
                     display: true,
-                    color: '#ffffff',
+                    anchor: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, coloca o rótulo fora
+                        return percentage < 7 ? 'end' : 'center';
+                    },
+                    align: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, alinha para fora
+                        return percentage < 7 ? 'end' : 'center';
+                    },
+                    color: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, cor escura, senão branca
+                        return percentage < 7 ? '#333333' : '#ffffff';
+                    },
                     font: {
                         weight: 'bold',
                         size: 14
@@ -585,6 +673,13 @@ function createModalChart(data) {
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const percentage = ((value / total) * 100).toFixed(1);
                         return `${value}\n(${percentage}%)`;
+                    },
+                    offset: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = (value / total) * 100;
+                        // Se fatia < 7%, afasta mais o rótulo
+                        return percentage < 7 ? 16 : 0;
                     }
                 }
             }
@@ -599,51 +694,81 @@ function createModalChart(data) {
 function createCanalChart(data) {
     const ctx = document.getElementById('canal-chart');
     if (!ctx) return;
-    
+
+    // Garantir destruição completa do gráfico anterior
     if (materiaisCharts.canal) {
-        materiaisCharts.canal.destroy();
+        try {
+            materiaisCharts.canal.destroy();
+            materiaisCharts.canal = null;
+        } catch (error) {
+            console.warn('[DASHBOARD_MATERIAIS] Erro ao destruir gráfico canal:', error);
+        }
     }
-    
-    // Usar cores do backend se disponíveis, senão usar cores padrão
-    const backgroundColors = data.backgroundColor || [
-        '#28a745', // Verde
-        '#dc3545', // Vermelho
-        '#ffc107', // Amarelo
-        '#007bff', // Azul
-        '#6c757d'  // Cinza
-    ];
-    
+
+    // Ordenar os dados do maior para o menor
+    const zipped = (data.labels || []).map((label, i) => ({
+        label,
+        value: data.data[i] || 0,
+        color: (data.backgroundColor && data.backgroundColor[i]) || [
+            '#28a745', // Verde
+            '#dc3545', // Vermelho
+            '#ffc107', // Amarelo
+            '#007bff', // Azul
+            '#6c757d'  // Cinza
+        ][i % 5]
+    }));
+    zipped.sort((a, b) => b.value - a.value);
+
+    const sortedLabels = zipped.map(item => item.label);
+    const sortedData = zipped.map(item => item.value);
+    const sortedColors = zipped.map(item => item.color);
+
     materiaisCharts.canal = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
-            labels: data.labels || [],
+            labels: sortedLabels,
             datasets: [{
                 label: 'Processos por Canal',
-                data: data.data || [],
-                backgroundColor: backgroundColors,
-                borderWidth: 2,
-                borderColor: '#ffffff'
+                data: sortedData,
+                backgroundColor: sortedColors,
+                borderColor: '#ffffff',
+                borderWidth: 1
             }]
         },
         options: {
+            indexAxis: 'y', // Barras horizontais
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: true,
-                    position: 'bottom'
+                    display: false
                 },
                 datalabels: {
                     display: true,
-                    color: '#ffffff',
+                    anchor: 'end',
+                    align: 'right',
+                    color: '#333333',
                     font: {
                         weight: 'bold',
-                        size: 14
+                        size: 12
                     },
                     formatter: function(value, context) {
-                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        const percentage = ((value / total) * 100).toFixed(1);
-                        return `${value}\n(${percentage}%)`;
+                        const total = sortedData.reduce((a, b) => a + b, 0);
+                        const percentage = total ? ((value / total) * 100).toFixed(1) : '0.0';
+                        return `${value} (${percentage}%)`;
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
                     }
                 }
             }
@@ -658,11 +783,17 @@ function createCanalChart(data) {
 function createTransitTimeChart(data) {
     const ctx = document.getElementById('transit-time-chart');
     if (!ctx) return;
-    
+
+    // Garantir destruição completa do gráfico anterior
     if (materiaisCharts.transitTime) {
-        materiaisCharts.transitTime.destroy();
+        try {
+            materiaisCharts.transitTime.destroy();
+            materiaisCharts.transitTime = null;
+        } catch (error) {
+            console.warn('[DASHBOARD_MATERIAIS] Erro ao destruir gráfico transit time:', error);
+        }
     }
-    
+
     materiaisCharts.transitTime = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -686,8 +817,8 @@ function createTransitTimeChart(data) {
                 },
                 datalabels: {
                     display: true,
-                    anchor: 'end',
-                    align: 'right',
+                    anchor: 'center', // Rótulo dentro da barra
+                    align: 'center',  // Centralizado na barra
                     color: '#ffffff',
                     font: {
                         weight: 'bold',
@@ -722,16 +853,37 @@ function createTransitTimeChart(data) {
 function updateMateriaisTable(data) {
     const tableBody = document.querySelector('#principais-materiais-table tbody');
     if (!tableBody) return;
-    
+
+    // Os dados já vêm ordenados do backend (da mais recente para mais antiga)
     tableBody.innerHTML = '';
+
+    const hoje = new Date();
     
+    // Função para parsear data brasileira
+    const parseDate = (dateStr) => {
+        if (!dateStr) return null;
+        const [d, m, y] = dateStr.split('/');
+        return new Date(`${y}-${m}-${d}T00:00:00`);
+    };
+
     data.forEach(material => {
         const row = document.createElement('tr');
-        
-        // Preparar célula da próxima chegada com indicativo visual
+
+        // Preparar célula da próxima chegada com indicativo visual de urgência (5 dias)
         let proximaChegadaCell = '';
         if (material.proxima_chegada) {
-            if (material.urgente) {
+            const chegadaDate = parseDate(material.proxima_chegada);
+            let isUrgente = false;
+            
+            if (chegadaDate) {
+                // Calcular diferença em dias
+                const diffMs = chegadaDate - hoje;
+                const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                // Urgente se for futuro e dentro de 5 dias
+                isUrgente = diffDias > 0 && diffDias <= 5;
+            }
+            
+            if (isUrgente || material.urgente) {
                 proximaChegadaCell = `
                     <span class="urgente-badge">
                         <i class="mdi mdi-clock-alert"></i>
@@ -744,19 +896,19 @@ function updateMateriaisTable(data) {
         } else {
             proximaChegadaCell = '-';
         }
-        
+
         row.innerHTML = `
-            <td>${material.material || '-'}</td>
+            <td><strong>${material.material || '-'}</strong></td>
             <td>${formatNumber(material.qtd_processos || 0)}</td>
-            <td>${formatCurrency(material.custo_total || 0)}</td>
+            <td>${formatCurrency(material.custo_proxima_chegada || 0)}</td>
             <td>${proximaChegadaCell}</td>
         `;
-        
+
         // Adicionar classe de linha urgente se necessário
         if (material.urgente) {
             row.classList.add('urgente-row');
         }
-        
+
         tableBody.appendChild(row);
     });
 }
