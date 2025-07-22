@@ -34,6 +34,7 @@
     
     <!-- KPI Cards -->
     <div class="kpi-grid">
+        <!-- Linha 1: Total Processos - Total Despesas - Ticket Médio - Chegando Este Mês - Chegando Esta Semana -->
         <div class="kpi-card kpi-primary">
             <div class="kpi-icon">
                 <i class="mdi mdi-file-document-multiple"></i>
@@ -64,6 +65,29 @@
             </div>
         </div>
         
+        <div class="kpi-card kpi-emerald">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-month"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Este Mês</p>
+                <p class="kpi-value" id="kpi-chegando-mes">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-teal">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-week"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Esta Semana</p>
+                <p class="kpi-value" id="kpi-chegando-semana">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
+            </div>
+        </div>
+        
+        <!-- Linha 2: Em Trânsito - Aguardando Embarque - Aguardando Chegada - Transit Time Médio - Processos/Mês -->
         <div class="kpi-card kpi-warning">
             <div class="kpi-icon">
                 <i class="mdi mdi-truck"></i>
@@ -94,28 +118,6 @@
             </div>
         </div>
         
-        <div class="kpi-card kpi-emerald">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calendar-month"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Chegando Este Mês</p>
-                <p class="kpi-value" id="kpi-chegando-mes">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-teal">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calendar-week"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Chegando Esta Semana</p>
-                <p class="kpi-value" id="kpi-chegando-semana">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
-            </div>
-        </div>
-        
         <div class="kpi-card kpi-indigo">
             <div class="kpi-icon">
                 <i class="mdi mdi-clock-outline"></i>
@@ -133,16 +135,6 @@
             <div class="kpi-content">
                 <p class="kpi-label">Processos/Mês</p>
                 <p class="kpi-value" id="kpi-proc-mes">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-danger">
-            <div class="kpi-icon">
-                <i class="mdi mdi-chart-timeline-variant"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Processos/Semana</p>
-                <p class="kpi-value" id="kpi-proc-semana">-</p>
             </div>
         </div>
     </div>
