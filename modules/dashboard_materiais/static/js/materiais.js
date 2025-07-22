@@ -262,7 +262,7 @@ async function loadMateriaisCharts(queryString) {
         // Load all charts in parallel
         await Promise.all([
             loadTopMateriaisChart(queryString),
-            loadEvolucaoMensalChart(queryString),
+            loadProcessosModalChart(queryString),
             loadModalDistributionChart(queryString),
             loadCanalDistributionChart(queryString),
             loadTransitTimeChart(queryString)
@@ -290,18 +290,18 @@ async function loadTopMateriaisChart(queryString) {
 }
 
 /**
- * Load evolução mensal chart
+ * Load processos por modal chart
  */
-async function loadEvolucaoMensalChart(queryString) {
+async function loadProcessosModalChart(queryString) {
     try {
-        const response = await fetch(`/dashboard-materiais/api/evolucao-mensal?${queryString}`);
+        const response = await fetch(`/dashboard-materiais/api/processos-modal?${queryString}`);
         const result = await response.json();
         
         if (result.success) {
-            createEvolucaoMensalChart(result.data);
+            createProcessosModalChart(result.data);
         }
     } catch (error) {
-        console.error('[DASHBOARD_MATERIAIS] Erro ao carregar evolução mensal:', error);
+        console.error('[DASHBOARD_MATERIAIS] Erro ao carregar processos por modal:', error);
     }
 }
 
@@ -414,7 +414,7 @@ function updateKPIValue(elementId, value) {
 }
 
 /**
- * Create top materials chart
+ * Create top materials chart com rótulos visíveis
  */
 function createTopMateriaisChart(data) {
     const ctx = document.getElementById('top-materiais-chart');
@@ -431,59 +431,112 @@ function createTopMateriaisChart(data) {
             datasets: [{
                 label: 'Quantidade de Processos',
                 data: data.data || [],
-                backgroundColor: '#28a745'
+                backgroundColor: '#198754', // Verde mais escuro para melhor contraste
+                borderColor: '#146c43',
+                borderWidth: 1
             }]
         },
         options: {
-            indexAxis: 'y', // Faz o gráfico ser horizontal
+            indexAxis: 'y', // Gráfico horizontal
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'right',
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: function(value) {
+                        return value;
+                    }
+                }
+            },
             scales: {
                 x: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    grid: {
+                        display: true
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels] // Plugin para mostrar rótulos
     });
 }
 
 /**
- * Create evolução mensal chart
+ * Create processos por modal chart (substituindo evolução mensal)
  */
-function createEvolucaoMensalChart(data) {
-    const ctx = document.getElementById('evolucao-mensal-chart');
+function createProcessosModalChart(data) {
+    const ctx = document.getElementById('processos-modal-chart');
     if (!ctx) return;
     
-    if (materiaisCharts.evolucaoMensal) {
-        materiaisCharts.evolucaoMensal.destroy();
+    if (materiaisCharts.processosModal) {
+        materiaisCharts.processosModal.destroy();
     }
     
-    materiaisCharts.evolucaoMensal = new Chart(ctx, {
-        type: 'line',
+    const colors = [
+        '#007bff', // Azul
+        '#28a745', // Verde
+        '#ffc107', // Amarelo
+        '#dc3545', // Vermelho
+        '#6c757d'  // Cinza
+    ];
+    
+    materiaisCharts.processosModal = new Chart(ctx, {
+        type: 'doughnut',
         data: {
             labels: data.labels || [],
-            datasets: data.datasets || []
+            datasets: [{
+                label: 'Processos',
+                data: data.data || [],
+                backgroundColor: colors.slice(0, (data.labels || []).length),
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: {
+                legend: {
                     display: true,
-                    text: 'Evolução Mensal - Top 3 Materiais'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
+                    position: 'right'
+                },
+                datalabels: {
+                    display: true,
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${value}\n(${percentage}%)`;
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
 /**
- * Create modal distribution chart
+ * Create modal distribution chart (rosca com rótulos)
  */
 function createModalChart(data) {
     const ctx = document.getElementById('modal-chart');
@@ -493,13 +546,24 @@ function createModalChart(data) {
         materiaisCharts.modal.destroy();
     }
     
+    const colors = [
+        '#007bff', // Azul
+        '#28a745', // Verde
+        '#ffc107', // Amarelo
+        '#dc3545', // Vermelho
+        '#6c757d'  // Cinza
+    ];
+    
     materiaisCharts.modal = new Chart(ctx, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
             labels: data.labels || [],
             datasets: [{
+                label: 'Processos por Modal',
                 data: data.data || [],
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+                backgroundColor: colors.slice(0, (data.labels || []).length),
+                borderWidth: 2,
+                borderColor: '#ffffff'
             }]
         },
         options: {
@@ -507,15 +571,30 @@ function createModalChart(data) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
+                    display: true,
                     position: 'right'
+                },
+                datalabels: {
+                    display: true,
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${value}\n(${percentage}%)`;
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
 /**
- * Create canal distribution chart
+ * Create canal distribution chart (rosca com cores corretas)
  */
 function createCanalChart(data) {
     const ctx = document.getElementById('canal-chart');
@@ -525,13 +604,25 @@ function createCanalChart(data) {
         materiaisCharts.canal.destroy();
     }
     
+    // Usar cores do backend se disponíveis, senão usar cores padrão
+    const backgroundColors = data.backgroundColor || [
+        '#28a745', // Verde
+        '#dc3545', // Vermelho
+        '#ffc107', // Amarelo
+        '#007bff', // Azul
+        '#6c757d'  // Cinza
+    ];
+    
     materiaisCharts.canal = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: data.labels || [],
             datasets: [{
+                label: 'Processos por Canal',
                 data: data.data || [],
-                backgroundColor: ['#9966FF', '#FF9F40', '#FF6384', '#4BC0C0', '#36A2EB']
+                backgroundColor: backgroundColors,
+                borderWidth: 2,
+                borderColor: '#ffffff'
             }]
         },
         options: {
@@ -539,15 +630,30 @@ function createCanalChart(data) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
+                    display: true,
                     position: 'bottom'
+                },
+                datalabels: {
+                    display: true,
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${value}\n(${percentage}%)`;
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
 /**
- * Create transit time chart
+ * Create transit time chart (barras horizontais com rótulos)
  */
 function createTransitTimeChart(data) {
     const ctx = document.getElementById('transit-time-chart');
@@ -564,23 +670,54 @@ function createTransitTimeChart(data) {
             datasets: [{
                 label: 'Transit Time Médio (dias)',
                 data: data.data || [],
-                backgroundColor: '#20c997'
+                backgroundColor: '#20c997',
+                borderColor: '#17a085',
+                borderWidth: 1
             }]
         },
         options: {
+            indexAxis: 'y', // Barras horizontais
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'right',
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: function(value) {
+                        return Math.round(value) + ' dias';
+                    }
+                }
+            },
             scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true
+                    }
+                },
                 y: {
-                    beginAtZero: true
+                    grid: {
+                        display: false
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
 /**
- * Update materials table
+ * Update materials table com indicativo de urgência
  */
 function updateMateriaisTable(data) {
     const tableBody = document.querySelector('#principais-materiais-table tbody');
@@ -590,12 +727,36 @@ function updateMateriaisTable(data) {
     
     data.forEach(material => {
         const row = document.createElement('tr');
+        
+        // Preparar célula da próxima chegada com indicativo visual
+        let proximaChegadaCell = '';
+        if (material.proxima_chegada) {
+            if (material.urgente) {
+                proximaChegadaCell = `
+                    <span class="urgente-badge">
+                        <i class="mdi mdi-clock-alert"></i>
+                        ${material.proxima_chegada}
+                    </span>
+                `;
+            } else {
+                proximaChegadaCell = material.proxima_chegada;
+            }
+        } else {
+            proximaChegadaCell = '-';
+        }
+        
         row.innerHTML = `
             <td>${material.material || '-'}</td>
             <td>${formatNumber(material.qtd_processos || 0)}</td>
             <td>${formatCurrency(material.custo_total || 0)}</td>
-            <td>${material.proxima_chegada || '-'}</td>
+            <td>${proximaChegadaCell}</td>
         `;
+        
+        // Adicionar classe de linha urgente se necessário
+        if (material.urgente) {
+            row.classList.add('urgente-row');
+        }
+        
         tableBody.appendChild(row);
     });
 }

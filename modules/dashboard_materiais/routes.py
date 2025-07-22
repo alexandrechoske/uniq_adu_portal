@@ -164,17 +164,18 @@ def materiais_kpis():
         
         for _, row in df.iterrows():
             mercadoria = str(row.get('mercadoria', '')).strip().lower()
-            if mercadoria and mercadoria not in ['', 'não informado', 'nan', 'none']:
+            if mercadoria and mercadoria not in ['', 'não informado', 'nan', 'none', 'null']:
                 materiais_unicos.add(mercadoria)
             
-            valor_cif = row.get('valor_cif_usd', 0) or 0
-            custo_total = row.get('custo_total', 0) or 0
+            # Usar os campos corretos da view
+            valor_cif = float(row.get('valor_cif_real', 0) or 0)
+            custo_total_item = float(row.get('custo_total', 0) or 0)
             valores_processos.append(valor_cif)
-            custos_processos.append(custo_total)
+            custos_processos.append(custo_total_item)
         
         total_materiais = len(materiais_unicos)
         valor_total = sum(valores_processos)
-        custo_total = sum(custos_processos)
+        custo_total_soma = sum(custos_processos)
         ticket_medio = valor_total / total_processos if total_processos > 0 else 0
         
         # Transit time médio
@@ -223,7 +224,7 @@ def materiais_kpis():
             'total_processos': total_processos,
             'total_materiais': total_materiais,
             'valor_total': valor_total,
-            'custo_total': custo_total,
+            'custo_total': custo_total_soma,
             'ticket_medio': ticket_medio,
             'transit_time': transit_time,
             'total_processos_mes': processos_mes,
@@ -291,11 +292,11 @@ def api_top_materiais():
             'data': []
         }), 500
 
-@bp.route('/api/evolucao-mensal')
+@bp.route('/api/processos-modal')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
-def api_evolucao_mensal():
-    """Evolução mensal dos top 3 materiais"""
+def api_processos_modal():
+    """Total de processos por modal (gráfico rosca)"""
     try:
         # Obter dados do cache ou recarregar
         user_data = session.get('user', {})
@@ -315,42 +316,14 @@ def api_evolucao_mensal():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        if 'mercadoria' in df.columns and 'data_abertura' in df.columns:
-            # Obter top 3 materiais
-            top_materiais = df['mercadoria'].value_counts().head(3).index.tolist()
-            
-            # Converter data_abertura para datetime
-            df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
-            df['mes_ano'] = df['data_abertura_dt'].dt.strftime('%m/%Y')
-            
-            # Filtrar apenas top 3 materiais
-            df_filtered = df[df['mercadoria'].isin(top_materiais)]
-            
-            # Agrupar por mês e material
-            evolucao = df_filtered.groupby(['mes_ano', 'mercadoria']).size().reset_index(name='quantidade')
-            
-            # Preparar dados para o gráfico
-            meses = sorted(evolucao['mes_ano'].unique())
-            datasets = []
-            
-            for material in top_materiais:
-                material_data = evolucao[evolucao['mercadoria'] == material]
-                quantities = []
-                for mes in meses:
-                    qty = material_data[material_data['mes_ano'] == mes]['quantidade'].sum()
-                    quantities.append(qty)
-                
-                datasets.append({
-                    'label': material,
-                    'data': quantities
-                })
-            
+        if 'modal' in df.columns:
+            modal_counts = df['modal'].value_counts()
             result = {
-                'labels': meses,
-                'datasets': datasets
+                'labels': modal_counts.index.tolist(),
+                'data': modal_counts.values.tolist()
             }
         else:
-            result = {'labels': [], 'datasets': []}
+            result = {'labels': [], 'data': []}
         
         return jsonify({
             'success': True,
@@ -358,7 +331,7 @@ def api_evolucao_mensal():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_MATERIAIS] Erro ao obter evolução mensal: {str(e)}")
+        print(f"[DASHBOARD_MATERIAIS] Erro ao obter processos por modal: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e),
@@ -415,7 +388,7 @@ def api_modal_distribution():
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def api_canal_distribution():
-    """Distribuição por canal"""
+    """Distribuição por canal com cores corretas"""
     try:
         # Obter dados do cache ou recarregar
         user_data = session.get('user', {})
@@ -428,7 +401,7 @@ def api_canal_distribution():
             return jsonify({
                 'success': False,
                 'error': 'Dados não encontrados. Recarregue a página.',
-                'data': []
+                'data': {}
             })
         
         # Aplicar filtros
@@ -437,12 +410,34 @@ def api_canal_distribution():
         
         if 'canal' in df.columns:
             canal_counts = df['canal'].value_counts()
+            
+            # Definir cores baseadas no tipo de canal
+            cores_canal = {
+                'Verde': '#28a745',    # Verde
+                'Vermelho': '#dc3545', # Vermelho
+                'Amarelo': '#ffc107',  # Amarelo
+                'Azul': '#007bff',     # Azul (caso apareça)
+                'Cinza': '#6c757d'     # Cinza (para outros)
+            }
+            
+            labels = canal_counts.index.tolist()
+            data_values = canal_counts.values.tolist()
+            
+            # Gerar cores baseadas nos labels
+            background_colors = []
+            for label in labels:
+                if label in cores_canal:
+                    background_colors.append(cores_canal[label])
+                else:
+                    background_colors.append(cores_canal['Cinza'])
+            
             result = {
-                'labels': canal_counts.index.tolist(),
-                'data': canal_counts.values.tolist()
+                'labels': labels,
+                'data': data_values,
+                'backgroundColor': background_colors
             }
         else:
-            result = {'labels': [], 'data': []}
+            result = {'labels': [], 'data': [], 'backgroundColor': []}
         
         return jsonify({
             'success': True,
@@ -454,7 +449,7 @@ def api_canal_distribution():
         return jsonify({
             'success': False,
             'error': str(e),
-            'data': []
+            'data': {}
         }), 500
 
 @bp.route('/api/transit-time-por-material')
@@ -517,8 +512,10 @@ def api_transit_time_por_material():
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def api_tabela_materiais():
-    """Tabela de materiais com ícone, nome, valor total, quantidade de processos e próxima chegada"""
+    """Tabela de materiais ordenada por próxima chegada com indicativo visual"""
     try:
+        from datetime import datetime, timedelta
+        
         # Obter dados do cache ou recarregar
         user_data = session.get('user', {})
         user_id = user_data.get('id')
@@ -546,9 +543,57 @@ def api_tabela_materiais():
             }).reset_index()
             
             materiais_grouped.columns = ['material', 'custo_total', 'qtd_processos', 'proxima_chegada']
-            materiais_grouped = materiais_grouped.sort_values('custo_total', ascending=False).head(15)
             
-            result = materiais_grouped.to_dict('records')
+            # Adicionar indicativo para chegadas dentro de 7 dias
+            hoje = datetime.now()
+            sete_dias = hoje + timedelta(days=7)
+            
+            def adicionar_indicativo(row):
+                if pd.isna(row['proxima_chegada']) or row['proxima_chegada'] is None:
+                    return {
+                        'material': row['material'],
+                        'qtd_processos': int(row['qtd_processos']),
+                        'custo_total': float(row['custo_total']),
+                        'proxima_chegada': None,
+                        'urgente': False,
+                        'data_ordenacao': datetime(9999, 12, 31)  # Para ordenação: sem data vai para o final
+                    }
+                
+                try:
+                    data_chegada = datetime.strptime(row['proxima_chegada'], '%d/%m/%Y')
+                    urgente = data_chegada <= sete_dias
+                    
+                    return {
+                        'material': row['material'],
+                        'qtd_processos': int(row['qtd_processos']),
+                        'custo_total': float(row['custo_total']),
+                        'proxima_chegada': row['proxima_chegada'],
+                        'urgente': urgente,
+                        'data_ordenacao': data_chegada
+                    }
+                except:
+                    return {
+                        'material': row['material'],
+                        'qtd_processos': int(row['qtd_processos']),
+                        'custo_total': float(row['custo_total']),
+                        'proxima_chegada': row['proxima_chegada'],
+                        'urgente': False,
+                        'data_ordenacao': datetime(9999, 12, 31)
+                    }
+            
+            # Aplicar a função e ordenar por data de chegada (mais recente primeiro)
+            result_list = []
+            for _, row in materiais_grouped.iterrows():
+                result_list.append(adicionar_indicativo(row))
+            
+            # Ordenar: urgentes primeiro, depois por data de chegada (mais próxima primeiro)
+            result_list.sort(key=lambda x: (not x['urgente'], x['data_ordenacao']))
+            
+            # Remover campo de ordenação antes de retornar
+            for item in result_list:
+                del item['data_ordenacao']
+            
+            result = result_list[:15]  # Top 15 materiais
         else:
             result = []
         

@@ -132,13 +132,13 @@
             </div>
         </div>
         
-        <!-- Evolução Mensal Chart -->
+        <!-- Evolução Mensal Chart - SUBSTITUÍDO POR MODAL ROSCA -->
         <div class="chart-section">
             <div class="chart-header">
-                <h2 class="chart-title">Evolução Mensal - Top 3 Materiais</h2>
+                <h2 class="chart-title">Total Processos por Modal</h2>
             </div>
             <div class="chart-container">
-                <canvas id="evolucao-mensal-chart" class="chart-canvas"></canvas>
+                <canvas id="processos-modal-chart" class="chart-canvas"></canvas>
             </div>
         </div>
         
@@ -317,6 +317,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
 <script src="{{ url_for('dashboard_materiais.static', filename='js/materiais.js') }}"></script>
