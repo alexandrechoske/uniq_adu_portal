@@ -314,6 +314,24 @@ function createMonthlyChart(data) {
             };
         });
 
+        // Lógica inteligente para exibir rótulos de dados:
+        // - Até 15 pontos: mostra todos
+        // - 16-30 pontos: mostra a cada 2
+        // - 31-60 pontos: mostra a cada 4
+        // - 61-120 pontos: mostra a cada 8
+        // - >120 pontos: mostra só o primeiro, último e a cada 15
+        const totalPoints = (data.labels || []).length;
+        let showLabelAtIndex = () => true;
+        if (totalPoints > 120) {
+            showLabelAtIndex = (i) => i === 0 || i === totalPoints - 1 || i % 15 === 0;
+        } else if (totalPoints > 60) {
+            showLabelAtIndex = (i) => i % 8 === 0 || i === totalPoints - 1;
+        } else if (totalPoints > 30) {
+            showLabelAtIndex = (i) => i % 4 === 0 || i === totalPoints - 1;
+        } else if (totalPoints > 15) {
+            showLabelAtIndex = (i) => i % 2 === 0 || i === totalPoints - 1;
+        }
+
         dashboardCharts.monthly = new Chart(ctx, {
             type: 'line',
             data: {
@@ -331,7 +349,10 @@ function createMonthlyChart(data) {
                         position: 'top'
                     },
                     datalabels: {
-                        display: true,
+                        display: function(context) {
+                            // Só mostra rótulo se for um índice permitido
+                            return showLabelAtIndex(context.dataIndex);
+                        },
                         align: function(context) {
                             // Primeiro dataset (processos): label em cima
                             // Segundo dataset (custo): label embaixo

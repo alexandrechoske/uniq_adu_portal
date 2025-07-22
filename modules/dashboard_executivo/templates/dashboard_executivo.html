@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 {% endblock %}
 
@@ -33,51 +34,116 @@
     
     <!-- KPI Cards -->
     <div class="kpi-grid">
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-total-processos">-</div>
-            <div class="kpi-label">Total de Processos</div>
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-file-document-multiple"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Processos</p>
+                <p class="kpi-value" id="kpi-total-processos">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-total-despesas">-</div>
-            <div class="kpi-label">Total de Despesas</div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-currency-usd"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Despesas</p>
+                <p class="kpi-value" id="kpi-total-despesas">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-ticket-medio">-</div>
-            <div class="kpi-label">Ticket Médio</div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calculator"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Ticket Médio</p>
+                <p class="kpi-value" id="kpi-ticket-medio">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-em-transito">-</div>
-            <div class="kpi-label">Em Trânsito</div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-truck"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Em Trânsito</p>
+                <p class="kpi-value" id="kpi-em-transito">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-total-agd-embarque">-</div>
-            <div class="kpi-label">Aguardando Embarque</div>
+        
+        <div class="kpi-card kpi-orange">
+            <div class="kpi-icon">
+                <i class="mdi mdi-ship-wheel"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Aguardando Embarque</p>
+                <p class="kpi-value" id="kpi-total-agd-embarque">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-total-ag-chegada">-</div>
-            <div class="kpi-label">Aguardando Chegada</div>
+        
+        <div class="kpi-card kpi-purple">
+            <div class="kpi-icon">
+                <i class="mdi mdi-map-marker-check"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Aguardando Chegada</p>
+                <p class="kpi-value" id="kpi-total-ag-chegada">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-chegando-mes">-</div>
-            <div class="kpi-label">Chegando Este Mês</div>
-            <div class="kpi-sub-value" id="kpi-chegando-mes-custo">-</div>
+        
+        <div class="kpi-card kpi-emerald">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-month"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Este Mês</p>
+                <p class="kpi-value" id="kpi-chegando-mes">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-chegando-semana">-</div>
-            <div class="kpi-label">Chegando Esta Semana</div>
-            <div class="kpi-sub-value" id="kpi-chegando-semana-custo">-</div>
+        
+        <div class="kpi-card kpi-teal">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-week"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Esta Semana</p>
+                <p class="kpi-value" id="kpi-chegando-semana">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-transit-time">-</div>
-            <div class="kpi-label">Transit Time Médio</div>
+        
+        <div class="kpi-card kpi-indigo">
+            <div class="kpi-icon">
+                <i class="mdi mdi-clock-outline"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Transit Time Médio</p>
+                <p class="kpi-value" id="kpi-transit-time">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-proc-mes">-</div>
-            <div class="kpi-label">Processos/Mês</div>
+        
+        <div class="kpi-card kpi-pink">
+            <div class="kpi-icon">
+                <i class="mdi mdi-chart-line"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Processos/Mês</p>
+                <p class="kpi-value" id="kpi-proc-mes">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="kpi-proc-semana">-</div>
-            <div class="kpi-label">Processos/Semana</div>
+        
+        <div class="kpi-card kpi-danger">
+            <div class="kpi-icon">
+                <i class="mdi mdi-chart-timeline-variant"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Processos/Semana</p>
+                <p class="kpi-value" id="kpi-proc-semana">-</p>
+            </div>
         </div>
     </div>
     

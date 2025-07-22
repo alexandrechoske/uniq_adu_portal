@@ -1,4 +1,11 @@
-{% exten{% block content %}
+{% extends "base.html" %}
+
+{% block header %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/materialdesignicons.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block body_class %}usuarios-page{% endblock %}
 <div class="dashboard-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">

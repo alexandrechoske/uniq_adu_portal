@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dashboard_materiais.static', filename='css/materiais.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 {% endblock %}
 
@@ -36,39 +37,86 @@
     
     <!-- KPI Cards -->
     <div class="kpi-grid">
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-total-processos">-</div>
-            <div class="kpi-label">Total de Processos</div>
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-file-document-multiple"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Processos</p>
+                <p class="kpi-value" id="mat-total-processos">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-total-materiais">-</div>
-            <div class="kpi-label">Tipos de Materiais</div>
+        
+        <div class="kpi-card kpi-emerald">
+            <div class="kpi-icon">
+                <i class="mdi mdi-package-variant-closed"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Tipos de Materiais</p>
+                <p class="kpi-value" id="mat-total-materiais">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-valor-total">-</div>
-            <div class="kpi-label">Valor Total CIF (R$)</div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-currency-brl"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Valor Total CIF (R$)</p>
+                <p class="kpi-value" id="mat-valor-total">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-custo-total">-</div>
-            <div class="kpi-label">Custo Total (R$)</div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-cash-multiple"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Custo Total (R$)</p>
+                <p class="kpi-value" id="mat-custo-total">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-ticket-medio">-</div>
-            <div class="kpi-label">Ticket Médio (R$)</div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calculator"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Ticket Médio (R$)</p>
+                <p class="kpi-value" id="mat-ticket-medio">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-transit-time">-</div>
-            <div class="kpi-label">Transit Time Médio</div>
+        
+        <div class="kpi-card kpi-purple">
+            <div class="kpi-icon">
+                <i class="mdi mdi-clock-outline"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Transit Time Médio</p>
+                <p class="kpi-value" id="mat-transit-time">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-processos-mes">-</div>
-            <div class="kpi-label">Chegando Este Mês</div>
-            <div class="kpi-sub-value" id="mat-custo-mes">-</div>
+        
+        <div class="kpi-card kpi-teal">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-month"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Este Mês</p>
+                <p class="kpi-value" id="mat-processos-mes">-</p>
+                <p class="kpi-sub-value" id="mat-custo-mes">-</p>
+            </div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-value" id="mat-processos-semana">-</div>
-            <div class="kpi-label">Chegando Esta Semana</div>
-            <div class="kpi-sub-value" id="mat-custo-semana">-</div>
+        
+        <div class="kpi-card kpi-orange">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-week"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Esta Semana</p>
+                <p class="kpi-value" id="mat-processos-semana">-</p>
+                <p class="kpi-sub-value" id="mat-custo-semana">-</p>
+            </div>
         </div>
     </div>
     
