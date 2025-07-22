@@ -609,9 +609,18 @@ function updateDetalhamentoTable(data) {
     
     tableBody.innerHTML = '';
     
-    data.forEach(processo => {
+    // Store operations data globally for modal access
+    window.currentOperations = data;
+    console.log('[DASHBOARD_MATERIAIS] Operações armazenadas globalmente:', window.currentOperations.length);
+    
+    data.forEach((processo, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
+            <td>
+                <button class="action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
+                    <i class="mdi mdi-eye"></i>
+                </button>
+            </td>
             <td>${processo.data_abertura || '-'}</td>
             <td>${processo.ref_unique || '-'}</td>
             <td>${processo.importador || '-'}</td>

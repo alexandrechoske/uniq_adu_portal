@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -354,11 +355,15 @@
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Modal de Detalhes do Processo -->
+    {% include 'shared/process_modal.html' %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

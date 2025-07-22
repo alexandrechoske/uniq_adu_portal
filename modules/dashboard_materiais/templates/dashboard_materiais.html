@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dashboard_materiais.static', filename='css/materiais.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -241,6 +242,7 @@
             <table id="detalhamento-table" class="data-table">
                 <thead>
                     <tr>
+                        <th>Ações</th>
                         <th>Data Abertura</th>
                         <th>Número Pedido</th>
                         <th>Cliente</th>
@@ -258,11 +260,16 @@
             </table>
         </div>
     </div>
+
+    <!-- Modal de Detalhes do Processo -->
+    {% include 'shared/process_modal.html' %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
 <script src="{{ url_for('dashboard_materiais.static', filename='js/materiais.js') }}"></script>
 {% endblock %}

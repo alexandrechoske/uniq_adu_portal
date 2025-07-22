@@ -1,0 +1,184 @@
+<!-- Modal de Detalhes do Processo - Compartilhado -->
+<div id="process-modal" class="modal-overlay">
+    <div class="modal-container">
+        <!-- Modal Header -->
+        <div class="modal-header">
+            <h2 class="modal-title" id="modal-title">Detalhes do Processo</h2>
+            <button class="modal-close" id="modal-close">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="modal-content">
+            <!-- Timeline do Processo -->
+            <div class="process-timeline">
+                <div class="timeline-step" data-step="1">
+                    <div class="timeline-icon">
+                        <i class="mdi mdi-file-document-outline"></i>
+                    </div>
+                    <div class="timeline-label">Abertura</div>
+                </div>
+                <div class="timeline-step" data-step="2">
+                    <div class="timeline-icon">
+                        <i class="mdi mdi-truck"></i>
+                    </div>
+                    <div class="timeline-label">Embarque</div>
+                </div>
+                <div class="timeline-step" data-step="3">
+                    <div class="timeline-icon">
+                        <i class="mdi mdi-airplane-landing"></i>
+                    </div>
+                    <div class="timeline-label">Chegada</div>
+                </div>
+                <div class="timeline-step" data-step="4">
+                    <div class="timeline-icon">
+                        <i class="mdi mdi-check-circle-outline"></i>
+                    </div>
+                    <div class="timeline-label">Desembaraço</div>
+                </div>
+                <div class="timeline-step" data-step="5">
+                    <div class="timeline-icon">
+                        <i class="mdi mdi-flag-checkered"></i>
+                    </div>
+                    <div class="timeline-label">Finalizado</div>
+                </div>
+            </div>
+
+            <!-- Cards de Informações -->
+            <div class="modal-cards">
+                <!-- Card 1: Informações Gerais -->
+                <div class="info-card">
+                    <h3 class="card-title">Informações Gerais</h3>
+                    <div class="card-grid-2">
+                        <div class="info-item">
+                            <label>Ref. Unique:</label>
+                            <span id="detail-ref-unique">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Ref. Importador:</label>
+                            <span id="detail-ref-importador">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Data de Abertura:</label>
+                            <span id="detail-data-abertura">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Importador:</label>
+                            <span id="detail-importador">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>CNPJ:</label>
+                            <span id="detail-cnpj">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Status Atual:</label>
+                            <span id="detail-status" class="status-badge">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Detalhes da Carga e Transporte -->
+                <div class="info-card">
+                    <h3 class="card-title">Detalhes da Carga e Transporte</h3>
+                    <div class="card-grid-3">
+                        <div class="info-item">
+                            <label>Modal:</label>
+                            <span id="detail-modal">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Container:</label>
+                            <span id="detail-container">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Data de Embarque:</label>
+                            <span id="detail-data-embarque">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Data de Chegada:</label>
+                            <span id="detail-data-chegada">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Transit Time (dias):</label>
+                            <span id="detail-transit-time">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Peso Bruto (Kg):</label>
+                            <span id="detail-peso-bruto">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Informações Aduaneiras -->
+                <div class="info-card">
+                    <h3 class="card-title">Informações Aduaneiras</h3>
+                    <div class="card-grid-3">
+                        <div class="info-item">
+                            <label>Número da DI:</label>
+                            <span id="detail-numero-di">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Data de Registro DI:</label>
+                            <span id="detail-data-registro">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Canal:</label>
+                            <span id="detail-canal">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Data do Desembaraço:</label>
+                            <span id="detail-data-desembaraco">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>URF de Entrada:</label>
+                            <span id="detail-urf-entrada">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>URF de Despacho:</label>
+                            <span id="detail-urf-despacho">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Resumo Financeiro -->
+                <div class="info-card">
+                    <h3 class="card-title">Resumo Financeiro</h3>
+                    <div class="card-grid-2">
+                        <div class="info-item">
+                            <label>Valor CIF (R$):</label>
+                            <span id="detail-valor-cif">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Frete Internacional (R$):</label>
+                            <span id="detail-frete-inter">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Armazenagem (R$):</label>
+                            <span id="detail-armazenagem">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Honorários (R$):</label>
+                            <span id="detail-honorarios">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Outras Despesas (R$):</label>
+                            <span id="detail-outras-despesas">-</span>
+                        </div>
+                        <div class="info-item total-item">
+                            <label>Custo Total (R$):</label>
+                            <span id="detail-custo-total" class="total-value">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 5: Documentos Anexados -->
+                <div class="info-card">
+                    <h3 class="card-title">Documentos Anexados</h3>
+                    <div class="documents-list" id="documents-list">
+                        <p class="no-documents">Funcionalidade de documentos será implementada em breve</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
