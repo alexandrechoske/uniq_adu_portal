@@ -7,6 +7,7 @@
 let materiaisData = null;
 let materiaisCharts = {};
 let currentFilters = {};
+let detalhamentoTable = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -20,9 +21,17 @@ document.addEventListener('DOMContentLoaded', function() {
 async function initializeMateriais() {
     try {
         showLoading(true);
+        
+        // Initialize enhanced table FIRST, before loading data
+        initializeEnhancedTable();
+        
+        // Then load initial data
         await loadInitialData();
+        
+        // Setup event listeners and filters
         setupEventListeners();
         setupDefaultFilters();
+        
         showLoading(false);
         updateLastUpdate();
     } catch (error) {
@@ -30,6 +39,51 @@ async function initializeMateriais() {
         showError('Erro ao carregar dashboard: ' + error.message);
         showLoading(false);
     }
+}
+
+/**
+ * Initialize enhanced table for process details
+ */
+function initializeEnhancedTable() {
+    console.log('[DASHBOARD_MATERIAIS] Inicializando Enhanced Table...');
+    
+    // Check if EnhancedDataTable is available
+    if (typeof EnhancedDataTable === 'undefined') {
+        console.error('[DASHBOARD_MATERIAIS] EnhancedDataTable não está disponível');
+        return;
+    }
+    
+    // Create enhanced table instance
+    detalhamentoTable = new EnhancedDataTable('detalhamento-table', {
+        containerId: 'detalhamento-container',
+        searchInputId: 'detalhamento-search',
+        itemsPerPage: 15,
+        searchFields: ['numero_pedido', 'ref_unique', 'cliente', 'importador', 'material', 'mercadoria', 'status', 'status_processo', 'canal'],
+        sortField: 'data_chegada',
+        sortOrder: 'desc'
+    });
+
+    // Override row rendering method
+    detalhamentoTable.renderRow = function(processo, index) {
+        return `
+            <td>
+                <button class="table-action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
+                    <i class="mdi mdi-eye-outline"></i>
+                </button>
+            </td>
+            <td>${formatDate(processo.data_abertura)}</td>
+            <td><strong>${processo.numero_pedido || processo.ref_unique || '-'}</strong></td>
+            <td>${processo.cliente || processo.importador || '-'}</td>
+            <td>${processo.material || processo.mercadoria || '-'}</td>
+            <td>${formatDate(processo.data_embarque)}</td>
+            <td>${formatDate(processo.data_chegada)}</td>
+            <td>${getStatusBadge(processo.status || processo.status_processo)}</td>
+            <td>${processo.canal || '-'}</td>
+            <td><span class="currency-value">${formatCurrency(processo.custo_total || 0)}</span></td>
+        `;
+    };
+
+    console.log('[DASHBOARD_MATERIAIS] Enhanced Table inicializada');
 }
 
 /**
@@ -917,35 +971,53 @@ function updateMateriaisTable(data) {
  * Update detalhamento table
  */
 function updateDetalhamentoTable(data) {
-    const tableBody = document.querySelector('#detalhamento-table tbody');
-    if (!tableBody) return;
+    console.log('[DASHBOARD_MATERIAIS] Atualizando tabela com', data.length, 'processos');
     
-    tableBody.innerHTML = '';
+    if (!detalhamentoTable) {
+        console.warn('[DASHBOARD_MATERIAIS] Enhanced table não inicializada, tentando inicializar...');
+        initializeEnhancedTable();
+        
+        // Se ainda não conseguiu inicializar, retorna
+        if (!detalhamentoTable) {
+            console.error('[DASHBOARD_MATERIAIS] Falha ao inicializar enhanced table');
+            return;
+        }
+    }
+
+    // Sort processes by data_chegada (most recent first)
+    const sortedData = [...data].sort((a, b) => {
+        const dateA = parseDate(a.data_chegada);
+        const dateB = parseDate(b.data_chegada);
+        
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        
+        return dateB - dateA; // Descending order (newest first)
+    });
+
+    // Set data to enhanced table
+    detalhamentoTable.setData(sortedData);
     
     // Store operations data globally for modal access
-    window.currentOperations = data;
+    window.currentOperations = sortedData;
     console.log('[DASHBOARD_MATERIAIS] Operações armazenadas globalmente:', window.currentOperations.length);
+}
+
+/**
+ * Parse date string (Brazilian format DD/MM/YYYY)
+ */
+function parseDate(dateStr) {
+    if (!dateStr) return null;
     
-    data.forEach((processo, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>
-                <button class="action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
-                    <i class="mdi mdi-eye"></i>
-                </button>
-            </td>
-            <td>${processo.data_abertura || '-'}</td>
-            <td>${processo.ref_unique || '-'}</td>
-            <td>${processo.importador || '-'}</td>
-            <td>${processo.mercadoria || '-'}</td>
-            <td>${processo.data_embarque || '-'}</td>
-            <td>${processo.data_chegada || '-'}</td>
-            <td>${processo.status_processo || '-'}</td>
-            <td>${processo.canal || '-'}</td>
-            <td>${formatCurrency(processo.custo_total || 0)}</td>
-        `;
-        tableBody.appendChild(row);
-    });
+    const brazilianMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (brazilianMatch) {
+        const [, day, month, year] = brazilianMatch;
+        return new Date(year, month - 1, day);
+    }
+    
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -1143,4 +1215,44 @@ function formatCurrencyCompact(value) {
     } else {
         return formatCurrency(value);
     }
+}
+
+// Utility Functions for Enhanced Table
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    try {
+        // Handle Brazilian date format (DD/MM/YYYY)
+        if (dateString.includes('/')) {
+            const [day, month, year] = dateString.split('/');
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('pt-BR');
+        }
+        // Handle ISO date format
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+        console.warn('Error formatting date:', dateString, error);
+        return dateString;
+    }
+}
+
+function getStatusBadge(status) {
+    if (!status) return '<span class="badge badge-secondary">-</span>';
+    
+    const statusMap = {
+        'ATRACADA': 'success',
+        'DESATRACADA': 'info', 
+        'ATRACANDO': 'warning',
+        'DESATRACANDO': 'primary',
+        'EM PROCESSAMENTO': 'warning',
+        'PROCESSADA': 'success',
+        'CANCELADA': 'danger',
+        'PENDENTE': 'secondary',
+        'CONFERIDA': 'success',
+        'NAO CONFERIDA': 'warning',
+        'EM CONFERENCIA': 'info'
+    };
+    
+    const badgeClass = statusMap[status?.toUpperCase()] || 'secondary';
+    return `<span class="badge badge-${badgeClass}">${status}</span>`;
 }

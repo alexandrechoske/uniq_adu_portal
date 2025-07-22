@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('dashboard_materiais.static', filename='css/materiais.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -249,16 +250,23 @@
         </div>
     </div>
 
-    <!-- Tabela de Detalhamento -->
-    <div class="table-section">
-        <div class="table-header">
-            <h2 class="table-title">Detalhamento dos Processos</h2>
-            <div class="table-controls">
-                <button id="export-data" class="btn btn-secondary">📊 Exportar</button>
+    <!-- Detalhamento dos Processos -->
+    <div class="enhanced-table-section" id="detalhamento-container">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
+                <i class="mdi mdi-file-document-outline"></i>
+                Detalhamento dos Processos
+            </h2>
+            <div class="enhanced-table-controls">
+                <div class="enhanced-search-container">
+                    <i class="mdi mdi-magnify enhanced-search-icon"></i>
+                    <input type="text" id="detalhamento-search" class="enhanced-search-input" 
+                           placeholder="Buscar por processo, cliente, material...">
+                </div>
             </div>
         </div>
-        <div class="table-container">
-            <table id="detalhamento-table" class="data-table">
+        <div class="enhanced-table-container">
+            <table id="detalhamento-table" class="enhanced-data-table">
                 <thead>
                     <tr>
                         <th>Ações</th>
@@ -291,5 +299,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
+<script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
 <script src="{{ url_for('dashboard_materiais.static', filename='js/materiais.js') }}"></script>
 {% endblock %}

@@ -13,6 +13,7 @@
 let dashboardData = null;
 let dashboardCharts = {};
 let monthlyChartPeriod = 'mensal';
+let recentOperationsTable = null;
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -44,9 +45,17 @@ document.addEventListener('DOMContentLoaded', function() {
 async function initializeDashboard() {
     try {
         showLoading(true);
+        
+        // Initialize enhanced table FIRST, before loading data
+        initializeEnhancedTable();
+        
+        // Then load initial data
         await loadInitialData();
+        
+        // Setup event listeners and filters
         setupEventListeners();
         setMonthlyChartPeriod('mensal');
+        
         showLoading(false);
         updateLastUpdate();
     } catch (error) {
@@ -54,6 +63,52 @@ async function initializeDashboard() {
         showError('Erro ao carregar dashboard: ' + error.message);
         showLoading(false);
     }
+}
+
+/**
+ * Initialize enhanced table for recent operations
+ */
+function initializeEnhancedTable() {
+    console.log('[DASHBOARD_EXECUTIVO] Inicializando Enhanced Table...');
+    
+    // Check if EnhancedDataTable is available
+    if (typeof EnhancedDataTable === 'undefined') {
+        console.error('[DASHBOARD_EXECUTIVO] EnhancedDataTable não está disponível');
+        return;
+    }
+    
+    // Create enhanced table instance
+    recentOperationsTable = new EnhancedDataTable('recent-operations-table', {
+        containerId: 'recent-operations-container',
+        searchInputId: 'recent-operations-search',
+        itemsPerPage: 15,
+        searchFields: ['ref_unique', 'importador', 'exportador_fornecedor', 'modal', 'status_processo', 'mercadoria', 'urf_entrada_normalizado'],
+        sortField: 'data_chegada',
+        sortOrder: 'desc'
+    });
+
+    // Override row rendering method
+    recentOperationsTable.renderRow = function(operation, index) {
+        return `
+            <td>
+                <button class="table-action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
+                    <i class="mdi mdi-eye-outline"></i>
+                </button>
+            </td>
+            <td><strong>${operation.ref_unique || '-'}</strong></td>
+            <td>${operation.importador || '-'}</td>
+            <td>${formatDate(operation.data_abertura)}</td>
+            <td>${operation.exportador_fornecedor || '-'}</td>
+            <td>${operation.modal || '-'}</td>
+            <td>${getStatusBadge(operation.status_processo)}</td>
+            <td><span class="currency-value">${formatCurrency(operation.custo_total || 0)}</span></td>
+            <td>${formatDate(operation.data_chegada)}</td>
+            <td>${operation.mercadoria || '-'}</td>
+            <td>${operation.urf_entrada_normalizado || operation.urf_entrada || '-'}</td>
+        `;
+    };
+
+    console.log('[DASHBOARD_EXECUTIVO] Enhanced Table inicializada');
 }
 
 /**
@@ -769,36 +824,51 @@ async function loadMonthlyChart(granularidade) {
 function updateRecentOperationsTable(operations) {
     console.log('[DASHBOARD_EXECUTIVO] Atualizando tabela com', operations.length, 'operações');
     
-    const tableBody = document.querySelector('#recent-operations-table tbody');
-    if (!tableBody) return;
-    
-    tableBody.innerHTML = '';
-    
-    operations.forEach((operation, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>
-                <button class="action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
-                    <i class="mdi mdi-eye-outline"></i>
-                </button>
-            </td>
-            <td>${operation.ref_unique || '-'}</td>
-            <td>${operation.importador || '-'}</td>
-            <td>${operation.data_abertura || '-'}</td>
-            <td>${operation.exportador_fornecedor || '-'}</td>
-            <td>${operation.modal || '-'}</td>
-            <td>${operation.status_processo || '-'}</td>
-            <td>${formatCurrency(operation.custo_total || 0)}</td>
-            <td>${operation.data_chegada || '-'}</td>
-            <td>${operation.mercadoria || '-'}</td>
-            <td>${operation.urf_entrada_normalizado || operation.urf_entrada || '-'}</td>
-        `;
-        tableBody.appendChild(row);
+    if (!recentOperationsTable) {
+        console.warn('[DASHBOARD_EXECUTIVO] Enhanced table não inicializada, tentando inicializar...');
+        initializeEnhancedTable();
+        
+        // Se ainda não conseguiu inicializar, retorna
+        if (!recentOperationsTable) {
+            console.error('[DASHBOARD_EXECUTIVO] Falha ao inicializar enhanced table');
+            return;
+        }
+    }
+
+    // Sort operations by data_chegada (most recent first)
+    const sortedOperations = [...operations].sort((a, b) => {
+        const dateA = parseDate(a.data_chegada);
+        const dateB = parseDate(b.data_chegada);
+        
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        
+        return dateB - dateA; // Descending order (newest first)
     });
+
+    // Set data to enhanced table
+    recentOperationsTable.setData(sortedOperations);
     
     // Store operations data globally for modal access
-    window.currentOperations = operations;
+    window.currentOperations = sortedOperations;
     console.log('[DASHBOARD_EXECUTIVO] Operações armazenadas globalmente:', window.currentOperations.length);
+}
+
+/**
+ * Parse date string (Brazilian format DD/MM/YYYY)
+ */
+function parseDate(dateStr) {
+    if (!dateStr) return null;
+    
+    const brazilianMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (brazilianMatch) {
+        const [, day, month, year] = brazilianMatch;
+        return new Date(year, month - 1, day);
+    }
+    
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -1134,4 +1204,44 @@ function updateDocumentsList(operation) {
         documentsList.innerHTML = '<p class="no-documents">Nenhum documento disponível</p>';
     }
     */
+}
+
+// Utility Functions for Enhanced Table
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    try {
+        // Handle Brazilian date format (DD/MM/YYYY)
+        if (dateString.includes('/')) {
+            const [day, month, year] = dateString.split('/');
+            const date = new Date(year, month - 1, day);
+            return date.toLocaleDateString('pt-BR');
+        }
+        // Handle ISO date format
+        const date = new Date(dateString);
+        return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+        console.warn('Error formatting date:', dateString, error);
+        return dateString;
+    }
+}
+
+function getStatusBadge(status) {
+    if (!status) return '<span class="badge badge-secondary">-</span>';
+    
+    const statusMap = {
+        'ATRACADA': 'success',
+        'DESATRACADA': 'info', 
+        'ATRACANDO': 'warning',
+        'DESATRACANDO': 'primary',
+        'EM PROCESSAMENTO': 'warning',
+        'PROCESSADA': 'success',
+        'CANCELADA': 'danger',
+        'PENDENTE': 'secondary',
+        'CONFERIDA': 'success',
+        'NAO CONFERIDA': 'warning',
+        'EM CONFERENCIA': 'info'
+    };
+    
+    const badgeClass = statusMap[status?.toUpperCase()] || 'secondary';
+    return `<span class="badge badge-${badgeClass}">${status}</span>`;
 }
