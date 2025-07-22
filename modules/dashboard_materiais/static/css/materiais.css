@@ -229,7 +229,8 @@
     height: 100% !important;
 }
 
-/* Filter Modal */
+/* Filter Modal - COMENTADO PARA EVITAR CONFLITO COM MODAL COMPARTILHADO */
+/*
 .modal {
     display: none;
     position: fixed;
@@ -293,6 +294,7 @@
     background: #f8f9fa;
     border-radius: 0 0 10px 10px;
 }
+*/
 
 /* Filter Sections */
 .filter-section {
@@ -470,10 +472,12 @@
         justify-content: center;
     }
     
+    /* COMENTADO - EVITAR CONFLITO COM MODAL COMPARTILHADO
     .modal-content {
         width: 95%;
         margin: 10% auto;
     }
+    */
     
     .filter-row {
         grid-template-columns: 1fr;
@@ -499,9 +503,11 @@
         padding: 15px;
     }
     
+    /* COMENTADO - EVITAR CONFLITO COM MODAL COMPARTILHADO
     .modal-body {
         padding: 20px;
     }
+    */
 }
 
 /* Utility Classes */
@@ -541,4 +547,21 @@
 
 .table-container::-webkit-scrollbar-thumb:hover {
     background: #a1a1a1;
+}
+
+/* Action Button in Table - Específico para ações da tabela */
+.action-btn {
+    background: none !important;
+    border: none !important;
+    color: #007bff !important;
+    cursor: pointer !important;
+    font-size: 1.2rem !important;
+    padding: 8px !important;
+    border-radius: 4px !important;
+    transition: all 0.3s ease !important;
+}
+
+.action-btn:hover {
+    background: #e7f3ff !important;
+    color: #0056b3 !important;
 }

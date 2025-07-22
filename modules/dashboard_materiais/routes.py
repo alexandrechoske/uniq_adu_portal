@@ -588,19 +588,34 @@ def api_detalhamento_processos():
         # Aplicar filtros
         filtered_data = apply_filters(data)
         
-        # Selecionar colunas relevantes
+        # Selecionar colunas relevantes para a tabela E modal
         relevant_columns = [
+            # Colunas básicas para a tabela
             'data_abertura', 'ref_unique', 'importador', 'mercadoria', 
-            'data_embarque', 'data_chegada', 'status_processo', 'canal', 'custo_total'
+            'data_embarque', 'data_chegada', 'status_processo', 'canal', 'custo_total',
+            
+            # Colunas adicionais para o modal
+            'ref_importador', 'cnpj_importador', 'status_macro', 'peso_bruto', 
+            'urf_despacho', 'urf_despacho_normalizado', 'container', 'transit_time_real', 
+            'valor_cif_real', 'custo_frete_inter', 'custo_armazenagem', 'custo_honorarios', 
+            'numero_di', 'data_registro', 'data_desembaraco', 'urf_entrada_normalizado', 
+            'urf_entrada', 'exportador_fornecedor'
         ]
         
         # Filtrar apenas as colunas que existem
         if filtered_data:
             available_columns = [col for col in relevant_columns if col in filtered_data[0].keys()]
+            print(f"[DASHBOARD_MATERIAIS] Colunas disponíveis: {available_columns}")
+            print(f"[DASHBOARD_MATERIAIS] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
+            
             result = []
             for item in filtered_data:
                 filtered_item = {col: item.get(col) for col in available_columns}
                 result.append(filtered_item)
+                
+            # Debug: mostrar dados de uma operação de exemplo
+            if result:
+                print(f"[DASHBOARD_MATERIAIS] Exemplo de operação (keys): {list(result[0].keys())}")
         else:
             result = []
         
