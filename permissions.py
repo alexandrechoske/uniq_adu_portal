@@ -1,8 +1,9 @@
 from flask import session
 from functools import wraps
-from extensions import supabase, supabase_admin
+from extensions import supabase_admin
 from flask import redirect, url_for, flash, current_app
 import time
+
 
 def get_user_permissions(user_id, role=None, force_refresh=False):
     """
@@ -193,3 +194,22 @@ def check_permission(required_roles=None, required_companies=None):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+
+
+def require_auth(role=None):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user = session.get('user')
+            if not user:
+                return redirect(url_for('auth.login', next=request.url))
+            if role and user.get('role') != role:
+                abort(403)
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_user_info():
+    """Recupera informações do usuário autenticado da sessão."""
+    return session.get('user')

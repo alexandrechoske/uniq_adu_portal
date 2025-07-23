@@ -187,15 +187,29 @@ function calculateOtherExpenses(operation) {
 }
 
 /**
- * Update documents list (placeholder)
+ * Update documents list - Now integrated with Document Manager
  */
 function updateDocumentsList(operation) {
-    const documentsList = document.getElementById('documents-list');
-    if (!documentsList) return;
+    console.log('[PROCESS_MODAL] Inicializando seção de documentos para:', operation.ref_unique);
     
-    // For now, show placeholder message
-    // In the future, this would fetch documents from an API endpoint
-    documentsList.innerHTML = '<p class="no-documents">Funcionalidade de documentos será implementada em breve</p>';
+    // Initialize document manager for this process
+    if (typeof initializeDocumentManager === 'function') {
+        initializeDocumentManager(operation.ref_unique);
+    } else {
+        console.warn('[PROCESS_MODAL] Document Manager não disponível');
+        
+        // Fallback: show placeholder
+        const documentsList = document.getElementById('documents-list');
+        if (documentsList) {
+            documentsList.innerHTML = `
+                <div class="no-documents">
+                    <i class="mdi mdi-file-document-outline"></i>
+                    <p>Sistema de documentos não carregado</p>
+                    <p class="text-muted">Verifique se o script document-manager.js foi incluído</p>
+                </div>
+            `;
+        }
+    }
 }
 
 /**

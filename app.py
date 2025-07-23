@@ -87,6 +87,9 @@ from modules.menu.routes import bp as menu_bp
 # Import shared blueprint
 from modules.shared.routes import shared_bp
 
+# Import documents blueprint
+from routes.documents import documents_bp
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -131,6 +134,9 @@ app.register_blueprint(paginas_bp)  # Páginas modular
 
 # Register shared blueprint
 app.register_blueprint(shared_bp)  # Shared static files
+
+# Register documents blueprint
+app.register_blueprint(documents_bp)  # Document management
 
 # Register modular menu blueprint
 app.register_blueprint(menu_bp)  # Menu modular
