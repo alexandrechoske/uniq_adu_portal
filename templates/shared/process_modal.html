@@ -173,12 +173,93 @@
 
                 <!-- Card 5: Documentos Anexados -->
                 <div class="info-card">
-                    <h3 class="card-title">Documentos Anexados</h3>
+                    <div class="card-header-with-action">
+                        <h3 class="card-title">Documentos Anexados</h3>
+                        <!-- Seção de upload (visível apenas para admin/interno) -->
+                        <div id="upload-section" style="display: none;">
+                            <button id="upload-document-btn" class="btn-upload">
+                                <i class="mdi mdi-plus"></i>
+                                Anexar Documento
+                            </button>
+                        </div>
+                    </div>
                     <div class="documents-list" id="documents-list">
-                        <p class="no-documents">Funcionalidade de documentos será implementada em breve</p>
+                        <div class="no-documents">
+                            <i class="mdi mdi-file-document-outline"></i>
+                            <p>Carregando documentos...</p>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Upload de Documento -->
+<div id="document-upload-modal" class="modal-overlay">
+    <div class="modal-container document-upload-container">
+        <div class="modal-header">
+            <h2 class="modal-title">Anexar Documento</h2>
+            <button class="modal-close" id="close-upload-modal">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <div class="modal-content">
+            <form id="document-upload-form" enctype="multipart/form-data">
+                <div class="upload-form-grid">
+                    <!-- File Input -->
+                    <div class="form-group full-width">
+                        <label for="document-file" class="form-label">Arquivo *</label>
+                        <div class="file-input-container">
+                            <input type="file" id="document-file" name="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.xlsx,.xls,.docx,.doc,.txt,.csv,.zip" required>
+                            <label for="document-file" class="file-input-label">
+                                <i class="mdi mdi-cloud-upload"></i>
+                                <span>Clique aqui ou arraste o arquivo</span>
+                                <small>Máx. 50MB - PDF, Imagem, Office, TXT, CSV, ZIP</small>
+                            </label>
+                        </div>
+                        <div id="file-preview" class="file-preview"></div>
+                    </div>
+                    
+                    <!-- Display Name -->
+                    <div class="form-group">
+                        <label for="document-display-name" class="form-label">Nome de Exibição *</label>
+                        <input type="text" id="document-display-name" name="display_name" class="form-input" required>
+                    </div>
+                    
+                    <!-- Visibility -->
+                    <div class="form-group">
+                        <label class="form-label">Visibilidade</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="document-visible-client" name="visible_to_client" checked>
+                                <span class="checkbox-custom"></span>
+                                Visível para o cliente
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="form-group full-width">
+                        <label for="document-description" class="form-label">Descrição</label>
+                        <textarea id="document-description" name="description" class="form-textarea" rows="3" placeholder="Descrição opcional do documento"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancel-upload">Cancelar</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="mdi mdi-upload"></i>
+                        Enviar Documento
+                    </button>
+                </div>
+                
+                <div id="upload-spinner" class="upload-spinner" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Enviando documento...</p>
+                </div>
+            </form>
         </div>
     </div>
 </div>

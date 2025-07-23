@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('dashboard_materiais.static', filename='css/materiais.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/document-manager.css') }}">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
@@ -299,6 +300,25 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
+<script src="{{ url_for('static', filename='shared/document-manager.js') }}"></script>
 <script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
 <script src="{{ url_for('dashboard_materiais.static', filename='js/materiais.js') }}"></script>
+
+<script>
+// Configure user role for document manager
+window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
+
+// Configure upload section visibility based on user role  
+document.addEventListener('DOMContentLoaded', function() {
+    const userRole = window.userRole;
+    const uploadSection = document.getElementById('upload-section');
+    
+    if (uploadSection && ['admin', 'interno_unique'].includes(userRole)) {
+        uploadSection.style.display = 'block';
+        console.log('[DASHBOARD_MATERIAIS] Seção de upload habilitada para role:', userRole);
+    } else {
+        console.log('[DASHBOARD_MATERIAIS] Seção de upload desabilitada para role:', userRole);
+    }
+});
+</script>
 {% endblock %}
