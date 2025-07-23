@@ -476,7 +476,7 @@ function createMonthlyChart(data) {
                             text: 'Custo Total (R$)'
                         },
                         grid: {
-                            drawOnChartArea: true,
+                            drawOnChartArea: false, // Remove grades do fundo
                         }
                     },
                     y1: {
@@ -488,7 +488,7 @@ function createMonthlyChart(data) {
                             text: 'Quantidade de Processos'
                         },
                         grid: {
-                            drawOnChartArea: false,
+                            drawOnChartArea: false, // Remove grades do fundo
                         },
                     }
                 },
@@ -511,16 +511,34 @@ function createMonthlyChart(data) {
 function createStatusChart(data) {
     const ctx = document.getElementById('status-chart');
     if (!ctx) return;
-    
+
     // Destroy existing chart
     if (dashboardCharts.status) {
         dashboardCharts.status.destroy();
     }
-    
+
+    // Função para quebrar o label em múltiplas linhas (máx 14 chars por linha)
+    const breakLabel = label => {
+        if (!label) return '';
+        const words = label.split(' ');
+        let lines = [];
+        let current = '';
+        words.forEach(word => {
+            if ((current + ' ' + word).trim().length > 14) {
+                if (current) lines.push(current.trim());
+                current = word;
+            } else {
+                current += ' ' + word;
+            }
+        });
+        if (current) lines.push(current.trim());
+        return lines;
+    };
+
     dashboardCharts.status = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: data.labels || [],
+            labels: (data.labels || []).map(breakLabel),
             datasets: [{
                 data: data.data || [],
                 backgroundColor: [
@@ -535,7 +553,15 @@ function createStatusChart(data) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'right'
+                    position: 'right',
+                    labels: {
+                        // Permite múltiplas linhas na legenda
+                        usePointStyle: true,
+                        textAlign: 'left',
+                        font: {
+                            size: 13
+                        }
+                    }
                 }
             }
         }
@@ -563,11 +589,19 @@ function createGroupedModalChart(data) {
     }
 
     try {
+        // Inverta a ordem dos datasets para que o de processos venha antes do de custo
+        // Supondo que o dataset de processos é o primeiro (index 0) e o de custo é o segundo (index 1)
+        let datasets = data.datasets || [];
+        if (datasets.length === 2) {
+            // Troca a ordem dos datasets
+            datasets = [datasets[1], datasets[0]];
+        }
+
         dashboardCharts.groupedModal = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.labels || [],
-                datasets: (data.datasets || []).map(ds => ({
+                datasets: datasets.map(ds => ({
                     ...ds,
                     datalabels: {
                         display: true
@@ -620,7 +654,10 @@ function createGroupedModalChart(data) {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Custo Total (R$)'
+                            text: 'Quantidade de Processos'
+                        },
+                        grid: {
+                            drawOnChartArea: false // Remove grades do fundo
                         }
                     },
                     y1: {
@@ -630,10 +667,10 @@ function createGroupedModalChart(data) {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Quantidade de Processos'
+                            text: 'Custo Total (R$)'
                         },
                         grid: {
-                            drawOnChartArea: false,
+                            drawOnChartArea: false // Remove grades do fundo
                         }
                     }
                 }
@@ -719,7 +756,15 @@ function createUrfChart(data) {
                 },
                 scales: {
                     x: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            drawOnChartArea: false // Remove grades do fundo
+                        }
+                    },
+                    y: {
+                        grid: {
+                            drawOnChartArea: false // Remove grades do fundo
+                        }
                     }
                 }
             },
@@ -740,17 +785,17 @@ function createMaterialChart(data) {
         console.error('[DASHBOARD_EXECUTIVO] Canvas material-chart não encontrado');
         return;
     }
-    
+
     if (typeof Chart === 'undefined') {
         console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
         return;
     }
-    
+
     // Destroy existing chart
     if (dashboardCharts.material) {
         dashboardCharts.material.destroy();
     }
-    
+
     try {
         dashboardCharts.material = new Chart(ctx, {
             type: 'bar',
@@ -769,7 +814,15 @@ function createMaterialChart(data) {
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            drawOnChartArea: false // Remove grades do fundo
+                        }
+                    },
+                    y: {
+                        grid: {
+                            drawOnChartArea: false // Remove grades do fundo
+                        }
                     }
                 }
             }
