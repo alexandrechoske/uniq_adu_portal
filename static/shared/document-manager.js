@@ -14,6 +14,7 @@ class DocumentManager {
     init() {
         console.log('[DOCUMENT_MANAGER] Inicializando para processo:', this.processRefUnique);
         this.getUserRole();
+        this.setupUploadSection();
         this.loadDocuments();
         this.setupEventListeners();
     }
@@ -22,6 +23,17 @@ class DocumentManager {
         // Assumindo que role está disponível globalmente
         this.userRole = window.userRole || 'cliente_unique';
         console.log('[DOCUMENT_MANAGER] Role do usuário:', this.userRole);
+    }
+
+    setupUploadSection() {
+        // Mostrar/ocultar seção de upload baseado no role
+        const uploadSection = document.getElementById('upload-section');
+        if (uploadSection && this.canUpload()) {
+            uploadSection.style.display = 'block';
+            console.log('[DOCUMENT_MANAGER] Seção de upload habilitada para role:', this.userRole);
+        } else {
+            console.log('[DOCUMENT_MANAGER] Seção de upload desabilitada para role:', this.userRole);
+        }
     }
 
     setupEventListeners() {
@@ -48,13 +60,51 @@ class DocumentManager {
         if (fileInput) {
             fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         }
+
+        // Drag & Drop para upload
+        const fileInputLabel = document.querySelector('.file-input-label');
+        if (fileInputLabel && this.canUpload()) {
+            fileInputLabel.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileInputLabel.classList.add('drag-over');
+            });
+            
+            fileInputLabel.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                fileInputLabel.classList.remove('drag-over');
+            });
+            
+            fileInputLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileInputLabel.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    this.handleFileSelect({ target: fileInput });
+                }
+            });
+        }
     }
 
     async loadDocuments() {
         try {
             console.log('[DOCUMENT_MANAGER] Carregando documentos...');
+            console.log('[DOCUMENT_MANAGER] Process ref unique:', this.processRefUnique);
             
-            const response = await fetch(`/api/documents/process/${this.processRefUnique}`);
+            // Encode the ref_unique to handle special characters
+            const encodedRefUnique = encodeURIComponent(this.processRefUnique);
+            const url = `/api/documents/process/${encodedRefUnique}`;
+            console.log('[DOCUMENT_MANAGER] URL da requisição:', url);
+            
+            const response = await fetch(url);
+            
+            // Check if response is ok
+            if (!response.ok) {
+                console.error('[DOCUMENT_MANAGER] Erro HTTP:', response.status, response.statusText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const result = await response.json();
 
             if (result.success) {

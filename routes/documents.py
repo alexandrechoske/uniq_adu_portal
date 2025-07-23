@@ -79,7 +79,7 @@ def upload_document():
             'error': f'Erro interno: {str(e)}'
         }), 500
 
-@documents_bp.route('/process/<ref_unique>', methods=['GET'])
+@documents_bp.route('/process/<path:ref_unique>', methods=['GET'])
 @login_required
 def get_process_documents(ref_unique):
     """

@@ -100,19 +100,30 @@ class DocumentService:
         Returns: {"success": bool, "data": dict, "error": str}
         """
         try:
+            print(f"[DOCUMENT_SERVICE] Iniciando upload para ref_unique: '{ref_unique}'")
+            print(f"[DOCUMENT_SERVICE] Arquivo: {file.filename}")
+            
             # Validar arquivo
             is_valid, error_msg = self.validate_file(file)
             if not is_valid:
+                print(f"[DOCUMENT_SERVICE] Arquivo inválido: {error_msg}")
                 return {"success": False, "error": error_msg}
             
             # Verificar se processo existe
-            process_check = supabase.table('importacoes_processos')\
+            print(f"[DOCUMENT_SERVICE] Verificando se processo existe: '{ref_unique}'")
+            
+            process_check = supabase_admin.table('importacoes_processos_aberta')\
                 .select('ref_unique')\
                 .eq('ref_unique', ref_unique)\
                 .execute()
             
+            print(f"[DOCUMENT_SERVICE] Resultado da busca: {process_check.data}")
+            
             if not process_check.data:
+                print(f"[DOCUMENT_SERVICE] Processo não encontrado: '{ref_unique}'")
                 return {"success": False, "error": "Processo não encontrado"}
+            
+            print(f"[DOCUMENT_SERVICE] Processo encontrado: {process_check.data[0]['ref_unique']}")
             
             # Gerar dados do arquivo
             filename = secure_filename(file.filename)
@@ -120,7 +131,7 @@ class DocumentService:
             
             file.seek(0, 2)
             file_size = file.tell()
-            file.seek(0)
+            file.seek(0)  # Voltar para o início para ler o conteúdo
             
             mime_type, _ = mimetypes.guess_type(filename)
             if not mime_type:
@@ -128,12 +139,26 @@ class DocumentService:
             
             extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
             
-            # Upload para Supabase Storage
-            upload_result = supabase_admin.storage.from_(self.STORAGE_BUCKET)\
-                .upload(storage_path, file)
+            print(f"[DOCUMENT_SERVICE] Fazendo upload para storage: {storage_path}")
+            print(f"[DOCUMENT_SERVICE] Tamanho do arquivo: {file_size} bytes")
             
-            if upload_result.get('error'):
+            # Ler o conteúdo do arquivo como bytes
+            file_content = file.read()
+            
+            # Upload para Supabase Storage com conteúdo em bytes
+            upload_result = supabase_admin.storage.from_(self.STORAGE_BUCKET)\
+                .upload(storage_path, file_content, file_options={'content-type': mime_type})
+            
+            print(f"[DOCUMENT_SERVICE] Resultado do upload: {upload_result}")
+            
+            if hasattr(upload_result, 'get') and upload_result.get('error'):
+                print(f"[DOCUMENT_SERVICE] Erro no upload para storage: {upload_result['error']}")
                 return {"success": False, "error": f"Erro no upload: {upload_result['error']}"}
+            elif not upload_result:
+                print(f"[DOCUMENT_SERVICE] Upload falhou - resultado vazio")
+                return {"success": False, "error": "Falha no upload para storage"}
+            
+            print(f"[DOCUMENT_SERVICE] Upload para storage realizado com sucesso")
             
             # Inserir no banco
             document_data = {
@@ -150,23 +175,33 @@ class DocumentService:
                 'descricao': description
             }
             
+            print(f"[DOCUMENT_SERVICE] Salvando no banco: {document_data}")
+            
             db_result = supabase_admin.table('documentos_processos')\
                 .insert(document_data)\
                 .execute()
             
+            print(f"[DOCUMENT_SERVICE] Resultado do banco: {db_result}")
+            
             if db_result.data:
+                print(f"[DOCUMENT_SERVICE] Documento salvo com sucesso: ID {db_result.data[0]['id']}")
                 return {
                     "success": True,
                     "data": db_result.data[0],
                     "message": "Documento enviado com sucesso!"
                 }
             else:
+                print(f"[DOCUMENT_SERVICE] Erro ao salvar no banco")
                 # Rollback: remover arquivo do storage
                 supabase_admin.storage.from_(self.STORAGE_BUCKET)\
                     .remove([storage_path])
                 return {"success": False, "error": "Erro ao salvar no banco de dados"}
                 
         except Exception as e:
+            print(f"[DOCUMENT_SERVICE] Exceção durante upload: {str(e)}")
+            print(f"[DOCUMENT_SERVICE] Tipo da exceção: {type(e)}")
+            import traceback
+            traceback.print_exc()
             return {"success": False, "error": f"Erro interno: {str(e)}"}
     
     def get_process_documents(self, ref_unique: str, user_role: str = None, 

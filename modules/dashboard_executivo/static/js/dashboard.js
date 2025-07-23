@@ -1172,38 +1172,36 @@ function calculateOtherExpenses(operation) {
 }
 
 /**
- * Update documents list (placeholder)
+ * Update documents list using DocumentManager
  */
 function updateDocumentsList(operation) {
     const documentsList = document.getElementById('documents-list');
     if (!documentsList) return;
     
-    // For now, show placeholder message
-    // In the future, this would fetch documents from an API endpoint
-    documentsList.innerHTML = '<p class="no-documents">Funcionalidade de documentos será implementada em breve</p>';
-    
-    // Example of how documents could be displayed:
-    /*
-    const documents = [
-        { name: 'Fatura Comercial.pdf', size: '1.2 MB', type: 'pdf' },
-        { name: 'Conhecimento de Embarque.pdf', size: '856 KB', type: 'pdf' },
-        { name: 'Packing List.xlsx', size: '245 KB', type: 'excel' }
-    ];
-    
-    if (documents.length > 0) {
-        documentsList.innerHTML = documents.map(doc => `
-            <div class="document-item">
-                <i class="document-icon mdi mdi-file-document-outline"></i>
-                <div class="document-info">
-                    <div class="document-name">${doc.name}</div>
-                    <div class="document-size">${doc.size}</div>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        documentsList.innerHTML = '<p class="no-documents">Nenhum documento disponível</p>';
+    // Verificar se temos o ref_unique da operação
+    const refUnique = operation?.ref_unique;
+    console.log('[DOCUMENT_MANAGER] ref_unique recebido:', refUnique);
+    if (!refUnique) {
+        documentsList.innerHTML = '<p class="no-documents">Referência do processo não encontrada</p>';
+        return;
     }
-    */
+    
+    // Verificar se DocumentManager está disponível
+    if (typeof DocumentManager === 'undefined') {
+        console.error('DocumentManager não carregado');
+        documentsList.innerHTML = '<p class="no-documents">Sistema de documentos não disponível</p>';
+        return;
+    }
+    
+    try {
+        // Inicializar DocumentManager para este processo
+        // O DocumentManager já chama loadDocuments() automaticamente no init()
+        const documentManager = new DocumentManager(refUnique);
+        
+    } catch (error) {
+        console.error('Erro ao inicializar DocumentManager:', error);
+        documentsList.innerHTML = '<p class="no-documents">Erro ao carregar sistema de documentos</p>';
+    }
 }
 
 // Utility Functions for Enhanced Table

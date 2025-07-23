@@ -203,13 +203,14 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     display: none;
-    z-index: 9999;
+    z-index: 99999 !important; /* Maior que o modal principal (9999) */
     align-items: center;
     justify-content: center;
 }
 
 .document-upload-modal.active {
-    display: flex;
+    display: flex !important;
+    z-index: 99999 !important;
 }
 
 .upload-modal-content {
@@ -218,6 +219,8 @@
     padding: 2rem;
     width: 90%;
     max-width: 500px;
+    position: relative;
+    z-index: 100000 !important;
     max-height: 90vh;
     overflow-y: auto;
 }
@@ -308,6 +311,12 @@
 .file-input-label:hover {
     border-color: #007bff;
     background: #e7f3ff;
+}
+
+.file-input-label.drag-over {
+    border-color: #28a745;
+    background: #d4edda;
+    transform: scale(1.02);
 }
 
 .file-input-label i {
