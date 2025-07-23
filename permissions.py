@@ -1,4 +1,4 @@
-from flask import session
+from flask import session, request, abort
 from functools import wraps
 from extensions import supabase_admin
 from flask import redirect, url_for, flash, current_app
@@ -212,4 +212,38 @@ def require_auth(role=None):
 
 def get_user_info():
     """Recupera informações do usuário autenticado da sessão."""
-    return session.get('user')
+    print(f"[USER DEBUG] session completa: {dict(session)}")
+    user_info = session.get('user')
+    print(f"[USER DEBUG] session.get('user'): {user_info}")
+    
+    if user_info:
+        # Mapear user_companies para companies para compatibilidade
+        if 'user_companies' in user_info and 'companies' not in user_info:
+            user_info['companies'] = user_info['user_companies']
+            print(f"[USER DEBUG] Mapeando user_companies para companies: {user_info['companies']}")
+        
+        # Se não tem companies e é cliente_unique, buscar via permissões
+        elif 'companies' not in user_info and user_info.get('role') == 'cliente_unique':
+            print(f"[USER DEBUG] Cliente sem empresas na sessão, buscando via permissões...")
+            try:
+                permissions = get_user_permissions(user_info['id'], user_info['role'])
+                user_companies = permissions.get('accessible_companies', [])
+                user_info['companies'] = user_companies
+                print(f"[USER DEBUG] Empresas buscadas via permissões: {user_companies}")
+                
+                # Também salvar na sessão para próximas chamadas
+                session['user']['companies'] = user_companies
+                session.modified = True
+                print(f"[USER DEBUG] Empresas salvas na sessão para cache")
+                
+            except Exception as e:
+                print(f"[USER DEBUG] Erro ao buscar empresas via permissões: {e}")
+                user_info['companies'] = []
+        
+        # Se ainda não tem companies, garantir lista vazia
+        if 'companies' not in user_info:
+            user_info['companies'] = []
+            print(f"[USER DEBUG] Definindo companies como lista vazia")
+    
+    print(f"[USER DEBUG] user_info final: {user_info}")
+    return user_info

@@ -211,6 +211,10 @@ class DocumentService:
         Returns: {"success": bool, "data": list, "error": str}
         """
         try:
+            print(f"[DOCUMENT_SERVICE] Buscando documentos para ref_unique: {ref_unique}")
+            print(f"[DOCUMENT_SERVICE] user_role: {user_role}")
+            print(f"[DOCUMENT_SERVICE] user_companies: {user_companies}")
+            
             query = supabase.table('vw_documentos_processos_completa')\
                 .select('*')\
                 .eq('ref_unique', ref_unique)\
@@ -219,12 +223,28 @@ class DocumentService:
             # Filtrar por permissão de cliente
             if user_role == 'cliente_unique':
                 if not user_companies:
+                    print(f"[DOCUMENT_SERVICE] ERRO: Usuário cliente sem empresas")
                     return {"success": False, "error": "Usuário sem empresas associadas"}
                 
-                query = query.in_('cnpj_importador', user_companies)\
+                # Normalizar CNPJs para comparação (remover pontos, barras e espaços)
+                normalized_companies = []
+                for cnpj in user_companies:
+                    normalized_cnpj = cnpj.replace('.', '').replace('/', '').replace('-', '').replace(' ', '')
+                    normalized_companies.append(normalized_cnpj)
+                
+                print(f"[DOCUMENT_SERVICE] CNPJs originais: {user_companies}")
+                print(f"[DOCUMENT_SERVICE] CNPJs normalizados: {normalized_companies}")
+                
+                query = query.in_('cnpj_importador', normalized_companies)\
                     .eq('visivel_cliente', True)
             
+            print(f"[DOCUMENT_SERVICE] Executando query...")
             result = query.execute()
+            
+            print(f"[DOCUMENT_SERVICE] Documentos encontrados: {len(result.data)}")
+            if result.data:
+                for doc in result.data:
+                    print(f"[DOCUMENT_SERVICE] Doc: {doc['nome_exibicao']} - CNPJ: {doc.get('cnpj_importador')} - Visível: {doc.get('visivel_cliente')}")
             
             # Formatar dados
             documents = []
@@ -244,9 +264,13 @@ class DocumentService:
                     'download_url': f"/api/documents/{doc['id']}/download"
                 })
             
+            print(f"[DOCUMENT_SERVICE] Retornando {len(documents)} documentos")
             return {"success": True, "data": documents}
             
         except Exception as e:
+            print(f"[DOCUMENT_SERVICE] ERRO: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {"success": False, "error": f"Erro ao buscar documentos: {str(e)}"}
     
     def get_download_url(self, document_id: str, user_role: str = None, 
@@ -266,7 +290,13 @@ class DocumentService:
                 if not user_companies:
                     return {"success": False, "error": "Acesso negado"}
                 
-                query = query.in_('cnpj_importador', user_companies)\
+                # Normalizar CNPJs para comparação (remover pontos, barras e espaços)
+                normalized_companies = []
+                for cnpj in user_companies:
+                    normalized_cnpj = cnpj.replace('.', '').replace('/', '').replace('-', '').replace(' ', '')
+                    normalized_companies.append(normalized_cnpj)
+                
+                query = query.in_('cnpj_importador', normalized_companies)\
                     .eq('visivel_cliente', True)
             
             result = query.execute()

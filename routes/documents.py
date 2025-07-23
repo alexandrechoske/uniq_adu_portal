@@ -7,6 +7,8 @@ from flask import Blueprint, request, jsonify, send_file, abort, session
 from werkzeug.utils import secure_filename
 import mimetypes
 from datetime import datetime
+import os
+from functools import wraps
 
 from services.document_service import document_service
 from routes.auth import login_required, role_required
@@ -15,6 +17,38 @@ from extensions import supabase
 
 # Blueprint para documentos
 documents_bp = Blueprint('documents', __name__, url_prefix='/api/documents')
+
+def api_auth_required(f):
+    """
+    Decorador personalizado para APIs que:
+    1. Permite bypass com X-API-Key
+    2. Verifica sessão Flask para usuários logados
+    3. Retorna JSON error em vez de redirect para login
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # 1. Verificar bypass key primeiro
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        request_api_key = request.headers.get('X-API-Key')
+        
+        print(f"[AUTH DEBUG] API_BYPASS_KEY configurada: {bool(api_bypass_key)}")
+        print(f"[AUTH DEBUG] X-API-Key recebida: {bool(request_api_key)}")
+        print(f"[AUTH DEBUG] Chaves são iguais: {request_api_key == api_bypass_key}")
+        
+        if api_bypass_key and request_api_key == api_bypass_key:
+            print(f"[AUTH DEBUG] Usando bypass key para acesso")
+            # Para bypass, simular user_info admin
+            return f(*args, **kwargs)
+        
+        # 2. Verificar se usuário está logado via sessão
+        if 'user' not in session:
+            return jsonify({
+                'success': False,
+                'error': 'Usuário não autenticado. Faça login para acessar esta funcionalidade.'
+            }), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
 @documents_bp.route('/upload', methods=['POST'])
 @login_required
@@ -80,22 +114,43 @@ def upload_document():
         }), 500
 
 @documents_bp.route('/process/<path:ref_unique>', methods=['GET'])
-@login_required
+@api_auth_required
 def get_process_documents(ref_unique):
     """
     Lista documentos de um processo
     Filtra por permissão do usuário
     """
     try:
-        user_info = get_user_info()
-        user_role = user_info.get('role')
-        user_companies = user_info.get('companies', [])
+        print(f"[DOC DEBUG] Iniciando get_process_documents para ref_unique: {ref_unique}")
         
-        result = document_service.get_process_documents(
-            ref_unique=ref_unique,
-            user_role=user_role,
-            user_companies=user_companies
-        )
+        # Verificar se é bypass key
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        request_api_key = request.headers.get('X-API-Key')
+        
+        if api_bypass_key and request_api_key == api_bypass_key:
+            print(f"[DOC DEBUG] Usando bypass - admin acesso total")
+            result = document_service.get_process_documents(
+                ref_unique=ref_unique,
+                user_role='admin',
+                user_companies=[]
+            )
+        else:
+            # Usuário logado normal
+            user_info = get_user_info()
+            print(f"[DOC DEBUG] user_info recebido: {user_info}")
+            
+            user_role = user_info.get('role')
+            user_companies = user_info.get('companies', [])
+            
+            print(f"[DOC DEBUG] Role: {user_role}, Companies: {user_companies}")
+            
+            result = document_service.get_process_documents(
+                ref_unique=ref_unique,
+                user_role=user_role,
+                user_companies=user_companies
+            )
+        
+        print(f"[DOC DEBUG] Resultado do service: {result}")
         
         if result['success']:
             return jsonify(result)
@@ -103,6 +158,9 @@ def get_process_documents(ref_unique):
             return jsonify(result), 400
             
     except Exception as e:
+        print(f"[DOC DEBUG] Erro na função get_process_documents: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': f'Erro interno: {str(e)}'
