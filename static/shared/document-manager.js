@@ -170,15 +170,15 @@ class DocumentManager {
                     </div>
                 </div>
                 <div class="document-actions">
-                    <button class="btn-icon download-btn" onclick="documentManager.downloadDocument('${doc.id}')" title="Download">
+                    <button class="btn-icon download-btn" onclick="downloadDocument('${doc.id}')" title="Download">
                         <i class="mdi mdi-download"></i>
                     </button>
                     ${canEdit ? `
-                        <button class="btn-icon edit-btn" onclick="documentManager.editDocument('${doc.id}')" title="Editar">
+                        <button class="btn-icon edit-btn" onclick="editDocument('${doc.id}')" title="Editar">
                             <i class="mdi mdi-pencil"></i>
                         </button>
                         ${this.userRole === 'admin' ? `
-                            <button class="btn-icon delete-btn" onclick="documentManager.deleteDocument('${doc.id}')" title="Remover">
+                            <button class="btn-icon delete-btn" onclick="deleteDocument('${doc.id}')" title="Remover">
                                 <i class="mdi mdi-delete"></i>
                             </button>
                         ` : ''}
@@ -411,9 +411,49 @@ class DocumentManager {
 // Variável global para gerenciador de documentos
 let documentManager = null;
 
+// Função global para download que verifica se documentManager existe
+function downloadDocument(documentId) {
+    console.log('[GLOBAL] downloadDocument chamado para ID:', documentId);
+    console.log('[GLOBAL] Verificando window.documentManager:', !!window.documentManager);
+    
+    if (!window.documentManager) {
+        console.error('[GLOBAL] window.documentManager não está inicializado');
+        alert('Sistema de documentos não está pronto. Tente novamente em alguns segundos.');
+        return;
+    }
+    
+    return window.documentManager.downloadDocument(documentId);
+}
+
+// Função global para editar documento
+function editDocument(documentId) {
+    console.log('[GLOBAL] editDocument chamado para ID:', documentId);
+    
+    if (!window.documentManager) {
+        console.error('[GLOBAL] window.documentManager não está inicializado');
+        alert('Sistema de documentos não está pronto. Tente novamente em alguns segundos.');
+        return;
+    }
+    
+    return window.documentManager.editDocument(documentId);
+}
+
+// Função global para deletar documento
+function deleteDocument(documentId) {
+    console.log('[GLOBAL] deleteDocument chamado para ID:', documentId);
+    
+    if (!window.documentManager) {
+        console.error('[GLOBAL] window.documentManager não está inicializado');
+        alert('Sistema de documentos não está pronto. Tente novamente em alguns segundos.');
+        return;
+    }
+    
+    return window.documentManager.deleteDocument(documentId);
+}
+
 // Função para inicializar gerenciador no modal
 function initializeDocumentManager(processRefUnique) {
     console.log('[DOCUMENT_MANAGER] Inicializando para processo:', processRefUnique);
-    documentManager = new DocumentManager(processRefUnique);
-    return documentManager;
+    window.documentManager = new DocumentManager(processRefUnique);
+    return window.documentManager;
 }

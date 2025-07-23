@@ -1245,9 +1245,10 @@ function updateDocumentsList(operation) {
     }
     
     try {
-        // Inicializar DocumentManager para este processo
+        // Inicializar DocumentManager para este processo e armazenar na variável global
         // O DocumentManager já chama loadDocuments() automaticamente no init()
-        const documentManager = new DocumentManager(refUnique);
+        window.documentManager = new DocumentManager(refUnique);
+        console.log('[DASHBOARD_EXECUTIVO] DocumentManager inicializado e armazenado em window.documentManager');
         
     } catch (error) {
         console.error('Erro ao inicializar DocumentManager:', error);
