@@ -65,9 +65,14 @@ function initializeEnhancedTable() {
 
     // Override row rendering method
     detalhamentoTable.renderRow = function(processo, index) {
+        // Use ref_unique to find the correct index in the global array
+        const globalIndex = window.currentOperations ? 
+            window.currentOperations.findIndex(p => p.ref_unique === processo.ref_unique) : 
+            index;
+            
         return `
             <td>
-                <button class="table-action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
+                <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
                     <i class="mdi mdi-eye-outline"></i>
                 </button>
             </td>

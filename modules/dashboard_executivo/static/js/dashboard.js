@@ -89,9 +89,27 @@ function initializeEnhancedTable() {
 
     // Override row rendering method
     recentOperationsTable.renderRow = function(operation, index) {
+        // Check if global array exists
+        if (!window.currentOperations) {
+            console.error(`[RENDER_ROW_DEBUG] window.currentOperations não existe ainda!`);
+            return '<td colspan="11">Carregando...</td>';
+        }
+        
+        // Use ref_unique to find the correct index in the global array
+        const globalIndex = window.currentOperations.findIndex(op => op.ref_unique === operation.ref_unique);
+            
+        console.log(`[RENDER_ROW] Processo: ${operation.ref_unique}, Index local: ${index}, Index global: ${globalIndex}`);
+        
+        // Validation check
+        if (globalIndex === -1) {
+            console.warn(`[RENDER_ROW] Processo ${operation.ref_unique} não encontrado no array global!`);
+            console.warn(`[RENDER_ROW] Primeiros 5 do array global:`, 
+                window.currentOperations.slice(0, 5).map(op => op.ref_unique));
+        }
+            
         return `
             <td>
-                <button class="table-action-btn" onclick="openProcessModal(${index})" title="Ver detalhes">
+                <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
                     <i class="mdi mdi-eye-outline"></i>
                 </button>
             </td>
@@ -847,12 +865,27 @@ function updateRecentOperationsTable(operations) {
         return dateB - dateA; // Descending order (newest first)
     });
 
-    // Set data to enhanced table
-    recentOperationsTable.setData(sortedOperations);
-    
-    // Store operations data globally for modal access
+    // Store operations data globally for modal access FIRST
     window.currentOperations = sortedOperations;
     console.log('[DASHBOARD_EXECUTIVO] Operações armazenadas globalmente:', window.currentOperations.length);
+    
+    // Then set data to enhanced table (this triggers render)
+    recentOperationsTable.setData(sortedOperations);
+    
+    // Debug: mostrar primeiros 10 processos do array global com detalhes
+    console.log('[DASHBOARD_EXECUTIVO] Primeiros 10 processos no array global:');
+    sortedOperations.slice(0, 10).forEach((op, idx) => {
+        console.log(`[DASHBOARD_EXECUTIVO] Index ${idx}: ${op.ref_unique} - ${op.importador} (${typeof op.ref_unique})`);
+    });
+    
+    // Debug: verificar se os dados estão sendo passados corretamente para a tabela
+    console.log('[DASHBOARD_EXECUTIVO] Verificando dados passados para a tabela...');
+    if (recentOperationsTable.data && recentOperationsTable.data.length > 0) {
+        console.log('[DASHBOARD_EXECUTIVO] Primeiros 5 da tabela:');
+        recentOperationsTable.data.slice(0, 5).forEach((op, idx) => {
+            console.log(`[DASHBOARD_EXECUTIVO] Tabela Index ${idx}: ${op.ref_unique} - ${op.importador} (${typeof op.ref_unique})`);
+        });
+    }
 }
 
 /**
@@ -995,13 +1028,30 @@ function formatCurrencyCompact(value) {
 function openProcessModal(operationIndex) {
     console.log('[DASHBOARD_EXECUTIVO] Abrindo modal para processo:', operationIndex);
     
-    if (!window.currentOperations || !window.currentOperations[operationIndex]) {
-        console.error('[DASHBOARD_EXECUTIVO] Operação não encontrada:', operationIndex);
+    // Validation checks
+    if (!window.currentOperations) {
+        console.error('[DASHBOARD_EXECUTIVO] Array global de operações não encontrado');
+        return;
+    }
+    
+    if (operationIndex === -1) {
+        console.error('[DASHBOARD_EXECUTIVO] Índice inválido (-1) - processo não encontrado no array global');
+        return;
+    }
+    
+    if (!window.currentOperations[operationIndex]) {
+        console.error('[DASHBOARD_EXECUTIVO] Operação não encontrada no índice:', operationIndex);
+        console.error('[DASHBOARD_EXECUTIVO] Array global tem:', window.currentOperations.length, 'elementos');
+        console.error('[DASHBOARD_EXECUTIVO] Índices válidos: 0 a', window.currentOperations.length - 1);
         return;
     }
     
     const operation = window.currentOperations[operationIndex];
     console.log('[DASHBOARD_EXECUTIVO] Dados da operação completos:', operation);
+    console.log('[DASHBOARD_EXECUTIVO] ref_unique do processo:', operation.ref_unique);
+    
+    // Debug: verificar se o índice está correto
+    console.log(`[DASHBOARD_EXECUTIVO] Operação no índice ${operationIndex}:`, operation.ref_unique, '-', operation.importador);
     
     // Debug específico dos campos problemáticos
     console.log('[MODAL_DEBUG] ref_importador:', operation.ref_importador);
@@ -1016,6 +1066,7 @@ function openProcessModal(operationIndex) {
     const modalTitle = document.getElementById('modal-title');
     if (modalTitle) {
         modalTitle.textContent = `Detalhes do Processo ${operation.ref_unique || 'N/A'}`;
+        console.log('[DASHBOARD_EXECUTIVO] Título do modal atualizado para:', operation.ref_unique);
     }
     
     // Update timeline - extract numeric value from status_macro like "5 - AG REGISTRO"

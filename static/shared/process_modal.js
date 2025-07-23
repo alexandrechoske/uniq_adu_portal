@@ -12,11 +12,13 @@ function openProcessModal(operationIndex) {
     
     if (!window.currentOperations || !window.currentOperations[operationIndex]) {
         console.error('[PROCESS_MODAL] Operação não encontrada:', operationIndex);
+        console.error('[PROCESS_MODAL] window.currentOperations:', window.currentOperations ? window.currentOperations.length : 'undefined');
         return;
     }
     
     const operation = window.currentOperations[operationIndex];
     console.log('[PROCESS_MODAL] Dados da operação completos:', operation);
+    console.log('[PROCESS_MODAL] ref_unique do processo:', operation.ref_unique);
     
     // Debug específico dos campos problemáticos
     console.log('[MODAL_DEBUG] ref_importador:', operation.ref_importador);
@@ -31,6 +33,7 @@ function openProcessModal(operationIndex) {
     const modalTitle = document.getElementById('modal-title');
     if (modalTitle) {
         modalTitle.textContent = `Detalhes do Processo ${operation.ref_unique || 'N/A'}`;
+        console.log('[PROCESS_MODAL] Título do modal atualizado para:', operation.ref_unique);
     }
     
     // Update timeline - extract numeric value from status_macro like "5 - AG REGISTRO"
