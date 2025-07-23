@@ -139,27 +139,69 @@ def dashboard_kpis():
         # Total Aguardando Chegada
         total_ag_chegada = len(df[df['status_processo'].str.contains('aguardando chegada', case=False, na=False)]) if 'status_processo' in df.columns else 0
 
-        # Chegando este mês/semana (quantidade e custo)
+        # Chegando/Chegou este mês/semana (quantidade e custo)
         hoje = pd.Timestamp.now().normalize()
         primeiro_dia_mes = hoje.replace(day=1)
-        inicio_semana = hoje - pd.Timedelta(days=hoje.dayofweek)
+        ultimo_dia_mes = (primeiro_dia_mes + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
+        
+        # Calcular semana atual (domingo a sábado)
+        dias_desde_domingo = (hoje.dayofweek + 1) % 7  # 0=domingo, 1=segunda, etc.
+        inicio_semana = hoje - pd.Timedelta(days=dias_desde_domingo)
+        fim_semana = inicio_semana + pd.Timedelta(days=6)
+        
+        # Chegando = data_chegada >= hoje (futuro)
         chegando_mes = 0
         chegando_mes_custo = 0
         chegando_semana = 0
         chegando_semana_custo = 0
         
+        # Chegou = data_chegada < hoje (passado)
+        chegou_mes = 0
+        chegou_mes_custo = 0
+        chegou_semana = 0
+        chegou_semana_custo = 0
+        
         if 'data_chegada' in df.columns:
             df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
-            for _, row in df.iterrows():
+            print(f"[DEBUG_KPI] Total registros: {len(df)}")
+            print(f"[DEBUG_KPI] Registros com data_chegada válida: {df['chegada_dt'].notnull().sum()}")
+            print(f"[DEBUG_KPI] Hoje: {hoje.strftime('%d/%m/%Y')}")
+            print(f"[DEBUG_KPI] Semana: {inicio_semana.strftime('%d/%m/%Y')} a {fim_semana.strftime('%d/%m/%Y')}")
+            print(f"[DEBUG_KPI] Mês: {primeiro_dia_mes.strftime('%d/%m/%Y')} a {ultimo_dia_mes.strftime('%d/%m/%Y')}")
+            
+            for idx, row in df.iterrows():
                 chegada = row.get('chegada_dt')
-                custo = row.get('custo_total', 0)
+                custo = row.get('custo_total', 0) or 0
+                data_str = row.get('data_chegada', 'SEM DATA')
+                
+                if pd.notnull(chegada) and idx < 5:  # Log apenas os primeiros 5
+                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Futuro: {chegada >= hoje} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
+                
                 if pd.notnull(chegada):
-                    if chegada >= primeiro_dia_mes and chegada <= hoje + pd.Timedelta(days=31):
-                        chegando_mes += 1
-                        chegando_mes_custo += custo
-                    if chegada >= inicio_semana and chegada <= hoje + pd.Timedelta(days=7):
-                        chegando_semana += 1
-                        chegando_semana_custo += custo
+                    # Lógica para MÊS
+                    if primeiro_dia_mes <= chegada <= ultimo_dia_mes:
+                        if chegada >= hoje:
+                            # CHEGANDO este mês (futuro)
+                            chegando_mes += 1
+                            chegando_mes_custo += custo
+                        else:
+                            # CHEGOU este mês (passado)
+                            chegou_mes += 1
+                            chegou_mes_custo += custo
+                    
+                    # Lógica para SEMANA
+                    if inicio_semana <= chegada <= fim_semana:
+                        if chegada >= hoje:
+                            # CHEGANDO esta semana (futuro)
+                            chegando_semana += 1
+                            chegando_semana_custo += custo
+                        else:
+                            # CHEGOU esta semana (passado)
+                            chegou_semana += 1
+                            chegou_semana_custo += custo
+            
+            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Chegou semana: {chegou_semana}")
+            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Chegou mês: {chegou_mes}")
 
         # Transit time médio
         transit_time = 0
@@ -199,6 +241,10 @@ def dashboard_kpis():
             'chegando_mes_custo': chegando_mes_custo,
             'chegando_semana': chegando_semana,
             'chegando_semana_custo': chegando_semana_custo,
+            'chegou_mes': chegou_mes,
+            'chegou_mes_custo': chegou_mes_custo,
+            'chegou_semana': chegou_semana,
+            'chegou_semana_custo': chegou_semana_custo,
             'transit_time_medio': transit_time,
             'processos_mes': processos_mes,
             'processos_semana': processos_semana

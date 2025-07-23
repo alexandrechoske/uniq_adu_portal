@@ -175,6 +175,8 @@ def salvar(user_id=None):
         email = request.form.get('email')
         role = request.form.get('role')
         is_active = request.form.get('is_active') == 'true'
+        password = request.form.get('password')  # Apenas para novos usuários
+        confirm_password = request.form.get('confirm_password')  # Apenas para novos usuários
 
         # Validações básicas
         if not name or not email or not role:
@@ -182,6 +184,20 @@ def salvar(user_id=None):
             if user_id:
                 return redirect(url_for('usuarios.editar', user_id=user_id))
             else:
+                return redirect(url_for('usuarios.novo'))
+
+        # Validações específicas para novo usuário
+        if not user_id:  # Apenas para criação
+            if not password or not confirm_password:
+                flash('Senha e confirmação de senha são obrigatórias', 'error')
+                return redirect(url_for('usuarios.novo'))
+            
+            if password != confirm_password:
+                flash('As senhas não coincidem', 'error')
+                return redirect(url_for('usuarios.novo'))
+            
+            if len(password) < 6:
+                flash('A senha deve ter pelo menos 6 caracteres', 'error')
                 return redirect(url_for('usuarios.novo'))
 
         # Validar formato do email
@@ -223,24 +239,66 @@ def salvar(user_id=None):
                 return redirect(url_for('usuarios.editar', user_id=user_id))
         else:
             # Criar novo usuário
-            user_data['id'] = str(uuid.uuid4())
-            user_data['created_at'] = datetime.datetime.now().isoformat()
-            
-            # Verificar se email já existe
+            # Verificar se email já existe primeiro
             existing_user = supabase_admin.table('users').select('id').eq('email', email).execute()
             if existing_user.data:
                 flash('Email já está em uso por outro usuário', 'error')
                 return redirect(url_for('usuarios.novo'))
             
-            print(f"[DEBUG] Criando novo usuário com dados: {user_data}")
-            response = supabase_admin.table('users').insert(user_data).execute()
+            print(f"[DEBUG] Iniciando criação de usuário com email: {email}")
             
-            if response.data:
-                print(f"[DEBUG] Usuário criado com sucesso: {response.data}")
-                flash('Usuário criado com sucesso!', 'success')
-            else:
-                print(f"[DEBUG] Erro ao criar usuário: {response}")
-                flash('Erro ao criar usuário', 'error')
+            try:
+                # Primeiro, criar o usuário no auth do Supabase
+                auth_response = supabase_admin.auth.admin.create_user({
+                    "email": email,
+                    "password": password,
+                    "email_confirm": True,
+                    "user_metadata": {
+                        "name": name,
+                        "role": role
+                    }
+                })
+                
+                if auth_response.user:
+                    auth_user_id = auth_response.user.id
+                    print(f"[DEBUG] Usuário auth criado com ID: {auth_user_id}")
+                    
+                    # Verificar se já existe na tabela users (para evitar duplicata)
+                    existing_in_table = supabase_admin.table('users').select('id').eq('id', auth_user_id).execute()
+                    if existing_in_table.data:
+                        print(f"[DEBUG] Usuário já existe na tabela users, atualizando...")
+                        # Atualizar dados se já existe
+                        user_data['updated_at'] = datetime.datetime.now().isoformat()
+                        response = supabase_admin.table('users').update(user_data).eq('id', auth_user_id).execute()
+                    else:
+                        # Inserir novo registro na tabela users
+                        user_data['id'] = auth_user_id
+                        user_data['created_at'] = datetime.datetime.now().isoformat()
+                        print(f"[DEBUG] Inserindo usuário na tabela com dados: {user_data}")
+                        response = supabase_admin.table('users').insert(user_data).execute()
+                    
+                    if response.data:
+                        print(f"[DEBUG] Usuário criado/atualizado com sucesso: {response.data}")
+                        flash('Usuário criado com sucesso!', 'success')
+                    else:
+                        print(f"[DEBUG] Erro ao inserir/atualizar usuário na tabela: {response}")
+                        # Se falhar, tentar deletar o usuário auth criado
+                        try:
+                            print(f"[DEBUG] Tentando deletar usuário auth: {auth_user_id}")
+                            supabase_admin.auth.admin.delete_user(auth_user_id)
+                        except Exception as cleanup_error:
+                            print(f"[DEBUG] Erro ao limpar usuário auth: {str(cleanup_error)}")
+                        flash('Erro ao criar usuário na tabela do sistema', 'error')
+                        return redirect(url_for('usuarios.novo'))
+                else:
+                    print(f"[DEBUG] Erro ao criar usuário auth: {auth_response}")
+                    flash('Erro ao criar usuário no sistema de autenticação', 'error')
+                    return redirect(url_for('usuarios.novo'))
+                    
+            except Exception as auth_error:
+                print(f"[DEBUG] Erro na criação do usuário: {str(auth_error)}")
+                print(f"[DEBUG] Tipo do erro: {type(auth_error)}")
+                flash(f'Erro ao criar usuário: {str(auth_error)}', 'error')
                 return redirect(url_for('usuarios.novo'))
 
         return redirect(url_for('usuarios.index'))
@@ -532,6 +590,47 @@ def remover_empresa_usuario(user_id):
         
     except Exception as e:
         print(f"[DEBUG] Erro ao remover empresa: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<user_id>/empresas-detalhadas', methods=['GET'])
+@login_required
+@role_required(['admin'])
+def obter_empresas_detalhadas(user_id):
+    """Obter empresas associadas a um usuário com detalhes da razão social"""
+    try:
+        response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        empresas_detalhadas = []
+        if response.data and response.data[0].get('empresa'):
+            empresas = response.data[0]['empresa']
+            if isinstance(empresas, str):
+                try:
+                    empresas = json.loads(empresas)
+                except json.JSONDecodeError:
+                    empresas = [empresas] if empresas else []
+            elif not isinstance(empresas, list):
+                empresas = []
+            
+            for cnpj in empresas:
+                if isinstance(cnpj, str):
+                    try:
+                        empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                        if empresa_info.data and len(empresa_info.data) > 0:
+                            empresa_data = empresa_info.data[0]
+                            empresas_detalhadas.append({
+                                'cnpj': empresa_data.get('cnpj'),
+                                'razao_social': empresa_data.get('razao_social')
+                            })
+                        else:
+                            empresas_detalhadas.append({'cnpj': cnpj, 'razao_social': None})
+                    except Exception as empresa_error:
+                        print(f"[DEBUG] Erro ao buscar dados da empresa {cnpj}: {str(empresa_error)}")
+                        empresas_detalhadas.append({'cnpj': cnpj, 'razao_social': None})
+        
+        return jsonify({'success': True, 'empresas': empresas_detalhadas})
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao obter empresas detalhadas: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/<user_id>/dados', methods=['GET'])

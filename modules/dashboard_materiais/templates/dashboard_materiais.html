@@ -271,15 +271,15 @@
                 <thead>
                     <tr>
                         <th>Ações</th>
-                        <th>Data Abertura</th>
-                        <th>Número Pedido</th>
-                        <th>Cliente</th>
-                        <th>Material</th>
-                        <th>Data Embarque</th>
-                        <th>Data Chegada</th>
-                        <th>Status</th>
-                        <th>Canal</th>
-                        <th>Valor (R$)</th>
+                        <th class="sortable" data-sort="data_abertura">Data Abertura</th>
+                        <th class="sortable" data-sort="numero_pedido">Número Pedido</th>
+                        <th class="sortable" data-sort="cliente">Cliente</th>
+                        <th class="sortable" data-sort="material">Material</th>
+                        <th class="sortable" data-sort="data_embarque">Data Embarque</th>
+                        <th class="sortable" data-sort="data_chegada">Data Chegada</th>
+                        <th class="sortable" data-sort="status">Status</th>
+                        <th class="sortable" data-sort="canal">Canal</th>
+                        <th class="sortable" data-sort="valor">Valor (R$)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -302,6 +302,7 @@
 <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
 <script src="{{ url_for('static', filename='shared/document-manager.js') }}"></script>
 <script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_materiais.static', filename='js/materiais.js') }}"></script>
 
 <script>

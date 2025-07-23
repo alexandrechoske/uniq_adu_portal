@@ -2,8 +2,9 @@
 
 /* === LAYOUT DO FORMULÁRIO === */
 .form-container {
-    max-width: 800px;
-    margin: 0 auto;
+    max-width: 1200px;
+    margin: 0;
+    margin-left: 0;
     display: grid;
     gap: var(--spacing-xl);
 }
@@ -56,7 +57,8 @@
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-xl);
+    align-items: start;
 }
 
 .form-group {
@@ -109,6 +111,14 @@
     box-shadow: 0 0 0 3px var(--color-danger-light);
 }
 
+.form-input.error {
+    border-color: var(--color-danger);
+}
+
+.form-input.error:focus {
+    box-shadow: 0 0 0 3px var(--color-danger-light);
+}
+
 .form-select {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -143,7 +153,8 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: var(--spacing-sm) 0;
+    padding: var(--spacing-md) 0;
+    min-height: 48px;
 }
 
 .switch-input {
@@ -195,7 +206,7 @@
 
 .empresas-header {
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-md);
 }
@@ -311,4 +322,208 @@
     .empresas-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* === FEEDBACK E LOADING === */
+.form-feedback {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.form-feedback.success {
+    background: var(--color-success-light);
+    border-color: var(--color-success);
+    color: var(--color-success-dark);
+}
+
+.form-feedback.error {
+    background: var(--color-danger-light);
+    border-color: var(--color-danger);
+    color: var(--color-danger-dark);
+}
+
+.form-feedback.warning {
+    background: var(--color-warning-light);
+    border-color: var(--color-warning);
+    color: var(--color-warning-dark);
+}
+
+.form-loading {
+    display: none;
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--color-text-muted);
+}
+
+.form-loading.active {
+    display: block;
+}
+
+.btn.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    margin: auto;
+    border: 2px solid currentColor;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+}
+
+/* === FEEDBACK E LOADING === */
+.form-feedback {
+    display: none;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid;
+}
+
+.form-feedback.success {
+    background: var(--color-success-light);
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+
+.form-feedback.error {
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+
+.form-feedback.warning {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+    border-color: var(--color-warning);
+}
+
+.form-feedback.info {
+    background: var(--color-info-light);
+    color: var(--color-info);
+    border-color: var(--color-info);
+}
+
+.form-loading {
+    display: none;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.form-loading.active {
+    display: flex;
+}
+
+.form-loading i {
+    animation: spin 1s linear infinite;
+}
+
+/* Loading states para botões */
+.btn.loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    color: inherit;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* === MODAL === */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 1.125rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+/* === BOTÕES PEQUENOS === */
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    min-height: 24px;
+}
+
+.btn-sm i {
+    font-size: 0.875rem;
 }

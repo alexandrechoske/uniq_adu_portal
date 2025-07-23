@@ -162,5 +162,17 @@ def index():
         return redirect(url_for('dashboard_executivo.index'))
     return redirect(url_for('auth.login'))
 
+@app.route('/test-date-sorting')
+def test_date_sorting():
+    """Rota temporária para testar ordenação de datas"""
+    with open('test_date_sorting.html', 'r', encoding='utf-8') as f:
+        return f.read()
+
+@app.route('/test-data-chegada')
+def test_data_chegada():
+    """Rota temporária para testar especificamente data_chegada"""
+    with open('test_data_chegada_specific.html', 'r', encoding='utf-8') as f:
+        return f.read()
+
 if __name__ == '__main__':
     app.run(debug=True)  # Forçando debug para true

@@ -6,7 +6,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Selecionar todos os cabeçalhos de tabela com a classe 'sortable'
     const sortableColumns = document.querySelectorAll('.sortable');
-    let currentSort = { column: 'data_embarque', direction: 'desc' }; // Ordenação padrão: data de embarque decrescente
+    let currentSort = { column: 'data_chegada', direction: 'desc' }; // Ordenação padrão: data de chegada decrescente
     
     sortableColumns.forEach(th => {
         th.addEventListener('click', function() {
@@ -174,14 +174,22 @@ document.addEventListener('DOMContentLoaded', function() {
         return columnMap[columnName] || 1;
     }
     
-    // Inicialmente, ordenar pela data de embarque (decrescente)
-    const defaultSortColumn = document.querySelector(`th[data-sort="data_embarque"]`);
+    // Inicialmente, ordenar pela data de chegada (decrescente) se disponível, caso contrário data de embarque
+    let defaultSortColumn = document.querySelector(`th[data-sort="data_chegada"]`);
+    let defaultSortField = 'data_chegada';
+    
+    if (!defaultSortColumn) {
+        defaultSortColumn = document.querySelector(`th[data-sort="data_embarque"]`);
+        defaultSortField = 'data_embarque';
+    }
+    
     if (defaultSortColumn) {
         defaultSortColumn.classList.add('desc');
+        currentSort = { column: defaultSortField, direction: 'desc' };
         
         // Opcionalmente, iniciar com a tabela já ordenada na carga inicial
         setTimeout(() => {
-            sortTable('data_embarque', 'desc');
+            sortTable(defaultSortField, 'desc');
         }, 200);
     }
 });

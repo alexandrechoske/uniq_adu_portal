@@ -222,6 +222,13 @@ class EnhancedDataTable {
         this.data = data || [];
         this.filteredData = [...this.data];
         this.currentPage = 1;
+        
+        // Apply initial sorting if configured and not already set
+        if (this.config.sortField && this.sortColumn === null) {
+            console.log('[ENHANCED_TABLE] Applying initial sort configuration');
+            this.setupInitialSorting();
+        }
+        
         this.sortData();
         console.log('[ENHANCED_TABLE] Calling render with', this.filteredData.length, 'filtered items');
         this.render();
@@ -273,6 +280,8 @@ class EnhancedDataTable {
 
         const headers = Array.from(this.table.querySelectorAll('thead th'));
         const columnKey = this.getColumnKey(this.sortColumn);
+        
+        console.log(`[ENHANCED_TABLE] Sorting by column ${this.sortColumn} (${columnKey}), direction: ${this.sortDirection}`);
 
         this.filteredData.sort((a, b) => {
             let aVal = a[columnKey];
@@ -282,20 +291,35 @@ class EnhancedDataTable {
             if (aVal === null || aVal === undefined) aVal = '';
             if (bVal === null || bVal === undefined) bVal = '';
 
+            // Special handling for dates - check if values look like Brazilian dates first
+            if (this.isBrazilianDate(aVal) || this.isBrazilianDate(bVal)) {
+                console.log(`[ENHANCED_TABLE] Comparing dates: "${aVal}" vs "${bVal}"`);
+                
+                const aDate = this.parseDate(aVal);
+                const bDate = this.parseDate(bVal);
+                
+                console.log(`[ENHANCED_TABLE] Parsed dates: ${aDate ? aDate.toISOString().split('T')[0] : 'null'} vs ${bDate ? bDate.toISOString().split('T')[0] : 'null'}`);
+
+                // If both are valid dates, compare them
+                if (aDate && bDate) {
+                    const result = this.sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+                    console.log(`[ENHANCED_TABLE] Date comparison result: ${result}`);
+                    return result;
+                }
+                
+                // If only one is a valid date, valid date comes first (or last depending on direction)
+                if (aDate && !bDate) return this.sortDirection === 'asc' ? -1 : 1;
+                if (!aDate && bDate) return this.sortDirection === 'asc' ? 1 : -1;
+                
+                // If neither is a valid date, fall back to string comparison
+            }
+
             // Try to parse as numbers for proper sorting
             const aNum = parseFloat(String(aVal).replace(/[^\d.-]/g, ''));
             const bNum = parseFloat(String(bVal).replace(/[^\d.-]/g, ''));
 
             if (!isNaN(aNum) && !isNaN(bNum)) {
                 return this.sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
-            }
-
-            // Try to parse as dates
-            const aDate = this.parseDate(aVal);
-            const bDate = this.parseDate(bVal);
-
-            if (aDate && bDate) {
-                return this.sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
             }
 
             // Default string comparison
@@ -308,20 +332,46 @@ class EnhancedDataTable {
                 return bStr.localeCompare(aStr, 'pt-BR');
             }
         });
+        
+        console.log(`[ENHANCED_TABLE] Sorting completed. First 3 items:`, 
+            this.filteredData.slice(0, 3).map(item => ({ [columnKey]: item[columnKey] })));
+    }
+
+    // New helper function to detect Brazilian date format
+    isBrazilianDate(value) {
+        if (!value || typeof value !== 'string') return false;
+        // Check for DD/MM/YYYY format (with or without time)
+        return /^\d{1,2}\/\d{1,2}\/\d{4}(\s\d{1,2}:\d{1,2}(:\d{1,2})?)?$/.test(value.trim());
     }
 
     parseDate(dateStr) {
         if (!dateStr) return null;
         
-        // Try Brazilian format DD/MM/YYYY
-        const brazilianMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        // Clean the string
+        const cleanStr = String(dateStr).trim();
+        
+        // Try Brazilian format DD/MM/YYYY (with optional time)
+        const brazilianMatch = cleanStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(\s.*)?$/);
         if (brazilianMatch) {
             const [, day, month, year] = brazilianMatch;
-            return new Date(year, month - 1, day);
+            const dayNum = parseInt(day, 10);
+            const monthNum = parseInt(month, 10);
+            const yearNum = parseInt(year, 10);
+            
+            // Basic validation
+            if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {
+                const date = new Date(yearNum, monthNum - 1, dayNum);
+                // Double check the date is valid (handles things like Feb 30)
+                if (date.getFullYear() === yearNum && 
+                    date.getMonth() === monthNum - 1 && 
+                    date.getDate() === dayNum) {
+                    return date;
+                }
+            }
         }
 
-        // Try ISO format
-        const date = new Date(dateStr);
+        // Try ISO format as fallback
+        const date = new Date(cleanStr);
         return isNaN(date.getTime()) ? null : date;
     }
 

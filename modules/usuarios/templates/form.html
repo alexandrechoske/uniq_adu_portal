@@ -18,7 +18,7 @@
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
                 {'name': 'Gerenciar Usuários', 'icon': 'mdi mdi-account-group', 'url': url_for('usuarios.index')},
-                {'name': '{% if user %}Editar Usuário{% else %}Novo Usuário{% endif %}', 'icon': 'mdi mdi-account-edit'}
+                {'name': ('Editar Usuário' if user else 'Novo Usuário'), 'icon': 'mdi mdi-account-edit'}
             ]) }}
             <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline">
                 <i class="mdi mdi-arrow-left"></i>
@@ -45,6 +45,18 @@
                             Preencha as informações abaixo para criar um novo usuário
                         {% endif %}
                     </p>
+                </div>
+
+                <!-- Área de feedback -->
+                <div id="form-feedback" class="form-feedback" style="display: none;">
+                    <i class="mdi mdi-information"></i>
+                    <span id="feedback-message"></span>
+                </div>
+
+                <!-- Área de loading -->
+                <div id="form-loading" class="form-loading">
+                    <i class="mdi mdi-loading mdi-spin"></i>
+                    Processando...
                 </div>
 
                 <form id="userForm" 
@@ -86,7 +98,42 @@
                             </div>
                         </div>
 
-                        <!-- Linha 2: Role e Status -->
+                        <!-- Linha 2: Senha (apenas para novos usuários) -->
+                        {% if not user %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="password" class="form-label required">
+                                    <i class="mdi mdi-lock"></i>
+                                    Senha
+                                </label>
+                                <input type="password" 
+                                       id="password" 
+                                       name="password" 
+                                       class="form-input" 
+                                       required
+                                       minlength="6"
+                                       placeholder="Digite uma senha segura">
+                                <div class="form-help">Mínimo de 6 caracteres. O usuário poderá alterar posteriormente</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirm_password" class="form-label required">
+                                    <i class="mdi mdi-lock-check"></i>
+                                    Confirmar Senha
+                                </label>
+                                <input type="password" 
+                                       id="confirm_password" 
+                                       name="confirm_password" 
+                                       class="form-input" 
+                                       required
+                                       minlength="6"
+                                       placeholder="Digite a senha novamente">
+                                <div class="form-help">Repita a senha para confirmação</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Linha 3: Role e Status -->
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="role" class="form-label required">
@@ -213,7 +260,33 @@
                         </p>
                     </div>
 
+                    {% if not user %}
+                    <div style="padding: var(--spacing-md); background: var(--color-info-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
+                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-info); font-size: 0.875rem;">
+                            <i class="mdi mdi-lock"></i>
+                            Política de Senhas
+                        </h4>
+                        <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--color-text-secondary); font-size: 0.875rem;">
+                            <li>Mínimo de 6 caracteres</li>
+                            <li>O usuário pode alterar a senha após o primeiro login</li>
+                            <li>Recomendamos usar letras, números e símbolos</li>
+                            <li>A senha é criptografada e armazenada de forma segura</li>
+                        </ul>
+                    </div>
+                    {% endif %}
+
                     {% if user %}
+                    <div style="padding: var(--spacing-md); background: var(--color-info-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
+                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-info); font-size: 0.875rem;">
+                            <i class="mdi mdi-lock-reset"></i>
+                            Gerenciamento de Senha
+                        </h4>
+                        <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
+                            Para alterar a senha deste usuário, utilize as opções de recuperação de senha no sistema de autenticação.
+                            Por segurança, senhas não podem ser editadas diretamente por administradores.
+                        </p>
+                    </div>
+                    
                     <div style="padding: var(--spacing-md); background: var(--color-success-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-success);">
                         <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-success); font-size: 0.875rem;">
                             <i class="mdi mdi-calendar"></i>
@@ -235,8 +308,103 @@
 {% block extra_js %}
 <script src="{{ url_for('usuarios.static', filename='js/form.js') }}"></script>
 <script>
-// CRUD AJAX de empresas associadas em modal
+// Controle de feedback e loading
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('userForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const feedback = document.getElementById('form-feedback');
+    const feedbackMessage = document.getElementById('feedback-message');
+    const loading = document.getElementById('form-loading');
+    
+    // Função para mostrar feedback
+    function showFeedback(message, type = 'info') {
+        feedback.className = `form-feedback ${type}`;
+        feedbackMessage.textContent = message;
+        feedback.style.display = 'flex';
+        
+        // Auto-hide após 5 segundos se for sucesso
+        if (type === 'success') {
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 5000);
+        }
+    }
+    
+    // Função para mostrar loading
+    function showLoading(show = true) {
+        if (show) {
+            loading.classList.add('active');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+        } else {
+            loading.classList.remove('active');
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+        }
+    }
+    
+    // Interceptar submit do formulário
+    form.addEventListener('submit', function(e) {
+        // Validar senhas se for novo usuário
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm_password');
+        
+        if (passwordField && confirmPasswordField) {
+            const password = passwordField.value;
+            const confirmPassword = confirmPasswordField.value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                showFeedback('As senhas não coincidem', 'error');
+                confirmPasswordField.focus();
+                return false;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                showFeedback('A senha deve ter pelo menos 6 caracteres', 'error');
+                passwordField.focus();
+                return false;
+            }
+        }
+        
+        showLoading(true);
+        showFeedback('Salvando usuário...', 'info');
+    });
+    
+    // Mostrar mensagens flash como feedback
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                showFeedback('{{ message|safe }}', '{{ "error" if category == "error" else "success" if category == "success" else "warning" }}');
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+        });
+    
+    // Validação em tempo real da confirmação de senha
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    
+    if (passwordField && confirmPasswordField) {
+        function validatePasswordMatch() {
+            const password = passwordField.value;
+            const confirmPassword = confirmPasswordField.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                confirmPasswordField.setCustomValidity('As senhas não coincidem');
+                confirmPasswordField.classList.add('error');
+            } else {
+                confirmPasswordField.setCustomValidity('');
+                confirmPasswordField.classList.remove('error');
+            }
+        }
+        
+        passwordField.addEventListener('input', validatePasswordMatch);
+        confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
+    
     const userId = document.getElementById('userForm')?.dataset?.userId;
     const empresasListCrud = document.getElementById('empresas-list-crud');
     const openEmpresasModalBtn = document.getElementById('open-empresas-modal');
@@ -247,23 +415,35 @@ document.addEventListener('DOMContentLoaded', function() {
     const novoCnpjInput = document.getElementById('novo-cnpj');
 
     function renderEmpresasCrud(target) {
+        if (!userId) return;
+        
         fetch(`/usuarios/${userId}/empresas-detalhadas`)
             .then(r => r.json())
             .then(data => {
-                const html = (data.empresas && data.empresas.length > 0)
-                    ? data.empresas.map(emp => `
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                            <span style="font-weight:600;">${emp.cnpj}</span>
-                            <button class="btn btn-danger btn-sm btn-remove-empresa" data-cnpj="${emp.cnpj}" title="Remover empresa"><i class="mdi mdi-delete"></i></button>
-                        </div>
-                    `).join('')
-                    : '<span style="color:var(--color-text-muted); font-style:italic;">Nenhuma empresa associada</span>';
-                if (target) target.innerHTML = html;
+                if (data.success) {
+                    const html = (data.empresas && data.empresas.length > 0)
+                        ? data.empresas.map(emp => `
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="font-weight:600;">${emp.cnpj}</span>
+                                ${emp.razao_social ? `<span style="color:var(--color-text-muted); font-size:0.8em;">- ${emp.razao_social}</span>` : ''}
+                                <button class="btn btn-danger btn-sm btn-remove-empresa" data-cnpj="${emp.cnpj}" title="Remover empresa"><i class="mdi mdi-delete"></i></button>
+                            </div>
+                        `).join('')
+                        : '<span style="color:var(--color-text-muted); font-style:italic;">Nenhuma empresa associada</span>';
+                    if (target) target.innerHTML = html;
+                } else {
+                    showFeedback('Erro ao carregar empresas: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showFeedback('Erro ao carregar empresas: ' + error.message, 'error');
             });
     }
+    
     if (userId && empresasListCrud) {
         renderEmpresasCrud(empresasListCrud);
     }
+    
     if (openEmpresasModalBtn && empresasModal && empresasListModal) {
         openEmpresasModalBtn.onclick = function() {
             empresasModal.style.display = 'flex';
@@ -276,29 +456,56 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target === empresasModal) empresasModal.style.display = 'none';
         };
     }
+    
     if (addEmpresaBtn && novoCnpjInput && empresasListModal) {
         addEmpresaBtn.onclick = function() {
             const cnpj = novoCnpjInput.value.trim();
-            if (!cnpj) return;
-            fetch(`/usuarios/${userId}/empresas`, {
+            if (!cnpj) {
+                showFeedback('Digite um CNPJ válido', 'warning');
+                return;
+            }
+            
+            addEmpresaBtn.classList.add('loading');
+            addEmpresaBtn.disabled = true;
+            
+            fetch(`/usuarios/${userId}/empresas/adicionar`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({cnpj})
             })
             .then(r => r.json())
             .then(data => {
-                novoCnpjInput.value = '';
-                renderEmpresasCrud(empresasListModal);
-                renderEmpresasCrud(empresasListCrud);
+                addEmpresaBtn.classList.remove('loading');
+                addEmpresaBtn.disabled = false;
+                
+                if (data.success) {
+                    novoCnpjInput.value = '';
+                    renderEmpresasCrud(empresasListModal);
+                    renderEmpresasCrud(empresasListCrud);
+                    showFeedback(data.message, 'success');
+                } else {
+                    showFeedback('Erro: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                addEmpresaBtn.classList.remove('loading');
+                addEmpresaBtn.disabled = false;
+                showFeedback('Erro de conexão: ' + error.message, 'error');
             });
         };
     }
+    
     if (empresasListModal) {
         empresasListModal.addEventListener('click', function(e) {
-            if (e.target.classList.contains('btn-remove-empresa')) {
-                const cnpj = e.target.dataset.cnpj;
+            if (e.target.classList.contains('btn-remove-empresa') || e.target.parentElement.classList.contains('btn-remove-empresa')) {
+                const btn = e.target.classList.contains('btn-remove-empresa') ? e.target : e.target.parentElement;
+                const cnpj = btn.dataset.cnpj;
                 if (!cnpj) return;
                 if (!confirm('Remover esta empresa?')) return;
+                
+                btn.classList.add('loading');
+                btn.disabled = true;
+                
                 fetch(`/usuarios/${userId}/empresas/remover`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -306,8 +513,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(r => r.json())
                 .then(data => {
-                    renderEmpresasCrud(empresasListModal);
-                    renderEmpresasCrud(empresasListCrud);
+                    if (data.success) {
+                        renderEmpresasCrud(empresasListModal);
+                        renderEmpresasCrud(empresasListCrud);
+                        showFeedback(data.message, 'success');
+                    } else {
+                        showFeedback('Erro: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    showFeedback('Erro de conexão: ' + error.message, 'error');
+                })
+                .finally(() => {
+                    btn.classList.remove('loading');
+                    btn.disabled = false;
                 });
             }
         });

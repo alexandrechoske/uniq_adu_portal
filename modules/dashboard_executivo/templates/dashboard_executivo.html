@@ -89,6 +89,28 @@
             </div>
         </div>
         
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-check"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegou Este Mês</p>
+                <p class="kpi-value" id="kpi-chegou-mes">-</p>
+                <p class="kpi-sub-value" id="kpi-chegou-mes-custo">-</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-check-outline"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegou Esta Semana</p>
+                <p class="kpi-value" id="kpi-chegou-semana">-</p>
+                <p class="kpi-sub-value" id="kpi-chegou-semana-custo">-</p>
+            </div>
+        </div>
+        
         <!-- Linha 2: Em Trânsito - Aguardando Embarque - Aguardando Chegada - Transit Time Médio - Processos/Mês -->
         <div class="kpi-card kpi-warning">
             <div class="kpi-icon">
@@ -219,16 +241,16 @@
                 <thead>
                     <tr>
                         <th>Ações</th>
-                        <th>Ref. Unique</th>
-                        <th>Importador</th>
-                        <th>Data Abertura</th>
-                        <th>Exportador</th>
-                        <th>Modal</th>
-                        <th>Status</th>
-                        <th>Custo Total</th>
-                        <th>Data Chegada</th>
-                        <th>Material</th>
-                        <th>URF</th>
+                        <th class="sortable" data-sort="ref_unique">Ref. Unique</th>
+                        <th class="sortable" data-sort="importador">Importador</th>
+                        <th class="sortable" data-sort="data_abertura">Data Abertura</th>
+                        <th class="sortable" data-sort="exportador">Exportador</th>
+                        <th class="sortable" data-sort="modal">Modal</th>
+                        <th class="sortable" data-sort="status">Status</th>
+                        <th class="sortable" data-sort="custo_total">Custo Total</th>
+                        <th class="sortable" data-sort="data_chegada">Data Chegada</th>
+                        <th class="sortable" data-sort="material">Material</th>
+                        <th class="sortable" data-sort="urf">URF</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -511,6 +533,7 @@
 <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
 <script src="{{ url_for('static', filename='shared/document-manager.js') }}"></script>
 <script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
 
 <script>

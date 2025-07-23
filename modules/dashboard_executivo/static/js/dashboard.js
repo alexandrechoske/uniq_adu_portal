@@ -293,6 +293,10 @@ function updateDashboardKPIs(kpis) {
     updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
     updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
     updateKPIValue('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo || 0));
+    updateKPIValue('kpi-chegou-mes', formatNumber(kpis.chegou_mes || 0));
+    updateKPIValue('kpi-chegou-mes-custo', formatCurrencyCompact(kpis.chegou_mes_custo || 0));
+    updateKPIValue('kpi-chegou-semana', formatNumber(kpis.chegou_semana || 0));
+    updateKPIValue('kpi-chegou-semana-custo', formatCurrencyCompact(kpis.chegou_semana_custo || 0));
     updateKPIValue('kpi-transit-time', formatNumber(kpis.transit_time_medio, 1) + ' dias');
     updateKPIValue('kpi-proc-mes', formatNumber(kpis.processos_mes, 1));
     updateKPIValue('kpi-proc-semana', formatNumber(kpis.processos_semana, 1));
