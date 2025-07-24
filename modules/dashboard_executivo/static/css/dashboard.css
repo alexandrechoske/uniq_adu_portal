@@ -116,9 +116,39 @@
 /* KPI Grid - Layout apenas (estilos dos cartões estão em kpi-cards.css) */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1rem;
     margin-bottom: 2.5rem;
+}
+
+/* Ajuste para fonte menor nos KPIs */
+.kpi-card .kpi-label {
+    font-size: 0.95rem;
+}
+.kpi-card .kpi-value {
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+.kpi-card .kpi-sub-value {
+    font-size: 0.95rem;
+}
+
+@media (max-width: 1200px) {
+    .kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Charts Grid */

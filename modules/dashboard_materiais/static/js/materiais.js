@@ -58,7 +58,7 @@ function initializeEnhancedTable() {
         containerId: 'detalhamento-container',
         searchInputId: 'detalhamento-search',
         itemsPerPage: 15,
-        searchFields: ['numero_pedido', 'ref_unique', 'cliente', 'importador', 'material', 'mercadoria', 'status', 'status_processo', 'canal'],
+        searchFields: ['ref_importador', 'ref_unique', 'cliente', 'importador', 'material', 'mercadoria', 'status', 'status_processo', 'status_macro_sistema', 'status_macro', 'canal'],
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
@@ -69,6 +69,11 @@ function initializeEnhancedTable() {
         const globalIndex = window.currentOperations ? 
             window.currentOperations.findIndex(p => p.ref_unique === processo.ref_unique) : 
             index;
+        
+        console.log(`[RENDER_ROW_MATERIAIS] Processo: ${processo.ref_unique}, Index local: ${index}, Index global: ${globalIndex}`);
+        console.log(`[RENDER_ROW_DEBUG_MATERIAIS] processo.status_macro_sistema:`, processo.status_macro_sistema);
+        console.log(`[RENDER_ROW_DEBUG_MATERIAIS] processo.status_macro:`, processo.status_macro);
+        console.log(`[RENDER_ROW_DEBUG_MATERIAIS] processo.status:`, processo.status);
             
         return `
             <td>
@@ -77,12 +82,12 @@ function initializeEnhancedTable() {
                 </button>
             </td>
             <td>${formatDate(processo.data_abertura)}</td>
-            <td><strong>${processo.numero_pedido || processo.ref_unique || '-'}</strong></td>
+            <td><strong>${processo.ref_importador || '-'}</strong></td>
             <td>${processo.cliente || processo.importador || '-'}</td>
             <td>${processo.material || processo.mercadoria || '-'}</td>
             <td>${formatDate(processo.data_embarque)}</td>
             <td>${formatDate(processo.data_chegada)}</td>
-            <td>${getStatusBadge(processo.status || processo.status_processo)}</td>
+            <td>${getStatusBadge(processo.status_macro_sistema || processo.status_macro || processo.status_processo || processo.status)}</td>
             <td>${processo.canal || '-'}</td>
             <td><span class="currency-value">${formatCurrency(processo.custo_total || 0)}</span></td>
         `;
@@ -1007,6 +1012,12 @@ function updateDetalhamentoTable(data) {
     // Store operations data globally for modal access
     window.currentOperations = sortedData;
     console.log('[DASHBOARD_MATERIAIS] Operações armazenadas globalmente:', window.currentOperations.length);
+    
+    // Debug: verificar campos disponíveis no primeiro item
+    if (sortedData.length > 0) {
+        console.log('[DASHBOARD_MATERIAIS] Campos disponíveis no primeiro item:', Object.keys(sortedData[0]));
+        console.log('[DASHBOARD_MATERIAIS] Primeiro item completo:', sortedData[0]);
+    }
 }
 
 /**
@@ -1126,7 +1137,7 @@ function exportData() {
     }
     
     // Get table data
-    const headers = ['Data Abertura', 'Número Pedido', 'Cliente', 'Material', 'Data Embarque', 'Data Chegada', 'Status', 'Canal', 'Valor (R$)'];
+    const headers = ['Data Abertura', 'Pedido', 'Cliente', 'Material', 'Data Embarque', 'Data Chegada', 'Status', 'Canal', 'Valor (R$)'];
     const rows = Array.from(tableBody.children).map(row => 
         Array.from(row.children).map(cell => cell.textContent)
     );
@@ -1244,7 +1255,38 @@ function formatDate(dateString) {
 function getStatusBadge(status) {
     if (!status) return '<span class="badge badge-secondary">-</span>';
     
+    console.log('[STATUS_BADGE_DEBUG_MATERIAIS] Status recebido:', status);
+
+    // Se o status tem formato "2 - AG EMBARQUE", extrair apenas a parte após o traço
+    let displayStatus = status;
+    if (typeof status === 'string' && status.includes(' - ')) {
+        displayStatus = status.split(' - ')[1].trim();
+        console.log('[STATUS_BADGE_DEBUG_MATERIAIS] Status extraído:', displayStatus);
+    }
+    
+    // Mapeamento para status_macro_sistema e status_macro
     const statusMap = {
+        'AG. EMBARQUE': 'info',
+        'AG EMBARQUE': 'info',
+        'AG. FECHAMENTO': 'info',
+        'AG. ENTREGA DA DHL NO IMPORTADOR': 'primary',
+        'AG MAPA': 'info',
+        'ABERTURA': 'secondary',
+        'NUMERÁRIO ENVIADO': 'warning',
+        'DECLARAÇÃO DESEMBARAÇADA': 'success',
+        'AG CARREGAMENTO': 'info',
+        'AG CHEGADA': 'primary',
+        'AG. CARREGAMENTO': 'info',
+        'AG. REGISTRO': 'primary',
+        'DI REGISTRADA': 'warning',
+        'DI DESEMBARAÇADA': 'success',
+        // Mapeamento para status_macro
+        'EM TRANSITO': 'info',
+        'CHEGOU': 'success',
+        'CHEGANDO': 'warning',
+        'PROCESSANDO': 'primary',
+        'FINALIZADO': 'success',
+        // Fallback para status antigos
         'ATRACADA': 'success',
         'DESATRACADA': 'info', 
         'ATRACANDO': 'warning',
@@ -1258,6 +1300,13 @@ function getStatusBadge(status) {
         'EM CONFERENCIA': 'info'
     };
     
-    const badgeClass = statusMap[status?.toUpperCase()] || 'secondary';
-    return `<span class="badge badge-${badgeClass}">${status}</span>`;
+    // Primeiro tenta match exato, depois normalizado
+    let badgeClass = statusMap[displayStatus];
+    if (!badgeClass) {
+        badgeClass = statusMap[displayStatus?.toUpperCase()] || 'secondary';
+    }
+    
+    console.log('[STATUS_BADGE_DEBUG_MATERIAIS] Badge class:', badgeClass, 'para status:', displayStatus);
+    
+    return `<span class="badge badge-${badgeClass}">${displayStatus}</span>`;
 }

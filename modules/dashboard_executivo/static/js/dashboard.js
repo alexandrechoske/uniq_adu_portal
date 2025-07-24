@@ -82,7 +82,7 @@ function initializeEnhancedTable() {
         containerId: 'recent-operations-container',
         searchInputId: 'recent-operations-search',
         itemsPerPage: 15,
-        searchFields: ['ref_unique', 'importador', 'exportador_fornecedor', 'modal', 'status_processo', 'mercadoria', 'urf_entrada_normalizado'],
+        searchFields: ['ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 'status_processo', 'status_macro_sistema', 'mercadoria', 'urf_entrada_normalizado'],
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
@@ -94,31 +94,30 @@ function initializeEnhancedTable() {
             console.error(`[RENDER_ROW_DEBUG] window.currentOperations não existe ainda!`);
             return '<td colspan="11">Carregando...</td>';
         }
-        
-        // Use ref_unique to find the correct index in the global array
-        const globalIndex = window.currentOperations.findIndex(op => op.ref_unique === operation.ref_unique);
-            
-        console.log(`[RENDER_ROW] Processo: ${operation.ref_unique}, Index local: ${index}, Index global: ${globalIndex}`);
-        
+        // Use ref_importador to find the correct index in the global array
+        const globalIndex = window.currentOperations.findIndex(op => op.ref_importador === operation.ref_importador);
+        console.log(`[RENDER_ROW] Processo: ${operation.ref_importador}, Index local: ${index}, Index global: ${globalIndex}`);
+        console.log(`[RENDER_ROW_DEBUG] operation.status_macro_sistema:`, operation.status_macro_sistema);
+        console.log(`[RENDER_ROW_DEBUG] operation.status:`, operation.status);
+        console.log(`[RENDER_ROW_DEBUG] Todos os campos do objeto:`, Object.keys(operation));
         // Validation check
         if (globalIndex === -1) {
-            console.warn(`[RENDER_ROW] Processo ${operation.ref_unique} não encontrado no array global!`);
+            console.warn(`[RENDER_ROW] Processo ${operation.ref_importador} não encontrado no array global!`);
             console.warn(`[RENDER_ROW] Primeiros 5 do array global:`, 
-                window.currentOperations.slice(0, 5).map(op => op.ref_unique));
+                window.currentOperations.slice(0, 5).map(op => op.ref_importador));
         }
-            
         return `
             <td>
                 <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
                     <i class="mdi mdi-eye-outline"></i>
                 </button>
             </td>
-            <td><strong>${operation.ref_unique || '-'}</strong></td>
+            <td><strong>${operation.ref_importador || '-'}</strong></td>
             <td>${operation.importador || '-'}</td>
             <td>${formatDate(operation.data_abertura)}</td>
             <td>${operation.exportador_fornecedor || '-'}</td>
             <td>${operation.modal || '-'}</td>
-            <td>${getStatusBadge(operation.status_processo)}</td>
+            <td>${getStatusBadge(operation.status_macro_sistema || operation.status)}</td>
             <td><span class="currency-value">${formatCurrency(operation.custo_total || 0)}</span></td>
             <td>${formatDate(operation.data_chegada)}</td>
             <td>${operation.mercadoria || '-'}</td>
@@ -926,6 +925,12 @@ function updateRecentOperationsTable(operations) {
     window.currentOperations = sortedOperations;
     console.log('[DASHBOARD_EXECUTIVO] Operações armazenadas globalmente:', window.currentOperations.length);
     
+    // Debug: verificar campos disponíveis no primeiro item
+    if (sortedOperations.length > 0) {
+        console.log('[DASHBOARD_EXECUTIVO] Campos disponíveis no primeiro item:', Object.keys(sortedOperations[0]));
+        console.log('[DASHBOARD_EXECUTIVO] Primeiro item completo:', sortedOperations[0]);
+    }
+    
     // Then set data to enhanced table (this triggers render)
     recentOperationsTable.setData(sortedOperations);
     
@@ -1114,6 +1119,7 @@ function openProcessModal(operationIndex) {
     console.log('[MODAL_DEBUG] ref_importador:', operation.ref_importador);
     console.log('[MODAL_DEBUG] cnpj_importador:', operation.cnpj_importador);
     console.log('[MODAL_DEBUG] status_macro:', operation.status_macro);
+    console.log('[MODAL_DEBUG] status_macro_sistema:', operation.status_macro_sistema);
     console.log('[MODAL_DEBUG] data_embarque:', operation.data_embarque);
     console.log('[MODAL_DEBUG] peso_bruto:', operation.peso_bruto);
     console.log('[MODAL_DEBUG] urf_despacho:', operation.urf_despacho);
@@ -1137,7 +1143,14 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-abertura', operation.data_abertura);
     updateElementValue('detail-importador', operation.importador);
     updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
-    updateElementValue('detail-status', operation.status_processo);
+    // Processar status_macro_sistema para exibição
+    let statusToDisplay = operation.status_macro_sistema || operation.status_processo || operation.status_macro;
+    if (statusToDisplay && typeof statusToDisplay === 'string' && statusToDisplay.includes(' - ')) {
+        statusToDisplay = statusToDisplay.split(' - ')[1].trim();
+    }
+    console.log('[MODAL_DEBUG] Status processado para exibição:', statusToDisplay);
+    
+    updateElementValue('detail-status', statusToDisplay);
     
     // Update cargo and transport details
     updateElementValue('detail-modal', operation.modal);
@@ -1334,21 +1347,42 @@ function formatDate(dateString) {
 
 function getStatusBadge(status) {
     if (!status) return '<span class="badge badge-secondary">-</span>';
-    
+
+    console.log('[STATUS_BADGE_DEBUG] Status recebido:', status);
+
+    // Se o status tem formato "2 - AG EMBARQUE", extrair apenas a parte após o traço
+    let displayStatus = status;
+    if (typeof status === 'string' && status.includes(' - ')) {
+        displayStatus = status.split(' - ')[1].trim();
+        console.log('[STATUS_BADGE_DEBUG] Status extraído:', displayStatus);
+    }
+
+    // Mapeamento para status_macro_sistema
     const statusMap = {
-        'ATRACADA': 'success',
-        'DESATRACADA': 'info', 
-        'ATRACANDO': 'warning',
-        'DESATRACANDO': 'primary',
-        'EM PROCESSAMENTO': 'warning',
-        'PROCESSADA': 'success',
-        'CANCELADA': 'danger',
-        'PENDENTE': 'secondary',
-        'CONFERIDA': 'success',
-        'NAO CONFERIDA': 'warning',
-        'EM CONFERENCIA': 'info'
+        'AG. EMBARQUE': 'info',
+        'AG EMBARQUE': 'info',
+        'AG. FECHAMENTO': 'info',
+        'AG. ENTREGA DA DHL NO IMPORTADOR': 'primary',
+        'AG MAPA': 'info',
+        'ABERTURA': 'secondary',
+        'NUMERÁRIO ENVIADO': 'warning',
+        'DECLARAÇÃO DESEMBARAÇADA': 'success',
+        'AG CARREGAMENTO': 'info',
+        'AG CHEGADA': 'primary',
+        'AG. CARREGAMENTO': 'info',
+        'AG. REGISTRO': 'primary',
+        'DI REGISTRADA': 'warning',
+        'DI DESEMBARAÇADA': 'success'
     };
-    
-    const badgeClass = statusMap[status?.toUpperCase()] || 'secondary';
-    return `<span class="badge badge-${badgeClass}">${status}</span>`;
+
+    // Primeiro tenta match exato, depois normalizado
+    let badgeClass = statusMap[displayStatus];
+    if (!badgeClass) {
+        const normalize = s => s?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        badgeClass = statusMap[normalize(displayStatus)] || 'secondary';
+    }
+
+    console.log('[STATUS_BADGE_DEBUG] Badge class:', badgeClass, 'para status:', displayStatus);
+
+    return `<span class="badge badge-${badgeClass}">${displayStatus}</span>`;
 }

@@ -147,6 +147,18 @@
     margin-bottom: 2.5rem;
 }
 
+/* Ajuste para fonte menor nos KPIs (igual ao dashboard executivo) */
+.kpi-card .kpi-label {
+    font-size: 0.95rem;
+}
+.kpi-card .kpi-value {
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+.kpi-card .kpi-sub-value {
+    font-size: 0.95rem;
+}
+
 /* Charts Grid */
 .charts-grid {
     display: grid;
