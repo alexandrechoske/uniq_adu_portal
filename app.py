@@ -174,5 +174,26 @@ def test_data_chegada():
     with open('test_data_chegada_specific.html', 'r', encoding='utf-8') as f:
         return f.read()
 
+@app.route('/test-empresa-search')
+def test_empresa_search():
+    """Rota temporária para testar busca de empresas"""
+    if not app.config['DEBUG']:
+        return "Disponível apenas em modo debug", 404
+    
+    try:
+        with open('test_empresa_search.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Arquivo de teste não encontrado", 404
+
 if __name__ == '__main__':
+    # Registrar rotas de teste apenas em desenvolvimento
+    if app.config['DEBUG']:
+        try:
+            from test_usuarios_api import register_test_routes
+            register_test_routes(app)
+            print("[DEBUG] Rotas de teste registradas")
+        except Exception as e:
+            print(f"[DEBUG] Erro ao registrar rotas de teste: {str(e)}")
+    
     app.run(debug=True)  # Forçando debug para true

@@ -419,7 +419,11 @@
                     
                     <div class="empresas-controls" style="margin-bottom: 1rem;">
                         <div class="form-group" style="margin-bottom: 0.5rem;">
-                            <input type="text" id="edit-cnpj-search" class="form-input" placeholder="Digite o CNPJ para buscar...">
+                            <label class="form-label" for="edit-cnpj-search">Buscar por CNPJ ou Nome da Empresa</label>
+                            <input type="text" id="edit-cnpj-search" class="form-input" placeholder="Digite o CNPJ (com ou sem formatação) ou nome da empresa..." autocomplete="off">
+                            <small style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
+                                Exemplos: 75.339.051/0001-41, 75339051000141 ou UNIQUE ADUANEIRA
+                            </small>
                         </div>
                         <button type="button" id="edit-btn-buscar-empresa" class="btn btn-outline">
                             <i class="mdi mdi-magnify"></i>

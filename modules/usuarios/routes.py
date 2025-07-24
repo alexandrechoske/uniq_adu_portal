@@ -6,6 +6,7 @@ import datetime
 import json
 import re
 import traceback
+import time
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('usuarios', __name__, 
@@ -16,19 +17,70 @@ bp = Blueprint('usuarios', __name__,
 
 VALID_ROLES = ['admin', 'interno_unique', 'cliente_unique']
 
+def retry_supabase_operation(operation, max_retries=3, delay=1):
+    """Executa operação no Supabase com retry automático em caso de falha"""
+    for attempt in range(max_retries):
+        try:
+            return operation()
+        except Exception as e:
+            error_msg = str(e).lower()
+            if 'server disconnected' in error_msg or 'connection' in error_msg:
+                if attempt < max_retries - 1:
+                    print(f"[DEBUG] Tentativa {attempt + 1} falhou, tentando novamente em {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2  # Backoff exponencial
+                    continue
+                else:
+                    print(f"[DEBUG] Todas as tentativas falharam após {max_retries} tentativas")
+                    raise
+            else:
+                # Se não for erro de conexão, falha imediatamente
+                raise
+
+def verificar_empresa_ja_associada(user_id, cnpj):
+    """Verifica se uma empresa já está associada ao usuário"""
+    def _verificar():
+        empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        if not empresas_response.data:
+            return False
+            
+        empresas = empresas_response.data[0].get('empresa', [])
+        if isinstance(empresas, str):
+            try:
+                empresas = json.loads(empresas)
+            except json.JSONDecodeError:
+                empresas = [empresas] if empresas else []
+        elif not isinstance(empresas, list):
+            empresas = []
+            
+        return cnpj in empresas
+    
+    try:
+        return retry_supabase_operation(_verificar)
+    except Exception as e:
+        print(f"[DEBUG] Erro ao verificar empresa associada: {str(e)}")
+        return False
+
 def carregar_usuarios():
-    """Função auxiliar para carregar usuários do banco de dados"""
+    """Função auxiliar para carregar usuários do banco de dados com retry automático"""
     try:
         print("[DEBUG] Iniciando busca de usuários")
         
         if not supabase:
             raise Exception("Cliente Supabase não está inicializado")
-          # Adicionar timeout e tratamento específico para erros do Supabase
-        users_response = supabase_admin.table('users').select('*').execute()
+        
+        # Função para buscar usuários com retry
+        def _buscar_usuarios():
+            return supabase_admin.table('users').select('*').execute()
+        
+        # Usar retry para buscar usuários
+        users_response = retry_supabase_operation(_buscar_usuarios)
         
         print(f"[DEBUG] Resposta da busca: {users_response}")
         print(f"[DEBUG] Tipo da resposta: {type(users_response)}")
-          # Verificar se houve erro na resposta
+        
+        # Verificar se houve erro na resposta
         if hasattr(users_response, 'error') and users_response.error:
             raise Exception(f"Erro do Supabase: {users_response.error}")
         
@@ -50,7 +102,11 @@ def carregar_usuarios():
                 
             if user.get('role') == 'cliente_unique':
                 try:
-                    agent_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
+                    # Usar retry para buscar empresas do cliente
+                    def _buscar_empresas_cliente():
+                        return supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
+                    
+                    agent_response = retry_supabase_operation(_buscar_empresas_cliente)
                     user['agent_info'] = {'empresas': []}
                     
                     if agent_response.data and len(agent_response.data) > 0 and agent_response.data[0].get('empresa'):
@@ -67,7 +123,11 @@ def carregar_usuarios():
                         for cnpj in empresas:
                             if isinstance(cnpj, str):
                                 try:
-                                    empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                                    # Usar retry para buscar dados da empresa
+                                    def _buscar_dados_empresa():
+                                        return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+                                    
+                                    empresa_info = retry_supabase_operation(_buscar_dados_empresa)
                                     if empresa_info.data and len(empresa_info.data) > 0:
                                         empresa_data = empresa_info.data[0]
                                         razao = empresa_data.get('razao_social')
@@ -448,107 +508,554 @@ def obter_empresas_usuario(user_id):
         print(f"[DEBUG] Erro ao obter empresas do usuário: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+def limpar_cnpj(cnpj):
+    """Remove formatação do CNPJ deixando apenas números"""
+    return re.sub(r'[^0-9]', '', cnpj)
+
+def formatar_cnpj(cnpj_limpo):
+    """Aplica formatação padrão XX.XXX.XXX/XXXX-XX ao CNPJ"""
+    if len(cnpj_limpo) != 14:
+        return cnpj_limpo
+    return f"{cnpj_limpo[:2]}.{cnpj_limpo[2:5]}.{cnpj_limpo[5:8]}/{cnpj_limpo[8:12]}-{cnpj_limpo[12:14]}"
+
 @bp.route('/api/empresas/buscar', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def buscar_empresa():
-    """Buscar empresa por CNPJ"""
+    """Buscar empresa por CNPJ ou Razão Social"""
     try:
         data = request.get_json()
-        cnpj = data.get('cnpj', '').strip()
+        termo_busca = data.get('cnpj', '').strip()
         
-        if not cnpj:
-            return jsonify({'success': False, 'error': 'CNPJ não informado'})
+        if not termo_busca:
+            return jsonify({'success': False, 'error': 'Termo de busca não informado'})
         
-        print(f"[DEBUG] Buscando empresa com CNPJ: {cnpj}")
+        print(f"[DEBUG] Buscando empresa com termo: {termo_busca}")
         
-        # Buscar empresa na view
-        empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
+        # Verificar se é CNPJ (só números ou com formatação)
+        cnpj_limpo = limpar_cnpj(termo_busca)
+        
+        if cnpj_limpo.isdigit() and len(cnpj_limpo) == 14:
+            # Busca por CNPJ - primeiro tenta com formatação, depois sem
+            cnpj_formatado = formatar_cnpj(cnpj_limpo)
+            
+            print(f"[DEBUG] CNPJ limpo: {cnpj_limpo}")
+            print(f"[DEBUG] CNPJ formatado: {cnpj_formatado}")
+            
+            # Buscar primeiro com formatação
+            empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj_formatado).execute()
+            
+            # Se não encontrar, tenta sem formatação
+            if not empresa_response.data:
+                empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj_limpo).execute()
+                
+        else:
+            # Busca por razão social (usando ilike para busca parcial case-insensitive)
+            print(f"[DEBUG] Buscando por razão social: {termo_busca}")
+            empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').ilike('razao_social', f'%{termo_busca}%').limit(10).execute()
         
         if empresa_response.data and len(empresa_response.data) > 0:
-            empresa = empresa_response.data[0]
-            return jsonify({
-                'success': True,
-                'empresa': {
-                    'cnpj': empresa['cnpj'],
-                    'razao_social': empresa['razao_social']
-                }
-            })
+            if len(empresa_response.data) == 1:
+                # Uma empresa encontrada
+                empresa = empresa_response.data[0]
+                return jsonify({
+                    'success': True,
+                    'empresa': {
+                        'cnpj': empresa['cnpj'],
+                        'razao_social': empresa['razao_social']
+                    }
+                })
+            else:
+                # Múltiplas empresas encontradas
+                empresas = []
+                for emp in empresa_response.data:
+                    empresas.append({
+                        'cnpj': emp['cnpj'],
+                        'razao_social': emp['razao_social']
+                    })
+                return jsonify({
+                    'success': True,
+                    'multiple': True,
+                    'empresas': empresas
+                })
         else:
             return jsonify({'success': False, 'error': 'Empresa não encontrada'})
             
     except Exception as e:
         print(f"[DEBUG] Erro ao buscar empresa: {str(e)}")
+        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<user_id>/empresas/definir-lista', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def definir_lista_empresas(user_id):
+    """Define a lista completa de empresas para um usuário (substitui a existente)"""
+    try:
+        data = request.get_json()
+        cnpjs = data.get('cnpjs', [])
+        
+        print(f"[DEBUG] Definindo lista completa de {len(cnpjs)} CNPJs para usuário {user_id}")
+        
+        # Verificar se usuário existe
+        def _verificar_usuario():
+            return supabase_admin.table('users').select('id').eq('id', user_id).execute()
+        
+        user_response = retry_supabase_operation(_verificar_usuario)
+        if not user_response.data:
+            return jsonify({'success': False, 'error': 'Usuário não encontrado'})
+        
+        # Se a lista está vazia, remover todas as empresas
+        if len(cnpjs) == 0:
+            print(f"[DEBUG] Lista vazia - removendo todas as empresas do usuário {user_id}")
+            
+            def _remover_todas_empresas():
+                # Primeiro tentar update
+                response = supabase_admin.table('clientes_agentes').update({
+                    'empresa': []
+                }).eq('user_id', user_id).execute()
+                
+                # Se não houve linhas afetadas, pode não existir registro
+                if not response.data:
+                    # Criar registro vazio
+                    return supabase_admin.table('clientes_agentes').insert({
+                        'user_id': user_id,
+                        'empresa': []
+                    }).execute()
+                return response
+            
+            try:
+                remove_response = retry_supabase_operation(_remover_todas_empresas)
+                if hasattr(remove_response, 'error') and remove_response.error:
+                    raise Exception(f"Erro do Supabase: {remove_response.error}")
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Todas as empresas removidas com sucesso',
+                    'resultado': {'sucessos': 0, 'erros': 0, 'ja_existentes': 0, 'removidas': True}
+                })
+            except Exception as e:
+                print(f"[DEBUG] Erro ao remover empresas: {str(e)}")
+                return jsonify({'success': False, 'error': f'Erro ao remover empresas: {str(e)}'})
+        
+        # Se há CNPJs, validar e definir a lista
+        cnpjs_validos = []
+        cnpjs_invalidos = []
+        
+        for cnpj in cnpjs:
+            cnpj_limpo = limpar_cnpj(cnpj)
+            
+            # Verificar se empresa existe na base
+            def _verificar_cnpj():
+                cnpj_formatado = formatar_cnpj(cnpj_limpo)
+                # Tentar primeiro com formatação
+                response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj').eq('cnpj', cnpj_formatado).execute()
+                if response.data:
+                    return response
+                # Se não encontrar, tentar sem formatação
+                return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj').eq('cnpj', cnpj_limpo).execute()
+            
+            try:
+                cnpj_response = retry_supabase_operation(_verificar_cnpj)
+                if cnpj_response.data:
+                    cnpjs_validos.append(cnpj_limpo)
+                else:
+                    cnpjs_invalidos.append(cnpj)
+            except Exception as e:
+                print(f"[DEBUG] Erro ao verificar CNPJ {cnpj}: {str(e)}")
+                cnpjs_invalidos.append(cnpj)
+        
+        print(f"[DEBUG] CNPJs válidos: {len(cnpjs_validos)}")
+        print(f"[DEBUG] CNPJs inválidos: {len(cnpjs_invalidos)}")
+        
+        # Definir a lista completa (substituindo a existente)
+        if cnpjs_validos:
+            try:
+                def _definir_lista():
+                    # Buscar se existe registro
+                    existing = supabase_admin.table('clientes_agentes').select('id').eq('user_id', user_id).execute()
+                    
+                    if existing.data and len(existing.data) > 0:
+                        # Update do registro existente
+                        return supabase_admin.table('clientes_agentes').update({
+                            'empresa': cnpjs_validos
+                        }).eq('user_id', user_id).execute()
+                    else:
+                        # Insert de novo registro
+                        return supabase_admin.table('clientes_agentes').insert({
+                            'user_id': user_id,
+                            'empresa': cnpjs_validos
+                        }).execute()
+                
+                update_response = retry_supabase_operation(_definir_lista)
+                
+                if hasattr(update_response, 'error') and update_response.error:
+                    raise Exception(f"Erro do Supabase: {update_response.error}")
+                
+                print(f"[DEBUG] Lista definida com sucesso: {len(cnpjs_validos)} empresas")
+                
+            except Exception as e:
+                print(f"[DEBUG] Erro ao definir lista: {str(e)}")
+                return jsonify({
+                    'success': False, 
+                    'error': f'Erro ao salvar lista de empresas: {str(e)}'
+                })
+        
+        # Preparar resultado
+        resultado = {
+            'sucessos': len(cnpjs_validos),
+            'erros': len(cnpjs_invalidos),
+            'ja_existentes': 0,  # Não aplicável neste caso pois substituímos a lista
+            'detalhes': {
+                'cnpjs_definidos': cnpjs_validos,
+                'cnpjs_invalidos': cnpjs_invalidos
+            }
+        }
+        
+        print(f"[DEBUG] Resultado final: {resultado}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Lista definida: {len(cnpjs_validos)} empresas válidas, {len(cnpjs_invalidos)} inválidas',
+            'resultado': resultado
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro no endpoint de definir lista: {str(e)}")
+        print("[DEBUG] Traceback completo:")
+        print(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<user_id>/empresas/adicionar-lote', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def adicionar_empresas_lote(user_id):
+    """Adicionar múltiplas empresas de uma vez para um usuário"""
+    try:
+        data = request.get_json()
+        cnpjs = data.get('cnpjs', [])
+        
+        if not cnpjs:
+            return jsonify({'success': False, 'error': 'Lista de CNPJs não informada'})
+        
+        print(f"[DEBUG] Adicionando lote de {len(cnpjs)} CNPJs para usuário {user_id}")
+        
+        # Verificar se usuário existe
+        def _verificar_usuario():
+            return supabase_admin.table('users').select('id').eq('id', user_id).execute()
+        
+        user_response = retry_supabase_operation(_verificar_usuario)
+        if not user_response.data:
+            return jsonify({'success': False, 'error': 'Usuário não encontrado'})
+        
+        # Buscar empresas atuais do usuário
+        def _buscar_empresas_atuais():
+            return supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        try:
+            empresas_response = retry_supabase_operation(_buscar_empresas_atuais)
+            empresas_atuais = []
+            
+            if empresas_response.data and len(empresas_response.data) > 0:
+                empresas_data = empresas_response.data[0].get('empresa', [])
+                if isinstance(empresas_data, str):
+                    try:
+                        empresas_atuais = json.loads(empresas_data)
+                    except json.JSONDecodeError:
+                        empresas_atuais = [empresas_data] if empresas_data else []
+                elif isinstance(empresas_data, list):
+                    empresas_atuais = empresas_data
+        except Exception as e:
+            print(f"[DEBUG] Erro ao buscar empresas atuais: {str(e)}")
+            empresas_atuais = []
+        
+        # Verificar quais CNPJs existem na base
+        cnpjs_validos = []
+        cnpjs_invalidos = []
+        cnpjs_ja_existentes = []
+        
+        for cnpj in cnpjs:
+            cnpj_limpo = limpar_cnpj(cnpj)
+            
+            # Verificar se já está associado
+            if cnpj_limpo in empresas_atuais or cnpj in empresas_atuais:
+                cnpjs_ja_existentes.append(cnpj)
+                continue
+            
+            # Verificar se empresa existe na base
+            def _verificar_cnpj():
+                cnpj_formatado = formatar_cnpj(cnpj_limpo)
+                # Tentar primeiro com formatação
+                response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj').eq('cnpj', cnpj_formatado).execute()
+                if response.data:
+                    return response
+                # Se não encontrar, tentar sem formatação
+                return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj').eq('cnpj', cnpj_limpo).execute()
+            
+            try:
+                cnpj_response = retry_supabase_operation(_verificar_cnpj)
+                if cnpj_response.data:
+                    cnpjs_validos.append(cnpj_limpo)
+                else:
+                    cnpjs_invalidos.append(cnpj)
+            except Exception as e:
+                print(f"[DEBUG] Erro ao verificar CNPJ {cnpj}: {str(e)}")
+                cnpjs_invalidos.append(cnpj)
+        
+        print(f"[DEBUG] CNPJs válidos: {len(cnpjs_validos)}")
+        print(f"[DEBUG] CNPJs inválidos: {len(cnpjs_invalidos)}")
+        print(f"[DEBUG] CNPJs já existentes: {len(cnpjs_ja_existentes)}")
+        
+        # Se há CNPJs válidos para adicionar, atualizar o registro
+        sucessos = 0
+        if cnpjs_validos:
+            try:
+                # Combinar empresas atuais com as novas
+                todas_empresas = list(set(empresas_atuais + cnpjs_validos))
+                
+                def _atualizar_empresas():
+                    if empresas_response.data and len(empresas_response.data) > 0:
+                        # Update do registro existente
+                        return supabase_admin.table('clientes_agentes').update({
+                            'empresa': todas_empresas
+                        }).eq('user_id', user_id).execute()
+                    else:
+                        # Insert de novo registro
+                        return supabase_admin.table('clientes_agentes').insert({
+                            'user_id': user_id,
+                            'empresa': todas_empresas
+                        }).execute()
+                
+                update_response = retry_supabase_operation(_atualizar_empresas)
+                
+                if hasattr(update_response, 'error') and update_response.error:
+                    raise Exception(f"Erro do Supabase: {update_response.error}")
+                
+                sucessos = len(cnpjs_validos)
+                print(f"[DEBUG] {sucessos} empresas adicionadas com sucesso")
+                
+            except Exception as e:
+                print(f"[DEBUG] Erro ao atualizar empresas: {str(e)}")
+                return jsonify({
+                    'success': False, 
+                    'error': f'Erro ao salvar empresas: {str(e)}'
+                })
+        
+        # Preparar resultado
+        resultado = {
+            'sucessos': sucessos,
+            'erros': len(cnpjs_invalidos),
+            'ja_existentes': len(cnpjs_ja_existentes),
+            'detalhes': {
+                'cnpjs_adicionados': cnpjs_validos,
+                'cnpjs_invalidos': cnpjs_invalidos,
+                'cnpjs_ja_existentes': cnpjs_ja_existentes
+            }
+        }
+        
+        print(f"[DEBUG] Resultado final: {resultado}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Lote processado: {sucessos} adicionadas, {len(cnpjs_invalidos)} inválidas, {len(cnpjs_ja_existentes)} já existentes',
+            'resultado': resultado
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro no endpoint de lote: {str(e)}")
+        print("[DEBUG] Traceback completo:")
+        print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/<user_id>/empresas/adicionar', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def adicionar_empresa_usuario(user_id):
-    """Adicionar empresa a um usuário"""
+    """Adicionar empresa a um usuário com tratamento robusto de erros"""
     try:
         data = request.get_json()
-        cnpj = data.get('cnpj', '').strip()
+        cnpj_original = data.get('cnpj', '').strip()
         
-        if not cnpj:
+        if not cnpj_original:
             return jsonify({'success': False, 'error': 'CNPJ não informado'})
         
-        print(f"[DEBUG] Adicionando empresa {cnpj} ao usuário {user_id}")
+        # Limpar CNPJ e verificar se existe
+        cnpj_limpo = limpar_cnpj(cnpj_original)
+        cnpj_formatado = formatar_cnpj(cnpj_limpo)
         
-        # Verificar se o usuário é cliente_unique
-        user_response = supabase_admin.table('users').select('role').eq('id', user_id).execute()
-        if not user_response.data or user_response.data[0]['role'] != 'cliente_unique':
-            return jsonify({'success': False, 'error': 'Usuário deve ser do tipo cliente_unique'})
+        print(f"[DEBUG] Adicionando empresa {cnpj_formatado} ao usuário {user_id}")
         
-        # Buscar empresas atuais
-        empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        # Verificar se o usuário é cliente_unique primeiro
+        def _verificar_usuario():
+            return supabase_admin.table('users').select('role').eq('id', user_id).execute()
         
-        empresas = []
-        if empresas_response.data and empresas_response.data[0].get('empresa'):
-            empresas = empresas_response.data[0]['empresa']
-            if isinstance(empresas, str):
-                try:
-                    empresas = json.loads(empresas)
-                except json.JSONDecodeError:
-                    empresas = [empresas] if empresas else []
-            elif not isinstance(empresas, list):
-                empresas = []
+        try:
+            user_response = retry_supabase_operation(_verificar_usuario)
+            if not user_response.data or user_response.data[0]['role'] != 'cliente_unique':
+                return jsonify({'success': False, 'error': 'Usuário deve ser do tipo cliente_unique'})
+        except Exception as e:
+            print(f"[DEBUG] Erro ao verificar usuário: {str(e)}")
+            return jsonify({'success': False, 'error': 'Erro ao verificar dados do usuário'})
         
-        # Verificar se empresa já está associada
-        if cnpj in empresas:
+        # Verificar se empresa já está associada (check rápido)
+        if verificar_empresa_ja_associada(user_id, cnpj_formatado) or verificar_empresa_ja_associada(user_id, cnpj_limpo):
             return jsonify({'success': False, 'error': 'Empresa já está associada ao usuário'})
         
-        # Adicionar nova empresa
-        empresas.append(cnpj)
+        # Verificar se a empresa existe na base de dados
+        def _buscar_empresa():
+            # Primeiro tenta com formatação
+            empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj_formatado).execute()
+            if empresa_response.data:
+                return empresa_response
+            # Se não encontrar, tenta sem formatação
+            return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj_limpo).execute()
         
-        # Atualizar no banco
-        if empresas_response.data:
-            # Atualizar registro existente
-            supabase_admin.table('clientes_agentes').update({
-                'empresa': empresas,
-                'updated_at': datetime.datetime.now().isoformat()
-            }).eq('user_id', user_id).execute()
-        else:
-            # Criar novo registro
-            supabase_admin.table('clientes_agentes').insert({
-                'id': str(uuid.uuid4()),
-                'user_id': user_id,
-                'empresa': empresas,
-                'created_at': datetime.datetime.now().isoformat(),
-                'updated_at': datetime.datetime.now().isoformat()
-            }).execute()
+        try:
+            empresa_response = retry_supabase_operation(_buscar_empresa)
+            if not empresa_response.data:
+                return jsonify({'success': False, 'error': 'Empresa não encontrada no banco de dados'})
+            
+            empresa_encontrada = empresa_response.data[0]
+            cnpj_usar = empresa_encontrada['cnpj']  # Usar o CNPJ conforme está no banco
+        except Exception as e:
+            print(f"[DEBUG] Erro ao buscar empresa: {str(e)}")
+            return jsonify({'success': False, 'error': 'Erro ao verificar empresa na base de dados'})
         
-        return jsonify({'success': True, 'message': 'Empresa adicionada com sucesso'})
+        # Buscar empresas atuais do usuário
+        def _buscar_empresas_atuais():
+            return supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        try:
+            empresas_response = retry_supabase_operation(_buscar_empresas_atuais)
+            
+            empresas = []
+            if empresas_response.data and empresas_response.data[0].get('empresa'):
+                empresas = empresas_response.data[0]['empresa']
+                if isinstance(empresas, str):
+                    try:
+                        empresas = json.loads(empresas)
+                    except json.JSONDecodeError:
+                        empresas = [empresas] if empresas else []
+                elif not isinstance(empresas, list):
+                    empresas = []
+            
+            # Verificação final de duplicata
+            if cnpj_usar in empresas:
+                return jsonify({'success': False, 'error': 'Empresa já está associada ao usuário'})
+            
+            # Adicionar nova empresa
+            empresas.append(cnpj_usar)
+            
+            # Atualizar no banco
+            def _atualizar_empresas():
+                if empresas_response.data:
+                    # Atualizar registro existente
+                    return supabase_admin.table('clientes_agentes').update({
+                        'empresa': empresas,
+                        'updated_at': datetime.datetime.now().isoformat()
+                    }).eq('user_id', user_id).execute()
+                else:
+                    # Criar novo registro
+                    return supabase_admin.table('clientes_agentes').insert({
+                        'user_id': user_id,
+                        'empresa': empresas,
+                        'aceite_termos': True,
+                        'usuario_ativo': True,
+                        'created_at': datetime.datetime.now().isoformat(),
+                        'updated_at': datetime.datetime.now().isoformat()
+                    }).execute()
+            
+            retry_supabase_operation(_atualizar_empresas)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Empresa adicionada com sucesso',
+                'empresa': {
+                    'cnpj': cnpj_usar,
+                    'razao_social': empresa_encontrada['razao_social']
+                }
+            })
+            
+        except Exception as e:
+            print(f"[DEBUG] Erro ao gerenciar empresas do usuário: {str(e)}")
+            return jsonify({'success': False, 'error': 'Erro ao atualizar lista de empresas'})
         
     except Exception as e:
-        print(f"[DEBUG] Erro ao adicionar empresa: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"[DEBUG] Erro geral ao adicionar empresa: {str(e)}")
+        print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': 'Erro interno do servidor'})
+
+@bp.route('/<user_id>/empresas/verificar-lote', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def verificar_empresas_lote(user_id):
+    """Verificar quais empresas já estão associadas ao usuário (para seleção múltipla)"""
+    try:
+        data = request.get_json()
+        cnpjs = data.get('cnpjs', [])
+        
+        if not cnpjs:
+            return jsonify({'success': False, 'error': 'Lista de CNPJs não informada'})
+        
+        print(f"[DEBUG] Verificando {len(cnpjs)} empresas para o usuário {user_id}")
+        
+        # Buscar empresas atuais do usuário
+        def _buscar_empresas_atuais():
+            return supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        
+        try:
+            empresas_response = retry_supabase_operation(_buscar_empresas_atuais)
+            
+            empresas_existentes = []
+            if empresas_response.data and empresas_response.data[0].get('empresa'):
+                empresas_existentes = empresas_response.data[0]['empresa']
+                if isinstance(empresas_existentes, str):
+                    try:
+                        empresas_existentes = json.loads(empresas_existentes)
+                    except json.JSONDecodeError:
+                        empresas_existentes = [empresas_existentes] if empresas_existentes else []
+                elif not isinstance(empresas_existentes, list):
+                    empresas_existentes = []
+            
+            # Verificar cada CNPJ
+            resultado = {
+                'novas': [],      # Empresas que podem ser adicionadas
+                'existentes': []  # Empresas já associadas
+            }
+            
+            for cnpj in cnpjs:
+                cnpj_limpo = limpar_cnpj(cnpj)
+                cnpj_formatado = formatar_cnpj(cnpj_limpo)
+                
+                # Verificar se já existe (em qualquer formato)
+                ja_existe = (cnpj in empresas_existentes or 
+                           cnpj_limpo in empresas_existentes or 
+                           cnpj_formatado in empresas_existentes)
+                
+                if ja_existe:
+                    resultado['existentes'].append(cnpj)
+                else:
+                    resultado['novas'].append(cnpj)
+            
+            return jsonify({
+                'success': True,
+                'resultado': resultado,
+                'total_verificadas': len(cnpjs)
+            })
+            
+        except Exception as e:
+            print(f"[DEBUG] Erro ao verificar empresas em lote: {str(e)}")
+            return jsonify({'success': False, 'error': 'Erro ao verificar empresas'})
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro geral na verificação em lote: {str(e)}")
+        return jsonify({'success': False, 'error': 'Erro interno do servidor'})
 
 @bp.route('/<user_id>/empresas/remover', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def remover_empresa_usuario(user_id):
-    """Remover empresa de um usuário"""
+    """Remover empresa de um usuário com tratamento robusto de erros"""
     try:
         data = request.get_json()
         cnpj = data.get('cnpj', '').strip()
@@ -559,38 +1066,49 @@ def remover_empresa_usuario(user_id):
         print(f"[DEBUG] Removendo empresa {cnpj} do usuário {user_id}")
         
         # Buscar empresas atuais
-        empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
+        def _buscar_empresas():
+            return supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
         
-        if not empresas_response.data:
-            return jsonify({'success': False, 'error': 'Usuário não possui empresas associadas'})
-        
-        empresas = empresas_response.data[0].get('empresa', [])
-        if isinstance(empresas, str):
-            try:
-                empresas = json.loads(empresas)
-            except json.JSONDecodeError:
-                empresas = [empresas] if empresas else []
-        elif not isinstance(empresas, list):
-            empresas = []
-        
-        # Verificar se empresa está na lista
-        if cnpj not in empresas:
-            return jsonify({'success': False, 'error': 'Empresa não está associada ao usuário'})
-        
-        # Remover empresa
-        empresas.remove(cnpj)
-        
-        # Atualizar no banco
-        supabase_admin.table('clientes_agentes').update({
-            'empresa': empresas,
-            'updated_at': datetime.datetime.now().isoformat()
-        }).eq('user_id', user_id).execute()
-        
-        return jsonify({'success': True, 'message': 'Empresa removida com sucesso'})
+        try:
+            empresas_response = retry_supabase_operation(_buscar_empresas)
+            
+            if not empresas_response.data:
+                return jsonify({'success': False, 'error': 'Usuário não possui empresas associadas'})
+            
+            empresas = empresas_response.data[0].get('empresa', [])
+            if isinstance(empresas, str):
+                try:
+                    empresas = json.loads(empresas)
+                except json.JSONDecodeError:
+                    empresas = [empresas] if empresas else []
+            elif not isinstance(empresas, list):
+                empresas = []
+            
+            # Verificar se empresa está na lista
+            if cnpj not in empresas:
+                return jsonify({'success': False, 'error': 'Empresa não está associada ao usuário'})
+            
+            # Remover empresa
+            empresas.remove(cnpj)
+            
+            # Atualizar no banco
+            def _atualizar_empresas():
+                return supabase_admin.table('clientes_agentes').update({
+                    'empresa': empresas,
+                    'updated_at': datetime.datetime.now().isoformat()
+                }).eq('user_id', user_id).execute()
+            
+            retry_supabase_operation(_atualizar_empresas)
+            
+            return jsonify({'success': True, 'message': 'Empresa removida com sucesso'})
+            
+        except Exception as e:
+            print(f"[DEBUG] Erro ao remover empresa: {str(e)}")
+            return jsonify({'success': False, 'error': 'Erro ao atualizar lista de empresas'})
         
     except Exception as e:
-        print(f"[DEBUG] Erro ao remover empresa: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"[DEBUG] Erro geral ao remover empresa: {str(e)}")
+        return jsonify({'success': False, 'error': 'Erro interno do servidor'})
 
 @bp.route('/<user_id>/empresas-detalhadas', methods=['GET'])
 @login_required
