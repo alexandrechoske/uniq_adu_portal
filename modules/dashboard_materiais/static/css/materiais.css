@@ -591,3 +591,57 @@
         font-size: 1rem;
     }
 }
+
+/* === CHIPS DE CANAL === */
+.canal-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 2px solid;
+    background: white;
+    white-space: nowrap;
+}
+
+.canal-chip-verde {
+    border-color: #28a745;
+    color: #28a745;
+}
+
+.canal-chip-amarelo {
+    border-color: #ffc107;
+    color: #f57c00;
+}
+
+.canal-chip-vermelho {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.canal-chip-secondary {
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+/* === INDICADOR DE CHEGADA PRÓXIMA === */
+.chegada-proxima {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    font-weight: 500;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chegada-proxima-icon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+}

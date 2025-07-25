@@ -389,3 +389,23 @@
 .hidden {
     display: none;
 }
+
+/* === INDICADOR DE CHEGADA PRÓXIMA === */
+.chegada-proxima {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    font-weight: 500;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chegada-proxima-icon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+}

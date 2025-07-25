@@ -116,10 +116,10 @@ function initializeEnhancedTable() {
             <td>${operation.importador || '-'}</td>
             <td>${formatDate(operation.data_abertura)}</td>
             <td>${operation.exportador_fornecedor || '-'}</td>
-            <td>${operation.modal || '-'}</td>
+            <td>${getModalBadge(operation.modal)}</td>
             <td>${getStatusBadge(operation.status_macro_sistema || operation.status)}</td>
             <td><span class="currency-value">${formatCurrency(operation.custo_total || 0)}</span></td>
-            <td>${formatDate(operation.data_chegada)}</td>
+            <td>${formatDataChegada(operation.data_chegada)}</td>
             <td>${operation.mercadoria || '-'}</td>
             <td>${operation.urf_entrada_normalizado || operation.urf_entrada || '-'}</td>
         `;
@@ -285,17 +285,15 @@ function updateDashboardKPIs(kpis) {
     updateKPIValue('kpi-total-processos', formatNumber(kpis.total_processos));
     updateKPIValue('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas));
     updateKPIValue('kpi-ticket-medio', formatCurrencyCompact(kpis.ticket_medio));
-    updateKPIValue('kpi-em-transito', formatNumber(kpis.em_transito));
-    updateKPIValue('kpi-total-agd-embarque', formatNumber(kpis.total_agd_embarque || 0));
-    updateKPIValue('kpi-total-ag-chegada', formatNumber(kpis.total_ag_chegada || 0));
-    updateKPIValue('kpi-chegando-mes', formatNumber(kpis.chegando_mes || 0));
-    updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
-    updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
-    updateKPIValue('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo || 0));
-    updateKPIValue('kpi-chegou-mes', formatNumber(kpis.chegou_mes || 0));
-    updateKPIValue('kpi-chegou-mes-custo', formatCurrencyCompact(kpis.chegou_mes_custo || 0));
-    updateKPIValue('kpi-chegou-semana', formatNumber(kpis.chegou_semana || 0));
-    updateKPIValue('kpi-chegou-semana-custo', formatCurrencyCompact(kpis.chegou_semana_custo || 0));
+    updateKPIValue('kpi-chegando-mes', formatNumber(kpis.chegando_mes));
+    updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo));
+    updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana));
+    updateKPIValue('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo));
+    updateKPIValue('kpi-aguardando-embarque', formatNumber(kpis.aguardando_embarque || 0));
+    updateKPIValue('kpi-aguardando-chegada', formatNumber(kpis.aguardando_chegada || 0));
+    updateKPIValue('kpi-aguardando-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
+    updateKPIValue('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
+    updateKPIValue('kpi-aguardando-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
     updateKPIValue('kpi-transit-time', formatNumber(kpis.transit_time_medio, 1) + ' dias');
     updateKPIValue('kpi-proc-mes', formatNumber(kpis.processos_mes, 1));
     updateKPIValue('kpi-proc-semana', formatNumber(kpis.processos_semana, 1));
@@ -1163,7 +1161,7 @@ function openProcessModal(operationIndex) {
     // Update customs information
     updateElementValue('detail-numero-di', operation.numero_di);
     updateElementValue('detail-data-registro', operation.data_registro);
-    updateElementValue('detail-canal', operation.canal);
+    updateElementValue('detail-canal', operation.canal, true);
     updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
     updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
     updateElementValue('detail-urf-despacho', operation.urf_despacho_normalizado || operation.urf_despacho);
@@ -1259,12 +1257,17 @@ function updateProcessTimeline(statusMacro) {
 /**
  * Update element value safely
  */
-function updateElementValue(elementId, value) {
+function updateElementValue(elementId, value, useCanalBadge = false) {
     const element = document.getElementById(elementId);
     if (element) {
-        const displayValue = value || '-';
-        element.textContent = displayValue;
-        console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com: "${displayValue}"`);
+        if (useCanalBadge && elementId === 'detail-canal') {
+            element.innerHTML = getCanalBadge(value);
+            console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com badge: "${value}"`);
+        } else {
+            const displayValue = value || '-';
+            element.textContent = displayValue;
+            console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com: "${displayValue}"`);
+        }
     } else {
         console.warn(`[MODAL_DEBUG] Elemento ${elementId} não encontrado no DOM`);
     }
@@ -1385,4 +1388,64 @@ function getStatusBadge(status) {
     console.log('[STATUS_BADGE_DEBUG] Badge class:', badgeClass, 'para status:', displayStatus);
 
     return `<span class="badge badge-${badgeClass}">${displayStatus}</span>`;
+}
+
+function getCanalBadge(canal) {
+    if (!canal) return '<span class="badge badge-secondary">-</span>';
+    
+    // Normalizar o texto para maiúsculo
+    const canalUpper = String(canal).toUpperCase().trim();
+    
+    // Mapeamento de cores para os canais
+    const canalMap = {
+        'VERDE': 'success',
+        'AMARELO': 'warning', 
+        'VERMELHO': 'danger'
+    };
+    
+    const badgeClass = canalMap[canalUpper] || 'secondary';
+    
+    return `<span class="badge badge-${badgeClass}">${canalUpper}</span>`;
+}
+
+function getModalBadge(modal) {
+    if (!modal) return '<span class="badge badge-secondary">-</span>';
+    
+    // Normalizar o texto para maiúsculo
+    const modalUpper = String(modal).toUpperCase().trim();
+    
+    // Mapeamento de ícones e cores para os modais
+    if (modalUpper.includes('MARÍTIMA') || modalUpper.includes('MARITIMA')) {
+        return `<span class="badge badge-info"><i class="mdi mdi-ferry"></i> ${modalUpper}</span>`;
+    } else if (modalUpper.includes('AÉREA') || modalUpper.includes('AEREA')) {
+        return `<span class="badge badge-primary"><i class="mdi mdi-airplane"></i> ${modalUpper}</span>`;
+    } else {
+        return `<span class="badge badge-secondary">${modalUpper}</span>`;
+    }
+}
+
+function formatDataChegada(dateString) {
+    if (!dateString) return '-';
+    
+    const hoje = new Date();
+    const chegadaDate = parseDate(dateString);
+    
+    if (!chegadaDate) return formatDate(dateString);
+    
+    // Calcular diferença em dias
+    const diffMs = chegadaDate - hoje;
+    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    // Se chegada for futuro e dentro de 5 dias, mostrar indicador de urgência
+    const isUrgente = diffDias > 0 && diffDias <= 5;
+    
+    if (isUrgente) {
+        return `<span class="chegada-proxima">
+            <img src="https://cdn-icons-png.flaticon.com/512/6198/6198499.png" 
+                 alt="Chegada próxima" class="chegada-proxima-icon">
+            ${formatDate(dateString)}
+        </span>`;
+    }
+    
+    return formatDate(dateString);
 }

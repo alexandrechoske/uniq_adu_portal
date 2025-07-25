@@ -86,9 +86,9 @@ function initializeEnhancedTable() {
             <td>${processo.cliente || processo.importador || '-'}</td>
             <td>${processo.material || processo.mercadoria || '-'}</td>
             <td>${formatDate(processo.data_embarque)}</td>
-            <td>${formatDate(processo.data_chegada)}</td>
+            <td>${formatDataChegada(processo.data_chegada)}</td>
             <td>${getStatusBadge(processo.status_macro_sistema || processo.status_macro || processo.status_processo || processo.status)}</td>
-            <td>${processo.canal || '-'}</td>
+            <td>${getCanalBadge(processo.canal)}</td>
             <td><span class="currency-value">${formatCurrency(processo.custo_total || 0)}</span></td>
         `;
     };
@@ -949,8 +949,9 @@ function updateMateriaisTable(data) {
             
             if (isUrgente || material.urgente) {
                 proximaChegadaCell = `
-                    <span class="urgente-badge">
-                        <i class="mdi mdi-clock-alert"></i>
+                    <span class="chegada-proxima">
+                        <img src="https://cdn-icons-png.flaticon.com/512/6198/6198499.png" 
+                             alt="Chegada próxima" class="chegada-proxima-icon">
                         ${material.proxima_chegada}
                     </span>
                 `;
@@ -1309,4 +1310,54 @@ function getStatusBadge(status) {
     console.log('[STATUS_BADGE_DEBUG_MATERIAIS] Badge class:', badgeClass, 'para status:', displayStatus);
     
     return `<span class="badge badge-${badgeClass}">${displayStatus}</span>`;
+}
+
+function getCanalBadge(canal) {
+    if (!canal) return '<span class="canal-chip canal-chip-secondary">-</span>';
+    
+    // Normalizar o texto para maiúsculo
+    const canalUpper = String(canal).toUpperCase().trim();
+    
+    // Mapeamento de cores para os canais com chips personalizados
+    if (canalUpper === 'VERDE') {
+        return `<span class="canal-chip canal-chip-verde">
+            <i class="mdi mdi-circle" style="color: #28a745;"></i> ${canalUpper}
+        </span>`;
+    } else if (canalUpper === 'AMARELO') {
+        return `<span class="canal-chip canal-chip-amarelo">
+            <i class="mdi mdi-circle" style="color: #ffc107;"></i> ${canalUpper}
+        </span>`;
+    } else if (canalUpper === 'VERMELHO') {
+        return `<span class="canal-chip canal-chip-vermelho">
+            <i class="mdi mdi-circle" style="color: #dc3545;"></i> ${canalUpper}
+        </span>`;
+    } else {
+        return `<span class="canal-chip canal-chip-secondary">${canalUpper}</span>`;
+    }
+}
+
+function formatDataChegada(dateString) {
+    if (!dateString) return '-';
+    
+    const hoje = new Date();
+    const chegadaDate = parseDate(dateString);
+    
+    if (!chegadaDate) return formatDate(dateString);
+    
+    // Calcular diferença em dias
+    const diffMs = chegadaDate - hoje;
+    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    // Se chegada for futuro e dentro de 5 dias, mostrar indicador de urgência
+    const isUrgente = diffDias > 0 && diffDias <= 5;
+    
+    if (isUrgente) {
+        return `<span class="chegada-proxima">
+            <img src="https://cdn-icons-png.flaticon.com/512/6198/6198499.png" 
+                 alt="Chegada próxima" class="chegada-proxima-icon">
+            ${formatDate(dateString)}
+        </span>`;
+    }
+    
+    return formatDate(dateString);
 }

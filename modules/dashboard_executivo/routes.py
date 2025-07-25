@@ -132,14 +132,54 @@ def dashboard_kpis():
         total_processos = len(df)
         total_despesas = df['custo_total'].sum() if 'custo_total' in df.columns else 0
         ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
-        em_transito = len(df[df['status_processo'].str.contains('trânsito', case=False, na=False)]) if 'status_processo' in df.columns else 0
 
-        # Total Aguardando Embarque
-        total_agd_embarque = len(df[df['status_processo'].str.contains('aguardando embarque', case=False, na=False)]) if 'status_processo' in df.columns else 0
-        # Total Aguardando Chegada
-        total_ag_chegada = len(df[df['status_processo'].str.contains('aguardando chegada', case=False, na=False)]) if 'status_processo' in df.columns else 0
+        # Função para normalizar status_macro_sistema
+        def normalize_status(status):
+            if pd.isna(status):
+                return ""
+            status = str(status).strip().upper()
+            # Normalizar variações dos status
+            if 'AG EMBARQUE' in status or 'AG. EMBARQUE' in status:
+                return 'AG EMBARQUE'
+            elif 'AG CARREGAMENTO' in status or 'AG. CARREGAMENTO' in status:
+                return 'AG CARREGAMENTO'
+            elif 'AG CHEGADA' in status:
+                return 'AG CHEGADA'
+            elif 'AG. ENTREGA DA DHL NO IMPORTADOR' in status:
+                return 'AG ENTREGA'
+            elif 'AG. FECHAMENTO' in status:
+                return 'AG FECHAMENTO'
+            elif 'AG. REGISTRO' in status:
+                return 'AG REGISTRO'
+            elif 'AG MAPA' in status:
+                return 'AG MAPA'
+            return status
 
-        # Chegando/Chegou este mês/semana (quantidade e custo)
+        # Aplicar normalização se a coluna existir
+        if 'status_macro_sistema' in df.columns:
+            df['status_normalizado'] = df['status_macro_sistema'].apply(normalize_status)
+            
+            # Calcular métricas baseadas nos status normalizados
+            aguardando_embarque = len(df[df['status_normalizado'] == 'AG EMBARQUE'])
+            aguardando_chegada = len(df[df['status_normalizado'] == 'AG CHEGADA'])
+            aguardando_liberacao = len(df[df['status_normalizado'].isin(['DI REGISTRADA', 'AG REGISTRO', 'AG MAPA'])])
+            agd_entrega = len(df[df['status_normalizado'] == 'AG ENTREGA'])
+            aguardando_fechamento = len(df[df['status_normalizado'] == 'AG FECHAMENTO'])
+            
+            print(f"[DEBUG_KPI] Status counts:")
+            print(f"[DEBUG_KPI] Aguardando Embarque: {aguardando_embarque}")
+            print(f"[DEBUG_KPI] Aguardando Chegada: {aguardando_chegada}")
+            print(f"[DEBUG_KPI] Aguardando Liberação: {aguardando_liberacao}")
+            print(f"[DEBUG_KPI] Agd Entrega: {agd_entrega}")
+            print(f"[DEBUG_KPI] Aguardando Fechamento: {aguardando_fechamento}")
+        else:
+            aguardando_embarque = 0
+            aguardando_chegada = 0
+            aguardando_liberacao = 0
+            agd_entrega = 0
+            aguardando_fechamento = 0
+
+        # Chegando/Chegando este mês/semana (quantidade e custo)
         hoje = pd.Timestamp.now().normalize()
         primeiro_dia_mes = hoje.replace(day=1)
         ultimo_dia_mes = (primeiro_dia_mes + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
@@ -154,12 +194,6 @@ def dashboard_kpis():
         chegando_mes_custo = 0
         chegando_semana = 0
         chegando_semana_custo = 0
-        
-        # Chegou = data_chegada < hoje (passado)
-        chegou_mes = 0
-        chegou_mes_custo = 0
-        chegou_semana = 0
-        chegou_semana_custo = 0
         
         if 'data_chegada' in df.columns:
             df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
@@ -177,31 +211,19 @@ def dashboard_kpis():
                 if pd.notnull(chegada) and idx < 5:  # Log apenas os primeiros 5
                     print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Futuro: {chegada >= hoje} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
                 
-                if pd.notnull(chegada):
+                if pd.notnull(chegada) and chegada >= hoje:  # Apenas datas futuras (chegando)
                     # Lógica para MÊS
                     if primeiro_dia_mes <= chegada <= ultimo_dia_mes:
-                        if chegada >= hoje:
-                            # CHEGANDO este mês (futuro)
-                            chegando_mes += 1
-                            chegando_mes_custo += custo
-                        else:
-                            # CHEGOU este mês (passado)
-                            chegou_mes += 1
-                            chegou_mes_custo += custo
+                        chegando_mes += 1
+                        chegando_mes_custo += custo
                     
                     # Lógica para SEMANA
                     if inicio_semana <= chegada <= fim_semana:
-                        if chegada >= hoje:
-                            # CHEGANDO esta semana (futuro)
-                            chegando_semana += 1
-                            chegando_semana_custo += custo
-                        else:
-                            # CHEGOU esta semana (passado)
-                            chegou_semana += 1
-                            chegou_semana_custo += custo
+                        chegando_semana += 1
+                        chegando_semana_custo += custo
             
-            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Chegou semana: {chegou_semana}")
-            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Chegou mês: {chegou_mes}")
+            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}")
+            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}")
 
         # Transit time médio
         transit_time = 0
@@ -234,17 +256,15 @@ def dashboard_kpis():
             'total_processos': total_processos,
             'total_despesas': total_despesas,
             'ticket_medio': ticket_medio,
-            'em_transito': em_transito,
-            'total_agd_embarque': total_agd_embarque,
-            'total_ag_chegada': total_ag_chegada,
+            'aguardando_embarque': aguardando_embarque,
+            'aguardando_chegada': aguardando_chegada,
+            'aguardando_liberacao': aguardando_liberacao,
+            'agd_entrega': agd_entrega,
+            'aguardando_fechamento': aguardando_fechamento,
             'chegando_mes': chegando_mes,
             'chegando_mes_custo': chegando_mes_custo,
             'chegando_semana': chegando_semana,
             'chegando_semana_custo': chegando_semana_custo,
-            'chegou_mes': chegou_mes,
-            'chegou_mes_custo': chegou_mes_custo,
-            'chegou_semana': chegou_semana,
-            'chegou_semana_custo': chegou_semana_custo,
             'transit_time_medio': transit_time,
             'processos_mes': processos_mes,
             'processos_semana': processos_semana

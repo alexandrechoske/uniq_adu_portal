@@ -103,9 +103,6 @@ app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
 # app.register_blueprint(paginas.bp)  # Comentado - usando versão modular
 # app.register_blueprint(config.bp)  # Comentado - usando versão modular
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
-from modules.dashboard_v2.routes import bp as dashboard_v2_bp
-app.register_blueprint(dashboard_v2_bp)  # Registrando o blueprint modularizado de Dashboard V2
-app.register_blueprint(materiais_v2.bp)  # Registrando o blueprint de Materiais V2
 
 # Register modular dashboard blueprints
 app.register_blueprint(dashboard_executivo.bp)  # Dashboard Executivo modular
