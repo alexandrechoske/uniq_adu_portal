@@ -4,12 +4,24 @@ Portal web corporativo para a Unique Aduaneira, desenvolvido com Flask e Supabas
 
 ## Módulos Disponíveis
 
-1. **Dashboard** - Visão geral das operações e métricas principais
-2. **One Page** - Interface simplificada para clientes e usuários internos
-3. **Conferência Documental IA** - Verificação automatizada de documentos com OCR e IA
-4. **Agente Unique** - Agente conversacional para atendimento ao cliente
-5. **Relatórios** - Geração e visualização de relatórios personalizados
-6. **Usuários** - Gerenciamento de usuários e permissões (apenas admin)
+1. **Dashboard Executivo** - Visão geral executiva das operações
+2. **Dashboard Materiais** - Métricas e análises de materiais
+3. **One Page** - Interface simplificada para clientes e usuários internos
+4. **Conferência Documental IA** - Verificação automatizada de documentos com OCR e IA
+5. **Agente Unique** - Agente conversacional para atendimento ao cliente
+6. **Relatórios** - Geração e visualização de relatórios personalizados
+7. **Usuários** - Gerenciamento de usuários e permissões (apenas admin)
+8. **Auth** - Autenticação e controle de acesso
+9. **API** - Endpoints para integração e automação
+10. **Menu** - Navegação e estrutura de menus
+11. **Paginas** - Páginas institucionais e informativas
+12. **Conferência** - Conferência de dados e documentos
+13. **Conferência PDF** - Processamento e visualização de PDFs
+14. **Background Tasks** - Processos assíncronos e agendados
+15. **Shared** - Componentes e recursos compartilhados
+16. **Config** - Configurações do sistema
+17. **Debug** - Ferramentas de depuração e diagnóstico
+18. **Controle de Telas** - Cadastro e gerenciamento de telas do sistema
 
 ## Requisitos de Sistema
 

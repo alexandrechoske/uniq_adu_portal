@@ -24,9 +24,9 @@ def login_required(f):
         
         if api_bypass_key and request_api_key == api_bypass_key:
             print(f"[AUTH] Bypass de API detectado - permitindo acesso sem autenticação")
-            # Criar uma sessão temporária para o bypass
+            # Criar uma sessão temporária para o bypass com UUID válido
             session['user'] = {
-                'id': 'api_bypass',
+                'id': '00000000-0000-0000-0000-000000000000',  # UUID válido para bypass
                 'email': 'api@bypass.com',
                 'role': 'admin',  # Acesso total para bypass
                 'name': 'API Bypass',

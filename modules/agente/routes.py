@@ -1,7 +1,10 @@
 # --- IMPORTS E BLUEPRINT NO TOPO ---
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
-from extensions import supabase
+from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+import requests
+import json
+import traceback
 import requests
 import json
 
@@ -11,79 +14,6 @@ bp = Blueprint('agente', __name__,
                template_folder='templates',
                static_folder='static',
                static_url_path='/agente/static')
-
-# --- AJAX: Adicionar número ---
-@bp.route('/ajax_add_numero', methods=['POST'])
-@login_required
-@role_required(['cliente_unique', 'admin'])
-def ajax_add_numero():
-    user_id = session['user']['id']
-    data = request.get_json()
-    numero = data.get('numero')
-    if not numero:
-        return jsonify({'success': False, 'error': 'Número não informado.'}), 400
-    try:
-        # Buscar registro do usuário
-        user_record = supabase.table('clientes_agentes').select('numero').eq('user_id', user_id).eq('usuario_ativo', True).execute()
-        if user_record.data:
-            numeros = user_record.data[0].get('numero') or []
-            if numero in numeros:
-                return jsonify({'success': False, 'error': 'Número já cadastrado.'}), 400
-            numeros.append(numero)
-            supabase.table('clientes_agentes').update({'numero': numeros}).eq('user_id', user_id).execute()
-        else:
-            # Novo registro
-            supabase.table('clientes_agentes').insert({
-                'user_id': user_id,
-                'numero': [numero],
-                'usuario_ativo': True,
-                'aceite_termos': True
-            }).execute()
-        return jsonify({'success': True})
-    except Exception as e:
-        print(f"[ERROR] AJAX add numero: {str(e)}")
-        return jsonify({'success': False, 'error': 'Erro interno.'}), 500
-
-# --- AJAX: Remover número ---
-@bp.route('/ajax_remove_numero', methods=['POST'])
-@login_required
-@role_required(['cliente_unique', 'admin'])
-def ajax_remove_numero():
-    user_id = session['user']['id']
-    data = request.get_json()
-    numero = data.get('numero')
-    if not numero:
-        return jsonify({'success': False, 'error': 'Número não informado.'}), 400
-    try:
-        user_record = supabase.table('clientes_agentes').select('numero').eq('user_id', user_id).eq('usuario_ativo', True).execute()
-        if not user_record.data:
-            return jsonify({'success': False, 'error': 'Registro não encontrado.'}), 404
-        numeros = user_record.data[0].get('numero') or []
-        if numero not in numeros:
-            return jsonify({'success': False, 'error': 'Número não encontrado.'}), 404
-        numeros = [n for n in numeros if n != numero]
-        supabase.table('clientes_agentes').update({'numero': numeros}).eq('user_id', user_id).execute()
-        return jsonify({'success': True})
-    except Exception as e:
-        print(f"[ERROR] AJAX remove numero: {str(e)}")
-        return jsonify({'success': False, 'error': 'Erro interno.'}), 500
-
-# --- AJAX: Cancelar adesão ---
-@bp.route('/ajax_cancelar_adesao', methods=['POST'])
-@login_required
-@role_required(['cliente_unique', 'admin'])
-def ajax_cancelar_adesao():
-    user_id = session['user']['id']
-    try:
-        supabase.table('clientes_agentes').update({
-            'usuario_ativo': False,
-            'numero': [],
-            'aceite_termos': False
-        }).eq('user_id', user_id).execute()
-        return jsonify({'success': True})
-    except Exception as e:
-        print(f"[ERROR] AJAX cancelar adesao: {str(e)}")
-        return jsonify({'success': False, 'error': 'Erro interno.'}), 500
 
 def notificar_cadastro_n8n(numero_zap):
     """Envia notificação para o webhook do N8N para acionar o fluxo de mensagem no WhatsApp"""
@@ -132,178 +62,453 @@ def get_user_companies(user_id):
         print(f"[ERROR] Erro ao buscar empresas do usuário: {str(e)}")
         return []
 
-def sync_user_companies_to_agent_numbers(user_id, companies):
-    """
-    Sincroniza as empresas que o usuário tem acesso para todos os seus números do agente.
-    Útil quando o usuário ganha/perde acesso a empresas.
-    """
-    try:
-        # Atualizar o registro do usuário com as empresas
-        supabase.table('clientes_agentes').update({
-            'empresa': companies
-        }).eq('user_id', user_id).eq('usuario_ativo', True).execute()
-        
-        print(f"[INFO] Empresas sincronizadas para o usuário {user_id}")
-        return True
-        
-    except Exception as e:
-        print(f"[ERROR] Erro ao sincronizar empresas: {str(e)}")
-        return False
-
-@bp.route('/')
+@bp.route('/', methods=['GET', 'POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
 def index():
     user_id = session['user']['id']
+    print(f"[AGENTE DEBUG] Método: {request.method}, User ID: {user_id}")
+    if request.method == 'POST':
+        print(f"[AGENTE DEBUG] POST recebido. Form data: {dict(request.form)}")
+        numero = request.form.get('numero_whatsapp')
+        aceite_terms = request.form.get('aceite_terms') == 'on' or request.form.get('aceite_terms') == 'true' or request.form.get('aceite_terms') == 'checked'
+        print(f"[AGENTE DEBUG] Número recebido: {numero}")
+        print(f"[AGENTE DEBUG] Aceite termos recebido: {aceite_terms}")
+        if not numero:
+            print(f"[AGENTE DEBUG] Número não informado")
+            flash('Por favor, informe seu número de WhatsApp.', 'error')
+            return redirect(url_for('agente.index'))
+        # Verificar se o usuário já aceitou os termos anteriormente
+        user_record = supabase.table('clientes_agentes').select('aceite_termos').eq('user_id', user_id).execute()
+        already_accepted_terms = user_record.data and user_record.data[0].get('aceite_termos', False)
+        print(f"[AGENTE DEBUG] Termos já aceitos anteriormente: {already_accepted_terms}")
+        if not aceite_terms and not already_accepted_terms:
+            print(f"[AGENTE DEBUG] Usuário precisa aceitar os termos")
+            flash('Você precisa aceitar os termos para continuar.', 'error')
+            return redirect(url_for('agente.index'))
+        try:
+            # Verificar se o número já existe em qualquer usuário
+            all_records = supabase.table('clientes_agentes').select('numero, user_id').eq('usuario_ativo', True).execute()
+            print(f"[AGENTE DEBUG] Registros encontrados: {len(all_records.data) if all_records.data else 0}")
+            for record in all_records.data if all_records.data else []:
+                existing_numbers = record.get('numero', [])
+                if isinstance(existing_numbers, str):
+                    existing_numbers = [existing_numbers] if existing_numbers else []
+                elif not isinstance(existing_numbers, list):
+                    existing_numbers = []
+                if numero in existing_numbers and record['user_id'] != user_id:
+                    print(f"[AGENTE DEBUG] Número já cadastrado por outro usuário: {record['user_id']}")
+                    flash('Este número já está cadastrado por outro usuário.', 'error')
+                    return redirect(url_for('agente.index'))
+            # Buscar ou criar registro do usuário
+            user_record_full = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+            print(f"[AGENTE DEBUG] Registro existente encontrado: {bool(user_record_full.data)}")
+            if user_record_full.data:
+                print(f"[AGENTE DEBUG] Atualizando registro existente...")
+                current_numbers = user_record_full.data[0].get('numero', [])
+                if isinstance(current_numbers, str):
+                    current_numbers = [current_numbers] if current_numbers else []
+                elif not isinstance(current_numbers, list):
+                    current_numbers = []
+                print(f"[AGENTE DEBUG] Números atuais: {current_numbers}")
+                if numero in current_numbers:
+                    print(f"[AGENTE DEBUG] Número já cadastrado para este usuário")
+                    flash('Este número já está cadastrado para você.', 'error')
+                    return redirect(url_for('agente.index'))
+                current_numbers.append(numero)
+                print(f"[AGENTE DEBUG] Novos números: {current_numbers}")
+                update_data = {
+                    'numero': current_numbers,
+                    'usuario_ativo': True,
+                    'aceite_termos': True if aceite_terms else already_accepted_terms
+                }
+                print(f"[AGENTE DEBUG] Dados para atualização: {update_data}")
+                result = supabase.table('clientes_agentes').update(update_data).eq('user_id', user_id).execute()
+                print(f"[AGENTE DEBUG] Resultado da atualização: {result.data}")
+                flash('Número adicionado com sucesso!', 'success')
+            else:
+                print(f"[AGENTE DEBUG] Criando primeiro registro do usuário...")
+                user_companies = get_user_companies(user_id)
+                print(f"[AGENTE DEBUG] Empresas do usuário: {user_companies}")
+                data = {
+                    'user_id': user_id,
+                    'numero': [numero],
+                    'aceite_termos': True if aceite_terms else already_accepted_terms,
+                    'usuario_ativo': True,
+                    'empresa': user_companies
+                }
+                print(f"[AGENTE DEBUG] Dados para inserção: {data}")
+                result = supabase.table('clientes_agentes').insert(data).execute()
+                print(f"[AGENTE DEBUG] Resultado da inserção: {result.data}")
+                flash('Primeiro número cadastrado com sucesso!', 'success')
+            print(f"[AGENTE DEBUG] Processo concluído com sucesso. Redirecionando...")
+            return redirect(url_for('agente.index'))
+        except Exception as e:
+            print(f"[AGENTE DEBUG] Erro ao processar adesão: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            flash('Erro ao processar sua adesão. Tente novamente.', 'error')
+            return redirect(url_for('agente.index'))
+    # Buscar registro do usuário com todos os números
+    try:
+        user_record = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+        
+        user_data = None
+        
+        if user_record.data:
+            record = user_record.data[0]
+            numbers = record.get('numero', [])
+            terms_accepted = record.get('aceite_termos', False)
+            usuario_ativo = record.get('usuario_ativo', False)
+            
+            # Processar números - garantir que seja lista
+            if isinstance(numbers, str):
+                numbers = [numbers] if numbers else []
+            elif not isinstance(numbers, list):
+                numbers = []
+            
+            # Filtrar números vazios
+            numbers = [num for num in numbers if num and num.strip()]
+            
+            # Processar empresas
+            companies = record.get('empresa', [])
+            if not isinstance(companies, list):
+                companies = []
+            
+            user_data = {
+                'id': record['id'],
+                'numero': numbers,
+                'aceite_termos': terms_accepted,
+                'usuario_ativo': usuario_ativo,
+                'empresa': companies,
+                'nome': record.get('nome'),
+                'created_at': record.get('created_at'),
+                'updated_at': record.get('updated_at')
+            }
+        
+        context = {
+            'user_data': user_data
+        }
+    except Exception as e:
+        print(f"[DEBUG] Erro ao buscar dados do usuário: {str(e)}")
+        context = {
+            'user_data': None
+        }
     
-    # Buscar dados do usuário agente
-    user_record = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
-    user_data = user_record.data[0] if user_record.data else None
-    
-    # Buscar empresas disponíveis se for admin
-    empresas_disponiveis = []
-    if session['user']['role'] == 'admin':
-        empresas_response = supabase.table('vw_aux_cnpj_importador').select('cnpj, razao_social').execute()
-        empresas_disponiveis = empresas_response.data if empresas_response.data else []
-    
-    return render_template('agente.html', 
-                         user_data=user_data, 
-                         empresas_disponiveis=empresas_disponiveis)
+    return render_template('agente.html', **context)
 
-@bp.route('/cadastrar', methods=['POST'])
+# --- AJAX: Adicionar número ---
+@bp.route('/ajax/add-numero', methods=['POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
-def cadastrar():
-    user_id = session['user']['id']
-    numero = request.form.get('numero_whatsapp')
-    aceite_terms = request.form.get('aceite_terms') == 'on'
-
-    if not numero:
-        flash('Por favor, informe seu número de WhatsApp.', 'error')
-        return redirect(url_for('agente.index'))
-    
-    # Verificar se já aceitou os termos
-    user_record = supabase.table('clientes_agentes').select('aceite_termos').eq('user_id', user_id).execute()
-    already_accepted_terms = user_record.data and user_record.data[0].get('aceite_termos', False)
-    
-    if not aceite_terms and not already_accepted_terms:
-        flash('Você precisa aceitar os termos para continuar.', 'error')
-        return redirect(url_for('agente.index'))
-    
+def ajax_add_numero():
+    """Adicionar novo número via AJAX"""
     try:
-        # Verificar se o número já existe
+        data = request.get_json()
+        numero = data.get('numero', '').strip()
+        user_id = session['user']['id']
+        
+        if not numero:
+            return jsonify({'success': False, 'message': 'Número é obrigatório'})
+        
+        # Verificar se o número já existe em qualquer usuário
         all_records = supabase.table('clientes_agentes').select('numero, user_id').eq('usuario_ativo', True).execute()
         
         for record in all_records.data if all_records.data else []:
-            if record.get('numero') == numero and record.get('user_id') != user_id:
-                flash('Este número já está cadastrado para outro usuário.', 'error')
-                return redirect(url_for('agente.index'))
+            existing_numbers = record.get('numero', [])
+            if isinstance(existing_numbers, str):
+                existing_numbers = [existing_numbers] if existing_numbers else []
+            elif not isinstance(existing_numbers, list):
+                existing_numbers = []
+            
+            if numero in existing_numbers and record['user_id'] != user_id:
+                return jsonify({'success': False, 'message': 'Este número já está cadastrado por outro usuário'})
         
-        # Buscar empresas do usuário
-        companies = get_user_companies(user_id)
+        # Buscar registro do usuário
+        user_record = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
         
-        # Dados para inserir/atualizar
-        agent_data = {
-            'user_id': user_id,
-            'numero': numero,
-            'empresa': companies,
-            'usuario_ativo': True,
-            'aceite_termos': True
-        }
-        
-        # Verificar se já existe registro para este usuário
-        existing_record = supabase.table('clientes_agentes').select('id').eq('user_id', user_id).execute()
-        
-        if existing_record.data:
+        if user_record.data:
+            # Usuário já tem registro, adicionar número à lista
+            current_numbers = user_record.data[0].get('numero', [])
+            if isinstance(current_numbers, str):
+                current_numbers = [current_numbers] if current_numbers else []
+            elif not isinstance(current_numbers, list):
+                current_numbers = []
+            
+            # Verificar se o número já existe para este usuário
+            if numero in current_numbers:
+                return jsonify({'success': False, 'message': 'Este número já está cadastrado para você'})
+            
+            # Adicionar novo número
+            current_numbers.append(numero)
+            
             # Atualizar registro existente
-            supabase.table('clientes_agentes').update(agent_data).eq('user_id', user_id).execute()
-            flash('Número do WhatsApp atualizado com sucesso!', 'success')
+            supabase.table('clientes_agentes').update({
+                'numero': current_numbers,
+                'usuario_ativo': True
+            }).eq('user_id', user_id).execute()
+            
+            # Enviar notificação para o N8N
+            notificar_cadastro_n8n(numero)
+            
+            return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
         else:
-            # Inserir novo registro
-            supabase.table('clientes_agentes').insert(agent_data).execute()
-            flash('Cadastro realizado com sucesso!', 'success')
-        
-        # Notificar N8N
-        if notificar_cadastro_n8n(numero):
-            flash('Notificação enviada! Você receberá uma mensagem no WhatsApp em breve.', 'info')
-        
-        return redirect(url_for('agente.index'))
-        
+            return jsonify({'success': False, 'message': 'Usuário não encontrado no sistema de agentes'})
+            
     except Exception as e:
-        print(f"[ERROR] Erro no cadastro: {str(e)}")
-        flash('Erro interno do servidor. Tente novamente.', 'error')
-        return redirect(url_for('agente.index'))
+        print(f"[ERROR] Erro ao adicionar número: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
-@bp.route('/desativar', methods=['POST'])
+# --- AJAX: Remover número ---
+@bp.route('/ajax/remove-numero', methods=['POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
-def desativar():
-    user_id = session['user']['id']
-    
+def ajax_remove_numero():
+    """Remover número via AJAX"""
     try:
-        # Desativar o agente
+        data = request.get_json()
+        numero = data.get('numero', '').strip()
+        user_id = session['user']['id']
+        
+        if not numero:
+            return jsonify({'success': False, 'message': 'Número é obrigatório'})
+        
+        # Buscar registro do usuário
+        user_record = supabase.table('clientes_agentes').select('numero').eq('user_id', user_id).execute()
+        
+        if user_record.data:
+            numbers = user_record.data[0].get('numero', [])
+            if isinstance(numbers, str):
+                numbers = [numbers] if numbers else []
+            elif not isinstance(numbers, list):
+                numbers = []
+            
+            if numero in numbers:
+                # Remover o número do array
+                numbers.remove(numero)
+                
+                # Se não sobrou nenhum número, desativar o usuário
+                if not numbers:
+                    supabase.table('clientes_agentes').update({
+                        'usuario_ativo': False,
+                        'aceite_termos': False,
+                        'numero': []
+                    }).eq('user_id', user_id).execute()
+                    return jsonify({'success': True, 'message': 'Último número removido. Você foi descadastrado do Agente Unique.'})
+                else:
+                    # Atualizar array sem o número removido
+                    supabase.table('clientes_agentes').update({
+                        'numero': numbers
+                    }).eq('user_id', user_id).execute()
+                    return jsonify({'success': True, 'message': f'Número {numero} removido com sucesso!'})
+            else:
+                return jsonify({'success': False, 'message': 'Número não encontrado'})
+        else:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+            
+    except Exception as e:
+        print(f"[ERROR] Erro ao remover número: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+# --- AJAX: Cancelar adesão ---
+@bp.route('/ajax/cancelar-adesao', methods=['POST'])
+@login_required
+@role_required(['cliente_unique', 'admin'])
+def ajax_cancelar_adesao():
+    """Cancelar adesão via AJAX"""
+    try:
+        user_id = session['user']['id']
+        
+        # Remover todos os números do usuário
         supabase.table('clientes_agentes').update({
-            'usuario_ativo': False
+            'usuario_ativo': False,
+            'aceite_termos': False,
+            'numero': []
         }).eq('user_id', user_id).execute()
         
-        flash('Agente desativado com sucesso.', 'success')
+        return jsonify({'success': True, 'message': 'Adesão cancelada com sucesso!'})
         
     except Exception as e:
-        print(f"[ERROR] Erro ao desativar agente: {str(e)}")
-        flash('Erro ao desativar o agente.', 'error')
-    
-    return redirect(url_for('agente.index'))
+        print(f"[ERROR] Erro ao cancelar adesão: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
+# --- ÁREA ADMINISTRATIVA ---
 @bp.route('/admin')
 @login_required
 @role_required(['admin'])
 def admin():
-    """Página administrativa para gerenciar todos os agentes"""
+    """Área administrativa para gerenciar todos os agentes"""
     try:
-        # Buscar todos os agentes ativos
-        agentes_response = supabase.table('clientes_agentes').select('*').eq('usuario_ativo', True).execute()
-        agentes = agentes_response.data if agentes_response.data else []
+        # Buscar todos os registros de agentes
+        agentes_data = supabase_admin.table('clientes_agentes').select('*').execute()
         
-        # Buscar dados dos usuários
-        user_ids = [agente['user_id'] for agente in agentes]
-        users_response = supabase.table('users').select('id, name, email').in_('id', user_ids).execute()
-        users_dict = {user['id']: user for user in users_response.data} if users_response.data else {}
+        # Buscar informações dos usuários
+        users_data = supabase_admin.table('users').select('id, email, nome').execute()
         
-        # Combinar dados
-        for agente in agentes:
-            user_data = users_dict.get(agente['user_id'], {})
-            agente['user_name'] = user_data.get('name', 'Usuário não encontrado')
-            agente['user_email'] = user_data.get('email', '')
+        # Criar um mapeamento de usuários
+        users_map = {}
+        if users_data.data:
+            for user in users_data.data:
+                users_map[user['id']] = user
+        
+        agentes = []
+        if agentes_data.data:
+            for record in agentes_data.data:
+                # Processar números
+                numbers = record.get('numero', [])
+                if isinstance(numbers, str):
+                    numbers = [numbers] if numbers else []
+                elif not isinstance(numbers, list):
+                    numbers = []
+                
+                # Filtrar números vazios
+                numbers = [num for num in numbers if num and num.strip()]
+                
+                # Processar empresas
+                companies = record.get('empresa', [])
+                if not isinstance(companies, list):
+                    companies = []
+                
+                # Buscar informações do usuário
+                user_info = users_map.get(record.get('user_id'), {})
+                
+                agentes.append({
+                    'id': record.get('id'),
+                    'user_id': record.get('user_id'),
+                    'nome': record.get('nome') or user_info.get('nome'),
+                    'email': user_info.get('email'),
+                    'numeros': numbers,
+                    'empresas': companies,
+                    'aceite_termos': record.get('aceite_termos', False),
+                    'usuario_ativo': record.get('usuario_ativo', False),
+                    'created_at': record.get('created_at'),
+                    'updated_at': record.get('updated_at')
+                })
         
         return render_template('admin.html', agentes=agentes)
         
     except Exception as e:
-        print(f"[ERROR] Erro ao carregar dados administrativos: {str(e)}")
+        print(f"[ERROR] Erro ao buscar agentes: {str(e)}")
+        import traceback
+        traceback.print_exc()
         flash('Erro ao carregar dados dos agentes.', 'error')
         return render_template('admin.html', agentes=[])
 
-@bp.route('/admin/toggle/<user_id>')
+@bp.route('/admin/toggle-user', methods=['POST'])
 @login_required
 @role_required(['admin'])
-def admin_toggle(user_id):
-    """Ativar/desativar agente"""
+def admin_toggle_user():
+    """Admin: Ativar/desativar usuário"""
     try:
-        # Buscar estado atual
-        current_state = supabase.table('clientes_agentes').select('usuario_ativo').eq('user_id', user_id).execute()
+        data = request.get_json()
+        user_id = data.get('user_id')
+        ativo = data.get('ativo', False)
         
-        if current_state.data:
-            new_state = not current_state.data[0]['usuario_ativo']
-            supabase.table('clientes_agentes').update({
-                'usuario_ativo': new_state
+        if not user_id:
+            return jsonify({'success': False, 'message': 'ID do usuário é obrigatório'})
+        
+        supabase_admin.table('clientes_agentes').update({
+            'usuario_ativo': ativo
+        }).eq('user_id', user_id).execute()
+        
+        status = 'ativado' if ativo else 'desativado'
+        return jsonify({'success': True, 'message': f'Usuário {status} com sucesso!'})
+        
+    except Exception as e:
+        print(f"[ERROR] Erro ao alterar status do usuário: {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+@bp.route('/admin/add-numero', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_add_numero():
+    """Admin: Adicionar número para usuário"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        numero = data.get('numero', '').strip()
+        
+        if not user_id or not numero:
+            return jsonify({'success': False, 'message': 'ID do usuário e número são obrigatórios'})
+        
+        # Verificar se o número já existe em qualquer usuário
+        all_records = supabase_admin.table('clientes_agentes').select('numero, user_id').eq('usuario_ativo', True).execute()
+        
+        for record in all_records.data if all_records.data else []:
+            existing_numbers = record.get('numero', [])
+            if isinstance(existing_numbers, str):
+                existing_numbers = [existing_numbers] if existing_numbers else []
+            elif not isinstance(existing_numbers, list):
+                existing_numbers = []
+            
+            if numero in existing_numbers:
+                return jsonify({'success': False, 'message': 'Este número já está cadastrado'})
+        
+        # Buscar registro do usuário
+        user_record = supabase_admin.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+        
+        if user_record.data:
+            # Usuário já tem registro, adicionar número à lista
+            current_numbers = user_record.data[0].get('numero', [])
+            if isinstance(current_numbers, str):
+                current_numbers = [current_numbers] if current_numbers else []
+            elif not isinstance(current_numbers, list):
+                current_numbers = []
+            
+            current_numbers.append(numero)
+            
+            # Atualizar registro existente
+            supabase_admin.table('clientes_agentes').update({
+                'numero': current_numbers,
+                'usuario_ativo': True
             }).eq('user_id', user_id).execute()
             
-            action = 'ativado' if new_state else 'desativado'
-            flash(f'Agente {action} com sucesso.', 'success')
+            return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
         else:
-            flash('Agente não encontrado.', 'error')
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
             
     except Exception as e:
-        print(f"[ERROR] Erro ao alterar estado do agente: {str(e)}")
-        flash('Erro ao alterar estado do agente.', 'error')
-    
-    return redirect(url_for('agente.admin'))
+        print(f"[ERROR] Erro ao adicionar número (admin): {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+@bp.route('/admin/remove-numero', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_remove_numero():
+    """Admin: Remover número de usuário"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        numero = data.get('numero', '').strip()
+        
+        if not user_id or not numero:
+            return jsonify({'success': False, 'message': 'ID do usuário e número são obrigatórios'})
+        
+        # Buscar registro do usuário
+        user_record = supabase_admin.table('clientes_agentes').select('numero').eq('user_id', user_id).execute()
+        
+        if user_record.data:
+            numbers = user_record.data[0].get('numero', [])
+            if isinstance(numbers, str):
+                numbers = [numbers] if numbers else []
+            elif not isinstance(numbers, list):
+                numbers = []
+            
+            if numero in numbers:
+                # Remover o número do array
+                numbers.remove(numero)
+                
+                # Atualizar array
+                supabase_admin.table('clientes_agentes').update({
+                    'numero': numbers
+                }).eq('user_id', user_id).execute()
+                
+                return jsonify({'success': True, 'message': f'Número {numero} removido com sucesso!'})
+            else:
+                return jsonify({'success': False, 'message': 'Número não encontrado'})
+        else:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+            
+    except Exception as e:
+        print(f"[ERROR] Erro ao remover número (admin): {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
