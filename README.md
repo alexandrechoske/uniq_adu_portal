@@ -107,17 +107,35 @@ Para mais detalhes, consulte a [documentação completa](docs/conferencia_docume
 
 ```
 app/
-├─ main.py
+├─ app.py
 ├─ config.py
-├─ routes/
-│ ├─ auth.py
-│ ├─ dashboard.py
-│ ├─ relatorios.py
-│ └─ usuarios.py
+├─ extensions.py
+├─ material_cleaner.py
+├─ services/
+│   └─ data_cache.py
+├─ modules/
+│   ├─ agente/
+│   ├─ api/
+│   ├─ auth/
+│   ├─ background_tasks/
+│   ├─ conferencia/
+│   ├─ conferencia_pdf/
+│   ├─ config/
+│   ├─ dashboard_executivo/
+│   ├─ dashboard_materiais/
+│   ├─ debug/
+│   ├─ menu/
+│   ├─ paginas/
+│   ├─ relatorios/
+│   ├─ shared/
+│   ├─ usuarios/
+│   └─ ...
 ├─ templates/
 ├─ static/
-└─ requirements.txt
+├─ requirements.txt
 ```
+
+Cada módulo possui suas próprias rotas, templates e arquivos estáticos, seguindo o padrão blueprint do Flask. Os componentes compartilhados ficam em `modules/shared/`.
 
 ## Funcionalidades
 
