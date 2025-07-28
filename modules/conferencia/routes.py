@@ -53,16 +53,111 @@ def ensure_upload_folders():
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
 
-# Prompts para análise IA
+# Templates de prompts para cada tipo de conferência
 PROMPTS = {
     'inconsistencias': """
-    Você é um sistema especializado em análise de documentos aduaneiros.
-    Analise o documento fornecido e identifique possíveis inconsistências.
-    Retorne uma análise estruturada em JSON com os problemas encontrados.
+    Você é um sistema avançado de extração de dados, especializado em análise de documentos aduaneiros para identificar inconsistências gerais. Sua tarefa é analisar o documento fornecido e identificar possíveis problemas ou inconsistências.
+
+    **Instruções para Análise Geral:**
+
+    1. Analise a estrutura geral do documento
+    2. Identifique campos obrigatórios ausentes
+    3. Verifique a consistência de datas
+    4. Analise valores e cálculos
+    5. Identifique informações conflitantes
+
+    **Formato da Saída (JSON):**
+    {
+        "sumario": {
+            "status": "ok|alerta|erro",
+            "total_erros_criticos": X,
+            "total_observacoes": Y,
+            "total_alertas": Z,
+            "conclusao": "Breve resumo da análise geral do documento."
+        },
+        "itens": [
+            {
+                "campo": "Nome do Campo Analisado",
+                "status": "ok|alerta|erro",
+                "tipo": "ok|erro_critico|observacao|alerta",
+                "valor_extraido": "Valor encontrado no documento",
+                "descricao": "Descrição da análise ou problema identificado."
+            }
+        ]
+    }
     """,
-    'dados_estruturados': """
-    Extraia dados estruturados do documento aduaneiro fornecido.
-    Organize as informações em formato JSON com campos padronizados.
+    'invoice': """
+    Você é um sistema avançado de extração de dados, especializado em análise de documentos aduaneiros. Sua tarefa é analisar a Invoice Comercial fornecida e extrair informações cruciais com base no Art. 557 do regulamento aduaneiro brasileiro.
+
+    **Instruções Detalhadas para Extração:**
+
+    1.  **Número do documento (Invoice Number):**
+        * Procure por rótulos como "Invoice No.", "Fattura nr.", "Rechnung", "Belegnummer", "INVOICE #", "Number", "Invoice No.:", "Fattura n.", "Número", "INVOICE", "INVOICE#", "SHIPMENT NUMBER".
+        * Seja flexível com prefixos e sufixos (ex: 'PI', 'INV-', 'S', 'FE/', 'IT00125VEN', '1610743'). Extraia o identificador principal.
+
+    2.  **Data de emissão (Issue Date):**
+        * Procure por "Date", "Data", "Datum", "DATE".
+
+    3.  **Exportador (Exporter/Shipper):**
+        * Procure por "Exporter", "Shipper", "From", "The Seller/Exporter", "HEADQUARTER", "MANUFACTURER", ou o nome da empresa no cabeçalho do documento. Extraia o nome e o endereço completos.
+
+    4.  **Importador (Importer/Consignee):**
+        * Procure por "Importer", "Consignee", "Bill to", "Ship to", "To", "MESSRS:", "Destinatario", "Buyer", "SOLD TO". Extraia o nome e o endereço completos.
+
+    5.  **Itens da Fatura (Line Items):**
+        * **Lógica de Agrupamento de Itens:** Documentos com tabelas ou grades complexas podem ter informações de um único item espalhadas por várias linhas. Agrupe de forma inteligente as linhas que pertencem ao mesmo item antes de extrair os dados.
+        * **Para cada item na fatura, extraia os seguintes campos:**
+            * **descricao_completa:** Combine a descrição principal do produto, part number, códigos e outras especificações. Procure por colunas como "DESCRIPTION", "Descrizione", "Bezeichnung", "Description of goods", "Product".
+            * **quantidade_unidade:** Extraia a quantidade total de peças. Procure por "Q'TY", "QTY", "Quantity", "PCS", "NR", "Menge", "SHIPPED", "QTY PACKED". A unidade (ex: "PCS", "NR", "KG", "LBS", "m", "pce", "pc", "pcs", "unit", "unt", "kgs", "ltr", "l", "mtr", "gr", "box") deve ser incluída se disponível.
+            * **preco_unitario:** Encontre o preço por unidade ou por milheiro (M). Procure por "UNIT PRICE", "Prezzo", "Preis", "USD/M", "Gross price", "UNIT". Pode ser indicado por um '@'.
+            * **valor_total_item:** O valor total para a linha do item. Procure por "AMOUNT", "Total", "Importo", "Summe", "Total tax excluded", "EXTENDED".
+
+    6.  **Incoterm:**
+        * Procure por termos como "INCOTERM", "PRICE TERM", "Delivery Terms", "FREIGHT TERMS". Extraia o termo e o local (ex: "FOB KAOHSIUNG TAIWAN", "EXWORKS").
+
+    7.  **País de Origem (Country of Origin):**
+        * Procure por "Country of Origin", "Made in", "Origin". Se não estiver explícito, infira a partir do endereço do exportador.
+
+    8.  **País de Aquisição (Country of Acquisition):**
+        * Procure por "Country of Acquisition", "COUNTRY OF ACQUISITION AND PROCEED". Se ausente, assuma que é o mesmo que o País de Origem.
+
+    **Formato da Saída (JSON):**
+    A saída DEVE ser um único objeto JSON válido, sem nenhum texto adicional antes ou depois. Para cada campo extraído, inclua um campo "valor_extraido" que mostra o texto exato do documento.
+
+    {
+        "sumario": {
+            "status": "ok|alerta|erro",
+            "total_erros_criticos": X,
+            "total_observacoes": Y,
+            "total_alertas": Z,
+            "conclusao": "Breve resumo do status geral da análise da fatura."
+        },
+        "itens_analisados": [
+            {
+                "campo": "Nome do Campo Verificado",
+                "status": "ok|alerta|erro",
+                "tipo": "ok|erro_critico|observacao|alerta",
+                "valor_extraido": "O texto exato encontrado no documento.",
+                "descricao": "Detalhamento do problema encontrado ou confirmação de conformidade."
+            }
+        ],
+        "itens_da_fatura": [
+            {
+                "descricao_completa": {
+                    "valor_extraido": "Descrição completa do item, incluindo códigos e part numbers."
+                },
+                "quantidade_unidade": {
+                    "valor_extraido": "Ex: 72,000 PCS"
+                },
+                "preco_unitario": {
+                    "valor_extraido": "Ex: 1.91 USD/M"
+                },
+                "valor_total_item": {
+                    "valor_extraido": "Ex: 137.48"
+                }
+            }
+        ]
+    }
     """
 }
 
@@ -91,6 +186,10 @@ def upload():
     if not files or files[0].filename == '':
         return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'}), 400
     
+    # Obter tipo de conferência do formulário
+    tipo_conferencia = request.form.get('tipo_conferencia', 'inconsistencias')
+    current_app.logger.info(f"Tipo de conferência selecionado: {tipo_conferencia}")
+    
     uploaded_files = []
     errors = []
     
@@ -109,6 +208,7 @@ def upload():
                     'path': filepath,
                     'size': os.path.getsize(filepath)
                 })
+                current_app.logger.info(f"Arquivo salvo: {filepath}")
             except Exception as e:
                 errors.append(f"Erro ao salvar {filename}: {str(e)}")
         else:
@@ -123,16 +223,20 @@ def upload():
             'files': uploaded_files,
             'results': [],
             'started_at': datetime.now(),
-            'user_id': session['user']['id']
+            'user_id': session['user']['id'],
+            'tipo_conferencia': tipo_conferencia
         }
         
-        # Simular processamento (substituir por lógica real de IA)
+        current_app.logger.info(f"Iniciando job {job_id} para {len(uploaded_files)} arquivos")
+        
+        # Processar em background
         threading.Thread(target=background_process, args=(job_id, uploaded_files)).start()
         
         return jsonify({
             'success': True,
             'job_id': job_id,
             'files_count': len(uploaded_files),
+            'tipo_conferencia': tipo_conferencia,
             'errors': errors
         })
     
@@ -143,9 +247,12 @@ def upload():
     }), 400
 
 def background_process(job_id, files):
-    """Processa arquivos em background"""
+    """Processa arquivos em background com análise real via Gemini"""
     try:
         total_files = len(files)
+        
+        # Obter tipo de conferência da sessão ou padrão
+        tipo_conferencia = jobs[job_id].get('tipo_conferencia', 'inconsistencias')
         
         for i, file_info in enumerate(files):
             if job_id not in jobs:
@@ -156,21 +263,45 @@ def background_process(job_id, files):
             jobs[job_id]['progress'] = progress
             jobs[job_id]['current_file'] = file_info['original_name']
             
-            # Simular processamento do arquivo
-            time.sleep(2)  # Substituir por processamento real
+            current_app.logger.info(f"Processando arquivo {file_info['original_name']} - Progresso: {progress}%")
             
-            # Resultado simulado
-            result = {
-                'file': file_info['original_name'],
-                'status': 'completed',
-                'inconsistencias': [
-                    'Dados de exemplo - implementar análise real'
-                ],
-                'dados_extraidos': {
-                    'documento': file_info['original_name'],
+            try:
+                # 1. Extrair texto do PDF
+                current_app.logger.info(f"Extraindo texto do PDF: {file_info['path']}")
+                pdf_text = extract_text_from_pdf(file_info['path'])
+                
+                if not pdf_text or pdf_text.strip() == "":
+                    # Se não conseguiu extrair texto, tentar conversão para imagem
+                    current_app.logger.warning(f"Texto vazio do PDF {file_info['original_name']}, tentando OCR...")
+                    analysis_result = process_pdf_as_image(file_info['path'], tipo_conferencia)
+                else:
+                    # 2. Processar com IA usando o texto extraído
+                    current_app.logger.info(f"Analisando texto com Gemini - Tipo: {tipo_conferencia}")
+                    analysis_result = process_with_ai(pdf_text, tipo_conferencia)
+                
+                # 3. Criar resultado estruturado
+                result = {
+                    'file': file_info['original_name'],
+                    'status': 'completed',
+                    'tipo_conferencia': tipo_conferencia,
+                    'analysis': analysis_result,
+                    'processado_em': datetime.now().isoformat(),
+                    'arquivo_info': {
+                        'tamanho': file_info['size'],
+                        'nome_salvo': file_info['saved_name']
+                    }
+                }
+                
+                current_app.logger.info(f"Análise concluída para {file_info['original_name']}")
+                
+            except Exception as e:
+                current_app.logger.error(f"Erro ao processar {file_info['original_name']}: {str(e)}")
+                result = {
+                    'file': file_info['original_name'],
+                    'status': 'error',
+                    'error': str(e),
                     'processado_em': datetime.now().isoformat()
                 }
-            }
             
             jobs[job_id]['results'].append(result)
         
@@ -179,8 +310,10 @@ def background_process(job_id, files):
             jobs[job_id]['status'] = 'completed'
             jobs[job_id]['progress'] = 100
             jobs[job_id]['completed_at'] = datetime.now()
+            current_app.logger.info(f"Job {job_id} finalizado com sucesso")
             
     except Exception as e:
+        current_app.logger.error(f"Erro geral no processamento do job {job_id}: {str(e)}")
         if job_id in jobs:
             jobs[job_id]['status'] = 'error'
             jobs[job_id]['error'] = str(e)
@@ -251,7 +384,7 @@ def cleanup_job(job_id):
     
     return jsonify({'success': True, 'message': 'Job removido com sucesso'})
 
-# Funções auxiliares para processamento de PDF (placeholder)
+# Funções auxiliares para processamento de PDF
 def extract_text_from_pdf(pdf_path):
     """Extrai texto de um arquivo PDF"""
     if not PDF_PROCESSING_AVAILABLE:
@@ -265,12 +398,150 @@ def extract_text_from_pdf(pdf_path):
                 text += page.extract_text()
             return text
     except Exception as e:
+        current_app.logger.error(f"Erro ao extrair texto do PDF {pdf_path}: {str(e)}")
         return f"Erro ao extrair texto: {str(e)}"
 
-def process_with_ai(text, prompt_template, api_key=None):
-    """Processa texto com IA (placeholder para integração real)"""
-    # Implementar integração real com Gemini ou outra IA
-    return {
-        "inconsistencias": ["Implementar análise real"],
-        "dados_extraidos": {"status": "placeholder"}
-    }
+def process_pdf_as_image(pdf_path, tipo_conferencia):
+    """Processa PDF convertendo para imagem quando texto não é extraível"""
+    try:
+        from pdf2image import convert_from_path
+        import base64
+        import io
+        
+        current_app.logger.info(f"Convertendo PDF para imagem: {pdf_path}")
+        
+        # Converter primeira página do PDF para imagem
+        images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=200)
+        
+        if not images:
+            return {"error": "Não foi possível converter PDF para imagem"}
+        
+        # Converter imagem para base64
+        img_buffer = io.BytesIO()
+        images[0].save(img_buffer, format='PNG')
+        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+        
+        # Processar com Gemini Vision
+        return process_with_ai_vision(img_base64, tipo_conferencia)
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao processar PDF como imagem {pdf_path}: {str(e)}")
+        return {"error": f"Erro no processamento de imagem: {str(e)}"}
+
+def process_with_ai(text, tipo_conferencia):
+    """Processa texto com IA usando Gemini"""
+    try:
+        import google.generativeai as genai
+        import os
+        
+        # Configurar Gemini
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            current_app.logger.error("GEMINI_API_KEY não configurada")
+            return {"error": "API Key do Gemini não configurada"}
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Obter prompt baseado no tipo de conferência
+        prompt_template = PROMPTS.get(tipo_conferencia, PROMPTS['inconsistencias'])
+        
+        # Construir prompt completo
+        full_prompt = f"{prompt_template}\n\n**DOCUMENTO A SER ANALISADO:**\n{text}"
+        
+        current_app.logger.info(f"Enviando texto para Gemini - Tamanho: {len(text)} caracteres")
+        
+        # Fazer request para o Gemini
+        response = model.generate_content(full_prompt)
+        
+        if not response.text:
+            return {"error": "Resposta vazia do Gemini"}
+        
+        current_app.logger.info("Resposta recebida do Gemini com sucesso")
+        
+        # Tentar parsear JSON da resposta
+        try:
+            import json
+            # Limpar resposta (remover markdown se houver)
+            clean_response = response.text.strip()
+            if clean_response.startswith('```json'):
+                clean_response = clean_response[7:]
+            if clean_response.endswith('```'):
+                clean_response = clean_response[:-3]
+            
+            parsed_result = json.loads(clean_response.strip())
+            return parsed_result
+            
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Erro ao parsear JSON do Gemini: {str(e)}")
+            current_app.logger.error(f"Resposta original: {response.text}")
+            return {
+                "error": "Erro ao parsear resposta da IA",
+                "raw_response": response.text
+            }
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao processar com Gemini: {str(e)}")
+        return {"error": f"Erro no processamento: {str(e)}"}
+
+def process_with_ai_vision(image_base64, tipo_conferencia):
+    """Processa imagem com Gemini Vision"""
+    try:
+        import google.generativeai as genai
+        import os
+        
+        # Configurar Gemini
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            return {"error": "API Key do Gemini não configurada"}
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Obter prompt baseado no tipo de conferência
+        prompt_template = PROMPTS.get(tipo_conferencia, PROMPTS['inconsistencias'])
+        
+        # Construir prompt para visão
+        vision_prompt = f"{prompt_template}\n\n**Analise a imagem do documento fornecida e extraia as informações conforme solicitado.**"
+        
+        current_app.logger.info("Enviando imagem para Gemini Vision")
+        
+        # Criar objeto de imagem
+        import PIL.Image
+        import io
+        import base64
+        
+        image_data = base64.b64decode(image_base64)
+        image = PIL.Image.open(io.BytesIO(image_data))
+        
+        # Fazer request para o Gemini Vision
+        response = model.generate_content([vision_prompt, image])
+        
+        if not response.text:
+            return {"error": "Resposta vazia do Gemini Vision"}
+        
+        current_app.logger.info("Resposta recebida do Gemini Vision com sucesso")
+        
+        # Tentar parsear JSON da resposta
+        try:
+            import json
+            # Limpar resposta
+            clean_response = response.text.strip()
+            if clean_response.startswith('```json'):
+                clean_response = clean_response[7:]
+            if clean_response.endswith('```'):
+                clean_response = clean_response[:-3]
+            
+            parsed_result = json.loads(clean_response.strip())
+            return parsed_result
+            
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Erro ao parsear JSON do Gemini Vision: {str(e)}")
+            return {
+                "error": "Erro ao parsear resposta da IA Vision",
+                "raw_response": response.text
+            }
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao processar com Gemini Vision: {str(e)}")
+        return {"error": f"Erro no processamento Vision: {str(e)}"}

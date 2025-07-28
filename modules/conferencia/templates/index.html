@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Conferência Documental IA - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('conferencia.static', filename='css/conferencia.css') }}">
+{% endblock %}
+
+{% block content %}
+    <!-- Sistema de notificações flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Header da Página -->
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="icon mdi mdi-file-document-multiple"></i>
+            Conferência Documental IA
+        </h1>
+        <p class="page-subtitle">
+            Análise inteligente de documentos aduaneiros com verificação automática de conformidade
+        </p>
+    </div>
+
+    <!-- Descrição da Página -->
+    <div class="page-description">
+        <p>
+            <strong>Sistema de Conferência Documental com Inteligência Artificial</strong> - 
+            Utilize nossa tecnologia avançada para verificar automaticamente a conformidade de documentos aduaneiros 
+            como invoices, packlists e conhecimentos de embarque.
+        </p>
+        <p>
+            <strong>Funcionalidades:</strong>
+        </p>
+        <ul>
+            <li>Extração inteligente de texto de documentos PDF</li>
+            <li>Verificação de conformidade com o Art. 557 do regulamento aduaneiro</li>
+            <li>Classificação de problemas em 3 níveis: erro crítico, alerta e observação</li>
+            <li>Análise baseada em IA (Google Gemini) para maior precisão</li>
+        </ul>
+    </div>
+
+    <!-- Seleção do Tipo de Conferência -->
+    <div class="main-card">
+        <h2 class="card-title">
+            <i class="icon mdi mdi-cog"></i>
+            Tipo de Conferência
+        </h2>
+        
+        <div class="radio-container">
+            <div class="radio-option selected">
+                <input type="radio" name="tipo_conferencia" value="inconsistencias" checked>
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Análise de Inconsistências Gerais</div>
+                    <div class="radio-option-desc">
+                        Verifica a estrutura geral do documento, campos obrigatórios ausentes, 
+                        consistência de datas, valores e identifica informações conflitantes.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="radio-option">
+                <input type="radio" name="tipo_conferencia" value="dados_estruturados">
+                <div class="radio-option-info">
+                    <div class="radio-option-title">Extração de Dados Estruturados</div>
+                    <div class="radio-option-desc">
+                        Extrai e organiza dados específicos como número da invoice, datas, 
+                        exportador, importador, itens da fatura e informações de incoterm.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload de Arquivos -->
+    <div class="upload-container">
+        <h2 class="upload-title">
+            <i class="mdi mdi-cloud-upload"></i>
+            Upload de Documentos
+        </h2>
+        
+        <div class="dropzone" id="dropzone">
+            <i class="dropzone-icon mdi mdi-file-pdf-box"></i>
+            <div class="dropzone-title">Arraste arquivos PDF aqui</div>
+            <div class="dropzone-subtitle">ou clique para selecionar arquivos</div>
+            <button type="button" class="btn btn-outline">
+                <i class="mdi mdi-folder-open"></i>
+                Selecionar Arquivos
+            </button>
+        </div>
+        
+        <input type="file" id="file-input" multiple accept=".pdf" style="display: none;">
+        
+        <div class="file-list" id="file-list"></div>
+        
+        <div style="text-align: center; margin-top: 1.5rem;">
+            <button type="button" id="upload-btn" class="btn btn-primary" disabled>
+                <i class="mdi mdi-upload"></i>
+                Selecione arquivos para processar
+            </button>
+        </div>
+    </div>
+
+    <!-- Timeline de Processamento -->
+    <div class="processing-timeline" id="processing-timeline">
+        <h2 class="timeline-title">
+            <i class="mdi mdi-progress-clock"></i>
+            Progresso do Processamento
+        </h2>
+        
+        <div class="timeline-steps">
+            <div class="timeline-step pending">
+                <div class="timeline-step-icon">
+                    <i class="mdi mdi-upload"></i>
+                </div>
+                <div class="timeline-step-title">Upload dos arquivos</div>
+            </div>
+            
+            <div class="timeline-step pending">
+                <div class="timeline-step-icon">
+                    <i class="mdi mdi-file-search"></i>
+                </div>
+                <div class="timeline-step-title">Extração de texto</div>
+            </div>
+            
+            <div class="timeline-step pending">
+                <div class="timeline-step-icon">
+                    <i class="mdi mdi-robot"></i>
+                </div>
+                <div class="timeline-step-title">Análise com IA</div>
+            </div>
+            
+            <div class="timeline-step pending">
+                <div class="timeline-step-icon">
+                    <i class="mdi mdi-check-circle"></i>
+                </div>
+                <div class="timeline-step-title">Processamento concluído</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container de Progresso -->
+    <div class="progress-container" id="progress-container">
+        <div class="progress-header">
+            <h3 class="progress-title">
+                <i class="mdi mdi-progress-clock"></i>
+                Processando Documentos
+            </h3>
+            <div class="progress-info" id="progress-info">0% concluído</div>
+        </div>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Container de Resultados -->
+    <div class="results-container" id="results-container">
+        <div class="results-header">
+            <h2 class="results-title">
+                <i class="mdi mdi-check-circle"></i>
+                Resultados da Análise
+            </h2>
+            <div class="results-summary">
+                Conferência concluída com sucesso
+            </div>
+        </div>
+        
+        <div class="results-cards" id="results-cards">
+            <!-- Os resultados serão inseridos aqui via JavaScript -->
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div class="details-container" id="details-container">
+        <div class="details-modal">
+            <div class="details-header">
+                <h3 class="details-title">Detalhes da Análise</h3>
+                <button class="details-close" id="close-details">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="details-content" id="details-content">
+                <!-- Conteúdo dos detalhes será inserido aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-message" id="loading-message">Processando...</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('conferencia.static', filename='js/conferencia.js') }}"></script>
+{% endblock %}
