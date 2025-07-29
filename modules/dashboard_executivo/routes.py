@@ -163,7 +163,9 @@ def dashboard_kpis():
             aguardando_embarque = len(df[df['status_normalizado'] == 'AG EMBARQUE'])
             aguardando_chegada = len(df[df['status_normalizado'] == 'AG CHEGADA'])
             aguardando_liberacao = len(df[df['status_normalizado'].isin(['DI REGISTRADA', 'AG REGISTRO', 'AG MAPA'])])
-            agd_entrega = len(df[df['status_normalizado'] == 'AG ENTREGA'])
+            agd_entrega = len(df[df['status_normalizado'].isin([
+                'AG. CARREGAMENTO', 'AG CARREGAMENTO', 'CARREGAMENTO AGENDADO'
+            ])])
             aguardando_fechamento = len(df[df['status_normalizado'] == 'AG FECHAMENTO'])
             
             print(f"[DEBUG_KPI] Status counts:")
