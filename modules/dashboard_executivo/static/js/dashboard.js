@@ -289,11 +289,11 @@ function updateDashboardKPIs(kpis) {
     updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo));
     updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana));
     updateKPIValue('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo));
-    updateKPIValue('kpi-aguardando-embarque', formatNumber(kpis.aguardando_embarque || 0));
-    updateKPIValue('kpi-aguardando-chegada', formatNumber(kpis.aguardando_chegada || 0));
-    updateKPIValue('kpi-aguardando-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
+    updateKPIValue('kpi-Agd-embarque', formatNumber(kpis.aguardando_embarque || 0));
+    updateKPIValue('kpi-Agd-chegada', formatNumber(kpis.aguardando_chegada || 0));
+    updateKPIValue('kpi-Agd-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
     updateKPIValue('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
-    updateKPIValue('kpi-aguardando-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
+    updateKPIValue('kpi-Agd-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
     updateKPIValue('kpi-transit-time', formatNumber(kpis.transit_time_medio, 1) + ' dias');
     updateKPIValue('kpi-proc-mes', formatNumber(kpis.processos_mes, 1));
     updateKPIValue('kpi-proc-semana', formatNumber(kpis.processos_semana, 1));
