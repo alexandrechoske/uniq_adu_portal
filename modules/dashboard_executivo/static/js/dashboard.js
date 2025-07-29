@@ -118,7 +118,7 @@ function initializeEnhancedTable() {
             <td>${formatDate(operation.data_abertura)}</td>
             <td>${operation.exportador_fornecedor || '-'}</td>
             <td>${getModalBadge(operation.modal)}</td>
-            <td>${getStatusBadge(operation.status_macro_sistema || operation.status)}</td>
+            <td>${getStatusBadge(operation.status_macro_sistema || operation.status_processo || operation.status)}</td>
             <td><span class="currency-value">${formatCurrency(operation.custo_total || 0)}</span></td>
             <td>${formatDataChegada(operation.data_chegada)}</td>
             <td>${operation.mercadoria || '-'}</td>
@@ -170,6 +170,7 @@ function setupFilterEventListeners() {
     const filterModal = document.getElementById('filter-modal');
     const applyFiltersBtn = document.getElementById('apply-filters');
     const clearFiltersBtn = document.getElementById('clear-filters');
+    const resetFiltersBtn = document.getElementById('reset-filters'); // NOVO
     
     if (openFiltersBtn) {
         openFiltersBtn.addEventListener('click', openFilterModal);
@@ -185,6 +186,11 @@ function setupFilterEventListeners() {
     
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', clearFilters);
+    }
+    
+    // NOVO: Reset filters button
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', resetAllFilters);
     }
     
     // Click outside modal to close
@@ -535,6 +541,9 @@ function createMonthlyChart(data) {
                             display: true,
                             text: 'Custo Total (R$)'
                         },
+                        ticks: {
+                            display: false // Remove valores do eixo Y
+                        },
                         grid: {
                             drawOnChartArea: false, // Remove grades do fundo
                         }
@@ -546,6 +555,9 @@ function createMonthlyChart(data) {
                         title: {
                             display: true,
                             text: 'Quantidade de Processos'
+                        },
+                        ticks: {
+                            display: false // Remove valores do eixo Y1
                         },
                         grid: {
                             drawOnChartArea: false, // Remove grades do fundo
@@ -716,6 +728,9 @@ function createGroupedModalChart(data) {
                             display: true,
                             text: 'Quantidade de Processos'
                         },
+                        ticks: {
+                            display: false // Remove valores do eixo Y
+                        },
                         grid: {
                             drawOnChartArea: false // Remove grades do fundo
                         }
@@ -728,6 +743,9 @@ function createGroupedModalChart(data) {
                         title: {
                             display: true,
                             text: 'Custo Total (R$)'
+                        },
+                        ticks: {
+                            display: false // Remove valores do eixo Y1
                         },
                         grid: {
                             drawOnChartArea: false // Remove grades do fundo
@@ -1473,13 +1491,13 @@ function getModalBadge(modal) {
     // Normalizar o texto para maiúsculo
     const modalUpper = String(modal).toUpperCase().trim();
     
-    // Mapeamento de ícones e cores para os modais
+    // Mapeamento de ícones para os modais (apenas ícone, sem texto na tabela)
     if (modalUpper.includes('MARÍTIMA') || modalUpper.includes('MARITIMA')) {
-        return `<span class="badge badge-info"><i class="mdi mdi-ferry"></i> ${modalUpper}</span>`;
+        return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-ferry"></i></span>`;
     } else if (modalUpper.includes('AÉREA') || modalUpper.includes('AEREA')) {
-        return `<span class="badge badge-primary"><i class="mdi mdi-airplane"></i> ${modalUpper}</span>`;
+        return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-airplane"></i></span>`;
     } else {
-        return `<span class="badge badge-secondary">${modalUpper}</span>`;
+        return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-truck"></i></span>`;
     }
 }
 
@@ -1667,6 +1685,9 @@ async function applyFilters() {
         // Update filter summary
         updateFilterSummary();
         
+        // Show/hide reset button based on active filters
+        updateResetButtonVisibility();
+        
         // Close modal
         closeFilterModal();
         
@@ -1678,7 +1699,7 @@ async function applyFilters() {
         ]);
         
         showLoading(false);
-        showSuccess('Filtros aplicados com sucesso!');
+        // Removido o popup de confirmação
         
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros:', error);
@@ -1711,6 +1732,68 @@ function clearFilters() {
     updateFilterSummary();
     
     showSuccess('Filtros limpos!');
+}
+
+/**
+ * Reset all filters and reload data
+ */
+async function resetAllFilters() {
+    try {
+        showLoading(true);
+        
+        // Clear form inputs
+        document.getElementById('data-inicio').value = '';
+        document.getElementById('data-fim').value = '';
+        document.getElementById('material-filter').value = '';
+        document.getElementById('cliente-filter').value = '';
+        document.getElementById('modal-filter').value = '';
+        document.getElementById('canal-filter').value = '';
+        
+        // Clear active buttons
+        document.querySelectorAll('.btn-quick').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Clear stored filters
+        currentFilters = {};
+        
+        // Update summary
+        updateFilterSummary();
+        
+        // Hide reset button
+        updateResetButtonVisibility();
+        
+        // Reload data without filters
+        await Promise.all([
+            loadDashboardKPIs(),
+            loadDashboardCharts(),
+            loadRecentOperations()
+        ]);
+        
+        showLoading(false);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao resetar filtros:', error);
+        showError('Erro ao resetar filtros: ' + error.message);
+        showLoading(false);
+    }
+}
+
+/**
+ * Update reset button visibility based on active filters
+ */
+function updateResetButtonVisibility() {
+    const resetBtn = document.getElementById('reset-filters');
+    if (!resetBtn) return;
+    
+    // Check if any filter is active
+    const hasActiveFilters = Object.values(currentFilters).some(value => value && value.trim() !== '');
+    
+    if (hasActiveFilters) {
+        resetBtn.style.display = 'inline-block';
+    } else {
+        resetBtn.style.display = 'none';
+    }
 }
 
 /**

@@ -617,7 +617,7 @@ def recent_operations():
         relevant_columns = [
             # Colunas para a tabela
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
-            'modal', 'status_processo', 'custo_total', 'data_chegada',
+            'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'data_chegada',
             
             # Colunas adicionais para o modal
             'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque',

@@ -599,6 +599,32 @@
     font-weight: 500;
 }
 
+/* Modal Icon Badge Styles */
+.modal-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    color: #495057;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    cursor: help;
+}
+
+.modal-icon-badge:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+    transform: scale(1.1);
+}
+
+.modal-icon-badge i {
+    font-size: 16px;
+}
+
 /* Responsive Filter Modal */
 @media (max-width: 768px) {
     .filter-modal-content {
@@ -618,5 +644,11 @@
         margin-left: 10px;
         font-size: 0.8rem;
         padding: 6px 12px;
+    }
+    
+    .modal-icon-badge {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
     }
 }
