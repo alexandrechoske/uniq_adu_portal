@@ -30,6 +30,21 @@ except ImportError:
     SUPABASE_AVAILABLE = False
     print("[ACCESS_LOG_WARNING] Supabase não disponível - logs serão apenas no console")
 
+# Fallback: criar cliente direto se extensions não funcionar
+def _create_direct_supabase():
+    """Cria cliente Supabase diretamente em caso de falha de import"""
+    try:
+        from supabase import create_client
+        SUPABASE_URL = os.getenv("SUPABASE_URL")
+        SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+        if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+            print("[ACCESS_LOG_WARNING] SUPABASE_URL ou SUPABASE_SERVICE_KEY não definidos no ambiente")
+            return None
+        return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    except Exception as e:
+        print(f"[ACCESS_LOG_WARNING] Falha ao criar cliente direto: {e}")
+        return None
+
 class AccessLogger:
     """
     Serviço para registrar logs de acesso dos usuários
@@ -148,7 +163,24 @@ class AccessLogger:
     def _insert_log_safe(self, log_data):
         """Insere log de forma segura com fallback"""
         try:
+            # Verificar se supabase_admin está disponível
+            client = None
+            
             if self.console_only or not SUPABASE_AVAILABLE:
+                client = None
+            else:
+                # Tentar usar supabase_admin das extensions
+                try:
+                    from extensions import supabase_admin
+                    client = supabase_admin
+                except ImportError:
+                    client = None
+                
+                # Se ainda for None, tentar criar cliente direto
+                if client is None:
+                    client = _create_direct_supabase()
+            
+            if client is None:
                 # Fallback para console
                 action = log_data.get('action_type', 'unknown')
                 user = log_data.get('user_email', 'Anonymous')
@@ -157,10 +189,12 @@ class AccessLogger:
                 return True
             
             # Tentar inserir no Supabase com timeout
-            result = supabase_admin.table('access_logs').insert(log_data).execute()
+            result = client.table('access_logs').insert(log_data).execute()
             
             if result.data and len(result.data) > 0:
-                return result.data[0].get('id')
+                log_id = result.data[0].get('id')
+                print(f"[ACCESS_LOG] ✅ {log_data.get('action_type', 'unknown')} - {log_data.get('user_email', 'Anonymous')} - {log_data.get('page_name', 'Unknown')} - ID: {log_id}")
+                return log_id
             return True
             
         except Exception as e:
@@ -244,9 +278,22 @@ class AccessLogger:
         if log_id and log_id != True and not self.console_only:
             try:
                 response_time = int((time.time() - start_time) * 1000)
-                supabase_admin.table('access_logs').update({
-                    'response_time': response_time
-                }).eq('id', log_id).execute()
+                
+                # Tentar usar o mesmo cliente que foi usado para inserir
+                client = None
+                try:
+                    from extensions import supabase_admin
+                    client = supabase_admin
+                except ImportError:
+                    pass
+                
+                if client is None:
+                    client = _create_direct_supabase()
+                
+                if client:
+                    client.table('access_logs').update({
+                        'response_time': response_time
+                    }).eq('id', log_id).execute()
             except:
                 pass  # Ignora erro de update de response_time
         
