@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function init() {
         setupEventListeners();
         
-        // Se estamos editando um usuário cliente, carregar empresas automaticamente
-        if (roleSelect && roleSelect.value === 'cliente_unique') {
+        // Se estamos editando um usuário cliente ou interno, carregar empresas automaticamente
+        if (roleSelect && (roleSelect.value === 'cliente_unique' || roleSelect.value === 'interno_unique')) {
             showEmpresasSection();
             loadEmpresas();
         }
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const role = roleSelect.value;
         console.log('[DEBUG] Role alterada para:', role);
 
-        if (role === 'cliente_unique') {
+        if (role === 'cliente_unique' || role === 'interno_unique') {
             showEmpresasSection();
             if (!empresasLoaded) {
                 loadEmpresas();
@@ -214,8 +214,8 @@ document.addEventListener('DOMContentLoaded', function() {
     async function handleFormSubmit(event) {
         console.log('[DEBUG] Enviando formulário');
 
-        // Se for cliente_unique, salvar empresas associadas
-        if (roleSelect?.value === 'cliente_unique' && selectedEmpresas.size > 0) {
+        // Se for cliente_unique ou interno_unique, salvar empresas associadas
+        if ((roleSelect?.value === 'cliente_unique' || roleSelect?.value === 'interno_unique') && selectedEmpresas.size > 0) {
             event.preventDefault();
             
             showFormLoading(true);

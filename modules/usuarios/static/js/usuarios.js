@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mostrar/esconder seção de empresas
         const empresasSection = document.getElementById('edit-empresas-section');
-        if (user.role === 'cliente_unique') {
+        if (user.role === 'cliente_unique' || user.role === 'interno_unique') {
             empresasSection.style.display = 'block';
             loadUserEmpresas(user.id);
         } else {
@@ -774,7 +774,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editRoleSelect) {
         editRoleSelect.addEventListener('change', function() {
             const empresasSection = document.getElementById('edit-empresas-section');
-            if (this.value === 'cliente_unique') {
+            if (this.value === 'cliente_unique' || this.value === 'interno_unique') {
                 empresasSection.style.display = 'block';
             } else {
                 empresasSection.style.display = 'none';

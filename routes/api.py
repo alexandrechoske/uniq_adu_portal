@@ -69,14 +69,22 @@ def get_currencies():
     }
 
 def get_user_companies(user_data):
-    """Get companies that the user has access to"""
+    """Get companies that the user has access to - atualizado para incluir interno_unique"""
     print(f"[API] get_user_companies chamado para usuário: {user_data.get('id')}")
     print(f"[API] User role: {user_data.get('role')}")
     
-    if user_data['role'] == 'cliente_unique':
+    user_role = user_data.get('role')
+    
+    # Para admin, retornar lista vazia (acesso total)
+    if user_role == 'admin':
+        print(f"[API] Usuário admin - acesso total")
+        return []
+    
+    # Para cliente_unique e interno_unique, buscar empresas associadas
+    if user_role in ['cliente_unique', 'interno_unique']:
         try:
             user_id = user_data['id']
-            print(f"[API] Buscando empresas para user_id: {user_id}")
+            print(f"[API] Buscando empresas para user_id: {user_id} (role: {user_role})")
             
             agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
             print(f"[API] Resposta da query clientes_agentes: {agent_response.data}")
@@ -99,10 +107,10 @@ def get_user_companies(user_data):
                         normalized_companies.append(normalized)
                         print(f"[API] CNPJ normalizado: {company} -> {normalized}")
                 
-                print(f"[API] Empresas normalizadas finais: {normalized_companies}")
+                print(f"[API] Empresas normalizadas finais para {user_role}: {normalized_companies}")
                 return normalized_companies
             else:
-                print(f"[API] Nenhuma empresa encontrada para o usuário")
+                print(f"[API] Nenhuma empresa encontrada para o usuário {user_role}")
                 return []
                 
         except Exception as e:
@@ -110,7 +118,7 @@ def get_user_companies(user_data):
             logger.error(f"Erro ao buscar empresas do usuário: {str(e)}")
             return []
     else:
-        print(f"[API] Usuário não é cliente_unique, retornando lista vazia")
+        print(f"[API] Usuário role {user_role} não requer filtragem de empresas")
         return []
 
 @bp.route('/global-data')

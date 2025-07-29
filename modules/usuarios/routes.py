@@ -17,8 +17,35 @@ bp = Blueprint('usuarios', __name__,
 
 VALID_ROLES = ['admin', 'interno_unique', 'cliente_unique']
 
-def retry_supabase_operation(operation, max_retries=3, delay=1):
-    """Executa operação no Supabase com retry automático em caso de falha"""
+# Cache simples em memória para usuários (TTL: 5 minutos)
+_users_cache = {'data': None, 'timestamp': 0, 'ttl': 300}
+
+def get_cached_users():
+    """Retorna usuários do cache se válido, senão recarrega"""
+    current_time = time.time()
+    
+    if (_users_cache['data'] is not None and 
+        current_time - _users_cache['timestamp'] < _users_cache['ttl']):
+        print(f"[DEBUG] Usando cache de usuários ({len(_users_cache['data'])} usuários)")
+        return _users_cache['data']
+    
+    print("[DEBUG] Cache expirado ou inexistente, recarregando usuários...")
+    users = carregar_usuarios()
+    
+    # Atualizar cache
+    _users_cache['data'] = users
+    _users_cache['timestamp'] = current_time
+    
+    return users
+
+def invalidate_users_cache():
+    """Invalida o cache de usuários"""
+    global _users_cache
+    _users_cache = {'data': None, 'timestamp': 0, 'ttl': 300}
+    print("[DEBUG] Cache de usuários invalidado")
+
+def retry_supabase_operation(operation, max_retries=2, delay=0.5):
+    """Executa operação no Supabase com retry otimizado (menos agressivo)"""
     for attempt in range(max_retries):
         try:
             return operation()
@@ -28,7 +55,6 @@ def retry_supabase_operation(operation, max_retries=3, delay=1):
                 if attempt < max_retries - 1:
                     print(f"[DEBUG] Tentativa {attempt + 1} falhou, tentando novamente em {delay}s...")
                     time.sleep(delay)
-                    delay *= 2  # Backoff exponencial
                     continue
                 else:
                     print(f"[DEBUG] Todas as tentativas falharam após {max_retries} tentativas")
@@ -63,24 +89,20 @@ def verificar_empresa_ja_associada(user_id, cnpj):
         return False
 
 def carregar_usuarios():
-    """Função auxiliar para carregar usuários do banco de dados com retry automático"""
+    """Função auxiliar otimizada para carregar usuários do banco de dados"""
     try:
-        print("[DEBUG] Iniciando busca de usuários")
+        print("[DEBUG] Iniciando busca otimizada de usuários")
+        start_time = time.time()
         
         if not supabase:
             raise Exception("Cliente Supabase não está inicializado")
         
-        # Função para buscar usuários com retry
+        # 1. Buscar todos os usuários ordenados por nome
         def _buscar_usuarios():
-            return supabase_admin.table('users').select('*').execute()
+            return supabase_admin.table('users').select('*').order('name').execute()
         
-        # Usar retry para buscar usuários
         users_response = retry_supabase_operation(_buscar_usuarios)
         
-        print(f"[DEBUG] Resposta da busca: {users_response}")
-        print(f"[DEBUG] Tipo da resposta: {type(users_response)}")
-        
-        # Verificar se houve erro na resposta
         if hasattr(users_response, 'error') and users_response.error:
             raise Exception(f"Erro do Supabase: {users_response.error}")
         
@@ -89,72 +111,89 @@ def carregar_usuarios():
             
         users = users_response.data
         
-        print(f"[DEBUG] Usuários encontrados: {len(users) if users else 0}")
-        
         if not users:
-            print("[DEBUG] Nenhum usuário encontrado - retornando lista vazia")
+            print("[DEBUG] Nenhum usuário encontrado")
             return []
         
+        print(f"[DEBUG] {len(users)} usuários encontrados")
+        
+        # 2. Buscar todas as associações de empresas de uma vez
+        def _buscar_todas_empresas():
+            return supabase_admin.table('clientes_agentes').select('user_id, empresa').execute()
+        
+        empresas_response = retry_supabase_operation(_buscar_todas_empresas)
+        
+        # Criar mapa de usuário -> empresas
+        user_empresas_map = {}
+        all_cnpjs = set()
+        
+        if empresas_response.data:
+            for item in empresas_response.data:
+                user_id = item.get('user_id')
+                empresas = item.get('empresa', [])
+                
+                # Normalizar formato da lista de empresas
+                if isinstance(empresas, str):
+                    try:
+                        empresas = json.loads(empresas)
+                    except json.JSONDecodeError:
+                        empresas = [empresas] if empresas else []
+                elif not isinstance(empresas, list):
+                    empresas = []
+                
+                user_empresas_map[user_id] = empresas
+                all_cnpjs.update(empresas)
+        
+        # 3. Buscar informações de todas as empresas em lotes
+        empresas_info_map = {}
+        if all_cnpjs:
+            cnpjs_list = list(all_cnpjs)
+            print(f"[DEBUG] Buscando informações de {len(cnpjs_list)} empresas em lotes...")
+            
+            # Buscar em lotes de 50 para evitar URLs muito grandes
+            batch_size = 50
+            for i in range(0, len(cnpjs_list), batch_size):
+                batch = cnpjs_list[i:i + batch_size]
+                try:
+                    def _buscar_lote_empresas():
+                        return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').in_('cnpj', batch).execute()
+                    
+                    batch_response = retry_supabase_operation(_buscar_lote_empresas)
+                    
+                    if batch_response.data:
+                        for empresa in batch_response.data:
+                            empresas_info_map[empresa['cnpj']] = empresa
+                            
+                except Exception as e:
+                    print(f"[DEBUG] Erro ao buscar lote de empresas: {str(e)}")
+        
+        # 4. Montar dados finais dos usuários
         for user in users:
             if not isinstance(user, dict):
-                print(f"[DEBUG] Usuário em formato inválido: {user}")
                 continue
                 
-            if user.get('role') == 'cliente_unique':
-                try:
-                    # Usar retry para buscar empresas do cliente
-                    def _buscar_empresas_cliente():
-                        return supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
-                    
-                    agent_response = retry_supabase_operation(_buscar_empresas_cliente)
-                    user['agent_info'] = {'empresas': []}
-                    
-                    if agent_response.data and len(agent_response.data) > 0 and agent_response.data[0].get('empresa'):
-                        empresas = agent_response.data[0].get('empresa', [])
-                        if isinstance(empresas, str):
-                            try:
-                                empresas = json.loads(empresas)
-                            except json.JSONDecodeError:
-                                empresas = [empresas] if empresas else []
-                        elif not isinstance(empresas, list):
-                            empresas = []
-                        
-                        empresas_detalhadas = []
-                        for cnpj in empresas:
-                            if isinstance(cnpj, str):
-                                try:
-                                    # Usar retry para buscar dados da empresa
-                                    def _buscar_dados_empresa():
-                                        return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
-                                    
-                                    empresa_info = retry_supabase_operation(_buscar_dados_empresa)
-                                    if empresa_info.data and len(empresa_info.data) > 0:
-                                        empresa_data = empresa_info.data[0]
-                                        razao = empresa_data.get('razao_social')
-                                        empresas_detalhadas.append({
-                                            'cnpj': empresa_data.get('cnpj'),
-                                            'razao_social': razao if razao else None
-                                        })
-                                    else:
-                                        empresas_detalhadas.append({
-                                            'cnpj': cnpj
-                                        })
-                                except Exception as empresa_error:
-                                    print(f"[DEBUG] Erro ao buscar dados da empresa {cnpj}: {str(empresa_error)}")
-                                    empresas_detalhadas.append({
-                                        'cnpj': cnpj
-                                    })
-                        user['agent_info']['empresas'] = empresas_detalhadas
-                except Exception as e:
-                    print(f"[DEBUG] Erro ao buscar empresas para usuário {user.get('id')}: {str(e)}")
-                    user['agent_info'] = {'empresas': []}
+            # Incluir tanto cliente_unique quanto interno_unique
+            if user.get('role') in ['cliente_unique', 'interno_unique']:
+                user_id = user.get('id')
+                empresas_cnpjs = user_empresas_map.get(user_id, [])
+                
+                empresas_detalhadas = []
+                for cnpj in empresas_cnpjs:
+                    if isinstance(cnpj, str) and cnpj:
+                        empresa_info = empresas_info_map.get(cnpj, {'cnpj': cnpj, 'razao_social': None})
+                        empresas_detalhadas.append(empresa_info)
+                
+                user['agent_info'] = {'empresas': empresas_detalhadas}
             else:
                 user['agent_info'] = {'empresas': []}
         
+        end_time = time.time()
+        print(f"[DEBUG] Carregamento otimizado concluído em {end_time - start_time:.2f}s")
+        
         return users
+        
     except Exception as e:
-        print(f"[DEBUG] Erro ao carregar usuários: {str(e)}\nTipo do erro: {type(e)}")
-        print("[DEBUG] Traceback completo:")
+        print(f"[DEBUG] Erro ao carregar usuários: {str(e)}")
         print(traceback.format_exc())
         raise e
 
@@ -163,7 +202,7 @@ def carregar_usuarios():
 @role_required(['admin'])
 def index():
     try:
-        users = carregar_usuarios()
+        users = get_cached_users()
         return render_template('usuarios.html', users=users)
     except Exception as e:
         flash(f'Erro ao carregar usuários: {str(e)}', 'error')
@@ -173,14 +212,15 @@ def index():
 @login_required
 @role_required(['admin'])
 def refresh():
-    """Endpoint para forçar atualização da lista de usuários"""
+    """Endpoint para forçar atualização da lista de usuários invalidando cache"""
     try:
-        users = carregar_usuarios()
+        invalidate_users_cache()
+        users = get_cached_users()
         flash('Lista de usuários atualizada com sucesso!', 'success')
-        return render_template('index.html', users=users)
+        return render_template('usuarios.html', users=users)
     except Exception as e:
         flash(f'Erro ao atualizar lista de usuários: {str(e)}', 'error')
-        return render_template('index.html', users=[])
+        return render_template('usuarios.html', users=[])
 
 @bp.route('/novo', methods=['GET'])
 @login_required
@@ -292,6 +332,7 @@ def salvar(user_id=None):
             
             if response.data:
                 print(f"[DEBUG] Usuário atualizado com sucesso: {response.data}")
+                invalidate_users_cache()  # Invalidar cache após atualização
                 flash('Usuário atualizado com sucesso!', 'success')
             else:
                 print(f"[DEBUG] Erro ao atualizar usuário: {response}")
@@ -339,6 +380,7 @@ def salvar(user_id=None):
                     
                     if response.data:
                         print(f"[DEBUG] Usuário criado/atualizado com sucesso: {response.data}")
+                        invalidate_users_cache()  # Invalidar cache após mudança
                         flash('Usuário criado com sucesso!', 'success')
                     else:
                         print(f"[DEBUG] Erro ao inserir/atualizar usuário na tabela: {response}")
@@ -404,6 +446,7 @@ def deletar(user_id):
         
         if response.data or response.count == 0:  # Supabase pode retornar count=0 para deletes bem-sucedidos
             print(f"[DEBUG] Usuário deletado com sucesso")
+            invalidate_users_cache()  # Invalidar cache após exclusão
             flash(f'Usuário {user.get("name", "desconhecido")} deletado com sucesso!', 'success')
         else:
             print(f"[DEBUG] Erro ao deletar usuário: {response}")
@@ -1207,3 +1250,48 @@ def obter_dados_usuario(user_id):
     except Exception as e:
         print(f"[DEBUG] Erro ao obter dados do usuário: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/performance-stats')
+@login_required
+@role_required(['admin'])
+def performance_stats():
+    """Endpoint para estatísticas de performance do módulo de usuários"""
+    cache_info = {
+        'users_cache_active': _users_cache['data'] is not None,
+        'users_cache_size': len(_users_cache['data']) if _users_cache['data'] else 0,
+        'users_cache_age_seconds': time.time() - _users_cache['timestamp'],
+        'users_cache_ttl_seconds': _users_cache['ttl'],
+        'valid_roles': VALID_ROLES
+    }
+    
+    return jsonify({
+        'success': True,
+        'cache_info': cache_info,
+        'optimizations': [
+            'Cache em memória implementado (TTL: 5 minutos)',
+            'Busca de empresas em lotes (batch de 50)',
+            'Retry reduzido para 2 tentativas com delay menor',
+            'Suporte a interno_unique com regras de cliente',
+            'Invalidação automática do cache após mudanças'
+        ],
+        'timestamp': datetime.datetime.now().isoformat()
+    })
+
+@bp.route('/clear-cache', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def clear_cache():
+    """Limpar cache de usuários manualmente"""
+    try:
+        invalidate_users_cache()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cache de usuários limpo com sucesso'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

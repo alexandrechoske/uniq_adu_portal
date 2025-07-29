@@ -175,9 +175,9 @@
                             </div>
                         </div>
 
-                        <!-- Seção de Empresas (apenas para clientes) -->
+                        <!-- Seção de Empresas (para clientes e usuários internos) -->
                         <div id="empresas-section" class="form-group full-width" 
-                             style="{% if not user or user.role != 'cliente_unique' %}display: none;{% endif %}">
+                             style="{% if not user or (user.role != 'cliente_unique' and user.role != 'interno_unique') %}display: none;{% endif %}">
                             <div class="empresas-section">
                                 <div class="empresas-header">
                                     <h3 class="empresas-title">
