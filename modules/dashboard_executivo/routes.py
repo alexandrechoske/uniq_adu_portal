@@ -133,26 +133,26 @@ def dashboard_kpis():
         total_despesas = df['custo_total'].sum() if 'custo_total' in df.columns else 0
         ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
 
-        # Função para normalizar status_macro_sistema
+        # Função robusta para normalizar status
+        import unicodedata, re
         def normalize_status(status):
-            if pd.isna(status):
+            if pd.isna(status) or not status:
                 return ""
-            status = str(status).strip().upper()
-            # Normalizar variações dos status
-            if 'AG EMBARQUE' in status or 'AG. EMBARQUE' in status:
-                return 'AG EMBARQUE'
-            elif 'AG CARREGAMENTO' in status or 'AG. CARREGAMENTO' in status:
-                return 'AG CARREGAMENTO'
-            elif 'AG CHEGADA' in status:
-                return 'AG CHEGADA'
-            elif 'AG. ENTREGA DA DHL NO IMPORTADOR' in status:
-                return 'AG ENTREGA'
-            elif 'AG. FECHAMENTO' in status:
-                return 'AG FECHAMENTO'
-            elif 'AG. REGISTRO' in status:
-                return 'AG REGISTRO'
-            elif 'AG MAPA' in status:
-                return 'AG MAPA'
+            status = unicodedata.normalize('NFKD', str(status)).encode('ASCII', 'ignore').decode('ASCII')
+            status = status.upper()
+            status = re.sub(r'[^A-Z0-9 ]', '', status)
+            status = re.sub(r'\s+', ' ', status)
+            status = status.strip()
+            # Normalizações finais para garantir agrupamento correto
+            if status in ['AG EMBARQUE', 'AG EMBARQUE']: return 'AG EMBARQUE'
+            if status in ['AG CHEGADA', 'AG CHEGADA']: return 'AG CHEGADA'
+            if status in ['AG CARREGAMENTO', 'AG CARREGAMENTO']: return 'AG CARREGAMENTO'
+            if status in ['AG FECHAMENTO', 'AG FECHAMENTO']: return 'AG FECHAMENTO'
+            if status in ['AG REGISTRO', 'AG REGISTRO']: return 'AG REGISTRO'
+            if status in ['AG MAPA', 'AG MAPA']: return 'AG MAPA'
+            if status in ['DI REGISTRADA', 'DI REGISTRADA']: return 'DI REGISTRADA'
+            if status in ['DI DESEMBARACADA', 'DI DESEMBARACADA']: return 'DI DESEMBARACADA'
+            if status in ['NUMERARIO ENVIADO', 'NUMERARIO ENVIADO']: return 'NUMERARIO ENVIADO'
             return status
 
         # Aplicar normalização se a coluna existir
