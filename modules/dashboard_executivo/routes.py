@@ -181,22 +181,18 @@ def dashboard_kpis():
             agd_entrega = 0
             aguardando_fechamento = 0
 
-        # Chegando/Chegando este mês/semana (quantidade e custo)
+        # Chegando Este Mês/Semana: considerar TODAS as datas de chegada dentro do mês/semana (igual dashboard materiais)
         hoje = pd.Timestamp.now().normalize()
         primeiro_dia_mes = hoje.replace(day=1)
         ultimo_dia_mes = (primeiro_dia_mes + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
-        
         # Calcular semana atual (domingo a sábado)
         dias_desde_domingo = (hoje.dayofweek + 1) % 7  # 0=domingo, 1=segunda, etc.
         inicio_semana = hoje - pd.Timedelta(days=dias_desde_domingo)
         fim_semana = inicio_semana + pd.Timedelta(days=6)
-        
-        # Chegando = data_chegada >= hoje (futuro)
         chegando_mes = 0
         chegando_mes_custo = 0
         chegando_semana = 0
         chegando_semana_custo = 0
-        
         if 'data_chegada' in df.columns:
             df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
             print(f"[DEBUG_KPI] Total registros: {len(df)}")
@@ -204,26 +200,20 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Hoje: {hoje.strftime('%d/%m/%Y')}")
             print(f"[DEBUG_KPI] Semana: {inicio_semana.strftime('%d/%m/%Y')} a {fim_semana.strftime('%d/%m/%Y')}")
             print(f"[DEBUG_KPI] Mês: {primeiro_dia_mes.strftime('%d/%m/%Y')} a {ultimo_dia_mes.strftime('%d/%m/%Y')}")
-            
             for idx, row in df.iterrows():
                 chegada = row.get('chegada_dt')
                 custo = row.get('custo_total', 0) or 0
                 data_str = row.get('data_chegada', 'SEM DATA')
-                
-                if pd.notnull(chegada) and idx < 5:  # Log apenas os primeiros 5
-                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Futuro: {chegada >= hoje} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
-                
-                if pd.notnull(chegada) and chegada >= hoje:  # Apenas datas futuras (chegando)
-                    # Lógica para MÊS
-                    if primeiro_dia_mes <= chegada <= ultimo_dia_mes:
-                        chegando_mes += 1
-                        chegando_mes_custo += custo
-                    
-                    # Lógica para SEMANA
-                    if inicio_semana <= chegada <= fim_semana:
-                        chegando_semana += 1
-                        chegando_semana_custo += custo
-            
+                if pd.notnull(chegada) and idx < 5:
+                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
+                # Lógica para MÊS (independente de ser passado ou futuro)
+                if pd.notnull(chegada) and primeiro_dia_mes <= chegada <= ultimo_dia_mes:
+                    chegando_mes += 1
+                    chegando_mes_custo += custo
+                # Lógica para SEMANA (independente de ser passado ou futuro)
+                if pd.notnull(chegada) and inicio_semana <= chegada <= fim_semana:
+                    chegando_semana += 1
+                    chegando_semana_custo += custo
             print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}")
             print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}")
 
