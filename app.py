@@ -4,6 +4,7 @@ import os
 import signal
 from extensions import init_supabase
 from session_handler import init_session_handler
+from services.logging_middleware import logging_middleware
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -83,6 +84,9 @@ from modules.paginas.routes import paginas_bp
 # Import modular menu blueprint
 from modules.menu.routes import bp as menu_bp
 
+# Import modular analytics blueprint
+from modules.analytics import analytics_bp
+
 # Import shared blueprint
 from modules.shared.routes import shared_bp
 
@@ -135,6 +139,12 @@ app.register_blueprint(documents_bp)  # Document management
 
 # Register modular menu blueprint
 app.register_blueprint(menu_bp)  # Menu modular
+
+# Register modular analytics blueprint
+app.register_blueprint(analytics_bp)  # Analytics modular
+
+# Initialize logging middleware (após registrar todos os blueprints)
+logging_middleware.init_app(app)
 
 # Debug das rotas registradas
 print("\n[DEBUG] ===== Rotas Registradas =====")

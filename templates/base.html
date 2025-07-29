@@ -698,6 +698,14 @@
                     <i class="mdi mdi-image-multiple text-xl"></i>
                     <span class="sidebar-text">Ícones Materiais</span>
                 </a>
+                
+                <!-- Analytics Dashboard -->
+                <a href="{{ url_for('analytics.dashboard') }}" 
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
+                   title="Analytics Dashboard">
+                    <i class="mdi mdi-chart-line text-xl"></i>
+                    <span class="sidebar-text">Analytics</span>
+                </a>
             </div>
             {% endif %}
             </nav>

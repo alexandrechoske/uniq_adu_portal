@@ -173,3 +173,12 @@ SEMPRE QUE PRECISAR REALIZAR O BYPASS EM REQUISIÇÕES, FAZER ASSIM:
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
 BASE_URL = 'http://localhost:5000'
 headers = {'X-API-Key': API_BYPASS_KEY, 'Content-Type': 'application/json'}
+
+SEMPRE QUE FOI CRIAR UM NOVO MÓDULO, A ESTRUTURA DA PASTA DEVE SER A SEGUINTE:
+```
+modules/[nome_do_modulo]/__init__.py
+modules/[nome_do_modulo]/routes.py
+modules/[nome_do_modulo]/templates/[nome_do_modulo]/[nome_do_modulo].html
+modules/[nome_do_modulo]/static/[nome_do_modulo]/[arquivos_estaticos].css
+modules/[nome_do_modulo]/static/[nome_do_modulo]/[arquivos_estaticos].js
+``` 

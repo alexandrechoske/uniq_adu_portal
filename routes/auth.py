@@ -8,6 +8,7 @@ import json
 import os
 import re  # para normalização de CNPJ
 from services.data_cache import data_cache
+from services.auth_logging import safe_log_login_success, safe_log_login_failure, safe_log_logout, safe_log_access_denied
 
 bp = Blueprint('auth', __name__)
 
@@ -213,6 +214,8 @@ def login():
                                 
                                 # Verificar se usuário está desativado
                                 if not is_user_active:
+                                    # Log de acesso negado
+                                    safe_log_access_denied(f'Usuário desativado: {email}')
                                     flash('Seu acesso está desativado. Entre em contato com o suporte.', 'error')
                                     return redirect(url_for('auth.acesso_negado'))
                         except Exception as agent_error:
@@ -266,11 +269,24 @@ def login():
                         session['cache_ready'] = False
                     
                     flash('Login realizado com sucesso!', 'success')
+                    
+                    # Log de login bem-sucedido
+                    safe_log_login_success({
+                        'id': user_id,
+                        'email': user.get('email'),
+                        'name': user.get('name'),
+                        'role': user.get('role')
+                    })
+                    
                     return redirect(url_for('dashboard_v2.index'))
                 else:
                     flash('Usuário não encontrado na base de dados.', 'error')
+                    # Log de falha no login
+                    safe_log_login_failure(email, 'Usuário não encontrado na base de dados')
             else:
                 flash('Email ou senha inválidos.', 'error')
+                # Log de falha no login
+                safe_log_login_failure(email, 'Email ou senha inválidos')
                 
         except Exception as e:
             error_message = str(e)
@@ -278,10 +294,13 @@ def login():
             
             if "Invalid login credentials" in error_message:
                 flash('Email ou senha inválidos.', 'error')
+                safe_log_login_failure(email, 'Email ou senha inválidos')
             elif "timeout" in error_message.lower():
                 flash('Erro de conexão. Tente novamente em alguns instantes.', 'error')
+                safe_log_login_failure(email, 'Erro de conexão - timeout')
             else:
                 flash('Erro interno. Tente novamente.', 'error')
+                safe_log_login_failure(email, f'Erro interno: {error_message}')
     
     return render_template('auth/login.html')
 
@@ -323,6 +342,14 @@ def preload_data():
 
 @bp.route('/logout')
 def logout():
+    # Capturar dados do usuário antes de limpar a sessão
+    user_email = None
+    if 'user' in session and session['user']:
+        user_email = session['user'].get('email')
+    
+    # Log de logout
+    safe_log_logout(user_email)
+    
     session.clear()
     flash('Logout realizado com sucesso!', 'success')
     return redirect(url_for('auth.login'))
@@ -387,4 +414,6 @@ def corrigir_user_ids():
 @bp.route('/acesso-negado')
 def acesso_negado():
     """Página para usuários com acesso negado/desativado"""
+    # Log de acesso à página de acesso negado
+    safe_log_access_denied('Acesso à página de acesso negado')
     return render_template('auth/acesso_negado.html')
