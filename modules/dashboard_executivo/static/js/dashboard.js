@@ -14,6 +14,7 @@ let dashboardData = null;
 let dashboardCharts = {};
 let monthlyChartPeriod = 'mensal';
 let recentOperationsTable = null;
+let currentFilters = {};  // NOVO: Para armazenar filtros ativos
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -154,6 +155,54 @@ function setupEventListeners() {
 
     // Modal event listeners
     setupModalEventListeners();
+    
+    // NOVO: Filter event listeners
+    setupFilterEventListeners();
+}
+
+/**
+ * Setup filter event listeners
+ */
+function setupFilterEventListeners() {
+    // Filter modal
+    const openFiltersBtn = document.getElementById('open-filters');
+    const closeModalBtn = document.getElementById('close-modal');
+    const filterModal = document.getElementById('filter-modal');
+    const applyFiltersBtn = document.getElementById('apply-filters');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+    
+    if (openFiltersBtn) {
+        openFiltersBtn.addEventListener('click', openFilterModal);
+    }
+    
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeFilterModal);
+    }
+    
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', applyFilters);
+    }
+    
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', clearFilters);
+    }
+    
+    // Click outside modal to close
+    if (filterModal) {
+        filterModal.addEventListener('click', function(e) {
+            if (e.target === filterModal) {
+                closeFilterModal();
+            }
+        });
+    }
+    
+    // Quick period buttons
+    document.querySelectorAll('.btn-quick').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const days = parseInt(this.dataset.days);
+            setQuickPeriod(days);
+        });
+    });
 }
 
 /**
@@ -202,11 +251,12 @@ async function loadInitialData() {
         dashboardData = result.data;
         console.log(`[DASHBOARD_EXECUTIVO] Dados carregados: ${result.total_records} registros`);
         
-        // Load KPIs and charts
+        // Load KPIs, charts and filter options
         await Promise.all([
             loadDashboardKPIs(),
             loadDashboardCharts(),
-            loadRecentOperations()
+            loadRecentOperations(),
+            loadFilterOptions()  // NOVO: Carregar opções de filtros
         ]);
         
     } catch (error) {
@@ -222,7 +272,8 @@ async function loadDashboardKPIs() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs...');
         
-        const response = await fetch('/dashboard-executivo/api/kpis');
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
         
         if (result.success) {
@@ -242,7 +293,8 @@ async function loadDashboardCharts() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando gráficos...');
         
-        const response = await fetch('/dashboard-executivo/api/charts');
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/charts?${queryString}`);
         const result = await response.json();
         
         if (result.success) {
@@ -262,7 +314,8 @@ async function loadRecentOperations() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando operações recentes...');
         
-        const response = await fetch('/dashboard-executivo/api/recent-operations');
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
         
         if (result.success) {
@@ -339,7 +392,13 @@ function createDashboardCharts(charts) {
         createUrfChart(charts.urf);
     }
     
-    // Create material chart
+    // NOVO: Create principais materiais table (substitui o gráfico material)
+    if (charts.principais_materiais) {
+        console.log('[DASHBOARD_EXECUTIVO] Criando tabela de principais materiais...');
+        createPrincipaisMateriaisTable(charts.principais_materiais);
+    }
+    
+    // Keep material chart for transit time (pode ser removido depois se não for usado)
     if (charts.material) {
         console.log('[DASHBOARD_EXECUTIVO] Criando gráfico material...');
         createMaterialChart(charts.material);
@@ -1448,4 +1507,281 @@ function formatDataChegada(dateString) {
     }
     
     return formatDate(dateString);
+}
+
+// ===== FUNÇÕES DE FILTROS =====
+
+/**
+ * Load filter options
+ */
+async function loadFilterOptions() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] Carregando opções de filtros...');
+        
+        const response = await fetch('/dashboard-executivo/api/filter-options');
+        const result = await response.json();
+        
+        if (result.success) {
+            populateFilterOptions(result.options);
+        } else {
+            console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar opções de filtros:', result.error);
+        }
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar opções de filtros:', error);
+    }
+}
+
+/**
+ * Populate filter select options
+ */
+function populateFilterOptions(options) {
+    // Material filter
+    const materialSelect = document.getElementById('material-filter');
+    if (materialSelect && options.materiais) {
+        materialSelect.innerHTML = '<option value="">Todos os materiais</option>';
+        options.materiais.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material;
+            option.textContent = material;
+            materialSelect.appendChild(option);
+        });
+    }
+    
+    // Cliente filter
+    const clienteSelect = document.getElementById('cliente-filter');
+    if (clienteSelect && options.clientes) {
+        clienteSelect.innerHTML = '<option value="">Todos os clientes</option>';
+        options.clientes.forEach(cliente => {
+            const option = document.createElement('option');
+            option.value = cliente;
+            option.textContent = cliente;
+            clienteSelect.appendChild(option);
+        });
+    }
+    
+    // Modal filter
+    const modalSelect = document.getElementById('modal-filter');
+    if (modalSelect && options.modais) {
+        modalSelect.innerHTML = '<option value="">Todos os modais</option>';
+        options.modais.forEach(modal => {
+            const option = document.createElement('option');
+            option.value = modal;
+            option.textContent = modal;
+            modalSelect.appendChild(option);
+        });
+    }
+    
+    // Canal filter
+    const canalSelect = document.getElementById('canal-filter');
+    if (canalSelect && options.canais) {
+        canalSelect.innerHTML = '<option value="">Todos os canais</option>';
+        options.canais.forEach(canal => {
+            const option = document.createElement('option');
+            option.value = canal;
+            option.textContent = canal;
+            canalSelect.appendChild(option);
+        });
+    }
+}
+
+/**
+ * Build filter query string
+ */
+function buildFilterQueryString() {
+    const params = new URLSearchParams();
+    
+    const dataInicio = document.getElementById('data-inicio')?.value;
+    const dataFim = document.getElementById('data-fim')?.value;
+    const material = document.getElementById('material-filter')?.value;
+    const cliente = document.getElementById('cliente-filter')?.value;
+    const modal = document.getElementById('modal-filter')?.value;
+    const canal = document.getElementById('canal-filter')?.value;
+    
+    if (dataInicio) params.append('data_inicio', dataInicio);
+    if (dataFim) params.append('data_fim', dataFim);
+    if (material) params.append('material', material);
+    if (cliente) params.append('cliente', cliente);
+    if (modal) params.append('modal', modal);
+    if (canal) params.append('canal', canal);
+    
+    return params.toString();
+}
+
+/**
+ * Open filter modal
+ */
+function openFilterModal() {
+    const modal = document.getElementById('filter-modal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+}
+
+/**
+ * Close filter modal
+ */
+function closeFilterModal() {
+    const modal = document.getElementById('filter-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Set quick period filter
+ */
+function setQuickPeriod(days) {
+    const hoje = new Date();
+    const dataFim = hoje.toISOString().split('T')[0];
+    const dataInicio = new Date(hoje.getTime() - (days * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+    
+    document.getElementById('data-inicio').value = dataInicio;
+    document.getElementById('data-fim').value = dataFim;
+    
+    // Update active button
+    document.querySelectorAll('.btn-quick').forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.dataset.days) === days) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+/**
+ * Apply filters
+ */
+async function applyFilters() {
+    try {
+        showLoading(true);
+        
+        // Store current filters for summary
+        currentFilters = {
+            dataInicio: document.getElementById('data-inicio')?.value,
+            dataFim: document.getElementById('data-fim')?.value,
+            material: document.getElementById('material-filter')?.value,
+            cliente: document.getElementById('cliente-filter')?.value,
+            modal: document.getElementById('modal-filter')?.value,
+            canal: document.getElementById('canal-filter')?.value
+        };
+        
+        // Update filter summary
+        updateFilterSummary();
+        
+        // Close modal
+        closeFilterModal();
+        
+        // Reload data with filters
+        await Promise.all([
+            loadDashboardKPIs(),
+            loadDashboardCharts(),
+            loadRecentOperations()
+        ]);
+        
+        showLoading(false);
+        showSuccess('Filtros aplicados com sucesso!');
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros:', error);
+        showError('Erro ao aplicar filtros: ' + error.message);
+        showLoading(false);
+    }
+}
+
+/**
+ * Clear all filters
+ */
+function clearFilters() {
+    // Clear form inputs
+    document.getElementById('data-inicio').value = '';
+    document.getElementById('data-fim').value = '';
+    document.getElementById('material-filter').value = '';
+    document.getElementById('cliente-filter').value = '';
+    document.getElementById('modal-filter').value = '';
+    document.getElementById('canal-filter').value = '';
+    
+    // Clear active buttons
+    document.querySelectorAll('.btn-quick').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Clear stored filters
+    currentFilters = {};
+    
+    // Update summary
+    updateFilterSummary();
+    
+    showSuccess('Filtros limpos!');
+}
+
+/**
+ * Update filter summary
+ */
+function updateFilterSummary() {
+    const summaryElement = document.getElementById('filter-summary-text');
+    if (!summaryElement) return;
+    
+    let summaryText = 'Vendo dados completos';
+    
+    if (currentFilters.dataInicio && currentFilters.dataFim) {
+        const dataInicio = new Date(currentFilters.dataInicio).toLocaleDateString('pt-BR');
+        const dataFim = new Date(currentFilters.dataFim).toLocaleDateString('pt-BR');
+        summaryText = `Dados de ${dataInicio} até ${dataFim}`;
+        
+        // Add other filters
+        const otherFilters = [];
+        if (currentFilters.material) otherFilters.push(`Material: ${currentFilters.material}`);
+        if (currentFilters.cliente) otherFilters.push(`Cliente: ${currentFilters.cliente}`);
+        if (currentFilters.modal) otherFilters.push(`Modal: ${currentFilters.modal}`);
+        if (currentFilters.canal) otherFilters.push(`Canal: ${currentFilters.canal}`);
+        
+        if (otherFilters.length > 0) {
+            summaryText += ` (${otherFilters.join(', ')})`;
+        }
+    }
+    
+    summaryElement.textContent = summaryText;
+}
+
+/**
+ * Create principais materiais table
+ */
+function createPrincipaisMateriaisTable(data) {
+    const tableBody = document.querySelector('#principais-materiais-table tbody');
+    if (!tableBody) {
+        console.error('[DASHBOARD_EXECUTIVO] Tabela de principais materiais não encontrada');
+        return;
+    }
+    
+    tableBody.innerHTML = '';
+    
+    if (!data.data || data.data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum material encontrado</td></tr>';
+        return;
+    }
+    
+    data.data.forEach(material => {
+        const row = document.createElement('tr');
+        
+        // Add urgente class if needed
+        if (material.is_urgente) {
+            row.classList.add('urgente-row');
+        }
+        
+        row.innerHTML = `
+            <td title="${material.material}">${material.material.length > 30 ? material.material.substring(0, 30) + '...' : material.material}</td>
+            <td class="text-center">${material.total_processos}</td>
+            <td class="text-center">${formatCurrency(material.custo_total)}</td>
+            <td class="text-center">
+                ${material.is_urgente ? 
+                    `<span class="material-urgente">${formatDate(material.data_chegada)} (${material.dias_para_chegada} dias)</span>` : 
+                    formatDate(material.data_chegada)
+                }
+            </td>
+            <td class="text-center">${material.transit_time ? formatNumber(material.transit_time, 1) + ' dias' : '-'}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    console.log(`[DASHBOARD_EXECUTIVO] Tabela de materiais criada com ${data.data.length} itens`);
 }

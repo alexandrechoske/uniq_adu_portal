@@ -33,6 +33,73 @@ def clean_data_for_json(data):
     else:
         return data
 
+def filter_by_date_python(item_date, data_inicio, data_fim):
+    """Filtrar data usando Python (formato brasileiro DD/MM/YYYY)"""
+    try:
+        if not item_date:
+            return False
+        
+        # Converter data do item (DD/MM/YYYY para YYYY-MM-DD)
+        if '/' in item_date:
+            day, month, year = item_date.split('/')
+            item_date_iso = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        else:
+            item_date_iso = item_date
+        
+        # Converter para datetime
+        item_dt = datetime.strptime(item_date_iso, '%Y-%m-%d')
+        inicio_dt = datetime.strptime(data_inicio, '%Y-%m-%d')
+        fim_dt = datetime.strptime(data_fim, '%Y-%m-%d')
+        
+        return inicio_dt <= item_dt <= fim_dt
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro ao filtrar data: {str(e)}")
+        return False
+
+def apply_filters(data):
+    """Aplicar filtros aos dados baseado nos parâmetros da requisição"""
+    try:
+        # Obter filtros da requisição
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        material = request.args.get('material')
+        cliente = request.args.get('cliente')
+        modal = request.args.get('modal')
+        canal = request.args.get('canal')
+        
+        filtered_data = data
+        
+        # Filtrar por data
+        if data_inicio and data_fim:
+            filtered_data = [item for item in filtered_data 
+                           if filter_by_date_python(item.get('data_abertura'), data_inicio, data_fim)]
+        
+        # Filtrar por material
+        if material:
+            filtered_data = [item for item in filtered_data 
+                           if material.lower() in item.get('mercadoria', '').lower()]
+        
+        # Filtrar por cliente
+        if cliente:
+            filtered_data = [item for item in filtered_data 
+                           if cliente.lower() in item.get('importador', '').lower()]
+        
+        # Filtrar por modal
+        if modal:
+            filtered_data = [item for item in filtered_data 
+                           if modal.lower() in item.get('modal', '').lower()]
+        
+        # Filtrar por canal
+        if canal:
+            filtered_data = [item for item in filtered_data 
+                           if canal.lower() in item.get('canal', '').lower()]
+        
+        return filtered_data
+        
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros: {str(e)}")
+        return data
+
 @bp.route('/')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
@@ -126,7 +193,9 @@ def dashboard_kpis():
                 'kpis': {}
             })
         
-        df = pd.DataFrame(data)
+        # Aplicar filtros se existirem
+        filtered_data = apply_filters(data)
+        df = pd.DataFrame(filtered_data)
         
         # Calcular KPIs executivos
         total_processos = len(df)
@@ -294,7 +363,9 @@ def dashboard_charts():
                 'charts': {}
             })
         
-        df = pd.DataFrame(data)
+        # Aplicar filtros se existirem
+        filtered_data = apply_filters(data)
+        df = pd.DataFrame(filtered_data)
         
         # Gráfico Evolução Mensal
         monthly_chart = {'labels': [], 'datasets': []}
@@ -383,12 +454,64 @@ def dashboard_charts():
                 'data': material_counts.values.tolist()
             }
 
+        # NOVO: Tabela de Principais Materiais (migrada do dashboard materiais)
+        principais_materiais = {'data': []}
+        if 'mercadoria' in df.columns and 'data_chegada' in df.columns:
+            try:
+                # Agrupar por material e calcular métricas
+                material_groups = df.groupby('mercadoria').agg({
+                    'ref_unique': 'count',
+                    'custo_total': 'sum',
+                    'data_chegada': 'first',
+                    'transit_time_real': 'mean'
+                }).reset_index()
+                
+                # Converter data_chegada para datetime para ordenação
+                material_groups['data_chegada_dt'] = pd.to_datetime(
+                    material_groups['data_chegada'], format='%d/%m/%Y', errors='coerce'
+                )
+                
+                # Ordenar por data_chegada mais próxima (futura)
+                hoje = pd.Timestamp.now()
+                material_groups['is_future'] = material_groups['data_chegada_dt'] >= hoje
+                material_groups = material_groups.sort_values([
+                    'is_future', 'data_chegada_dt'
+                ], ascending=[False, True])
+                
+                # Preparar dados da tabela
+                table_data = []
+                for _, row in material_groups.head(15).iterrows():
+                    # Calcular se está chegando nos próximos 5 dias
+                    is_urgente = False
+                    dias_para_chegada = 0
+                    if pd.notnull(row['data_chegada_dt']):
+                        diff_days = (row['data_chegada_dt'] - hoje).days
+                        is_urgente = 0 < diff_days <= 5
+                        dias_para_chegada = diff_days if diff_days > 0 else 0
+                    
+                    table_data.append({
+                        'material': row['mercadoria'],
+                        'total_processos': int(row['ref_unique']),
+                        'custo_total': float(row['custo_total']) if pd.notnull(row['custo_total']) else 0,
+                        'data_chegada': row['data_chegada'],
+                        'transit_time': float(row['transit_time_real']) if pd.notnull(row['transit_time_real']) else 0,
+                        'is_urgente': is_urgente,
+                        'dias_para_chegada': dias_para_chegada
+                    })
+                
+                principais_materiais = {'data': table_data}
+                
+            except Exception as e:
+                print(f"[DASHBOARD_EXECUTIVO] Erro ao processar tabela de materiais: {str(e)}")
+                principais_materiais = {'data': []}
+
         charts = {
             'monthly': monthly_chart,
             'status': status_chart,
             'grouped_modal': grouped_modal_chart,
             'urf': urf_chart,
-            'material': material_chart
+            'material': material_chart,
+            'principais_materiais': principais_materiais  # NOVO
         }
         
         return jsonify({
@@ -472,9 +595,18 @@ def recent_operations():
                 'operations': []
             })
         
-        # Ordenar por data mais recente e limitar a 50 registros
-        df = pd.DataFrame(data)
+        # Aplicar filtros se existirem
+        filtered_data = apply_filters(data)
+        df = pd.DataFrame(filtered_data)
         
+        # Garantir que há dados filtrados
+        if df.empty:
+            return jsonify({
+                'success': True,
+                'operations': []
+            })
+        
+        # Ordenar por data mais recente e limitar a 50 registros
         if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
             df_sorted = df.sort_values('data_abertura_dt', ascending=False).head(50)
@@ -524,4 +656,81 @@ def recent_operations():
             'success': False,
             'error': str(e),
             'operations': []
+        }), 500
+
+@bp.route('/api/filter-options')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def filter_options():
+    """Obter opções para filtros"""
+    try:
+        # Obter dados do cache
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
+        
+        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'Dados não encontrados. Recarregue a página.',
+                'options': {}
+            })
+        
+        df = pd.DataFrame(data)
+        
+        # Extrair opções únicas para os filtros
+        materiais = []
+        clientes = []
+        canais = []
+        modais = []
+        
+        # Materiais únicos (filtrar vazios)
+        if 'mercadoria' in df.columns:
+            materiais = sorted([
+                mat for mat in df['mercadoria'].dropna().unique() 
+                if str(mat).strip() and str(mat).lower() not in ['nan', 'none', 'null', '', 'não informado']
+            ])
+        
+        # Clientes únicos (filtrar vazios)
+        if 'importador' in df.columns:
+            clientes = sorted([
+                cli for cli in df['importador'].dropna().unique()
+                if str(cli).strip() and str(cli).lower() not in ['nan', 'none', 'null', '']
+            ])
+        
+        # Canais únicos
+        if 'canal' in df.columns:
+            canais = sorted([
+                canal for canal in df['canal'].dropna().unique()
+                if str(canal).strip() and str(canal).lower() not in ['nan', 'none', 'null', '']
+            ])
+        
+        # Modais únicos
+        if 'modal' in df.columns:
+            modais = sorted([
+                modal for modal in df['modal'].dropna().unique()
+                if str(modal).strip() and str(modal).lower() not in ['nan', 'none', 'null', '']
+            ])
+        
+        options = {
+            'materiais': materiais[:50],  # Limitar a 50 itens para performance
+            'clientes': clientes[:50],
+            'canais': canais,
+            'modais': modais
+        }
+        
+        print(f"[DASHBOARD_EXECUTIVO] Opções de filtro: {len(materiais)} materiais, {len(clientes)} clientes, {len(canais)} canais, {len(modais)} modais")
+        
+        return jsonify({
+            'success': True,
+            'options': clean_data_for_json(options)
+        })
+        
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro ao obter opções de filtro: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'options': {}
         }), 500
