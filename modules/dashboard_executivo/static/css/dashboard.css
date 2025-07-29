@@ -625,6 +625,195 @@
     font-size: 16px;
 }
 
+/* Multi-Select Styles */
+.multi-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.multi-select-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    min-height: 40px;
+}
+
+.multi-select-header:hover {
+    border-color: #007bff;
+}
+
+.multi-select-header.active {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.multi-select-placeholder {
+    flex: 1;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.multi-select-dropdown.open {
+    display: block;
+}
+
+.multi-select-search {
+    padding: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.multi-select-search input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    font-size: 0.85rem;
+}
+
+.multi-select-options {
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.multi-select-option {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.multi-select-option:hover {
+    background: #f8f9fa;
+}
+
+.multi-select-option input[type="checkbox"] {
+    margin: 0 8px 0 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.multi-select-option label {
+    cursor: pointer;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.multi-select-selected-count {
+    background: #007bff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
+
+/* Modal Icons */
+.modal-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    border-radius: 4px;
+    background: #f8f9fa;
+    color: #495057;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.modal-icon.maritima {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.modal-icon.aerea {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.modal-icon.rodoviaria {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.modal-icon.ferroviaria {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+.modal-icon.postal {
+    background: #fce4ec;
+    color: #c2185b;
+}
+
+.modal-icon.courier {
+    background: #e0f2f1;
+    color: #00695c;
+}
+
+/* Canal Status Indicators */
+.canal-indicator {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.canal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.canal-dot.verde {
+    background: #4caf50;
+}
+
+.canal-dot.amarelo {
+    background: #ffc107;
+}
+
+.canal-dot.vermelho {
+    background: #f44336;
+}
+
+.canal-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
 /* Responsive Filter Modal */
 @media (max-width: 768px) {
     .filter-modal-content {

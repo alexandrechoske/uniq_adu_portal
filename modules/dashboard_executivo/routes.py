@@ -74,25 +74,37 @@ def apply_filters(data):
             filtered_data = [item for item in filtered_data 
                            if filter_by_date_python(item.get('data_abertura'), data_inicio, data_fim)]
         
-        # Filtrar por material
+        # Filtrar por material (múltiplas seleções)
         if material:
-            filtered_data = [item for item in filtered_data 
-                           if material.lower() in item.get('mercadoria', '').lower()]
+            materiais_lista = [m.strip() for m in material.split(',') if m.strip()]
+            if materiais_lista:
+                filtered_data = [item for item in filtered_data 
+                               if any(mat.lower() in item.get('mercadoria', '').lower() 
+                                     for mat in materiais_lista)]
         
-        # Filtrar por cliente
+        # Filtrar por cliente (múltiplas seleções)
         if cliente:
-            filtered_data = [item for item in filtered_data 
-                           if cliente.lower() in item.get('importador', '').lower()]
+            clientes_lista = [c.strip() for c in cliente.split(',') if c.strip()]
+            if clientes_lista:
+                filtered_data = [item for item in filtered_data 
+                               if any(cli.lower() in item.get('importador', '').lower() 
+                                     for cli in clientes_lista)]
         
-        # Filtrar por modal
+        # Filtrar por modal (múltiplas seleções)
         if modal:
-            filtered_data = [item for item in filtered_data 
-                           if modal.lower() in item.get('modal', '').lower()]
+            modais_lista = [m.strip() for m in modal.split(',') if m.strip()]
+            if modais_lista:
+                filtered_data = [item for item in filtered_data 
+                               if any(mod.lower() in item.get('modal', '').lower() 
+                                     for mod in modais_lista)]
         
-        # Filtrar por canal
+        # Filtrar por canal (múltiplas seleções)
         if canal:
-            filtered_data = [item for item in filtered_data 
-                           if canal.lower() in item.get('canal', '').lower()]
+            canais_lista = [c.strip() for c in canal.split(',') if c.strip()]
+            if canais_lista:
+                filtered_data = [item for item in filtered_data 
+                               if any(can.lower() in item.get('canal', '').lower() 
+                                     for can in canais_lista)]
         
         return filtered_data
         

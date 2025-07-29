@@ -438,6 +438,7 @@ function createMonthlyChart(data) {
             if (idx === 1) {
                 return {
                     ...ds,
+                    type: 'line', // Força o tipo como linha
                     fill: {
                         target: 'origin',
                         above: 'rgba(40, 167, 69, 0.08)', // verde claro
@@ -448,6 +449,7 @@ function createMonthlyChart(data) {
             // O dataset de processos é o primeiro (idx === 0)
             return {
                 ...ds,
+                type: 'line', // Força o tipo como linha
                 fill: false,
                 pointBackgroundColor: ds.borderColor,
             };
@@ -1554,52 +1556,175 @@ async function loadFilterOptions() {
  */
 function populateFilterOptions(options) {
     // Material filter
-    const materialSelect = document.getElementById('material-filter');
-    if (materialSelect && options.materiais) {
-        materialSelect.innerHTML = '<option value="">Todos os materiais</option>';
-        options.materiais.forEach(material => {
-            const option = document.createElement('option');
-            option.value = material;
-            option.textContent = material;
-            materialSelect.appendChild(option);
-        });
+    if (options.materiais) {
+        populateMultiSelect('material', options.materiais);
     }
     
     // Cliente filter
-    const clienteSelect = document.getElementById('cliente-filter');
-    if (clienteSelect && options.clientes) {
-        clienteSelect.innerHTML = '<option value="">Todos os clientes</option>';
-        options.clientes.forEach(cliente => {
-            const option = document.createElement('option');
-            option.value = cliente;
-            option.textContent = cliente;
-            clienteSelect.appendChild(option);
-        });
+    if (options.clientes) {
+        populateMultiSelect('cliente', options.clientes);
     }
     
     // Modal filter
-    const modalSelect = document.getElementById('modal-filter');
-    if (modalSelect && options.modais) {
-        modalSelect.innerHTML = '<option value="">Todos os modais</option>';
-        options.modais.forEach(modal => {
-            const option = document.createElement('option');
-            option.value = modal;
-            option.textContent = modal;
-            modalSelect.appendChild(option);
-        });
+    if (options.modais) {
+        populateMultiSelect('modal', options.modais);
     }
     
     // Canal filter
-    const canalSelect = document.getElementById('canal-filter');
-    if (canalSelect && options.canais) {
-        canalSelect.innerHTML = '<option value="">Todos os canais</option>';
-        options.canais.forEach(canal => {
-            const option = document.createElement('option');
-            option.value = canal;
-            option.textContent = canal;
-            canalSelect.appendChild(option);
-        });
+    if (options.canais) {
+        populateMultiSelect('canal', options.canais);
     }
+    
+    // Initialize multi-select functionality after populating options
+    initializeMultiSelects();
+}
+
+/**
+ * Populate a multi-select dropdown
+ */
+function populateMultiSelect(type, options) {
+    const optionsContainer = document.getElementById(`${type}-options`);
+    if (!optionsContainer) return;
+    
+    optionsContainer.innerHTML = '';
+    
+    options.forEach((option, index) => {
+        const optionElement = document.createElement('div');
+        optionElement.className = 'multi-select-option';
+        
+        let iconHtml = '';
+        
+        // Add icons for modal options
+        if (type === 'modal') {
+            iconHtml = getModalIcon(option);
+        }
+        // Add colored dots for canal options
+        else if (type === 'canal') {
+            iconHtml = getCanalIndicator(option);
+        }
+        
+        optionElement.innerHTML = `
+            <input type="checkbox" id="${type}-${index}" value="${option}" onchange="updateMultiSelectDisplay('${type}')">
+            <label for="${type}-${index}">
+                ${iconHtml}
+                ${option}
+            </label>
+        `;
+        optionsContainer.appendChild(optionElement);
+    });
+}
+
+/**
+ * Initialize multi-select functionality
+ */
+function initializeMultiSelects() {
+    const types = ['material', 'cliente', 'modal', 'canal'];
+    
+    types.forEach(type => {
+        const header = document.getElementById(`${type}-header`);
+        const dropdown = document.getElementById(`${type}-dropdown`);
+        const search = document.getElementById(`${type}-search`);
+        
+        if (header && dropdown) {
+            // Toggle dropdown on header click
+            header.addEventListener('click', function() {
+                // Close other dropdowns
+                types.forEach(otherType => {
+                    if (otherType !== type) {
+                        const otherDropdown = document.getElementById(`${otherType}-dropdown`);
+                        const otherHeader = document.getElementById(`${otherType}-header`);
+                        if (otherDropdown && otherHeader) {
+                            otherDropdown.classList.remove('open');
+                            otherHeader.classList.remove('active');
+                        }
+                    }
+                });
+                
+                // Toggle current dropdown
+                dropdown.classList.toggle('open');
+                header.classList.toggle('active');
+            });
+            
+            // Search functionality
+            if (search) {
+                search.addEventListener('input', function() {
+                    filterMultiSelectOptions(type, this.value);
+                });
+            }
+        }
+    });
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.multi-select-container')) {
+            types.forEach(type => {
+                const dropdown = document.getElementById(`${type}-dropdown`);
+                const header = document.getElementById(`${type}-header`);
+                if (dropdown && header) {
+                    dropdown.classList.remove('open');
+                    header.classList.remove('active');
+                }
+            });
+        }
+    });
+}
+
+/**
+ * Filter multi-select options based on search
+ */
+function filterMultiSelectOptions(type, searchTerm) {
+    const options = document.querySelectorAll(`#${type}-options .multi-select-option`);
+    const term = searchTerm.toLowerCase();
+    
+    options.forEach(option => {
+        const label = option.querySelector('label').textContent.toLowerCase();
+        if (label.includes(term)) {
+            option.style.display = 'flex';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Update multi-select display when selections change
+ */
+function updateMultiSelectDisplay(type) {
+    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]:checked`);
+    const placeholder = document.querySelector(`#${type}-header .multi-select-placeholder`);
+    
+    if (!placeholder) return;
+    
+    const selectedCount = checkboxes.length;
+    
+    if (selectedCount === 0) {
+        placeholder.innerHTML = `Todos os ${getTypePlural(type)}`;
+    } else if (selectedCount === 1) {
+        placeholder.innerHTML = checkboxes[0].nextElementSibling.textContent;
+    } else {
+        placeholder.innerHTML = `${selectedCount} ${getTypePlural(type)} selecionados`;
+    }
+}
+
+/**
+ * Get plural form for filter types
+ */
+function getTypePlural(type) {
+    const plurals = {
+        'material': 'materiais',
+        'cliente': 'clientes', 
+        'modal': 'modais',
+        'canal': 'canais'
+    };
+    return plurals[type] || type;
+}
+
+/**
+ * Get selected values from multi-select
+ */
+function getMultiSelectValues(type) {
+    const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]:checked`);
+    return Array.from(checkboxes).map(cb => cb.value);
 }
 
 /**
@@ -1610,17 +1735,21 @@ function buildFilterQueryString() {
     
     const dataInicio = document.getElementById('data-inicio')?.value;
     const dataFim = document.getElementById('data-fim')?.value;
-    const material = document.getElementById('material-filter')?.value;
-    const cliente = document.getElementById('cliente-filter')?.value;
-    const modal = document.getElementById('modal-filter')?.value;
-    const canal = document.getElementById('canal-filter')?.value;
+    
+    // Get multi-select values
+    const materiais = getMultiSelectValues('material');
+    const clientes = getMultiSelectValues('cliente');
+    const modais = getMultiSelectValues('modal');
+    const canais = getMultiSelectValues('canal');
     
     if (dataInicio) params.append('data_inicio', dataInicio);
     if (dataFim) params.append('data_fim', dataFim);
-    if (material) params.append('material', material);
-    if (cliente) params.append('cliente', cliente);
-    if (modal) params.append('modal', modal);
-    if (canal) params.append('canal', canal);
+    
+    // Add multi-select values as comma-separated strings
+    if (materiais.length > 0) params.append('material', materiais.join(','));
+    if (clientes.length > 0) params.append('cliente', clientes.join(','));
+    if (modais.length > 0) params.append('modal', modais.join(','));
+    if (canais.length > 0) params.append('canal', canais.join(','));
     
     return params.toString();
 }
@@ -1712,13 +1841,19 @@ async function applyFilters() {
  * Clear all filters
  */
 function clearFilters() {
-    // Clear form inputs
+    // Clear date inputs
     document.getElementById('data-inicio').value = '';
     document.getElementById('data-fim').value = '';
-    document.getElementById('material-filter').value = '';
-    document.getElementById('cliente-filter').value = '';
-    document.getElementById('modal-filter').value = '';
-    document.getElementById('canal-filter').value = '';
+    
+    // Clear multi-select checkboxes
+    const types = ['material', 'cliente', 'modal', 'canal'];
+    types.forEach(type => {
+        const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateMultiSelectDisplay(type);
+    });
     
     // Clear active buttons
     document.querySelectorAll('.btn-quick').forEach(btn => {
@@ -1741,13 +1876,19 @@ async function resetAllFilters() {
     try {
         showLoading(true);
         
-        // Clear form inputs
+        // Clear date inputs
         document.getElementById('data-inicio').value = '';
         document.getElementById('data-fim').value = '';
-        document.getElementById('material-filter').value = '';
-        document.getElementById('cliente-filter').value = '';
-        document.getElementById('modal-filter').value = '';
-        document.getElementById('canal-filter').value = '';
+        
+        // Clear multi-select checkboxes
+        const types = ['material', 'cliente', 'modal', 'canal'];
+        types.forEach(type => {
+            const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]`);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateMultiSelectDisplay(type);
+        });
         
         // Clear active buttons
         document.querySelectorAll('.btn-quick').forEach(btn => {
@@ -1867,4 +2008,55 @@ function createPrincipaisMateriaisTable(data) {
     });
     
     console.log(`[DASHBOARD_EXECUTIVO] Tabela de materiais criada com ${data.data.length} itens`);
+}
+
+/**
+ * Get modal icon HTML
+ */
+function getModalIcon(modal) {
+    const modalLower = modal.toLowerCase();
+    let iconClass = 'mdi-help';
+    let cssClass = '';
+    
+    if (modalLower.includes('maritim') || modalLower.includes('marítim')) {
+        iconClass = 'mdi-ferry';
+        cssClass = 'maritima';
+    } else if (modalLower.includes('aer') || modalLower.includes('aére')) {
+        iconClass = 'mdi-airplane';
+        cssClass = 'aerea';
+    } else if (modalLower.includes('rodovi') || modalLower.includes('rodoviári')) {
+        iconClass = 'mdi-truck';
+        cssClass = 'rodoviaria';
+    } else if (modalLower.includes('ferr') || modalLower.includes('ferrovi')) {
+        iconClass = 'mdi-train';
+        cssClass = 'ferroviaria';
+    } else if (modalLower.includes('postal') || modalLower.includes('correio')) {
+        iconClass = 'mdi-email';
+        cssClass = 'postal';
+    } else if (modalLower.includes('courier') || modalLower.includes('expres')) {
+        iconClass = 'mdi-package-variant';
+        cssClass = 'courier';
+    }
+    
+    return `<span class="modal-icon ${cssClass}"><i class="mdi ${iconClass}"></i></span>`;
+}
+
+/**
+ * Get canal indicator HTML
+ */
+function getCanalIndicator(canal) {
+    let dotClass = '';
+    
+    if (canal && canal.toLowerCase) {
+        const canalLower = canal.toLowerCase();
+        if (canalLower.includes('verde') || canalLower === 'verde') {
+            dotClass = 'verde';
+        } else if (canalLower.includes('amarelo') || canalLower === 'amarelo') {
+            dotClass = 'amarelo';
+        } else if (canalLower.includes('vermelho') || canalLower === 'vermelho') {
+            dotClass = 'vermelho';
+        }
+    }
+    
+    return `<span class="canal-indicator"><span class="canal-dot ${dotClass}"></span></span>`;
 }
