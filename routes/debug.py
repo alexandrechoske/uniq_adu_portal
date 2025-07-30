@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, jsonify
 import flask
 import datetime
 import sys
 import platform
 import os
+from extensions import supabase_admin
 
 bp = Blueprint('debug', __name__, url_prefix='/debug')
 
@@ -121,3 +122,34 @@ def check_paginas_table():
             'error': str(e),
             'message': 'Tabela paginas_portal não existe ou não é acessível'
         }
+
+@bp.route('/recent-logs')
+def recent_logs():
+    """
+    Endpoint para visualizar logs recentes do sistema
+    """
+    try:
+        # Buscar logs das últimas 2 horas
+        response = supabase_admin.table('access_logs').select('*').order('timestamp', desc=True).limit(50).execute()
+        
+        logs = []
+        for log in response.data:
+            logs.append({
+                'timestamp': log.get('timestamp'),
+                'user_id': log.get('user_id'),
+                'user_name': log.get('user_name'),
+                'user_role': log.get('user_role'),
+                'endpoint': log.get('endpoint'),
+                'page_name': log.get('page_name'),
+                'module': log.get('module'),
+                'ip_address': log.get('ip_address'),
+                'user_agent': log.get('user_agent')
+            })
+        
+        return jsonify(logs)
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Erro ao buscar logs: {str(e)}'
+        }), 500

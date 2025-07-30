@@ -56,7 +56,7 @@ class RobustLoggingMiddleware:
         return response  # SEMPRE retorna a resposta original
     
     def _should_log_request(self):
-        """Determina se deve fazer log da requisição"""
+        """Determina se deve fazer log da requisição - apenas páginas importantes"""
         try:
             # Não fazer log de arquivos estáticos
             if request.endpoint and (
@@ -77,12 +77,58 @@ class RobustLoggingMiddleware:
             if request.path in ['/health', '/ping', '/favicon.ico']:
                 return False
             
-            # Não fazer log de debug se não for admin
+            # NÃO fazer log de APIs (evita poluição)
+            if request.path.startswith('/api/'):
+                return False
+            
+            # NÃO fazer log de endpoints específicos que fazem muitas chamadas
+            skip_endpoints = [
+                '/usuarios/analytics/api/',
+                '/dashboard/api/',
+                '/materiais/api/',
+                '/relatorios/api/',
+                '/conferencia/api/',
+                '/agente/api/',
+                '/usuarios/api/',
+                '/menu/api/',
+                '/config/api/'
+            ]
+            
+            for skip_path in skip_endpoints:
+                if request.path.startswith(skip_path):
+                    return False
+            
+            # NÃO fazer log de debug se não for admin
             if (request.path.startswith('/debug') and 
                 session.get('user', {}).get('role') != 'admin'):
                 return False
             
-            return True
+            # APENAS fazer log de páginas principais (não APIs)
+            # Login/logout são tratados separadamente no auth_logging
+            important_patterns = [
+                '/dashboard',
+                '/usuarios/',
+                '/materiais/',
+                '/relatorios/',
+                '/conferencia/',
+                '/agente/',
+                '/menu/',
+                '/config/',
+                '/analytics/',
+                '/auth/login',
+                '/auth/logout'
+            ]
+            
+            # Verificar se é uma página importante
+            for pattern in important_patterns:
+                if request.path.startswith(pattern) and not '/api/' in request.path:
+                    return True
+            
+            # Log da página inicial/welcome
+            if request.path in ['/', '/welcome']:
+                return True
+            
+            return False  # Por padrão, não fazer log
             
         except Exception:
             return False  # Em caso de erro, não fazer log
@@ -95,18 +141,25 @@ class RobustLoggingMiddleware:
                 'dashboard.dashboard': {'name': 'Dashboard Principal', 'module': 'dashboard'},
                 'dashboard.dashboard_v2': {'name': 'Dashboard V2', 'module': 'dashboard'},
                 'dashboard_v2.index': {'name': 'Dashboard V2', 'module': 'dashboard'},
+                'dashboard_executivo.dashboard': {'name': 'Dashboard Executivo', 'module': 'dashboard'},
                 'materiais.materiais': {'name': 'Análise de Materiais', 'module': 'materiais'},
                 'materiais.index': {'name': 'Análise de Materiais', 'module': 'materiais'},
                 'usuarios.index': {'name': 'Gestão de Usuários', 'module': 'usuarios'},
                 'usuarios.form': {'name': 'Formulário de Usuário', 'module': 'usuarios'},
                 'usuarios.novo': {'name': 'Novo Usuário', 'module': 'usuarios'},
                 'usuarios.editar': {'name': 'Editar Usuário', 'module': 'usuarios'},
+                'analytics.analytics_dashboard': {'name': 'Analytics', 'module': 'analytics'},
                 'relatorios.relatorios': {'name': 'Relatórios', 'module': 'relatorios'},
                 'relatorios.index': {'name': 'Relatórios', 'module': 'relatorios'},
                 'conferencia.conferencia': {'name': 'Conferência', 'module': 'conferencia'},
                 'conferencia.index': {'name': 'Conferência', 'module': 'conferencia'},
                 'agente.agente': {'name': 'Consulta Agente', 'module': 'agente'},
                 'agente.index': {'name': 'Consulta Agente', 'module': 'agente'},
+                'config.config_dashboard': {'name': 'Configurações', 'module': 'config'},
+                'menu.menu_home': {'name': 'Menu Principal', 'module': 'menu'},
+                'menu.dashboards': {'name': 'Menu Dashboards', 'module': 'menu'},
+                'menu.ferramentas': {'name': 'Menu Ferramentas', 'module': 'menu'},
+                'menu.configuracoes': {'name': 'Menu Configurações', 'module': 'menu'},
                 'auth.login': {'name': 'Login', 'module': 'auth'},
                 'auth.logout': {'name': 'Logout', 'module': 'auth'},
                 'welcome': {'name': 'Página Inicial', 'module': 'main'},

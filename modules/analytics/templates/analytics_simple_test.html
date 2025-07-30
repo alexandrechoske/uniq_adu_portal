@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+<div class="p-6 bg-white rounded-lg shadow-lg m-4">
+    <h1 class="text-2xl font-bold text-blue-600 mb-4">
+        <i class="mdi mdi-chart-bar"></i>
+        Analytics Dashboard
+    </h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1 -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="bg-blue-500 text-white p-2 rounded-lg">
+                    <i class="mdi mdi-eye text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="text-2xl font-bold text-gray-900" id="total-access">--</div>
+                    <div class="text-sm text-gray-600">Total de Acessos</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 2 -->
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="bg-green-500 text-white p-2 rounded-lg">
+                    <i class="mdi mdi-account-group text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="text-2xl font-bold text-gray-900" id="unique-users">--</div>
+                    <div class="text-sm text-gray-600">Usuários Únicos</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 3 -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="bg-yellow-500 text-white p-2 rounded-lg">
+                    <i class="mdi mdi-login text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="text-2xl font-bold text-gray-900" id="logins-today">--</div>
+                    <div class="text-sm text-gray-600">Logins Hoje</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 4 -->
+        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div class="flex items-center">
+                <div class="bg-purple-500 text-white p-2 rounded-lg">
+                    <i class="mdi mdi-door-open text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <div class="text-2xl font-bold text-gray-900" id="total-logins">--</div>
+                    <div class="text-sm text-gray-600">Total de Logins</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading -->
+    <div id="loading-status" style="display: none;" class="text-center mt-6 p-4 bg-gray-50 rounded">
+        <div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+        Carregando dados...
+    </div>
+</div>
+
+<script>
+// Carregar dados via API
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[ANALYTICS] Carregando...');
+    
+    async function loadStats() {
+        try {
+            const response = await fetch('/usuarios/analytics/api/stats');
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('total-access').textContent = data.total_access.toLocaleString('pt-BR');
+                document.getElementById('unique-users').textContent = data.unique_users.toLocaleString('pt-BR');
+                document.getElementById('logins-today').textContent = data.logins_today.toLocaleString('pt-BR');
+                document.getElementById('total-logins').textContent = data.total_logins.toLocaleString('pt-BR');
+                console.log('[ANALYTICS] Dados carregados:', data);
+            }
+        } catch (error) {
+            console.error('[ANALYTICS] Erro:', error);
+        }
+    }
+    
+    loadStats();
+});
+</script>
+{% endblock %}

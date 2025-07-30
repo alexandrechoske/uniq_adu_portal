@@ -37,7 +37,7 @@ def register_routes(analytics_bp):
     @admin_required
     def analytics_dashboard():
         """Página principal do dashboard de analytics"""
-        return render_template('analytics.html')
+        return render_template('analytics_simple_test.html')
 
     @analytics_bp.route('/api/stats')
     @admin_required

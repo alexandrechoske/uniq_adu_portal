@@ -2,70 +2,69 @@
 
 {% block title %}Analytics - UniSystem{% endblock %}
 
-{% block head %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics.css') }}">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="analytics-container">
-    <!-- Header -->
+<div class="dashboard-container">
     <div class="analytics-header">
-        <h1><i class="fas fa-chart-bar"></i> Analytics</h1>
+        <h1 class="analytics-title">
+            <i class="mdi mdi-chart-bar"></i>
+            Analytics
+        </h1>
         <p class="analytics-subtitle">Estatísticas de acesso e uso do sistema</p>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-        <!-- Total de Acessos -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <span class="stat-title">Total de Acessos</span>
-                <div class="stat-icon primary">
-                    <i class="fas fa-eye"></i>
-                </div>
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary" id="access-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-eye"></i>
             </div>
-            <div class="stat-value" id="total-access">--</div>
-            <div class="stat-description">Últimos 30 dias</div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Acessos</p>
+                <p class="kpi-value" id="total-access">--</p>
+                <p class="kpi-description">Últimos 30 dias</p>
+            </div>
         </div>
-
-        <!-- Usuários Únicos -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <span class="stat-title">Usuários Únicos</span>
-                <div class="stat-icon success">
-                    <i class="fas fa-users"></i>
-                </div>
+        <div class="kpi-card kpi-success" id="users-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-group"></i>
             </div>
-            <div class="stat-value" id="unique-users">--</div>
-            <div class="stat-description">Últimos 30 dias</div>
+            <div class="kpi-content">
+                <p class="kpi-label">Usuários Únicos</p>
+                <p class="kpi-value" id="unique-users">--</p>
+                <p class="kpi-description">Últimos 30 dias</p>
+            </div>
         </div>
-
-        <!-- Logins Hoje -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <span class="stat-title">Logins Hoje</span>
-                <div class="stat-icon warning">
-                    <i class="fas fa-sign-in-alt"></i>
-                </div>
+        <div class="kpi-card kpi-warning" id="today-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-login"></i>
             </div>
-            <div class="stat-value" id="logins-today">--</div>
-            <div class="stat-description">Desde 00:00h</div>
+            <div class="kpi-content">
+                <p class="kpi-label">Logins Hoje</p>
+                <p class="kpi-value" id="logins-today">--</p>
+                <p class="kpi-description">Desde 00:00h</p>
+            </div>
         </div>
-
-        <!-- Total de Logins -->
-        <div class="stat-card">
-            <div class="stat-header">
-                <span class="stat-title">Total de Logins</span>
-                <div class="stat-icon info">
-                    <i class="fas fa-door-open"></i>
-                </div>
+        <div class="kpi-card kpi-info" id="total-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-door-open"></i>
             </div>
-            <div class="stat-value" id="total-logins">--</div>
-            <div class="stat-description">Todos os tempos</div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Logins</p>
+                <p class="kpi-value" id="total-logins">--</p>
+                <p class="kpi-description">Todos os tempos</p>
+            </div>
         </div>
     </div>
-</div>
 
+    <div class="loading-status" id="loading-status" style="display: none;">
+        <div class="loading-spinner"></div>
+        <span>Carregando dados...</span>
+    </div>
+</div>
 <script src="{{ url_for('analytics.static', filename='js/analytics.js') }}"></script>
 {% endblock %}
