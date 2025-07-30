@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, jsonify, request, session
 from datetime import datetime, timedelta
 from extensions import supabase_admin
-from routes.auth import role_required
+from permissions import admin_required
 import logging
 
 # Configurar logging
@@ -13,7 +13,7 @@ bp = Blueprint('analytics', __name__,
                template_folder='templates')
 
 @bp.route('/')
-@role_required(['admin'])
+@admin_required
 def analytics_dashboard():
     """
     Página principal do Analytics
@@ -25,7 +25,7 @@ def analytics_dashboard():
         return f"Erro ao carregar página: {str(e)}", 500
 
 @bp.route('/api/stats')
-@role_required(['admin'])
+@admin_required
 def get_stats():
     """
     API para estatísticas básicas do Analytics
@@ -51,8 +51,8 @@ def get_stats():
         query = supabase_admin.table('access_logs').select('*')
         
         # Aplicar filtros de data
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
+        query = query.gte('timestamp', start_date.isoformat())
+        query = query.lte('timestamp', end_date.isoformat())
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
@@ -73,8 +73,8 @@ def get_stats():
         logins_today = len([
             log for log in logs 
             if log.get('action_type') == 'login' and 
-            log.get('created_at') and
-            datetime.fromisoformat(log.get('created_at').replace('Z', '+00:00')) >= today_start
+            log.get('timestamp') and
+            datetime.fromisoformat(log.get('timestamp').replace('Z', '+00:00')) >= today_start
         ])
         
         # Total de logins (todos os tempos)
@@ -109,7 +109,7 @@ def get_stats():
         })
 
 @bp.route('/api/charts')
-@role_required(['admin'])
+@admin_required
 def get_charts():
     """
     API para dados dos gráficos
@@ -137,8 +137,8 @@ def get_charts():
         
         # Query base
         query = supabase_admin.table('access_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
+        query = query.gte('timestamp', start_date.isoformat())
+        query = query.lte('timestamp', end_date.isoformat())
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
@@ -159,7 +159,7 @@ def get_charts():
             count = 0
             for log in logs:
                 try:
-                    log_time = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00'))
+                    log_time = datetime.fromisoformat(log.get('timestamp', '').replace('Z', '+00:00'))
                     if day_start <= log_time < day_end:
                         count += 1
                 except:
@@ -198,7 +198,7 @@ def get_charts():
         hourly_counts = {}
         for log in logs:
             try:
-                hour = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00')).hour
+                hour = datetime.fromisoformat(log.get('timestamp', '').replace('Z', '+00:00')).hour
                 hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
             except:
                 continue
@@ -228,7 +228,7 @@ def get_charts():
         })
 
 @bp.route('/api/top-users')
-@role_required(['admin'])
+@admin_required
 def get_top_users():
     """
     API para dados dos top usuários
@@ -251,8 +251,8 @@ def get_top_users():
         
         # Query base
         query = supabase_admin.table('access_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
+        query = query.gte('timestamp', start_date.isoformat())
+        query = query.lte('timestamp', end_date.isoformat())
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
@@ -286,8 +286,8 @@ def get_top_users():
                     user_stats[user_id]['favorite_pages'].append(page_name)
             
             if log.get('action_type') == 'login':
-                if not user_stats[user_id]['last_login'] or log.get('created_at') > user_stats[user_id]['last_login']:
-                    user_stats[user_id]['last_login'] = log.get('created_at')
+                if not user_stats[user_id]['last_login'] or log.get('timestamp') > user_stats[user_id]['last_login']:
+                    user_stats[user_id]['last_login'] = log.get('timestamp')
         
         # Converter para lista e ordenar
         top_users = list(user_stats.values())
@@ -304,7 +304,7 @@ def get_top_users():
         return jsonify([])  # Retornar lista vazia
 
 @bp.route('/api/recent-activity')
-@role_required(['admin'])
+@admin_required
 def get_recent_activity():
     """
     API para atividade recente
@@ -328,9 +328,9 @@ def get_recent_activity():
         
         # Query base
         query = supabase_admin.table('access_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        query = query.order('created_at', desc=True)
+        query = query.gte('timestamp', start_date.isoformat())
+        query = query.lte('timestamp', end_date.isoformat())
+        query = query.order('timestamp', desc=True)
         query = query.limit(50)  # Limitar a 50 registros mais recentes
         
         if user_role != 'all':

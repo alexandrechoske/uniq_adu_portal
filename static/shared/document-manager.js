@@ -37,9 +37,9 @@ class DocumentManager {
     }
 
     setupEventListeners() {
-        // Botão de upload (apenas para admin/interno)
+        // Botão de upload (TODAS as roles podem fazer upload)
         const uploadBtn = document.getElementById('upload-document-btn');
-        if (uploadBtn && ['admin', 'interno_unique'].includes(this.userRole)) {
+        if (uploadBtn && ['admin', 'interno_unique', 'cliente_unique'].includes(this.userRole)) {
             uploadBtn.addEventListener('click', () => this.showUploadModal());
         }
 
@@ -148,7 +148,7 @@ class DocumentManager {
     }
 
     renderDocumentItem(doc) {
-        const canEdit = ['admin', 'interno_unique'].includes(this.userRole);
+        const canDelete = ['admin', 'interno_unique', 'cliente_unique'].includes(this.userRole); // TODAS as roles podem deletar
         const uploadDate = new Date(doc.data_upload).toLocaleDateString('pt-BR');
         
         return `
@@ -173,18 +173,13 @@ class DocumentManager {
                     <button class="btn-icon download-btn" onclick="downloadDocument('${doc.id}')" title="Download">
                         <i class="mdi mdi-download"></i>
                     </button>
-                    ${canEdit ? `
-                        <button class="btn-icon edit-btn" onclick="editDocument('${doc.id}')" title="Editar">
-                            <i class="mdi mdi-pencil"></i>
+                    ${canDelete ? `
+                        <button class="btn-icon delete-btn" onclick="deleteDocument('${doc.id}')" title="Remover">
+                            <i class="mdi mdi-delete"></i>
                         </button>
-                        ${this.userRole === 'admin' ? `
-                            <button class="btn-icon delete-btn" onclick="deleteDocument('${doc.id}')" title="Remover">
-                                <i class="mdi mdi-delete"></i>
-                            </button>
-                        ` : ''}
                     ` : ''}
                 </div>
-                ${!doc.visivel_cliente && canEdit ? '<div class="document-badge">Oculto do cliente</div>' : ''}
+                ${!doc.visivel_cliente ? '<div class="document-badge">Oculto do cliente</div>' : ''}
             </div>
         `;
     }
@@ -209,7 +204,7 @@ class DocumentManager {
     }
 
     canUpload() {
-        return ['admin', 'interno_unique'].includes(this.userRole);
+        return ['admin', 'interno_unique', 'cliente_unique'].includes(this.userRole);
     }
 
     showUploadModal() {

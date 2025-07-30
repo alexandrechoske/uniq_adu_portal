@@ -684,13 +684,16 @@
 // Disponibilizar role do usuário globalmente para o Document Manager
 window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
 
-// Mostrar seção de upload baseado na role
+// Mostrar seção de upload baseado na role - TODAS as roles podem fazer upload
 document.addEventListener('DOMContentLoaded', function() {
     const userRole = window.userRole;
     const uploadSection = document.getElementById('upload-section');
     
-    if (uploadSection && ['admin', 'interno_unique'].includes(userRole)) {
+    if (uploadSection && ['admin', 'interno_unique', 'cliente_unique'].includes(userRole)) {
         uploadSection.style.display = 'block';
+        console.log('[DASHBOARD_EXECUTIVO] Seção de upload habilitada para role:', userRole);
+    } else {
+        console.log('[DASHBOARD_EXECUTIVO] Seção de upload desabilitada para role:', userRole);
     }
 });
 </script>

@@ -55,18 +55,18 @@ def api_auth_required(f):
 def upload_document():
     """
     Upload de documento para um processo
-    Apenas usuários admin/interno podem fazer upload
+    Todas as roles podem fazer upload
     """
     try:
         user_info = get_user_info()
         user_role = user_info.get('role')
         user_email = user_info.get('email')
         
-        # Verificar permissão
-        if user_role not in ['admin', 'interno_unique']:
+        # Verificar permissão - TODAS as roles podem fazer upload
+        if user_role not in ['admin', 'interno_unique', 'cliente_unique']:
             return jsonify({
                 'success': False,
-                'error': 'Acesso negado. Apenas usuários internos podem enviar documentos.'
+                'error': 'Acesso negado. Role não autorizada.'
             }), 403
         
         # Validar dados da requisição
@@ -206,17 +206,17 @@ def download_document(document_id):
 def update_document(document_id):
     """
     Atualiza informações do documento
-    Apenas usuários admin/interno podem editar
+    Todas as roles podem editar documentos
     """
     try:
         user_info = get_user_info()
         user_role = user_info.get('role')
         
-        # Verificar permissão
-        if user_role not in ['admin', 'interno_unique']:
+        # Verificar permissão - TODAS as roles podem editar
+        if user_role not in ['admin', 'interno_unique', 'cliente_unique']:
             return jsonify({
                 'success': False,
-                'error': 'Acesso negado. Apenas usuários internos podem editar documentos.'
+                'error': 'Acesso negado. Role não autorizada.'
             }), 403
         
         data = request.get_json()
@@ -244,17 +244,17 @@ def update_document(document_id):
 def delete_document(document_id):
     """
     Remove documento (soft delete)
-    Apenas usuários admin podem remover
+    TODAS as roles podem remover documentos
     """
     try:
         user_info = get_user_info()
         user_role = user_info.get('role')
         
-        # Verificar permissão (apenas admin)
-        if user_role != 'admin':
+        # Verificar permissão - TODAS as roles podem deletar
+        if user_role not in ['admin', 'interno_unique', 'cliente_unique']:
             return jsonify({
                 'success': False,
-                'error': 'Acesso negado. Apenas administradores podem remover documentos.'
+                'error': 'Acesso negado. Role não autorizada.'
             }), 403
         
         result = document_service.delete_document(document_id)
