@@ -6,6 +6,8 @@ from permissions import check_permission
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
+import unicodedata
+import re
 from services.data_cache import DataCacheService
 
 # Instanciar o serviço de cache
@@ -123,9 +125,9 @@ def index():
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
 def load_data():
-    """Carregar dados da view vw_importacoes_6_meses"""
+    """Carregar dados da tabela importacoes_processos_aberta"""
     try:
-        print("[DASHBOARD_EXECUTIVO] Iniciando carregamento de dados da view...")
+        print("[DASHBOARD_EXECUTIVO] Iniciando carregamento de dados da tabela...")
         
         # Obter dados do usuário
         user_data = session.get('user', {})
@@ -144,8 +146,8 @@ def load_data():
                 'total_records': len(cached_data)
             })
         
-        # Query base da view
-        query = supabase_admin.table('vw_importacoes_6_meses').select('*')
+        # Query base da nova tabela
+        query = supabase_admin.table('importacoes_processos_aberta').select('*')
         
         # Filtrar por empresa se for cliente
         if user_role == 'cliente_unique':

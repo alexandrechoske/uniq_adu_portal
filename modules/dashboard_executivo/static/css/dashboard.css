@@ -814,6 +814,58 @@
     font-weight: 500;
 }
 
+/* Container List Styles */
+.container-item {
+    grid-column: 1 / -1; /* Span full width quando necessário */
+}
+
+.container-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 100%;
+}
+
+.container-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    background: #e3f2fd;
+    border: 1px solid #1976d2;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #1565c0;
+    white-space: nowrap;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.container-tag:hover {
+    background: #bbdefb;
+    cursor: help;
+}
+
+/* Timeline Status Styles */
+.timeline-step .timeline-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #495057;
+    text-align: center;
+    margin-top: 5px;
+}
+
+.timeline-step.completed .timeline-label {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.timeline-step.active .timeline-label {
+    color: #007bff;
+    font-weight: 600;
+}
+
 /* Responsive Filter Modal */
 @media (max-width: 768px) {
     .filter-modal-content {

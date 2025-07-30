@@ -266,7 +266,7 @@
                         <th class="sortable" data-sort="ref_importador">Pedido</th>
                         <th class="sortable" data-sort="importador">Importador</th>
                         <th class="sortable" data-sort="data_abertura">Data Abertura</th>
-                        <th class="sortable" data-sort="exportador">Exportador</th>
+                        <th class="sortable" data-sort="exportador_fornecedor">Exportador</th>
                         <th class="sortable" data-sort="modal">Modal</th>
                         <th class="sortable" data-sort="status">Status</th>
                         <th class="sortable" data-sort="custo_total">Custo Total</th>
@@ -352,6 +352,10 @@
                                 <span id="detail-importador">-</span>
                             </div>
                             <div class="info-item">
+                                <label>Exportador:</label>
+                                <span id="detail-exportador">-</span>
+                            </div>
+                            <div class="info-item">
                                 <label>CNPJ:</label>
                                 <span id="detail-cnpj">-</span>
                             </div>
@@ -370,9 +374,9 @@
                                 <label>Modal:</label>
                                 <span id="detail-modal">-</span>
                             </div>
-                            <div class="info-item">
-                                <label>Container:</label>
-                                <span id="detail-container">-</span>
+                            <div class="info-item container-item">
+                                <label>Container(s):</label>
+                                <div id="detail-container" class="container-list">-</div>
                             </div>
                             <div class="info-item">
                                 <label>Data de Embarque:</label>
@@ -381,6 +385,10 @@
                             <div class="info-item">
                                 <label>Data de Chegada:</label>
                                 <span id="detail-data-chegada">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>Data de Fechamento:</label>
+                                <span id="detail-data-fechamento">-</span>
                             </div>
                             <div class="info-item">
                                 <label>Transit Time (dias):</label>

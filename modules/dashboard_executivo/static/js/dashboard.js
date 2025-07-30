@@ -2098,13 +2098,21 @@ function openProcessModal(operationIndex) {
     // Update timeline - extract numeric value from status_macro like "5 - AG REGISTRO"
     const statusMacroNumber = extractStatusMacroNumber(operation.status_macro);
     console.log('[MODAL_DEBUG] Status macro extraído:', statusMacroNumber);
-    updateProcessTimeline(statusMacroNumber);
+    
+    // NOVO: Usar status_timeline ou fallback para status_macro
+    const statusTimeline = operation.status_timeline || operation.status_macro;
+    console.log('[TIMELINE_DEBUG] Status timeline original:', operation.status_timeline);
+    console.log('[TIMELINE_DEBUG] Status macro fallback:', operation.status_macro);
+    console.log('[TIMELINE_DEBUG] Status final usado:', statusTimeline);
+    
+    updateProcessTimelineFromStatusTimeline(statusTimeline);
     
     // Update general information
     updateElementValue('detail-ref-unique', operation.ref_unique);
     updateElementValue('detail-ref-importador', operation.ref_importador);
     updateElementValue('detail-data-abertura', operation.data_abertura);
     updateElementValue('detail-importador', operation.importador);
+    updateElementValue('detail-exportador', operation.exportador_fornecedor);
     updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
     // Processar status_macro_sistema para exibição
     let statusToDisplay = operation.status_macro_sistema || operation.status_processo || operation.status_macro;
@@ -2117,9 +2125,10 @@ function openProcessModal(operationIndex) {
     
     // Update cargo and transport details
     updateElementValue('detail-modal', operation.modal);
-    updateElementValue('detail-container', operation.container);
+    updateContainerField(operation.container); // NOVO: Função para processar containers múltiplos
     updateElementValue('detail-data-embarque', operation.data_embarque);
     updateElementValue('detail-data-chegada', operation.data_chegada);
+    updateElementValue('detail-data-fechamento', operation.data_fechamento); // NOVA data
     updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : '-');
     updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : '-');
     
@@ -2195,28 +2204,121 @@ function formatCNPJ(cnpj) {
 }
 
 /**
- * Update process timeline based on status_macro
+ * Update process timeline based on status_timeline from database
  */
-function updateProcessTimeline(statusMacro) {
-    console.log('[TIMELINE_DEBUG] Atualizando timeline com status:', statusMacro);
+function updateProcessTimelineFromStatusTimeline(statusTimeline) {
+    console.log('[TIMELINE_DEBUG] Atualizando timeline com status_timeline:', statusTimeline);
     
     const timelineSteps = document.querySelectorAll('.timeline-step');
     console.log('[TIMELINE_DEBUG] Steps encontrados:', timelineSteps.length);
     
-    timelineSteps.forEach((step, index) => {
-        const stepNumber = index + 1;
+    // Resetar todos os steps
+    timelineSteps.forEach(step => {
         step.classList.remove('completed', 'active');
-        
-        console.log(`[TIMELINE_DEBUG] Step ${stepNumber}: status=${statusMacro}`);
-        
-        if (stepNumber < statusMacro) {
-            step.classList.add('completed');
-            console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como completed`);
-        } else if (stepNumber === statusMacro) {
-            step.classList.add('active');
-            console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como active`);
-        }
     });
+    
+    if (!statusTimeline) {
+        console.log('[TIMELINE_DEBUG] Status timeline vazio - nenhum step ativo');
+        return;
+    }
+    
+    // Mapear status_timeline para steps (remover número do início e pontos)
+    const timelineMap = {
+        'Aberto': 1,
+        'Abertura': 1,
+        'Processo Aberto': 1,
+        'Embarque': 2, 
+        'Embarcado': 2,
+        'Chegada': 3,
+        'Chegou': 3,
+        'Registro': 4,
+        'Registrado': 4,
+        'DI Registrada': 4,
+        'Desembaraço': 5,
+        'Desembaracado': 5,
+        'Processo Concluído': 5,
+        'Finalizado': 5,
+        'Liberado': 5
+    };
+    
+    // Extrair o nome do status (remover número, pontos e traços)
+    let statusName = statusTimeline.replace(/^\d+[\.\-\s]*/, '').trim().toUpperCase();
+    console.log(`[TIMELINE_DEBUG] Status original: "${statusTimeline}"`);
+    console.log(`[TIMELINE_DEBUG] Status limpo: "${statusName}"`);
+    
+    // Buscar correspondência no mapeamento (case insensitive)
+    let currentStep = null;
+    for (const [key, step] of Object.entries(timelineMap)) {
+        if (statusName.includes(key.toUpperCase()) || key.toUpperCase().includes(statusName)) {
+            currentStep = step;
+            console.log(`[TIMELINE_DEBUG] Mapeamento encontrado: "${key}" -> Step ${step}`);
+            break;
+        }
+    }
+    
+    // Se não encontrou correspondência, tentar extrair número diretamente
+    if (!currentStep) {
+        const numeroMatch = statusTimeline.match(/^(\d+)/);
+        if (numeroMatch) {
+            const numero = parseInt(numeroMatch[1]);
+            if (numero >= 1 && numero <= 10) {
+                // Mapear números para steps (1-5 são diretos, 6-10 são status 5)
+                currentStep = numero <= 5 ? numero : 5;
+                console.log(`[TIMELINE_DEBUG] Mapeamento por número: ${numero} -> Step ${currentStep}`);
+            }
+        }
+    }
+    
+    console.log(`[TIMELINE_DEBUG] Step final: ${currentStep}`);
+    
+    if (currentStep) {
+        timelineSteps.forEach((step, index) => {
+            const stepNumber = index + 1;
+            
+            if (stepNumber < currentStep) {
+                step.classList.add('completed');
+                console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como completed`);
+            } else if (stepNumber === currentStep) {
+                step.classList.add('active');
+                console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como active`);
+            }
+        });
+    } else {
+        console.log(`[TIMELINE_DEBUG] Nenhum mapeamento encontrado para: "${statusTimeline}"`);
+    }
+}
+
+/**
+ * Update container field with support for multiple containers
+ */
+function updateContainerField(containerValue) {
+    const containerElement = document.getElementById('detail-container');
+    
+    if (!containerElement) {
+        console.warn('[MODAL_DEBUG] Elemento detail-container não encontrado');
+        return;
+    }
+    
+    if (!containerValue || containerValue.trim() === '') {
+        containerElement.innerHTML = '-';
+        return;
+    }
+    
+    // Verificar se há múltiplos containers (separados por vírgula)
+    const containers = containerValue.split(',').map(c => c.trim()).filter(c => c);
+    
+    if (containers.length === 1) {
+        // Um único container
+        containerElement.innerHTML = `<span class="container-tag" title="${containers[0]}">${containers[0]}</span>`;
+    } else {
+        // Múltiplos containers
+        const containerTags = containers.map(container => 
+            `<span class="container-tag" title="${container}">${container}</span>`
+        ).join('');
+        
+        containerElement.innerHTML = containerTags;
+        console.log(`[MODAL_DEBUG] ${containers.length} containers processados:`, containers);
+    }
 }
 
 /**
