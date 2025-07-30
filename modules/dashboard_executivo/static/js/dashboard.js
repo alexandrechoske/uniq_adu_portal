@@ -406,35 +406,89 @@ async function loadInitialData() {
 }
 
 /**
- * Load initial data with intelligent caching
+ * Load initial data with intelligent caching and retry mechanism
  */
 async function loadInitialDataWithCache() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento com cache...');
         
-        // Verificar se temos cache válido para filter options
-        let filterOptionsData = dashboardCache.get('filterOptions');
-        if (!filterOptionsData) {
-            await loadFilterOptions();
-        }
+        // Carregar dados base com retry
+        dashboardData = await loadDataWithRetry();
         
-        // Carregar dados base apenas se necessário
-        const response = await fetch('/dashboard-executivo/api/load-data');
-        const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.error || 'Erro ao carregar dados');
-        }
-        
-        dashboardData = result.data;
-        console.log(`[DASHBOARD_EXECUTIVO] Dados carregados: ${result.total_records} registros`);
-        
-        // Carregar componentes com cache inteligente
-        await loadComponentsWithCache();
+        // Carregar componentes com retry automático
+        await loadComponentsWithRetry();
         
     } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar dados:', error);
-        throw error;
+        console.error('[DASHBOARD_EXECUTIVO] Erro fatal ao carregar dados:', error);
+        
+        // Tentar recuperação usando cache como último recurso
+        await attemptCacheRecovery();
+    }
+}
+
+/**
+ * Load data with automatic retry mechanism
+ */
+async function loadDataWithRetry(maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt}/${maxRetries} - Carregando dados base...`);
+            
+            const response = await fetch('/dashboard-executivo/api/load-data');
+            const result = await response.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                console.log(`[DASHBOARD_EXECUTIVO] Dados carregados com sucesso: ${result.total_records} registros`);
+                return result.data;
+            } else {
+                throw new Error(result.error || 'Dados não encontrados ou vazios');
+            }
+            
+        } catch (error) {
+            console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} falhou:`, error.message);
+            
+            if (attempt === maxRetries) {
+                throw new Error(`Falha após ${maxRetries} tentativas: ${error.message}`);
+            }
+            
+            // Aguardar antes da próxima tentativa (backoff exponencial)
+            const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+            console.log(`[DASHBOARD_EXECUTIVO] Aguardando ${delay}ms antes da próxima tentativa...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+/**
+ * Load components with retry mechanism
+ */
+async function loadComponentsWithRetry() {
+    const components = [
+        { name: 'KPIs', loadFunction: () => loadDashboardKPIsWithRetry() },
+        { name: 'Gráficos', loadFunction: () => loadDashboardChartsWithRetry() },
+        { name: 'Operações', loadFunction: () => loadRecentOperationsWithRetry() },
+        { name: 'Filtros', loadFunction: () => loadFilterOptionsWithRetry() }
+    ];
+    
+    // Carregar componentes em paralelo com tratamento individual de erros
+    const results = await Promise.allSettled(components.map(async (component) => {
+        try {
+            await component.loadFunction();
+            console.log(`[DASHBOARD_EXECUTIVO] ✅ ${component.name} carregado com sucesso`);
+            return { component: component.name, success: true };
+        } catch (error) {
+            console.error(`[DASHBOARD_EXECUTIVO] ❌ ${component.name} falhou:`, error.message);
+            return { component: component.name, success: false, error: error.message };
+        }
+    }));
+    
+    // Verificar resultados
+    const failed = results.filter(r => r.value && !r.value.success);
+    if (failed.length > 0) {
+        console.warn(`[DASHBOARD_EXECUTIVO] ${failed.length} componentes falharam:`, failed.map(f => f.value.component));
+        
+        // Mostrar mensagem discreta para o usuário
+        showWarningMessage(`Alguns dados podem estar desatualizados. ${failed.length} componente(s) com problema.`);
     }
 }
 
@@ -530,6 +584,46 @@ async function loadDashboardKPIsWithCache() {
 }
 
 /**
+ * Load dashboard KPIs with retry and cache fallback
+ */
+async function loadDashboardKPIsWithRetry(maxRetries = 2) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[DASHBOARD_EXECUTIVO] Carregando KPIs (tentativa ${attempt}/${maxRetries})...`);
+            
+            const queryString = buildFilterQueryString();
+            const response = await fetch(`/dashboard-executivo/api/kpis?${queryString}`);
+            const result = await response.json();
+            
+            if (result.success && result.kpis) {
+                console.log('[DASHBOARD_EXECUTIVO] KPIs carregados com sucesso');
+                dashboardCache.set('kpis', result.kpis);
+                updateDashboardKPIs(result.kpis);
+                return;
+            } else {
+                throw new Error(result.error || 'KPIs não encontrados');
+            }
+            
+        } catch (error) {
+            console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de KPIs falhou:`, error.message);
+            
+            if (attempt === maxRetries) {
+                // Tentar usar cache como fallback
+                const cachedKpis = dashboardCache.get('kpis');
+                if (cachedKpis) {
+                    console.log('[DASHBOARD_EXECUTIVO] Usando KPIs do cache como fallback');
+                    updateDashboardKPIs(cachedKpis);
+                    return;
+                }
+                throw error;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+    }
+}
+
+/**
  * Load dashboard charts
  */
 async function loadDashboardCharts() {
@@ -573,6 +667,49 @@ async function loadDashboardChartsWithCache() {
 }
 
 /**
+ * Load dashboard charts with retry and cache fallback
+ */
+async function loadDashboardChartsWithRetry(maxRetries = 2) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[DASHBOARD_EXECUTIVO] Carregando gráficos (tentativa ${attempt}/${maxRetries})...`);
+            
+            const queryString = buildFilterQueryString();
+            const response = await fetch(`/dashboard-executivo/api/charts?${queryString}`);
+            const result = await response.json();
+            
+            if (result.success && result.charts) {
+                console.log('[DASHBOARD_EXECUTIVO] Gráficos carregados com sucesso');
+                dashboardCache.set('charts', result.charts);
+                createDashboardChartsWithValidation(result.charts);
+                return;
+            } else {
+                throw new Error(result.error || 'Gráficos não encontrados');
+            }
+            
+        } catch (error) {
+            console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de gráficos falhou:`, error.message);
+            
+            if (attempt === maxRetries) {
+                // Tentar usar cache como fallback
+                const cachedCharts = dashboardCache.get('charts');
+                if (cachedCharts) {
+                    console.log('[DASHBOARD_EXECUTIVO] Usando gráficos do cache como fallback');
+                    createDashboardChartsWithValidation(cachedCharts);
+                    return;
+                }
+                
+                // Se não há cache, criar gráficos vazios para evitar telas em branco
+                createEmptyCharts();
+                throw error;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+    }
+}
+
+/**
  * Load recent operations
  */
 async function loadRecentOperations() {
@@ -612,6 +749,102 @@ async function loadRecentOperationsWithCache() {
         }
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', error);
+    }
+}
+
+/**
+ * Load recent operations with retry and cache fallback
+ */
+async function loadRecentOperationsWithRetry(maxRetries = 2) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[DASHBOARD_EXECUTIVO] Carregando operações (tentativa ${attempt}/${maxRetries})...`);
+            
+            const queryString = buildFilterQueryString();
+            const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
+            const result = await response.json();
+            
+            if (result.success && result.operations) {
+                console.log(`[DASHBOARD_EXECUTIVO] Operações carregadas: ${result.operations.length} registros`);
+                dashboardCache.set('operations', result.operations);
+                updateRecentOperationsTable(result.operations);
+                return;
+            } else {
+                throw new Error(result.error || 'Operações não encontradas');
+            }
+            
+        } catch (error) {
+            console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de operações falhou:`, error.message);
+            
+            if (attempt === maxRetries) {
+                // Tentar usar cache como fallback
+                const cachedOperations = dashboardCache.get('operations');
+                if (cachedOperations) {
+                    console.log('[DASHBOARD_EXECUTIVO] Usando operações do cache como fallback');
+                    updateRecentOperationsTable(cachedOperations);
+                    return;
+                }
+                
+                // Se não há cache, mostrar tabela vazia
+                updateRecentOperationsTable([]);
+                throw error;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+    }
+}
+
+/**
+ * Load filter options with retry and cache fallback
+ */
+async function loadFilterOptionsWithRetry(maxRetries = 2) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[DASHBOARD_EXECUTIVO] Carregando filtros (tentativa ${attempt}/${maxRetries})...`);
+            
+            const response = await fetch('/dashboard-executivo/api/filter-options');
+            const result = await response.json();
+            
+            if (result.success && result.options) {
+                console.log('[DASHBOARD_EXECUTIVO] Opções de filtros carregadas:', {
+                    materiais: result.options.materiais?.length || 0,
+                    clientes: result.options.clientes?.length || 0,
+                    modais: result.options.modais?.length || 0,
+                    canais: result.options.canais?.length || 0
+                });
+                
+                dashboardCache.set('filterOptions', result.options);
+                populateFilterOptions(result.options);
+                return;
+            } else {
+                throw new Error(result.error || 'Opções de filtros não encontradas');
+            }
+            
+        } catch (error) {
+            console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de filtros falhou:`, error.message);
+            
+            if (attempt === maxRetries) {
+                // Tentar usar cache como fallback
+                const cachedOptions = dashboardCache.get('filterOptions');
+                if (cachedOptions) {
+                    console.log('[DASHBOARD_EXECUTIVO] Usando filtros do cache como fallback');
+                    populateFilterOptions(cachedOptions);
+                    return;
+                }
+                
+                // Se não há cache, criar filtros vazios
+                populateFilterOptions({
+                    materiais: [],
+                    clientes: [],
+                    modais: [],
+                    canais: []
+                });
+                throw error;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
     }
 }
 
@@ -1629,6 +1862,152 @@ function showSuccess(message) {
 function showError(message) {
     // Simple alert for now - could be replaced with toast notification
     alert('Erro: ' + message);
+}
+
+/**
+ * Show warning message to user
+ */
+function showWarningMessage(message) {
+    console.warn('[DASHBOARD_EXECUTIVO] Warning:', message);
+    
+    // Criar elemento de aviso se não existir
+    let warningDiv = document.getElementById('dashboard-warning');
+    if (!warningDiv) {
+        warningDiv = document.createElement('div');
+        warningDiv.id = 'dashboard-warning';
+        warningDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 12px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 9999;
+            max-width: 400px;
+            font-size: 14px;
+        `;
+        document.body.appendChild(warningDiv);
+    }
+    
+    warningDiv.innerHTML = `
+        <strong>⚠️ Aviso:</strong> ${message}
+        <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 16px; cursor: pointer; margin-left: 10px;">×</button>
+    `;
+    
+    // Auto remover após 8 segundos
+    setTimeout(() => {
+        if (warningDiv && warningDiv.parentElement) {
+            warningDiv.remove();
+        }
+    }, 8000);
+}
+
+/**
+ * Attempt cache recovery as last resort
+ */
+async function attemptCacheRecovery() {
+    console.log('[DASHBOARD_EXECUTIVO] Tentando recuperação via cache...');
+    
+    try {
+        // Tentar recuperar cada componente do cache
+        const cachedKpis = dashboardCache.get('kpis');
+        const cachedCharts = dashboardCache.get('charts');
+        const cachedOperations = dashboardCache.get('operations');
+        const cachedFilterOptions = dashboardCache.get('filterOptions');
+        
+        let recoveredComponents = 0;
+        
+        if (cachedKpis) {
+            updateDashboardKPIs(cachedKpis);
+            recoveredComponents++;
+            console.log('[DASHBOARD_EXECUTIVO] ✅ KPIs recuperados do cache');
+        }
+        
+        if (cachedCharts) {
+            createDashboardChartsWithValidation(cachedCharts);
+            recoveredComponents++;
+            console.log('[DASHBOARD_EXECUTIVO] ✅ Gráficos recuperados do cache');
+        } else {
+            createEmptyCharts();
+            console.log('[DASHBOARD_EXECUTIVO] ⚠️ Criados gráficos vazios');
+        }
+        
+        if (cachedOperations) {
+            updateRecentOperationsTable(cachedOperations);
+            recoveredComponents++;
+            console.log('[DASHBOARD_EXECUTIVO] ✅ Operações recuperadas do cache');
+        } else {
+            updateRecentOperationsTable([]);
+            console.log('[DASHBOARD_EXECUTIVO] ⚠️ Criada tabela vazia');
+        }
+        
+        if (cachedFilterOptions) {
+            populateFilterOptions(cachedFilterOptions);
+            recoveredComponents++;
+            console.log('[DASHBOARD_EXECUTIVO] ✅ Filtros recuperados do cache');
+        } else {
+            populateFilterOptions({
+                materiais: [],
+                clientes: [],
+                modais: [],
+                canais: []
+            });
+            console.log('[DASHBOARD_EXECUTIVO] ⚠️ Criados filtros vazios');
+        }
+        
+        if (recoveredComponents > 0) {
+            showWarningMessage(`Dashboard carregado com dados em cache. ${recoveredComponents} componente(s) recuperado(s).`);
+        } else {
+            showError('Não foi possível carregar os dados. Tente recarregar a página.');
+        }
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na recuperação via cache:', error);
+        showError('Erro ao carregar dashboard. Recarregue a página.');
+    }
+}
+
+/**
+ * Create empty charts to prevent blank spaces
+ */
+function createEmptyCharts() {
+    console.log('[DASHBOARD_EXECUTIVO] Criando gráficos vazios...');
+    
+    const emptyCharts = {
+        monthly: {
+            labels: ['Sem dados'],
+            datasets: [{
+                label: 'Processos',
+                data: [0],
+                backgroundColor: '#e9ecef',
+                borderColor: '#dee2e6'
+            }]
+        },
+        status: {
+            labels: ['Sem dados'],
+            data: [1]
+        },
+        grouped_modal: {
+            labels: ['Sem dados'],
+            datasets: [{
+                label: 'Processos',
+                data: [0],
+                backgroundColor: '#e9ecef'
+            }]
+        },
+        urf: {
+            labels: ['Sem dados'],
+            data: [1]
+        },
+        principais_materiais: {
+            data: []
+        }
+    };
+    
+    createDashboardChartsWithValidation(emptyCharts);
 }
 
 /**
