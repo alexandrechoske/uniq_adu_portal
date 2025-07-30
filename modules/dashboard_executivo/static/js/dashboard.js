@@ -1983,14 +1983,13 @@ function createPrincipaisMateriaisTable(data) {
         return;
     }
     
-    data.data.forEach(material => {
+    // Exibir apenas o Top 5 materiais
+    (data.data.slice(0, 5)).forEach(material => {
         const row = document.createElement('tr');
-        
         // Add urgente class if needed
         if (material.is_urgente) {
             row.classList.add('urgente-row');
         }
-        
         row.innerHTML = `
             <td title="${material.material}">${material.material.length > 30 ? material.material.substring(0, 30) + '...' : material.material}</td>
             <td class="text-center">${material.total_processos}</td>
@@ -2003,7 +2002,6 @@ function createPrincipaisMateriaisTable(data) {
             </td>
             <td class="text-center">${material.transit_time ? formatNumber(material.transit_time, 1) + ' dias' : '-'}</td>
         `;
-        
         tableBody.appendChild(row);
     });
     

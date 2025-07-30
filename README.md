@@ -56,7 +56,7 @@ pip install -r requirements.txt
 Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
 ```
 SUPABASE_URL=sua_url_do_supabase
-SUPABASE_KEY=sua_chave_do_supabase
+SUPABASE_SERVICE_KEY=sua_chave_do_supabase
 SECRET_KEY=sua_chave_secreta_flask
 FLASK_DEBUG=True
 ```

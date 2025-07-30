@@ -7,7 +7,7 @@ load_dotenv()
 class Config:
     # Supabase Configuration
     SUPABASE_URL = os.getenv('SUPABASE_URL')
-    SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+    SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')
     SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')
     SUPABASE_CURL_BEARER = os.getenv('SUPABASE_CURL_BEARER')
     

@@ -13,23 +13,23 @@ def init_supabase(app):
     if not app.config['SUPABASE_URL']:
         print("[DEBUG] ERRO: SUPABASE_URL não está configurado")
         raise ValueError("SUPABASE_URL environment variable is not set")
-    if not app.config['SUPABASE_KEY']:
-        print("[DEBUG] ERRO: SUPABASE_KEY não está configurado")
-        raise ValueError("SUPABASE_KEY environment variable is not set")
+    if not app.config['SUPABASE_SERVICE_KEY']:
+        print("[DEBUG] ERRO: SUPABASE_SERVICE_KEY não está configurado")
+        raise ValueError("SUPABASE_SERVICE_KEY environment variable is not set")
     if not app.config['SUPABASE_SERVICE_KEY']:
         print("[DEBUG] ERRO: SUPABASE_SERVICE_KEY não está configurado")
         raise ValueError("SUPABASE_SERVICE_KEY environment variable is not set. This is required for admin operations.")
     
     print(f"[DEBUG] SUPABASE_URL: {app.config['SUPABASE_URL']}")
-    print(f"[DEBUG] SUPABASE_KEY (primeiros 10 caracteres): {app.config['SUPABASE_KEY'][:10] if app.config['SUPABASE_KEY'] else 'None'}")
+    print(f"[DEBUG] SUPABASE_SERVICE_KEY (primeiros 10 caracteres): {app.config['SUPABASE_SERVICE_KEY'][:10] if app.config['SUPABASE_SERVICE_KEY'] else 'None'}")
     print(f"[DEBUG] SUPABASE_SERVICE_KEY (primeiros 10 caracteres): {app.config['SUPABASE_SERVICE_KEY'][:10] if app.config['SUPABASE_SERVICE_KEY'] else 'None'}")
     
     try:
         # Regular client for normal operations
         print("\n[DEBUG] Criando cliente regular do Supabase...")
         print(f"[DEBUG] URL do cliente regular: {app.config['SUPABASE_URL']}")
-        print(f"[DEBUG] Chave do cliente regular (primeiros 10 caracteres): {app.config['SUPABASE_KEY'][:10]}")
-        supabase = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
+        print(f"[DEBUG] Chave do cliente regular (primeiros 10 caracteres): {app.config['SUPABASE_SERVICE_KEY'][:10]}")
+        supabase = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_SERVICE_KEY'])
         
         # Test the regular client
         print("[DEBUG] Testando cliente regular...")
