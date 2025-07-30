@@ -680,6 +680,9 @@
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
 
+<!-- TESTE: Script de validação dos filtros -->
+<script src="{{ url_for('static', filename='test_filter_validation.js') }}"></script>
+
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager
 window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';

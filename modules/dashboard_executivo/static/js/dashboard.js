@@ -16,9 +16,69 @@ let monthlyChartPeriod = 'mensal';
 let recentOperationsTable = null;
 let currentFilters = {};  // NOVO: Para armazenar filtros ativos
 
+// CACHE INTELIGENTE: Sistema de cache para evitar recarregamentos desnecessários
+let dashboardCache = {
+    kpis: null,
+    charts: null,
+    operations: null,
+    filterOptions: null,
+    lastUpdate: null,
+    cacheTimeout: 5 * 60 * 1000, // 5 minutos
+    
+    // Verificar se o cache é válido
+    isValid: function() {
+        return this.lastUpdate && (Date.now() - this.lastUpdate) < this.cacheTimeout;
+    },
+    
+    // Invalidar cache
+    invalidate: function() {
+        this.kpis = null;
+        this.charts = null;
+        this.operations = null;
+        this.lastUpdate = null;
+        console.log('[DASHBOARD_CACHE] Cache invalidado');
+    },
+    
+    // Definir dados no cache
+    set: function(type, data) {
+        this[type] = data;
+        this.lastUpdate = Date.now();
+        console.log(`[DASHBOARD_CACHE] Cache atualizado para ${type}`);
+    },
+    
+    // Obter dados do cache
+    get: function(type) {
+        if (this.isValid() && this[type]) {
+            console.log(`[DASHBOARD_CACHE] Usando cache para ${type}`);
+            return this[type];
+        }
+        return null;
+    }
+};
+
+// Estado do dashboard para evitar múltiplos carregamentos simultâneos
+let dashboardState = {
+    isLoading: false,
+    isInitialized: false
+};
+
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
+    
+    // Detectar se o usuário está voltando para a página (cache do navegador)
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+            console.log('[DASHBOARD_EXECUTIVO] Página restaurada do cache do navegador');
+            
+            // Se o dashboard já foi inicializado mas os gráficos estão vazios, recriar
+            if (dashboardState.isInitialized) {
+                setTimeout(() => {
+                    validateAndRecreateCharts();
+                }, 500);
+            }
+        }
+    });
     
     // Simple initialization - wait a bit for scripts to load
     setTimeout(() => {
@@ -41,27 +101,86 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
+ * Validate and recreate charts if they are missing
+ */
+function validateAndRecreateCharts() {
+    console.log('[DASHBOARD_EXECUTIVO] Validando estado dos gráficos...');
+    
+    // Lista de gráficos esperados
+    const expectedCharts = [
+        'monthly-chart',
+        'status-chart', 
+        'grouped-modal-chart',
+        'urf-chart'
+    ];
+    
+    let missingCharts = 0;
+    
+    // Verificar se os canvas existem e se têm gráficos ativos
+    expectedCharts.forEach(chartId => {
+        const canvas = document.getElementById(chartId);
+        if (canvas) {
+            const chartInstance = Chart.getChart(canvas);
+            if (!chartInstance) {
+                console.warn(`[DASHBOARD_EXECUTIVO] Gráfico ${chartId} não encontrado - será recriado`);
+                missingCharts++;
+            }
+        }
+    });
+    
+    // Se algum gráfico estiver faltando, recriar todos usando o cache
+    if (missingCharts > 0) {
+        console.log(`[DASHBOARD_EXECUTIVO] ${missingCharts} gráficos faltando - recriando com cache...`);
+        
+        const cachedCharts = dashboardCache.get('charts');
+        if (cachedCharts) {
+            createDashboardChartsWithValidation(cachedCharts);
+        } else {
+            console.log('[DASHBOARD_EXECUTIVO] Cache não disponível - recarregando gráficos...');
+            loadDashboardChartsWithCache();
+        }
+    } else {
+        console.log('[DASHBOARD_EXECUTIVO] Todos os gráficos estão presentes');
+    }
+}
+
+/**
  * Initialize the dashboard
  */
 async function initializeDashboard() {
+    // Evitar múltiplas inicializações simultâneas
+    if (dashboardState.isLoading || dashboardState.isInitialized) {
+        console.log('[DASHBOARD_EXECUTIVO] Dashboard já está carregando ou inicializado');
+        return;
+    }
+    
     try {
+        dashboardState.isLoading = true;
         showLoading(true);
+        
+        console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento do dashboard...');
         
         // Initialize enhanced table FIRST, before loading data
         initializeEnhancedTable();
         
-        // Then load initial data
-        await loadInitialData();
+        // Then load initial data with cache check
+        await loadInitialDataWithCache();
         
         // Setup event listeners and filters
         setupEventListeners();
         setMonthlyChartPeriod('mensal');
         
+        dashboardState.isInitialized = true;
         showLoading(false);
         updateLastUpdate();
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dashboard inicializado com sucesso');
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro na inicialização:', error);
         showError('Erro ao carregar dashboard: ' + error.message);
+        dashboardState.isInitialized = false;
+    } finally {
+        dashboardState.isLoading = false;
         showLoading(false);
     }
 }
@@ -164,6 +283,8 @@ function setupEventListeners() {
  * Setup filter event listeners
  */
 function setupFilterEventListeners() {
+    console.log('[DASHBOARD_EXECUTIVO] Configurando event listeners dos filtros...');
+    
     // Filter modal
     const openFiltersBtn = document.getElementById('open-filters');
     const closeModalBtn = document.getElementById('close-modal');
@@ -173,7 +294,20 @@ function setupFilterEventListeners() {
     const resetFiltersBtn = document.getElementById('reset-filters'); // NOVO
     
     if (openFiltersBtn) {
-        openFiltersBtn.addEventListener('click', openFilterModal);
+        openFiltersBtn.addEventListener('click', function() {
+            console.log('[DASHBOARD_EXECUTIVO] Botão Filtros clicado');
+            
+            // Verificar se as opções de filtros foram carregadas
+            const materialOptions = document.getElementById('material-options');
+            if (materialOptions && materialOptions.children.length === 0) {
+                console.log('[DASHBOARD_EXECUTIVO] Opções de filtros não carregadas - recarregando...');
+                loadFilterOptions().then(() => {
+                    openFilterModal();
+                });
+            } else {
+                openFilterModal();
+            }
+        });
     }
     
     if (closeModalBtn) {
@@ -272,6 +406,87 @@ async function loadInitialData() {
 }
 
 /**
+ * Load initial data with intelligent caching
+ */
+async function loadInitialDataWithCache() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento com cache...');
+        
+        // Verificar se temos cache válido para filter options
+        let filterOptionsData = dashboardCache.get('filterOptions');
+        if (!filterOptionsData) {
+            await loadFilterOptions();
+        }
+        
+        // Carregar dados base apenas se necessário
+        const response = await fetch('/dashboard-executivo/api/load-data');
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Erro ao carregar dados');
+        }
+        
+        dashboardData = result.data;
+        console.log(`[DASHBOARD_EXECUTIVO] Dados carregados: ${result.total_records} registros`);
+        
+        // Carregar componentes com cache inteligente
+        await loadComponentsWithCache();
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar dados:', error);
+        throw error;
+    }
+}
+
+/**
+ * Load components with intelligent caching
+ */
+async function loadComponentsWithCache() {
+    try {
+        // Verificar cache antes de fazer requisições
+        let kpisData = dashboardCache.get('kpis');
+        let chartsData = dashboardCache.get('charts');
+        let operationsData = dashboardCache.get('operations');
+        
+        const promises = [];
+        
+        // Carregar KPIs (sempre, pois podem mudar com filtros)
+        promises.push(loadDashboardKPIsWithCache());
+        
+        // Carregar gráficos se não estiver em cache ou se filtros mudaram
+        if (!chartsData || hasFiltersChanged()) {
+            promises.push(loadDashboardChartsWithCache());
+        } else {
+            console.log('[DASHBOARD_EXECUTIVO] Usando gráficos em cache');
+            createDashboardChartsWithValidation(chartsData);
+        }
+        
+        // Carregar operações recentes
+        promises.push(loadRecentOperationsWithCache());
+        
+        await Promise.all(promises);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar componentes:', error);
+        throw error;
+    }
+}
+
+/**
+ * Check if filters have changed since last cache
+ */
+function hasFiltersChanged() {
+    const currentFilterString = buildFilterQueryString();
+    const cachedFilterString = dashboardCache.lastFilterString || '';
+    
+    if (currentFilterString !== cachedFilterString) {
+        dashboardCache.lastFilterString = currentFilterString;
+        return true;
+    }
+    return false;
+}
+
+/**
  * Load dashboard KPIs
  */
 async function loadDashboardKPIs() {
@@ -283,6 +498,28 @@ async function loadDashboardKPIs() {
         const result = await response.json();
         
         if (result.success) {
+            updateDashboardKPIs(result.kpis);
+        } else {
+            console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar KPIs:', result.error);
+        }
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar KPIs:', error);
+    }
+}
+
+/**
+ * Load dashboard KPIs with cache
+ */
+async function loadDashboardKPIsWithCache() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs com cache...');
+        
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/kpis?${queryString}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            dashboardCache.set('kpis', result.kpis);
             updateDashboardKPIs(result.kpis);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar KPIs:', result.error);
@@ -314,6 +551,28 @@ async function loadDashboardCharts() {
 }
 
 /**
+ * Load dashboard charts with cache
+ */
+async function loadDashboardChartsWithCache() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] Carregando gráficos com cache...');
+        
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/charts?${queryString}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            dashboardCache.set('charts', result.charts);
+            createDashboardChartsWithValidation(result.charts);
+        } else {
+            console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar gráficos:', result.error);
+        }
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar gráficos:', error);
+    }
+}
+
+/**
  * Load recent operations
  */
 async function loadRecentOperations() {
@@ -325,6 +584,28 @@ async function loadRecentOperations() {
         const result = await response.json();
         
         if (result.success) {
+            updateRecentOperationsTable(result.operations);
+        } else {
+            console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', result.error);
+        }
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', error);
+    }
+}
+
+/**
+ * Load recent operations with cache
+ */
+async function loadRecentOperationsWithCache() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] Carregando operações recentes com cache...');
+        
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            dashboardCache.set('operations', result.operations);
             updateRecentOperationsTable(result.operations);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', result.error);
@@ -408,6 +689,78 @@ function createDashboardCharts(charts) {
     if (charts.material) {
         console.log('[DASHBOARD_EXECUTIVO] Criando gráfico material...');
         createMaterialChart(charts.material);
+    }
+}
+
+/**
+ * Create dashboard charts with validation and error handling
+ */
+function createDashboardChartsWithValidation(charts) {
+    if (!charts) {
+        console.error('[DASHBOARD_EXECUTIVO] Dados de gráficos não fornecidos');
+        return;
+    }
+    
+    console.log('[DASHBOARD_EXECUTIVO] Criando gráficos com validação...', charts);
+    
+    try {
+        // Verificar se Chart.js está disponível
+        if (typeof Chart === 'undefined') {
+            console.error('[DASHBOARD_EXECUTIVO] Chart.js não está disponível');
+            return;
+        }
+        
+        // Create monthly chart with validation
+        if (charts.monthly && charts.monthly.labels && charts.monthly.datasets) {
+            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico mensal...');
+            createMonthlyChartWithValidation(charts.monthly);
+        } else {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal inválidos ou ausentes');
+        }
+        
+        // Create status chart with validation
+        if (charts.status && charts.status.labels && charts.status.data) {
+            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico de status...');
+            createStatusChartWithValidation(charts.status);
+        } else {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de status inválidos ou ausentes');
+        }
+        
+        // Create grouped modal chart with validation
+        if (charts.grouped_modal && charts.grouped_modal.labels && charts.grouped_modal.datasets) {
+            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico modal...');
+            createGroupedModalChartWithValidation(charts.grouped_modal);
+        } else {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico modal inválidos ou ausentes');
+        }
+        
+        // Create URF chart with validation
+        if (charts.urf && charts.urf.labels && charts.urf.data) {
+            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico URF...');
+            createUrfChartWithValidation(charts.urf);
+        } else {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico URF inválidos ou ausentes');
+        }
+        
+        // Create principais materiais table with validation
+        if (charts.principais_materiais && charts.principais_materiais.data) {
+            console.log('[DASHBOARD_EXECUTIVO] Criando tabela de principais materiais...');
+            createPrincipaisMateriaisTableWithValidation(charts.principais_materiais);
+        } else {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais inválidos ou ausentes');
+        }
+        
+        // Create material chart with validation (se existir)
+        if (charts.material && charts.material.labels && charts.material.data) {
+            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico material...');
+            createMaterialChartWithValidation(charts.material);
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Todos os gráficos foram criados com sucesso');
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráficos:', error);
+        showError('Erro ao criar gráficos. Tente recarregar a página.');
     }
 }
 
@@ -576,6 +929,155 @@ function createMonthlyChart(data) {
         console.log('[DASHBOARD_EXECUTIVO] Gráfico mensal criado com sucesso');
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico mensal:', error);
+    }
+}
+
+/**
+ * Create monthly evolution chart with validation
+ */
+function createMonthlyChartWithValidation(data) {
+    try {
+        // Validação robusta dos dados
+        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal inválidos - labels ausentes ou vazios');
+            return;
+        }
+        
+        if (!data.datasets || !Array.isArray(data.datasets) || data.datasets.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal inválidos - datasets ausentes ou vazios');
+            return;
+        }
+        
+        // Verificar se cada dataset tem dados válidos
+        for (let i = 0; i < data.datasets.length; i++) {
+            const dataset = data.datasets[i];
+            if (!dataset.data || !Array.isArray(dataset.data) || dataset.data.length === 0) {
+                console.warn(`[DASHBOARD_EXECUTIVO] Dataset ${i} do gráfico mensal tem dados inválidos`);
+                return;
+            }
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal validados - criando gráfico...');
+        createMonthlyChart(data);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico mensal:', error);
+    }
+}
+
+/**
+ * Create status chart with validation
+ */
+function createStatusChartWithValidation(data) {
+    try {
+        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de status inválidos - labels ausentes ou vazios');
+            return;
+        }
+        
+        if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de status inválidos - data ausente ou vazio');
+            return;
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico de status validados - criando gráfico...');
+        createStatusChart(data);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico de status:', error);
+    }
+}
+
+/**
+ * Create grouped modal chart with validation
+ */
+function createGroupedModalChartWithValidation(data) {
+    try {
+        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico modal inválidos - labels ausentes ou vazios');
+            return;
+        }
+        
+        if (!data.datasets || !Array.isArray(data.datasets) || data.datasets.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico modal inválidos - datasets ausentes ou vazios');
+            return;
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico modal validados - criando gráfico...');
+        createGroupedModalChart(data);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico modal:', error);
+    }
+}
+
+/**
+ * Create URF chart with validation
+ */
+function createUrfChartWithValidation(data) {
+    try {
+        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico URF inválidos - labels ausentes ou vazios');
+            return;
+        }
+        
+        if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico URF inválidos - data ausente ou vazio');
+            return;
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico URF validados - criando gráfico...');
+        createUrfChart(data);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico URF:', error);
+    }
+}
+
+/**
+ * Create material chart with validation
+ */
+function createMaterialChartWithValidation(data) {
+    try {
+        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de material inválidos - labels ausentes ou vazios');
+            return;
+        }
+        
+        if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de material inválidos - data ausente ou vazio');
+            return;
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico de material validados - criando gráfico...');
+        createMaterialChart(data);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico de material:', error);
+    }
+}
+
+/**
+ * Create principais materiais table with validation
+ */
+function createPrincipaisMateriaisTableWithValidation(data) {
+    try {
+        if (!data || !data.data || !Array.isArray(data.data)) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais inválidos - data ausente ou não é array');
+            
+            // Criar tabela vazia com mensagem
+            const tableBody = document.querySelector('#principais-materiais-table tbody');
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum material encontrado</td></tr>';
+            }
+            return;
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais validados - criando tabela...');
+        createPrincipaisMateriaisTable(data);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro na validação da tabela de materiais:', error);
     }
 }
 
@@ -1049,7 +1551,12 @@ function parseDate(dateStr) {
 async function refreshData() {
     try {
         showLoading(true);
-        await loadInitialData();
+        
+        // Invalidar cache antes de recarregar
+        dashboardCache.invalidate();
+        console.log('[DASHBOARD_EXECUTIVO] Cache invalidado - recarregando dados...');
+        
+        await loadInitialDataWithCache();
         updateLastUpdate();
         showLoading(false);
         showSuccess('Dados atualizados com sucesso!');
@@ -1542,12 +2049,39 @@ async function loadFilterOptions() {
         const result = await response.json();
         
         if (result.success) {
+            console.log('[DASHBOARD_EXECUTIVO] Opções de filtros recebidas:', {
+                materiais: result.options.materiais?.length || 0,
+                clientes: result.options.clientes?.length || 0,
+                modais: result.options.modais?.length || 0,
+                canais: result.options.canais?.length || 0
+            });
+            
             populateFilterOptions(result.options);
+            
+            // Armazenar no cache
+            dashboardCache.set('filterOptions', result.options);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar opções de filtros:', result.error);
+            throw new Error(result.error || 'Erro ao carregar opções de filtros');
         }
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar opções de filtros:', error);
+        
+        // Tentar usar cache como fallback
+        const cachedOptions = dashboardCache.get('filterOptions');
+        if (cachedOptions) {
+            console.log('[DASHBOARD_EXECUTIVO] Usando opções de filtros do cache como fallback');
+            populateFilterOptions(cachedOptions);
+        } else {
+            // Se não há cache, criar opções vazias para evitar erro
+            console.warn('[DASHBOARD_EXECUTIVO] Criando opções de filtros vazias');
+            populateFilterOptions({
+                materiais: [],
+                clientes: [],
+                modais: [],
+                canais: []
+            });
+        }
     }
 }
 
@@ -1555,28 +2089,34 @@ async function loadFilterOptions() {
  * Populate filter select options
  */
 function populateFilterOptions(options) {
+    console.log('[DASHBOARD_EXECUTIVO] Populando opções de filtros...');
+    
     // Material filter
     if (options.materiais) {
         populateMultiSelect('material', options.materiais);
+        console.log(`[DASHBOARD_EXECUTIVO] Materiais: ${options.materiais.length} opções`);
     }
     
     // Cliente filter
     if (options.clientes) {
         populateMultiSelect('cliente', options.clientes);
+        console.log(`[DASHBOARD_EXECUTIVO] Clientes: ${options.clientes.length} opções`);
     }
     
     // Modal filter
     if (options.modais) {
         populateMultiSelect('modal', options.modais);
+        console.log(`[DASHBOARD_EXECUTIVO] Modais: ${options.modais.length} opções`);
     }
     
     // Canal filter
     if (options.canais) {
         populateMultiSelect('canal', options.canais);
+        console.log(`[DASHBOARD_EXECUTIVO] Canais: ${options.canais.length} opções`);
     }
     
-    // Initialize multi-select functionality after populating options
-    initializeMultiSelects();
+    // NÃO initialize aqui - será feito quando o modal abrir
+    console.log('[DASHBOARD_EXECUTIVO] Opções de filtros populadas - event listeners serão configurados ao abrir modal');
 }
 
 /**
@@ -1618,7 +2158,10 @@ function populateMultiSelect(type, options) {
  * Initialize multi-select functionality
  */
 function initializeMultiSelects() {
+    console.log('[DASHBOARD_EXECUTIVO] Inicializando multi-selects...');
+    
     const types = ['material', 'cliente', 'modal', 'canal'];
+    let initializedCount = 0;
     
     types.forEach(type => {
         const header = document.getElementById(`${type}-header`);
@@ -1626,8 +2169,16 @@ function initializeMultiSelects() {
         const search = document.getElementById(`${type}-search`);
         
         if (header && dropdown) {
+            console.log(`[DASHBOARD_EXECUTIVO] Configurando event listeners para ${type}`);
+            
+            // Remover event listeners existentes para evitar duplicação
+            const newHeader = header.cloneNode(true);
+            header.parentNode.replaceChild(newHeader, header);
+            
             // Toggle dropdown on header click
-            header.addEventListener('click', function() {
+            newHeader.addEventListener('click', function() {
+                console.log(`[DASHBOARD_EXECUTIVO] Clique no header ${type}`);
+                
                 // Close other dropdowns
                 types.forEach(otherType => {
                     if (otherType !== type) {
@@ -1642,31 +2193,48 @@ function initializeMultiSelects() {
                 
                 // Toggle current dropdown
                 dropdown.classList.toggle('open');
-                header.classList.toggle('active');
+                newHeader.classList.toggle('active');
+                
+                console.log(`[DASHBOARD_EXECUTIVO] Dropdown ${type} ${dropdown.classList.contains('open') ? 'aberto' : 'fechado'}`);
             });
             
             // Search functionality
-            if (search) {
-                search.addEventListener('input', function() {
+            const searchInput = document.getElementById(`${type}-search`);
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
                     filterMultiSelectOptions(type, this.value);
                 });
             }
-        }
-    });
-    
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.multi-select-container')) {
-            types.forEach(type => {
-                const dropdown = document.getElementById(`${type}-dropdown`);
-                const header = document.getElementById(`${type}-header`);
-                if (dropdown && header) {
-                    dropdown.classList.remove('open');
-                    header.classList.remove('active');
-                }
+            
+            initializedCount++;
+        } else {
+            console.warn(`[DASHBOARD_EXECUTIVO] Elementos não encontrados para ${type}:`, {
+                header: !!header,
+                dropdown: !!dropdown
             });
         }
     });
+    
+    // Só adicionar o event listener global se algum multi-select foi inicializado
+    if (initializedCount > 0) {
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.multi-select-container')) {
+                types.forEach(type => {
+                    const dropdown = document.getElementById(`${type}-dropdown`);
+                    const header = document.getElementById(`${type}-header`);
+                    if (dropdown && header) {
+                        dropdown.classList.remove('open');
+                        header.classList.remove('active');
+                    }
+                });
+            }
+        });
+        
+        console.log(`[DASHBOARD_EXECUTIVO] Multi-selects inicializados: ${initializedCount}/${types.length}`);
+    } else {
+        console.error('[DASHBOARD_EXECUTIVO] Nenhum multi-select foi inicializado!');
+    }
 }
 
 /**
@@ -1758,9 +2326,19 @@ function buildFilterQueryString() {
  * Open filter modal
  */
 function openFilterModal() {
+    console.log('[DASHBOARD_EXECUTIVO] Abrindo modal de filtros...');
+    
     const modal = document.getElementById('filter-modal');
     if (modal) {
         modal.style.display = 'block';
+        
+        // Aguardar o modal estar visível e então inicializar os multi-selects
+        setTimeout(() => {
+            console.log('[DASHBOARD_EXECUTIVO] Modal visível - inicializando multi-selects...');
+            initializeMultiSelects();
+        }, 100);
+    } else {
+        console.error('[DASHBOARD_EXECUTIVO] Modal de filtros não encontrado!');
     }
 }
 
@@ -1820,11 +2398,15 @@ async function applyFilters() {
         // Close modal
         closeFilterModal();
         
-        // Reload data with filters
+        // Invalidate cache since filters changed
+        dashboardCache.invalidate();
+        console.log('[DASHBOARD_EXECUTIVO] Cache invalidado devido a mudança de filtros');
+        
+        // Reload data with filters using cache system
         await Promise.all([
-            loadDashboardKPIs(),
-            loadDashboardCharts(),
-            loadRecentOperations()
+            loadDashboardKPIsWithCache(),
+            loadDashboardChartsWithCache(),
+            loadRecentOperationsWithCache()
         ]);
         
         showLoading(false);
@@ -1904,11 +2486,14 @@ async function resetAllFilters() {
         // Hide reset button
         updateResetButtonVisibility();
         
-        // Reload data without filters
+        // Invalidate cache and reload data without filters
+        dashboardCache.invalidate();
+        console.log('[DASHBOARD_EXECUTIVO] Cache invalidado devido a reset de filtros');
+        
         await Promise.all([
-            loadDashboardKPIs(),
-            loadDashboardCharts(),
-            loadRecentOperations()
+            loadDashboardKPIsWithCache(),
+            loadDashboardChartsWithCache(),
+            loadRecentOperationsWithCache()
         ]);
         
         showLoading(false);
