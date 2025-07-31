@@ -8,10 +8,51 @@ import pandas as pd
 import numpy as np
 import unicodedata
 import re
+import json
 from services.data_cache import DataCacheService
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
+
+def calculate_custo_from_despesas_processo(despesas_processo):
+    """
+    Calcular custo total baseado no campo JSON despesas_processo
+    Reproduz a lógica do frontend processExpensesByCategory()
+    """
+    try:
+        if not despesas_processo:
+            return 0.0
+        
+        # Se for string JSON, converter para lista
+        if isinstance(despesas_processo, str):
+            despesas_list = json.loads(despesas_processo)
+        else:
+            despesas_list = despesas_processo
+        
+        if not isinstance(despesas_list, list):
+            return 0.0
+        
+        total_custo = 0.0
+        for despesa in despesas_list:
+            if isinstance(despesa, dict) and 'valor_custo' in despesa:
+                valor = despesa.get('valor_custo', 0)
+                
+                # CORREÇÃO: Tratar valores como string também (igual ao frontend)
+                if valor is not None and valor != '':
+                    try:
+                        # Converter para float (funciona com string e números)
+                        valor_float = float(valor)
+                        if not pd.isna(valor_float) and not np.isinf(valor_float):
+                            total_custo += valor_float
+                    except (ValueError, TypeError):
+                        # Se não conseguir converter, ignore o valor
+                        continue
+        
+        return total_custo
+        
+    except Exception as e:
+        print(f"[CUSTO_CALCULATION] Erro ao calcular custo: {str(e)}")
+        return 0.0
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('dashboard_executivo', __name__, 
@@ -68,6 +109,7 @@ def apply_filters(data):
         cliente = request.args.get('cliente')
         modal = request.args.get('modal')
         canal = request.args.get('canal')
+        status_processo = request.args.get('status_processo')
         
         filtered_data = data
         
@@ -108,6 +150,17 @@ def apply_filters(data):
                                if any(can.lower() in item.get('canal', '').lower() 
                                      for can in canais_lista)]
         
+        # Filtrar por status do processo (aberto/fechado)
+        if status_processo:
+            if status_processo == 'aberto':
+                # Processo aberto: sem data de fechamento (None, '', ou valor vazio)
+                filtered_data = [item for item in filtered_data 
+                               if not item.get('data_fechamento') or item.get('data_fechamento') == '']
+            elif status_processo == 'fechado':
+                # Processo fechado: com data de fechamento válida
+                filtered_data = [item for item in filtered_data 
+                               if item.get('data_fechamento') and item.get('data_fechamento') != '']
+        
         return filtered_data
         
     except Exception as e:
@@ -146,8 +199,8 @@ def load_data():
                 'total_records': len(cached_data)
             })
         
-        # Query base da nova tabela
-        query = supabase_admin.table('importacoes_processos_aberta').select('*')
+        # Query base da view com dados de despesas
+        query = supabase_admin.table('vw_importacoes_6_meses').select('*')
         
         # Filtrar por empresa se for cliente
         if user_role == 'cliente_unique':
@@ -167,6 +220,16 @@ def load_data():
             })
         
         print(f"[DASHBOARD_EXECUTIVO] Dados carregados: {len(result.data)} registros")
+        
+        # Log para verificar estrutura do campo despesas_processo
+        records_with_expenses = 0
+        for record in result.data:
+            if 'despesas_processo' in record and record['despesas_processo']:
+                records_with_expenses += 1
+                if records_with_expenses == 1:  # Log apenas do primeiro registro
+                    print(f"[DASHBOARD_EXECUTIVO] Exemplo despesas_processo: {record['despesas_processo'][:2] if len(record['despesas_processo']) > 2 else record['despesas_processo']}")
+        
+        print(f"[DASHBOARD_EXECUTIVO] Registros com despesas_processo: {records_with_expenses}/{len(result.data)}")
         
         # Armazenar dados no cache do servidor
         data_cache.set_cache(user_id, 'dashboard_v2_data', result.data)
@@ -211,10 +274,46 @@ def dashboard_kpis():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        # Calcular KPIs executivos
+        # Calcular custo total usando despesas_processo
+        print("[DEBUG_KPI] Calculando custos baseado em despesas_processo...")
+        custos_calculados = []
+        total_despesas_debug = 0.0
+        registros_com_custo = 0
+        
+        for idx, row in df.iterrows():
+            despesas = row.get('despesas_processo')
+            custo_calculado = calculate_custo_from_despesas_processo(despesas)
+            custos_calculados.append(custo_calculado)
+            
+            if custo_calculado > 0:
+                registros_com_custo += 1
+                total_despesas_debug += custo_calculado
+            
+            # Log dos primeiros 5 registros para verificação
+            if idx < 5:
+                print(f"[DEBUG_KPI] Registro {idx}: ref={row.get('ref_unique')}, custo_calculado={custo_calculado}")
+        
+        # Adicionar coluna de custo calculado
+        df['custo_calculado'] = custos_calculados
+        
+        print(f"[DEBUG_KPI] Registros com custo > 0: {registros_com_custo}/{len(df)}")
+        print(f"[DEBUG_KPI] Total despesas calculado: {total_despesas_debug:,.2f}")
+        
+        # Calcular KPIs executivos usando o novo custo
         total_processos = len(df)
-        total_despesas = df['custo_total'].sum() if 'custo_total' in df.columns else 0
+        total_despesas = df['custo_calculado'].sum()
         ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
+        
+        print(f"[DEBUG_KPI] KPIs Calculados:")
+        print(f"[DEBUG_KPI] - Total processos: {total_processos}")
+        print(f"[DEBUG_KPI] - Total despesas: {total_despesas:,.2f}")
+        print(f"[DEBUG_KPI] - Ticket médio: {ticket_medio:,.2f}")
+        
+        # Comparar com custo_total original se disponível
+        if 'custo_total' in df.columns:
+            total_original = df['custo_total'].sum()
+            print(f"[DEBUG_KPI] Total original (custo_total): {total_original:,.2f}")
+            print(f"[DEBUG_KPI] Diferença: {total_despesas - total_original:,.2f}")
 
         # Função robusta para normalizar status
         import unicodedata, re
@@ -273,9 +372,9 @@ def dashboard_kpis():
         inicio_semana = hoje - pd.Timedelta(days=dias_desde_domingo)
         fim_semana = inicio_semana + pd.Timedelta(days=6)
         chegando_mes = 0
-        chegando_mes_custo = 0
+        chegando_mes_custo = 0.0
         chegando_semana = 0
-        chegando_semana_custo = 0
+        chegando_semana_custo = 0.0
         if 'data_chegada' in df.columns:
             df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
             print(f"[DEBUG_KPI] Total registros: {len(df)}")
@@ -285,10 +384,12 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Mês: {primeiro_dia_mes.strftime('%d/%m/%Y')} a {ultimo_dia_mes.strftime('%d/%m/%Y')}")
             for idx, row in df.iterrows():
                 chegada = row.get('chegada_dt')
-                custo = row.get('custo_total', 0) or 0
+                custo = row.get('custo_calculado', 0.0)  # USANDO CUSTO CALCULADO
+                if custo is None:
+                    custo = 0.0
                 data_str = row.get('data_chegada', 'SEM DATA')
                 if pd.notnull(chegada) and idx < 5:
-                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
+                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Custo: {custo} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
                 # Lógica para MÊS (independente de ser passado ou futuro)
                 if pd.notnull(chegada) and primeiro_dia_mes <= chegada <= ultimo_dia_mes:
                     chegando_mes += 1
@@ -297,8 +398,8 @@ def dashboard_kpis():
                 if pd.notnull(chegada) and inicio_semana <= chegada <= fim_semana:
                     chegando_semana += 1
                     chegando_semana_custo += custo
-            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}")
-            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}")
+            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
+            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
         # Transit time médio
         transit_time = 0
@@ -329,21 +430,23 @@ def dashboard_kpis():
 
         kpis = {
             'total_processos': total_processos,
-            'total_despesas': total_despesas,
-            'ticket_medio': ticket_medio,
+            'total_despesas': float(total_despesas),
+            'ticket_medio': float(ticket_medio),
             'aguardando_embarque': aguardando_embarque,
             'aguardando_chegada': aguardando_chegada,
             'aguardando_liberacao': aguardando_liberacao,
             'agd_entrega': agd_entrega,
             'aguardando_fechamento': aguardando_fechamento,
             'chegando_mes': chegando_mes,
-            'chegando_mes_custo': chegando_mes_custo,
+            'chegando_mes_custo': float(chegando_mes_custo),
             'chegando_semana': chegando_semana,
-            'chegando_semana_custo': chegando_semana_custo,
-            'transit_time_medio': transit_time,
-            'processos_mes': processos_mes,
-            'processos_semana': processos_semana
+            'chegando_semana_custo': float(chegando_semana_custo),
+            'transit_time_medio': float(transit_time),
+            'processos_mes': float(processos_mes),
+            'processos_semana': float(processos_semana)
         }
+        
+        print(f"[DEBUG_KPI] KPIs finais: {kpis}")
         
         return jsonify({
             'success': True,
@@ -381,16 +484,28 @@ def dashboard_charts():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
+        # Calcular custo total usando despesas_processo (igual aos KPIs)
+        print("[DEBUG_CHARTS] Calculando custos baseado em despesas_processo...")
+        custos_calculados = []
+        for idx, row in df.iterrows():
+            despesas = row.get('despesas_processo')
+            custo_calculado = calculate_custo_from_despesas_processo(despesas)
+            custos_calculados.append(custo_calculado)
+        
+        # Adicionar coluna de custo calculado
+        df['custo_calculado'] = custos_calculados
+        print(f"[DEBUG_CHARTS] Total custo calculado nos gráficos: {df['custo_calculado'].sum():,.2f}")
+        
         # Gráfico Evolução Mensal
         monthly_chart = {'labels': [], 'datasets': []}
-        if 'data_abertura' in df.columns and 'custo_total' in df.columns:
+        if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
             df_mensal = df.dropna(subset=['data_abertura_dt'])
             df_mensal['mes_ano'] = df_mensal['data_abertura_dt'].dt.strftime('%m/%Y')
             
             grouped = df_mensal.groupby('mes_ano').agg({
                 'ref_unique': 'count',
-                'custo_total': 'sum'
+                'custo_calculado': 'sum'  # USANDO CUSTO CALCULADO
             }).reset_index().sort_values('mes_ano')
             
             monthly_chart = {
@@ -404,7 +519,7 @@ def dashboard_charts():
                     },
                     {
                         'label': 'Custo Total (R$)',
-                        'data': grouped['custo_total'].tolist(),
+                        'data': grouped['custo_calculado'].tolist(),  # USANDO CUSTO CALCULADO
                         'type': 'bar',
                         'yAxisID': 'y'
                     }
@@ -422,10 +537,10 @@ def dashboard_charts():
 
         # Gráfico de Modal
         grouped_modal_chart = {'labels': [], 'datasets': []}
-        if 'modal' in df.columns and 'custo_total' in df.columns:
+        if 'modal' in df.columns:
             modal_grouped = df.groupby('modal').agg({
                 'ref_unique': 'count',
-                'custo_total': 'sum'
+                'custo_calculado': 'sum'  # USANDO CUSTO CALCULADO
             }).reset_index()
             
             grouped_modal_chart = {
@@ -441,9 +556,9 @@ def dashboard_charts():
                     },
                     {
                         'label': 'Custo Total (R$)',
-                        'data': modal_grouped['custo_total'].tolist(),
-                        'type': 'bar',
-                        'backgroundColor': 'rgba(255, 99, 132, 0.6)',
+                        'data': modal_grouped['custo_calculado'].tolist(),  # USANDO CUSTO CALCULADO
+                        'type': 'line',
+                        'backgroundColor': 'rgba(255, 99, 132, 0.2)',
                         'borderColor': 'rgba(255, 99, 132, 1)',
                         'yAxisID': 'y'
                     }
@@ -475,7 +590,7 @@ def dashboard_charts():
                 # Agrupar por material e calcular métricas
                 material_groups = df.groupby('mercadoria').agg({
                     'ref_unique': 'count',
-                    'custo_total': 'sum',
+                    'custo_calculado': 'sum',  # USANDO CUSTO CALCULADO
                     'data_chegada': 'first',
                     'transit_time_real': 'mean'
                 }).reset_index()
@@ -506,7 +621,7 @@ def dashboard_charts():
                     table_data.append({
                         'material': row['mercadoria'],
                         'total_processos': int(row['ref_unique']),
-                        'custo_total': float(row['custo_total']) if pd.notnull(row['custo_total']) else 0,
+                        'custo_total': float(row['custo_calculado']) if pd.notnull(row['custo_calculado']) else 0,  # USANDO CUSTO CALCULADO
                         'data_chegada': row['data_chegada'],
                         'transit_time': float(row['transit_time_real']) if pd.notnull(row['transit_time_real']) else 0,
                         'is_urgente': is_urgente,
@@ -557,8 +672,18 @@ def monthly_chart():
         
         df = pd.DataFrame(data)
         
+        # Calcular custo total usando despesas_processo (igual aos KPIs e charts)
+        custos_calculados = []
+        for idx, row in df.iterrows():
+            despesas = row.get('despesas_processo')
+            custo_calculado = calculate_custo_from_despesas_processo(despesas)
+            custos_calculados.append(custo_calculado)
+        
+        # Adicionar coluna de custo calculado
+        df['custo_calculado'] = custos_calculados
+        
         # Garantir colunas necessárias
-        if 'data_abertura' not in df.columns or 'custo_total' not in df.columns:
+        if 'data_abertura' not in df.columns:
             return jsonify({'success': False, 'error': 'Colunas necessárias não encontradas.', 'data': {}})
         
         # Converter datas
@@ -576,13 +701,13 @@ def monthly_chart():
         
         grouped = df.groupby('periodo').agg({
             'ref_unique': 'count',
-            'custo_total': 'sum'
+            'custo_calculado': 'sum'  # USANDO CUSTO CALCULADO
         }).reset_index().sort_values('periodo')
         
         chart_data = {
             'periods': grouped['periodo'].tolist(),
             'processes': grouped['ref_unique'].tolist(),
-            'values': grouped['custo_total'].tolist()
+            'values': grouped['custo_calculado'].tolist()  # USANDO CUSTO CALCULADO
         }
         
         return jsonify({'success': True, 'data': clean_data_for_json(chart_data)})
@@ -638,7 +763,7 @@ def recent_operations():
             'peso_bruto', 'urf_despacho', 'urf_despacho_normalizado', 'container',
             'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
             'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',
-            'canal', 'data_desembaraco'
+            'canal', 'data_desembaraco', 'despesas_processo'  # NOVO CAMPO ADICIONADO
         ]
         
         # Adicionar colunas normalizadas se disponíveis
@@ -658,6 +783,14 @@ def recent_operations():
         # Debug: mostrar dados de uma operação de exemplo
         if operations_data:
             print(f"[DASHBOARD_EXECUTIVO] Exemplo de operação (keys): {list(operations_data[0].keys())}")
+            # Verificar especificamente o campo despesas_processo
+            if 'despesas_processo' in operations_data[0]:
+                despesas = operations_data[0]['despesas_processo']
+                print(f"[DASHBOARD_EXECUTIVO] Campo despesas_processo encontrado: {type(despesas)} com {len(despesas) if isinstance(despesas, list) else 'N/A'} itens")
+                if isinstance(despesas, list) and len(despesas) > 0:
+                    print(f"[DASHBOARD_EXECUTIVO] Primeiro item de despesas: {despesas[0]}")
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] ❌ Campo despesas_processo NÃO encontrado nas operações!")
         
         return jsonify({
             'success': True,

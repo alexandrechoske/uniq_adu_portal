@@ -226,6 +226,28 @@ function initializeEnhancedTable() {
             console.warn(`[RENDER_ROW] Primeiros 5 do array global:`, 
                 window.currentOperations.slice(0, 5).map(op => op.ref_importador));
         }
+        
+        // Calcular custo total usando despesas_processo se disponível
+        let custoTotal = operation.custo_total || 0;
+        if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+            const expenseData = processExpensesByCategory(operation.despesas_processo);
+            custoTotal = expenseData.total;
+        }
+        
+        // Determinar se deve mostrar coluna Material
+        // Verificar se há clientes KINGSPAN nos dados atuais da tabela
+        const hasKingspanInCurrentData = window.currentOperations && 
+            window.currentOperations.some(op => 
+                op.importador && op.importador.toUpperCase().includes('KING')
+            );
+        
+        // Se há clientes KINGSPAN nos dados, mostrar a coluna
+        // Para clientes KINGSPAN, mostrar o material; para outros, mostrar "-"
+        const isKingspanClient = operation.importador && operation.importador.toUpperCase().includes('KING');
+        const materialColumn = hasKingspanInCurrentData ? 
+            `<td>${isKingspanClient ? (operation.mercadoria || '-') : '-'}</td>` : '';
+        const urfColumn = `<td>${operation.urf_entrada_normalizado || operation.urf_entrada || '-'}</td>`;
+        
         return `
             <td>
                 <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
@@ -238,10 +260,10 @@ function initializeEnhancedTable() {
             <td>${operation.exportador_fornecedor || '-'}</td>
             <td>${getModalBadge(operation.modal)}</td>
             <td>${getStatusBadge(operation.status_macro_sistema || operation.status_processo || operation.status)}</td>
-            <td><span class="currency-value">${formatCurrency(operation.custo_total || 0)}</span></td>
+            <td><span class="currency-value">${formatCurrency(custoTotal)}</span></td>
             <td>${formatDataChegada(operation.data_chegada)}</td>
-            <td>${operation.mercadoria || '-'}</td>
-            <td>${operation.urf_entrada_normalizado || operation.urf_entrada || '-'}</td>
+            ${materialColumn}
+            ${urfColumn}
         `;
     };
 
@@ -1398,24 +1420,34 @@ function createGroupedModalChart(data) {
     }
 
     try {
-        // Inverta a ordem dos datasets para que o de processos venha antes do de custo
-        // Supondo que o dataset de processos é o primeiro (index 0) e o de custo é o segundo (index 1)
+        // Ajustar datasets para garantir ambos como barras, cada um em seu eixo
         let datasets = data.datasets || [];
         if (datasets.length === 2) {
-            // Troca a ordem dos datasets
-            datasets = [datasets[1], datasets[0]];
+            // Dataset 0: Processos, Dataset 1: Custo Total
+            datasets = [
+                {
+                    ...datasets[0],
+                    type: 'bar',
+                    yAxisID: 'y',
+                    backgroundColor: '#007bff', // azul
+                    borderColor: '#007bff',
+                    datalabels: { display: true }
+                },
+                {
+                    ...datasets[1],
+                    type: 'bar',
+                    yAxisID: 'y1',
+                    backgroundColor: '#ff9800', // laranja
+                    borderColor: '#ff9800',
+                    datalabels: { display: true }
+                }
+            ];
         }
-
         dashboardCharts.groupedModal = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.labels || [],
-                datasets: datasets.map(ds => ({
-                    ...ds,
-                    datalabels: {
-                        display: true
-                    }
-                }))
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -1705,10 +1737,39 @@ async function loadMonthlyChart(granularidade) {
 }
 
 /**
+ * Ajustar cabeçalhos e colunas da tabela baseado nos dados
+ */
+function adjustTableHeadersAndColumns(operations) {
+    // Verificar se há clientes KINGSPAN nos dados
+    const hasKingspanClients = operations.some(op => 
+        op.importador && op.importador.toUpperCase().includes('KING')
+    );
+    
+    console.log('[DASHBOARD_EXECUTIVO] Clientes KINGSPAN encontrados:', hasKingspanClients);
+    
+    // Encontrar o cabeçalho da coluna Material
+    const table = document.getElementById('recent-operations-table');
+    if (!table) return;
+    
+    const materialHeader = Array.from(table.querySelectorAll('thead th')).find(th => 
+        th.textContent.trim() === 'Material'
+    );
+    
+    if (materialHeader) {
+        // Mostrar/ocultar coluna Material baseado na presença de clientes KINGSPAN
+        materialHeader.style.display = hasKingspanClients ? '' : 'none';
+        console.log('[DASHBOARD_EXECUTIVO] Coluna Material:', hasKingspanClients ? 'mostrada' : 'oculta');
+    }
+}
+
+/**
  * Update recent operations table
  */
 function updateRecentOperationsTable(operations) {
     console.log('[DASHBOARD_EXECUTIVO] Atualizando tabela com', operations.length, 'operações');
+    
+    // Ajustar cabeçalhos e colunas baseado nos dados
+    adjustTableHeadersAndColumns(operations);
     
     if (!recentOperationsTable) {
         console.warn('[DASHBOARD_EXECUTIVO] Enhanced table não inicializada, tentando inicializar...');
@@ -2140,16 +2201,8 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
     updateElementValue('detail-urf-despacho', operation.urf_despacho_normalizado || operation.urf_despacho);
     
-    // Update financial summary
-    updateElementValue('detail-valor-cif', formatCurrency(operation.valor_cif_real || 0));
-    updateElementValue('detail-frete-inter', formatCurrency(operation.custo_frete_inter || 0));
-    updateElementValue('detail-armazenagem', formatCurrency(operation.custo_armazenagem || 0));
-    updateElementValue('detail-honorarios', formatCurrency(operation.custo_honorarios || 0));
-    
-    // Calculate other expenses
-    const otherExpenses = calculateOtherExpenses(operation);
-    updateElementValue('detail-outras-despesas', formatCurrency(otherExpenses));
-    updateElementValue('detail-custo-total', formatCurrency(operation.custo_total || 0));
+    // Update financial summary using new category-based system
+    updateFinancialSummary(operation);
     
     // Update documents (placeholder for now)
     updateDocumentsList(operation);
@@ -2341,9 +2394,148 @@ function updateElementValue(elementId, value, useCanalBadge = false) {
 }
 
 /**
- * Calculate other expenses
+ * Processar despesas por categoria do campo JSON despesas_processo
+ */
+function processExpensesByCategory(despesasProcesso) {
+    try {
+        if (!despesasProcesso || !Array.isArray(despesasProcesso)) {
+            console.warn('[DASHBOARD_EXECUTIVO] Despesas processo não é um array válido:', despesasProcesso);
+            return {
+                categorias: {},
+                total: 0
+            };
+        }
+
+        const categorias = {};
+        let total = 0;
+
+        despesasProcesso.forEach(despesa => {
+            const categoria = despesa.categoria_custo || 'Outros';
+            const valor = parseFloat(despesa.valor_custo) || 0;
+
+            if (!categorias[categoria]) {
+                categorias[categoria] = 0;
+            }
+
+            categorias[categoria] += valor;
+            total += valor;
+        });
+
+        console.log('[DASHBOARD_EXECUTIVO] Despesas processadas:', {
+            categorias,
+            total,
+            totalItens: despesasProcesso.length
+        });
+
+        return {
+            categorias,
+            total
+        };
+
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao processar despesas por categoria:', error);
+        return {
+            categorias: {},
+            total: 0
+        };
+    }
+}
+
+/**
+ * Gerar HTML para o novo resumo financeiro
+ */
+function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
+    try {
+        const { categorias, total } = expenseData;
+
+        let html = `
+            <div class="info-item valor-cif-item">
+                <label>Valor CIF (R$):</label>
+                <span>${formatCurrency(valorCif)}</span>
+            </div>
+        `;
+
+        // Ordenar categorias por valor (maior para menor)
+        const categoriasOrdenadas = Object.entries(categorias)
+            .sort(([,a], [,b]) => b - a);
+
+        categoriasOrdenadas.forEach(([categoria, valor]) => {
+            html += `
+                <div class="info-item">
+                    <label>${categoria} (R$):</label>
+                    <span>${formatCurrency(valor)}</span>
+                </div>
+            `;
+        });
+
+        // Total com destaque
+        html += `
+            <div class="info-item total-item">
+                <label>Custo Total (R$):</label>
+                <span class="total-value">${formatCurrency(total)}</span>
+            </div>
+        `;
+
+        return html;
+
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao gerar HTML do resumo financeiro:', error);
+        return `
+            <div class="info-item">
+                <label>Erro ao carregar resumo financeiro</label>
+                <span>-</span>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Atualizar resumo financeiro no modal usando o novo sistema de categorias
+ */
+function updateFinancialSummary(operation) {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] Atualizando resumo financeiro para operação:', operation.ref_unique);
+        console.log('[DASHBOARD_EXECUTIVO] Operação completa (verificação):', {
+            ref_unique: operation.ref_unique,
+            tem_despesas_processo: 'despesas_processo' in operation,
+            tipo_despesas_processo: typeof operation.despesas_processo,
+            despesas_processo: operation.despesas_processo
+        });
+
+        // Processar despesas por categoria
+        const expenseData = processExpensesByCategory(operation.despesas_processo);
+        
+        // Obter valor CIF
+        const valorCif = operation.valor_cif_real || 0;
+
+        // Gerar HTML
+        const summaryHTML = generateFinancialSummaryHTML(expenseData, valorCif);
+
+        // Atualizar o DOM
+        const cardGrid = document.querySelector('#process-modal .info-card:nth-child(4) .card-grid-2');
+        if (cardGrid) {
+            cardGrid.innerHTML = summaryHTML;
+            console.log('[DASHBOARD_EXECUTIVO] Resumo financeiro atualizado com sucesso');
+        } else {
+            console.error('[DASHBOARD_EXECUTIVO] Elemento card-grid-2 não encontrado no modal');
+        }
+
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao atualizar resumo financeiro:', error);
+    }
+}
+
+/**
+ * Calculate other expenses (DEPRECATED - mantido para compatibilidade)
  */
 function calculateOtherExpenses(operation) {
+    // Se temos o novo formato de despesas, usar ele
+    if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+        const expenseData = processExpensesByCategory(operation.despesas_processo);
+        return expenseData.total;
+    }
+    
+    // Fallback para o formato antigo
     const expenseFields = [
         'custo_ii', 'custo_ipi', 'custo_pis', 'custo_cofins', 'custo_icms',
         'custo_afrmm', 'custo_seguro', 'custo_adicional_frete', 'custo_taxa_siscomex',
@@ -2784,6 +2976,7 @@ function buildFilterQueryString() {
     
     const dataInicio = document.getElementById('data-inicio')?.value;
     const dataFim = document.getElementById('data-fim')?.value;
+    const statusProcesso = document.getElementById('status-processo')?.value;
     
     // Get multi-select values
     const materiais = getMultiSelectValues('material');
@@ -2793,6 +2986,7 @@ function buildFilterQueryString() {
     
     if (dataInicio) params.append('data_inicio', dataInicio);
     if (dataFim) params.append('data_fim', dataFim);
+    if (statusProcesso) params.append('status_processo', statusProcesso);
     
     // Add multi-select values as comma-separated strings
     if (materiais.length > 0) params.append('material', materiais.join(','));
@@ -2864,6 +3058,7 @@ async function applyFilters() {
         currentFilters = {
             dataInicio: document.getElementById('data-inicio')?.value,
             dataFim: document.getElementById('data-fim')?.value,
+            statusProcesso: document.getElementById('status-processo')?.value,
             material: document.getElementById('material-filter')?.value,
             cliente: document.getElementById('cliente-filter')?.value,
             modal: document.getElementById('modal-filter')?.value,
@@ -2907,6 +3102,9 @@ function clearFilters() {
     // Clear date inputs
     document.getElementById('data-inicio').value = '';
     document.getElementById('data-fim').value = '';
+    
+    // Clear status processo
+    document.getElementById('status-processo').value = '';
     
     // Clear multi-select checkboxes
     const types = ['material', 'cliente', 'modal', 'canal'];
@@ -3023,6 +3221,10 @@ function updateFilterSummary() {
         if (currentFilters.cliente) otherFilters.push(`Cliente: ${currentFilters.cliente}`);
         if (currentFilters.modal) otherFilters.push(`Modal: ${currentFilters.modal}`);
         if (currentFilters.canal) otherFilters.push(`Canal: ${currentFilters.canal}`);
+        if (currentFilters.statusProcesso) {
+            const statusText = currentFilters.statusProcesso === 'aberto' ? 'Processos Abertos' : 'Processos Fechados';
+            otherFilters.push(`Status: ${statusText}`);
+        }
         
         if (otherFilters.length > 0) {
             summaryText += ` (${otherFilters.join(', ')})`;

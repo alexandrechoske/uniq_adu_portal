@@ -562,6 +562,30 @@
     gap: 15px;
 }
 
+/* Status Processo Select */
+#status-processo {
+    padding: 10px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+    color: #495057;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+#status-processo:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+#status-processo option {
+    padding: 8px;
+    font-weight: 500;
+}
+
 /* Principais Materiais Table */
 #principais-materiais-table {
     width: 100%;
