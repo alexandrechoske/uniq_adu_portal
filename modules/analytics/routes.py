@@ -63,11 +63,16 @@ def get_stats():
         # Executar query
         response = query.execute()
         logs = response.data if response.data else []
-        
+        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
+        logs = [log for log in logs if not (
+            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
+            (log.get('ip_address') == '127.0.0.1')
+        )]
+
         # Calcular estatísticas
         total_access = len([log for log in logs if log.get('action_type') == 'page_access'])
         unique_users = len(set(log.get('user_id') for log in logs if log.get('user_id')))
-        
+
         # Logins hoje
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         logins_today = len([
@@ -76,17 +81,23 @@ def get_stats():
             log.get('created_at') and
             datetime.fromisoformat(log.get('created_at').replace('Z', '+00:00')) >= today_start
         ])
-        
+
         # Total de logins (todos os tempos)
         try:
             total_logins_response = supabase_admin.table('access_logs').select('*').eq('action_type', 'login').execute()
-            total_logins = len(total_logins_response.data) if total_logins_response.data else 0
+            total_logins = len([
+                log for log in total_logins_response.data
+                if not (
+                    (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
+                    (log.get('ip_address') == '127.0.0.1')
+                )
+            ]) if total_logins_response.data else 0
         except:
             total_logins = 0
-        
+
         # Sessão média (simulado - pode ser calculado com base nos dados de logout)
         avg_session_minutes = 45  # Placeholder
-        
+
         return jsonify({
             'success': True,
             'total_access': total_access,
@@ -148,27 +159,93 @@ def get_charts():
         
         response = query.execute()
         logs = response.data if response.data else []
+        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
+        logs = [log for log in logs if not (
+            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
+            (log.get('ip_address') == '127.0.0.1')
+        )]
         
-        # Acessos diários
-        daily_access = []
+        # Acessos diários (duas métricas: total de acessos e total de usuários únicos)
+        daily_access = []  # total de acessos por dia
+        daily_users = []   # total de usuários únicos por dia
+        logger.info(f"[ANALYTICS] Processando {len(logs)} logs para acessos diários")
+        logger.info(f"[ANALYTICS] Intervalo: {start_date} até {end_date} ({days_back} dias)")
+        
+        # Melhorar processamento: agrupar logs por data primeiro
+        from datetime import timezone
+        logs_by_date = {}
+        logs_ids_in_days = set()
+        
+        # Agrupar logs por data para processamento mais eficiente
+        for log in logs:
+            if log.get('action_type') != 'page_access':
+                continue
+                
+            try:
+                created_at_raw = log.get('created_at', '')
+                if not created_at_raw:
+                    continue
+                    
+                log_time = datetime.fromisoformat(created_at_raw.replace('Z', '+00:00'))
+                log_date = log_time.date()
+                
+                if log_date not in logs_by_date:
+                    logs_by_date[log_date] = []
+                logs_by_date[log_date].append(log)
+                
+                # Marcar log_id como usado
+                if log.get('id'):
+                    logs_ids_in_days.add(log['id'])
+                    
+            except Exception as e:
+                logger.warning(f"[ANALYTICS] Erro ao processar log: {e}")
+                continue
+        
+        # Processar apenas dias que tenham dados (evitar dias com 0 desnecessários)
+        days_with_data = []
         for i in range(days_back):
             day = start_date + timedelta(days=i)
-            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = day_start + timedelta(days=1)
+            day_date = day.date()
             
-            count = 0
-            for log in logs:
-                try:
-                    log_time = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00'))
-                    if day_start <= log_time < day_end:
-                        count += 1
-                except:
-                    continue
+            logs_day = logs_by_date.get(day_date, [])
+            unique_users_day = set()
+            logs_count_day = len(logs_day)
             
-            daily_access.append({
-                'date': day.strftime('%Y-%m-%d'),
-                'count': count
-            })
+            for log in logs_day:
+                user_id = log.get('user_id')
+                if user_id:
+                    unique_users_day.add(user_id)
+            
+            # Só incluir o dia se tiver dados OU se for um dos últimos 7 dias
+            recent_threshold = (datetime.now() - timedelta(days=7)).date()
+            should_include = logs_count_day > 0 or day_date >= recent_threshold
+            
+            if should_include:
+                daily_access.append({
+                    'date': day.strftime('%Y-%m-%d'),
+                    'count': logs_count_day
+                })
+                daily_users.append({
+                    'date': day.strftime('%Y-%m-%d'),
+                    'count': len(unique_users_day)
+                })
+                
+                if logs_count_day > 0:
+                    days_with_data.append(day.strftime('%Y-%m-%d'))
+            
+            logger.info(f"[ANALYTICS] Dia {day.strftime('%Y-%m-%d')}: {logs_count_day} acessos, {len(unique_users_day)} usuários únicos")
+        
+        logger.info(f"[ANALYTICS] Dias com dados incluídos: {len(days_with_data)}")
+        # LOG EXTRA: Soma dos acessos diários
+        soma_diaria = sum(d['count'] for d in daily_access)
+        total_acessos = len([log for log in logs if log.get('action_type') == 'page_access'])
+        logger.info(f"[ANALYTICS] Soma dos acessos diários: {soma_diaria}")
+        logger.info(f"[ANALYTICS] Total de acessos no período: {total_acessos}")
+        # LOG EXTRA: Logs de page_access que não entraram em nenhum dia
+        ids_logs_page_access = set(log['id'] for log in logs if log.get('action_type') == 'page_access' and log.get('id'))
+        ids_fora = ids_logs_page_access - logs_ids_in_days
+        if ids_fora:
+            logger.warning(f"[ANALYTICS] {len(ids_fora)} logs de page_access não entraram em nenhum dia do gráfico. IDs: {list(ids_fora)[:10]} ...")
         
         # Top páginas
         page_counts = {}
@@ -210,7 +287,8 @@ def get_charts():
         
         return jsonify({
             'success': True,
-            'daily_access': daily_access,
+            'daily_access': daily_access,   # total de acessos por dia
+            'daily_users': daily_users,     # total de usuários únicos por dia
             'top_pages': top_pages,
             'users_activity': users_activity,
             'hourly_heatmap': hourly_heatmap
@@ -259,7 +337,12 @@ def get_top_users():
         
         response = query.execute()
         logs = response.data if response.data else []
-        
+        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
+        logs = [log for log in logs if not (
+            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
+            (log.get('ip_address') == '127.0.0.1')
+        )]
+
         # Agrupar por usuário
         user_stats = {}
         for log in logs:
@@ -288,15 +371,15 @@ def get_top_users():
             if log.get('action_type') == 'login':
                 if not user_stats[user_id]['last_login'] or log.get('created_at') > user_stats[user_id]['last_login']:
                     user_stats[user_id]['last_login'] = log.get('created_at')
-        
+
         # Converter para lista e ordenar
         top_users = list(user_stats.values())
         top_users.sort(key=lambda x: x['total_access'], reverse=True)
-        
+
         # Limitar páginas favoritas
         for user in top_users:
             user['favorite_pages'] = ', '.join(user['favorite_pages'][:3])
-        
+
         return jsonify(top_users[:20])  # Top 20 usuários
         
     except Exception as e:
@@ -340,7 +423,41 @@ def get_recent_activity():
             query = query.eq('action_type', action_type)
         
         response = query.execute()
-        return jsonify(response.data if response.data else [])
+        logs = response.data if response.data else []
+        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
+        logs = [log for log in logs if not (
+            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
+            (log.get('ip_address') == '127.0.0.1')
+        )]
+        
+        # Formatar dados para o frontend
+        formatted_logs = []
+        for log in logs:
+            try:
+                # Tratar a data corretamente
+                created_at = log.get('created_at')
+                if created_at:
+                    # Converter para datetime e depois para timestamp
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    timestamp = dt.isoformat()
+                else:
+                    timestamp = None
+                
+                formatted_log = {
+                    'timestamp': timestamp,
+                    'user_name': log.get('user_name', 'N/A'),
+                    'user_email': log.get('user_email', 'N/A'),
+                    'action_type': log.get('action_type', 'N/A'),
+                    'page_name': log.get('page_name', 'N/A'),
+                    'endpoint': log.get('endpoint', 'N/A'),
+                    'ip_address': log.get('ip_address', 'N/A'),
+                    'user_agent': log.get('user_agent', 'N/A')
+                }
+                formatted_logs.append(formatted_log)
+            except Exception as format_error:
+                logger.warning(f"Erro ao formatar log: {format_error}")
+                continue
+        return jsonify(formatted_logs)
         
     except Exception as e:
         logger.error(f"Erro ao obter atividade recente: {e}")

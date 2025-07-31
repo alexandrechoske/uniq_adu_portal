@@ -107,58 +107,157 @@ function updateStatsCards(data) {
 }
 
 function updateCharts(chartsData) {
-    // Destruir gráficos existentes
+    // Destruir gráficos existentes explicitamente
     Object.values(charts).forEach(chart => {
-        if (chart) chart.destroy();
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+        }
     });
     charts = {};
     
-    // Criar gráficos
-    createDailyAccessChart(chartsData.daily_access || []);
-    createTopPagesChart(chartsData.top_pages || []);
-    createUsersActivityChart(chartsData.users_activity || []);
-    createHourlyHeatmapChart(chartsData.hourly_heatmap || []);
-    
-    console.log('[ANALYTICS] Gráficos atualizados');
+    // Aguardar um pouco para garantir limpeza completa
+    setTimeout(() => {
+        // Criar gráficos
+        createDailyAccessChart(chartsData);
+        createTopPagesChart(chartsData.top_pages || []);
+        createUsersActivityChart(chartsData.users_activity || []);
+        createHourlyHeatmapChart(chartsData.hourly_heatmap || []);
+        
+        console.log('[ANALYTICS] Gráficos atualizados');
+    }, 100);
 }
 
 function createDailyAccessChart(data) {
     const ctx = document.getElementById('daily-access-chart');
     if (!ctx) return;
     
-    const labels = data.map(item => new Date(item.date).toLocaleDateString('pt-BR'));
-    const values = data.map(item => item.count);
+    // Tratamento seguro das datas
+    // Espera-se que chartsData tenha daily_access e daily_users
+    const accessData = data.daily_access || [];
+    const usersData = data.daily_users || [];
+
+    // Garantir que as datas estejam alinhadas
+    const labels = accessData.map(item => {
+        try {
+            const date = new Date(item.date);
+            return date.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: '2-digit' 
+            });
+        } catch {
+            return item.date;
+        }
+    });
     
+    const accessValues = accessData.map(item => item.count || 0);
+    const usersValues = usersData.map(item => item.count || 0);
+
+    console.log('[ANALYTICS] Daily Chart - Access Values:', accessValues);
+    console.log('[ANALYTICS] Daily Chart - Users Values:', usersValues);
+    console.log('[ANALYTICS] Daily Chart - Labels:', labels);
+
     charts.dailyAccess = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Acessos',
-                data: values,
-                borderColor: '#3498DB',
-                backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
+            datasets: [
+                {
+                    label: 'Total de Acessos',
+                    data: accessValues,
+                    borderColor: '#3498DB',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: function(context) {
+                        // Mostrar pontos maiores apenas quando há dados
+                        return context.raw > 0 ? 5 : 3;
+                    },
+                    pointBackgroundColor: '#3498DB',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    borderWidth: 2
+                },
+                {
+                    label: 'Total de Usuários',
+                    data: usersValues,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: function(context) {
+                        // Mostrar pontos maiores apenas quando há dados
+                        return context.raw > 0 ? 5 : 3;
+                    },
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    borderWidth: 2
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        boxWidth: 16,
+                        font: { weight: 'bold' },
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: '#3498DB',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    callbacks: {
+                        title: function(context) {
+                            return `Data: ${context[0].label}`;
+                        },
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw}`;
+                        }
+                    }
                 }
             },
             scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
                 y: {
                     beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
                     ticks: {
-                        precision: 0
+                        precision: 0,
+                        font: {
+                            size: 11
+                        }
                     }
                 }
             }
-        }
+        },
+        plugins: []
     });
 }
 
@@ -212,26 +311,61 @@ function createUsersActivityChart(data) {
                 label: 'Acessos',
                 data: values.slice(0, 10),
                 backgroundColor: '#10b981',
-                borderRadius: 4
+                borderRadius: 4,
+                borderSkipped: false
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(context) {
+                            return `Usuário: ${context[0].label}`;
+                        },
+                        label: function(context) {
+                            return `Acessos: ${context.raw}`;
+                        }
                     }
                 }
+            },
+            scales: { 
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                y: { 
+                    beginAtZero: true, 
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: { 
+                        precision: 0,
+                        font: {
+                            size: 11
+                        }
+                    } 
+                } 
             }
-        }
+        },
+        plugins: []
     });
 }
 
@@ -318,9 +452,23 @@ function updateRecentActivityTable(data) {
     
     countElement.textContent = `${data.length} atividades`;
     
-    tbody.innerHTML = data.map(activity => `
+    tbody.innerHTML = data.map(activity => {
+        // Tratamento seguro da data
+        let formattedDate = 'Data inválida';
+        if (activity.timestamp) {
+            try {
+                const date = new Date(activity.timestamp);
+                if (!isNaN(date.getTime())) {
+                    formattedDate = date.toLocaleString('pt-BR');
+                }
+            } catch (e) {
+                console.warn('Erro ao formatar data:', activity.timestamp, e);
+            }
+        }
+        
+        return `
         <tr>
-            <td>${new Date(activity.timestamp).toLocaleString('pt-BR')}</td>
+            <td>${formattedDate}</td>
             <td>
                 <div class="user-info">
                     <strong>${activity.user_name || 'N/A'}</strong>
@@ -334,7 +482,8 @@ function updateRecentActivityTable(data) {
             <td><code>${activity.ip_address || 'N/A'}</code></td>
             <td>${activity.user_agent ? activity.user_agent.substring(0, 50) + '...' : 'N/A'}</td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function updateKPIValue(elementId, value, suffix = '') {
@@ -368,6 +517,15 @@ function handlePeriodChange(event) {
     // Atualizar filtros e recarregar dados
     if (chart === 'daily') {
         currentFilters.dateRange = period;
+        
+        // Garantir que os gráficos sejam destruídos antes de recarregar
+        Object.values(charts).forEach(chart => {
+            if (chart && typeof chart.destroy === 'function') {
+                chart.destroy();
+            }
+        });
+        charts = {};
+        
         loadAnalyticsStats();
     }
 }

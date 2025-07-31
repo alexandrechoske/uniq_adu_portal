@@ -106,8 +106,8 @@
 
     <!-- Charts Grid -->
     <div class="charts-grid">
-        <!-- Daily Access Chart -->
-        <div class="chart-section">
+        <!-- Daily Access Chart - Full Width -->
+        <div class="chart-section chart-full-width">
             <div class="chart-header">
                 <h2 class="chart-title">Acessos Diários</h2>
                 <div class="period-controls">
@@ -121,8 +121,9 @@
             </div>
         </div>
 
+        <!-- Second Row: Three Charts Side by Side -->
         <!-- Top Pages Chart -->
-        <div class="chart-section">
+        <div class="chart-section chart-third-width">
             <div class="chart-header">
                 <h2 class="chart-title">Páginas Mais Acessadas</h2>
             </div>
@@ -131,23 +132,23 @@
             </div>
         </div>
 
-        <!-- Users Activity Chart -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Atividade de Usuários</h2>
-            </div>
-            <div class="chart-container">
-                <canvas id="users-activity-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-
         <!-- Hourly Heatmap Chart -->
-        <div class="chart-section">
+        <div class="chart-section chart-third-width">
             <div class="chart-header">
                 <h2 class="chart-title">Mapa de Calor por Horário</h2>
             </div>
             <div class="chart-container">
                 <canvas id="hourly-heatmap-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Users Activity Chart -->
+        <div class="chart-section chart-third-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Atividade de Usuários</h2>
+            </div>
+            <div class="chart-container">
+                <canvas id="users-activity-chart" class="chart-canvas"></canvas>
             </div>
         </div>
     </div>
@@ -267,5 +268,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="{{ url_for('analytics.static', filename='js/analytics.js') }}"></script>
 {% endblock %}
