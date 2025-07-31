@@ -1703,7 +1703,14 @@ function setMonthlyChartPeriod(period) {
  */
 async function loadMonthlyChart(granularidade) {
     try {
-        const response = await fetch(`/dashboard-executivo/api/monthly-chart?granularidade=${granularidade}`);
+        // CORREÇÃO: Incluir filtros na URL do gráfico mensal
+        const filterQueryString = buildFilterQueryString();
+        const separator = filterQueryString ? '&' : '';
+        const url = `/dashboard-executivo/api/monthly-chart?granularidade=${granularidade}${separator}${filterQueryString}`;
+        
+        console.log(`[DASHBOARD_EXECUTIVO] Carregando gráfico ${granularidade} com filtros:`, url);
+        
+        const response = await fetch(url);
         const result = await response.json();
         
         if (result.success) {
@@ -2945,6 +2952,16 @@ function updateMultiSelectDisplay(type) {
     } else {
         placeholder.innerHTML = `${selectedCount} ${getTypePlural(type)} selecionados`;
     }
+    
+    // CORREÇÃO: Atualizar currentFilters e mostrar/esconder botão Reset
+    if (!currentFilters) currentFilters = {};
+    
+    // Obter valores selecionados do multi-select
+    const selectedValues = getMultiSelectValues(type);
+    currentFilters[type] = selectedValues.length > 0 ? selectedValues.join(',') : '';
+    
+    // Atualizar visibilidade do botão Reset
+    updateResetButtonVisibility();
 }
 
 /**
@@ -3054,16 +3071,19 @@ async function applyFilters() {
     try {
         showLoading(true);
         
-        // Store current filters for summary
+        // CORREÇÃO: Store current filters using correct methods
         currentFilters = {
             dataInicio: document.getElementById('data-inicio')?.value,
             dataFim: document.getElementById('data-fim')?.value,
             statusProcesso: document.getElementById('status-processo')?.value,
-            material: document.getElementById('material-filter')?.value,
-            cliente: document.getElementById('cliente-filter')?.value,
-            modal: document.getElementById('modal-filter')?.value,
-            canal: document.getElementById('canal-filter')?.value
+            // CORREÇÃO: Usar getMultiSelectValues() para multi-selects
+            material: getMultiSelectValues('material').join(','),
+            cliente: getMultiSelectValues('cliente').join(','),
+            modal: getMultiSelectValues('modal').join(','),
+            canal: getMultiSelectValues('canal').join(',')
         };
+        
+        console.log('[DASHBOARD_EXECUTIVO] Filtros aplicados:', currentFilters);
         
         // Update filter summary
         updateFilterSummary();
@@ -3074,9 +3094,9 @@ async function applyFilters() {
         // Close modal
         closeFilterModal();
         
-        // Invalidate cache since filters changed
-        dashboardCache.invalidate();
-        console.log('[DASHBOARD_EXECUTIVO] Cache invalidado devido a mudança de filtros');
+        // CORREÇÃO: NÃO invalidar cache completo - apenas recarregar dados com filtros
+        // dashboardCache.invalidate(); // ❌ REMOVIDO - causa perda dos dados base
+        console.log('[DASHBOARD_EXECUTIVO] Recarregando dados com novos filtros...');
         
         // Reload data with filters using cache system
         await Promise.all([

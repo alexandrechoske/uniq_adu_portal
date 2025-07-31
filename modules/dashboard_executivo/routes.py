@@ -67,11 +67,13 @@ def clean_data_for_json(data):
         return {k: clean_data_for_json(v) for k, v in data.items()}
     elif isinstance(data, list):
         return [clean_data_for_json(item) for item in data]
-    elif pd.isna(data) or data is None or (isinstance(data, float) and np.isnan(data)):
-        return 0
+    elif pd.isna(data) or data is None:
+        return None  # CORREÇÃO: Manter None para campos de data
+    elif isinstance(data, float) and np.isnan(data):
+        return None  # CORREÇÃO: Manter None para campos de data
     elif isinstance(data, (np.integer, np.floating)):
         if np.isnan(data) or np.isinf(data):
-            return 0
+            return None  # CORREÇÃO: Manter None para campos de data
         return int(data) if isinstance(data, np.integer) else float(data)
     else:
         return data
@@ -150,16 +152,16 @@ def apply_filters(data):
                                if any(can.lower() in item.get('canal', '').lower() 
                                      for can in canais_lista)]
         
-        # Filtrar por status do processo (aberto/fechado)
+        # Filtrar por status do processo (aberto/fechado) - NOVA REGRA usando data_fechamento
         if status_processo:
             if status_processo == 'aberto':
-                # Processo aberto: sem data de fechamento (None, '', ou valor vazio)
+                # Processo aberto: sem data_fechamento (None, '', ou valor vazio)
                 filtered_data = [item for item in filtered_data 
-                               if not item.get('data_fechamento') or item.get('data_fechamento') == '']
+                               if not item.get('data_fechamento') or item.get('data_fechamento') == '' or item.get('data_fechamento').strip() == '']
             elif status_processo == 'fechado':
-                # Processo fechado: com data de fechamento válida
+                # Processo fechado: com data_fechamento válida
                 filtered_data = [item for item in filtered_data 
-                               if item.get('data_fechamento') and item.get('data_fechamento') != '']
+                               if item.get('data_fechamento') and item.get('data_fechamento') != '' and item.get('data_fechamento').strip() != '']
         
         return filtered_data
         
@@ -402,30 +404,31 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
         # Calcular processos abertos e fechados baseado na data_fechamento
+        # NOVA REGRA: Se tem data_fechamento = processo fechado, se não tem = processo aberto
         processos_abertos = 0
         processos_fechados = 0
         
         if 'data_fechamento' in df.columns:
-            # Processos abertos: sem data_fechamento (None, '', ou valor vazio)
-            processos_abertos = len(df[
-                df['data_fechamento'].isna() | 
-                (df['data_fechamento'] == '') | 
-                (df['data_fechamento'].astype(str).str.strip() == '')
-            ])
-            
             # Processos fechados: com data_fechamento válida
             processos_fechados = len(df[
                 df['data_fechamento'].notna() & 
                 (df['data_fechamento'] != '') & 
                 (df['data_fechamento'].astype(str).str.strip() != '')
             ])
+            
+            # Processos abertos: sem data_fechamento (None, '', ou valor vazio)
+            processos_abertos = len(df[
+                df['data_fechamento'].isna() | 
+                (df['data_fechamento'] == '') | 
+                (df['data_fechamento'].astype(str).str.strip() == '')
+            ])
         else:
             # Se não tiver coluna data_fechamento, considerar todos como abertos
             processos_abertos = total_processos
             processos_fechados = 0
 
-        print(f"[DEBUG_KPI] Processos Abertos: {processos_abertos}")
-        print(f"[DEBUG_KPI] Processos Fechados: {processos_fechados}")
+        print(f"[DEBUG_KPI] NOVA REGRA - Processos Abertos (sem data_fechamento): {processos_abertos}")
+        print(f"[DEBUG_KPI] NOVA REGRA - Processos Fechados (com data_fechamento): {processos_fechados}")
         print(f"[DEBUG_KPI] Total: {processos_abertos + processos_fechados} (deve ser igual a {total_processos})")
 
         kpis = {
@@ -515,13 +518,19 @@ def dashboard_charts():
                         'label': 'Quantidade de Processos',
                         'data': grouped['ref_unique'].tolist(),
                         'type': 'line',
-                        'yAxisID': 'y1'
+                        'borderColor': '#007bff',
+                        'backgroundColor': 'rgba(0, 123, 255, 0.1)',
+                        'yAxisID': 'y1',
+                        'tension': 0.4
                     },
                     {
                         'label': 'Custo Total (R$)',
                         'data': grouped['custo_calculado'].tolist(),  # USANDO CUSTO CALCULADO
-                        'type': 'bar',
-                        'yAxisID': 'y'
+                        'type': 'line',  # CORREÇÃO: Mudado de 'bar' para 'line' para consistência
+                        'borderColor': '#28a745',
+                        'backgroundColor': 'rgba(40, 167, 69, 0.1)',
+                        'yAxisID': 'y',
+                        'tension': 0.4
                     }
                 ]
             }
@@ -670,7 +679,15 @@ def monthly_chart():
         if not data:
             return jsonify({'success': False, 'error': 'Dados não encontrados.', 'data': {}})
         
-        df = pd.DataFrame(data)
+        # APLICAR FILTROS ANTES DE PROCESSAR O GRÁFICO
+        filtered_data = apply_filters(data)
+        df = pd.DataFrame(filtered_data)
+        
+        # Debug para verificar filtro de datas
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        print(f"[MONTHLY_CHART] Filtro de datas: {data_inicio} até {data_fim}")
+        print(f"[MONTHLY_CHART] Dados após filtro: {len(df)} registros")
         
         # Calcular custo total usando despesas_processo (igual aos KPIs e charts)
         custos_calculados = []
@@ -759,7 +776,7 @@ def recent_operations():
             'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'data_chegada',
             
             # Colunas adicionais para o modal
-            'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque',
+            'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque', 'data_fechamento',
             'peso_bruto', 'urf_despacho', 'urf_despacho_normalizado', 'container',
             'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
             'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',

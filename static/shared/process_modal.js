@@ -54,6 +54,7 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-container', operation.container);
     updateElementValue('detail-data-embarque', operation.data_embarque);
     updateElementValue('detail-data-chegada', operation.data_chegada);
+    updateElementValue('detail-data-fechamento', operation.data_fechamento);
     updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : '-');
     updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : '-');
     
