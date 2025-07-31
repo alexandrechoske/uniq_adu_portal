@@ -876,10 +876,10 @@ async function loadFilterOptionsWithRetry(maxRetries = 2) {
 function updateDashboardKPIs(kpis) {
     console.log('[DASHBOARD_EXECUTIVO] Atualizando KPIs...', kpis);
     
-    // Update KPI values
+    // Update KPI values com nova estrutura
     updateKPIValue('kpi-total-processos', formatNumber(kpis.total_processos));
-    updateKPIValue('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas));
-    updateKPIValue('kpi-ticket-medio', formatCurrencyCompact(kpis.ticket_medio));
+    updateKPIValue('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
+    updateKPIValue('kpi-processos-fechados', formatNumber(kpis.processos_fechados || 0));
     updateKPIValue('kpi-chegando-mes', formatNumber(kpis.chegando_mes));
     updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo));
     updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana));
@@ -889,9 +889,9 @@ function updateDashboardKPIs(kpis) {
     updateKPIValue('kpi-Agd-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
     updateKPIValue('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
     updateKPIValue('kpi-Agd-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
-    updateKPIValue('kpi-transit-time', formatNumber(kpis.transit_time_medio, 1) + ' dias');
-    updateKPIValue('kpi-proc-mes', formatNumber(kpis.processos_mes, 1));
-    updateKPIValue('kpi-proc-semana', formatNumber(kpis.processos_semana, 1));
+    updateKPIValue('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas));
+    updateKPIValue('kpi-ticket-medio', formatCurrencyCompact(kpis.ticket_medio));
+    // Removidos: kpi-transit-time, kpi-proc-mes, kpi-proc-semana
 }
 
 /**

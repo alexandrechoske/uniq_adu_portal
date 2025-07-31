@@ -401,35 +401,37 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
             print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
-        # Transit time médio
-        transit_time = 0
-        if 'data_embarque' in df.columns and 'data_chegada' in df.columns:
-            datas_validas = df.dropna(subset=['data_embarque', 'data_chegada'])
-            if not datas_validas.empty:
-                datas_validas['embarque_dt'] = pd.to_datetime(datas_validas['data_embarque'], format='%d/%m/%Y', errors='coerce')
-                datas_validas['chegada_dt'] = pd.to_datetime(datas_validas['data_chegada'], format='%d/%m/%Y', errors='coerce')
-                datas_validas = datas_validas.dropna(subset=['embarque_dt', 'chegada_dt'])
-                if not datas_validas.empty:
-                    datas_validas['transit_days'] = (datas_validas['chegada_dt'] - datas_validas['embarque_dt']).dt.days
-                    transit_time = datas_validas['transit_days'].mean()
+        # Calcular processos abertos e fechados baseado na data_fechamento
+        processos_abertos = 0
+        processos_fechados = 0
+        
+        if 'data_fechamento' in df.columns:
+            # Processos abertos: sem data_fechamento (None, '', ou valor vazio)
+            processos_abertos = len(df[
+                df['data_fechamento'].isna() | 
+                (df['data_fechamento'] == '') | 
+                (df['data_fechamento'].astype(str).str.strip() == '')
+            ])
+            
+            # Processos fechados: com data_fechamento válida
+            processos_fechados = len(df[
+                df['data_fechamento'].notna() & 
+                (df['data_fechamento'] != '') & 
+                (df['data_fechamento'].astype(str).str.strip() != '')
+            ])
+        else:
+            # Se não tiver coluna data_fechamento, considerar todos como abertos
+            processos_abertos = total_processos
+            processos_fechados = 0
 
-        # Processos médios por mês/semana
-        processos_mes = 0
-        processos_semana = 0
-        if 'data_abertura' in df.columns:
-            datas = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
-            datas_validas = datas.dropna()
-            if not datas_validas.empty:
-                # Calcular média mensal
-                meses_unicos = datas_validas.dt.to_period('M').nunique()
-                processos_mes = total_processos / meses_unicos if meses_unicos > 0 else 0
-                
-                # Calcular média semanal
-                semanas_unicas = datas_validas.dt.to_period('W').nunique()
-                processos_semana = total_processos / semanas_unicas if semanas_unicas > 0 else 0
+        print(f"[DEBUG_KPI] Processos Abertos: {processos_abertos}")
+        print(f"[DEBUG_KPI] Processos Fechados: {processos_fechados}")
+        print(f"[DEBUG_KPI] Total: {processos_abertos + processos_fechados} (deve ser igual a {total_processos})")
 
         kpis = {
             'total_processos': total_processos,
+            'processos_abertos': processos_abertos,
+            'processos_fechados': processos_fechados,
             'total_despesas': float(total_despesas),
             'ticket_medio': float(ticket_medio),
             'aguardando_embarque': aguardando_embarque,
@@ -440,10 +442,8 @@ def dashboard_kpis():
             'chegando_mes': chegando_mes,
             'chegando_mes_custo': float(chegando_mes_custo),
             'chegando_semana': chegando_semana,
-            'chegando_semana_custo': float(chegando_semana_custo),
-            'transit_time_medio': float(transit_time),
-            'processos_mes': float(processos_mes),
-            'processos_semana': float(processos_semana)
+            'chegando_semana_custo': float(chegando_semana_custo)
+            # Removidos: transit_time_medio, processos_mes, processos_semana
         }
         
         print(f"[DEBUG_KPI] KPIs finais: {kpis}")
