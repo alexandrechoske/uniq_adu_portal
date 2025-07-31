@@ -56,14 +56,14 @@
                         </div>
                     </a>
                     
-                    {% if session.user.role in ['admin', 'interno_unique'] %}
-                    <a href="{{ url_for('conferencia.index') }}" class="menu-card tools">
+                    {% if session.user.role == 'admin' %}
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}" class="menu-card tools">
                         <div class="card-icon">
-                            <i class="mdi mdi-file-document-check"></i>
+                            <i class="mdi mdi-chart-line"></i>
                         </div>
                         <div class="card-content">
-                            <h4 class="card-title">Conferência Documental</h4>
-                            <p class="card-description">Análise e validação de documentos</p>
+                            <h4 class="card-title">Analytics</h4>
+                            <p class="card-description">Relatórios de acesso e uso do sistema</p>
                         </div>
                     </a>
                     {% endif %}
