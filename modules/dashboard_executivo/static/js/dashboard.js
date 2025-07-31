@@ -15,6 +15,9 @@ let dashboardCharts = {};
 let monthlyChartPeriod = 'mensal';
 let recentOperationsTable = null;
 let currentFilters = {};  // NOVO: Para armazenar filtros ativos
+let isLoading = false;
+let loadAttempts = 0;
+const maxLoadAttempts = 3;
 
 // CACHE INTELIGENTE: Sistema de cache para evitar recarregamentos desnecessários
 let dashboardCache = {
@@ -66,6 +69,16 @@ let dashboardState = {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
     
+    // Aguardar sistema unificado de loading estar pronto
+    const waitForUnifiedSystem = () => {
+        if (window.unifiedLoadingManager) {
+            console.log('[DASHBOARD_EXECUTIVO] Sistema unificado detectado');
+            initializeDashboard();
+        } else {
+            setTimeout(waitForUnifiedSystem, 100);
+        }
+    };
+    
     // Detectar se o usuário está voltando para a página (cache do navegador)
     window.addEventListener('pageshow', function(event) {
         if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
@@ -93,7 +106,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('[DASHBOARD_EXECUTIVO] Erro ao registrar plugin:', error);
                 }
             }
-            initializeDashboard();
+            waitForUnifiedSystem();
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Chart.js não foi carregado');
         }
@@ -156,7 +169,6 @@ async function initializeDashboard() {
     
     try {
         dashboardState.isLoading = true;
-        showLoading(true);
         
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento do dashboard...');
         
@@ -171,17 +183,22 @@ async function initializeDashboard() {
         setMonthlyChartPeriod('mensal');
         
         dashboardState.isInitialized = true;
-        showLoading(false);
         updateLastUpdate();
         
         console.log('[DASHBOARD_EXECUTIVO] Dashboard inicializado com sucesso');
+        
+        // Notificar sistema unificado que o carregamento foi concluído
+        if (window.unifiedLoadingManager && window.unifiedLoadingManager.isTransitioning) {
+            console.log('[DASHBOARD_EXECUTIVO] Notificando sistema unificado - dados carregados');
+            // O sistema unificado detectará automaticamente que os dados carregaram
+        }
+        
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro na inicialização:', error);
         showError('Erro ao carregar dashboard: ' + error.message);
         dashboardState.isInitialized = false;
     } finally {
         dashboardState.isLoading = false;
-        showLoading(false);
     }
 }
 
@@ -399,8 +416,16 @@ function setupModalEventListeners() {
  * Load initial data
  */
 async function loadInitialData() {
+    if (isLoading) {
+        console.log('[DASHBOARD_EXECUTIVO] Já está carregando, aguardando...');
+        return;
+    }
+    
+    isLoading = true;
+    loadAttempts++;
+    
     try {
-        console.log('[DASHBOARD_EXECUTIVO] Carregando dados iniciais...');
+        console.log('[DASHBOARD_EXECUTIVO] Carregando dados iniciais... (tentativa', loadAttempts, ')');
         
         // Load data
         const response = await fetch('/dashboard-executivo/api/load-data');
@@ -421,9 +446,26 @@ async function loadInitialData() {
             loadFilterOptions()  // NOVO: Carregar opções de filtros
         ]);
         
+        console.log('[DASHBOARD_EXECUTIVO] Dados iniciais carregados com sucesso');
+        loadAttempts = 0; // Reset attempts on success
+        
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar dados:', error);
-        throw error;
+        
+        // Tentar novamente se não atingiu o máximo
+        if (loadAttempts < maxLoadAttempts) {
+            console.log('[DASHBOARD_EXECUTIVO] Tentando novamente em 2 segundos...');
+            setTimeout(() => {
+                isLoading = false;
+                loadInitialData();
+            }, 2000);
+            return;
+        } else {
+            loadAttempts = 0;
+            throw error;
+        }
+    } finally {
+        isLoading = false;
     }
 }
 
@@ -1894,13 +1936,11 @@ function exportData() {
 }
 
 /**
- * Show/hide loading overlay
+ * Show/hide loading overlay - Integrado com sistema unificado
  */
 function showLoading(show) {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.style.display = show ? 'flex' : 'none';
-    }
+    // Sistema unificado gerencia loading - manter apenas para compatibilidade
+    console.log('[DASHBOARD_EXECUTIVO] showLoading chamado:', show, '- gerenciado por sistema unificado');
 }
 
 /**
@@ -3346,3 +3386,43 @@ function getCanalIndicator(canal) {
     
     return `<span class="canal-indicator"><span class="canal-dot ${dotClass}"></span></span>`;
 }
+
+/**
+ * Refresh silencioso do dashboard
+ */
+async function silentRefresh() {
+    console.log('[DASHBOARD_EXECUTIVO] Refresh silencioso iniciado');
+    if (isLoading) {
+        console.log('[DASHBOARD_EXECUTIVO] Já está carregando, pulando refresh silencioso');
+        return;
+    }
+    
+    try {
+        await loadInitialData();
+        console.log('[DASHBOARD_EXECUTIVO] Refresh silencioso concluído com sucesso');
+        return true;
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro no refresh silencioso:', error);
+        return false;
+    }
+}
+
+// Expor funções globalmente para validação e debug
+window.dashboardModule = {
+    refresh: loadInitialData,
+    silentRefresh: silentRefresh,
+    loadData: loadInitialData,
+    charts: dashboardCharts,
+    data: dashboardData,
+    isLoading: () => isLoading,
+    hasData: () => {
+        return dashboardData && 
+               dashboardData.length > 0 &&
+               Object.keys(dashboardCharts).length > 0;
+    },
+    validateCharts: validateAndRecreateCharts
+};
+
+// Também manter as funções globais existentes para compatibilidade
+window.loadInitialData = loadInitialData;
+window.dashboardCharts = dashboardCharts;

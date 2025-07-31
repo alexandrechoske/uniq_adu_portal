@@ -9,11 +9,30 @@ let currentFilters = {
     endDate: null
 };
 
+let isLoading = false;
+let loadAttempts = 0;
+const maxLoadAttempts = 3;
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[ANALYTICS] Module loaded');
-    initializeAnalytics();
-    setupEventListeners();
-    loadAnalyticsStats();
+    
+    // Aguardar sistema unificado de loading estar pronto
+    const waitForUnifiedSystem = () => {
+        if (window.unifiedLoadingManager) {
+            console.log('[ANALYTICS] Sistema unificado detectado');
+            initializeAnalytics();
+            setupEventListeners();
+            
+            // Aguardar um pouco antes de carregar para permitir que outros scripts inicializem
+            setTimeout(() => {
+                loadAnalyticsStats();
+            }, 500);
+        } else {
+            setTimeout(waitForUnifiedSystem, 100);
+        }
+    };
+    
+    waitForUnifiedSystem();
 });
 
 function initializeAnalytics() {
@@ -53,9 +72,16 @@ function setupEventListeners() {
 }
 
 async function loadAnalyticsStats() {
+    if (isLoading) {
+        console.log('[ANALYTICS] Já está carregando, aguardando...');
+        return;
+    }
+    
+    isLoading = true;
+    loadAttempts++;
+    
     try {
-        console.log('[ANALYTICS] Carregando estatísticas...');
-        showLoading();
+        console.log('[ANALYTICS] Carregando estatísticas... (tentativa', loadAttempts, ')');
         
         // Fazer requisições em paralelo
         const [statsResponse, chartsResponse, usersResponse, activityResponse] = await Promise.all([
@@ -86,12 +112,31 @@ async function loadAnalyticsStats() {
         updateFilterSummary();
         
         console.log('[ANALYTICS] Dados carregados com sucesso');
+        loadAttempts = 0; // Reset attempts on success
+        
+        // Notificar sistema unificado que o carregamento foi concluído
+        if (window.unifiedLoadingManager && window.unifiedLoadingManager.isTransitioning) {
+            console.log('[ANALYTICS] Notificando sistema unificado - dados carregados');
+            // O sistema unificado detectará automaticamente que os dados carregaram
+        }
         
     } catch (error) {
         console.error('[ANALYTICS] Erro ao carregar dados:', error);
-        showError('Erro ao carregar dados: ' + error.message);
+        
+        // Tentar novamente se não atingiu o máximo
+        if (loadAttempts < maxLoadAttempts) {
+            console.log('[ANALYTICS] Tentando novamente em 2 segundos...');
+            setTimeout(() => {
+                isLoading = false;
+                loadAnalyticsStats();
+            }, 2000);
+            return;
+        } else {
+            showError('Erro ao carregar dados: ' + error.message);
+            loadAttempts = 0;
+        }
     } finally {
-        hideLoading();
+        isLoading = false;
     }
 }
 
@@ -597,6 +642,53 @@ function refreshData() {
     loadAnalyticsStats();
 }
 
+function refreshData() {
+    console.log('[ANALYTICS] Refresh manual iniciado');
+    loadAnalyticsStats();
+}
+
+async function silentRefresh() {
+    console.log('[ANALYTICS] Refresh silencioso iniciado');
+    if (isLoading) {
+        console.log('[ANALYTICS] Já está carregando, pulando refresh silencioso');
+        return;
+    }
+    
+    try {
+        await loadAnalyticsStats();
+        console.log('[ANALYTICS] Refresh silencioso concluído com sucesso');
+        return true;
+    } catch (error) {
+        console.error('[ANALYTICS] Erro no refresh silencioso:', error);
+        return false;
+    }
+}
+
+function resetFilters() {
+    currentFilters = {
+        dateRange: '30d',
+        userRole: 'all',
+        actionType: 'all',
+        startDate: null,
+        endDate: null
+    };
+    
+    // Reset form values
+    const form = document.getElementById('filters-modal');
+    if (form) {
+        form.querySelectorAll('select, input').forEach(input => {
+            if (input.type === 'date') {
+                input.value = '';
+            } else {
+                input.value = input.getAttribute('data-default') || input.options ? input.options[0].value : '';
+            }
+        });
+    }
+    
+    closeFiltersModal();
+    loadAnalyticsStats();
+}
+
 function updateFilterSummary() {
     const summaryElement = document.getElementById('filter-summary-text');
     if (!summaryElement) return;
@@ -628,19 +720,15 @@ function updateFilterSummary() {
     summaryElement.textContent = summary;
 }
 
-// Loading States
+// Loading States - Integrado com sistema unificado
 function showLoading() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-    }
+    // Sistema unificado gerencia loading - manter apenas para compatibilidade
+    console.log('[ANALYTICS] showLoading chamado - gerenciado por sistema unificado');
 }
 
 function hideLoading() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.style.display = 'none';
-    }
+    // Sistema unificado gerencia loading - manter apenas para compatibilidade
+    console.log('[ANALYTICS] hideLoading chamado - gerenciado por sistema unificado');
 }
 
 function showError(message) {
@@ -654,12 +742,19 @@ setInterval(() => {
     loadAnalyticsStats();
 }, 300000);
 
-// Expor funções globalmente para debug
+// Expor funções globalmente para debug e validação
 window.analyticsModule = {
     refresh: refreshData,
+    silentRefresh: silentRefresh,
     loadStats: loadAnalyticsStats,
     showError: showError,
     currentFilters: currentFilters,
     analyticsData: analyticsData,
-    charts: charts
+    charts: charts,
+    isLoading: () => isLoading,
+    hasData: () => {
+        return analyticsData && 
+               Object.keys(analyticsData).length > 0 &&
+               Object.keys(charts).length > 0;
+    }
 };
