@@ -1005,11 +1005,8 @@ function createDashboardChartsWithValidation(charts) {
             console.warn('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais inválidos ou ausentes');
         }
         
-        // Create material chart with validation (se existir)
-        if (charts.material && charts.material.labels && charts.material.data) {
-            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico material...');
-            createMaterialChartWithValidation(charts.material);
-        }
+        // CORREÇÃO: Material só tem TABELA, não gráfico
+        // Removido createMaterialChartWithValidation pois canvas material-chart não existe no HTML
         
         console.log('[DASHBOARD_EXECUTIVO] Todos os gráficos foram criados com sucesso');
         
@@ -3161,6 +3158,9 @@ async function resetAllFilters() {
         document.getElementById('data-inicio').value = '';
         document.getElementById('data-fim').value = '';
         
+        // CORREÇÃO: Adicionar reset do status processo
+        document.getElementById('status-processo').value = '';
+        
         // Clear multi-select checkboxes
         const types = ['material', 'cliente', 'modal', 'canal'];
         types.forEach(type => {
@@ -3185,9 +3185,9 @@ async function resetAllFilters() {
         // Hide reset button
         updateResetButtonVisibility();
         
-        // Invalidate cache and reload data without filters
-        dashboardCache.invalidate();
-        console.log('[DASHBOARD_EXECUTIVO] Cache invalidado devido a reset de filtros');
+        // CORREÇÃO: NÃO invalidar cache - preservar dados base para evitar erro "Dados não encontrados"
+        // dashboardCache.invalidate(); // ❌ REMOVIDO - causa erro de dados
+        console.log('[DASHBOARD_EXECUTIVO] Recarregando dados sem filtros (cache preservado)...');
         
         await Promise.all([
             loadDashboardKPIsWithCache(),
