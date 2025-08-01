@@ -63,7 +63,6 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-registro', operation.data_registro);
     updateElementValue('detail-canal', operation.canal);
     updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
-    updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
     updateElementValue('detail-urf-despacho', operation.urf_despacho_normalizado || operation.urf_despacho);
     
     // Update financial summary

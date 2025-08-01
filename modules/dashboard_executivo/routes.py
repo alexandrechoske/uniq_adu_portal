@@ -54,6 +54,92 @@ def calculate_custo_from_despesas_processo(despesas_processo):
         print(f"[CUSTO_CALCULATION] Erro ao calcular custo: {str(e)}")
         return 0.0
 
+def calculate_custo_from_vw_despesas(ref_unique):
+    """
+    Calcular custo total de um processo usando a view vw_despesas_6_meses
+    Esta é a fonte correta que contém os filtros aplicados
+    """
+    try:
+        if not ref_unique:
+            return 0.0
+        
+        print(f"[DESPESAS_VIEW] Consultando vw_despesas_6_meses para ref_unique: {ref_unique}")
+        
+        # Consultar view de despesas com filtros aplicados
+        query = supabase_admin.table('vw_despesas_6_meses').select('valor_custo').eq('ref_unique', ref_unique)
+        result = query.execute()
+        
+        if not result.data:
+            print(f"[DESPESAS_VIEW] Nenhuma despesa encontrada para {ref_unique}")
+            return 0.0
+        
+        total_custo = 0.0
+        count_items = 0
+        
+        for despesa in result.data:
+            valor_custo = despesa.get('valor_custo', 0)
+            if valor_custo is not None and valor_custo != '':
+                try:
+                    valor_float = float(valor_custo)
+                    if not pd.isna(valor_float) and not np.isinf(valor_float):
+                        total_custo += valor_float
+                        count_items += 1
+                except (ValueError, TypeError):
+                    continue
+        
+        print(f"[DESPESAS_VIEW] {ref_unique}: {count_items} itens, Total: R$ {total_custo:,.2f}")
+        return total_custo
+        
+    except Exception as e:
+        print(f"[DESPESAS_VIEW] Erro ao consultar despesas para {ref_unique}: {str(e)}")
+        return 0.0
+
+def enrich_data_with_despesas_view(data):
+    """
+    Enriquecer dados dos processos com custos calculados da vw_despesas_6_meses
+    """
+    try:
+        print(f"[DESPESAS_VIEW] Enriquecendo {len(data)} processos com dados da view de despesas...")
+        
+        enriched_data = []
+        total_queries = 0
+        
+        for item in data:
+            # Copiar item original
+            enriched_item = item.copy()
+            
+            # Calcular custo usando view de despesas
+            ref_unique = item.get('ref_unique')
+            if ref_unique:
+                custo_correto = calculate_custo_from_vw_despesas(ref_unique)
+                enriched_item['custo_total_view'] = custo_correto
+                
+                # Também manter o cálculo original para comparação
+                custo_original = calculate_custo_from_despesas_processo(item.get('despesas_processo'))
+                enriched_item['custo_total_original'] = custo_original
+                
+                # Usar o custo da view como oficial
+                enriched_item['custo_total'] = custo_correto
+                
+                total_queries += 1
+                
+                # Log para processo 6555 especificamente
+                if '6555' in str(ref_unique):
+                    print(f"[DESPESAS_VIEW] Processo 6555 -> View: R$ {custo_correto:,.2f}, Original: R$ {custo_original:,.2f}")
+            else:
+                enriched_item['custo_total_view'] = 0.0
+                enriched_item['custo_total_original'] = 0.0
+                enriched_item['custo_total'] = 0.0
+            
+            enriched_data.append(enriched_item)
+        
+        print(f"[DESPESAS_VIEW] Enriquecimento concluído: {total_queries} consultas realizadas")
+        return enriched_data
+        
+    except Exception as e:
+        print(f"[DESPESAS_VIEW] Erro no enriquecimento: {str(e)}")
+        return data  # Retornar dados originais em caso de erro
+
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('dashboard_executivo', __name__, 
                url_prefix='/dashboard-executivo',
@@ -223,25 +309,29 @@ def load_data():
         
         print(f"[DASHBOARD_EXECUTIVO] Dados carregados: {len(result.data)} registros")
         
+        # NOVA IMPLEMENTAÇÃO: Enriquecer dados com custos da view vw_despesas_6_meses
+        print("[DASHBOARD_EXECUTIVO] Enriquecendo dados com custos da vw_despesas_6_meses...")
+        enriched_data = enrich_data_with_despesas_view(result.data)
+        
         # Log para verificar estrutura do campo despesas_processo
         records_with_expenses = 0
-        for record in result.data:
+        for record in enriched_data:
             if 'despesas_processo' in record and record['despesas_processo']:
                 records_with_expenses += 1
                 if records_with_expenses == 1:  # Log apenas do primeiro registro
                     print(f"[DASHBOARD_EXECUTIVO] Exemplo despesas_processo: {record['despesas_processo'][:2] if len(record['despesas_processo']) > 2 else record['despesas_processo']}")
         
-        print(f"[DASHBOARD_EXECUTIVO] Registros com despesas_processo: {records_with_expenses}/{len(result.data)}")
+        print(f"[DASHBOARD_EXECUTIVO] Registros com despesas_processo: {records_with_expenses}/{len(enriched_data)}")
         
-        # Armazenar dados no cache do servidor
-        data_cache.set_cache(user_id, 'dashboard_v2_data', result.data)
-        print(f"[DASHBOARD_EXECUTIVO] Cache armazenado para user_id: {user_id} com {len(result.data)} registros")
+        # Armazenar dados ENRIQUECIDOS no cache do servidor
+        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_data)
+        print(f"[DASHBOARD_EXECUTIVO] Cache armazenado para user_id: {user_id} com {len(enriched_data)} registros (dados enriquecidos)")
         
         session['dashboard_v2_loaded'] = True
         
         return jsonify({
             'success': True,
-            'data': result.data,
+            'data': enriched_data,
             'total_records': len(result.data)
         })
         
@@ -574,14 +664,14 @@ def dashboard_charts():
                 ]
             }
 
-        # Gráfico URF
+        # Gráfico URF Despacho (usar coluna urf_despacho)
         urf_chart = {'labels': [], 'data': []}
-        if 'urf_entrada_normalizado' in df.columns:
-            urf_counts = df['urf_entrada_normalizado'].value_counts().head(10)
-            urf_chart = {
-                'labels': urf_counts.index.tolist(),
-                'data': urf_counts.values.tolist()
-            }
+        if 'urf_despacho_normalizado' in df.columns:
+            urf_counts = df['urf_despacho_normalizado'].value_counts().head(10)
+            urf_chart = {'labels': urf_counts.index.tolist(), 'data': urf_counts.values.tolist()}
+        elif 'urf_despacho' in df.columns:
+            urf_counts = df['urf_despacho'].value_counts().head(10)
+            urf_chart = {'labels': urf_counts.index.tolist(), 'data': urf_counts.values.tolist()}
 
         # Gráfico Materiais
         material_chart = {'labels': [], 'data': []}
@@ -783,13 +873,9 @@ def recent_operations():
             'canal', 'data_desembaraco', 'despesas_processo'  # NOVO CAMPO ADICIONADO
         ]
         
-        # Adicionar colunas normalizadas se disponíveis
+        # Colunas normalizadas disponíveis
         if 'mercadoria' in df_sorted.columns:
             relevant_columns.append('mercadoria')
-        if 'urf_entrada_normalizado' in df_sorted.columns:
-            relevant_columns.append('urf_entrada_normalizado')
-        elif 'urf_entrada' in df_sorted.columns:
-            relevant_columns.append('urf_entrada')
         
         available_columns = [col for col in relevant_columns if col in df_sorted.columns]
         print(f"[DASHBOARD_EXECUTIVO] Colunas disponíveis: {available_columns}")
@@ -797,17 +883,16 @@ def recent_operations():
         
         operations_data = df_sorted[available_columns].to_dict('records')
         
-        # Debug: mostrar dados de uma operação de exemplo
+        # Debug: mostrar dados de uma operação de exemplo e verificar despesas_processo
         if operations_data:
-            print(f"[DASHBOARD_EXECUTIVO] Exemplo de operação (keys): {list(operations_data[0].keys())}")
-            # Verificar especificamente o campo despesas_processo
-            if 'despesas_processo' in operations_data[0]:
-                despesas = operations_data[0]['despesas_processo']
-                print(f"[DASHBOARD_EXECUTIVO] Campo despesas_processo encontrado: {type(despesas)} com {len(despesas) if isinstance(despesas, list) else 'N/A'} itens")
-                if isinstance(despesas, list) and len(despesas) > 0:
-                    print(f"[DASHBOARD_EXECUTIVO] Primeiro item de despesas: {despesas[0]}")
+            first_op = operations_data[0]
+            print(f"[DASHBOARD_EXECUTIVO] Exemplo de operação (keys): {list(first_op.keys())}")
+            if 'despesas_processo' in first_op:
+                despesas = first_op['despesas_processo']
+                count = len(despesas) if isinstance(despesas, list) else 'N/A'
+                print(f"[DASHBOARD_EXECUTIVO] Campo despesas_processo encontrado: {type(despesas)} com {count} itens")
             else:
-                print(f"[DASHBOARD_EXECUTIVO] ❌ Campo despesas_processo NÃO encontrado nas operações!")
+                print(f"[DASHBOARD_EXECUTIVO] Campo despesas_processo NÃO encontrado nas operações!")
         
         return jsonify({
             'success': True,
@@ -898,3 +983,121 @@ def filter_options():
             'error': str(e),
             'options': {}
         }), 500
+
+@bp.route('/api/force-refresh', methods=['POST'])
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def force_refresh_dashboard():
+    """
+    Force refresh específico para o Dashboard Executivo
+    Limpa o cache e busca dados atualizados do banco
+    """
+    try:
+        print("[DASHBOARD_EXECUTIVO] === INICIANDO FORCE REFRESH ===")
+        
+        # Obter dados do usuário
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
+        user_role = user_data.get('role')
+        
+        # 1. Limpar cache do usuário
+        print(f"[DASHBOARD_EXECUTIVO] Limpando cache para user_id: {user_id}")
+        data_cache.clear_user_cache(user_id)
+        
+        # 2. Limpar cache da sessão também
+        if 'dashboard_v2_loaded' in session:
+            del session['dashboard_v2_loaded']
+        
+        # 3. Buscar dados frescos do banco
+        print("[DASHBOARD_EXECUTIVO] Buscando dados frescos do banco...")
+        
+        # Query base da view com dados de despesas - SEMPRE buscar dados frescos
+        query = supabase_admin.table('vw_importacoes_6_meses').select('*')
+        
+        # Filtrar por empresa se for cliente
+        if user_role == 'cliente_unique':
+            user_companies = get_user_companies(user_data)
+            if user_companies:
+                print(f"[DASHBOARD_EXECUTIVO] Filtrando por empresas: {user_companies}")
+                query = query.in_('cnpj_importador', user_companies)
+        
+        # Executar query
+        result = query.execute()
+        
+        if not result.data:
+            return jsonify({
+                'success': False,
+                'error': 'Nenhum dado encontrado',
+                'total_records': 0
+            }), 404
+        
+        print(f"[DASHBOARD_EXECUTIVO] Dados frescos carregados: {len(result.data)} registros")
+        
+        # NOVA IMPLEMENTAÇÃO: Enriquecer dados com custos da view vw_despesas_6_meses
+        print("[DASHBOARD_EXECUTIVO] Force refresh - Enriquecendo dados com custos da vw_despesas_6_meses...")
+        enriched_data = enrich_data_with_despesas_view(result.data)
+        
+        # 4. Verificar especificamente o processo 6555 (mencionado pelo usuário)
+        processo_6555 = None
+        total_custo_6555_view = 0
+        total_custo_6555_original = 0
+        
+        for record in enriched_data:
+            if str(record.get('processo', '')).strip() == '6555':
+                processo_6555 = record
+                total_custo_6555_view = record.get('custo_total_view', 0)
+                total_custo_6555_original = record.get('custo_total_original', 0)
+                print(f"[DASHBOARD_EXECUTIVO] Processo 6555 encontrado:")
+                print(f"   - Custo View (vw_despesas_6_meses): R$ {total_custo_6555_view:,.2f}")
+                print(f"   - Custo Original (despesas_processo): R$ {total_custo_6555_original:,.2f}")
+                break
+        
+        # 5. Armazenar dados frescos ENRIQUECIDOS no cache
+        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_data)
+        session['dashboard_v2_loaded'] = True
+        
+        print(f"[DASHBOARD_EXECUTIVO] Cache atualizado com dados frescos para user_id: {user_id}")
+        
+        # 6. Calcular estatísticas rápidas para retorno
+        df = pd.DataFrame(enriched_data)
+        
+        # Calcular custo total usando custos da view (corrigidos)
+        total_custo = df['custo_total_view'].sum() if 'custo_total_view' in df.columns else 0
+        registros_com_custo = (df['custo_total_view'] > 0).sum() if 'custo_total_view' in df.columns else 0
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cache atualizado com dados frescos do banco (usando vw_despesas_6_meses)',
+            'total_records': len(enriched_data),
+            'total_custo': total_custo,
+            'registros_com_custo': registros_com_custo,
+            'processo_6555': {
+                'encontrado': processo_6555 is not None,
+                'custo_total': total_custo_6555_view if processo_6555 else 0,
+                'custo_original': total_custo_6555_original if processo_6555 else 0,
+                'diferenca': abs(total_custo_6555_view - total_custo_6555_original) if processo_6555 else 0
+            },
+            'refresh_timestamp': datetime.now().isoformat(),
+            'source': 'vw_despesas_6_meses (com filtros aplicados)'
+        })
+        
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro no force refresh: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Erro ao atualizar cache'
+        }), 500
+
+@bp.route('/test-force-refresh')
+def test_force_refresh_page():
+    """Página de teste para force refresh (temporária)"""
+    import os
+    test_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'test_force_refresh_dashboard.html')
+    
+    try:
+        with open(test_file_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return html_content
+    except Exception as e:
+        return f"Erro ao carregar página de teste: {str(e)}", 404

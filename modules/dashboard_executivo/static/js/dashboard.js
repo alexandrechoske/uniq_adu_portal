@@ -219,7 +219,7 @@ function initializeEnhancedTable() {
         containerId: 'recent-operations-container',
         searchInputId: 'recent-operations-search',
         itemsPerPage: 15,
-        searchFields: ['ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 'status_processo', 'status_macro_sistema', 'mercadoria', 'urf_entrada_normalizado'],
+        searchFields: ['ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 'status_processo', 'status_macro_sistema', 'mercadoria', 'urf_despacho_normalizado', 'urf_despacho'],
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
@@ -263,7 +263,7 @@ function initializeEnhancedTable() {
         const isKingspanClient = operation.importador && operation.importador.toUpperCase().includes('KING');
         const materialColumn = hasKingspanInCurrentData ? 
             `<td>${isKingspanClient ? (operation.mercadoria || '-') : '-'}</td>` : '';
-        const urfColumn = `<td>${operation.urf_entrada_normalizado || operation.urf_entrada || '-'}</td>`;
+        const urfColumn = `<td>${operation.urf_despacho_normalizado || operation.urf_despacho || '-'}</td>`;
         
         return `
             <td>
@@ -1908,6 +1908,75 @@ async function refreshData() {
 }
 
 /**
+ * Force refresh específico do Dashboard Executivo
+ * Busca dados frescos diretamente do banco, ignorando cache
+ */
+async function forceRefreshDashboard() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] === INICIANDO FORCE REFRESH ===');
+        showLoading(true);
+        
+        // Mostrar mensagem específica para force refresh
+        const loadingText = document.querySelector('.loading-spinner p');
+        if (loadingText) {
+            loadingText.textContent = 'Buscando dados atualizados do banco...';
+        }
+        
+        // 1. Chamar endpoint específico de force refresh do dashboard
+        console.log('[DASHBOARD_EXECUTIVO] Chamando force refresh específico...');
+        
+        const response = await fetch('/dashboard-executivo/api/force-refresh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Erro desconhecido no force refresh');
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] Force refresh bem-sucedido:', result);
+        
+        // 2. Invalidar cache local
+        dashboardCache.invalidate();
+        
+        // 3. Recarregar todos os componentes com dados frescos
+        await loadInitialDataWithCache();
+        
+        updateLastUpdate();
+        showLoading(false);
+        
+        // Mostrar feedback detalhado do force refresh
+        const message = `
+            ✅ Cache atualizado com dados frescos!<br>
+            📊 ${result.total_records} registros processados<br>
+            💰 Custo total: R$ ${(result.total_custo || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+        `;
+        
+        if (result.processo_6555?.encontrado) {
+            const custoProcesso = result.processo_6555.custo_total || 0;
+            showSuccess(`${message}<br>🎯 Processo 6555: R$ ${custoProcesso.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+        } else {
+            showSuccess(message);
+        }
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro no force refresh:', error);
+        showError('Erro ao forçar atualização: ' + error.message);
+        showLoading(false);
+    }
+}
+
+/**
  * Export data
  */
 function exportData() {
@@ -3411,6 +3480,7 @@ async function silentRefresh() {
 window.dashboardModule = {
     refresh: loadInitialData,
     silentRefresh: silentRefresh,
+    forceRefresh: forceRefreshDashboard, // NOVO: Force refresh específico
     loadData: loadInitialData,
     charts: dashboardCharts,
     data: dashboardData,
@@ -3426,3 +3496,68 @@ window.dashboardModule = {
 // Também manter as funções globais existentes para compatibilidade
 window.loadInitialData = loadInitialData;
 window.dashboardCharts = dashboardCharts;
+
+// Integração com o sistema global de refresh
+document.addEventListener('DOMContentLoaded', function() {
+    // Escutar evento de refresh global para executar force refresh específico
+    document.addEventListener('globalRefreshRequested', function() {
+        console.log('[DASHBOARD_EXECUTIVO] Refresh global detectado, executando force refresh...');
+        forceRefreshDashboard();
+    });
+    
+    // Disponibilizar função de force refresh globalmente
+    window.forceRefreshDashboard = forceRefreshDashboard;
+});
+
+// INTEGRAÇÃO COM SISTEMA GLOBAL DE REFRESH
+// Hook para interceptar o botão global de refresh quando estamos no dashboard executivo
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se estamos na página do dashboard executivo
+    const isDashboardExecutivo = window.location.pathname.includes('/dashboard-executivo');
+    
+    if (isDashboardExecutivo) {
+        console.log('[DASHBOARD_EXECUTIVO] Integrando com sistema global de refresh...');
+        
+        // Substituir comportamento do botão global de refresh
+        const globalRefreshButton = document.getElementById('global-refresh-button');
+        if (globalRefreshButton) {
+            // Remover listeners existentes clonando o elemento
+            const newButton = globalRefreshButton.cloneNode(true);
+            globalRefreshButton.parentNode.replaceChild(newButton, globalRefreshButton);
+            
+            // Adicionar novo listener específico para o dashboard
+            newButton.addEventListener('click', async function() {
+                console.log('[DASHBOARD_EXECUTIVO] Force refresh acionado via botão global');
+                
+                // Feedback visual
+                const originalHtml = newButton.innerHTML;
+                newButton.innerHTML = '<i class="mdi mdi-loading mdi-spin text-sm"></i>';
+                newButton.disabled = true;
+                newButton.classList.add('opacity-50');
+                
+                try {
+                    await forceRefreshDashboard();
+                } finally {
+                    // Restaurar botão
+                    newButton.innerHTML = originalHtml;
+                    newButton.disabled = false;
+                    newButton.classList.remove('opacity-50');
+                }
+            });
+            
+            console.log('[DASHBOARD_EXECUTIVO] Botão global de refresh redirecionado para force refresh do dashboard');
+        }
+        
+        // Registrar módulo no sistema global (se existir)
+        if (window.GlobalRefresh) {
+            console.log('[DASHBOARD_EXECUTIVO] Registrando no sistema GlobalRefresh...');
+            
+            // Adicionar listener para refresh global
+            window.addEventListener('globalRefreshCompleted', function(event) {
+                console.log('[DASHBOARD_EXECUTIVO] Refresh global detectado, sincronizando dashboard...');
+                // Apenas recarregar cache, não force refresh novamente
+                loadInitialDataWithCache().catch(console.error);
+            });
+        }
+    }
+});

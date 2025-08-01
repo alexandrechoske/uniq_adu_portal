@@ -250,6 +250,21 @@
             // Mostrar notificação de início
             showNotification('🔄 Iniciando atualização forçada dos dados...', 'info');
             
+            // Verificar se estamos no dashboard executivo e executar force refresh específico
+            const currentPath = window.location.pathname;
+            if (currentPath.includes('/dashboard-executivo') && typeof window.forceRefreshDashboard === 'function') {
+                console.log('[GlobalRefresh] Dashboard executivo detectado, executando force refresh específico...');
+                try {
+                    await window.forceRefreshDashboard();
+                    showNotification('✅ Dashboard executivo atualizado com dados frescos!', 'success');
+                    return; // Sair da função após executar o refresh específico
+                } catch (error) {
+                    console.error('[GlobalRefresh] Erro no force refresh do dashboard:', error);
+                    showNotification('❌ Erro ao atualizar dashboard: ' + error.message, 'error');
+                    return;
+                }
+            }
+            
             // Verificar sessão primeiro
             const sessionValid = await checkSession();
             if (!sessionValid) {
@@ -317,8 +332,13 @@
         } finally {
             // Restaurar botão
             const refreshButton = document.getElementById('global-refresh-button');
-            if (refreshButton) {
+            if (refreshButton && originalHtml) {
                 refreshButton.innerHTML = originalHtml;
+                refreshButton.disabled = false;
+                refreshButton.classList.remove('opacity-50');
+            } else if (refreshButton) {
+                // Fallback se originalHtml não estiver definido
+                refreshButton.innerHTML = '<i class="mdi mdi-refresh text-sm"></i>';
                 refreshButton.disabled = false;
                 refreshButton.classList.remove('opacity-50');
             }

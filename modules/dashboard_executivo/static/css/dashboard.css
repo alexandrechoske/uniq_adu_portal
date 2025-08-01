@@ -683,6 +683,64 @@
     font-size: 0.9rem;
 }
 
+/* Force Refresh Button Styles */
+#global-refresh-button {
+    transition: all 0.3s ease;
+}
+
+#global-refresh-button:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+#global-refresh-button.refreshing {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+}
+
+/* Force Refresh Loading Message */
+.force-refresh-message {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+    z-index: 10001;
+    max-width: 350px;
+    font-size: 0.9rem;
+    border-left: 4px solid #ffc107;
+}
+
+.force-refresh-message .icon {
+    display: inline-block;
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+.force-refresh-message .details {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
 .multi-select-dropdown {
     position: absolute;
     top: 100%;
