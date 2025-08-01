@@ -363,14 +363,17 @@
                     <div class="info-card">
                         <h3 class="card-title">Detalhes da Carga e Transporte</h3>
                         <div class="card-grid-2">
+                            <!-- Linha 1: Modal - Peso -->
                             <div class="info-item">
                                 <label>Modal:</label>
                                 <span id="detail-modal">-</span>
                             </div>
-                            <div class="info-item container-item">
-                                <label>Container(s):</label>
-                                <div id="detail-container" class="container-list">-</div>
+                            <div class="info-item">
+                                <label>Peso Bruto (Kg):</label>
+                                <span id="detail-peso-bruto">-</span>
                             </div>
+                            
+                            <!-- Linha 2: Data Embarque - Data Chegada -->
                             <div class="info-item">
                                 <label>Data de Embarque:</label>
                                 <span id="detail-data-embarque">-</span>
@@ -379,6 +382,8 @@
                                 <label>Data de Chegada:</label>
                                 <span id="detail-data-chegada">-</span>
                             </div>
+                            
+                            <!-- Linha 3: Data Fechamento - Transit Time -->
                             <div class="info-item">
                                 <label>Data de Fechamento:</label>
                                 <span id="detail-data-fechamento">-</span>
@@ -387,12 +392,15 @@
                                 <label>Transit Time (dias):</label>
                                 <span id="detail-transit-time">-</span>
                             </div>
-                            <div class="info-item">
-                                <label>Peso Bruto (Kg):</label>
-                                <span id="detail-peso-bruto">-</span>
+                            
+                            <!-- Linha 4: Containers (ocupa toda a linha) -->
+                            <div class="info-item container-item" style="grid-column: 1 / -1;">
+                                <label>Container(s):</label>
+                                <div id="detail-container" class="container-list">-</div>
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Card 3: Informações Aduaneiras -->
                     <div class="info-card">
