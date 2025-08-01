@@ -17,8 +17,232 @@
                 {'name': 'Agente Unique', 'icon': 'mdi mdi-robot'}
             ]) }}
         </div>
+        {% if is_admin_view %}
+        <div class="actions-right">
+            <span class="status-badge status-active">
+                <i class="mdi mdi-shield-crown"></i>
+                Modo Administrador
+            </span>
+        </div>
+        {% endif %}
     </div>
 
+    {% if is_admin_view %}
+    <!-- ===== PAINEL ADMINISTRATIVO ===== -->
+    <div class="admin-main-content">
+        
+        <!-- Seção de Estatísticas -->
+        <div class="stats-section">
+            <div class="stat-card total-users">
+                <div class="stat-icon">
+                    <i class="mdi mdi-account-multiple"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Total de Usuários</div>
+                    <div class="stat-value" data-stat="total_users">0</div>
+                </div>
+            </div>
+            
+            <div class="stat-card active-users">
+                <div class="stat-icon">
+                    <i class="mdi mdi-account-check"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Usuários Ativos</div>
+                    <div class="stat-value" data-stat="active_users">0</div>
+                </div>
+            </div>
+            
+            <div class="stat-card total-numbers">
+                <div class="stat-icon">
+                    <i class="mdi mdi-phone"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Total de Números</div>
+                    <div class="stat-value" data-stat="total_numbers">0</div>
+                </div>
+            </div>
+            
+            <div class="stat-card total-companies">
+                <div class="stat-icon">
+                    <i class="mdi mdi-office-building"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Empresas</div>
+                    <div class="stat-value" data-stat="total_companies">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="admin-filters-card">
+            <div class="card-header">
+                <div class="card-icon" style="background: var(--color-info-light); color: var(--color-info);">
+                    <i class="mdi mdi-filter"></i>
+                </div>
+                <h3 class="card-title">Filtros de Busca</h3>
+            </div>
+            
+            <div class="filters-grid">
+                <div class="form-group">
+                    <label class="form-label">Buscar Usuário</label>
+                    <div class="input-group">
+                        <input type="text" id="search-users" class="form-input with-icon" placeholder="Nome, email ou número..." onkeyup="filterUsers()">
+                        <i class="input-icon mdi mdi-magnify"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select id="status-filter" class="form-input" onchange="filterUsers()">
+                        <option value="all">Todos</option>
+                        <option value="active">Ativos</option>
+                        <option value="inactive">Inativos</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Empresa</label>
+                    <select id="company-filter" class="form-input" onchange="filterUsers()">
+                        <option value="">Todas as empresas</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Usuários -->
+        <div class="users-table-section">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-account-group"></i>
+                    Gerenciamento de Usuários
+                </h3>
+                <div class="table-controls">
+                    <button class="btn btn-info btn-table" onclick="refreshData()">
+                        <i class="mdi mdi-refresh"></i>
+                        Atualizar
+                    </button>
+                    <button class="btn btn-success btn-table" onclick="exportAllData()">
+                        <i class="mdi mdi-download"></i>
+                        Exportar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th class="user-info-cell">Usuário</th>
+                            <th class="numbers-cell">Números WhatsApp</th>
+                            <th class="companies-cell">Empresas</th>
+                            <th class="status-cell">Status</th>
+                            <th class="actions-cell">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        {% for agente in agentes %}
+                        <tr data-user-id="{{ agente.user_id }}">
+                            <td class="user-info-cell">
+                                <div class="user-name-table">{{ agente.nome or 'Nome não informado' }}</div>
+                                <div class="user-email-table">{{ agente.email }}</div>
+                            </td>
+                            <td class="numbers-cell">
+                                <div class="numbers-list-table">
+                                    {% if agente.numeros %}
+                                        {% for numero in agente.numeros %}
+                                        <span class="number-badge">{{ numero }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span style="color: var(--color-text-muted); font-size: 0.75rem;">Nenhum número</span>
+                                    {% endif %}
+                                </div>
+                                <div class="add-number-inline" style="display: none;">
+                                    <input type="text" class="form-input add-number-input" placeholder="Novo número" id="new-number-{{ agente.user_id }}">
+                                    <button class="btn btn-success btn-table" onclick="adminAddNumber('{{ agente.user_id }}')">
+                                        <i class="mdi mdi-plus"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="companies-cell">
+                                {% if agente.empresas and agente.empresas|length > 0 %}
+                                    <span class="companies-count">{{ agente.empresas|length }} empresa(s)</span>
+                                {% else %}
+                                    <span style="color: var(--color-text-muted); font-size: 0.75rem;">Nenhuma empresa</span>
+                                {% endif %}
+                            </td>
+                            <td class="status-cell">
+                                {% if agente.usuario_ativo %}
+                                    <span class="status-badge status-active">
+                                        <i class="mdi mdi-check-circle"></i>
+                                        Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">
+                                        <i class="mdi mdi-close-circle"></i>
+                                        Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="actions-cell">
+                                <button class="btn btn-primary btn-table" onclick="showUserDetails('{{ agente.user_id }}')">
+                                    <i class="mdi mdi-eye"></i>
+                                </button>
+                                {% if agente.usuario_ativo %}
+                                    <button class="btn btn-warning btn-table" onclick="adminToggleUser('{{ agente.user_id }}', false)">
+                                        <i class="mdi mdi-pause"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-success btn-table" onclick="adminToggleUser('{{ agente.user_id }}', true)">
+                                        <i class="mdi mdi-play"></i>
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not agentes %}
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <i class="mdi mdi-account-off"></i>
+                                <h3>Nenhum usuário encontrado</h3>
+                                <p>Não há usuários cadastrados no sistema Agente Unique.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ações Rápidas -->
+        <div class="quick-actions-card">
+            <div class="card-header">
+                <div class="card-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
+                    <i class="mdi mdi-lightning-bolt"></i>
+                </div>
+                <h3 class="card-title">Ações Rápidas</h3>
+            </div>
+            
+            <div class="quick-actions-grid">
+                <button class="btn btn-primary" onclick="refreshData()">
+                    <i class="mdi mdi-refresh"></i>
+                    Recarregar Dados
+                </button>
+                <button class="btn btn-info" onclick="exportAllData()">
+                    <i class="mdi mdi-download"></i>
+                    Exportar Relatório
+                </button>
+                <button class="btn btn-warning" onclick="showBulkActions()">
+                    <i class="mdi mdi-cog"></i>
+                    Ações em Massa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- ===== ÁREA DO USUÁRIO COMUM ===== -->
     <div class="main-content agent-grid">
         {% if user_data and user_data.usuario_ativo %}
         <!-- Agente Configurado -->
@@ -229,6 +453,8 @@
         {% endif %}
     </div>
     
+    {% endif %}
+    
     <!-- Mensagens Flash (serão convertidas para toasts) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -237,6 +463,25 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+
+    <!-- Modal de Detalhes do Usuário -->
+    <div id="user-details-modal" class="user-details-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="mdi mdi-account-details"></i>
+                    Detalhes do Usuário
+                </h3>
+                <button class="modal-close" onclick="closeUserDetailsModal()">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body" id="modal-body-content">
+                <!-- Conteúdo será carregado dinamicamente -->
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

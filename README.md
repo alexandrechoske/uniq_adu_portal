@@ -156,7 +156,7 @@ Cada módulo possui suas próprias rotas, templates e arquivos estáticos, segui
 - Backend: Python 3.x + Flask
 - Banco de Dados: Supabase (PostgreSQL)
 - Frontend: Bootstrap 5
-- Dashboards: Plotly
+- Dashboards: ChartJS
 - Geração de PDF: WeasyPrint
 
 ## Contribuição

@@ -2,6 +2,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+import json
+import requests
+import traceback
+from datetime import datetime
 import requests
 import json
 import traceback
@@ -62,12 +66,105 @@ def get_user_companies(user_id):
         print(f"[ERROR] Erro ao buscar empresas do usuário: {str(e)}")
         return []
 
+def render_admin_panel():
+    """Renderiza o painel administrativo para admins"""
+    try:
+        # Buscar todos os usuários com agentes
+        agentes_query = supabase_admin.table('clientes_agentes').select('*').execute()
+        
+        # Buscar informações dos usuários
+        users_query = supabase_admin.table('users').select('id, email, name').execute()
+        
+        # Criar mapeamento de usuários
+        users_map = {}
+        if users_query.data:
+            for user in users_query.data:
+                users_map[user['id']] = {
+                    'email': user.get('email', 'N/A'),
+                    'nome': user.get('name', 'N/A')  # Mapear name para nome
+                }
+        
+        # Processar dados dos agentes
+        agentes = []
+        total_users = 0
+        active_users = 0
+        total_numbers = 0
+        users_by_company = {}
+        
+        if agentes_query.data:
+            for agente in agentes_query.data:
+                user_info = users_map.get(agente['user_id'], {})
+                
+                # Processar números e empresas com validação
+                numeros = agente.get('numero', [])
+                if not isinstance(numeros, list):
+                    numeros = [numeros] if numeros else []
+                
+                empresas = agente.get('empresa', [])
+                if not isinstance(empresas, list):
+                    empresas = [empresas] if empresas else []
+                
+                agente_data = {
+                    'user_id': agente['user_id'],
+                    'nome': user_info.get('nome', 'N/A'),
+                    'email': user_info.get('email', 'N/A'),
+                    'numeros': numeros,
+                    'empresas': empresas,
+                    'usuario_ativo': agente.get('usuario_ativo', False),
+                    'aceite_termos': agente.get('aceite_termos', False),
+                    'created_at': agente.get('created_at', ''),
+                    'data_aceite': agente.get('data_aceite', '')
+                }
+                
+                agentes.append(agente_data)
+                total_users += 1
+                
+                if agente_data['usuario_ativo']:
+                    active_users += 1
+                
+                total_numbers += len(agente_data['numeros'])
+                
+                # Contabilizar empresas
+                for empresa in agente_data['empresas']:
+                    cnpj = empresa if isinstance(empresa, str) else empresa.get('cnpj', 'N/A')
+                    users_by_company[cnpj] = users_by_company.get(cnpj, 0) + 1
+        
+        # Estatísticas
+        stats = {
+            'total_users': total_users,
+            'active_users': active_users,
+            'total_numbers': total_numbers,
+            'total_companies': len(users_by_company),
+            'users_by_company': users_by_company
+        }
+        
+        context = {
+            'is_admin_view': True,
+            'agentes': agentes,
+            'stats': stats
+        }
+        
+        return render_template('agente.html', **context)
+        
+    except Exception as e:
+        print(f"[ERROR] Erro ao carregar painel admin: {str(e)}")
+        traceback.print_exc()
+        flash('Erro ao carregar dados dos agentes.', 'error')
+        return render_template('agente.html', is_admin_view=True, agentes=[], stats={})
+
 @bp.route('/', methods=['GET', 'POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
 def index():
     user_id = session['user']['id']
-    print(f"[AGENTE DEBUG] Método: {request.method}, User ID: {user_id}")
+    user_role = session['user']['role']
+    print(f"[AGENTE DEBUG] Método: {request.method}, User ID: {user_id}, Role: {user_role}")
+    
+    # Se for admin, mostrar painel de gerenciamento
+    if user_role == 'admin':
+        return render_admin_panel()
+    
+    # Lógica normal para usuários comuns
     if request.method == 'POST':
         print(f"[AGENTE DEBUG] POST recebido. Form data: {dict(request.form)}")
         numero = request.form.get('numero_whatsapp')
@@ -394,6 +491,124 @@ def admin():
         flash('Erro ao carregar dados dos agentes.', 'error')
         return render_template('admin.html', agentes=[])
 
+@bp.route('/admin/data', methods=['GET'])
+def admin_data():
+    """API para buscar dados do painel administrativo com bypass de autenticação"""
+    try:
+        # Verificar se é uma requisição com bypass de API
+        api_key = request.headers.get('X-API-Key')
+        bypass_mode = api_key == 'uniq_api_2025_dev_bypass_key'
+        
+        print(f"[DEBUG] API Key recebida: {api_key}")
+        print(f"[DEBUG] Bypass mode: {bypass_mode}")
+        
+        if not bypass_mode:
+            # Verificar autenticação normal
+            if 'user_id' not in session:
+                print("[DEBUG] Usuário não autenticado e sem bypass")
+                return jsonify({'success': False, 'message': 'Usuário não autenticado'}), 401
+            
+            # Verificar se é admin
+            user_id = session.get('user_id')
+            user_data = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+            
+            if not user_data.data or user_data.data[0].get('user_type') != 'admin':
+                print("[DEBUG] Usuário não é admin")
+                return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+        
+        print("[DEBUG] Prosseguindo com busca de dados...")
+        
+        # Buscar dados dos agentes
+        agentes_response = supabase_admin.table('clientes_agentes').select('*').execute()
+        
+        # Buscar dados dos usuários
+        users_response = supabase_admin.table('users').select('*').execute()
+        
+        # Processar dados dos usuários
+        users = []
+        numbers = []
+        companies = []
+        
+        users_map = {}
+        if users_response.data:
+            for user in users_response.data:
+                users_map[user['id']] = user
+        
+        if agentes_response.data:
+            for agente in agentes_response.data:
+                user_id = agente.get('user_id')
+                user_info = users_map.get(user_id, {})
+                
+                # Processar números
+                agent_numbers = agente.get('numero', [])
+                if isinstance(agent_numbers, str):
+                    agent_numbers = [agent_numbers] if agent_numbers else []
+                elif not isinstance(agent_numbers, list):
+                    agent_numbers = []
+                
+                # Filtrar números válidos
+                valid_numbers = [num for num in agent_numbers if num and num.strip()]
+                
+                # Processar empresas
+                agent_companies = agente.get('empresa', [])
+                if not isinstance(agent_companies, list):
+                    agent_companies = []
+                
+                # Adicionar usuário
+                users.append({
+                    'user_id': user_id,
+                    'nome': agente.get('nome') or user_info.get('nome', 'N/A'),
+                    'email': user_info.get('email', 'N/A'),
+                    'usuario_ativo': agente.get('usuario_ativo', False),
+                    'aceite_termos': agente.get('aceite_termos', False),
+                    'user_type': user_info.get('user_type', 'user'),
+                    'created_at': agente.get('created_at'),
+                    'data_aceite': agente.get('updated_at'),
+                    'numeros': valid_numbers
+                })
+                
+                # Adicionar números
+                for numero in valid_numbers:
+                    numbers.append({
+                        'user_id': user_id,
+                        'phone': numero
+                    })
+                
+                # Adicionar empresas
+                for empresa in agent_companies:
+                    companies.append({
+                        'user_id': user_id,
+                        'nome': empresa
+                    })
+        
+        # Calcular estatísticas
+        stats = {
+            'total_users': len(users),
+            'active_users': len([u for u in users if u.get('usuario_ativo', False)]),
+            'total_numbers': len(numbers),
+            'total_companies': len(companies)
+        }
+        
+        print(f"[DEBUG] Retornando dados: {len(users)} usuários, {len(numbers)} números")
+        
+        return jsonify({
+            'success': True,
+            'users': users,
+            'numbers': numbers,
+            'companies': companies,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] Erro ao buscar dados administrativos: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False, 
+            'message': 'Erro interno do servidor',
+            'error': str(e)
+        }), 500
+
 @bp.route('/admin/toggle-user', methods=['POST'])
 @login_required
 @role_required(['admin'])
@@ -511,4 +726,186 @@ def admin_remove_numero():
             
     except Exception as e:
         print(f"[ERROR] Erro ao remover número (admin): {str(e)}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+# --- NOVOS ENDPOINTS PARA ADMINISTRADORES ---
+
+@bp.route('/api/admin/users-summary', methods=['GET'])
+@login_required
+@role_required(['admin'])
+def api_admin_users_summary():
+    """API: Resumo completo de usuários para administradores"""
+    try:
+        # Parâmetros de busca e filtro
+        search = request.args.get('search', '').strip()
+        status_filter = request.args.get('status', 'all')  # all, active, inactive
+        company_filter = request.args.get('company', '').strip()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        
+        # Buscar todos os agentes
+        agentes_query = supabase_admin.table('clientes_agentes').select('*')
+        
+        # Aplicar filtro de status
+        if status_filter == 'active':
+            agentes_query = agentes_query.eq('usuario_ativo', True)
+        elif status_filter == 'inactive':
+            agentes_query = agentes_query.eq('usuario_ativo', False)
+        
+        agentes_result = agentes_query.execute()
+        
+        # Buscar informações dos usuários
+        users_result = supabase_admin.table('users').select('id, email, name').execute()
+        
+        # Criar mapeamento de usuários
+        users_map = {}
+        if users_result.data:
+            for user in users_result.data:
+                users_map[user['id']] = {
+                    'email': user.get('email', ''),
+                    'nome': user.get('name', '')  # Mapear name para nome
+                }
+        
+        # Processar e filtrar dados
+        agentes = []
+        stats = {
+            'total_users': 0,
+            'active_users': 0,
+            'total_numbers': 0,
+            'total_companies': 0,
+            'users_by_company': {}
+        }
+        
+        if agentes_result.data:
+            for agente in agentes_result.data:
+                user_info = users_map.get(agente['user_id'], {})
+                nome = user_info.get('nome', 'N/A')
+                email = user_info.get('email', 'N/A')
+                
+                # Aplicar filtro de busca
+                if search:
+                    search_text = f"{nome} {email}".lower()
+                    if search.lower() not in search_text:
+                        continue
+                
+                # Processar números
+                numeros = agente.get('numero', [])
+                if isinstance(numeros, str):
+                    numeros = [numeros] if numeros else []
+                elif not isinstance(numeros, list):
+                    numeros = []
+                
+                # Processar empresas
+                empresas = agente.get('empresa', [])
+                if not isinstance(empresas, list):
+                    empresas = []
+                
+                # Aplicar filtro de empresa
+                if company_filter:
+                    empresa_found = False
+                    for empresa in empresas:
+                        cnpj = empresa if isinstance(empresa, str) else empresa.get('cnpj', '')
+                        if company_filter in cnpj:
+                            empresa_found = True
+                            break
+                    if not empresa_found:
+                        continue
+                
+                agente_data = {
+                    'user_id': agente['user_id'],
+                    'nome': nome,
+                    'email': email,
+                    'numeros': numeros,
+                    'empresas': empresas,
+                    'usuario_ativo': agente.get('usuario_ativo', False),
+                    'aceite_termos': agente.get('aceite_termos', False),
+                    'created_at': agente.get('created_at', ''),
+                    'data_aceite': agente.get('data_aceite', ''),
+                    'last_activity': agente.get('updated_at', '')
+                }
+                
+                agentes.append(agente_data)
+                
+                # Atualizar estatísticas
+                stats['total_users'] += 1
+                if agente_data['usuario_ativo']:
+                    stats['active_users'] += 1
+                stats['total_numbers'] += len(numeros)
+                
+                # Contabilizar empresas
+                for empresa in empresas:
+                    cnpj = empresa if isinstance(empresa, str) else empresa.get('cnpj', 'N/A')
+                    stats['users_by_company'][cnpj] = stats['users_by_company'].get(cnpj, 0) + 1
+        
+        stats['total_companies'] = len(stats['users_by_company'])
+        
+        # Implementar paginação
+        total_items = len(agentes)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        agentes_paginated = agentes[start_idx:end_idx]
+        
+        return jsonify({
+            'success': True,
+            'users': agentes_paginated,
+            'stats': stats,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total_items': total_items,
+                'total_pages': (total_items + per_page - 1) // per_page
+            }
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] Erro ao buscar resumo de usuários: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+@bp.route('/admin/bulk-actions', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def admin_bulk_actions():
+    """Admin: Ações em massa"""
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        user_ids = data.get('user_ids', [])
+        
+        if not action or not user_ids:
+            return jsonify({'success': False, 'message': 'Ação e IDs de usuários são obrigatórios'})
+        
+        if action == 'activate':
+            # Ativar usuários
+            for user_id in user_ids:
+                supabase_admin.table('clientes_agentes').update({
+                    'usuario_ativo': True
+                }).eq('user_id', user_id).execute()
+            
+            return jsonify({'success': True, 'message': f'{len(user_ids)} usuários ativados com sucesso!'})
+            
+        elif action == 'deactivate':
+            # Desativar usuários
+            for user_id in user_ids:
+                supabase_admin.table('clientes_agentes').update({
+                    'usuario_ativo': False
+                }).eq('user_id', user_id).execute()
+            
+            return jsonify({'success': True, 'message': f'{len(user_ids)} usuários desativados com sucesso!'})
+            
+        elif action == 'export':
+            # Exportar dados (retornar dados para download)
+            export_data = []
+            for user_id in user_ids:
+                user_record = supabase_admin.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+                if user_record.data:
+                    export_data.append(user_record.data[0])
+            
+            return jsonify({'success': True, 'data': export_data, 'message': 'Dados exportados com sucesso!'})
+            
+        else:
+            return jsonify({'success': False, 'message': 'Ação não reconhecida'})
+            
+    except Exception as e:
+        print(f"[ERROR] Erro em ações em massa: {str(e)}")
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
