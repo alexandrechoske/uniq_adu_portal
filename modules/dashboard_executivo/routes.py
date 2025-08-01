@@ -97,43 +97,83 @@ def calculate_custo_from_vw_despesas(ref_unique):
 def enrich_data_with_despesas_view(data):
     """
     Enriquecer dados dos processos com custos calculados da vw_despesas_6_meses
+    OTIMIZAÇÃO: Uma única consulta batch em vez de consultas individuais
     """
     try:
         print(f"[DESPESAS_VIEW] Enriquecendo {len(data)} processos com dados da view de despesas...")
         
+        # Extrair todos os ref_unique de uma vez
+        ref_uniques = [item.get('ref_unique') for item in data if item.get('ref_unique')]
+        print(f"[DESPESAS_VIEW] Consultando custos para {len(ref_uniques)} ref_unique únicos...")
+        
+        # OTIMIZAÇÃO: Uma única consulta para todos os ref_unique
+        despesas_map = {}
+        if ref_uniques:
+            try:
+                # Consultar em lotes de 1000 para evitar limite de query
+                batch_size = 1000
+                for i in range(0, len(ref_uniques), batch_size):
+                    batch = ref_uniques[i:i + batch_size]
+                    print(f"[DESPESAS_VIEW] Processando lote {i//batch_size + 1}: {len(batch)} registros")
+                    
+                    # Consulta batch
+                    query = supabase_admin.table('vw_despesas_6_meses').select('ref_unique, valor_custo').in_('ref_unique', batch)
+                    result = query.execute()
+                    
+                    if result.data:
+                        # Agrupar por ref_unique e somar custos
+                        for despesa in result.data:
+                            ref_unique = despesa.get('ref_unique')
+                            valor_custo = despesa.get('valor_custo', 0)
+                            
+                            if ref_unique:
+                                if ref_unique not in despesas_map:
+                                    despesas_map[ref_unique] = 0
+                                
+                                # Somar valor_custo
+                                if valor_custo is not None and valor_custo != '':
+                                    try:
+                                        valor_float = float(valor_custo)
+                                        if not pd.isna(valor_float) and not np.isinf(valor_float):
+                                            despesas_map[ref_unique] += valor_float
+                                    except (ValueError, TypeError):
+                                        continue
+                
+                print(f"[DESPESAS_VIEW] Encontrados custos para {len(despesas_map)} processos")
+                
+            except Exception as e:
+                print(f"[DESPESAS_VIEW] Erro na consulta batch: {str(e)}")
+                despesas_map = {}
+        
+        # Enriquecer dados originais
         enriched_data = []
-        total_queries = 0
+        total_encontrados = 0
         
         for item in data:
-            # Copiar item original
             enriched_item = item.copy()
-            
-            # Calcular custo usando view de despesas
             ref_unique = item.get('ref_unique')
-            if ref_unique:
-                custo_correto = calculate_custo_from_vw_despesas(ref_unique)
-                enriched_item['custo_total_view'] = custo_correto
-                
-                # Também manter o cálculo original para comparação
-                custo_original = calculate_custo_from_despesas_processo(item.get('despesas_processo'))
-                enriched_item['custo_total_original'] = custo_original
-                
-                # Usar o custo da view como oficial
-                enriched_item['custo_total'] = custo_correto
-                
-                total_queries += 1
-                
-                # Log para processo 6555 especificamente
-                if '6555' in str(ref_unique):
-                    print(f"[DESPESAS_VIEW] Processo 6555 -> View: R$ {custo_correto:,.2f}, Original: R$ {custo_original:,.2f}")
-            else:
-                enriched_item['custo_total_view'] = 0.0
-                enriched_item['custo_total_original'] = 0.0
-                enriched_item['custo_total'] = 0.0
+            
+            # Custo original do campo despesas_processo
+            custo_original = calculate_custo_from_despesas_processo(item.get('despesas_processo'))
+            enriched_item['custo_total_original'] = custo_original
+            
+            # Custo da view vw_despesas_6_meses (batch)
+            custo_view = despesas_map.get(ref_unique, 0)
+            enriched_item['custo_total_view'] = custo_view
+            
+            # Usar o custo da view como oficial
+            enriched_item['custo_total'] = custo_view
+            
+            if custo_view > 0:
+                total_encontrados += 1
+            
+            # Log para processo 6555 especificamente
+            if ref_unique and '6555' in str(ref_unique):
+                print(f"[DESPESAS_VIEW] Processo 6555 -> View: R$ {custo_view:,.2f}, Original: R$ {custo_original:,.2f}")
             
             enriched_data.append(enriched_item)
         
-        print(f"[DESPESAS_VIEW] Enriquecimento concluído: {total_queries} consultas realizadas")
+        print(f"[DESPESAS_VIEW] Enriquecimento concluído: {total_encontrados}/{len(data)} processos com custos encontrados na view")
         return enriched_data
         
     except Exception as e:
@@ -155,12 +195,24 @@ def clean_data_for_json(data):
         return [clean_data_for_json(item) for item in data]
     elif pd.isna(data) or data is None:
         return None  # CORREÇÃO: Manter None para campos de data
-    elif isinstance(data, float) and np.isnan(data):
+    elif isinstance(data, float) and (np.isnan(data) or np.isinf(data)):
         return None  # CORREÇÃO: Manter None para campos de data
-    elif isinstance(data, (np.integer, np.floating)):
+    elif isinstance(data, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+        # CORREÇÃO: Tratar explicitamente tipos numpy integer
         if np.isnan(data) or np.isinf(data):
-            return None  # CORREÇÃO: Manter None para campos de data
-        return int(data) if isinstance(data, np.integer) else float(data)
+            return None
+        return int(data)
+    elif isinstance(data, (np.floating, np.float64, np.float32)):
+        # CORREÇÃO: Tratar explicitamente tipos numpy float
+        if np.isnan(data) or np.isinf(data):
+            return None
+        return float(data)
+    elif hasattr(data, 'item'):
+        # CORREÇÃO: Para qualquer tipo numpy scalar, usar .item() para converter para tipo Python nativo
+        try:
+            return data.item()
+        except (ValueError, OverflowError):
+            return None
     else:
         return data
 
@@ -238,16 +290,16 @@ def apply_filters(data):
                                if any(can.lower() in item.get('canal', '').lower() 
                                      for can in canais_lista)]
         
-        # Filtrar por status do processo (aberto/fechado) - NOVA REGRA usando data_fechamento
+        # Filtrar por status do processo (aberto/fechado) - REGRA CORRIGIDA usando status_macro_sistema
         if status_processo:
             if status_processo == 'aberto':
-                # Processo aberto: sem data_fechamento (None, '', ou valor vazio)
+                # Processo aberto: status_macro_sistema ≠ "PROCESSO CONCLUIDO" (incluindo nulls)
                 filtered_data = [item for item in filtered_data 
-                               if not item.get('data_fechamento') or item.get('data_fechamento') == '' or item.get('data_fechamento').strip() == '']
+                               if item.get('status_macro_sistema') != 'PROCESSO CONCLUIDO']
             elif status_processo == 'fechado':
-                # Processo fechado: com data_fechamento válida
+                # Processo fechado: status_macro_sistema = "PROCESSO CONCLUIDO"
                 filtered_data = [item for item in filtered_data 
-                               if item.get('data_fechamento') and item.get('data_fechamento') != '' and item.get('data_fechamento').strip() != '']
+                               if item.get('status_macro_sistema') == 'PROCESSO CONCLUIDO']
         
         return filtered_data
         
@@ -494,32 +546,31 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
             print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
-        # Calcular processos abertos e fechados baseado na data_fechamento
-        # NOVA REGRA: Se tem data_fechamento = processo fechado, se não tem = processo aberto
+        # Calcular processos abertos e fechados baseado no status_macro_sistema
+        # REGRA CORRETA: 
+        # - Fechados: status_macro_sistema = "PROCESSO CONCLUIDO"
+        # - Abertos: status_macro_sistema ≠ "PROCESSO CONCLUIDO" (incluindo nulls)
         processos_abertos = 0
         processos_fechados = 0
         
-        if 'data_fechamento' in df.columns:
-            # Processos fechados: com data_fechamento válida
+        if 'status_macro_sistema' in df.columns:
+            # Processos fechados: status_macro_sistema = "PROCESSO CONCLUIDO"
             processos_fechados = len(df[
-                df['data_fechamento'].notna() & 
-                (df['data_fechamento'] != '') & 
-                (df['data_fechamento'].astype(str).str.strip() != '')
+                df['status_macro_sistema'] == 'PROCESSO CONCLUIDO'
             ])
             
-            # Processos abertos: sem data_fechamento (None, '', ou valor vazio)
+            # Processos abertos: status_macro_sistema ≠ "PROCESSO CONCLUIDO" (incluindo nulls)
             processos_abertos = len(df[
-                df['data_fechamento'].isna() | 
-                (df['data_fechamento'] == '') | 
-                (df['data_fechamento'].astype(str).str.strip() == '')
+                (df['status_macro_sistema'] != 'PROCESSO CONCLUIDO') | 
+                (df['status_macro_sistema'].isna())
             ])
         else:
-            # Se não tiver coluna data_fechamento, considerar todos como abertos
+            # Se não tiver coluna status_macro_sistema, considerar todos como abertos
             processos_abertos = total_processos
             processos_fechados = 0
 
-        print(f"[DEBUG_KPI] NOVA REGRA - Processos Abertos (sem data_fechamento): {processos_abertos}")
-        print(f"[DEBUG_KPI] NOVA REGRA - Processos Fechados (com data_fechamento): {processos_fechados}")
+        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Fechados (status_macro_sistema = 'PROCESSO CONCLUIDO'): {processos_fechados}")
+        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Abertos (status_macro_sistema ≠ 'PROCESSO CONCLUIDO'): {processos_abertos}")
         print(f"[DEBUG_KPI] Total: {processos_abertos + processos_fechados} (deve ser igual a {total_processos})")
 
         kpis = {
@@ -1018,9 +1069,10 @@ def force_refresh_dashboard():
     """
     Force refresh específico para o Dashboard Executivo
     Limpa o cache e busca dados atualizados do banco
+    VERSÃO OTIMIZADA: Consulta batch de despesas
     """
     try:
-        print("[DASHBOARD_EXECUTIVO] === INICIANDO FORCE REFRESH ===")
+        print("[DASHBOARD_EXECUTIVO] === INICIANDO FORCE REFRESH OTIMIZADO ===")
         
         # Obter dados do usuário
         user_data = session.get('user', {})
@@ -1060,24 +1112,9 @@ def force_refresh_dashboard():
         
         print(f"[DASHBOARD_EXECUTIVO] Dados frescos carregados: {len(result.data)} registros")
         
-        # NOVA IMPLEMENTAÇÃO: Enriquecer dados com custos da view vw_despesas_6_meses
-        print("[DASHBOARD_EXECUTIVO] Force refresh - Enriquecendo dados com custos da vw_despesas_6_meses...")
+        # 4. Enriquecer dados com custos da view vw_despesas_6_meses (VERSÃO OTIMIZADA)
+        print("[DASHBOARD_EXECUTIVO] Force refresh - Enriquecendo dados com custos (versão otimizada)...")
         enriched_data = enrich_data_with_despesas_view(result.data)
-        
-        # 4. Verificar especificamente o processo 6555 (mencionado pelo usuário)
-        processo_6555 = None
-        total_custo_6555_view = 0
-        total_custo_6555_original = 0
-        
-        for record in enriched_data:
-            if str(record.get('processo', '')).strip() == '6555':
-                processo_6555 = record
-                total_custo_6555_view = record.get('custo_total_view', 0)
-                total_custo_6555_original = record.get('custo_total_original', 0)
-                print(f"[DASHBOARD_EXECUTIVO] Processo 6555 encontrado:")
-                print(f"   - Custo View (vw_despesas_6_meses): R$ {total_custo_6555_view:,.2f}")
-                print(f"   - Custo Original (despesas_processo): R$ {total_custo_6555_original:,.2f}")
-                break
         
         # 5. Armazenar dados frescos ENRIQUECIDOS no cache
         data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_data)
@@ -1088,25 +1125,27 @@ def force_refresh_dashboard():
         # 6. Calcular estatísticas rápidas para retorno
         df = pd.DataFrame(enriched_data)
         
-        # Calcular custo total usando custos da view (corrigidos)
-        total_custo = df['custo_total_view'].sum() if 'custo_total_view' in df.columns else 0
-        registros_com_custo = (df['custo_total_view'] > 0).sum() if 'custo_total_view' in df.columns else 0
+        # Calcular custo total usando custos da view (corrigidos) - CONVERTER PARA TIPOS JSON-SAFE
+        total_custo_raw = df['custo_total_view'].sum() if 'custo_total_view' in df.columns else 0
+        registros_com_custo_raw = (df['custo_total_view'] > 0).sum() if 'custo_total_view' in df.columns else 0
         
-        return jsonify({
+        # CORREÇÃO: Converter tipos numpy/pandas para tipos Python nativos
+        total_custo = float(total_custo_raw) if not pd.isna(total_custo_raw) else 0.0
+        registros_com_custo = int(registros_com_custo_raw) if not pd.isna(registros_com_custo_raw) else 0
+        
+        # Preparar resposta com dados limpos para JSON
+        response_data = {
             'success': True,
-            'message': 'Cache atualizado com dados frescos do banco (usando vw_despesas_6_meses)',
+            'message': 'Cache atualizado com dados frescos do banco (versão otimizada)',
             'total_records': len(enriched_data),
             'total_custo': total_custo,
             'registros_com_custo': registros_com_custo,
-            'processo_6555': {
-                'encontrado': processo_6555 is not None,
-                'custo_total': total_custo_6555_view if processo_6555 else 0,
-                'custo_original': total_custo_6555_original if processo_6555 else 0,
-                'diferenca': abs(total_custo_6555_view - total_custo_6555_original) if processo_6555 else 0
-            },
             'refresh_timestamp': datetime.now().isoformat(),
-            'source': 'vw_despesas_6_meses (com filtros aplicados)'
-        })
+            'source': 'vw_despesas_6_meses (consulta batch otimizada)'
+        }
+        
+        # CORREÇÃO: Usar clean_data_for_json para garantir compatibilidade JSON
+        return jsonify(clean_data_for_json(response_data))
         
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro no force refresh: {str(e)}")
