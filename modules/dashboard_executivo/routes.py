@@ -366,27 +366,28 @@ def dashboard_kpis():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        # Calcular custo total usando despesas_processo
-        print("[DEBUG_KPI] Calculando custos baseado em despesas_processo...")
-        custos_calculados = []
-        total_despesas_debug = 0.0
-        registros_com_custo = 0
+        # USAR CUSTO DA VIEW ENRIQUECIDA (custo_total_view calculado pelo enriquecimento)
+        print("[DEBUG_KPI] Usando custos da view vw_despesas_6_meses via enriquecimento...")
         
-        for idx, row in df.iterrows():
-            despesas = row.get('despesas_processo')
-            custo_calculado = calculate_custo_from_despesas_processo(despesas)
-            custos_calculados.append(custo_calculado)
-            
-            if custo_calculado > 0:
-                registros_com_custo += 1
-                total_despesas_debug += custo_calculado
-            
-            # Log dos primeiros 5 registros para verificação
-            if idx < 5:
-                print(f"[DEBUG_KPI] Registro {idx}: ref={row.get('ref_unique')}, custo_calculado={custo_calculado}")
+        # Usar o custo_total_view que foi calculado durante o enriquecimento dos dados
+        if 'custo_total_view' not in df.columns:
+            print("[DEBUG_KPI] ERRO: Campo custo_total_view não encontrado! Usando fallback.")
+            df['custo_total_view'] = 0.0
         
-        # Adicionar coluna de custo calculado
-        df['custo_calculado'] = custos_calculados
+        df['custo_calculado'] = df['custo_total_view']
+        
+        registros_com_custo = (df['custo_calculado'] > 0).sum()
+        total_despesas_debug = df['custo_calculado'].sum()
+        
+        # Log dos primeiros 5 registros para verificação
+        for idx, row in df.head(5).iterrows():
+            ref_unique = row.get('ref_unique', 'N/A')
+            custo_view = row.get('custo_total_view', 0)  # CORRIGIDO: usar custo_total_view
+            print(f"[DEBUG_KPI] Registro {idx}: ref={ref_unique}, custo_total_view={custo_view:,.2f}")
+            
+            # Log específico para o processo 6555
+            if '6555' in str(ref_unique):
+                print(f"[DEBUG_KPI] *** PROCESSO 6555 ENCONTRADO: custo_total_view={custo_view:,.2f} ***")
         
         print(f"[DEBUG_KPI] Registros com custo > 0: {registros_com_custo}/{len(df)}")
         print(f"[DEBUG_KPI] Total despesas calculado: {total_despesas_debug:,.2f}")
@@ -401,10 +402,10 @@ def dashboard_kpis():
         print(f"[DEBUG_KPI] - Total despesas: {total_despesas:,.2f}")
         print(f"[DEBUG_KPI] - Ticket médio: {ticket_medio:,.2f}")
         
-        # Comparar com custo_total original se disponível
-        if 'custo_total' in df.columns:
-            total_original = df['custo_total'].sum()
-            print(f"[DEBUG_KPI] Total original (custo_total): {total_original:,.2f}")
+        # Comparar com custo_total_view original se disponível
+        if 'custo_total_view' in df.columns:
+            total_original = df['custo_total_view'].sum()
+            print(f"[DEBUG_KPI] Total original (custo_total_view): {total_original:,.2f}")
             print(f"[DEBUG_KPI] Diferença: {total_despesas - total_original:,.2f}")
 
         # Função robusta para normalizar status
@@ -577,17 +578,24 @@ def dashboard_charts():
         filtered_data = apply_filters(data)
         df = pd.DataFrame(filtered_data)
         
-        # Calcular custo total usando despesas_processo (igual aos KPIs)
-        print("[DEBUG_CHARTS] Calculando custos baseado em despesas_processo...")
-        custos_calculados = []
-        for idx, row in df.iterrows():
-            despesas = row.get('despesas_processo')
-            custo_calculado = calculate_custo_from_despesas_processo(despesas)
-            custos_calculados.append(custo_calculado)
+        # USAR CUSTO DA VIEW ENRIQUECIDA (custo_total_view calculado pelo enriquecimento)
+        print("[DEBUG_CHARTS] Usando custos da view vw_despesas_6_meses via enriquecimento...")
         
-        # Adicionar coluna de custo calculado
-        df['custo_calculado'] = custos_calculados
-        print(f"[DEBUG_CHARTS] Total custo calculado nos gráficos: {df['custo_calculado'].sum():,.2f}")
+        # Usar o custo_total_view que foi calculado durante o enriquecimento dos dados
+        if 'custo_total_view' not in df.columns:
+            print("[DEBUG_CHARTS] ERRO: Campo custo_total_view não encontrado! Usando fallback.")
+            df['custo_total_view'] = 0.0
+        
+        df['custo_calculado'] = df['custo_total_view']
+        print(f"[DEBUG_CHARTS] Total custo da view nos gráficos: {df['custo_calculado'].sum():,.2f}")
+        
+        # Log específico para o processo 6555 nos gráficos também
+        for idx, row in df.iterrows():
+            ref_unique = row.get('ref_unique', 'N/A')
+            if '6555' in str(ref_unique):
+                custo_view = row.get('custo_total_view', 0)  # CORRIGIDO: usar custo_total_view
+                print(f"[DEBUG_CHARTS] *** PROCESSO 6555 nos gráficos: custo_total_view={custo_view:,.2f} ***")
+                break
         
         # Gráfico Evolução Mensal
         monthly_chart = {'labels': [], 'datasets': []}
@@ -779,15 +787,24 @@ def monthly_chart():
         print(f"[MONTHLY_CHART] Filtro de datas: {data_inicio} até {data_fim}")
         print(f"[MONTHLY_CHART] Dados após filtro: {len(df)} registros")
         
-        # Calcular custo total usando despesas_processo (igual aos KPIs e charts)
-        custos_calculados = []
-        for idx, row in df.iterrows():
-            despesas = row.get('despesas_processo')
-            custo_calculado = calculate_custo_from_despesas_processo(despesas)
-            custos_calculados.append(custo_calculado)
+        # USAR CUSTO DA VIEW ENRIQUECIDA (custo_total_view calculado pelo enriquecimento)
+        print("[MONTHLY_CHART] Usando custos da view vw_despesas_6_meses via enriquecimento...")
         
-        # Adicionar coluna de custo calculado
-        df['custo_calculado'] = custos_calculados
+        # Usar o custo_total_view que foi calculado durante o enriquecimento dos dados
+        if 'custo_total_view' not in df.columns:
+            print("[MONTHLY_CHART] ERRO: Campo custo_total_view não encontrado! Usando fallback.")
+            df['custo_total_view'] = 0.0
+        
+        df['custo_calculado'] = df['custo_total_view']
+        print(f"[MONTHLY_CHART] Total custo da view no gráfico mensal: {df['custo_calculado'].sum():,.2f}")
+        
+        # Log específico para o processo 6555 no gráfico mensal também
+        for idx, row in df.iterrows():
+            ref_unique = row.get('ref_unique', 'N/A')
+            if '6555' in str(ref_unique):
+                custo_view = row.get('custo_total_view', 0)  # CORRIGIDO: usar custo_total_view
+                print(f"[MONTHLY_CHART] *** PROCESSO 6555 no gráfico mensal: custo_total_view={custo_view:,.2f} ***")
+                break
         
         # Garantir colunas necessárias
         if 'data_abertura' not in df.columns:
@@ -882,18 +899,28 @@ def recent_operations():
         print(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
         
         operations_data = df_sorted[available_columns].to_dict('records')
-        
-        # Debug: mostrar dados de uma operação de exemplo e verificar despesas_processo
-        if operations_data:
-            first_op = operations_data[0]
-            print(f"[DASHBOARD_EXECUTIVO] Exemplo de operação (keys): {list(first_op.keys())}")
-            if 'despesas_processo' in first_op:
-                despesas = first_op['despesas_processo']
-                count = len(despesas) if isinstance(despesas, list) else 'N/A'
-                print(f"[DASHBOARD_EXECUTIVO] Campo despesas_processo encontrado: {type(despesas)} com {count} itens")
-            else:
-                print(f"[DASHBOARD_EXECUTIVO] Campo despesas_processo NÃO encontrado nas operações!")
-        
+
+        # Corrigir o campo custo_total para priorizar custo_total_view/custo_total (igual ao modal)
+        for op in operations_data:
+            custo_total_view = op.get('custo_total_view')
+            custo_total = op.get('custo_total')
+            if custo_total_view is not None and custo_total_view > 0:
+                op['custo_total'] = custo_total_view
+            elif custo_total is not None and custo_total > 0:
+                op['custo_total'] = custo_total
+            # Se não houver valor, mantém o original
+
+        # Log específico para o processo 6555 nos dados enviados para o frontend
+        for op in operations_data:
+            ref_unique = str(op.get('ref_unique', ''))
+            if '6555' in ref_unique:
+                print(f"[RECENT_OPERATIONS] *** PROCESSO 6555 DADOS PARA FRONTEND (TABELA) ***")
+                print(f"[RECENT_OPERATIONS] ref_unique: {op.get('ref_unique', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] custo_total (enviado): {op.get('custo_total', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] custo_total_view: {op.get('custo_total_view', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] custo_total_original: {op.get('custo_total_original', 'N/A')}")
+                break
+
         return jsonify({
             'success': True,
             'operations': clean_data_for_json(operations_data)
@@ -1088,16 +1115,3 @@ def force_refresh_dashboard():
             'error': str(e),
             'message': 'Erro ao atualizar cache'
         }), 500
-
-@bp.route('/test-force-refresh')
-def test_force_refresh_page():
-    """Página de teste para force refresh (temporária)"""
-    import os
-    test_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'test_force_refresh_dashboard.html')
-    
-    try:
-        with open(test_file_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-        return html_content
-    except Exception as e:
-        return f"Erro ao carregar página de teste: {str(e)}", 404

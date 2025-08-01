@@ -244,11 +244,27 @@ function initializeEnhancedTable() {
                 window.currentOperations.slice(0, 5).map(op => op.ref_importador));
         }
         
-        // Calcular custo total usando despesas_processo se disponível
-        let custoTotal = operation.custo_total || 0;
-        if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+        // Calcular custo total - PRIORIZAR custo_total_view/custo_total (igual ao modal)
+        let custoTotal = 0;
+        if (operation.custo_total_view !== undefined && operation.custo_total_view !== null && operation.custo_total_view > 0) {
+            custoTotal = operation.custo_total_view;
+            console.log(`[RENDER_ROW] Usando custo_total_view para ${operation.ref_unique}: ${custoTotal}`);
+        } else if (operation.custo_total !== undefined && operation.custo_total !== null && operation.custo_total > 0) {
+            custoTotal = operation.custo_total;
+            console.log(`[RENDER_ROW] Usando custo_total para ${operation.ref_unique}: ${custoTotal}`);
+        } else if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+            // Fallback: calcular manualmente
             const expenseData = processExpensesByCategory(operation.despesas_processo);
             custoTotal = expenseData.total;
+            console.log(`[RENDER_ROW] Calculado manualmente para ${operation.ref_unique}: ${custoTotal}`);
+        }
+        
+        // Log específico para processo 6555 na tabela
+        if (operation.ref_unique && operation.ref_unique.includes('6555')) {
+            console.log(`[RENDER_ROW] *** PROCESSO 6555 NA TABELA ***`);
+            console.log(`[RENDER_ROW] custo_total_view: ${operation.custo_total_view}`);
+            console.log(`[RENDER_ROW] custo_total: ${operation.custo_total}`);
+            console.log(`[RENDER_ROW] custoTotal final usado: ${custoTotal}`);
         }
         
         // Determinar se deve mostrar coluna Material
@@ -2249,6 +2265,34 @@ function openProcessModal(operationIndex) {
     console.log('[DASHBOARD_EXECUTIVO] Dados da operação completos:', operation);
     console.log('[DASHBOARD_EXECUTIVO] ref_unique do processo:', operation.ref_unique);
     
+    // LOG ESPECÍFICO PARA CAMPOS DE CUSTO
+    console.log('[DASHBOARD_EXECUTIVO] === ANÁLISE DE CUSTOS ===');
+    console.log('[DASHBOARD_EXECUTIVO] custo_total:', operation.custo_total);
+    console.log('[DASHBOARD_EXECUTIVO] custo_total_view:', operation.custo_total_view);
+    console.log('[DASHBOARD_EXECUTIVO] custo_total_original:', operation.custo_total_original);
+    console.log('[DASHBOARD_EXECUTIVO] despesas_processo tipo:', typeof operation.despesas_processo);
+    console.log('[DASHBOARD_EXECUTIVO] despesas_processo length:', operation.despesas_processo ? operation.despesas_processo.length : 'N/A');
+    
+    // LOG ESPECÍFICO PARA PROCESSO 6555
+    if (operation.ref_unique && operation.ref_unique.includes('6555')) {
+        console.log('[DASHBOARD_EXECUTIVO] *** DETECTADO PROCESSO 6555 NO MODAL ***');
+        console.log('[DASHBOARD_EXECUTIVO] QUAL CAMPO ESTÁ SENDO USADO NO MODAL?');
+        console.log('[DASHBOARD_EXECUTIVO] operation.custo_total:', operation.custo_total);
+        console.log('[DASHBOARD_EXECUTIVO] operation.custo_total_view:', operation.custo_total_view);
+        console.log('[DASHBOARD_EXECUTIVO] operation.custo_total_original:', operation.custo_total_original);
+        
+        if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+            console.log('[DASHBOARD_EXECUTIVO] Despesas do processo 6555:');
+            let total_manual = 0;
+            operation.despesas_processo.forEach((despesa, i) => {
+                const valor = parseFloat(despesa.valor_custo) || 0;
+                total_manual += valor;
+                console.log(`[DASHBOARD_EXECUTIVO] ${i+1}. ${despesa.categoria_custo}: R$ ${valor.toFixed(2)}`);
+            });
+            console.log('[DASHBOARD_EXECUTIVO] Total manual calculado:', total_manual.toFixed(2));
+        }
+    }
+    
     // Debug: verificar se o índice está correto
     console.log(`[DASHBOARD_EXECUTIVO] Operação no índice ${operationIndex}:`, operation.ref_unique, '-', operation.importador);
     
@@ -2511,6 +2555,11 @@ function updateElementValue(elementId, value, useCanalBadge = false) {
  */
 function processExpensesByCategory(despesasProcesso) {
     try {
+        console.log('[DASHBOARD_EXECUTIVO] === INÍCIO processExpensesByCategory ===');
+        console.log('[DASHBOARD_EXECUTIVO] Entrada - despesasProcesso:', despesasProcesso);
+        console.log('[DASHBOARD_EXECUTIVO] Tipo:', typeof despesasProcesso);
+        console.log('[DASHBOARD_EXECUTIVO] É array:', Array.isArray(despesasProcesso));
+        
         if (!despesasProcesso || !Array.isArray(despesasProcesso)) {
             console.warn('[DASHBOARD_EXECUTIVO] Despesas processo não é um array válido:', despesasProcesso);
             return {
@@ -2522,9 +2571,16 @@ function processExpensesByCategory(despesasProcesso) {
         const categorias = {};
         let total = 0;
 
-        despesasProcesso.forEach(despesa => {
+        console.log('[DASHBOARD_EXECUTIVO] Processando', despesasProcesso.length, 'despesas...');
+
+        despesasProcesso.forEach((despesa, index) => {
+            console.log(`[DASHBOARD_EXECUTIVO] Despesa ${index + 1}:`, despesa);
+            
             const categoria = despesa.categoria_custo || 'Outros';
-            const valor = parseFloat(despesa.valor_custo) || 0;
+            const valorStr = despesa.valor_custo;
+            const valor = parseFloat(valorStr) || 0;
+            
+            console.log(`[DASHBOARD_EXECUTIVO] Processando: categoria="${categoria}", valorStr="${valorStr}", valor=${valor}`);
 
             if (!categorias[categoria]) {
                 categorias[categoria] = 0;
@@ -2532,13 +2588,14 @@ function processExpensesByCategory(despesasProcesso) {
 
             categorias[categoria] += valor;
             total += valor;
+            
+            console.log(`[DASHBOARD_EXECUTIVO] Categoria "${categoria}" agora tem: R$ ${categorias[categoria].toFixed(2)}`);
+            console.log(`[DASHBOARD_EXECUTIVO] Total acumulado: R$ ${total.toFixed(2)}`);
         });
 
-        console.log('[DASHBOARD_EXECUTIVO] Despesas processadas:', {
-            categorias,
-            total,
-            totalItens: despesasProcesso.length
-        });
+        console.log('[DASHBOARD_EXECUTIVO] Resultado final - categorias:', categorias);
+        console.log('[DASHBOARD_EXECUTIVO] Resultado final - total:', total);
+        console.log('[DASHBOARD_EXECUTIVO] === FIM processExpensesByCategory ===');
 
         return {
             categorias,
@@ -2607,16 +2664,90 @@ function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
  */
 function updateFinancialSummary(operation) {
     try {
+        console.log('[DASHBOARD_EXECUTIVO] === INÍCIO updateFinancialSummary ===');
         console.log('[DASHBOARD_EXECUTIVO] Atualizando resumo financeiro para operação:', operation.ref_unique);
         console.log('[DASHBOARD_EXECUTIVO] Operação completa (verificação):', {
             ref_unique: operation.ref_unique,
             tem_despesas_processo: 'despesas_processo' in operation,
             tipo_despesas_processo: typeof operation.despesas_processo,
-            despesas_processo: operation.despesas_processo
+            tem_custo_total: 'custo_total' in operation,
+            custo_total: operation.custo_total,
+            tem_custo_total_view: 'custo_total_view' in operation,
+            custo_total_view: operation.custo_total_view,
+            tem_custo_total_original: 'custo_total_original' in operation,
+            custo_total_original: operation.custo_total_original
         });
 
-        // Processar despesas por categoria
-        const expenseData = processExpensesByCategory(operation.despesas_processo);
+        // LOG ESPECÍFICO PARA PROCESSO 6555
+        if (operation.ref_unique && operation.ref_unique.includes('6555')) {
+            console.log('[DASHBOARD_EXECUTIVO] *** PROCESSO 6555 NO FRONTEND ***');
+            console.log('[DASHBOARD_EXECUTIVO] custo_total:', operation.custo_total);
+            console.log('[DASHBOARD_EXECUTIVO] custo_total_view:', operation.custo_total_view);
+            console.log('[DASHBOARD_EXECUTIVO] custo_total_original:', operation.custo_total_original);
+            console.log('[DASHBOARD_EXECUTIVO] despesas_processo tipo:', typeof operation.despesas_processo);
+            console.log('[DASHBOARD_EXECUTIVO] despesas_processo length:', operation.despesas_processo ? operation.despesas_processo.length : 'N/A');
+            if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+                console.log('[DASHBOARD_EXECUTIVO] Primeiras 3 despesas do 6555:');
+                operation.despesas_processo.slice(0, 3).forEach((despesa, i) => {
+                    console.log(`[DASHBOARD_EXECUTIVO] Despesa ${i+1}:`, despesa);
+                });
+            }
+        }
+
+        // NOVA LÓGICA: Usar custo_total (que foi corrigido pelo backend) quando disponível
+        let expenseData;
+        let custoTotalCorreto = null;
+        
+        // Prioridade: 1) custo_total_view, 2) custo_total, 3) calcular manualmente
+        if (operation.custo_total_view !== undefined && operation.custo_total_view !== null) {
+            custoTotalCorreto = operation.custo_total_view;
+            console.log('[DASHBOARD_EXECUTIVO] Usando custo_total_view (corrigido):', custoTotalCorreto);
+        } else if (operation.custo_total !== undefined && operation.custo_total !== null) {
+            custoTotalCorreto = operation.custo_total;
+            console.log('[DASHBOARD_EXECUTIVO] Usando custo_total:', custoTotalCorreto);
+        }
+        
+        // Se temos custo corrigido, usar ele + tentar quebrar por categoria
+        if (custoTotalCorreto !== null) {
+            console.log('[DASHBOARD_EXECUTIVO] USANDO CUSTO CORRIGIDO DO BACKEND:', custoTotalCorreto);
+            
+            // Tentar processar despesas por categoria, mas usar o total corrigido
+            if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
+                const categorias = {};
+                
+                operation.despesas_processo.forEach(despesa => {
+                    const categoria = despesa.categoria_custo || 'Outros';
+                    const valor = parseFloat(despesa.valor_custo) || 0;
+                    
+                    if (!categorias[categoria]) {
+                        categorias[categoria] = 0;
+                    }
+                    categorias[categoria] += valor;
+                });
+                
+                // IMPORTANTE: Usar o total corrigido, não o calculado manualmente
+                expenseData = {
+                    categorias: categorias,
+                    total: custoTotalCorreto
+                };
+                
+                console.log('[DASHBOARD_EXECUTIVO] Usando categorias das despesas + total corrigido:', expenseData);
+            } else {
+                // Se não temos despesas detalhadas, mostrar apenas o total
+                expenseData = {
+                    categorias: { 'Total de Custos': custoTotalCorreto },
+                    total: custoTotalCorreto
+                };
+                
+                console.log('[DASHBOARD_EXECUTIVO] Sem detalhes de despesas, usando apenas total:', expenseData);
+            }
+        } else {
+            // Fallback: calcular manualmente (método antigo)
+            console.log('[DASHBOARD_EXECUTIVO] FALLBACK: Calculando manualmente via despesas_processo');
+            expenseData = processExpensesByCategory(operation.despesas_processo);
+        }
+        
+        console.log('[DASHBOARD_EXECUTIVO] expenseData final:', expenseData);
         
         // Obter valor CIF
         const valorCif = operation.valor_cif_real || 0;
@@ -2629,9 +2760,12 @@ function updateFinancialSummary(operation) {
         if (cardGrid) {
             cardGrid.innerHTML = summaryHTML;
             console.log('[DASHBOARD_EXECUTIVO] Resumo financeiro atualizado com sucesso');
+            console.log('[DASHBOARD_EXECUTIVO] HTML gerado:', summaryHTML.substring(0, 200) + '...');
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Elemento card-grid-2 não encontrado no modal');
         }
+
+        console.log('[DASHBOARD_EXECUTIVO] === FIM updateFinancialSummary ===');
 
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao atualizar resumo financeiro:', error);
