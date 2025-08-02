@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Importações Resumido - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dash_importacoes_resumido.static', filename='dash_importacoes_resumido/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-resumido-container">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+    </div>
+
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
+                {'name': 'Dashboard Importações', 'icon': 'mdi mdi-ship'}
+            ]) }}
+        </div>
+        <div class="actions-right">
+            <button id="btn-refresh" class="btn btn-secondary">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+            <div class="checkbox-container">
+                <input type="checkbox" id="filtro-embarque" class="filter-checkbox">
+                <label for="filtro-embarque">Apenas com Data de Embarque</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header com Métricas -->
+    <div class="header-section">
+        <div class="header-left">
+            <div class="title-section">
+                <h1 class="dashboard-title">DASHBOARD</h1>
+                <div class="pagination-info">
+                    <span id="pagination-text">PÁGINA 1 / 1</span>
+                </div>
+                <div class="total-info">
+                    <span id="total-processos">TOTAL: 0 PROCESSOS</span>
+                    <div class="modal-counts">
+                        (<span id="count-maritimo">0</span> <i class="mdi mdi-ship"></i> | 
+                         <span id="count-aereo">0</span> <i class="mdi mdi-airplane"></i> | 
+                         <span id="count-terrestre">0</span> <i class="mdi mdi-truck"></i>)
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="header-center">
+            <div class="company-logo">
+                <!-- Logo do cliente será exibida aqui dinamicamente -->
+                <img id="client-logo" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Logo Cliente" class="logo-img">
+                <span id="client-name" class="company-name">CLIENTE</span>
+            </div>
+        </div>
+        
+        <div class="header-right">
+            <div class="time-info">
+                <div class="current-time" id="current-time">--:--</div>
+                <div class="current-date" id="current-date">-- ------</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Dados -->
+    <div class="table-container">
+        <table class="custom-table" id="data-table">
+            <thead>
+                <tr>
+                    <th>MODAL</th>
+                    <th>NUM</th>
+                    <th>NÚMERO DI</th>
+                    <th>REF UNIQUE</th>
+                    <th>REF IMPORTADOR</th>
+                    <th>DATA EMBARQUE</th>
+                    <th>DATA CHEGADA</th>
+                    <th>DATA REGISTRO</th>
+                    <th>CANAL</th>
+                    <th>DATA ENTREGA</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Dados serão inseridos via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginação -->
+    <div class="pagination-container">
+        <button id="btn-prev-page" class="btn btn-secondary" disabled>
+            <i class="mdi mdi-chevron-left"></i>
+            Anterior
+        </button>
+        <span id="page-info" class="page-info">Página 1 de 1</span>
+        <button id="btn-next-page" class="btn btn-secondary" disabled>
+            Próxima
+            <i class="mdi mdi-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer-section">
+        <div class="footer-left">
+            <div class="copyright">
+                <span>Copyright © 2024 Todos os direitos reservados.</span>
+                <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique" class="footer-logo">
+            </div>
+        </div>
+        
+        <div class="footer-right">
+            <div class="exchange-rates">
+                <div class="currency-item">
+                    <span class="currency-symbol">$</span>
+                    <span id="dolar-rate" class="currency-value">-.----</span>
+                </div>
+                <div class="currency-item">
+                    <span class="currency-symbol">€</span>
+                    <span id="euro-rate" class="currency-value">-.----</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('dash_importacoes_resumido.static', filename='dash_importacoes_resumido/dashboard.js') }}"></script>
+{% endblock %}

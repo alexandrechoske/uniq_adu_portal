@@ -666,6 +666,13 @@
                class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>
                 <span class="sidebar-text">Dashboard Executivo</span>
+            </a>
+            
+            <!-- Dashboard Importações -->
+            <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" 
+               class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
+                <i class="mdi mdi-ship text-xl"></i>
+                <span class="sidebar-text">Dashboard Importações</span>
             </a>           
 
             <!-- Conferência Documental (apenas para admin e interno_unique) -->

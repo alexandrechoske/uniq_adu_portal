@@ -87,6 +87,9 @@ from modules.menu.routes import bp as menu_bp
 # Import modular analytics blueprint
 from modules.analytics import analytics_bp
 
+# Import modular dash_importacoes_resumido blueprint
+from modules.dash_importacoes_resumido import dash_importacoes_resumido_bp
+
 # Import shared blueprint
 from modules.shared.routes import shared_bp
 
@@ -142,6 +145,9 @@ app.register_blueprint(menu_bp)  # Menu modular
 
 # Register modular analytics blueprint
 app.register_blueprint(analytics_bp)  # Analytics modular
+
+# Register modular dash_importacoes_resumido blueprint
+app.register_blueprint(dash_importacoes_resumido_bp)  # Dashboard Importações Resumido modular
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)
