@@ -1,81 +1,129 @@
 /**
- * Gerenciador de Sidebar - Versão simplificada sem sistema dinâmico
+ * CORREÇÃO: Mobile Menu e Sidebar - Versão Simplificada
+ * Remove duplicações e corrige funcionalidade mobile
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Sidebar toggle functionality - SEMPRE INICIA COLAPSADA
-    let sidebarExpanded = false; // Sempre inicia colapsada
+    console.log('[SIDEBAR] Iniciando correção mobile...');
     
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('main-content');
+    // Elementos principais
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    const overlay = document.getElementById('mobile-overlay');
+    
+    // Botões (vamos unificar em um só)
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    
+    // Estado da sidebar
+    let isMobile = window.innerWidth < 1024;
+    let sidebarExpanded = false;
+    
+    console.log('[SIDEBAR] Mobile detectado:', isMobile);
+    
+    // Função para detectar mobile
+    function updateMobileState() {
+        const wasMobile = isMobile;
+        isMobile = window.innerWidth < 1024;
+        
+        if (wasMobile !== isMobile) {
+            console.log('[SIDEBAR] Mudança mobile/desktop:', isMobile);
+            initializeSidebar();
+        }
+    }
+    
+    // Função para inicializar sidebar baseado no dispositivo
+    function initializeSidebar() {
+        if (!sidebar || !mainContent) return;
+        
+        // Limpar todas as classes
+        sidebar.classList.remove('collapsed', 'mobile-open', 'hidden');
+        mainContent.classList.remove('sidebar-collapsed');
+        overlay?.classList.remove('show');
+        
+        if (isMobile) {
+            // Mobile: sidebar oculta e sem margin no content
+            sidebar.classList.add('hidden');
+            mainContent.style.marginLeft = '0';
+            console.log('[SIDEBAR] Configurado para mobile');
+        } else {
+            // Desktop: sidebar sempre visível mas colapsada
+            sidebar.classList.add('collapsed');
+            mainContent.classList.add('sidebar-collapsed');
+            mainContent.style.marginLeft = '4rem'; // w-16 equivalent
+            console.log('[SIDEBAR] Configurado para desktop (colapsada)');
+        }
+    }
+    
+    // Função para toggle desktop
+    function toggleDesktopSidebar() {
+        if (isMobile) return;
         
         sidebarExpanded = !sidebarExpanded;
+        console.log('[SIDEBAR] Toggle desktop:', sidebarExpanded);
         
         if (sidebarExpanded) {
             sidebar.classList.remove('collapsed');
             mainContent.classList.remove('sidebar-collapsed');
+            mainContent.style.marginLeft = '16rem'; // w-64 equivalent
         } else {
             sidebar.classList.add('collapsed');
             mainContent.classList.add('sidebar-collapsed');
+            mainContent.style.marginLeft = '4rem'; // w-16 equivalent
         }
         
-        // Store preference in localStorage
         localStorage.setItem('sidebarExpanded', sidebarExpanded);
     }
     
-    // Apply initial state - SEMPRE COLAPSADA MAS VISÍVEL
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.getElementById('main-content');
-    
-    if (sidebar && mainContent) {
-        sidebar.classList.add('collapsed');
-        mainContent.classList.add('sidebar-collapsed');
+    // Função para toggle mobile
+    function toggleMobileSidebar() {
+        if (!isMobile) return;
         
-        // Garantir que a sidebar seja visível em desktop
-        if (window.innerWidth >= 1024) {
-            sidebar.classList.remove('hidden');
-        } else {
-            sidebar.classList.add('hidden');
-        }
-    }
-    
-    // Add event listener to hamburger button
-    document.getElementById('sidebar-toggle')?.addEventListener('click', toggleSidebar);
-    
-    // Mobile menu functionality
-    function toggleMobileMenu() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('mobile-overlay');
         const isOpen = sidebar.classList.contains('mobile-open');
+        console.log('[SIDEBAR] Toggle mobile, estava aberto:', isOpen);
         
         if (isOpen) {
+            // Fechar
             sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('show');
+            sidebar.classList.add('hidden');
+            overlay?.classList.remove('show');
         } else {
+            // Abrir
+            sidebar.classList.remove('hidden');
             sidebar.classList.add('mobile-open');
-            overlay.classList.add('show');
+            overlay?.classList.add('show');
         }
     }
     
-    document.getElementById('mobile-menu-toggle')?.addEventListener('click', toggleMobileMenu);
-    
-    // Close mobile menu when clicking overlay
-    document.getElementById('mobile-overlay')?.addEventListener('click', toggleMobileMenu);
-    
-    // Hide mobile menu on window resize
-    window.addEventListener('resize', function() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('mobile-overlay');
+    // Event listeners unificados
+    function handleMenuClick() {
+        console.log('[SIDEBAR] Clique no menu, mobile:', isMobile);
         
-        if (window.innerWidth >= 1024) {
-            sidebar.classList.remove('mobile-open');
-            sidebar.classList.remove('hidden');
-            overlay.classList.remove('show');
+        if (isMobile) {
+            toggleMobileSidebar();
         } else {
-            sidebar.classList.remove('mobile-open');
-            sidebar.classList.add('hidden');
-            overlay.classList.remove('show');
+            toggleDesktopSidebar();
+        }
+    }
+    
+    // Adicionar listeners aos botões
+    sidebarToggle?.addEventListener('click', handleMenuClick);
+    mobileMenuToggle?.addEventListener('click', handleMenuClick);
+    
+    // Fechar menu mobile ao clicar no overlay
+    overlay?.addEventListener('click', function() {
+        if (isMobile) {
+            toggleMobileSidebar();
         }
     });
+    
+    // Listener para resize
+    window.addEventListener('resize', function() {
+        updateMobileState();
+    });
+    
+    // Inicialização
+    initializeSidebar();
+    
+    console.log('[SIDEBAR] Inicialização completa');
 });
