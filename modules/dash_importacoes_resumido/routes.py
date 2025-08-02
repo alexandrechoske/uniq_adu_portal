@@ -241,12 +241,24 @@ def get_dashboard_data():
         # Calcular métricas do cabeçalho
         total_processos = len(df)
         
-        # Contar por modal
+        # Contar por modal - mapeamento flexível
         modal_counts = df['modal'].value_counts() if 'modal' in df.columns else {}
-        count_maritimo = modal_counts.get('1', 0)
-        count_aereo = modal_counts.get('4', 0) 
-        count_terrestre = modal_counts.get('7', 0)
         
+        # Mapear diferentes valores de modal para categorias
+        count_maritimo = 0
+        count_aereo = 0
+        count_terrestre = 0
+        
+        for modal, count in modal_counts.items():
+            modal_str = str(modal).upper()
+            if modal_str in ['1', 'MARÍTIMO', 'MARÍTIMA', 'MARITIMO', 'SHIP']:
+                count_maritimo += count
+            elif modal_str in ['4', 'AÉREO', 'AÉREA', 'AEREO', 'AIRPLANE', 'PLANE']:
+                count_aereo += count
+            elif modal_str in ['7', 'TERRESTRE', 'RODOVIÁRIO', 'RODOVIARIO', 'TRUCK']:
+                count_terrestre += count
+        
+        print(f"[DEBUG] Modal counts raw: {dict(modal_counts)}")
         print(f"[DEBUG] Métricas: total={total_processos}, marítimo={count_maritimo}, aéreo={count_aereo}, terrestre={count_terrestre}")
         
         # Preparar dados para a tabela

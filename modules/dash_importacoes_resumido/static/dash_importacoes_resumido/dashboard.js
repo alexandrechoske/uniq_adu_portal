@@ -84,7 +84,10 @@ class DashboardImportacoesResumido {
     }
     
     showLoading() {
-        document.getElementById('loading-overlay').style.display = 'flex';
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
         this.isLoading = true;
     }
     
@@ -178,9 +181,10 @@ class DashboardImportacoesResumido {
             const dolarRate = headerData.exchange_rates.dolar;
             const euroRate = headerData.exchange_rates.euro;
             
-            document.getElementById('dolar-rate').textContent = 
+            // Atualizar cotações no topo
+            document.getElementById('dolar-rate-top').textContent = 
                 dolarRate ? dolarRate.toFixed(4) : '-.----';
-            document.getElementById('euro-rate').textContent = 
+            document.getElementById('euro-rate-top').textContent = 
                 euroRate ? euroRate.toFixed(4) : '-.----';
         }
     }
