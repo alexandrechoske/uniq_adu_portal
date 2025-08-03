@@ -26,18 +26,10 @@
             ]) }}
         </div>
         <div class="actions-right">
-            <button id="btn-toggle-auto-loop" class="btn btn-secondary">
-                <i id="auto-loop-icon" class="mdi mdi-play-circle"></i>
-                <span id="auto-loop-text">Parar Loop</span>
+            <button id="btn-settings" class="btn btn-primary">
+                <i class="mdi mdi-cog"></i>
+                Configurações
             </button>
-            <button id="btn-refresh" class="btn btn-secondary">
-                <i class="mdi mdi-refresh"></i>
-                Atualizar
-            </button>
-            <div class="checkbox-container">
-                <input type="checkbox" id="filtro-embarque" class="filter-checkbox">
-                <label for="filtro-embarque">Apenas com Data de Embarque</label>
-            </div>
         </div>
     </div>
 
@@ -132,6 +124,191 @@
             Próxima
             <i class="mdi mdi-chevron-right"></i>
         </button>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="settings-modal" class="settings-modal">
+        <div class="settings-modal-content">
+            <div class="settings-modal-header">
+                <h2>
+                    <i class="mdi mdi-cog"></i>
+                    Configurações do Dashboard
+                </h2>
+                <button id="btn-close-settings" class="btn-close-settings">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            
+            <div class="settings-modal-body">
+                <form id="settings-form">
+                    <!-- Grade de Configurações -->
+                    <div class="settings-grid">
+                        
+                        <!-- Card: Loop Automático -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-autorenew"></i>
+                                <h3>Loop Automático</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label for="auto-loop-enabled" class="toggle-label">
+                                        <input type="checkbox" id="auto-loop-enabled" checked>
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Ativar Loop</span>
+                                    </label>
+                                </div>
+                                <div class="settings-row">
+                                    <label for="auto-loop-interval">Intervalo (segundos):</label>
+                                    <input type="number" id="auto-loop-interval" min="5" max="120" value="15" class="settings-input">
+                                </div>
+                                <div class="settings-row">
+                                    <label for="auto-loop-pause-duration">Pausa após Interação:</label>
+                                    <input type="number" id="auto-loop-pause-duration" min="5" max="60" value="10" class="settings-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Atualização -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-refresh"></i>
+                                <h3>Atualização</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label for="auto-refresh-enabled" class="toggle-label">
+                                        <input type="checkbox" id="auto-refresh-enabled" checked>
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Auto Refresh</span>
+                                    </label>
+                                </div>
+                                <div class="settings-row">
+                                    <label for="auto-refresh-interval">Intervalo (segundos):</label>
+                                    <input type="number" id="auto-refresh-interval" min="10" max="300" value="30" class="settings-input">
+                                </div>
+                                <div class="settings-row">
+                                    <button id="btn-manual-refresh" type="button" class="btn btn-secondary btn-full">
+                                        <i class="mdi mdi-refresh"></i>
+                                        Atualizar Agora
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Exibição -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-table"></i>
+                                <h3>Exibição</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label for="records-per-page">Registros por página:</label>
+                                    <select id="records-per-page" class="settings-select">
+                                        <option value="5">5 registros</option>
+                                        <option value="10" selected>10 registros</option>
+                                        <option value="15">15 registros</option>
+                                        <option value="20">20 registros</option>
+                                        <option value="25">25 registros</option>
+                                    </select>
+                                </div>
+                                <div class="settings-row">
+                                    <label for="compact-mode" class="toggle-label">
+                                        <input type="checkbox" id="compact-mode">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Modo Compacto</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Filtros -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-filter"></i>
+                                <h3>Filtros</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label for="filter-embarque-default" class="toggle-label">
+                                        <input type="checkbox" id="filter-embarque-default">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Data de Embarque</span>
+                                    </label>
+                                </div>
+                                <div class="settings-row">
+                                    <button id="btn-apply-filter" type="button" class="btn btn-secondary btn-full">
+                                        <i class="mdi mdi-filter-check"></i>
+                                        Aplicar Filtros
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Interface -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-palette"></i>
+                                <h3>Interface</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label for="theme-mode">Tema:</label>
+                                    <select id="theme-mode" class="settings-select">
+                                        <option value="auto" selected>Automático</option>
+                                        <option value="light">Claro</option>
+                                        <option value="dark">Escuro</option>
+                                    </select>
+                                </div>
+                                <div class="settings-row">
+                                    <label for="animations-enabled" class="toggle-label">
+                                        <input type="checkbox" id="animations-enabled" checked>
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Animações</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Controles -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-play-pause"></i>
+                                <h3>Controles</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <button id="btn-toggle-loop" type="button" class="btn btn-secondary btn-full">
+                                        <i id="loop-control-icon" class="mdi mdi-pause"></i>
+                                        <span id="loop-control-text">Parar Loop</span>
+                                    </button>
+                                </div>
+                                <div class="settings-row">
+                                    <button id="btn-reset-settings" type="button" class="btn btn-warning btn-full">
+                                        <i class="mdi mdi-restore"></i>
+                                        Restaurar Padrões
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+            
+            <div class="settings-modal-footer">
+                <div class="settings-footer-left">
+                    <span class="settings-status">Configurações salvas automaticamente</span>
+                </div>
+                <div class="settings-footer-actions">
+                    <button id="btn-cancel-settings" class="btn btn-secondary">
+                        <i class="mdi mdi-close"></i>
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Rodapé -->

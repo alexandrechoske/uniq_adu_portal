@@ -15,40 +15,94 @@ class DashboardImportacoesResumido {
         this.autoPageLoopEnabled = true;
         this.autoPageLoopTimer = 15000; // 15 segundos por página
         
+        // Settings management
+        this.settings = {
+            autoLoop: true,
+            autoRefresh: true,
+            loopInterval: 15,
+            refreshInterval: 30,
+            compactMode: false,
+            showFilters: true,
+            pagination: 100,
+            apiTimeout: 30
+        };
+        
         this.init();
     }
     
     init() {
+        this.loadSettings();
         this.bindEvents();
         this.loadData();
         this.startAutoRefresh();
-        this.startAutoPageLoop(); // Iniciar rolagem automática de páginas
-        this.updateAutoPageLoopButton(); // Atualizar estado do botão
+        this.startAutoPageLoop();
+        this.updateAutoPageLoopButton();
         this.updateClock();
+        this.applySettings();
         
         // Atualizar relógio a cada minuto
         setInterval(() => this.updateClock(), 60000);
     }
     
+    loadSettings() {
+        const savedSettings = localStorage.getItem('dashboardSettings');
+        if (savedSettings) {
+            this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+            this.autoPageLoopTimer = this.settings.loopInterval * 1000;
+            this.autoRefreshTimer = this.settings.refreshInterval * 1000;
+            this.autoPageLoopEnabled = this.settings.autoLoop;
+            this.autoRefreshEnabled = this.settings.autoRefresh;
+        }
+    }
+    
+    saveSettings() {
+        localStorage.setItem('dashboardSettings', JSON.stringify(this.settings));
+    }
+    
+    applySettings() {
+        // Apply compact mode
+        const container = document.querySelector('.dashboard-resumido-container');
+        if (container) {
+            if (this.settings.compactMode) {
+                container.classList.add('compact-mode');
+            } else {
+                container.classList.remove('compact-mode');
+            }
+        }
+        
+        // Apply filter visibility
+        const filterSection = document.querySelector('.filters-section');
+        if (filterSection) {
+            filterSection.style.display = this.settings.showFilters ? 'block' : 'none';
+        }
+    }
+    
     bindEvents() {
-        // Botão de atualização manual
-        document.getElementById('btn-refresh').addEventListener('click', () => {
-            this.loadData();
+        // Botão de configurações
+        document.getElementById('btn-settings')?.addEventListener('click', () => {
+            this.openSettingsModal();
         });
         
-        // Botão para toggle do loop automático
-        document.getElementById('btn-toggle-auto-loop').addEventListener('click', () => {
-            this.toggleAutoPageLoop();
+        // Fechar modal
+        document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+            this.closeSettingsModal();
         });
         
-        // Checkbox de filtro
-        document.getElementById('filtro-embarque').addEventListener('change', () => {
+        // Fechar modal clicando fora
+        document.getElementById('settings-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'settings-modal') {
+                this.closeSettingsModal();
+            }
+        });
+        
+        // Checkbox de filtro (se ainda existir)
+        document.getElementById('filtro-embarque')?.addEventListener('change', () => {
             this.currentPage = 1;
             this.loadData();
         });
         
         // Botões de paginação
-        document.getElementById('btn-prev-page').addEventListener('click', () => {
+        document.getElementById('btn-prev-page')?.addEventListener('click', () => {
             this.pauseAutoPageLoop(); // Pausar rolagem automática ao clicar
             if (this.currentPage > 1) {
                 this.currentPage--;
@@ -56,13 +110,16 @@ class DashboardImportacoesResumido {
             }
         });
         
-        document.getElementById('btn-next-page').addEventListener('click', () => {
+        document.getElementById('btn-next-page')?.addEventListener('click', () => {
             this.pauseAutoPageLoop(); // Pausar rolagem automática ao clicar
             if (this.currentPage < this.totalPages) {
                 this.currentPage++;
                 this.loadData();
             }
         });
+        
+        // Settings events
+        this.bindSettingsEvents();
         
         // Pausar auto-refresh e auto-page-loop quando o usuário está interagindo
         document.addEventListener('click', () => {
@@ -74,6 +131,209 @@ class DashboardImportacoesResumido {
             this.resetAutoRefresh();
             this.pauseAutoPageLoop(10000); // Pausar por 10 segundos
         });
+    }
+    
+    bindSettingsEvents() {
+        // Auto Loop Toggle
+        document.getElementById('auto-loop-enabled')?.addEventListener('change', (e) => {
+            this.settings.autoLoop = e.target.checked;
+            this.autoPageLoopEnabled = e.target.checked;
+            this.saveSettings();
+            if (e.target.checked) {
+                this.startAutoPageLoop();
+            } else {
+                this.stopAutoPageLoop();
+            }
+            this.updateAutoPageLoopButton();
+        });
+
+        // Auto Refresh Toggle
+        document.getElementById('auto-refresh-enabled')?.addEventListener('change', (e) => {
+            this.settings.autoRefresh = e.target.checked;
+            this.autoRefreshEnabled = e.target.checked;
+            this.saveSettings();
+            if (e.target.checked) {
+                this.startAutoRefresh();
+            } else {
+                this.stopAutoRefresh();
+            }
+        });
+
+        // Loop Interval
+        document.getElementById('auto-loop-interval')?.addEventListener('change', (e) => {
+            this.settings.loopInterval = parseInt(e.target.value);
+            this.autoPageLoopTimer = this.settings.loopInterval * 1000;
+            this.saveSettings();
+            if (this.autoPageLoopEnabled) {
+                this.startAutoPageLoop();
+            }
+        });
+
+        // Refresh Interval
+        document.getElementById('auto-refresh-interval')?.addEventListener('change', (e) => {
+            this.settings.refreshInterval = parseInt(e.target.value);
+            this.autoRefreshTimer = this.settings.refreshInterval * 1000;
+            this.saveSettings();
+            if (this.autoRefreshEnabled) {
+                this.startAutoRefresh();
+            }
+        });
+
+        // Records per page
+        document.getElementById('records-per-page')?.addEventListener('change', (e) => {
+            this.settings.pagination = parseInt(e.target.value);
+            this.perPage = parseInt(e.target.value);
+            this.saveSettings();
+            this.currentPage = 1;
+            this.loadData();
+        });
+
+        // Compact Mode
+        document.getElementById('compact-mode')?.addEventListener('change', (e) => {
+            this.settings.compactMode = e.target.checked;
+            this.saveSettings();
+            this.applySettings();
+        });
+
+        // Filter embarque default
+        document.getElementById('filter-embarque-default')?.addEventListener('change', (e) => {
+            this.settings.showFilters = e.target.checked;
+            this.saveSettings();
+            this.applySettings();
+        });
+
+        // Manual Refresh
+        document.getElementById('btn-manual-refresh')?.addEventListener('click', () => {
+            this.loadData();
+        });
+
+        // Toggle Loop Control
+        document.getElementById('btn-toggle-loop')?.addEventListener('click', () => {
+            this.toggleAutoPageLoop();
+        });
+
+        // Reset Settings
+        document.getElementById('btn-reset-settings')?.addEventListener('click', () => {
+            this.resetSettings();
+        });
+
+        // Apply filters
+        document.getElementById('btn-apply-filter')?.addEventListener('click', () => {
+            this.currentPage = 1;
+            this.loadData();
+        });
+
+        // Cancel/Close settings
+        document.getElementById('btn-cancel-settings')?.addEventListener('click', () => {
+            this.closeSettingsModal();
+        });
+    }
+    
+    openSettingsModal() {
+        this.updateSettingsForm();
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.classList.add('show');
+        }
+    }
+    
+    closeSettingsModal() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+    
+    updateSettingsForm() {
+        // Update form values with current settings
+        const autoLoopToggle = document.getElementById('auto-loop-enabled');
+        const autoRefreshToggle = document.getElementById('auto-refresh-enabled');
+        const loopIntervalInput = document.getElementById('auto-loop-interval');
+        const refreshIntervalInput = document.getElementById('auto-refresh-interval');
+        const compactModeToggle = document.getElementById('compact-mode');
+        const filterToggle = document.getElementById('filter-embarque-default');
+        const recordsPerPageSelect = document.getElementById('records-per-page');
+        
+        if (autoLoopToggle) autoLoopToggle.checked = this.settings.autoLoop;
+        if (autoRefreshToggle) autoRefreshToggle.checked = this.settings.autoRefresh;
+        if (loopIntervalInput) loopIntervalInput.value = this.settings.loopInterval;
+        if (refreshIntervalInput) refreshIntervalInput.value = this.settings.refreshInterval;
+        if (compactModeToggle) compactModeToggle.checked = this.settings.compactMode;
+        if (filterToggle) filterToggle.checked = this.settings.showFilters;
+        if (recordsPerPageSelect) recordsPerPageSelect.value = this.settings.pagination;
+        
+        // Update status
+        this.updateSettingsStatus();
+        this.updateLoopControlButton();
+    }
+    
+    updateSettingsStatus() {
+        const statusElement = document.querySelector('.settings-status');
+        if (statusElement) {
+            if (this.autoPageLoopEnabled) {
+                statusElement.textContent = `Loop ativo - ${this.settings.loopInterval}s`;
+                statusElement.style.color = '#10b981';
+            } else {
+                statusElement.textContent = 'Loop inativo';
+                statusElement.style.color = '#6b7280';
+            }
+        }
+    }
+    
+    updateLoopControlButton() {
+        const toggleBtn = document.getElementById('btn-toggle-loop');
+        const icon = document.getElementById('loop-control-icon');
+        const text = document.getElementById('loop-control-text');
+        
+        if (toggleBtn && icon && text) {
+            if (this.autoPageLoopEnabled) {
+                icon.className = 'mdi mdi-pause';
+                text.textContent = 'Parar Loop';
+                toggleBtn.classList.remove('btn-secondary');
+                toggleBtn.classList.add('btn-warning');
+            } else {
+                icon.className = 'mdi mdi-play';
+                text.textContent = 'Iniciar Loop';
+                toggleBtn.classList.remove('btn-warning');
+                toggleBtn.classList.add('btn-secondary');
+            }
+        }
+    }
+    
+    resetSettings() {
+        if (confirm('Tem certeza que deseja resetar todas as configurações?')) {
+            this.settings = {
+                autoLoop: true,
+                autoRefresh: true,
+                loopInterval: 15,
+                refreshInterval: 30,
+                compactMode: false,
+                showFilters: true,
+                pagination: 10,
+                apiTimeout: 30
+            };
+            
+            this.autoPageLoopTimer = this.settings.loopInterval * 1000;
+            this.autoRefreshTimer = this.settings.refreshInterval * 1000;
+            this.autoPageLoopEnabled = this.settings.autoLoop;
+            this.autoRefreshEnabled = this.settings.autoRefresh;
+            this.perPage = this.settings.pagination;
+            
+            this.saveSettings();
+            this.updateSettingsForm();
+            this.applySettings();
+            
+            if (this.settings.autoLoop) {
+                this.startAutoPageLoop();
+            }
+            if (this.settings.autoRefresh) {
+                this.startAutoRefresh();
+            }
+            
+            this.updateAutoPageLoopButton();
+            this.currentPage = 1;
+            this.loadData();
+        }
     }
     
     startAutoRefresh() {
@@ -168,19 +428,31 @@ class DashboardImportacoesResumido {
         const text = document.getElementById('auto-loop-text');
         const indicator = document.getElementById('auto-loop-indicator');
         
-        if (this.autoPageLoopEnabled) {
-            button.className = 'btn btn-secondary';
-            icon.className = 'mdi mdi-pause-circle';
-            text.textContent = 'Parar Loop';
-            if (indicator) {
-                indicator.classList.remove('hidden');
+        // Verificar se os elementos existem antes de tentar modificá-los
+        if (button && icon && text) {
+            if (this.autoPageLoopEnabled) {
+                button.className = 'btn btn-secondary';
+                icon.className = 'mdi mdi-pause-circle';
+                text.textContent = 'Parar Loop';
+                if (indicator) {
+                    indicator.classList.remove('hidden');
+                }
+            } else {
+                button.className = 'btn btn-primary';
+                icon.className = 'mdi mdi-play-circle';
+                text.textContent = 'Iniciar Loop';
+                if (indicator) {
+                    indicator.classList.add('hidden');
+                }
             }
         } else {
-            button.className = 'btn btn-primary';
-            icon.className = 'mdi mdi-play-circle';
-            text.textContent = 'Iniciar Loop';
+            // Se os elementos não existem, apenas atualizar o indicador se disponível
             if (indicator) {
-                indicator.classList.add('hidden');
+                if (this.autoPageLoopEnabled) {
+                    indicator.classList.remove('hidden');
+                } else {
+                    indicator.classList.add('hidden');
+                }
             }
         }
     }
@@ -230,7 +502,9 @@ class DashboardImportacoesResumido {
         }
         
         try {
-            const filtroEmbarque = document.getElementById('filtro-embarque').checked ? 'preenchida' : '';
+            // Verificar se existe filtro de embarque (legacy support)
+            const filtroEmbarqueElement = document.getElementById('filtro-embarque');
+            const filtroEmbarque = filtroEmbarqueElement?.checked ? 'preenchida' : '';
             
             const params = new URLSearchParams({
                 page: this.currentPage,
