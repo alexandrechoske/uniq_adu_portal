@@ -53,3 +53,5 @@ OS generated files
 Thumbs.db
 
 /static/uploads/
+
+test_*
