@@ -141,44 +141,58 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
 }
 
-.title-section {
+.metrics-section {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-}
-
-.dashboard-title {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin: 0;
-    color: #2c3e50;
-}
-
-.pagination-info {
-    font-size: 1.2rem;
-    font-weight: 600;
+    gap: 1rem;
+    align-items: flex-start;
 }
 
 .total-info {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.modal-counts-container {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.modal-count-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f8fafc;
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    transition: all 0.3s ease;
 }
 
-.modal-counts {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 1rem;
+.modal-count-item:hover {
+    background: #e3f2fd;
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
 }
 
-.modal-counts i {
+.modal-count-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.modal-count-item span {
     font-size: 1.2rem;
-    margin: 0 0.2rem;
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 24px;
+    text-align: center;
 }
 
 .header-center {
@@ -407,6 +421,10 @@
         align-items: center;
     }
     
+    .metrics-section {
+        align-items: center;
+    }
+    
     .time-info {
         text-align: center;
     }
@@ -429,6 +447,20 @@
     .actions-right {
         flex-direction: column;
         width: 100%;
+    }
+    
+    .modal-counts-container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .modal-count-item {
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .modal-count-icon {
+        width: 24px;
+        height: 24px;
     }
     
     .custom-table {

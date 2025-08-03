@@ -40,17 +40,22 @@
     <!-- Header com Métricas -->
     <div class="header-section">
         <div class="header-left">
-            <div class="title-section">
-                <h1 class="dashboard-title">DASHBOARD</h1>
-                <div class="pagination-info">
-                    <span id="pagination-text">PÁGINA 1 / 1</span>
-                </div>
+            <div class="metrics-section">
                 <div class="total-info">
                     <span id="total-processos">TOTAL: 0 PROCESSOS</span>
-                    <div class="modal-counts">
-                        (<span id="count-maritimo">0</span> <i class="mdi mdi-ship"></i> | 
-                         <span id="count-aereo">0</span> <i class="mdi mdi-airplane"></i> | 
-                         <span id="count-terrestre">0</span> <i class="mdi mdi-truck"></i>)
+                </div>
+                <div class="modal-counts-container">
+                    <div class="modal-count-item">
+                        <img src="/static/medias/minimal_ship.png" alt="Marítimo" class="modal-count-icon">
+                        <span id="count-maritimo">0</span>
+                    </div>
+                    <div class="modal-count-item">
+                        <img src="/static/medias/minimal_plane.png" alt="Aéreo" class="modal-count-icon">
+                        <span id="count-aereo">0</span>
+                    </div>
+                    <div class="modal-count-item">
+                        <img src="/static/medias/minimal_truck.png" alt="Terrestre" class="modal-count-icon">
+                        <span id="count-terrestre">0</span>
                     </div>
                 </div>
             </div>

@@ -286,11 +286,7 @@ class DashboardImportacoesResumido {
         this.totalPages = paginationData.pages || 1;
         this.currentPage = paginationData.current_page || 1;
         
-        // Atualizar informações de paginação no cabeçalho
-        document.getElementById('pagination-text').textContent = 
-            `PÁGINA ${this.currentPage} / ${this.totalPages}`;
-        
-        // Atualizar informações de paginação no rodapé
+        // Atualizar apenas as informações de paginação no rodapé
         document.getElementById('page-info').textContent = 
             `Página ${this.currentPage} de ${this.totalPages}`;
         
