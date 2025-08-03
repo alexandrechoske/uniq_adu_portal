@@ -10,6 +10,11 @@ class DashboardImportacoesResumido {
         this.autoRefreshEnabled = true;
         this.autoRefreshTimer = 30000; // 30 segundos
         
+        // Configurações para rolagem automática de páginas
+        this.autoPageLoopInterval = null;
+        this.autoPageLoopEnabled = true;
+        this.autoPageLoopTimer = 15000; // 15 segundos por página
+        
         this.init();
     }
     
@@ -17,6 +22,8 @@ class DashboardImportacoesResumido {
         this.bindEvents();
         this.loadData();
         this.startAutoRefresh();
+        this.startAutoPageLoop(); // Iniciar rolagem automática de páginas
+        this.updateAutoPageLoopButton(); // Atualizar estado do botão
         this.updateClock();
         
         // Atualizar relógio a cada minuto
@@ -29,6 +36,11 @@ class DashboardImportacoesResumido {
             this.loadData();
         });
         
+        // Botão para toggle do loop automático
+        document.getElementById('btn-toggle-auto-loop').addEventListener('click', () => {
+            this.toggleAutoPageLoop();
+        });
+        
         // Checkbox de filtro
         document.getElementById('filtro-embarque').addEventListener('change', () => {
             this.currentPage = 1;
@@ -37,6 +49,7 @@ class DashboardImportacoesResumido {
         
         // Botões de paginação
         document.getElementById('btn-prev-page').addEventListener('click', () => {
+            this.pauseAutoPageLoop(); // Pausar rolagem automática ao clicar
             if (this.currentPage > 1) {
                 this.currentPage--;
                 this.loadData();
@@ -44,19 +57,22 @@ class DashboardImportacoesResumido {
         });
         
         document.getElementById('btn-next-page').addEventListener('click', () => {
+            this.pauseAutoPageLoop(); // Pausar rolagem automática ao clicar
             if (this.currentPage < this.totalPages) {
                 this.currentPage++;
                 this.loadData();
             }
         });
         
-        // Pausar auto-refresh quando o usuário está interagindo
+        // Pausar auto-refresh e auto-page-loop quando o usuário está interagindo
         document.addEventListener('click', () => {
             this.resetAutoRefresh();
+            this.pauseAutoPageLoop(10000); // Pausar por 10 segundos
         });
         
         document.addEventListener('keydown', () => {
             this.resetAutoRefresh();
+            this.pauseAutoPageLoop(10000); // Pausar por 10 segundos
         });
     }
     
@@ -80,6 +96,92 @@ class DashboardImportacoesResumido {
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
             this.autoRefreshInterval = null;
+        }
+    }
+    
+    // Métodos para controlar rolagem automática de páginas
+    startAutoPageLoop() {
+        if (this.autoPageLoopInterval) {
+            clearInterval(this.autoPageLoopInterval);
+        }
+        
+        this.autoPageLoopInterval = setInterval(() => {
+            if (this.autoPageLoopEnabled && !this.isLoading && this.totalPages > 1) {
+                this.nextPageLoop();
+            }
+        }, this.autoPageLoopTimer);
+    }
+    
+    nextPageLoop() {
+        // Se estiver na última página, volta para a primeira
+        if (this.currentPage >= this.totalPages) {
+            this.currentPage = 1;
+        } else {
+            this.currentPage++;
+        }
+        
+        // Carregar dados da nova página silenciosamente
+        this.loadData(true);
+    }
+    
+    pauseAutoPageLoop(duration = null) {
+        this.autoPageLoopEnabled = false;
+        
+        if (this.autoPageLoopInterval) {
+            clearInterval(this.autoPageLoopInterval);
+            this.autoPageLoopInterval = null;
+        }
+        
+        // Se especificado um tempo, retomar após esse período
+        if (duration) {
+            setTimeout(() => {
+                this.resumeAutoPageLoop();
+            }, duration);
+        }
+    }
+    
+    resumeAutoPageLoop() {
+        this.autoPageLoopEnabled = true;
+        this.startAutoPageLoop();
+    }
+    
+    stopAutoPageLoop() {
+        this.autoPageLoopEnabled = false;
+        if (this.autoPageLoopInterval) {
+            clearInterval(this.autoPageLoopInterval);
+            this.autoPageLoopInterval = null;
+        }
+    }
+    
+    toggleAutoPageLoop() {
+        if (this.autoPageLoopEnabled) {
+            this.pauseAutoPageLoop();
+        } else {
+            this.resumeAutoPageLoop();
+        }
+        this.updateAutoPageLoopButton();
+    }
+    
+    updateAutoPageLoopButton() {
+        const button = document.getElementById('btn-toggle-auto-loop');
+        const icon = document.getElementById('auto-loop-icon');
+        const text = document.getElementById('auto-loop-text');
+        const indicator = document.getElementById('auto-loop-indicator');
+        
+        if (this.autoPageLoopEnabled) {
+            button.className = 'btn btn-secondary';
+            icon.className = 'mdi mdi-pause-circle';
+            text.textContent = 'Parar Loop';
+            if (indicator) {
+                indicator.classList.remove('hidden');
+            }
+        } else {
+            button.className = 'btn btn-primary';
+            icon.className = 'mdi mdi-play-circle';
+            text.textContent = 'Iniciar Loop';
+            if (indicator) {
+                indicator.classList.add('hidden');
+            }
         }
     }
     
@@ -380,6 +482,7 @@ class DashboardImportacoesResumido {
     
     destroy() {
         this.stopAutoRefresh();
+        this.stopAutoPageLoop();
     }
 }
 

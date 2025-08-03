@@ -26,6 +26,10 @@
             ]) }}
         </div>
         <div class="actions-right">
+            <button id="btn-toggle-auto-loop" class="btn btn-secondary">
+                <i id="auto-loop-icon" class="mdi mdi-play-circle"></i>
+                <span id="auto-loop-text">Parar Loop</span>
+            </button>
             <button id="btn-refresh" class="btn btn-secondary">
                 <i class="mdi mdi-refresh"></i>
                 Atualizar
@@ -117,7 +121,13 @@
             <i class="mdi mdi-chevron-left"></i>
             Anterior
         </button>
-        <span id="page-info" class="page-info">Página 1 de 1</span>
+        <div class="page-info-container">
+            <span id="page-info" class="page-info">Página 1 de 1</span>
+            <div id="auto-loop-indicator" class="auto-loop-indicator">
+                <i class="mdi mdi-autorenew"></i>
+                <span>Loop Automático</span>
+            </div>
+        </div>
         <button id="btn-next-page" class="btn btn-secondary" disabled>
             Próxima
             <i class="mdi mdi-chevron-right"></i>
