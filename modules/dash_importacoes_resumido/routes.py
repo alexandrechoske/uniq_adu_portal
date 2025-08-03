@@ -127,7 +127,7 @@ def get_dashboard_data():
             print("[DEBUG] Buscando dados direto da view vw_importacoes_6_meses...")
             try:
                 # Buscar dados direto da view vw_importacoes_6_meses
-                query = supabase.table('vw_importacoes_6_meses').select('*')
+                query = supabase.table('vw_importacoes_6_meses').select('*').not_.eq('status_macro_sistema', 'PROCESSO CONCLUIDO')
                 
                 # Se for cliente, filtrar por empresa já na query
                 if user_role == 'cliente_unique':
