@@ -67,19 +67,23 @@
         
         <div class="header-right">
             <div class="time-info">
-                <!-- Cotações movidas para o topo -->
-                <div class="exchange-rates-top">
+                <!-- Primeira linha: USD + Relógio -->
+                <div class="time-row">
                     <div class="currency-item-small">
                         <span class="currency-symbol-small">$</span>
                         <span id="dolar-rate-top" class="currency-value-small">-.----</span>
                     </div>
+                    <div class="current-time" id="current-time">--:--</div>
+                </div>
+                
+                <!-- Segunda linha: EUR + Data -->
+                <div class="time-row">
                     <div class="currency-item-small">
                         <span class="currency-symbol-small">€</span>
                         <span id="euro-rate-top" class="currency-value-small">-.----</span>
                     </div>
+                    <div class="current-date" id="current-date">-- ------</div>
                 </div>
-                <div class="current-time" id="current-time">--:--</div>
-                <div class="current-date" id="current-date">-- ------</div>
             </div>
         </div>
     </div>
