@@ -183,3 +183,5 @@ modules/[nome_do_modulo]/templates/[nome_do_modulo]/[nome_do_modulo].html
 modules/[nome_do_modulo]/static/[nome_do_modulo]/[arquivos_estaticos].css
 modules/[nome_do_modulo]/static/[nome_do_modulo]/[arquivos_estaticos].js
 ``` 
+
+A API_BYPASS_KEY É SEMPRE "$env:API_BYPASS_KEY = uniq_api_2025_dev_bypass_key", utilize ela nos testes.

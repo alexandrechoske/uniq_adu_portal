@@ -5,6 +5,7 @@ import os
 import uuid
 import re
 import unicodedata
+import json
 from datetime import datetime
 
 # Criar blueprint com configuração modular
@@ -24,6 +25,13 @@ def logos_clientes():
     """Página de gerenciamento de logos de clientes"""
     return render_template('logos_clientes.html')
 
+@config_bp.route('/test-clientes')
+@login_required
+@role_required(['admin'])
+def test_clientes():
+    """Página de teste do CRUD de clientes"""
+    return render_template('test_clientes.html')
+
 @config_bp.route('/icones-materiais')
 @login_required
 @role_required(['admin'])
@@ -35,16 +43,17 @@ def icones_materiais():
 @login_required
 @role_required(['admin'])
 def api_cnpj_options():
-    """API para listar opções de CNPJ da view auxiliar"""
+    """API para listar CNPJs disponíveis (não atrelados a clientes)"""
     try:
-        response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').order('razao_social').execute()
+        # Usar view que mostra apenas CNPJs disponíveis
+        response = supabase_admin.table('vw_cnpjs_disponiveis').select('cnpj, razao_social').order('razao_social').execute()
         
         return jsonify({
             'success': True,
             'data': response.data or []
         })
     except Exception as e:
-        print(f"[CONFIG] Erro ao buscar opções de CNPJ: {e}")
+        print(f"[CONFIG] Erro ao buscar CNPJs disponíveis: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -54,16 +63,31 @@ def api_cnpj_options():
 @login_required
 @role_required(['admin'])
 def api_logos_clientes():
-    """API para listar logos de clientes"""
+    """API para listar clientes do sistema com seus CNPJs"""
     try:
-        response = supabase_admin.table('cad_clientes').select('*').order('razao_social').execute()
+        # Buscar clientes ativos com seus CNPJs em array
+        response = supabase_admin.table('cad_clientes_sistema').select('*').eq('ativo', True).order('nome_cliente').execute()
+        
+        # Processar dados para o frontend
+        clientes_processados = []
+        for cliente in response.data or []:
+            cliente_processado = {
+                'id': cliente['id'],
+                'nome_cliente': cliente['nome_cliente'],
+                'logo_url': cliente['logo_url'],
+                'cnpjs': cliente['cnpjs'] or [],  # Array de CNPJs
+                'total_cnpjs_ativos': len(cliente['cnpjs'] or []),
+                'created_at': cliente['created_at'],
+                'updated_at': cliente['updated_at']
+            }
+            clientes_processados.append(cliente_processado)
         
         return jsonify({
             'success': True,
-            'data': response.data or []
+            'data': clientes_processados
         })
     except Exception as e:
-        print(f"[CONFIG] Erro ao buscar logos de clientes: {e}")
+        print(f"[CONFIG] Erro ao buscar clientes do sistema: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -73,49 +97,182 @@ def api_logos_clientes():
 @login_required
 @role_required(['admin'])
 def api_create_logo_cliente():
-    """API para criar novo logo de cliente"""
+    """API para criar cliente do sistema com CNPJs"""
     try:
         data = request.get_json()
+        print(f"[CONFIG] Dados recebidos: {data}")
         
         # Validar dados obrigatórios
-        required_fields = ['cnpj', 'razao_social']
+        required_fields = ['nome_cliente', 'cnpjs']
         for field in required_fields:
-            if not data.get(field):
+            if field not in data or not data[field]:
                 return jsonify({
                     'success': False,
-                    'error': f'Campo {field} é obrigatório'
+                    'error': f'Campo obrigatório: {field}'
                 }), 400
         
-        # Inserir no banco
-        response = supabase_admin.table('cad_clientes').insert(data).execute()
+        # Validar se é lista de CNPJs
+        cnpjs = data.get('cnpjs', [])
+        if not isinstance(cnpjs, list) or len(cnpjs) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'Pelo menos um CNPJ deve ser informado'
+            }), 400
+        
+        # Validar e limpar CNPJs
+        cnpjs_validos = []
+        for cnpj in cnpjs:
+            cnpj_limpo = re.sub(r'[^0-9]', '', str(cnpj))
+            if len(cnpj_limpo) != 14:
+                return jsonify({
+                    'success': False,
+                    'error': f'CNPJ inválido: {cnpj} (deve ter 14 dígitos)'
+                }), 400
+            cnpjs_validos.append(cnpj_limpo)
+        
+        # Criar cliente no sistema
+        cliente_data = {
+            'nome_cliente': data['nome_cliente'],
+            'cnpjs': cnpjs_validos,  # Array de CNPJs
+            'logo_url': data.get('logo_url', ''),
+            'ativo': True
+        }
+        
+        response = supabase_admin.table('cad_clientes_sistema').insert(cliente_data).execute()
+        
+        if not response.data:
+            return jsonify({
+                'success': False,
+                'error': 'Erro ao criar cliente no banco de dados'
+            }), 500
+        
+        cliente_criado = response.data[0]
+        print(f"[CONFIG] Cliente criado com sucesso: {cliente_criado}")
         
         return jsonify({
             'success': True,
-            'data': response.data[0] if response.data else None
+            'data': cliente_criado,
+            'message': f'Cliente criado com {len(cnpjs_validos)} CNPJ(s) associado(s)'
         })
         
     except Exception as e:
-        print(f"[CONFIG] Erro ao criar logo de cliente: {e}")
+        print(f"[CONFIG] Erro ao criar cliente: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@config_bp.route('/api/logos-clientes/<cnpj>', methods=['DELETE'])
+@config_bp.route('/api/logos-clientes/<int:cliente_id>', methods=['PUT'])
 @login_required
 @role_required(['admin'])
-def api_delete_logo_cliente(cnpj):
-    """API para deletar logo de cliente"""
+def api_update_logo_cliente(cliente_id):
+    """API para atualizar cliente do sistema"""
     try:
-        response = supabase_admin.table('cad_clientes').delete().eq('cnpj', cnpj).execute()
+        data = request.get_json()
+        print(f"[CONFIG] Atualizando cliente {cliente_id} com dados: {data}")
+        
+        # Validar dados obrigatórios
+        if 'nome_cliente' not in data or not data['nome_cliente']:
+            return jsonify({
+                'success': False,
+                'error': 'Nome do cliente é obrigatório'
+            }), 400
+        
+        # Processar CNPJs se informados
+        updates = {
+            'nome_cliente': data['nome_cliente'],
+            'logo_url': data.get('logo_url', ''),
+            'ativo': data.get('ativo', True)
+        }
+        
+        if 'cnpjs' in data:
+            cnpjs = data['cnpjs']
+            if isinstance(cnpjs, list):
+                # Validar e limpar CNPJs
+                cnpjs_validos = []
+                for cnpj in cnpjs:
+                    cnpj_limpo = re.sub(r'[^0-9]', '', str(cnpj))
+                    if len(cnpj_limpo) != 14:
+                        return jsonify({
+                            'success': False,
+                            'error': f'CNPJ inválido: {cnpj} (deve ter 14 dígitos)'
+                        }), 400
+                    cnpjs_validos.append(cnpj_limpo)
+                
+                updates['cnpjs'] = cnpjs_validos
+        
+        # Atualizar no banco de dados
+        response = supabase_admin.table('cad_clientes_sistema').update(updates).eq('id', cliente_id).execute()
+        
+        if not response.data:
+            return jsonify({
+                'success': False,
+                'error': 'Cliente não encontrado ou erro na atualização'
+            }), 404
+        
+        cliente_atualizado = response.data[0]
+        print(f"[CONFIG] Cliente atualizado: {cliente_atualizado}")
         
         return jsonify({
             'success': True,
-            'message': 'Logo removido com sucesso'
+            'data': cliente_atualizado,
+            'message': 'Cliente atualizado com sucesso'
         })
         
     except Exception as e:
-        print(f"[CONFIG] Erro ao deletar logo de cliente: {e}")
+        print(f"[CONFIG] Erro ao atualizar cliente: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@config_bp.route('/api/logos-clientes/<int:cliente_id>', methods=['DELETE'])
+@login_required
+@role_required(['admin'])
+def api_delete_logo_cliente(cliente_id):
+    """API para excluir cliente do sistema"""
+    try:
+        print(f"[CONFIG] Excluindo cliente {cliente_id}")
+        
+        # Verificar se cliente existe
+        check_response = supabase_admin.table('cad_clientes_sistema').select('id').eq('id', cliente_id).execute()
+        
+        if not check_response.data:
+            return jsonify({
+                'success': False,
+                'error': 'Cliente não encontrado'
+            }), 404
+        
+        # Excluir cliente
+        response = supabase_admin.table('cad_clientes_sistema').delete().eq('id', cliente_id).execute()
+        
+        print(f"[CONFIG] Cliente excluído: {cliente_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cliente excluído com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"[CONFIG] Erro ao excluir cliente: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+@role_required(['admin'])
+def api_delete_logo_cliente(cliente_id):
+    """API para deletar cliente do sistema (cascata remove CNPJs associados)"""
+    try:
+        # Deletar cliente (cascata remove CNPJs via foreign key)
+        response = supabase_admin.table('cad_clientes_sistema').delete().eq('id', cliente_id).execute()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cliente removido com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"[CONFIG] Erro ao deletar cliente: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -223,12 +380,12 @@ def api_upload_logo():
             }), 400
         
         file = request.files['file']
-        cnpj = request.form.get('cnpj')
+        cliente_id = request.form.get('cliente_id')
         
-        if not cnpj:
+        if not cliente_id:
             return jsonify({
                 'success': False,
-                'error': 'CNPJ é obrigatório'
+                'error': 'ID do cliente é obrigatório'
             }), 400
         
         if file.filename == '':
@@ -238,24 +395,88 @@ def api_upload_logo():
             }), 400
         
         # Validar tipo de arquivo
-        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
-        if not ('.' in file.filename and 
-                file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        if file_extension not in allowed_extensions:
             return jsonify({
                 'success': False,
-                'error': 'Tipo de arquivo não permitido'
+                'error': f'Tipo de arquivo não permitido. Use: {", ".join(allowed_extensions)}'
             }), 400
         
-        # Processar upload (implementar lógica de salvamento)
-        # Por enquanto, retornar sucesso simulado
-        return jsonify({
-            'success': True,
-            'message': 'Logo carregado com sucesso',
-            'file_url': f'/static/logos/{cnpj}.png'  # URL simulada
-        })
+        # Gerar nome único para o arquivo
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        
+        # Path no bucket: assets/logos_clientes/
+        bucket_path = f"logos_clientes/{unique_filename}"
+        
+        # Upload para o Supabase Storage
+        try:
+            # Ler o conteúdo do arquivo
+            file_content = file.read()
+            
+            print(f"[CONFIG] Iniciando upload para: {bucket_path}")
+            print(f"[CONFIG] Tamanho do arquivo: {len(file_content)} bytes")
+            
+            # Upload para o bucket 'assets'
+            upload_response = supabase_admin.storage.from_('assets').upload(
+                path=bucket_path,
+                file=file_content,
+                file_options={
+                    'content-type': f'image/{file_extension}',
+                    'cache-control': '3600'
+                }
+            )
+            
+            print(f"[CONFIG] Upload response: {upload_response}")
+            
+            # Verificar se upload foi bem-sucedido
+            if hasattr(upload_response, 'error') and upload_response.error:
+                raise Exception(f"Erro no upload: {upload_response.error}")
+            
+            # Gerar URL pública
+            public_url_response = supabase_admin.storage.from_('assets').get_public_url(bucket_path)
+            
+            # Verificar se a resposta é uma string (URL) ou objeto
+            if isinstance(public_url_response, str):
+                public_url = public_url_response
+            elif hasattr(public_url_response, 'data'):
+                public_url = public_url_response.data
+            else:
+                public_url = str(public_url_response)
+            
+            print(f"[CONFIG] URL pública gerada: {public_url}")
+            
+            # Atualizar cliente com a nova URL do logo
+            update_response = supabase_admin.table('cad_clientes_sistema').update({
+                'logo_url': public_url
+            }).eq('id', cliente_id).execute()
+            
+            if not update_response.data:
+                return jsonify({
+                    'success': False,
+                    'error': 'Erro ao atualizar cliente com nova URL do logo'
+                }), 500
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'logo_url': public_url,
+                    'filename': unique_filename,
+                    'cliente': update_response.data[0]
+                },
+                'message': 'Logo enviado com sucesso!'
+            })
+            
+        except Exception as storage_error:
+            print(f"[CONFIG] Erro no storage: {storage_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Erro no upload: {str(storage_error)}'
+            }), 500
         
     except Exception as e:
-        print(f"[CONFIG] Erro no upload de logo: {e}")
+        print(f"[CONFIG] Erro geral no upload: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

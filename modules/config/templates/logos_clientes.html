@@ -4,6 +4,85 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
+<link rel="stylesheet" href="{{ url_for('config.static', filename='css/config.css') }}">
+<style>
+    /* Estilos específicos para CRUD de clientes */
+    .cnpj-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .cnpj-badge {
+        background: #E5E7EB;
+        color: #374151;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .logo-preview {
+        max-width: 48px;
+        max-height: 48px;
+        object-fit: contain;
+        border: 1px solid #D1D5DB;
+        border-radius: 4px;
+    }
+    
+    .logo-placeholder {
+        width: 48px;
+        height: 48px;
+        background-color: #F3F4F6;
+        border: 1px solid #D1D5DB;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6B7280;
+        font-size: 1.5rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .btn-edit,
+    .btn-danger {
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-edit {
+        color: #2563EB;
+        background: transparent;
+    }
+    
+    .btn-edit:hover {
+        color: #1D4ED8;
+        background: rgba(37, 99, 235, 0.1);
+    }
+    
+    .btn-danger {
+        color: #DC2626;
+        background: transparent;
+    }
+    
+    .btn-danger:hover {
+        color: #B91C1C;
+        background: rgba(220, 38, 38, 0.1);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -44,14 +123,15 @@
                 <thead>
                     <tr>
                         <th>Logo</th>
-                        <th>CNPJ</th>
-                        <th>Razão Social</th>
+                        <th>Cliente</th>
+                        <th>CNPJs Associados</th>
+                        <th>Total CNPJs</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="clientes-tbody">
                     <tr>
-                        <td colspan="4" style="text-align: center; color: var(--color-text-muted);">
+                        <td colspan="5" style="text-align: center; color: var(--color-text-muted);">
                             Carregando...
                         </td>
                     </tr>
@@ -77,15 +157,24 @@
             <div class="modal-body">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="cnpj" class="form-label required">CNPJ</label>
-                        <input type="text" id="cnpj" name="cnpj" required class="form-input" placeholder="00.000.000/0000-00 ou selecione abaixo">
-                        <select id="cnpj-select" class="form-input" style="margin-top: 8px;">
-                            <option value="">Selecionar CNPJ dos importadores cadastrados</option>
-                        </select>
+                        <label for="nome_cliente" class="form-label required">Nome do Cliente</label>
+                        <input type="text" id="nome_cliente" name="nome_cliente" required class="form-input" placeholder="Nome do cliente no sistema">
                     </div>
                     <div class="form-group">
-                        <label for="razao_social" class="form-label required">Razão Social</label>
-                        <input type="text" id="razao_social" name="razao_social" required class="form-input" placeholder="Nome da empresa">
+                        <label for="cnpjs" class="form-label required">CNPJs</label>
+                        <div id="cnpjs-container">
+                            <div class="cnpj-input-group">
+                                <input type="text" id="cnpj-input" class="form-input" placeholder="Digite o CNPJ (apenas números ou com formatação)" maxlength="18">
+                                <button type="button" id="add-cnpj" class="btn btn-outline">
+                                    <i class="mdi mdi-plus"></i>
+                                    Adicionar
+                                </button>
+                            </div>
+                            <div id="selected-cnpjs" class="selected-cnpjs-list">
+                                <!-- CNPJs selecionados aparecerão aqui -->
+                            </div>
+                        </div>
+                        <p class="form-help">Digite um CNPJ e clique em "Adicionar" para criar a lista</p>
                     </div>
                     <div class="form-group">
                         <label for="logo_file" class="form-label">Upload do Logo</label>
@@ -119,12 +208,14 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mdi/font@7.0.96/js/materialdesignicons.min.js"></script>
-<script src="{{ url_for('static', filename='js/logos-clientes.js') }}"></script>
+<script src="{{ url_for('config.static', filename='js/logos-clientes-sistema.js') }}"></script>
 <script>
 function closeClienteModal() {
     document.getElementById('modal-cliente').style.display = 'none';
     document.getElementById('form-cliente').reset();
     document.getElementById('logo-preview').classList.add('hidden');
+    selectedCnpjs = [];
+    renderSelectedCnpjs();
 }
 </script>
 {% endblock %}

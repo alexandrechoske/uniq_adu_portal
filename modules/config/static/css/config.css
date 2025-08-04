@@ -297,4 +297,261 @@ select.form-input option {
     .config-table td {
         padding: 8px 12px;
     }
+    
+    .cnpj-input-group {
+        flex-direction: column;
+    }
+    
+    .cnpj-input, .cnpj-select {
+        width: 100%;
+    }
+}
+
+/* Estilos para botões de ação nas tabelas */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-buttons .btn-edit,
+.action-buttons .btn-danger {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+/* Estilos para mensagens de status */
+.loading-message {
+    text-align: center;
+    padding: 2rem;
+    color: #6B7280;
+    font-style: italic;
+}
+
+.empty-message {
+    text-align: center;
+    padding: 2rem;
+    color: #6B7280;
+}
+
+.empty-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    opacity: 0.5;
+}
+
+/* Close button do modal */
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6B7280;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #374151;
+}
+
+/* Estilos específicos para CNPJs múltiplos */
+.cnpj-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.cnpj-input-group select {
+    flex: 1;
+}
+
+.selected-cnpjs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px dashed #D1D5DB;
+    border-radius: 6px;
+    background-color: #F9FAFB;
+}
+
+.selected-cnpjs-list.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+    font-style: italic;
+    font-size: 0.875rem;
+}
+
+.selected-cnpjs-list.empty::before {
+    content: "Nenhum CNPJ selecionado";
+}
+
+.cnpj-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #2563EB;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.cnpj-tag .remove-cnpj {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.cnpj-tag .remove-cnpj:hover {
+    opacity: 1;
+}
+
+.cliente-name {
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.cnpj-count {
+    background-color: #E5E7EB;
+    color: #374151;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.cnpj-list-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 300px;
+}
+
+.cnpj-badge-small {
+    background: #F3F4F6;
+    color: #374151;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.625rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .cnpj-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .cnpj-list-compact {
+        max-width: 100%;
+    }
+}
+
+/* Estilos para filtros */
+.filters-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+.filter-input {
+    width: 100%;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+    background-color: #FFFFFF;
+    position: relative;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filter-input.active {
+    border-color: #059669;
+    background-color: #F0FDF4;
+}
+
+.filter-input::placeholder {
+    color: #9CA3AF;
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: #6B7280;
+    border: 1px solid #D1D5DB;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-outline:hover {
+    background-color: #F3F4F6;
+    color: #374151;
+    border-color: #9CA3AF;
+}
+
+@media (max-width: 768px) {
+    .filters-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
 }
