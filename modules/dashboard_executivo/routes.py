@@ -339,8 +339,8 @@ def load_data():
                 'total_records': len(cached_data)
             })
         
-        # Query base da view com dados de despesas
-        query = supabase_admin.table('vw_importacoes_6_meses').select('*')
+        # Query base da view com dados de despesas (já filtrada)
+        query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
         # Filtrar por empresa se for cliente
         if user_role == 'cliente_unique':
@@ -1090,8 +1090,8 @@ def force_refresh_dashboard():
         # 3. Buscar dados frescos do banco
         print("[DASHBOARD_EXECUTIVO] Buscando dados frescos do banco...")
         
-        # Query base da view com dados de despesas - SEMPRE buscar dados frescos
-        query = supabase_admin.table('vw_importacoes_6_meses').select('*')
+        # Query base da view com dados de despesas - SEMPRE buscar dados frescos (já filtrada)
+        query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
         # Filtrar por empresa se for cliente
         if user_role == 'cliente_unique':

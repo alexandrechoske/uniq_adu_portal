@@ -122,12 +122,12 @@ def get_dashboard_data():
             cached_data = data_cache.get_cache(user_id, 'raw_data')
             print(f"[DEBUG] Cache service: {type(cached_data)} com {len(cached_data) if cached_data else 0} registros")
         
-        # Se ainda não há dados, vamos tentar buscar direto da view vw_importacoes_6_meses
+        # Se ainda não há dados, vamos tentar buscar direto da view vw_importacoes_6_meses_abertos_dash
         if not cached_data or not isinstance(cached_data, list):
-            print("[DEBUG] Buscando dados direto da view vw_importacoes_6_meses...")
+            print("[DEBUG] Buscando dados direto da view vw_importacoes_6_meses_abertos_dash...")
             try:
-                # Buscar dados direto da view vw_importacoes_6_meses
-                query = supabase.table('vw_importacoes_6_meses').select('*').not_.eq('status_macro_sistema', 'PROCESSO CONCLUIDO')
+                # Buscar dados direto da view vw_importacoes_6_meses_abertos_dash (já filtrada)
+                query = supabase.table('vw_importacoes_6_meses_abertos_dash').select('*')
                 
                 # Se for cliente, filtrar por empresa já na query
                 if user_role == 'cliente_unique':
