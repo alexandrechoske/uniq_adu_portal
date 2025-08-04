@@ -24,7 +24,8 @@ class DashboardImportacoesResumido {
             compactMode: false,
             showFilters: true,
             pagination: 100,
-            apiTimeout: 30
+            apiTimeout: 30,
+            animationsEnabled: true
         };
         
         this.init();
@@ -67,6 +68,13 @@ class DashboardImportacoesResumido {
                 container.classList.add('compact-mode');
             } else {
                 container.classList.remove('compact-mode');
+            }
+            
+            // Apply animations setting
+            if (this.settings.animationsEnabled) {
+                container.classList.remove('animations-disabled');
+            } else {
+                container.classList.add('animations-disabled');
             }
         }
         
@@ -195,6 +203,13 @@ class DashboardImportacoesResumido {
             this.applySettings();
         });
 
+        // Animations Toggle
+        document.getElementById('animations-enabled')?.addEventListener('change', (e) => {
+            this.settings.animationsEnabled = e.target.checked;
+            this.saveSettings();
+            this.applySettings();
+        });
+
         // Filter embarque default
         document.getElementById('filter-embarque-default')?.addEventListener('change', (e) => {
             this.settings.showFilters = e.target.checked;
@@ -251,6 +266,7 @@ class DashboardImportacoesResumido {
         const loopIntervalInput = document.getElementById('auto-loop-interval');
         const refreshIntervalInput = document.getElementById('auto-refresh-interval');
         const compactModeToggle = document.getElementById('compact-mode');
+        const animationsToggle = document.getElementById('animations-enabled');
         const filterToggle = document.getElementById('filter-embarque-default');
         const recordsPerPageSelect = document.getElementById('records-per-page');
         
@@ -259,6 +275,7 @@ class DashboardImportacoesResumido {
         if (loopIntervalInput) loopIntervalInput.value = this.settings.loopInterval;
         if (refreshIntervalInput) refreshIntervalInput.value = this.settings.refreshInterval;
         if (compactModeToggle) compactModeToggle.checked = this.settings.compactMode;
+        if (animationsToggle) animationsToggle.checked = this.settings.animationsEnabled;
         if (filterToggle) filterToggle.checked = this.settings.showFilters;
         if (recordsPerPageSelect) recordsPerPageSelect.value = this.settings.pagination;
         
@@ -567,67 +584,63 @@ class DashboardImportacoesResumido {
     
     updateTable(tableData) {
         const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '';
         
-        if (!tableData || tableData.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="10" style="text-align: center; padding: 2rem; color: #6b7280;">
-                        Nenhum dado encontrado
+        // Adicionar classe de loading se animações estão habilitadas
+        if (this.settings.animationsEnabled) {
+            tbody.classList.add('loading');
+            tbody.classList.remove('loaded');
+        }
+        
+        // Pequeno delay para a animação de fade out
+        setTimeout(() => {
+            tbody.innerHTML = '';
+            
+            if (!tableData || tableData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 2rem; color: #6b7280;">
+                            Nenhum dado encontrado
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableData.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // Formatar data de embarque com cor condicional
+                const dataEmbarqueFormatted = this.formatDataEmbarque(row.data_embarque);
+                
+                // Obter imagem do modal
+                const modalImage = this.getModalImage(row.modal);
+                
+                tr.innerHTML = `
+                    <td>
+                        <img src="${modalImage}" alt="Modal ${row.modal}" class="modal-icon">
                     </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        tableData.forEach(row => {
-            const tr = document.createElement('tr');
+                    <td>${row.numero || ''}</td>
+                    <td>${row.numero_di || ''}</td>
+                    <td>${row.ref_unique || ''}</td>
+                    <td>${row.ref_importador || ''}</td>
+                    <td>${dataEmbarqueFormatted}</td>
+                    <td>${row.data_chegada || ''}</td>
+                    <td>${row.data_registro || ''}</td>
+                    <td>
+                        ${row.canal ? `<div class="canal-indicator" style="background-color: ${row.canal_color || '#9E9E9E'}"></div>` : ''}
+                    </td>
+                    <td>${row.data_entrega || ''}</td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
             
-            // Formatar data de embarque com cor condicional
-            const dataEmbarqueFormatted = this.formatDataEmbarque(row.data_embarque);
-            
-            // Obter imagem do modal
-            const modalImage = this.getModalImage(row.modal);
-            
-            tr.innerHTML = `
-                <td>
-                    <img src="${modalImage}" alt="Modal ${row.modal}" class="modal-icon">
-                </td>
-                <td>${row.numero || ''}</td>
-                <td>${row.numero_di || ''}</td>
-                <td>${row.ref_unique || ''}</td>
-                <td>${row.ref_importador || ''}</td>
-                <td>${dataEmbarqueFormatted}</td>
-                <td>${row.data_chegada || ''}</td>
-                <td>${row.data_registro || ''}</td>
-                <td>
-                    ${row.canal ? `<div class="canal-indicator" style="background-color: ${row.canal_color || '#9E9E9E'}"></div>` : ''}
-                </td>
-                <td>${row.data_entrega || ''}</td>
-            `;
-            
-            tbody.appendChild(tr);
-        });
-        
-        // Preencher linhas vazias se necessário para manter o layout
-        const remainingRows = this.perPage - tableData.length;
-        for (let i = 0; i < remainingRows; i++) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-                <td>&nbsp;</td>
-            `;
-            tr.style.opacity = '0.3';
-            tbody.appendChild(tr);
-        }
+            // Adicionar classe de loaded se animações estão habilitadas
+            if (this.settings.animationsEnabled) {
+                tbody.classList.remove('loading');
+                tbody.classList.add('loaded');
+            }
+        }, this.settings.animationsEnabled ? 200 : 0);
     }
     
     formatDataEmbarque(dataStr) {
