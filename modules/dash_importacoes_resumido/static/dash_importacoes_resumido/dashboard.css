@@ -16,6 +16,41 @@
     min-height: 100vh;
 }
 
+/* Container Unificado Principal */
+.dashboard-main-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e6ed;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.dashboard-main-content .header-section {
+    background: white;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.dashboard-main-content .table-container {
+    margin-bottom: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+
+.dashboard-main-content .footer-section {
+    background: white;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin-top: 0;
+    border-top: 2px solid #f1f5f9;
+}
+
 /* Loading Overlay */
 .loading-overlay {
     position: fixed;
@@ -326,8 +361,31 @@
     transition: background-color 0.2s ease;
 }
 
+.custom-table tbody tr:nth-child(even) {
+    background-color: #f8fafc; /* Zebramento sutil */
+}
+
 .custom-table tbody tr:hover {
-    background-color: #f8fafc; /* Hover sutil */
+    background-color: #e3f2fd; /* Hover mais destacado */
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo para linhas vazias */
+.custom-table tbody tr.empty-row {
+    height: 50px; /* Altura mínima consistente */
+    min-height: 50px;
+}
+
+.custom-table tbody tr.empty-row:hover {
+    background-color: inherit; /* Não mudar cor no hover */
+    transform: none; /* Sem animação no hover */
+    box-shadow: none; /* Sem sombra no hover */
+}
+
+.custom-table tbody tr.empty-row td {
+    border-bottom: 1px solid #e5e7eb; /* Manter borda para visual consistente */
+    padding: 10px 8px; /* Manter padding padrão */
 }
 
 .custom-table tbody tr:last-child {
@@ -381,38 +439,60 @@
     font-weight: 600;
 }
 
+/* Ícone de data de chegada próxima */
+.data-chegada-proxima {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.flag-icon {
+    color: #FF9800;
+    font-size: 1rem;
+    animation: flagWave 2s ease-in-out infinite;
+}
+
+@keyframes flagWave {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(-3deg) scale(1.05); }
+    75% { transform: rotate(3deg) scale(1.05); }
+}
+
 /* Animações dos ícones modais */
 @keyframes modalIconMove {
-    0% { transform: translateX(0) rotate(0deg); }
-    25% { transform: translateX(2px) rotate(1deg); }
-    50% { transform: translateX(0) rotate(0deg); }
-    75% { transform: translateX(-2px) rotate(-1deg); }
-    100% { transform: translateX(0) rotate(0deg); }
+    0% { transform: translateX(-15px) rotate(0deg); }
+    50% { transform: translateX(15px) rotate(0deg); }
+    100% { transform: translateX(-15px) rotate(0deg); }
 }
 
 @keyframes modalIconShip {
-    0% { transform: translateX(0) translateY(0); }
-    25% { transform: translateX(3px) translateY(-1px); }
-    50% { transform: translateX(0) translateY(1px); }
-    75% { transform: translateX(-3px) translateY(-1px); }
-    100% { transform: translateX(0) translateY(0); }
+    0% { transform: translateX(-20px) translateY(0); }
+    25% { transform: translateX(-10px) translateY(-1px); }
+    50% { transform: translateX(0px) translateY(1px); }
+    75% { transform: translateX(10px) translateY(-1px); }
+    100% { transform: translateX(20px) translateY(0); }
 }
 
 @keyframes modalIconPlane {
-    0% { transform: translateX(-5px) translateY(2px) rotate(-2deg); }
-    50% { transform: translateX(5px) translateY(-2px) rotate(2deg); }
-    100% { transform: translateX(-5px) translateY(2px) rotate(-2deg); }
+    0% { transform: translateX(-25px) translateY(2px) rotate(-1deg); }
+    25% { transform: translateX(-8px) translateY(-1px) rotate(0deg); }
+    50% { transform: translateX(8px) translateY(2px) rotate(1deg); }
+    75% { transform: translateX(20px) translateY(-1px) rotate(0deg); }
+    100% { transform: translateX(25px) translateY(2px) rotate(-1deg); }
 }
 
 @keyframes modalIconTruck {
-    0% { transform: translateX(0); }
-    10% { transform: translateX(1px); }
-    20% { transform: translateX(0); }
-    30% { transform: translateX(1px); }
-    40% { transform: translateX(0); }
-    50% { transform: translateX(2px); }
-    60% { transform: translateX(0); }
-    100% { transform: translateX(0); }
+    0% { transform: translateX(-18px); }
+    10% { transform: translateX(-15px); }
+    20% { transform: translateX(-10px); }
+    30% { transform: translateX(-5px); }
+    40% { transform: translateX(0px); }
+    50% { transform: translateX(5px); }
+    60% { transform: translateX(10px); }
+    70% { transform: translateX(15px); }
+    80% { transform: translateX(18px); }
+    90% { transform: translateX(20px); }
+    100% { transform: translateX(18px); }
 }
 
 /* Animação do canal (bolinha piscando) */
@@ -459,19 +539,19 @@
 
 /* Aplicar animações quando habilitadas */
 .dashboard-resumido-container:not(.animations-disabled) .modal-icon {
-    animation: modalIconMove 4s ease-in-out infinite;
+    animation: modalIconMove 6s ease-in-out infinite;
 }
 
 .dashboard-resumido-container:not(.animations-disabled) .modal-icon[src*="ship"] {
-    animation: modalIconShip 3s ease-in-out infinite;
+    animation: modalIconShip 8s ease-in-out infinite;
 }
 
 .dashboard-resumido-container:not(.animations-disabled) .modal-icon[src*="plane"] {
-    animation: modalIconPlane 4s ease-in-out infinite;
+    animation: modalIconPlane 7s ease-in-out infinite;
 }
 
 .dashboard-resumido-container:not(.animations-disabled) .modal-icon[src*="truck"] {
-    animation: modalIconTruck 2s ease-in-out infinite;
+    animation: modalIconTruck 5s ease-in-out infinite;
 }
 
 .dashboard-resumido-container:not(.animations-disabled) .canal-indicator {
@@ -513,7 +593,9 @@
     justify-content: center;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 2rem;
+    padding: 1.5rem 2rem;
+    background: white;
+    border-top: 1px solid #f1f5f9;
 }
 
 .page-info-container {
@@ -532,15 +614,17 @@
 .auto-loop-indicator {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    background: #e3f2fd;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
     border: 1px solid var(--color-primary);
-    border-radius: 4px;
-    font-size: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
     color: var(--color-primary);
+    font-weight: 600;
     opacity: 1;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.1);
 }
 
 .auto-loop-indicator.hidden {
@@ -549,7 +633,7 @@
 }
 
 .auto-loop-indicator i {
-    font-size: 1rem;
+    font-size: 1.1rem;
     animation: spin 2s linear infinite;
 }
 

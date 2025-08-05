@@ -33,101 +33,96 @@
         </div>
     </div>
 
-    <!-- Header com Métricas -->
-    <div class="header-section">
-        <div class="header-left">
-            <div class="metrics-section">
-                <div class="total-info">
-                    <span id="total-processos">TOTAL: 0 PROCESSOS</span>
+    <!-- Container Unificado Principal -->
+    <div class="dashboard-main-content">
+        <!-- Header com Métricas -->
+        <div class="header-section">
+            <div class="header-left">
+                <div class="metrics-section">
+                    <div class="total-info">
+                        <span id="total-processos">TOTAL: 0 PROCESSOS</span>
+                    </div>
+                    <div class="modal-counts-container">
+                        <div class="modal-count-item">
+                            <img src="/static/medias/minimal_ship.png" alt="Marítimo" class="modal-count-icon">
+                            <span id="count-maritimo">0</span>
+                        </div>
+                        <div class="modal-count-item">
+                            <img src="/static/medias/minimal_plane.png" alt="Aéreo" class="modal-count-icon">
+                            <span id="count-aereo">0</span>
+                        </div>
+                        <div class="modal-count-item">
+                            <img src="/static/medias/minimal_truck.png" alt="Terrestre" class="modal-count-icon">
+                            <span id="count-terrestre">0</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-counts-container">
-                    <div class="modal-count-item">
-                        <img src="/static/medias/minimal_ship.png" alt="Marítimo" class="modal-count-icon">
-                        <span id="count-maritimo">0</span>
+            </div>
+            
+            <div class="header-center">
+                <div class="company-logo">
+                    <!-- Logo do cliente será exibida aqui dinamicamente -->
+                    <img id="client-logo" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Logo Cliente" class="logo-img">
+                    <span id="client-name" class="company-name">CLIENTE</span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="time-info">
+                    <!-- Primeira linha: USD + Relógio -->
+                    <div class="time-row">
+                        <div class="currency-item-small">
+                            <span class="currency-symbol-small">$</span>
+                            <span id="dolar-rate-top" class="currency-value-small">-.----</span>
+                        </div>
+                        <div class="current-time" id="current-time">--:--</div>
                     </div>
-                    <div class="modal-count-item">
-                        <img src="/static/medias/minimal_plane.png" alt="Aéreo" class="modal-count-icon">
-                        <span id="count-aereo">0</span>
-                    </div>
-                    <div class="modal-count-item">
-                        <img src="/static/medias/minimal_truck.png" alt="Terrestre" class="modal-count-icon">
-                        <span id="count-terrestre">0</span>
+                    
+                    <!-- Segunda linha: EUR + Data -->
+                    <div class="time-row">
+                        <div class="currency-item-small">
+                            <span class="currency-symbol-small">€</span>
+                            <span id="euro-rate-top" class="currency-value-small">-.----</span>
+                        </div>
+                        <div class="current-date" id="current-date">-- ------</div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="header-center">
-            <div class="company-logo">
-                <!-- Logo do cliente será exibida aqui dinamicamente -->
-                <img id="client-logo" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Logo Cliente" class="logo-img">
-                <span id="client-name" class="company-name">CLIENTE</span>
-            </div>
-        </div>
-        
-        <div class="header-right">
-            <div class="time-info">
-                <!-- Primeira linha: USD + Relógio -->
-                <div class="time-row">
-                    <div class="currency-item-small">
-                        <span class="currency-symbol-small">$</span>
-                        <span id="dolar-rate-top" class="currency-value-small">-.----</span>
-                    </div>
-                    <div class="current-time" id="current-time">--:--</div>
-                </div>
-                
-                <!-- Segunda linha: EUR + Data -->
-                <div class="time-row">
-                    <div class="currency-item-small">
-                        <span class="currency-symbol-small">€</span>
-                        <span id="euro-rate-top" class="currency-value-small">-.----</span>
-                    </div>
-                    <div class="current-date" id="current-date">-- ------</div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Tabela de Dados -->
-    <div class="table-container">
-        <table class="custom-table" id="data-table">
-            <thead>
-                <tr>
-                    <th>MODAL</th>
-                    <th>NUM</th>
-                    <th>NÚMERO DI</th>
-                    <th>REF UNIQUE</th>
-                    <th>REF IMPORTADOR</th>
-                    <th>DATA EMBARQUE</th>
-                    <th>DATA CHEGADA</th>
-                    <th>DATA REGISTRO</th>
-                    <th>CANAL</th>
-                    <th>DATA ENTREGA</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                <!-- Dados serão inseridos via JavaScript -->
-            </tbody>
-        </table>
-    </div>
+        <!-- Tabela de Dados -->
+        <div class="table-container">
+            <table class="custom-table" id="data-table">
+                <thead>
+                    <tr>
+                        <th>MODAL</th>
+                        <th>NUM</th>
+                        <th>NÚMERO DI</th>
+                        <th>REF UNIQUE</th>
+                        <th>REF IMPORTADOR</th>
+                        <th>DATA EMBARQUE</th>
+                        <th>DATA CHEGADA</th>
+                        <th>DATA REGISTRO</th>
+                        <th>CANAL</th>
+                        <th>DATA ENTREGA</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Dados serão inseridos via JavaScript -->
+                </tbody>
+            </table>
+        </div>
 
-    <!-- Paginação -->
-    <div class="pagination-container">
-        <button id="btn-prev-page" class="btn btn-secondary" disabled>
-            <i class="mdi mdi-chevron-left"></i>
-            Anterior
-        </button>
-        <div class="page-info-container">
-            <span id="page-info" class="page-info">Página 1 de 1</span>
-            <div id="auto-loop-indicator" class="auto-loop-indicator">
-                <i class="mdi mdi-autorenew"></i>
-                <span>Loop Automático</span>
+        <!-- Paginação simplificada -->
+        <div class="pagination-container">
+            <div class="page-info-container">
+                <span id="page-info" class="page-info">Página 1 de 1</span>
+                <div id="auto-loop-indicator" class="auto-loop-indicator">
+                    <i class="mdi mdi-autorenew"></i>
+                    <span>Loop Automático Ativo</span>
+                </div>
             </div>
         </div>
-        <button id="btn-next-page" class="btn btn-secondary" disabled>
-            Próxima
-            <i class="mdi mdi-chevron-right"></i>
-        </button>
     </div>
 
     <!-- Modal de Configurações -->

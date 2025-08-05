@@ -612,6 +612,9 @@ class DashboardImportacoesResumido {
                 // Formatar data de embarque com cor condicional
                 const dataEmbarqueFormatted = this.formatDataEmbarque(row.data_embarque);
                 
+                // Formatar data de chegada com bandeirinha se próxima
+                const dataChegadaFormatted = this.formatDataChegada(row.data_chegada);
+                
                 // Obter imagem do modal
                 const modalImage = this.getModalImage(row.modal);
                 
@@ -624,7 +627,7 @@ class DashboardImportacoesResumido {
                     <td>${row.ref_unique || ''}</td>
                     <td>${row.ref_importador || ''}</td>
                     <td>${dataEmbarqueFormatted}</td>
-                    <td>${row.data_chegada || ''}</td>
+                    <td>${dataChegadaFormatted}</td>
                     <td>${row.data_registro || ''}</td>
                     <td>
                         ${row.canal ? `<div class="canal-indicator" style="background-color: ${row.canal_color || '#9E9E9E'}"></div>` : ''}
@@ -635,12 +638,59 @@ class DashboardImportacoesResumido {
                 tbody.appendChild(tr);
             });
             
+            // Adicionar linhas vazias para manter o layout consistente
+            const emptyRowsNeeded = this.perPage - tableData.length;
+            for (let i = 0; i < emptyRowsNeeded; i++) {
+                const tr = document.createElement('tr');
+                tr.classList.add('empty-row');
+                tr.innerHTML = `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                `;
+                tbody.appendChild(tr);
+            }
+            
             // Adicionar classe de loaded se animações estão habilitadas
             if (this.settings.animationsEnabled) {
                 tbody.classList.remove('loading');
                 tbody.classList.add('loaded');
             }
         }, this.settings.animationsEnabled ? 200 : 0);
+    }
+    
+    formatDataChegada(dataStr) {
+        if (!dataStr || dataStr.trim() === '') {
+            return '';
+        }
+        
+        try {
+            // Assumir que a data está no formato DD/MM/YYYY
+            const [dia, mes, ano] = dataStr.split('/');
+            const dataChegada = new Date(ano, mes - 1, dia);
+            const hoje = new Date();
+            const diffTime = dataChegada.getTime() - hoje.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Se a data de chegada é nos próximos 7 dias, adicionar bandeirinha
+            if (diffDays >= 0 && diffDays <= 7) {
+                return `<div class="data-chegada-proxima">
+                    <i class="mdi mdi-flag flag-icon"></i>
+                    ${dataStr}
+                </div>`;
+            } else {
+                return dataStr;
+            }
+        } catch (e) {
+            return dataStr;
+        }
     }
     
     formatDataEmbarque(dataStr) {
@@ -676,15 +726,21 @@ class DashboardImportacoesResumido {
         this.currentPage = paginationData.current_page || 1;
         
         // Atualizar apenas as informações de paginação no rodapé
-        document.getElementById('page-info').textContent = 
-            `Página ${this.currentPage} de ${this.totalPages}`;
+        const pageInfoElement = document.getElementById('page-info');
+        if (pageInfoElement) {
+            pageInfoElement.textContent = `Página ${this.currentPage} de ${this.totalPages}`;
+        }
         
-        // Atualizar estado dos botões
+        // Atualizar estado dos botões (verificar se existem primeiro)
         const btnPrev = document.getElementById('btn-prev-page');
         const btnNext = document.getElementById('btn-next-page');
         
-        btnPrev.disabled = this.currentPage <= 1;
-        btnNext.disabled = this.currentPage >= this.totalPages;
+        if (btnPrev) {
+            btnPrev.disabled = this.currentPage <= 1;
+        }
+        if (btnNext) {
+            btnNext.disabled = this.currentPage >= this.totalPages;
+        }
     }
     
     showNoDataMessage() {
