@@ -116,7 +116,7 @@
 /* KPI Grid - Layout apenas (estilos dos cartões estão em kpi-cards.css) */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); /* 5 colunas para primeira linha com 5 KPIs */
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas para melhor distribuição dos 7 KPIs */
     gap: 1rem;
     margin-bottom: 2.5rem;
 }
@@ -560,30 +560,6 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
-}
-
-/* Status Processo Select */
-#status-processo {
-    padding: 10px 12px;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    background: white;
-    color: #495057;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-#status-processo:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-#status-processo option {
-    padding: 8px;
-    font-weight: 500;
 }
 
 /* Principais Materiais Table */

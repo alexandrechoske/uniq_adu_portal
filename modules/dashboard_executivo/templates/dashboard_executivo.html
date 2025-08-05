@@ -39,17 +39,7 @@
     
     <!-- KPI Cards -->
     <div class="kpi-grid">
-        <!-- Linha 1: Total Processos - Abertos - Fechados - Chegando Este Mês - Chegando Esta Semana -->
-        <div class="kpi-card kpi-primary">
-            <div class="kpi-icon">
-                <i class="mdi mdi-file-document-multiple"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Total de Processos</p>
-                <p class="kpi-value" id="kpi-total-processos">-</p>
-            </div>
-        </div>
-        
+        <!-- Linha 1: Processos Abertos - Chegando Este Mês - Chegando Esta Semana -->
         <div class="kpi-card kpi-info">
             <div class="kpi-icon">
                 <i class="mdi mdi-folder-open"></i>
@@ -57,16 +47,6 @@
             <div class="kpi-content">
                 <p class="kpi-label">Processos Abertos</p>
                 <p class="kpi-value" id="kpi-processos-abertos">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-success">
-            <div class="kpi-icon">
-                <i class="mdi mdi-folder-check"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Processos Fechados</p>
-                <p class="kpi-value" id="kpi-processos-fechados">-</p>
             </div>
         </div>
         
@@ -143,7 +123,7 @@
             </div>
         </div>
         
-        <!-- Linha 3: Total Despesas - Ticket Médio -->
+        <!-- Linha 3: Total Despesas -->
         <div class="kpi-card kpi-indigo">
             <div class="kpi-icon">
                 <i class="mdi mdi-currency-usd"></i>
@@ -151,16 +131,6 @@
             <div class="kpi-content">
                 <p class="kpi-label">Total de Despesas</p>
                 <p class="kpi-value" id="kpi-total-despesas">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-pink">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calculator"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Ticket Médio</p>
-                <p class="kpi-value" id="kpi-ticket-medio">-</p>
             </div>
         </div>
     </div>
@@ -655,18 +625,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Status do Processo -->
-                <div class="filter-section">
-                    <h3 class="filter-section-title">📋 Status do Processo</h3>
-                    <div class="filter-input-group">
-                        <select id="status-processo" name="status_processo">
-                            <option value="">Todos (Abertos e Fechados)</option>
-                            <option value="aberto">🟢 Processos Abertos</option>
-                            <option value="fechado">🔴 Processos Fechados</option>
-                        </select>
                     </div>
                 </div>
             </div>

@@ -934,10 +934,8 @@ async function loadFilterOptionsWithRetry(maxRetries = 2) {
 function updateDashboardKPIs(kpis) {
     console.log('[DASHBOARD_EXECUTIVO] Atualizando KPIs...', kpis);
     
-    // Update KPI values com nova estrutura
-    updateKPIValue('kpi-total-processos', formatNumber(kpis.total_processos));
+    // Update KPI values com nova estrutura - apenas KPIs existentes
     updateKPIValue('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
-    updateKPIValue('kpi-processos-fechados', formatNumber(kpis.processos_fechados || 0));
     updateKPIValue('kpi-chegando-mes', formatNumber(kpis.chegando_mes));
     updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo));
     updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana));
@@ -948,8 +946,7 @@ function updateDashboardKPIs(kpis) {
     updateKPIValue('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
     updateKPIValue('kpi-Agd-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
     updateKPIValue('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas));
-    updateKPIValue('kpi-ticket-medio', formatCurrencyCompact(kpis.ticket_medio));
-    // Removidos: kpi-transit-time, kpi-proc-mes, kpi-proc-semana
+    // Removidos: kpi-total-processos, kpi-processos-fechados, kpi-ticket-medio
 }
 
 /**
@@ -3197,7 +3194,6 @@ function buildFilterQueryString() {
     
     const dataInicio = document.getElementById('data-inicio')?.value;
     const dataFim = document.getElementById('data-fim')?.value;
-    const statusProcesso = document.getElementById('status-processo')?.value;
     
     // Get multi-select values
     const materiais = getMultiSelectValues('material');
@@ -3207,7 +3203,6 @@ function buildFilterQueryString() {
     
     if (dataInicio) params.append('data_inicio', dataInicio);
     if (dataFim) params.append('data_fim', dataFim);
-    if (statusProcesso) params.append('status_processo', statusProcesso);
     
     // Add multi-select values as comma-separated strings
     if (materiais.length > 0) params.append('material', materiais.join(','));
@@ -3279,7 +3274,6 @@ async function applyFilters() {
         currentFilters = {
             dataInicio: document.getElementById('data-inicio')?.value,
             dataFim: document.getElementById('data-fim')?.value,
-            statusProcesso: document.getElementById('status-processo')?.value,
             // CORREÇÃO: Usar getMultiSelectValues() para multi-selects
             material: getMultiSelectValues('material').join(','),
             cliente: getMultiSelectValues('cliente').join(','),
@@ -3327,9 +3321,6 @@ function clearFilters() {
     document.getElementById('data-inicio').value = '';
     document.getElementById('data-fim').value = '';
     
-    // Clear status processo
-    document.getElementById('status-processo').value = '';
-    
     // Clear multi-select checkboxes
     const types = ['material', 'cliente', 'modal', 'canal'];
     types.forEach(type => {
@@ -3364,9 +3355,6 @@ async function resetAllFilters() {
         // Clear date inputs
         document.getElementById('data-inicio').value = '';
         document.getElementById('data-fim').value = '';
-        
-        // CORREÇÃO: Adicionar reset do status processo
-        document.getElementById('status-processo').value = '';
         
         // Clear multi-select checkboxes
         const types = ['material', 'cliente', 'modal', 'canal'];
