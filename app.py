@@ -207,5 +207,5 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"[DEBUG] Erro ao registrar rotas de teste: {str(e)}")
     
-    app.run(debug=True, host='192.168.0.75', port=5000)  # Forçando debug para true
-    # app.run(debug=True)  # Forçando debug para true
+    # app.run(debug=True, host='192.168.0.75', port=5000)  # Forçando debug para true
+    app.run(debug=True)  # Forçando debug para true
