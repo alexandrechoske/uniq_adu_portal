@@ -25,8 +25,13 @@ class DashboardImportacoesResumido {
             showFilters: true,
             pagination: 100,
             apiTimeout: 30,
-            animationsEnabled: true
+            animationsEnabled: true,
+            tvMode: false
         };
+        
+        // TV Mode state
+        this.tvModeEnabled = false;
+        this.tvExitButton = null;
         
         this.init();
     }
@@ -91,6 +96,11 @@ class DashboardImportacoesResumido {
             this.openSettingsModal();
         });
         
+        // Botão de modo TV
+        document.getElementById('btn-fullscreen-tv')?.addEventListener('click', () => {
+            this.toggleTVMode();
+        });
+        
         // Fechar modal
         document.getElementById('btn-close-settings')?.addEventListener('click', () => {
             this.closeSettingsModal();
@@ -135,9 +145,10 @@ class DashboardImportacoesResumido {
             this.pauseAutoPageLoop(10000); // Pausar por 10 segundos
         });
         
-        document.addEventListener('keydown', () => {
+        document.addEventListener('keydown', (e) => {
             this.resetAutoRefresh();
             this.pauseAutoPageLoop(10000); // Pausar por 10 segundos
+            this.handleKeyPress(e); // Adicionar handler para ESC
         });
     }
     
@@ -713,12 +724,12 @@ class DashboardImportacoesResumido {
     
     getModalImage(modal) {
         const modalImages = {
-            '1': '/static/medias/minimal_ship.png',      // Marítimo
-            '4': '/static/medias/minimal_plane.png',     // Aéreo
-            '7': '/static/medias/minimal_truck.png'      // Terrestre
+            '1': '/static/medias/ship_color.png',      // Marítimo
+            '4': '/static/medias/plane_color.png',     // Aéreo
+            '7': '/static/medias/truck_color.png'      // Terrestre
         };
         
-        return modalImages[modal] || '/static/medias/minimal_ship.png';
+        return modalImages[modal] || '/static/medias/ship_color.png';
     }
     
     updatePagination(paginationData) {
@@ -826,6 +837,134 @@ class DashboardImportacoesResumido {
     destroy() {
         this.stopAutoRefresh();
         this.stopAutoPageLoop();
+        this.exitTVMode(); // Sair do modo TV se estiver ativo
+    }
+    
+    // Métodos para Modo TV
+    toggleTVMode() {
+        if (this.tvModeEnabled) {
+            this.exitTVMode();
+        } else {
+            this.enterTVMode();
+        }
+    }
+    
+    enterTVMode() {
+        this.tvModeEnabled = true;
+        
+        // Adicionar classe CSS para modo TV
+        const container = document.querySelector('.dashboard-resumido-container');
+        if (container) {
+            container.classList.add('tv-fullscreen-mode');
+        }
+        
+        // Criar botão de saída
+        this.createTVExitButton();
+        
+        // Entrar em fullscreen se suportado
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log('Erro ao entrar em fullscreen:', err);
+            });
+        }
+        
+        // Parar interações automáticas durante modo TV para evitar distrações
+        this.pauseAutoPageLoop(0); // Pausar indefinidamente
+        
+        // Atualizar botão
+        this.updateTVModeButton();
+        
+        console.log('Modo TV ativado');
+    }
+    
+    exitTVMode() {
+        if (!this.tvModeEnabled) return;
+        
+        this.tvModeEnabled = false;
+        
+        // Remover classe CSS
+        const container = document.querySelector('.dashboard-resumido-container');
+        if (container) {
+            container.classList.remove('tv-fullscreen-mode');
+        }
+        
+        // Remover botão de saída
+        if (this.tvExitButton) {
+            this.tvExitButton.remove();
+            this.tvExitButton = null;
+        }
+        
+        // Sair do fullscreen
+        if (document.exitFullscreen && document.fullscreenElement) {
+            document.exitFullscreen().catch(err => {
+                console.log('Erro ao sair do fullscreen:', err);
+            });
+        }
+        
+        // Retomar auto page loop
+        this.resumeAutoPageLoop();
+        
+        // Atualizar botão
+        this.updateTVModeButton();
+        
+        console.log('Modo TV desativado');
+    }
+    
+    createTVExitButton() {
+        // Criar botão de saída do modo TV
+        this.tvExitButton = document.createElement('button');
+        this.tvExitButton.className = 'tv-exit-button';
+        this.tvExitButton.innerHTML = '<i class="mdi mdi-fullscreen-exit"></i> Sair do Modo TV';
+        
+        // Event listener para sair do modo TV
+        this.tvExitButton.addEventListener('click', () => {
+            this.exitTVMode();
+        });
+        
+        // Adicionar ao body
+        document.body.appendChild(this.tvExitButton);
+        
+        // Auto-hide após 5 segundos
+        setTimeout(() => {
+            if (this.tvExitButton) {
+                this.tvExitButton.style.opacity = '0.3';
+            }
+        }, 5000);
+        
+        // Mostrar novamente ao mover o mouse
+        document.addEventListener('mousemove', () => {
+            if (this.tvExitButton) {
+                this.tvExitButton.style.opacity = '1';
+            }
+        });
+    }
+    
+    updateTVModeButton() {
+        const button = document.getElementById('btn-fullscreen-tv');
+        const icon = button?.querySelector('i');
+        
+        if (button && icon) {
+            if (this.tvModeEnabled) {
+                button.textContent = '';
+                button.appendChild(icon);
+                button.appendChild(document.createTextNode(' Sair do Modo TV'));
+                icon.className = 'mdi mdi-fullscreen-exit';
+                button.className = 'btn btn-warning';
+            } else {
+                button.textContent = '';
+                button.appendChild(icon);
+                button.appendChild(document.createTextNode(' Modo TV'));
+                icon.className = 'mdi mdi-fullscreen';
+                button.className = 'btn btn-secondary';
+            }
+        }
+    }
+    
+    // Adicionar handler para tecla ESC sair do modo TV
+    handleKeyPress(event) {
+        if (event.key === 'Escape' && this.tvModeEnabled) {
+            this.exitTVMode();
+        }
     }
 }
 

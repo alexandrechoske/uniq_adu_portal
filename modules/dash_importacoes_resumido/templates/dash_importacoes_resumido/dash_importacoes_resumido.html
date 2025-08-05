@@ -26,6 +26,10 @@
             ]) }}
         </div>
         <div class="actions-right">
+            <button id="btn-fullscreen-tv" class="btn btn-secondary">
+                <i class="mdi mdi-fullscreen"></i>
+                Modo TV
+            </button>
             <button id="btn-settings" class="btn btn-primary">
                 <i class="mdi mdi-cog"></i>
                 Configurações
@@ -44,15 +48,15 @@
                     </div>
                     <div class="modal-counts-container">
                         <div class="modal-count-item">
-                            <img src="/static/medias/minimal_ship.png" alt="Marítimo" class="modal-count-icon">
+                            <img src="/static/medias/ship_color.png" alt="Marítimo" class="modal-count-icon">
                             <span id="count-maritimo">0</span>
                         </div>
                         <div class="modal-count-item">
-                            <img src="/static/medias/minimal_plane.png" alt="Aéreo" class="modal-count-icon">
+                            <img src="/static/medias/plane_color.png" alt="Aéreo" class="modal-count-icon">
                             <span id="count-aereo">0</span>
                         </div>
                         <div class="modal-count-item">
-                            <img src="/static/medias/minimal_truck.png" alt="Terrestre" class="modal-count-icon">
+                            <img src="/static/medias/truck_color.png" alt="Terrestre" class="modal-count-icon">
                             <span id="count-terrestre">0</span>
                         </div>
                     </div>
@@ -85,6 +89,13 @@
                             <span id="euro-rate-top" class="currency-value-small">-.----</span>
                         </div>
                         <div class="current-date" id="current-date">-- ------</div>
+                    </div>
+                    
+                    <!-- Terceira linha: Indicador de Loop (apenas no modo TV) -->
+                    <div class="time-row time-row-loop">
+                        <div id="auto-loop-indicator-header" class="auto-loop-indicator-header">
+                            <i class="mdi mdi-autorenew"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,6 +131,16 @@
                 <div id="auto-loop-indicator" class="auto-loop-indicator">
                     <i class="mdi mdi-autorenew"></i>
                     <span>Loop Automático Ativo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="footer-section">
+            <div class="footer-center">
+                <div class="copyright">
+                    <span>Copyright © 2024 Todos os direitos reservados.</span>
+                    <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique" class="footer-logo">
                 </div>
             </div>
         </div>
@@ -306,16 +327,6 @@
                         Fechar
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Rodapé -->
-    <div class="footer-section">
-        <div class="footer-center">
-            <div class="copyright">
-                <span>Copyright © 2024 Todos os direitos reservados.</span>
-                <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique" class="footer-logo">
             </div>
         </div>
     </div>
