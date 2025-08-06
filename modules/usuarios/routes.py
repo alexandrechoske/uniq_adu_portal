@@ -6,16 +6,14 @@ import time
 import uuid
 import datetime
 import json
-import re
 import traceback
-import time
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('usuarios', __name__, 
                url_prefix='/usuarios',
                template_folder='templates',
                static_folder='static',
-               static_url_path='/usuarios/static')
+               static_url_path='/static')
 
 VALID_ROLES = ['admin', 'interno_unique', 'cliente_unique']
 
@@ -157,14 +155,33 @@ def carregar_usuarios():
                     'vinculo_ativo': vinculo.get('ativo')
                 })
         
-        # 3. Montar dados finais dos usuários com nova estrutura
+        # 3. Buscar números de WhatsApp de todos os usuários
+        def _buscar_whatsapp():
+            return supabase_admin.table('user_whatsapp').select('*').eq('ativo', True).execute()
+        
+        whatsapp_response = retry_supabase_operation(_buscar_whatsapp)
+        
+        # Criar mapa de usuário -> whatsapp
+        user_whatsapp_map = {}
+        
+        if whatsapp_response.data:
+            print(f"[DEBUG] {len(whatsapp_response.data)} números de WhatsApp encontrados")
+            for whatsapp in whatsapp_response.data:
+                user_id = whatsapp.get('user_id')
+                if user_id:
+                    if user_id not in user_whatsapp_map:
+                        user_whatsapp_map[user_id] = []
+                    user_whatsapp_map[user_id].append(whatsapp)
+
+        # 4. Montar dados finais dos usuários com nova estrutura
         for user in users:
             if not isinstance(user, dict):
                 continue
-                
+            
+            user_id = user.get('id')
+            
             # Incluir tanto cliente_unique quanto interno_unique
             if user.get('role') in ['cliente_unique', 'interno_unique']:
-                user_id = user.get('id')
                 empresas_info = user_empresas_map.get(user_id, [])
                 
                 # Adaptar formato para compatibilidade com o frontend
@@ -180,6 +197,9 @@ def carregar_usuarios():
                 user['agent_info'] = {'empresas': empresas_detalhadas}
             else:
                 user['agent_info'] = {'empresas': []}
+            
+            # Adicionar números de WhatsApp para todos os usuários
+            user['whatsapp_numbers'] = user_whatsapp_map.get(user_id, [])
         
         end_time = time.time()
         print(f"[DEBUG] Carregamento otimizado concluído em {end_time - start_time:.2f}s")
@@ -220,102 +240,80 @@ def refresh():
 @login_required
 @role_required(['admin'])
 def novo():
-    return render_template('form.html')
+    # Redirecionar para a página principal - o modal é usado para criação
+    return redirect(url_for('usuarios.index'))
 
 @bp.route('/<user_id>/editar', methods=['GET'])
 @login_required
 @role_required(['admin'])
 def editar(user_id):
-    try:
-        user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
-        if user_response.data:
-            user = user_response.data[0]
-            # Buscar empresas associadas se for cliente_unique
-            if user.get('role') == 'cliente_unique':
-                agent_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user['id']).execute()
-                user['agent_info'] = {'empresas': []}
-                if agent_response.data and len(agent_response.data) > 0 and agent_response.data[0].get('empresa'):
-                    empresas = agent_response.data[0].get('empresa', [])
-                    if isinstance(empresas, str):
-                        try:
-                            empresas = json.loads(empresas)
-                        except json.JSONDecodeError:
-                            empresas = [empresas] if empresas else []
-                    elif not isinstance(empresas, list):
-                        empresas = []
-                    empresas_detalhadas = []
-                    for cnpj in empresas:
-                        if isinstance(cnpj, str):
-                            empresas_detalhadas.append({'cnpj': cnpj})
-                    user['agent_info']['empresas'] = empresas_detalhadas
-            else:
-                user['agent_info'] = {'empresas': []}
-            return render_template('form.html', user=user)
-        else:
-            flash('Usuário não encontrado', 'error')
-            return redirect(url_for('usuarios.index'))
-    except Exception as e:
-        flash(f'Erro ao carregar usuário: {str(e)}', 'error')
-        return redirect(url_for('usuarios.index'))
+    # Redirecionar para a página principal - o modal é usado para edição
+    return redirect(url_for('usuarios.index'))
 
-@bp.route('/novo', methods=['POST'])
-@bp.route('/<user_id>/editar', methods=['POST'])
+@bp.route('/salvar', methods=['POST'])
 @login_required
 @role_required(['admin'])
-def salvar(user_id=None):
+def salvar_usuario():
+    """Nova função simplificada para salvar usuários via JSON API"""
     try:
-        # Coletar dados do formulário
-        name = request.form.get('name')
-        email = request.form.get('email')
-        role = request.form.get('role')
-        is_active = request.form.get('is_active') == 'true'
-        password = request.form.get('password')  # Apenas para novos usuários
-        confirm_password = request.form.get('confirm_password')  # Apenas para novos usuários
+        # Verificar se a requisição é JSON
+        if not request.is_json:
+            return jsonify({'success': False, 'error': 'Content-Type deve ser application/json'}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Dados não fornecidos'}), 400
+        
+        # Extrair dados - apenas campos que existem na tabela users
+        user_id = data.get('user_id')  # Se fornecido, é edição
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        role = data.get('role', '').strip()
+        is_active = data.get('is_active', True)
+        password = data.get('password', '').strip() if not user_id else None
+        confirm_password = data.get('confirm_password', '').strip() if not user_id else None
+        
+        # Campos extras que não vão para a tabela users (podem ser salvos separadamente depois)
+        cargo = data.get('cargo', '').strip()  # Para usar depois
+        telefone = data.get('telefone', '').strip()  # Para usar depois
 
         # Validações básicas
-        if not name or not email or not role:
-            flash('Nome, email e role são obrigatórios', 'error')
-            if user_id:
-                return redirect(url_for('usuarios.editar', user_id=user_id))
-            else:
-                return redirect(url_for('usuarios.novo'))
-
-        # Validações específicas para novo usuário
-        if not user_id:  # Apenas para criação
-            if not password or not confirm_password:
-                flash('Senha e confirmação de senha são obrigatórias', 'error')
-                return redirect(url_for('usuarios.novo'))
-            
-            if password != confirm_password:
-                flash('As senhas não coincidem', 'error')
-                return redirect(url_for('usuarios.novo'))
-            
-            if len(password) < 6:
-                flash('A senha deve ter pelo menos 6 caracteres', 'error')
-                return redirect(url_for('usuarios.novo'))
-
+        errors = []
+        if not name:
+            errors.append('Nome é obrigatório')
+        if not email:
+            errors.append('Email é obrigatório')
+        if not role:
+            errors.append('Perfil é obrigatório')
+        
         # Validar formato do email
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, email):
-            flash('Formato de email inválido', 'error')
-            if user_id:
-                return redirect(url_for('usuarios.editar', user_id=user_id))
-            else:
-                return redirect(url_for('usuarios.novo'))
+        if email and not re.match(email_pattern, email):
+            errors.append('Formato de email inválido')
 
         # Validar role
-        if role not in VALID_ROLES:
-            flash('Role inválida', 'error')
-            if user_id:
-                return redirect(url_for('usuarios.editar', user_id=user_id))
-            else:
-                return redirect(url_for('usuarios.novo'))
+        if role and role not in VALID_ROLES:
+            errors.append('Perfil inválido')
 
+        # Validações específicas para novo usuário
+        if not user_id:
+            if not password:
+                errors.append('Senha é obrigatória')
+            elif len(password) < 6:
+                errors.append('Senha deve ter pelo menos 6 caracteres')
+            
+            if password != confirm_password:
+                errors.append('Senhas não coincidem')
+
+        if errors:
+            return jsonify({'success': False, 'error': '; '.join(errors)}), 400
+
+        # Dados que vão para a tabela users (apenas colunas existentes)
         user_data = {
             'name': name,
             'email': email,
             'role': role,
-            'is_active': is_active,
+            'is_active': bool(is_active),
             'updated_at': datetime.datetime.now().isoformat()
         }
 
@@ -325,25 +323,26 @@ def salvar(user_id=None):
             response = supabase_admin.table('users').update(user_data).eq('id', user_id).execute()
             
             if response.data:
-                print(f"[DEBUG] Usuário atualizado com sucesso: {response.data}")
-                invalidate_users_cache()  # Invalidar cache após atualização
-                flash('Usuário atualizado com sucesso!', 'success')
+                print(f"[DEBUG] Usuário atualizado com sucesso")
+                invalidate_users_cache()
+                
+                # TODO: Atualizar cargo/telefone em tabela separada se necessário
+                
+                return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso', 'user_id': user_id})
             else:
-                print(f"[DEBUG] Erro ao atualizar usuário: {response}")
-                flash('Erro ao atualizar usuário', 'error')
-                return redirect(url_for('usuarios.editar', user_id=user_id))
+                return jsonify({'success': False, 'error': 'Erro ao atualizar usuário'}), 500
         else:
             # Criar novo usuário
-            # Verificar se email já existe primeiro
+            # Verificar se email já existe primeiro (tanto na tabela users quanto no auth)
             existing_user = supabase_admin.table('users').select('id').eq('email', email).execute()
             if existing_user.data:
-                flash('Email já está em uso por outro usuário', 'error')
-                return redirect(url_for('usuarios.novo'))
+                return jsonify({'success': False, 'error': 'Email já está em uso por outro usuário'}), 400
             
-            print(f"[DEBUG] Iniciando criação de usuário com email: {email}")
+            print(f"[DEBUG] Criando novo usuário com email: {email}")
             
             try:
                 # Primeiro, criar o usuário no auth do Supabase
+                print(f"[DEBUG] Criando usuário auth com dados: email={email}, name={name}, role={role}")
                 auth_response = supabase_admin.auth.admin.create_user({
                     "email": email,
                     "password": password,
@@ -358,11 +357,11 @@ def salvar(user_id=None):
                     auth_user_id = auth_response.user.id
                     print(f"[DEBUG] Usuário auth criado com ID: {auth_user_id}")
                     
-                    # Verificar se já existe na tabela users (para evitar duplicata)
+                    # Verificar se já existe na tabela users (isso pode acontecer em retry)
                     existing_in_table = supabase_admin.table('users').select('id').eq('id', auth_user_id).execute()
                     if existing_in_table.data:
                         print(f"[DEBUG] Usuário já existe na tabela users, atualizando...")
-                        # Atualizar dados se já existe
+                        # Atualizar dados se já existe (caso de retry)
                         user_data['updated_at'] = datetime.datetime.now().isoformat()
                         response = supabase_admin.table('users').update(user_data).eq('id', auth_user_id).execute()
                     else:
@@ -374,8 +373,11 @@ def salvar(user_id=None):
                     
                     if response.data:
                         print(f"[DEBUG] Usuário criado/atualizado com sucesso: {response.data}")
-                        invalidate_users_cache()  # Invalidar cache após mudança
-                        flash('Usuário criado com sucesso!', 'success')
+                        invalidate_users_cache()
+                        
+                        # TODO: Salvar cargo/telefone em tabela separada se necessário
+                        
+                        return jsonify({'success': True, 'message': 'Usuário criado com sucesso', 'user_id': auth_user_id})
                     else:
                         print(f"[DEBUG] Erro ao inserir/atualizar usuário na tabela: {response}")
                         # Se falhar, tentar deletar o usuário auth criado
@@ -384,67 +386,74 @@ def salvar(user_id=None):
                             supabase_admin.auth.admin.delete_user(auth_user_id)
                         except Exception as cleanup_error:
                             print(f"[DEBUG] Erro ao limpar usuário auth: {str(cleanup_error)}")
-                        flash('Erro ao criar usuário na tabela do sistema', 'error')
-                        return redirect(url_for('usuarios.novo'))
+                        return jsonify({'success': False, 'error': 'Erro ao criar usuário na tabela do sistema'}), 500
                 else:
                     print(f"[DEBUG] Erro ao criar usuário auth: {auth_response}")
-                    flash('Erro ao criar usuário no sistema de autenticação', 'error')
-                    return redirect(url_for('usuarios.novo'))
-                    
-            except Exception as auth_error:
-                print(f"[DEBUG] Erro na criação do usuário: {str(auth_error)}")
-                print(f"[DEBUG] Tipo do erro: {type(auth_error)}")
+                    return jsonify({'success': False, 'error': 'Erro ao criar usuário no sistema de autenticação'}), 500
+                        
+            except Exception as create_error:
+                print(f"[DEBUG] Erro ao criar usuário: {str(create_error)}")
+                print(f"[DEBUG] Tipo do erro: {type(create_error)}")
                 
                 # Tratar erros específicos do Supabase Auth
-                error_message = str(auth_error)
+                error_message = str(create_error)
                 if "A user with this email address has already been registered" in error_message:
-                    flash('Este email já está cadastrado no sistema. Use outro email ou faça login.', 'error')
+                    return jsonify({'success': False, 'error': 'Este email já está cadastrado no sistema. Use outro email ou faça login.'}), 400
                 elif "email" in error_message.lower():
-                    flash('Erro relacionado ao email. Verifique se o formato está correto.', 'error')
+                    return jsonify({'success': False, 'error': 'Erro relacionado ao email. Verifique se o formato está correto.'}), 400
                 elif "password" in error_message.lower():
-                    flash('Erro relacionado à senha. Verifique se atende aos critérios mínimos.', 'error')
+                    return jsonify({'success': False, 'error': 'Erro relacionado à senha. Verifique se atende aos critérios mínimos.'}), 400
                 else:
-                    flash(f'Erro ao criar usuário: {error_message}', 'error')
-                
-                return redirect(url_for('usuarios.novo'))
-
-        return redirect(url_for('usuarios.index'))
+                    return jsonify({'success': False, 'error': f'Erro ao criar usuário: {error_message}'}), 500
         
     except Exception as e:
-        print(f"[DEBUG] Erro ao salvar usuário: {str(e)}")
+        print(f"[DEBUG] Erro geral ao salvar usuário: {str(e)}")
         print("[DEBUG] Traceback completo:")
         print(traceback.format_exc())
-        flash(f'Erro ao salvar usuário: {str(e)}', 'error')
-        
-        if user_id:
-            return redirect(url_for('usuarios.editar', user_id=user_id))
-        else:
-            return redirect(url_for('usuarios.novo'))
+        return jsonify({'success': False, 'error': f'Erro interno: {str(e)}'}), 500
 
-@bp.route('/<user_id>/deletar', methods=['POST'])
+@bp.route('/deletar/<user_id>', methods=['POST'])
 @login_required
 @role_required(['admin'])
-def deletar(user_id):
+def deletar_usuario(user_id):
+    """Nova função simplificada para deletar usuários via JSON API"""
     try:
         print(f"[DEBUG] Tentando deletar usuário: {user_id}")
         
         # Verificar se o usuário existe
         user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
         if not user_response.data:
-            flash('Usuário não encontrado', 'error')
-            return redirect(url_for('usuarios.index'))
+            if request.is_json:
+                return jsonify({'success': False, 'error': 'Usuário não encontrado'}), 404
+            else:
+                flash('Usuário não encontrado', 'error')
+                return redirect(url_for('usuarios.index'))
         
         user = user_response.data[0]
         
         # Verificar se não está tentando deletar o próprio usuário
         current_user = session.get('user', {})
         if current_user.get('id') == user_id:
-            flash('Você não pode deletar seu próprio usuário', 'error')
-            return redirect(url_for('usuarios.index'))
+            error_msg = 'Você não pode deletar seu próprio usuário'
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            else:
+                flash(error_msg, 'error')
+                return redirect(url_for('usuarios.index'))
         
         # Deletar associações de empresa se existirem
-        if user.get('role') == 'cliente_unique':
-            supabase_admin.table('clientes_agentes').delete().eq('user_id', user_id).execute()
+        try:
+            supabase_admin.table('user_empresas').delete().eq('user_id', user_id).execute()
+            print(f"[DEBUG] Associações de empresa deletadas para usuário {user_id}")
+        except Exception as e:
+            print(f"[DEBUG] Erro ao deletar associações de empresa: {str(e)}")
+        
+        # Deletar números de WhatsApp se existirem  
+        try:
+            supabase_admin.table('user_whatsapp').delete().eq('user_id', user_id).execute()
+            print(f"[DEBUG] Números WhatsApp deletados para usuário {user_id}")
+        except Exception as e:
+            print(f"[DEBUG] Erro ao deletar números WhatsApp: {str(e)}")
         
         # Deletar usuário
         response = supabase_admin.table('users').delete().eq('id', user_id).execute()
@@ -452,10 +461,31 @@ def deletar(user_id):
         if response.data or response.count == 0:  # Supabase pode retornar count=0 para deletes bem-sucedidos
             print(f"[DEBUG] Usuário deletado com sucesso")
             invalidate_users_cache()  # Invalidar cache após exclusão
-            flash(f'Usuário {user.get("name", "desconhecido")} deletado com sucesso!', 'success')
+            
+            if request.is_json:
+                return jsonify({'success': True, 'message': f'Usuário {user.get("name", "desconhecido")} deletado com sucesso'})
+            else:
+                flash(f'Usuário {user.get("name", "desconhecido")} deletado com sucesso!', 'success')
+                return redirect(url_for('usuarios.index'))
         else:
             print(f"[DEBUG] Erro ao deletar usuário: {response}")
-            flash('Erro ao deletar usuário', 'error')
+            error_msg = 'Erro ao deletar usuário'
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 500
+            else:
+                flash(error_msg, 'error')
+                return redirect(url_for('usuarios.index'))
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao deletar usuário: {str(e)}")
+        print(traceback.format_exc())
+        error_msg = f'Erro ao deletar usuário: {str(e)}'
+        
+        if request.is_json:
+            return jsonify({'success': False, 'error': error_msg}), 500
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('usuarios.index'))
         
         return redirect(url_for('usuarios.index'))
         
@@ -1773,3 +1803,221 @@ def get_user_whatsapp_numbers(user_id):
     except Exception as e:
         current_app.logger.error(f"Erro ao buscar WhatsApp do usuário: {e}")
         return []
+
+# =====================
+# NOVAS ROTAS UNIFICADAS
+# =====================
+
+@bp.route('/api/user/<user_id>')
+@login_required
+@role_required(['admin'])
+def api_get_user(user_id):
+    """API para buscar dados de um usuário específico"""
+    try:
+        result = supabase_admin.from_('users').select('*').eq('id', user_id).execute()
+        
+        if not result.data:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            
+        user = result.data[0]
+        return jsonify({'success': True, 'user': user})
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar usuário {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+@bp.route('/api/user/<user_id>/empresas')
+@login_required
+@role_required(['admin'])
+def api_get_user_empresas(user_id):
+    """API para buscar empresas de um usuário com retry e melhor tratamento de erro"""
+    try:
+        print(f"[DEBUG] Buscando empresas para usuário: {user_id}")
+        
+        # Usar função retry_supabase_operation para conexões mais robustas
+        def buscar_empresas():
+            result = supabase_admin.from_('user_empresas').select('''
+                empresa_id,
+                cad_clientes_sistema(
+                    id,
+                    nome_cliente,
+                    cnpj
+                )
+            ''').eq('user_id', user_id).eq('ativo', True).execute()
+            return result
+        
+        result = retry_supabase_operation(buscar_empresas, max_retries=3, delay=1.0)
+        
+        empresas = []
+        for item in result.data or []:
+            if item.get('cad_clientes_sistema'):
+                empresas.append({
+                    'empresa_id': item['empresa_id'],
+                    'nome_cliente': item['cad_clientes_sistema']['nome_cliente'],
+                    'cnpj': item['cad_clientes_sistema']['cnpj']
+                })
+        
+        print(f"[DEBUG] Encontradas {len(empresas)} empresas para usuário {user_id}")
+        return jsonify({'success': True, 'empresas': empresas})
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[DEBUG] Erro ao buscar empresas do usuário {user_id}: {error_msg}")
+        current_app.logger.error(f"Erro ao buscar empresas do usuário {user_id}: {e}")
+        
+        # Retornar erro mais específico
+        if "Server disconnected" in error_msg or "Connection" in error_msg:
+            return jsonify({'success': False, 'message': 'Erro de conexão com banco de dados', 'retry': True}), 503
+        else:
+            return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+@bp.route('/api/user/<user_id>/whatsapp')
+@login_required
+@role_required(['admin'])
+def api_get_user_whatsapp(user_id):
+    """API para buscar WhatsApp de um usuário com retry e melhor tratamento de erro"""
+    try:
+        print(f"[DEBUG] Buscando WhatsApp para usuário: {user_id}")
+        
+        # Usar função retry_supabase_operation para conexões mais robustas
+        def buscar_whatsapp():
+            result = supabase_admin.from_('user_whatsapp').select('*').eq('user_id', user_id).eq('ativo', True).execute()
+            return result
+        
+        result = retry_supabase_operation(buscar_whatsapp, max_retries=3, delay=1.0)
+        
+        whatsapp_list = result.data or []
+        print(f"[DEBUG] Encontrados {len(whatsapp_list)} números WhatsApp para usuário {user_id}")
+        return jsonify({'success': True, 'whatsapp': whatsapp_list})
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[DEBUG] Erro ao buscar WhatsApp do usuário {user_id}: {error_msg}")
+        current_app.logger.error(f"Erro ao buscar WhatsApp do usuário {user_id}: {e}")
+        
+        # Retornar erro mais específico
+        if "Server disconnected" in error_msg or "Connection" in error_msg:
+            return jsonify({'success': False, 'message': 'Erro de conexão com banco de dados', 'retry': True}), 503
+        else:
+            return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+@bp.route('/api/empresas')
+@login_required
+@role_required(['admin'])
+def api_get_empresas():
+    """API para buscar todas as empresas disponíveis"""
+    try:
+        result = supabase_admin.from_('cad_clientes_sistema').select('id, nome_cliente, cnpj').eq('ativo', True).order('nome_cliente').execute()
+        
+        empresas = result.data or []
+        return jsonify({'success': True, 'empresas': empresas})
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar empresas: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+@bp.route('/api/user/<user_id>', methods=['PUT'])
+@login_required
+@role_required(['admin'])
+def api_update_user(user_id):
+    """API para atualizar informações do usuário"""
+    try:
+        data = request.get_json()
+        
+        # Validar dados obrigatórios
+        if not data.get('nome') or not data.get('email'):
+            return jsonify({'success': False, 'message': 'Nome e email são obrigatórios'}), 400
+        
+        # Preparar dados para atualização
+        update_data = {
+            'name': data.get('nome'),
+            'email': data.get('email'),
+            'telefone': data.get('telefone'),
+            'cargo': data.get('cargo'),
+            'role': data.get('role'),
+            'is_active': data.get('ativo') == 'true',
+            'updated_at': datetime.datetime.now().isoformat()
+        }
+        
+        # Atualizar usuário
+        result = supabase_admin.from_('users').update(update_data).eq('id', user_id).execute()
+        
+        if not result.data:
+            return jsonify({'success': False, 'message': 'Erro ao atualizar usuário'}), 400
+        
+        # Invalidar cache
+        invalidate_users_cache()
+        
+        return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso'})
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao atualizar usuário {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+@bp.route('/api/user/<user_id>/empresas', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def api_update_user_empresas(user_id):
+    """API para atualizar empresas do usuário"""
+    try:
+        data = request.get_json()
+        empresas = data.get('empresas', [])
+        
+        # Primeiro, desativar todas as empresas existentes
+        supabase_admin.from_('user_empresas').update({'ativo': False}).eq('user_id', user_id).execute()
+        
+        # Inserir/ativar novas empresas
+        for empresa in empresas:
+            empresa_id = empresa.get('empresa_id')
+            if empresa_id:
+                # Verificar se já existe
+                existing = supabase_admin.from_('user_empresas').select('id').eq('user_id', user_id).eq('empresa_id', empresa_id).execute()
+                
+                if existing.data:
+                    # Reativar existente
+                    supabase_admin.from_('user_empresas').update({'ativo': True}).eq('user_id', user_id).eq('empresa_id', empresa_id).execute()
+                else:
+                    # Criar novo
+                    supabase_admin.from_('user_empresas').insert({
+                        'user_id': user_id,
+                        'empresa_id': empresa_id,
+                        'ativo': True,
+                        'created_at': datetime.datetime.now().isoformat()
+                    }).execute()
+        
+        return jsonify({'success': True, 'message': 'Empresas atualizadas com sucesso'})
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao atualizar empresas do usuário {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+@bp.route('/api/user/<user_id>/whatsapp', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def api_update_user_whatsapp(user_id):
+    """API para atualizar WhatsApp do usuário"""
+    try:
+        data = request.get_json()
+        whatsapp_list = data.get('whatsapp', [])
+        
+        # Primeiro, desativar todos os WhatsApp existentes
+        supabase_admin.from_('user_whatsapp').update({'ativo': False}).eq('user_id', user_id).execute()
+        
+        # Inserir novos WhatsApp
+        for whatsapp in whatsapp_list:
+            numero = whatsapp.get('numero')
+            if numero:
+                supabase_admin.from_('user_whatsapp').insert({
+                    'user_id': user_id,
+                    'numero': numero,
+                    'descricao': whatsapp.get('descricao', ''),
+                    'principal': whatsapp.get('principal', False),
+                    'ativo': True,
+                    'created_at': datetime.datetime.now().isoformat()
+                }).execute()
+        
+        return jsonify({'success': True, 'message': 'WhatsApp atualizados com sucesso'})
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao atualizar WhatsApp do usuário {user_id}: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500

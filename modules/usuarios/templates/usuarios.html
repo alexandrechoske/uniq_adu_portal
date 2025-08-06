@@ -1,481 +1,448 @@
 {% extends "base.html" %}
 
-{% block header %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/materialdesignicons.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-{% endblock %}
-
-{% block body_class %}usuarios-page{% endblock %}
-<div class="dashboard-container">
-    <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
-        <div class="actions-left">
-            {{ breadcrumb([
-                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
-                {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
-                {'name': 'Gerenciar Usuários', 'icon': 'mdi mdi-account-group'}
-            ]) }}
-            <a href="{{ url_for('usuarios.refresh') }}" class="btn btn-outline">
-                <i class="mdi mdi-refresh"></i>
-                Atualizar
-            </a>
-            <a href="{{ url_for('usuarios.form') }}" class="btn btn-primary">
-                <i class="mdi mdi-plus"></i>
-                Novo Usuário
-            </a>
-        </div>
-    </div>
-{% block title %}Usuários - Portal UniSystem{% endblock %}
+{% block title %}Gerenciamento de Usuários - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
+<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/style.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="usuarios-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">
         <div class="actions-left">
             {{ breadcrumb([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
-                {'name': 'Gerenciar Usuários', 'icon': 'mdi mdi-account-group'}
+                {'name': 'Usuários', 'icon': 'mdi mdi-account-multiple'}
             ]) }}
-        </div>
-        <div class="actions-right">
-            <a href="{{ url_for('usuarios.refresh') }}" class="btn btn-outline">
-                <i class="mdi mdi-refresh"></i>
-                Atualizar
-            </a>
-            <a href="{{ url_for('usuarios.novo') }}" class="btn btn-primary">
-                <i class="mdi mdi-plus"></i>
-                Novo Usuário
-            </a>
         </div>
     </div>
 
-    <div class="main-content">
-        <!-- Métricas -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-icon" style="background: var(--color-danger-light); color: #dc2626;">
-                    <i class="mdi mdi-shield-crown"></i>
-                </div>
-                <div class="metric-content">
-                    <p class="metric-label">Administradores</p>
-                    <p class="metric-value">{{ users | selectattr("role", "equalto", "admin") | list | length }}</p>
-                </div>
+    <!-- Header Section -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="page-title">
+                    <i class="mdi mdi-account-multiple text-blue-600"></i>
+                    Gerenciamento de Usuários
+                </h1>
+                <p class="page-subtitle">Gerencie usuários, permissões e configurações do sistema</p>
             </div>
-            
-            <div class="metric-card">
-                <div class="metric-icon" style="background: var(--color-primary-light); color: #2563eb;">
-                    <i class="mdi mdi-account-tie"></i>
-                </div>
-                <div class="metric-content">
-                    <p class="metric-label">Equipe Interna</p>
-                    <p class="metric-value">{{ users | selectattr("role", "equalto", "interno_unique") | list | length }}</p>
-                </div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-icon" style="background: var(--color-success-light); color: #059669;">
-                    <i class="mdi mdi-account-multiple"></i>
-                </div>
-                <div class="metric-content">
-                    <p class="metric-label">Clientes</p>
-                    <p class="metric-value">{{ users | selectattr("role", "equalto", "cliente_unique") | list | length }}</p>
-                </div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-icon" style="background: var(--color-purple-light); color: #7c3aed;">
-                    <i class="mdi mdi-account"></i>
-                </div>
-                <div class="metric-content">
-                    <p class="metric-label">Total de Usuários</p>
-                    <p class="metric-value">{{ users | length }}</p>
-                </div>
+            <div class="header-right">
+                <button id="btn-novo-usuario" class="btn btn-primary">
+                    <i class="mdi mdi-plus"></i>
+                    Novo Usuário
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Filtros -->
-        <div class="filters-section">
-            <div class="filters-grid">
-                <div class="filter-group">
-                    <label class="filter-label" for="search-input">Buscar usuário</label>
-                    <input type="text" id="search-input" class="filter-input" 
-                           placeholder="Nome ou email...">
-                </div>
-                
-                <div class="filter-group">
-                    <label class="filter-label" for="role-filter">Filtrar por role</label>
-                    <select id="role-filter" class="filter-input">
-                        <option value="">Todas as roles</option>
-                        <option value="admin">Administrador</option>
-                        <option value="interno_unique">Equipe Interna</option>
-                        <option value="cliente_unique">Cliente</option>
-                    </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label class="filter-label" for="empresa-filter">Filtrar por empresa</label>
-                    <input type="text" id="empresa-filter" class="filter-input" 
-                           placeholder="CNPJ ou razão social...">
-                </div>
-                
-                <div class="filter-group">
-                    <button type="button" id="clear-filters" class="btn btn-outline" style="margin-top: auto;">
-                        <i class="mdi mdi-filter-remove"></i>
-                        Limpar Filtros
-                    </button>
-                </div>
+    <!-- Controls Section -->
+    <div class="controls-section">
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="mdi mdi-magnify search-icon"></i>
+                <input 
+                    type="text" 
+                    id="search-usuarios" 
+                    class="search-input" 
+                    placeholder="Buscar por nome ou email..."
+                    autocomplete="off"
+                >
             </div>
         </div>
+        <div class="controls-right">
+            <button id="btn-refresh" class="btn btn-secondary">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
 
-        <!-- Seção: Administradores -->
-        <div class="users-section" data-role="admin">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--color-danger-light); color: #dc2626;">
-                    <i class="mdi mdi-shield-crown"></i>
-                </div>
-                <h2 class="section-title">Administradores</h2>
-                <span class="section-count" id="admin-section-count">
-                    {{ users | selectattr("role", "equalto", "admin") | list | length }} usuários
-                </span>
-            </div>
-            <div class="users-table-container">
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>Usuário</th>
-                            <th>Email</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+    <!-- Notification Area -->
+    <div id="notification-area" class="notification-area hidden"></div>
+
+    <!-- Users Table -->
+    <div class="table-container">
+        <div class="table-wrapper">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th class="th-nome">
+                            <i class="mdi mdi-account"></i>
+                            Nome
+                        </th>
+                        <th class="th-email">
+                            <i class="mdi mdi-email"></i>
+                            Email
+                        </th>
+                        <th class="th-role">
+                            <i class="mdi mdi-shield-account"></i>
+                            Perfil
+                        </th>
+                        <th class="th-status">
+                            <i class="mdi mdi-check-circle"></i>
+                            Status
+                        </th>
+                        <th class="th-acoes">
+                            <i class="mdi mdi-cog"></i>
+                            Ações
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="usuarios-tbody">
+                    {% if users %}
                         {% for user in users %}
-                            {% if user.role == 'admin' %}
-                                <tr class="user-row" 
-                                    data-user-id="{{ user.id }}"
-                                    data-name="{{ user.name | lower }}" 
-                                    data-email="{{ user.email | lower }}" 
-                                    data-role="{{ user.role }}"
-                                    data-empresas="">
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                            <div style="width: 32px; height: 32px; background: var(--color-danger-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #dc2626;">
-                                                <i class="mdi mdi-shield-crown" style="font-size: 1rem;"></i>
-                                            </div>
-                                            <div>
-                                                <div style="font-weight: 600;">{{ user.name }}</div>
-                                                <div class="role-badge role-admin">Administrador</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>{{ user.email }}</td>
-                                    <td>
-                                        {% if user.is_active %}
-                                            <span class="status-badge status-active">
-                                                <span class="status-dot"></span>
-                                                Ativo
-                                            </span>
-                                        {% else %}
-                                            <span class="status-badge status-inactive">
-                                                <span class="status-dot"></span>
-                                                Inativo
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                                                <i class="mdi mdi-pencil"></i> Editar
-                                            </button>
-                                            <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                                                <i class="mdi mdi-delete"></i> Excluir
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endif %}
+                        <tr data-user-id="{{ user.id }}" class="user-row">
+                            <td class="td-nome">
+                                <div class="user-info">
+                                    <div class="user-avatar">
+                                        <i class="mdi mdi-account-circle"></i>
+                                    </div>
+                                    <div class="user-details">
+                                        <span class="user-name">{{ user.name or 'Nome não informado' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="td-email">
+                                <span class="email-text">{{ user.email }}</span>
+                            </td>
+                            <td class="td-role">
+                                <span class="role-badge role-{{ user.role }}">
+                                    {% if user.role == 'admin' %}
+                                        <i class="mdi mdi-shield-crown"></i>
+                                        Administrador
+                                    {% elif user.role == 'interno_unique' %}
+                                        <i class="mdi mdi-account-tie"></i>
+                                        Interno Unique
+                                    {% elif user.role == 'cliente_unique' %}
+                                        <i class="mdi mdi-account-group"></i>
+                                        Cliente
+                                    {% else %}
+                                        <i class="mdi mdi-help-circle"></i>
+                                        {{ user.role }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="td-status">
+                                {% if user.is_active %}
+                                    <span class="status-badge status-active">
+                                        <i class="mdi mdi-check-circle"></i>
+                                        Ativo
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-inactive">
+                                        <i class="mdi mdi-close-circle"></i>
+                                        Inativo
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="td-acoes">
+                                <div class="action-buttons">
+                                    <button 
+                                        class="btn-action btn-edit" 
+                                        data-user-id="{{ user.id }}"
+                                        title="Editar usuário"
+                                    >
+                                        <i class="mdi mdi-pencil"></i>
+                                    </button>
+                                    <button 
+                                        class="btn-action btn-delete" 
+                                        data-user-id="{{ user.id }}"
+                                        data-user-name="{{ user.name }}"
+                                        title="Deletar usuário"
+                                    >
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                    {% else %}
+                        <tr class="empty-row">
+                            <td colspan="5" class="empty-message">
+                                <div class="empty-state">
+                                    <i class="mdi mdi-account-off"></i>
+                                    <p>Nenhum usuário encontrado</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Criação/Edição de Usuário -->
+<div id="modal-usuario" class="modal-overlay hidden">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 id="modal-title" class="modal-title">Novo Usuário</h2>
+            <button id="btn-close-modal" class="btn-close-modal">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <div class="modal-content">
+            <form id="form-usuario" class="user-form">
+                <!-- Loading Indicator -->
+                <div id="form-loading" class="form-loading hidden">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando dados...</p>
+                </div>
+
+                <!-- Seção 1: Informações do Usuário -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="mdi mdi-account"></i>
+                            Informações do Usuário
+                        </h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="user-name" class="form-label required">Nome</label>
+                                <input 
+                                    type="text" 
+                                    id="user-name" 
+                                    name="name" 
+                                    class="form-input" 
+                                    placeholder="Digite o nome completo"
+                                    required
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="user-email" class="form-label required">Email</label>
+                                <input 
+                                    type="email" 
+                                    id="user-email" 
+                                    name="email" 
+                                    class="form-input" 
+                                    placeholder="Digite o email"
+                                    required
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="user-role" class="form-label required">Perfil</label>
+                                <select id="user-role" name="role" class="form-select" required>
+                                    <option value="">Selecione um perfil</option>
+                                    <option value="admin">Administrador</option>
+                                    <option value="interno_unique">Interno Unique</option>
+                                    <option value="cliente_unique">Cliente</option>
+                                </select>
+                            </div>
+                            <div class="form-group status-group">
+                                <label class="form-label">Status</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="user-active" name="is_active" checked>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Usuário Ativo</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Campos de Senha (apenas para novo usuário) -->
+                        <div id="password-section" class="password-section">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="user-password" class="form-label required">Senha</label>
+                                    <input 
+                                        type="password" 
+                                        id="user-password" 
+                                        name="password" 
+                                        class="form-input" 
+                                        placeholder="Digite a senha"
+                                        minlength="6"
+                                    >
+                                    <small class="form-hint">Mínimo de 6 caracteres</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="user-confirm-password" class="form-label required">Confirmar Senha</label>
+                                    <input 
+                                        type="password" 
+                                        id="user-confirm-password" 
+                                        name="confirm_password" 
+                                        class="form-input" 
+                                        placeholder="Confirme a senha"
+                                        minlength="6"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção 2: Empresas Associadas -->
+                <div id="empresas-section" class="form-section hidden">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="mdi mdi-domain"></i>
+                            Empresas Associadas
+                        </h3>
+                        <p class="section-subtitle">Empresas que este usuário pode acessar</p>
+                    </div>
+                    <div class="section-content">
+                        <!-- Busca e Adição de Empresas -->
+                        <div class="empresa-search-container">
+                            <div class="search-add-wrapper">
+                                <div class="empresa-search-input-wrapper">
+                                    <i class="mdi mdi-magnify search-icon"></i>
+                                    <input 
+                                        type="text" 
+                                        id="empresa-search" 
+                                        class="form-input" 
+                                        placeholder="Buscar empresa por nome ou CNPJ..."
+                                        autocomplete="off"
+                                    >
+                                </div>
+                                <button type="button" id="btn-add-empresa" class="btn btn-secondary" disabled>
+                                    <i class="mdi mdi-plus"></i>
+                                    Adicionar
+                                </button>
+                            </div>
+                            
+                            <!-- Resultados da busca -->
+                            <div id="empresa-search-results" class="search-results hidden"></div>
+                        </div>
+
+                        <!-- Lista de Empresas Associadas -->
+                        <div class="empresas-list-container">
+                            <div class="list-header">
+                                <h4 class="list-title">
+                                    <i class="mdi mdi-domain"></i>
+                                    Empresas Vinculadas
+                                </h4>
+                                <span id="empresas-count" class="count-badge">0</span>
+                            </div>
+                            <div id="empresas-list" class="empresas-list">
+                                <div class="empty-list">
+                                    <i class="mdi mdi-domain-off"></i>
+                                    <p>Nenhuma empresa associada</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção 3: Números de WhatsApp -->
+                <div id="whatsapp-section" class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <i class="mdi mdi-whatsapp"></i>
+                            Números de WhatsApp
+                        </h3>
+                        <p class="section-subtitle">Números para comunicação e notificações</p>
+                    </div>
+                    <div class="section-content">
+                        <!-- Formulário de Adição de WhatsApp -->
+                        <div class="whatsapp-form-container">
+                            <div class="whatsapp-form-grid">
+                                <div class="form-group">
+                                    <label for="whatsapp-numero" class="form-label">Número</label>
+                                    <input 
+                                        type="tel" 
+                                        id="whatsapp-numero" 
+                                        class="form-input" 
+                                        placeholder="+5511999999999"
+                                        pattern="^\+[1-9]\d{1,14}$"
+                                    >
+                                    <small class="form-hint">Formato internacional (+55...)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="whatsapp-nome" class="form-label">Nome do Contato</label>
+                                    <input 
+                                        type="text" 
+                                        id="whatsapp-nome" 
+                                        class="form-input" 
+                                        placeholder="Ex: João Silva"
+                                    >
+                                </div>
+                                <div class="form-group">
+                                    <label for="whatsapp-tipo" class="form-label">Tipo</label>
+                                    <select id="whatsapp-tipo" class="form-select">
+                                        <option value="pessoal">Pessoal</option>
+                                        <option value="empresarial">Empresarial</option>
+                                        <option value="suporte">Suporte</option>
+                                    </select>
+                                </div>
+                                <div class="form-group-btn">
+                                    <button type="button" id="btn-add-whatsapp" class="btn btn-secondary">
+                                        <i class="mdi mdi-plus"></i>
+                                        Adicionar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Números de WhatsApp -->
+                        <div class="whatsapp-list-container">
+                            <div class="list-header">
+                                <h4 class="list-title">
+                                    <i class="mdi mdi-whatsapp"></i>
+                                    Números Cadastrados
+                                </h4>
+                                <span id="whatsapp-count" class="count-badge">0</span>
+                            </div>
+                            <div id="whatsapp-list" class="whatsapp-list">
+                                <div class="empty-list">
+                                    <i class="mdi mdi-phone-off"></i>
+                                    <p>Nenhum número cadastrado</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
 
-        <!-- Seção: Equipe Interna -->
-        <div class="users-section" data-role="interno_unique">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--color-primary-light); color: #2563eb;">
-                    <i class="mdi mdi-account-tie"></i>
-                </div>
-                <h2 class="section-title">Equipe Interna</h2>
-                <span class="section-count" id="interno-section-count">
-                    {{ users | selectattr("role", "equalto", "interno_unique") | list | length }} usuários
-                </span>
-            </div>
-            <div class="users-table-container">
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>Usuário</th>
-                            <th>Email</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                            {% if user.role == 'interno_unique' %}
-                                <tr class="user-row" 
-                                    data-user-id="{{ user.id }}"
-                                    data-name="{{ user.name | lower }}" 
-                                    data-email="{{ user.email | lower }}" 
-                                    data-role="{{ user.role }}"
-                                    data-empresas="">
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                            <div style="width: 32px; height: 32px; background: var(--color-primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #2563eb;">
-                                                <i class="mdi mdi-account-tie" style="font-size: 1rem;"></i>
-                                            </div>
-                                            <div>
-                                                <div style="font-weight: 600;">{{ user.name }}</div>
-                                                <div class="role-badge role-interno">Equipe Interna</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>{{ user.email }}</td>
-                                    <td>
-                                        {% if user.is_active %}
-                                            <span class="status-badge status-active">
-                                                <span class="status-dot"></span>
-                                                Ativo
-                                            </span>
-                                        {% else %}
-                                            <span class="status-badge status-inactive">
-                                                <span class="status-dot"></span>
-                                                Inativo
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                                                <i class="mdi mdi-pencil"></i> Editar
-                                            </button>
-                                            <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                                                <i class="mdi mdi-delete"></i> Excluir
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Seção: Clientes -->
-        <div class="users-section" data-role="cliente_unique">
-            <div class="section-header">
-                <div class="section-icon" style="background: var(--color-success-light); color: #059669;">
-                    <i class="mdi mdi-account-multiple"></i>
-                </div>
-                <h2 class="section-title">Clientes</h2>
-                <span class="section-count" id="cliente-section-count">
-                    {{ users | selectattr("role", "equalto", "cliente_unique") | list | length }} usuários
-                </span>
-            </div>
-            <div class="users-table-container">
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>Usuário</th>
-                            <th>Email</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                            {% if user.role == 'cliente_unique' %}
-                                <tr class="user-row" 
-                                    data-user-id="{{ user.id }}"
-                                    data-name="{{ user.name | lower }}" 
-                                    data-email="{{ user.email | lower }}" 
-                                    data-role="{{ user.role }}">
-                                    <td>
-                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                            <div style="width: 32px; height: 32px; background: var(--color-success-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #059669;">
-                                                <i class="mdi mdi-account-multiple" style="font-size: 1rem;"></i>
-                                            </div>
-                                            <div>
-                                                <div style="font-weight: 600;">{{ user.name }}</div>
-                                                <div class="role-badge role-cliente">Cliente</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>{{ user.email }}</td>
-                                    <td>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                                                <i class="mdi mdi-pencil"></i> Editar
-                                            </button>
-                                            <button onclick="openDeleteModal('{{ user.id }}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
-                                                <i class="mdi mdi-delete"></i> Excluir
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="modal-footer">
+            <button type="button" id="btn-cancel" class="btn btn-secondary">
+                <i class="mdi mdi-close"></i>
+                Cancelar
+            </button>
+            <button type="submit" id="btn-save" class="btn btn-primary" form="form-usuario">
+                <i class="mdi mdi-check"></i>
+                <span id="save-text">Salvar</span>
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Modal de Confirmação de Exclusão -->
-<!-- Modal de Edição -->
-<div id="editModal" class="modal-overlay" style="display: none;">
-    <div class="modal-container">
+<div id="modal-delete-confirm" class="modal-overlay hidden">
+    <div class="modal-container modal-small">
         <div class="modal-header">
-            <h3 class="modal-title">
-                <i class="mdi mdi-pencil"></i>
-                Editar Usuário
-            </h3>
-            <button type="button" onclick="closeEditModal()" class="modal-close">
-                <i class="mdi mdi-close"></i>
-            </button>
+            <h2 class="modal-title">Confirmar Exclusão</h2>
         </div>
-        
-        <form id="editUserForm" method="POST">
-            <div class="modal-body">
-                <!-- Lado Esquerdo: Formulário de Edição -->
-                <div class="edit-form-section">
-                    <h4 style="margin: 0 0 1rem 0; color: var(--color-text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="mdi mdi-account-edit"></i>
-                        Dados do Usuário
-                    </h4>
-                    
-                    <div class="form-grid" style="grid-template-columns: 1fr; gap: var(--spacing-md);">
-                        <div class="form-group">
-                            <label class="form-label" for="edit-name">Nome Completo *</label>
-                            <input type="text" id="edit-name" name="name" class="form-input" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="edit-email">Email *</label>
-                            <input type="email" id="edit-email" name="email" class="form-input" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="edit-role">Tipo de Usuário *</label>
-                            <select id="edit-role" name="role" class="form-input" required>
-                                <option value="">Selecione uma role</option>
-                                <option value="admin">Administrador</option>
-                                <option value="interno_unique">Equipe Interna</option>
-                                <option value="cliente_unique">Cliente</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="edit-is_active">Status</label>
-                            <select id="edit-is_active" name="is_active" class="form-input">
-                                <option value="true">Ativo</option>
-                                <option value="false">Inativo</option>
-                            </select>
-                        </div>
-                    </div>
+        <div class="modal-content">
+            <div class="delete-confirm-content">
+                <div class="delete-icon">
+                    <i class="mdi mdi-alert-circle"></i>
                 </div>
-                
-                <!-- Lado Direito: Seção de Empresas -->
-                <div id="edit-empresas-section" class="empresas-section" style="display: none;">
-                    <h4 style="margin: 0 0 1rem 0; color: var(--color-text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                        <i class="mdi mdi-domain"></i>
-                        Empresas Associadas
-                    </h4>
-                    
-                    <div class="empresas-controls" style="margin-bottom: 1rem;">
-                        <div class="form-group" style="margin-bottom: 0.5rem;">
-                            <label class="form-label" for="edit-cnpj-search">Buscar Empresa</label>
-                            <input type="text" id="edit-cnpj-search" class="form-input" placeholder="CNPJ ou nome da empresa..." autocomplete="off">
-                            <small style="color: var(--color-text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
-                                Ex: 75.339.051/0001-41 ou UNIQUE ADUANEIRA
-                            </small>
-                        </div>
-                        <button type="button" id="edit-btn-buscar-empresa" class="btn btn-outline" style="width: 100%;">
-                            <i class="mdi mdi-magnify"></i>
-                            Buscar Empresa
-                        </button>
-                    </div>
-                    
-                    <div id="edit-empresas-list" class="empresas-list" style="max-height: 300px; overflow-y: auto;">
-                        <!-- Lista de empresas será carregada aqui -->
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-actions">
-                <button type="button" onclick="closeEditModal()" class="btn btn-outline">
-                    <i class="mdi mdi-close"></i>
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="mdi mdi-check"></i>
-                    Salvar Alterações
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="deleteModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <div class="modal-icon">
-                <i class="mdi mdi-alert"></i>
-            </div>
-            <h3 class="modal-title">Confirmar Exclusão</h3>
-        </div>
-        
-        <div class="modal-body">
-            <p class="modal-text">
-                Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
-            </p>
-            
-            <div class="modal-user-info">
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                    <span id="delete-user-name"></span>
-                </div>
-                <div style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 0.25rem;">
-                    <span id="delete-user-email"></span>
-                </div>
-                <div style="color: var(--color-text-muted); font-size: 0.875rem;">
-                    Role: <span id="delete-user-role"></span>
+                <div class="delete-message">
+                    <p>Tem certeza que deseja excluir o usuário <strong id="delete-user-name"></strong>?</p>
+                    <p class="delete-warning">Esta ação não pode ser desfeita.</p>
                 </div>
             </div>
         </div>
-        
-        <div class="modal-actions">
-            <button type="button" onclick="closeDeleteModal()" class="btn btn-outline">
+        <div class="modal-footer">
+            <button type="button" id="btn-cancel-delete" class="btn btn-secondary">
                 <i class="mdi mdi-close"></i>
                 Cancelar
             </button>
-            <form id="deleteForm" method="POST" style="display: inline;">
-                <button type="submit" class="btn btn-danger">
-                    <i class="mdi mdi-delete"></i>
-                    Confirmar Exclusão
-                </button>
-            </form>
+            <button type="button" id="btn-confirm-delete" class="btn btn-danger">
+                <i class="mdi mdi-delete"></i>
+                Excluir
+            </button>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('usuarios.static', filename='js/usuarios.js') }}"></script>
+<script src="{{ url_for('usuarios.static', filename='js/script.js') }}"></script>
 {% endblock %}

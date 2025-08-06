@@ -53,18 +53,23 @@ def check_session():
         user_exists_in_db = True
         db_user_data = None
         
-        try:
-            # Usar cliente admin para contornar problemas de RLS
-            response = supabase_admin.table('users').select('id, name, email').eq('id', user_id).execute()
-            if not response.data or len(response.data) == 0:
-                user_exists_in_db = False
-            else:
-                db_user_data = response.data[0]
-                logger.info(f"Usuário {user_id} encontrado no banco: {db_user_data.get('name', 'Nome não disponível')}")
-        except Exception as db_error:
-            logger.error(f"Erro ao verificar usuário no banco: {str(db_error)}")
-            # Não bloquear se houver erro de conexão com o banco
+        # Pular verificação do banco para usuário bypass de API
+        if user_id == '00000000-0000-0000-0000-000000000000':
+            logger.info("Usuário bypass de API detectado - pulando verificação do banco")
             user_exists_in_db = True
+        else:
+            try:
+                # Usar cliente admin para contornar problemas de RLS
+                response = supabase_admin.table('users').select('id, name, email').eq('id', user_id).execute()
+                if not response.data or len(response.data) == 0:
+                    user_exists_in_db = False
+                else:
+                    db_user_data = response.data[0]
+                    logger.info(f"Usuário {user_id} encontrado no banco: {db_user_data.get('name', 'Nome não disponível')}")
+            except Exception as db_error:
+                logger.error(f"Erro ao verificar usuário no banco: {str(db_error)}")
+                # Não bloquear se houver erro de conexão com o banco
+                user_exists_in_db = True
         
         # Se o usuário não existe mais no banco, invalidar sessão
         if not user_exists_in_db:
