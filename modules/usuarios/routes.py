@@ -609,30 +609,33 @@ def associar_empresas(user_id):
         # Manter compatibilidade com sistema antigo (tabela clientes_agentes)
         # Isso será removido futuramente
         try:
-            # Extrair apenas CNPJs para o sistema antigo
-            cnpjs_compatibilidade = []
-            for empresa_info in empresas_data:
-                if isinstance(empresa_info, dict) and 'cnpj' in empresa_info:
-                    cnpjs_compatibilidade.append(empresa_info['cnpj'])
-                elif isinstance(empresa_info, str):
-                    cnpjs_compatibilidade.append(empresa_info)
+            existing_response = supabase_admin.table('clientes_agentes').select('id').eq('user_id', user_id).execute()
             
-            if cnpjs_compatibilidade:
-                # Manter sistema antigo funcionando
-                existing_response = supabase_admin.table('clientes_agentes').select('id').eq('user_id', user_id).execute()
+            if empresas_data:  # Se há empresas para associar
+                # Extrair apenas CNPJs para o sistema antigo
+                cnpjs_compatibilidade = []
+                for empresa_info in empresas_data:
+                    if isinstance(empresa_info, dict) and 'cnpj' in empresa_info:
+                        cnpjs_compatibilidade.append(empresa_info['cnpj'])
+                    elif isinstance(empresa_info, str):
+                        cnpjs_compatibilidade.append(empresa_info)
                 
-                association_data = {
-                    'user_id': user_id,
-                    'empresa': cnpjs_compatibilidade,
-                    'updated_at': datetime.datetime.now().isoformat()
-                }
-                
+                if cnpjs_compatibilidade:
+                    association_data = {
+                        'user_id': user_id,
+                        'empresa': cnpjs_compatibilidade,
+                        'updated_at': datetime.datetime.now().isoformat()
+                    }
+                    
+                    if existing_response.data:
+                        supabase_admin.table('clientes_agentes').update(association_data).eq('user_id', user_id).execute()
+                    else:
+                        association_data['id'] = str(uuid.uuid4())
+                        association_data['created_at'] = datetime.datetime.now().isoformat()
+                        supabase_admin.table('clientes_agentes').insert(association_data).execute()
+            else:  # Array vazio = limpar também do sistema antigo
                 if existing_response.data:
-                    supabase_admin.table('clientes_agentes').update(association_data).eq('user_id', user_id).execute()
-                else:
-                    association_data['id'] = str(uuid.uuid4())
-                    association_data['created_at'] = datetime.datetime.now().isoformat()
-                    supabase_admin.table('clientes_agentes').insert(association_data).execute()
+                    supabase_admin.table('clientes_agentes').delete().eq('user_id', user_id).execute()
         except Exception as e:
             print(f"[DEBUG] Erro na compatibilidade com sistema antigo: {e}")
         
@@ -640,22 +643,30 @@ def associar_empresas(user_id):
         invalidate_users_cache()
         
         # Resposta
-        if vinculos_criados > 0:
-            message = f"{vinculos_criados} empresas associadas com sucesso!"
-            if erros:
-                message += f" ({len(erros)} erros encontrados)"
-            
+        if empresas_data:  # Se havia empresas para associar
+            if vinculos_criados > 0:
+                message = f"{vinculos_criados} empresas associadas com sucesso!"
+                if erros:
+                    message += f" ({len(erros)} erros encontrados)"
+                
+                return jsonify({
+                    'success': True, 
+                    'message': message,
+                    'vinculos_criados': vinculos_criados,
+                    'erros': erros
+                })
+            else:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Nenhuma empresa foi associada',
+                    'erros': erros
+                })
+        else:  # Array vazio = remover todas as empresas
             return jsonify({
                 'success': True, 
-                'message': message,
-                'vinculos_criados': vinculos_criados,
-                'erros': erros
-            })
-        else:
-            return jsonify({
-                'success': False, 
-                'error': 'Nenhuma empresa foi associada',
-                'erros': erros
+                'message': 'Todas as empresas foram removidas com sucesso!',
+                'vinculos_criados': 0,
+                'erros': []
             })
             
     except Exception as e:

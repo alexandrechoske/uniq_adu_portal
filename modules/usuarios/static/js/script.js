@@ -337,9 +337,9 @@ async function loadUserData(userId) {
     console.log(`[USUARIOS] Carregando dados do usuário: ${userId}`);
     
     const [userData, empresasData, whatsappData] = await Promise.all([
-        apiRequest(`/api/user/${userId}`, 'GET'),
-        apiRequest(`/api/user/${userId}/empresas`, 'GET'),
-        apiRequest(`/api/user/${userId}/whatsapp`, 'GET')
+        apiRequest(`/${userId}/dados`, 'GET'),
+        apiRequest(`/${userId}/empresas`, 'GET'),
+        apiRequest(`/${userId}/whatsapp`, 'GET')
     ]);
     
     if (!userData.success) {
@@ -347,7 +347,7 @@ async function loadUserData(userId) {
     }
     
     // Preencher dados básicos
-    fillUserForm(userData.user);
+    fillUserForm(userData.data);
     
     // Carregar empresas se aplicável
     if (empresasData.success && empresasData.empresas) {
@@ -356,9 +356,9 @@ async function loadUserData(userId) {
     }
     
     // Carregar WhatsApp
-    if (whatsappData.success && whatsappData.whatsapp) {
-        appState.originalWhatsapp = [...whatsappData.whatsapp];
-        populateWhatsappList(whatsappData.whatsapp);
+    if (whatsappData.success && whatsappData.data) {
+        appState.originalWhatsapp = [...whatsappData.data];
+        populateWhatsappList(whatsappData.data);
     }
     
     // Ajustar visibilidade das seções baseado no role
@@ -704,7 +704,7 @@ function addEmpresaToList(empresa) {
     empresaElement.innerHTML = `
         <div class="empresa-info">
             <div class="empresa-name">${empresa.nome_cliente}</div>
-            <div class="empresa-cnpj">${empresa.cnpjs}</div>
+            <div class="empresa-cnpj">${Array.isArray(empresa.cnpj) ? empresa.cnpj[0] : (empresa.cnpj || empresa.cnpjs || 'CNPJ não informado')}</div>
         </div>
         <div class="item-actions">
             <button type="button" class="btn-remove" onclick="removeEmpresaFromList(this)" title="Remover empresa">
@@ -1192,10 +1192,8 @@ async function saveUserEmpresas(userId) {
     
     console.log(`[USUARIOS] IDs de empresas para salvar:`, empresaIds);
     
-    if (empresaIds.length === 0) {
-        console.log('[USUARIOS] Nenhuma empresa válida para salvar');
-        return; // Não há empresas para salvar, mas não é erro
-    }
+    // SEMPRE enviar para API, mesmo que array vazio (para remover empresas)
+    console.log(`[USUARIOS] Enviando ${empresaIds.length} empresas para API (0 = remover todas)`);
     
     const response = await apiRequest(`/${userId}/empresas`, 'POST', {
         empresas: empresaIds
