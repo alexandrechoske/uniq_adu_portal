@@ -32,8 +32,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    currentEditUserData = data.user;
-                    populateEditForm(data.user);
+                    currentEditUserData = data.data;
+                    populateEditForm(data.data);
                     
                     // Mostrar modal
                     const modal = document.getElementById('editModal');
@@ -93,7 +93,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const empresasSection = document.getElementById('edit-empresas-section');
         if (user.role === 'cliente_unique' || user.role === 'interno_unique') {
             empresasSection.style.display = 'block';
-            loadUserEmpresas(user.id);
+            
+            // Se as empresas já vieram nos dados do usuário, usar elas
+            if (user.empresas && user.empresas.length > 0) {
+                console.log('[DEBUG] Usando empresas que vieram com os dados do usuário:', user.empresas);
+                empresasLocais = user.empresas;
+                atualizarListaEmpresasVisuais();
+            } else {
+                console.log('[DEBUG] Carregando empresas via endpoint separado');
+                loadUserEmpresas(user.id);
+            }
         } else {
             empresasSection.style.display = 'none';
         }
@@ -115,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
             empresasList.innerHTML = '<div style="display: flex; align-items: center; gap: 8px; padding: 1rem; color: var(--color-text-muted);"><i class="mdi mdi-loading mdi-spin"></i>Carregando empresas...</div>';
             
             // Usar timeout para evitar travamento
-            const fetchPromise = fetch(`/usuarios/${userId}/empresas-detalhadas`, {
+            const fetchPromise = fetch(`/usuarios/${userId}/empresas`, {
                 signal: AbortSignal.timeout(15000) // 15 segundos timeout
             });
             
@@ -128,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(data => {
                     if (data.success) {
+                        console.log('[DEBUG] Empresas carregadas do servidor:', data.empresas);
                         // Carregar empresas do servidor na lista local
                         empresasLocais = data.empresas || [];
                         atualizarListaEmpresasVisuais();
@@ -173,24 +183,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         empresas.forEach(empresa => {
-            // Suporte para array de CNPJ ou objeto { cnpj, razao_social }
-            let cnpj = empresa;
-            let razao = '';
+            // Nova estrutura: empresa tem id, nome_cliente, cnpjs
+            let empresaId = empresa.id || '';
+            let nomeCliente = empresa.nome_cliente || empresa.name || '';
+            let cnpjs = empresa.cnpjs || [];
+            let vinculoId = empresa.vinculo_id || '';
             
-            if (typeof empresa === 'object' && empresa !== null) {
-                cnpj = empresa.cnpj || '';
-                razao = empresa.razao_social || '';
+            // Fallback para estrutura antiga se necessário
+            if (!nomeCliente && empresa.cnpj) {
+                nomeCliente = empresa.cnpj;
+                cnpjs = [empresa.cnpj];
             }
             
             const empresaItem = document.createElement('div');
-            empresaItem.className = 'empresa-item';
+            empresaItem.className = 'empresa-item-associada';
             empresaItem.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--color-bg-secondary); border-radius: 6px; margin-bottom: 0.5rem; border: 1px solid #e5e7eb;">
                     <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--color-text-primary);">${cnpj}</div>
-                        ${razao ? `<div style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: 2px;">${razao}</div>` : ''}
+                        <div style="font-weight: 600; color: var(--color-text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="mdi mdi-domain" style="color: var(--color-primary);"></i>
+                            ${nomeCliente}
+                        </div>
+                        <div style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: 2px;">
+                            ${cnpjs.length} CNPJ${cnpjs.length !== 1 ? 's' : ''} vinculado${cnpjs.length !== 1 ? 's' : ''}
+                        </div>
                     </div>
-                    <button type="button" onclick="removeEmpresaFromUser('${userId}', '${cnpj}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.375rem 0.75rem; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <button type="button" onclick="removerEmpresaAssociada('${empresaId}')" class="btn" style="background: var(--color-danger); color: white; padding: 0.375rem 0.75rem; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                         <i class="mdi mdi-delete"></i>
                         Remover
                     </button>
@@ -232,6 +250,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('[DEBUG] Buscando empresa:', termo_busca);
         
+        // Desabilitar botão durante busca
+        const btnBuscar = document.getElementById('edit-btn-buscar-empresa');
+        if (btnBuscar) {
+            btnBuscar.disabled = true;
+            btnBuscar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Buscando...';
+        }
+        
         fetch('/usuarios/api/empresas/buscar', {
             method: 'POST',
             headers: {
@@ -246,9 +271,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Múltiplas empresas encontradas - mostrar seletor
                     mostrarSeletorEmpresas(data.empresas, cnpjInput);
                 } else {
-                    // Uma empresa encontrada - adicionar diretamente
-                    addEmpresaToUser(currentEditUserId, data.empresa.cnpj, data.empresa.razao_social);
-                    cnpjInput.value = '';
+                    // Uma empresa encontrada - adicionar diretamente usando ID
+                    const empresa = data.empresa;
+                    
+                    // Verificar se empresa já está na lista
+                    const jaExiste = empresasLocais.find(emp => emp.id === empresa.id);
+                    if (jaExiste) {
+                        alert(`A empresa "${empresa.nome_cliente}" já está associada a este usuário.`);
+                        cnpjInput.value = '';
+                        return;
+                    }
+                    
+                    addEmpresaToUserById(currentEditUserId, empresa.id, empresa.nome_cliente, empresa.cnpjs);
                 }
             } else {
                 alert('Erro ao buscar empresa: ' + data.error);
@@ -257,6 +291,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('[DEBUG] Erro ao buscar empresa:', error);
             alert('Erro ao buscar empresa');
+        })
+        .finally(() => {
+            // Reabilitar botão
+            if (btnBuscar) {
+                btnBuscar.disabled = false;
+                btnBuscar.innerHTML = '<i class="mdi mdi-magnify"></i> Buscar Empresa';
+            }
         });
     };
 
@@ -332,9 +373,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const conteudoEmpresa = document.createElement('div');
             conteudoEmpresa.style.cssText = `flex: 1;`;
+            
+            // Formatear CNPJs (pode ser um array)
+            let cnpjDisplay = '';
+            if (Array.isArray(empresa.cnpj)) {
+                cnpjDisplay = empresa.cnpj.join(', ');
+            } else {
+                cnpjDisplay = empresa.cnpj;
+            }
+            
             conteudoEmpresa.innerHTML = `
-                <div style="font-weight: bold; color: #1f2937;">${empresa.razao_social}</div>
-                <div style="font-size: 0.9em; color: #666;">${empresa.cnpj}</div>
+                <div style="font-weight: bold; color: #1f2937;">${empresa.nome_cliente || empresa.razao_social}</div>
+                <div style="font-size: 0.9em; color: #666;">${cnpjDisplay}</div>
             `;
 
             opcao.appendChild(checkbox);
@@ -345,13 +395,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkbox.checked = !checkbox.checked;
                 
                 if (checkbox.checked) {
-                    if (!empresasSelecionadas.find(e => e.cnpj === empresa.cnpj)) {
+                    if (!empresasSelecionadas.find(e => e.id === empresa.id)) {
                         empresasSelecionadas.push(empresa);
                         opcao.style.backgroundColor = '#dbeafe';
                         opcao.style.borderColor = '#3b82f6';
                     }
                 } else {
-                    empresasSelecionadas = empresasSelecionadas.filter(e => e.cnpj !== empresa.cnpj);
+                    empresasSelecionadas = empresasSelecionadas.filter(e => e.id !== empresa.id);
                     opcao.style.backgroundColor = 'white';
                     opcao.style.borderColor = '#eee';
                 }
@@ -552,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = '';
 
         if (empresasLocais.length === 0) {
-            container.innerHTML = '<p style="color: var(--color-text-muted); font-style: italic;">Nenhuma empresa adicionada</p>';
+            container.innerHTML = '<p style="color: var(--color-text-muted); font-style: italic;">Nenhuma empresa associada</p>';
             return;
         }
 
@@ -567,33 +617,55 @@ document.addEventListener('DOMContentLoaded', function() {
             color: #495057;
             border: 1px solid #dee2e6;
         `;
-        header.innerHTML = `📋 ${empresasLocais.length} empresa${empresasLocais.length !== 1 ? 's' : ''} selecionada${empresasLocais.length !== 1 ? 's' : ''} (não salva${empresasLocais.length !== 1 ? 's' : ''} ainda)`;
+        header.innerHTML = `📋 ${empresasLocais.length} empresa${empresasLocais.length !== 1 ? 's' : ''} associada${empresasLocais.length !== 1 ? 's' : ''}`;
         container.appendChild(header);
 
         // Criar lista de empresas
         empresasLocais.forEach((empresa, index) => {
             const empresaItem = document.createElement('div');
-            empresaItem.className = 'empresa-item-local';
+            empresaItem.className = 'empresa-item-associada';
             empresaItem.style.cssText = `
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 12px;
-                background: #fff3cd;
-                border: 1px solid #ffeaa7;
+                background: #d4edda;
+                border: 1px solid #c3e6cb;
                 border-radius: 6px;
                 margin-bottom: 6px;
                 transition: all 0.2s;
             `;
             
+            // Contar CNPJs sem listá-los
+            let quantidadeCNPJs = 0;
+            if (empresa.cnpjs && Array.isArray(empresa.cnpjs)) {
+                quantidadeCNPJs = empresa.cnpjs.length;
+            } else if (empresa.cnpj) {
+                // Fallback para estrutura antiga
+                if (Array.isArray(empresa.cnpj)) {
+                    quantidadeCNPJs = empresa.cnpj.length;
+                } else {
+                    quantidadeCNPJs = 1;
+                }
+            }
+            
+            const nomeEmpresa = empresa.nome_cliente || empresa.razao_social || 'Nome não disponível';
+            const dataVinculo = empresa.data_vinculo ? ` (vinculado em ${new Date(empresa.data_vinculo).toLocaleDateString()})` : '';
+            
             empresaItem.innerHTML = `
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #856404;">${empresa.cnpj}</div>
-                    ${empresa.razao_social ? `<div style="color: #6c757d; font-size: 0.875rem; margin-top: 2px;">${empresa.razao_social}</div>` : ''}
+                    <div style="font-weight: 600; color: #155724; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="mdi mdi-domain" style="color: var(--color-primary);"></i>
+                        ${nomeEmpresa}
+                    </div>
+                    <div style="color: #6c757d; font-size: 0.875rem; margin-top: 2px;">
+                        ${quantidadeCNPJs} CNPJ${quantidadeCNPJs !== 1 ? 's' : ''} vinculado${quantidadeCNPJs !== 1 ? 's' : ''}${dataVinculo}
+                    </div>
                 </div>
-                <button onclick="window.removerEmpresaLocal('${empresa.cnpj}')" 
-                        style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem;">
+                <button onclick="window.removerEmpresaAssociada(${empresa.id})" 
+                        style="background: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
                     <i class="mdi mdi-trash-can"></i>
+                    Remover
                 </button>
             `;
             
@@ -619,6 +691,51 @@ document.addEventListener('DOMContentLoaded', function() {
             container.appendChild(btnLimpar);
         }
     }
+
+    // Função para remover empresa associada (nova estrutura)
+    window.removerEmpresaAssociada = function(empresaId) {
+        if (!confirm('Tem certeza que deseja remover esta empresa?')) {
+            return;
+        }
+        
+        console.log('[DEBUG] Removendo empresa ID:', empresaId, 'do usuário:', currentEditUserId);
+        
+        // Primeiro, remover localmente para feedback imediato
+        const empresaIndex = empresasLocais.findIndex(emp => emp.id === empresaId);
+        if (empresaIndex > -1) {
+            const empresaRemovida = empresasLocais[empresaIndex];
+            empresasLocais.splice(empresaIndex, 1);
+            atualizarListaEmpresasVisuais();
+            console.log(`[DEBUG] Empresa "${empresaRemovida.nome_cliente}" removida da lista local`);
+        }
+        
+        fetch(`/usuarios/${currentEditUserId}/desvincular-empresa`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cliente_sistema_id: empresaId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacao('Empresa removida com sucesso!', 'success');
+            } else {
+                console.error('[DEBUG] Erro no servidor ao remover empresa:', data.error);
+                mostrarNotificacao('Erro ao remover empresa: ' + data.error, 'error');
+                
+                // Em caso de erro, recarregar a lista para sincronizar
+                loadUserEmpresas(currentEditUserId);
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro de conexão ao remover empresa:', error);
+            mostrarNotificacao('Erro de conexão ao remover empresa', 'error');
+            
+            // Em caso de erro, recarregar a lista para sincronizar
+            loadUserEmpresas(currentEditUserId);
+        });
+    };
 
     function mostrarNotificacao(mensagem, tipo = 'info') {
         const cores = {
@@ -664,13 +781,81 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function adicionarEmpresasSelecionadas(empresas, inputElement, seletor) {
-        console.log('[DEBUG] Adicionando empresas selecionadas à lista local:', empresas);
+        console.log('[DEBUG] Adicionando empresas selecionadas:', empresas);
         
-        const novasAdicionadas = adicionarEmpresasLocalmente(empresas);
+        if (!empresas || empresas.length === 0) {
+            alert('Nenhuma empresa selecionada');
+            return;
+        }
+        
+        let empresasAdicionadas = 0;
+        let empresasJaExistentes = 0;
+        
+        // Processar cada empresa selecionada
+        empresas.forEach(empresa => {
+            // Verificar se empresa já está na lista
+            const jaExiste = empresasLocais.find(emp => emp.id === empresa.id);
+            if (jaExiste) {
+                empresasJaExistentes++;
+                console.log(`[DEBUG] Empresa "${empresa.nome_cliente}" já existe na lista`);
+                return;
+            }
+            
+            // Adicionar empresa via API
+            fetch(`/usuarios/${currentEditUserId}/vincular-empresa`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    cliente_sistema_id: empresa.id,
+                    observacoes: `Adicionada via seleção múltipla em ${new Date().toLocaleString()}`
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Adicionar na lista local
+                    empresasLocais.push({
+                        id: empresa.id,
+                        nome_cliente: empresa.nome_cliente || empresa.razao_social,
+                        cnpjs: empresa.cnpjs || [empresa.cnpj],
+                        data_vinculo: new Date().toISOString(),
+                        ativo: true
+                    });
+                    
+                    empresasAdicionadas++;
+                    
+                    // Atualizar visual se for a última empresa
+                    if (empresasAdicionadas + empresasJaExistentes === empresas.length) {
+                        atualizarListaEmpresasVisuais();
+                        
+                        // Mostrar mensagem de sucesso
+                        let mensagem = '';
+                        if (empresasAdicionadas > 0) {
+                            mensagem += `${empresasAdicionadas} empresa${empresasAdicionadas !== 1 ? 's' : ''} adicionada${empresasAdicionadas !== 1 ? 's' : ''}`;
+                        }
+                        if (empresasJaExistentes > 0) {
+                            if (mensagem) mensagem += '; ';
+                            mensagem += `${empresasJaExistentes} já existia${empresasJaExistentes !== 1 ? 'm' : ''}`;
+                        }
+                        
+                        mostrarNotificacao(mensagem, 'success');
+                    }
+                } else {
+                    console.error(`[DEBUG] Erro ao adicionar empresa "${empresa.nome_cliente}":`, data.error);
+                    mostrarNotificacao(`Erro ao adicionar "${empresa.nome_cliente}": ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error(`[DEBUG] Erro de conexão ao adicionar empresa "${empresa.nome_cliente}":`, error);
+                mostrarNotificacao(`Erro de conexão ao adicionar "${empresa.nome_cliente}"`, 'error');
+            });
+        });
         
         // Fechar seletor e limpar input
-        inputElement.value = '';
         seletor.remove();
+        inputElement.value = '';
     }
 
     function addEmpresaToUser(userId, cnpj, razaoSocial = null) {
@@ -729,6 +914,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function addEmpresaToUserById(userId, empresaId, nomeEmpresa, cnpjArray = null) {
+        console.log('[DEBUG] Adicionando empresa por ID ao usuário:', userId, 'Empresa ID:', empresaId, 'Nome:', nomeEmpresa);
+        
+        fetch(`/usuarios/${userId}/vincular-empresa`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                cliente_sistema_id: empresaId,
+                observacoes: `Adicionada via interface em ${new Date().toLocaleString()}`
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Adicionar empresa na lista local
+                empresasLocais.push({
+                    id: empresaId,
+                    nome_cliente: nomeEmpresa,
+                    cnpjs: cnpjArray,
+                    data_vinculo: new Date().toISOString(),
+                    ativo: true
+                });
+                
+                // Atualizar visual
+                atualizarListaEmpresasVisuais();
+                
+                // Limpar campo de busca
+                const cnpjInput = document.getElementById('edit-cnpj-search');
+                if (cnpjInput) cnpjInput.value = '';
+                
+                // Mostrar mensagem de sucesso
+                mostrarNotificacao(`Empresa "${nomeEmpresa}" adicionada com sucesso!`, 'success');
+                
+            } else {
+                console.error('[DEBUG] Erro ao adicionar empresa:', data.error);
+                mostrarNotificacao('Erro ao adicionar empresa: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro ao adicionar empresa:', error);
+            mostrarNotificacao('Erro de conexão ao adicionar empresa', 'error');
+        });
+    }
+
     window.removeEmpresaFromUser = function(userId, cnpj) {
         console.log('[DEBUG] Removendo empresa do usuário:', userId, cnpj);
         
@@ -767,6 +998,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnBuscarEmpresa = document.getElementById('edit-btn-buscar-empresa');
     if (btnBuscarEmpresa) {
         btnBuscarEmpresa.addEventListener('click', buscarEmpresaEdit);
+    }
+
+    // Event listener para buscar empresa com Enter
+    const cnpjSearchInput = document.getElementById('edit-cnpj-search');
+    if (cnpjSearchInput) {
+        cnpjSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarEmpresaEdit();
+            }
+        });
     }
 
     // Event listener para mudança de role

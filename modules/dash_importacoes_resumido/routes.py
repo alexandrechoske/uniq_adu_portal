@@ -129,13 +129,31 @@ def get_dashboard_data():
                 # Buscar dados direto da view vw_importacoes_6_meses_abertos_dash (já filtrada)
                 query = supabase.table('vw_importacoes_6_meses_abertos_dash').select('*')
                 
-                # Se for cliente, filtrar por empresa já na query
+                # NOVA REGRA: Se for cliente, filtrar por CNPJs das empresas vinculadas
                 if user_role == 'cliente_unique':
                     user_data = session.get('user', {})
-                    user_companies = get_user_companies(user_data)
-                    if user_companies:
-                        query = query.in_('cnpj_importador', user_companies)
-                        print(f"[DEBUG] Query filtrada por empresas: {user_companies}")
+                    user_cnpjs = get_user_companies(user_data)
+                    if user_cnpjs:
+                        query = query.in_('cnpj_importador', user_cnpjs)
+                        print(f"[DEBUG] Query filtrada por CNPJs das empresas vinculadas: {user_cnpjs}")
+                    else:
+                        print(f"[DEBUG] Usuário cliente sem CNPJs vinculados - retornando vazio")
+                        # Se não tem CNPJs vinculados, retornar dados vazios
+                        return jsonify({
+                            'success': True,
+                            'message': 'Usuário sem empresas vinculadas',
+                            'header': {
+                                'total_processos': 0,
+                                'count_maritimo': 0,
+                                'count_aereo': 0,
+                                'count_terrestre': 0,
+                                'current_time': datetime.now().strftime('%H:%M'),
+                                'current_date': datetime.now().strftime('%d %B').upper(),
+                                'exchange_rates': get_exchange_rates()
+                            },
+                            'data': [],
+                            'pagination': {'total': 0, 'pages': 0, 'current_page': 1, 'per_page': per_page}
+                        })
                 
                 result = query.limit(100).execute()
                 if result.data:
@@ -227,11 +245,15 @@ def get_dashboard_data():
         # Aplicar filtro adicional por empresa se for cliente e não foi filtrado na query
         if user_role == 'cliente_unique' and 'cnpj_importador' in df.columns:
             user_data = session.get('user', {})
-            user_companies = get_user_companies(user_data)
-            if user_companies:
+            user_cnpjs = get_user_companies(user_data)
+            if user_cnpjs:
                 original_count = len(df)
-                df = df[df['cnpj_importador'].isin(user_companies)]
-                print(f"[DEBUG] Filtrado por empresa: {original_count} -> {len(df)} registros")
+                df = df[df['cnpj_importador'].isin(user_cnpjs)]
+                print(f"[DEBUG] Filtrado por CNPJs das empresas vinculadas: {original_count} -> {len(df)} registros")
+                print(f"[DEBUG] CNPJs utilizados no filtro: {user_cnpjs}")
+            else:
+                print(f"[DEBUG] Usuário cliente sem CNPJs - DataFrame vazio")
+                df = df.iloc[0:0]  # DataFrame vazio
         
         # Aplicar filtro de data de embarque se especificado
         if filtro_embarque == 'preenchida':

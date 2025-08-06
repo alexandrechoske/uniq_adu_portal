@@ -6,11 +6,6 @@ import json
 import requests
 import traceback
 from datetime import datetime
-import requests
-import json
-import traceback
-import requests
-import json
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('agente', __name__, 
@@ -18,6 +13,25 @@ bp = Blueprint('agente', __name__,
                template_folder='templates',
                static_folder='static',
                static_url_path='/agente/static')
+
+def format_date_br(date_str):
+    """Converte data ISO para formato brasileiro DD/MM/AAAA"""
+    if not date_str:
+        return "Data não informada"
+    
+    try:
+        # Se for string de data ISO
+        if isinstance(date_str, str):
+            # Pegar apenas a parte da data (YYYY-MM-DD)
+            date_part = date_str.split('T')[0] if 'T' in date_str else date_str
+            # Converter para datetime
+            dt = datetime.strptime(date_part, '%Y-%m-%d')
+            # Retornar no formato brasileiro
+            return dt.strftime('%d/%m/%Y')
+        else:
+            return str(date_str)
+    except:
+        return date_str
 
 def notificar_cadastro_n8n(numero_zap):
     """Envia notificação para o webhook do N8N para acionar o fluxo de mensagem no WhatsApp"""
@@ -43,37 +57,187 @@ def notificar_cadastro_n8n(numero_zap):
         print(f"[ERROR] Erro ao acionar webhook N8N: {str(e)}")
         return False
 
-def get_user_companies(user_id):
+def format_phone_number(numero):
     """
-    Busca todas as empresas que o usuário tem acesso.
-    Retorna uma lista única de CNPJs.
+    Formata número de telefone para o padrão esperado pela constraint.
+    A constraint parece esperar formato: +5511999999999 (14 dígitos com +55)
+    """
+    import re
+    
+    if not numero:
+        return None
+    
+    # Remove todos os caracteres não numéricos
+    cleaned = re.sub(r'\D', '', str(numero))
+    
+    print(f"[FORMAT DEBUG] Input: '{numero}' → Cleaned: '{cleaned}' (length: {len(cleaned)})")
+    
+    # Se já tem 13 dígitos e começa com 55, adiciona +
+    if len(cleaned) == 13 and cleaned.startswith('55'):
+        formatted = f"+{cleaned}"
+    
+    # Se tem 12 dígitos e começa com 55 (caso específico: 554196650141)
+    elif len(cleaned) == 12 and cleaned.startswith('55'):
+        # 554196650141 → 55 + 41 + 96650141 (8 dígitos no telefone)
+        # Precisa adicionar o 9: +5541966650141 (14 caracteres)
+        area_code = cleaned[2:4]  # 41
+        phone_part = cleaned[4:]  # 96650141 (8 dígitos)
+        if len(phone_part) == 8:
+            # Adicionar o 9 para celular: 96650141 → 996650141
+            formatted = f"+55{area_code}9{phone_part}"
+        else:
+            # Se já tem 9 dígitos ou mais, usar direto
+            formatted = f"+55{cleaned[2:]}"
+    
+    # Se tem 11 dígitos (formato brasileiro sem código de país)
+    elif len(cleaned) == 11:
+        formatted = f"+55{cleaned}"
+    
+    # Se tem 10 dígitos (sem o 9 no celular), adiciona o 9
+    elif len(cleaned) == 10 and cleaned[2] in ['6', '7', '8', '9']:
+        formatted = f"+55{cleaned[:2]}9{cleaned[2:]}"
+    
+    # Se tem 14 dígitos e começa com 55, remove um dígito extra
+    elif len(cleaned) == 14 and cleaned.startswith('55'):
+        formatted = f"+{cleaned[:13]}"
+    
+    # Se já tem 15 dígitos e começa com 55, remove dígitos extras para 14
+    elif len(cleaned) == 15 and cleaned.startswith('55'):
+        formatted = f"+{cleaned[:13]}"
+    
+    # Se não conseguiu identificar o padrão, tenta formato mínimo +55
+    elif len(cleaned) >= 10:
+        # Pega os últimos dígitos como número brasileiro
+        if len(cleaned) >= 11:
+            phone_part = cleaned[-11:]
+            formatted = f"+55{phone_part}"
+        else:
+            # Muito poucos dígitos, adiciona zeros se necessário
+            phone_part = cleaned.zfill(11)
+            formatted = f"+55{phone_part}"
+    
+    else:
+        # Formato inválido
+        raise ValueError(f"Formato de número inválido: {numero} (muito poucos dígitos)")
+    
+    print(f"[FORMAT DEBUG] Output: '{formatted}' (length: {len(formatted)})")
+    return formatted
+
+def validate_phone_number(numero):
+    """Valida se o número formatado está no padrão correto"""
+    try:
+        formatted = format_phone_number(numero)
+        
+        if not formatted:
+            return False, "Número não pode estar vazio"
+        
+        # Deve ter exatamente 14 caracteres (+5511999999999)
+        if len(formatted) != 14:
+            return False, f"Número deve ter 14 caracteres, encontrado: {len(formatted)}"
+        
+        # Deve começar com +55
+        if not formatted.startswith('+55'):
+            return False, "Número deve começar com +55"
+        
+        # Parte do telefone deve ter 11 dígitos
+        phone_part = formatted[3:]  # Remove +55
+        if len(phone_part) != 11:
+            return False, f"Parte do telefone deve ter 11 dígitos, encontrado: {len(phone_part)}"
+        
+        # Primeiro dígito deve ser 1, 2, 3, 4, 5, 6, 7, 8 ou 9 (código de área)
+        area_code = phone_part[:2]
+        if not area_code.isdigit() or int(area_code) < 11 or int(area_code) > 99:
+            return False, f"Código de área inválido: {area_code}"
+        
+        # Terceiro dígito deve ser 9 (celular) ou 2,3,4,5 (fixo)
+        first_digit = phone_part[2]
+        if first_digit not in ['2', '3', '4', '5', '9']:
+            return False, f"Primeiro dígito do telefone inválido: {first_digit}"
+        
+        return True, formatted
+        
+    except Exception as e:
+        return False, str(e)
+
+def get_user_whatsapp_numbers(user_id):
+    """
+    Busca todos os números WhatsApp do usuário na nova estrutura.
+    Retorna lista de dicts com número, nome e demais informações.
     """
     try:
-        # Buscar o registro do usuário
-        user_agent = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).eq('usuario_ativo', True).execute()
+        whatsapp_query = supabase.table('user_whatsapp').select('*').eq('user_id', user_id).eq('ativo', True).order('principal', desc=True).execute()
         
-        if not user_agent.data:
+        if not whatsapp_query.data:
             return []
         
-        # O campo empresa é um array JSONB
-        companies = user_agent.data[0].get('empresa', [])
-        if isinstance(companies, list):
-            return companies
-        
+        print(f"[INFO] Encontrados {len(whatsapp_query.data)} números WhatsApp para usuário {user_id}")
+        return whatsapp_query.data
+    
+    except Exception as e:
+        print(f"[ERROR] Erro ao buscar números WhatsApp do usuário: {str(e)}")
         return []
+
+def get_user_companies(user_id):
+    """
+    Busca todas as empresas que o usuário tem acesso via nova estrutura user_empresas.
+    Retorna uma lista de empresas com detalhes.
+    """
+    try:
+        # Buscar empresas vinculadas via user_empresas
+        empresas_query = supabase.table('user_empresas').select(
+            '*, cad_clientes_sistema!inner(id, nome_cliente, cnpjs)'
+        ).eq('user_id', user_id).eq('ativo', True).execute()
+        
+        if not empresas_query.data:
+            return []
+        
+        empresas = []
+        for vinculo in empresas_query.data:
+            empresa_info = vinculo.get('cad_clientes_sistema', {})
+            
+            # Garantir que os dados não sejam None
+            nome_cliente = empresa_info.get('nome_cliente') or 'Empresa não identificada'
+            cnpjs = empresa_info.get('cnpjs') or []
+            data_vinculo = vinculo.get('data_vinculo')
+            
+            # Formatar data para o formato brasileiro
+            data_vinculo_formatada = format_date_br(data_vinculo)
+            
+            empresas.append({
+                'id': empresa_info.get('id'),
+                'nome_cliente': nome_cliente,
+                'cnpjs': cnpjs,
+                'data_vinculo': data_vinculo,  # Data original
+                'data_vinculo_formatada': data_vinculo_formatada,  # Data formatada
+                'total_cnpjs': len(cnpjs) if cnpjs else 0
+            })
+        
+        print(f"[INFO] Encontradas {len(empresas)} empresas para usuário {user_id}")
+        return empresas
     
     except Exception as e:
         print(f"[ERROR] Erro ao buscar empresas do usuário: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def render_admin_panel():
-    """Renderiza o painel administrativo para admins"""
+    """Renderiza o painel administrativo para admins - NOVA ESTRUTURA"""
     try:
-        # Buscar todos os usuários com agentes
-        agentes_query = supabase_admin.table('clientes_agentes').select('*').execute()
+        # Buscar todos os usuários com números WhatsApp
+        whatsapp_query = supabase_admin.table('user_whatsapp').select('''
+            id,
+            user_id,
+            numero_whatsapp,
+            nome_contato,
+            tipo_numero,
+            ativo,
+            principal,
+            created_at
+        ''').execute()
         
         # Buscar informações dos usuários
-        users_query = supabase_admin.table('users').select('id, email, name').execute()
+        users_query = supabase_admin.table('users').select('id, email, name, role').execute()
         
         # Criar mapeamento de usuários
         users_map = {}
@@ -81,66 +245,79 @@ def render_admin_panel():
             for user in users_query.data:
                 users_map[user['id']] = {
                     'email': user.get('email', 'N/A'),
-                    'nome': user.get('name', 'N/A')  # Mapear name para nome
+                    'nome': user.get('name', 'Sem nome'),
+                    'role': user.get('role', 'N/A')
                 }
         
-        # Processar dados dos agentes
-        agentes = []
-        total_users = 0
+        # Buscar empresas vinculadas
+        empresas_query = supabase_admin.table('user_empresas').select('''
+            user_id,
+            cad_clientes_sistema!inner(
+                nome_cliente
+            )
+        ''').eq('ativo', True).execute()
+        
+        # Mapear empresas por usuário
+        empresas_map = {}
+        if empresas_query.data:
+            for vinculo in empresas_query.data:
+                user_id = vinculo['user_id']
+                empresa_nome = vinculo['cad_clientes_sistema']['nome_cliente']
+                if user_id not in empresas_map:
+                    empresas_map[user_id] = []
+                empresas_map[user_id].append(empresa_nome)
+        
+        # Processar dados dos usuários
+        usuarios = {}
+        total_users = len(users_map)
         active_users = 0
         total_numbers = 0
-        users_by_company = {}
         
-        if agentes_query.data:
-            for agente in agentes_query.data:
-                user_info = users_map.get(agente['user_id'], {})
+        # Organizar dados por usuário
+        if whatsapp_query.data:
+            for whatsapp in whatsapp_query.data:
+                user_id = whatsapp['user_id']
                 
-                # Processar números e empresas com validação
-                numeros = agente.get('numero', [])
-                if not isinstance(numeros, list):
-                    numeros = [numeros] if numeros else []
+                if user_id not in usuarios:
+                    user_info = users_map.get(user_id, {})
+                    usuarios[user_id] = {
+                        'user_id': user_id,
+                        'email': user_info.get('email', 'N/A'),
+                        'nome': user_info.get('nome', 'Sem nome'),
+                        'role': user_info.get('role', 'N/A'),
+                        'numeros': [],
+                        'empresas': empresas_map.get(user_id, []),
+                        'ativo': False
+                    }
                 
-                empresas = agente.get('empresa', [])
-                if not isinstance(empresas, list):
-                    empresas = [empresas] if empresas else []
+                # Adicionar número
+                usuarios[user_id]['numeros'].append({
+                    'id': whatsapp['id'],
+                    'numero': whatsapp['numero_whatsapp'],
+                    'nome': whatsapp['nome_contato'],
+                    'tipo': whatsapp['tipo_numero'],
+                    'principal': whatsapp['principal'],
+                    'ativo': whatsapp['ativo']
+                })
                 
-                agente_data = {
-                    'user_id': agente['user_id'],
-                    'nome': user_info.get('nome', 'N/A'),
-                    'email': user_info.get('email', 'N/A'),
-                    'numeros': numeros,
-                    'empresas': empresas,
-                    'usuario_ativo': agente.get('usuario_ativo', False),
-                    'aceite_termos': agente.get('aceite_termos', False),
-                    'created_at': agente.get('created_at', ''),
-                    'data_aceite': agente.get('data_aceite', '')
-                }
-                
-                agentes.append(agente_data)
-                total_users += 1
-                
-                if agente_data['usuario_ativo']:
-                    active_users += 1
-                
-                total_numbers += len(agente_data['numeros'])
-                
-                # Contabilizar empresas
-                for empresa in agente_data['empresas']:
-                    cnpj = empresa if isinstance(empresa, str) else empresa.get('cnpj', 'N/A')
-                    users_by_company[cnpj] = users_by_company.get(cnpj, 0) + 1
+                if whatsapp['ativo']:
+                    usuarios[user_id]['ativo'] = True
+                    total_numbers += 1
+        
+        # Contar usuários ativos
+        active_users = sum(1 for u in usuarios.values() if u['ativo'])
         
         # Estatísticas
         stats = {
             'total_users': total_users,
             'active_users': active_users,
             'total_numbers': total_numbers,
-            'total_companies': len(users_by_company),
-            'users_by_company': users_by_company
+            'total_companies': len(set([nome for empresas in empresas_map.values() for nome in empresas]))
         }
         
         context = {
             'is_admin_view': True,
-            'agentes': agentes,
+            'usuarios': list(usuarios.values()),
             'stats': stats
         }
         
@@ -148,9 +325,10 @@ def render_admin_panel():
         
     except Exception as e:
         print(f"[ERROR] Erro ao carregar painel admin: {str(e)}")
+        import traceback
         traceback.print_exc()
         flash('Erro ao carregar dados dos agentes.', 'error')
-        return render_template('agente.html', is_admin_view=True, agentes=[], stats={})
+        return render_template('agente.html', is_admin_view=True, usuarios=[], stats={})
 
 @bp.route('/', methods=['GET', 'POST'])
 @login_required
@@ -164,336 +342,322 @@ def index():
     if user_role == 'admin':
         return render_admin_panel()
     
-    # Lógica normal para usuários comuns
+    # Lógica normal para usuários comuns - NOVA ESTRUTURA
     if request.method == 'POST':
         print(f"[AGENTE DEBUG] POST recebido. Form data: {dict(request.form)}")
-        numero = request.form.get('numero_whatsapp')
-        aceite_terms = request.form.get('aceite_terms') == 'on' or request.form.get('aceite_terms') == 'true' or request.form.get('aceite_terms') == 'checked'
-        print(f"[AGENTE DEBUG] Número recebido: {numero}")
-        print(f"[AGENTE DEBUG] Aceite termos recebido: {aceite_terms}")
+        numero = request.form.get('numero_whatsapp', '').strip()
+        nome_contato = request.form.get('nome_contato', '').strip()
+        tipo_numero = request.form.get('tipo_numero', 'pessoal')
+        
+        print(f"[AGENTE DEBUG] Número: {numero}, Nome: {nome_contato}, Tipo: {tipo_numero}")
+        
         if not numero:
-            print(f"[AGENTE DEBUG] Número não informado")
-            flash('Por favor, informe seu número de WhatsApp.', 'error')
+            flash('Por favor, informe o número de WhatsApp.', 'error')
             return redirect(url_for('agente.index'))
-        # Verificar se o usuário já aceitou os termos anteriormente
-        user_record = supabase.table('clientes_agentes').select('aceite_termos').eq('user_id', user_id).execute()
-        already_accepted_terms = user_record.data and user_record.data[0].get('aceite_termos', False)
-        print(f"[AGENTE DEBUG] Termos já aceitos anteriormente: {already_accepted_terms}")
-        if not aceite_terms and not already_accepted_terms:
-            print(f"[AGENTE DEBUG] Usuário precisa aceitar os termos")
-            flash('Você precisa aceitar os termos para continuar.', 'error')
+        
+        if not nome_contato:
+            flash('Por favor, informe um nome para identificar este número.', 'error')
             return redirect(url_for('agente.index'))
+        
+        # Validar e formatar número
+        is_valid, formatted_numero = validate_phone_number(numero)
+        if not is_valid:
+            flash(f'Número inválido: {formatted_numero}', 'error')
+            return redirect(url_for('agente.index'))
+        
+        print(f"[AGENTE DEBUG] Número formatado: {numero} → {formatted_numero}")
+        
         try:
-            # Verificar se o número já existe em qualquer usuário
-            all_records = supabase.table('clientes_agentes').select('numero, user_id').eq('usuario_ativo', True).execute()
-            print(f"[AGENTE DEBUG] Registros encontrados: {len(all_records.data) if all_records.data else 0}")
-            for record in all_records.data if all_records.data else []:
-                existing_numbers = record.get('numero', [])
-                if isinstance(existing_numbers, str):
-                    existing_numbers = [existing_numbers] if existing_numbers else []
-                elif not isinstance(existing_numbers, list):
-                    existing_numbers = []
-                if numero in existing_numbers and record['user_id'] != user_id:
-                    print(f"[AGENTE DEBUG] Número já cadastrado por outro usuário: {record['user_id']}")
+            # Verificar se o número já existe
+            existing = supabase.table('user_whatsapp').select('id, user_id').eq('numero_whatsapp', formatted_numero).eq('ativo', True).execute()
+            
+            if existing.data:
+                existing_user = existing.data[0]['user_id']
+                if existing_user != user_id:
                     flash('Este número já está cadastrado por outro usuário.', 'error')
                     return redirect(url_for('agente.index'))
-            # Buscar ou criar registro do usuário
-            user_record_full = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
-            print(f"[AGENTE DEBUG] Registro existente encontrado: {bool(user_record_full.data)}")
-            if user_record_full.data:
-                print(f"[AGENTE DEBUG] Atualizando registro existente...")
-                current_numbers = user_record_full.data[0].get('numero', [])
-                if isinstance(current_numbers, str):
-                    current_numbers = [current_numbers] if current_numbers else []
-                elif not isinstance(current_numbers, list):
-                    current_numbers = []
-                print(f"[AGENTE DEBUG] Números atuais: {current_numbers}")
-                if numero in current_numbers:
-                    print(f"[AGENTE DEBUG] Número já cadastrado para este usuário")
+                else:
                     flash('Este número já está cadastrado para você.', 'error')
                     return redirect(url_for('agente.index'))
-                current_numbers.append(numero)
-                print(f"[AGENTE DEBUG] Novos números: {current_numbers}")
-                update_data = {
-                    'numero': current_numbers,
-                    'usuario_ativo': True,
-                    'aceite_termos': True if aceite_terms else already_accepted_terms
-                }
-                print(f"[AGENTE DEBUG] Dados para atualização: {update_data}")
-                result = supabase.table('clientes_agentes').update(update_data).eq('user_id', user_id).execute()
-                print(f"[AGENTE DEBUG] Resultado da atualização: {result.data}")
-                flash('Número adicionado com sucesso!', 'success')
-            else:
-                print(f"[AGENTE DEBUG] Criando primeiro registro do usuário...")
-                user_companies = get_user_companies(user_id)
-                print(f"[AGENTE DEBUG] Empresas do usuário: {user_companies}")
-                data = {
-                    'user_id': user_id,
-                    'numero': [numero],
-                    'aceite_termos': True if aceite_terms else already_accepted_terms,
-                    'usuario_ativo': True,
-                    'empresa': user_companies
-                }
-                print(f"[AGENTE DEBUG] Dados para inserção: {data}")
-                result = supabase.table('clientes_agentes').insert(data).execute()
-                print(f"[AGENTE DEBUG] Resultado da inserção: {result.data}")
-                flash('Primeiro número cadastrado com sucesso!', 'success')
-            print(f"[AGENTE DEBUG] Processo concluído com sucesso. Redirecionando...")
+            
+            # Verificar se é o primeiro número (será principal)
+            user_numbers = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
+            is_first_number = not user_numbers.data
+            
+            # Inserir novo número
+            data = {
+                'user_id': user_id,
+                'numero_whatsapp': formatted_numero,
+                'nome_contato': nome_contato,
+                'tipo_numero': tipo_numero,
+                'principal': is_first_number,
+                'ativo': True
+            }
+            
+            result = supabase.table('user_whatsapp').insert(data).execute()
+            print(f"[AGENTE DEBUG] Número inserido: {result.data}")
+            
+            flash('Número WhatsApp adicionado com sucesso!', 'success')
             return redirect(url_for('agente.index'))
+            
         except Exception as e:
-            print(f"[AGENTE DEBUG] Erro ao processar adesão: {str(e)}")
+            print(f"[AGENTE DEBUG] Erro ao adicionar número: {str(e)}")
             import traceback
             traceback.print_exc()
-            flash('Erro ao processar sua adesão. Tente novamente.', 'error')
+            flash('Erro ao adicionar número. Tente novamente.', 'error')
             return redirect(url_for('agente.index'))
-    # Buscar registro do usuário com todos os números
+    
+    # GET - Buscar dados do usuário
     try:
-        user_record = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+        # Buscar números WhatsApp do usuário
+        numeros = get_user_whatsapp_numbers(user_id)
         
-        user_data = None
+        # Buscar empresas do usuário
+        empresas = get_user_companies(user_id)
         
-        if user_record.data:
-            record = user_record.data[0]
-            numbers = record.get('numero', [])
-            terms_accepted = record.get('aceite_termos', False)
-            usuario_ativo = record.get('usuario_ativo', False)
-            
-            # Processar números - garantir que seja lista
-            if isinstance(numbers, str):
-                numbers = [numbers] if numbers else []
-            elif not isinstance(numbers, list):
-                numbers = []
-            
-            # Filtrar números vazios
-            numbers = [num for num in numbers if num and num.strip()]
-            
-            # Processar empresas
-            companies = record.get('empresa', [])
-            if not isinstance(companies, list):
-                companies = []
-            
-            user_data = {
-                'id': record['id'],
-                'numero': numbers,
-                'aceite_termos': terms_accepted,
-                'usuario_ativo': usuario_ativo,
-                'empresa': companies,
-                'nome': record.get('nome'),
-                'created_at': record.get('created_at'),
-                'updated_at': record.get('updated_at')
+        context = {
+            'user_data': {
+                'numeros': numeros,
+                'empresas': empresas,
+                'tem_numeros': len(numeros) > 0
             }
-        
-        context = {
-            'user_data': user_data
         }
+        
+        print(f"[AGENTE DEBUG] Context preparado: {len(numeros)} números, {len(empresas)} empresas")
+        
     except Exception as e:
-        print(f"[DEBUG] Erro ao buscar dados do usuário: {str(e)}")
+        print(f"[AGENTE DEBUG] Erro ao buscar dados: {str(e)}")
         context = {
-            'user_data': None
+            'user_data': {
+                'numeros': [],
+                'empresas': [],
+                'tem_numeros': False
+            }
         }
     
     return render_template('agente.html', **context)
 
-# --- AJAX: Adicionar número ---
+# --- AJAX: Adicionar número - NOVA ESTRUTURA ---
 @bp.route('/ajax/add-numero', methods=['POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
 def ajax_add_numero():
-    """Adicionar novo número via AJAX"""
+    """Adicionar novo número via AJAX - NOVA ESTRUTURA"""
     try:
         data = request.get_json()
         numero = data.get('numero', '').strip()
+        nome_contato = data.get('nome_contato', '').strip()
+        tipo_numero = data.get('tipo_numero', 'pessoal')
         user_id = session['user']['id']
         
         if not numero:
             return jsonify({'success': False, 'message': 'Número é obrigatório'})
         
-        # Verificar se o número já existe em qualquer usuário
-        all_records = supabase.table('clientes_agentes').select('numero, user_id').eq('usuario_ativo', True).execute()
+        if not nome_contato:
+            return jsonify({'success': False, 'message': 'Nome de contato é obrigatório'})
         
-        for record in all_records.data if all_records.data else []:
-            existing_numbers = record.get('numero', [])
-            if isinstance(existing_numbers, str):
-                existing_numbers = [existing_numbers] if existing_numbers else []
-            elif not isinstance(existing_numbers, list):
-                existing_numbers = []
-            
-            if numero in existing_numbers and record['user_id'] != user_id:
+        # Validar e formatar número
+        is_valid, formatted_numero = validate_phone_number(numero)
+        if not is_valid:
+            return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
+        
+        # Verificar se o número já existe
+        existing = supabase.table('user_whatsapp').select('id, user_id').eq('numero_whatsapp', formatted_numero).eq('ativo', True).execute()
+        
+        if existing.data:
+            existing_user = existing.data[0]['user_id']
+            if existing_user != user_id:
                 return jsonify({'success': False, 'message': 'Este número já está cadastrado por outro usuário'})
-        
-        # Buscar registro do usuário
-        user_record = supabase.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
-        
-        if user_record.data:
-            # Usuário já tem registro, adicionar número à lista
-            current_numbers = user_record.data[0].get('numero', [])
-            if isinstance(current_numbers, str):
-                current_numbers = [current_numbers] if current_numbers else []
-            elif not isinstance(current_numbers, list):
-                current_numbers = []
-            
-            # Verificar se o número já existe para este usuário
-            if numero in current_numbers:
+            else:
                 return jsonify({'success': False, 'message': 'Este número já está cadastrado para você'})
-            
-            # Adicionar novo número
-            current_numbers.append(numero)
-            
-            # Atualizar registro existente
-            supabase.table('clientes_agentes').update({
-                'numero': current_numbers,
-                'usuario_ativo': True
-            }).eq('user_id', user_id).execute()
-            
-            # Enviar notificação para o N8N
-            notificar_cadastro_n8n(numero)
-            
-            return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
-        else:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado no sistema de agentes'})
+        
+        # Verificar se é o primeiro número (será principal)
+        user_numbers = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
+        is_first_number = not user_numbers.data
+        
+        # Inserir novo número
+        data_insert = {
+            'user_id': user_id,
+            'numero_whatsapp': formatted_numero,
+            'nome_contato': nome_contato,
+            'tipo_numero': tipo_numero,
+            'principal': is_first_number,
+            'ativo': True
+        }
+        
+        result = supabase.table('user_whatsapp').insert(data_insert).execute()
+        
+        # Enviar notificação para o N8N
+        try:
+            notificar_cadastro_n8n(formatted_numero)
+        except Exception as e:
+            print(f"[WARNING] Erro ao notificar N8N: {str(e)}")
+        
+        return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
             
     except Exception as e:
         print(f"[ERROR] Erro ao adicionar número: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
-# --- AJAX: Remover número ---
+# --- AJAX: Remover número - NOVA ESTRUTURA ---
 @bp.route('/ajax/remove-numero', methods=['POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
 def ajax_remove_numero():
-    """Remover número via AJAX"""
+    """Remover número via AJAX - NOVA ESTRUTURA"""
     try:
         data = request.get_json()
-        numero = data.get('numero', '').strip()
+        numero_id = data.get('numero_id')
         user_id = session['user']['id']
         
-        if not numero:
-            return jsonify({'success': False, 'message': 'Número é obrigatório'})
+        if not numero_id:
+            return jsonify({'success': False, 'message': 'ID do número é obrigatório'})
         
-        # Buscar registro do usuário
-        user_record = supabase.table('clientes_agentes').select('numero').eq('user_id', user_id).execute()
+        # Verificar se o número pertence ao usuário
+        numero_record = supabase.table('user_whatsapp').select('id, numero_whatsapp, principal').eq('id', numero_id).eq('user_id', user_id).eq('ativo', True).execute()
         
-        if user_record.data:
-            numbers = user_record.data[0].get('numero', [])
-            if isinstance(numbers, str):
-                numbers = [numbers] if numbers else []
-            elif not isinstance(numbers, list):
-                numbers = []
+        if not numero_record.data:
+            return jsonify({'success': False, 'message': 'Número não encontrado ou não pertence a você'})
+        
+        numero_info = numero_record.data[0]
+        numero_whatsapp = numero_info['numero_whatsapp']
+        is_principal = numero_info['principal']
+        
+        # Desativar o número
+        supabase.table('user_whatsapp').update({
+            'ativo': False
+        }).eq('id', numero_id).execute()
+        
+        # Se era o número principal, definir outro como principal
+        if is_principal:
+            outros_numeros = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).neq('id', numero_id).limit(1).execute()
             
-            if numero in numbers:
-                # Remover o número do array
-                numbers.remove(numero)
-                
-                # Se não sobrou nenhum número, desativar o usuário
-                if not numbers:
-                    supabase.table('clientes_agentes').update({
-                        'usuario_ativo': False,
-                        'aceite_termos': False,
-                        'numero': []
-                    }).eq('user_id', user_id).execute()
-                    return jsonify({'success': True, 'message': 'Último número removido. Você foi descadastrado do Agente Unique.'})
-                else:
-                    # Atualizar array sem o número removido
-                    supabase.table('clientes_agentes').update({
-                        'numero': numbers
-                    }).eq('user_id', user_id).execute()
-                    return jsonify({'success': True, 'message': f'Número {numero} removido com sucesso!'})
-            else:
-                return jsonify({'success': False, 'message': 'Número não encontrado'})
-        else:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+            if outros_numeros.data:
+                # Definir outro número como principal
+                supabase.table('user_whatsapp').update({
+                    'principal': True
+                }).eq('id', outros_numeros.data[0]['id']).execute()
+        
+        return jsonify({'success': True, 'message': f'Número {numero_whatsapp} removido com sucesso!'})
             
     except Exception as e:
         print(f"[ERROR] Erro ao remover número: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
-# --- AJAX: Cancelar adesão ---
+# --- AJAX: Cancelar adesão - NOVA ESTRUTURA ---
 @bp.route('/ajax/cancelar-adesao', methods=['POST'])
 @login_required
 @role_required(['cliente_unique', 'admin'])
 def ajax_cancelar_adesao():
-    """Cancelar adesão via AJAX"""
+    """Cancelar adesão via AJAX - NOVA ESTRUTURA"""
     try:
         user_id = session['user']['id']
         
-        # Remover todos os números do usuário
-        supabase.table('clientes_agentes').update({
-            'usuario_ativo': False,
-            'aceite_termos': False,
-            'numero': []
+        # Desativar todos os números do usuário
+        supabase.table('user_whatsapp').update({
+            'ativo': False
         }).eq('user_id', user_id).execute()
         
-        return jsonify({'success': True, 'message': 'Adesão cancelada com sucesso!'})
+        return jsonify({'success': True, 'message': 'Adesão cancelada com sucesso! Todos os números foram removidos.'})
         
     except Exception as e:
         print(f"[ERROR] Erro ao cancelar adesão: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
-# --- ÁREA ADMINISTRATIVA ---
+# --- AJAX: Definir número principal - NOVA ESTRUTURA ---
+@bp.route('/ajax/set-principal', methods=['POST'])
+@login_required
+@role_required(['cliente_unique', 'admin'])
+def ajax_set_principal():
+    """Definir número como principal via AJAX - NOVA ESTRUTURA"""
+    try:
+        data = request.get_json()
+        numero_id = data.get('numero_id')
+        user_id = session['user']['id']
+        
+        if not numero_id:
+            return jsonify({'success': False, 'message': 'ID do número é obrigatório'})
+        
+        # Verificar se o número pertence ao usuário
+        numero_record = supabase.table('user_whatsapp').select('id').eq('id', numero_id).eq('user_id', user_id).eq('ativo', True).execute()
+        
+        if not numero_record.data:
+            return jsonify({'success': False, 'message': 'Número não encontrado ou não pertence a você'})
+        
+        # Remover principal de todos os números do usuário
+        supabase.table('user_whatsapp').update({
+            'principal': False
+        }).eq('user_id', user_id).execute()
+        
+        # Definir este número como principal
+        supabase.table('user_whatsapp').update({
+            'principal': True
+        }).eq('id', numero_id).execute()
+        
+        return jsonify({'success': True, 'message': 'Número principal definido com sucesso!'})
+            
+    except Exception as e:
+        print(f"[ERROR] Erro ao definir principal: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+# --- AJAX: Editar número - NOVA ESTRUTURA ---
+@bp.route('/ajax/edit-numero', methods=['POST'])
+@login_required
+@role_required(['cliente_unique', 'admin'])
+def ajax_edit_numero():
+    """Editar informações do número via AJAX - NOVA ESTRUTURA"""
+    try:
+        data = request.get_json()
+        numero_id = data.get('numero_id')
+        nome_contato = data.get('nome_contato', '').strip()
+        tipo_numero = data.get('tipo_numero', 'pessoal')
+        user_id = session['user']['id']
+        
+        if not numero_id:
+            return jsonify({'success': False, 'message': 'ID do número é obrigatório'})
+        
+        if not nome_contato:
+            return jsonify({'success': False, 'message': 'Nome de contato é obrigatório'})
+        
+        # Verificar se o número pertence ao usuário
+        numero_record = supabase.table('user_whatsapp').select('id').eq('id', numero_id).eq('user_id', user_id).eq('ativo', True).execute()
+        
+        if not numero_record.data:
+            return jsonify({'success': False, 'message': 'Número não encontrado ou não pertence a você'})
+        
+        # Atualizar informações
+        supabase.table('user_whatsapp').update({
+            'nome_contato': nome_contato,
+            'tipo_numero': tipo_numero
+        }).eq('id', numero_id).execute()
+        
+        return jsonify({'success': True, 'message': 'Número atualizado com sucesso!'})
+            
+    except Exception as e:
+        print(f"[ERROR] Erro ao editar número: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+# --- ÁREA ADMINISTRATIVA - REDIRECIONAMENTO ---
 @bp.route('/admin')
 @login_required
 @role_required(['admin'])
 def admin():
-    """Área administrativa para gerenciar todos os agentes"""
-    try:
-        # Buscar todos os registros de agentes
-        agentes_data = supabase_admin.table('clientes_agentes').select('*').execute()
-        
-        # Buscar informações dos usuários
-        users_data = supabase_admin.table('users').select('id, email, nome').execute()
-        
-        # Criar um mapeamento de usuários
-        users_map = {}
-        if users_data.data:
-            for user in users_data.data:
-                users_map[user['id']] = user
-        
-        agentes = []
-        if agentes_data.data:
-            for record in agentes_data.data:
-                # Processar números
-                numbers = record.get('numero', [])
-                if isinstance(numbers, str):
-                    numbers = [numbers] if numbers else []
-                elif not isinstance(numbers, list):
-                    numbers = []
-                
-                # Filtrar números vazios
-                numbers = [num for num in numbers if num and num.strip()]
-                
-                # Processar empresas
-                companies = record.get('empresa', [])
-                if not isinstance(companies, list):
-                    companies = []
-                
-                # Buscar informações do usuário
-                user_info = users_map.get(record.get('user_id'), {})
-                
-                agentes.append({
-                    'id': record.get('id'),
-                    'user_id': record.get('user_id'),
-                    'nome': record.get('nome') or user_info.get('nome'),
-                    'email': user_info.get('email'),
-                    'numeros': numbers,
-                    'empresas': companies,
-                    'aceite_termos': record.get('aceite_termos', False),
-                    'usuario_ativo': record.get('usuario_ativo', False),
-                    'created_at': record.get('created_at'),
-                    'updated_at': record.get('updated_at')
-                })
-        
-        return render_template('admin.html', agentes=agentes)
-        
-    except Exception as e:
-        print(f"[ERROR] Erro ao buscar agentes: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        flash('Erro ao carregar dados dos agentes.', 'error')
-        return render_template('admin.html', agentes=[])
+    """Redirecionar para a página principal (que já gerencia admins)"""
+    return redirect(url_for('agente.index'))
 
 @bp.route('/admin/data', methods=['GET'])
 def admin_data():
-    """API para buscar dados do painel administrativo com bypass de autenticação"""
+    """API para buscar dados do painel administrativo - NOVA ESTRUTURA"""
     try:
         # Verificar se é uma requisição com bypass de API
         api_key = request.headers.get('X-API-Key')
@@ -512,88 +676,119 @@ def admin_data():
             user_id = session.get('user_id')
             user_data = supabase_admin.table('users').select('*').eq('id', user_id).execute()
             
-            if not user_data.data or user_data.data[0].get('user_type') != 'admin':
+            if not user_data.data or user_data.data[0].get('role') != 'admin':
                 print("[DEBUG] Usuário não é admin")
                 return jsonify({'success': False, 'message': 'Acesso negado'}), 403
         
         print("[DEBUG] Prosseguindo com busca de dados...")
         
-        # Buscar dados dos agentes
-        agentes_response = supabase_admin.table('clientes_agentes').select('*').execute()
+        # Buscar números WhatsApp
+        whatsapp_response = supabase_admin.table('user_whatsapp').select('''
+            id,
+            user_id,
+            numero_whatsapp,
+            nome_contato,
+            tipo_numero,
+            ativo,
+            principal,
+            created_at
+        ''').execute()
         
         # Buscar dados dos usuários
-        users_response = supabase_admin.table('users').select('*').execute()
+        users_response = supabase_admin.table('users').select('id, email, name, role').execute()
         
-        # Processar dados dos usuários
-        users = []
-        numbers = []
-        companies = []
+        # Buscar empresas vinculadas
+        empresas_response = supabase_admin.table('user_empresas').select('''
+            user_id,
+            cad_clientes_sistema!inner(
+                nome_cliente
+            )
+        ''').eq('ativo', True).execute()
         
+        # Processar dados
         users_map = {}
         if users_response.data:
             for user in users_response.data:
-                users_map[user['id']] = user
+                users_map[user['id']] = {
+                    'email': user.get('email', 'N/A'),
+                    'nome': user.get('name', 'Sem nome'),
+                    'role': user.get('role', 'N/A')
+                }
         
-        if agentes_response.data:
-            for agente in agentes_response.data:
-                user_id = agente.get('user_id')
-                user_info = users_map.get(user_id, {})
+        # Mapear empresas por usuário
+        empresas_map = {}
+        if empresas_response.data:
+            for vinculo in empresas_response.data:
+                user_id = vinculo['user_id']
+                empresa_nome = vinculo['cad_clientes_sistema']['nome_cliente']
+                if user_id not in empresas_map:
+                    empresas_map[user_id] = []
+                empresas_map[user_id].append(empresa_nome)
+        
+        # Organizar usuários com números
+        usuarios = {}
+        numbers = []
+        companies = []
+        
+        if whatsapp_response.data:
+            for whatsapp in whatsapp_response.data:
+                user_id = whatsapp['user_id']
                 
-                # Processar números
-                agent_numbers = agente.get('numero', [])
-                if isinstance(agent_numbers, str):
-                    agent_numbers = [agent_numbers] if agent_numbers else []
-                elif not isinstance(agent_numbers, list):
-                    agent_numbers = []
+                if user_id not in usuarios:
+                    user_info = users_map.get(user_id, {})
+                    usuarios[user_id] = {
+                        'user_id': user_id,
+                        'email': user_info.get('email', 'N/A'),
+                        'nome': user_info.get('nome', 'Sem nome'),
+                        'role': user_info.get('role', 'N/A'),
+                        'numeros': [],
+                        'empresas': empresas_map.get(user_id, []),
+                        'usuario_ativo': False
+                    }
                 
-                # Filtrar números válidos
-                valid_numbers = [num for num in agent_numbers if num and num.strip()]
+                # Adicionar número
+                numero_data = {
+                    'id': whatsapp['id'],
+                    'numero': whatsapp['numero_whatsapp'],
+                    'nome': whatsapp['nome_contato'],
+                    'tipo': whatsapp['tipo_numero'],
+                    'principal': whatsapp['principal'],
+                    'ativo': whatsapp['ativo']
+                }
+                usuarios[user_id]['numeros'].append(numero_data)
                 
-                # Processar empresas
-                agent_companies = agente.get('empresa', [])
-                if not isinstance(agent_companies, list):
-                    agent_companies = []
+                if whatsapp['ativo']:
+                    usuarios[user_id]['usuario_ativo'] = True
                 
-                # Adicionar usuário
-                users.append({
+                # Para compatibilidade com front-end
+                numbers.append({
                     'user_id': user_id,
-                    'nome': agente.get('nome') or user_info.get('nome', 'N/A'),
-                    'email': user_info.get('email', 'N/A'),
-                    'usuario_ativo': agente.get('usuario_ativo', False),
-                    'aceite_termos': agente.get('aceite_termos', False),
-                    'user_type': user_info.get('user_type', 'user'),
-                    'created_at': agente.get('created_at'),
-                    'data_aceite': agente.get('updated_at'),
-                    'numeros': valid_numbers
+                    'phone': whatsapp['numero_whatsapp']
                 })
-                
-                # Adicionar números
-                for numero in valid_numbers:
-                    numbers.append({
-                        'user_id': user_id,
-                        'phone': numero
-                    })
-                
-                # Adicionar empresas
-                for empresa in agent_companies:
-                    companies.append({
-                        'user_id': user_id,
-                        'nome': empresa
-                    })
+        
+        # Criar lista de empresas para compatibilidade
+        for user_id, empresa_list in empresas_map.items():
+            for empresa in empresa_list:
+                companies.append({
+                    'user_id': user_id,
+                    'nome': empresa
+                })
+        
+        users_list = list(usuarios.values())
         
         # Calcular estatísticas
         stats = {
-            'total_users': len(users),
-            'active_users': len([u for u in users if u.get('usuario_ativo', False)]),
+            'total_users': len(users_map),
+            'active_users': len([u for u in users_list if u.get('usuario_ativo', False)]),
             'total_numbers': len(numbers),
-            'total_companies': len(companies)
+            'total_companies': len(set([c['nome'] for c in companies]))
         }
         
-        print(f"[DEBUG] Retornando dados: {len(users)} usuários, {len(numbers)} números")
+        print(f"[DEBUG] Retornando dados: {len(users_list)} usuários, {len(numbers)} números")
         
         return jsonify({
             'success': True,
-            'users': users,
+            'users': users_list,
             'numbers': numbers,
             'companies': companies,
             'stats': stats
@@ -613,7 +808,7 @@ def admin_data():
 @login_required
 @role_required(['admin'])
 def admin_toggle_user():
-    """Admin: Ativar/desativar usuário"""
+    """Admin: Ativar/desativar usuário - NOVA ESTRUTURA"""
     try:
         data = request.get_json()
         user_id = data.get('user_id')
@@ -622,8 +817,9 @@ def admin_toggle_user():
         if not user_id:
             return jsonify({'success': False, 'message': 'ID do usuário é obrigatório'})
         
-        supabase_admin.table('clientes_agentes').update({
-            'usuario_ativo': ativo
+        # Ativar/desativar todos os números do usuário
+        supabase_admin.table('user_whatsapp').update({
+            'ativo': ativo
         }).eq('user_id', user_id).execute()
         
         status = 'ativado' if ativo else 'desativado'
@@ -631,101 +827,107 @@ def admin_toggle_user():
         
     except Exception as e:
         print(f"[ERROR] Erro ao alterar status do usuário: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
 @bp.route('/admin/add-numero', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def admin_add_numero():
-    """Admin: Adicionar número para usuário"""
+    """Admin: Adicionar número para usuário - NOVA ESTRUTURA"""
     try:
         data = request.get_json()
         user_id = data.get('user_id')
         numero = data.get('numero', '').strip()
+        nome_contato = data.get('nome_contato', '').strip()
+        tipo_numero = data.get('tipo_numero', 'pessoal')
         
         if not user_id or not numero:
             return jsonify({'success': False, 'message': 'ID do usuário e número são obrigatórios'})
         
-        # Verificar se o número já existe em qualquer usuário
-        all_records = supabase_admin.table('clientes_agentes').select('numero, user_id').eq('usuario_ativo', True).execute()
+        if not nome_contato:
+            nome_contato = f"Número {numero[-4:]}"  # Nome padrão baseado nos últimos 4 dígitos
         
-        for record in all_records.data if all_records.data else []:
-            existing_numbers = record.get('numero', [])
-            if isinstance(existing_numbers, str):
-                existing_numbers = [existing_numbers] if existing_numbers else []
-            elif not isinstance(existing_numbers, list):
-                existing_numbers = []
-            
-            if numero in existing_numbers:
-                return jsonify({'success': False, 'message': 'Este número já está cadastrado'})
+        # Validar e formatar número
+        is_valid, formatted_numero = validate_phone_number(numero)
+        if not is_valid:
+            return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
-        # Buscar registro do usuário
-        user_record = supabase_admin.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
+        # Verificar se o número já existe
+        existing = supabase_admin.table('user_whatsapp').select('id, user_id').eq('numero_whatsapp', formatted_numero).eq('ativo', True).execute()
         
-        if user_record.data:
-            # Usuário já tem registro, adicionar número à lista
-            current_numbers = user_record.data[0].get('numero', [])
-            if isinstance(current_numbers, str):
-                current_numbers = [current_numbers] if current_numbers else []
-            elif not isinstance(current_numbers, list):
-                current_numbers = []
-            
-            current_numbers.append(numero)
-            
-            # Atualizar registro existente
-            supabase_admin.table('clientes_agentes').update({
-                'numero': current_numbers,
-                'usuario_ativo': True
-            }).eq('user_id', user_id).execute()
-            
-            return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
-        else:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+        if existing.data:
+            return jsonify({'success': False, 'message': 'Este número já está cadastrado'})
+        
+        # Verificar se é o primeiro número (será principal)
+        user_numbers = supabase_admin.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
+        is_first_number = not user_numbers.data
+        
+        # Inserir novo número
+        data_insert = {
+            'user_id': user_id,
+            'numero_whatsapp': formatted_numero,
+            'nome_contato': nome_contato,
+            'tipo_numero': tipo_numero,
+            'principal': is_first_number,
+            'ativo': True
+        }
+        
+        result = supabase_admin.table('user_whatsapp').insert(data_insert).execute()
+        
+        return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
             
     except Exception as e:
         print(f"[ERROR] Erro ao adicionar número (admin): {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
 @bp.route('/admin/remove-numero', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def admin_remove_numero():
-    """Admin: Remover número de usuário"""
+    """Admin: Remover número de usuário - NOVA ESTRUTURA"""
     try:
         data = request.get_json()
-        user_id = data.get('user_id')
-        numero = data.get('numero', '').strip()
+        numero_id = data.get('numero_id')
         
-        if not user_id or not numero:
-            return jsonify({'success': False, 'message': 'ID do usuário e número são obrigatórios'})
+        if not numero_id:
+            return jsonify({'success': False, 'message': 'ID do número é obrigatório'})
         
-        # Buscar registro do usuário
-        user_record = supabase_admin.table('clientes_agentes').select('numero').eq('user_id', user_id).execute()
+        # Verificar se o número existe
+        numero_record = supabase_admin.table('user_whatsapp').select('id, numero_whatsapp, user_id, principal').eq('id', numero_id).eq('ativo', True).execute()
         
-        if user_record.data:
-            numbers = user_record.data[0].get('numero', [])
-            if isinstance(numbers, str):
-                numbers = [numbers] if numbers else []
-            elif not isinstance(numbers, list):
-                numbers = []
+        if not numero_record.data:
+            return jsonify({'success': False, 'message': 'Número não encontrado'})
+        
+        numero_info = numero_record.data[0]
+        numero_whatsapp = numero_info['numero_whatsapp']
+        user_id = numero_info['user_id']
+        is_principal = numero_info['principal']
+        
+        # Desativar o número
+        supabase_admin.table('user_whatsapp').update({
+            'ativo': False
+        }).eq('id', numero_id).execute()
+        
+        # Se era o número principal, definir outro como principal
+        if is_principal:
+            outros_numeros = supabase_admin.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).neq('id', numero_id).limit(1).execute()
             
-            if numero in numbers:
-                # Remover o número do array
-                numbers.remove(numero)
-                
-                # Atualizar array
-                supabase_admin.table('clientes_agentes').update({
-                    'numero': numbers
-                }).eq('user_id', user_id).execute()
-                
-                return jsonify({'success': True, 'message': f'Número {numero} removido com sucesso!'})
-            else:
-                return jsonify({'success': False, 'message': 'Número não encontrado'})
-        else:
-            return jsonify({'success': False, 'message': 'Usuário não encontrado'})
+            if outros_numeros.data:
+                # Definir outro número como principal
+                supabase_admin.table('user_whatsapp').update({
+                    'principal': True
+                }).eq('id', outros_numeros.data[0]['id']).execute()
+        
+        return jsonify({'success': True, 'message': f'Número {numero_whatsapp} removido com sucesso!'})
             
     except Exception as e:
         print(f"[ERROR] Erro ao remover número (admin): {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
 
 # --- NOVOS ENDPOINTS PARA ADMINISTRADORES ---
@@ -866,7 +1068,7 @@ def api_admin_users_summary():
 @login_required
 @role_required(['admin'])
 def admin_bulk_actions():
-    """Admin: Ações em massa"""
+    """Admin: Ações em massa - NOVA ESTRUTURA"""
     try:
         data = request.get_json()
         action = data.get('action')
@@ -876,19 +1078,19 @@ def admin_bulk_actions():
             return jsonify({'success': False, 'message': 'Ação e IDs de usuários são obrigatórios'})
         
         if action == 'activate':
-            # Ativar usuários
+            # Ativar todos os números dos usuários
             for user_id in user_ids:
-                supabase_admin.table('clientes_agentes').update({
-                    'usuario_ativo': True
+                supabase_admin.table('user_whatsapp').update({
+                    'ativo': True
                 }).eq('user_id', user_id).execute()
             
             return jsonify({'success': True, 'message': f'{len(user_ids)} usuários ativados com sucesso!'})
             
         elif action == 'deactivate':
-            # Desativar usuários
+            # Desativar todos os números dos usuários
             for user_id in user_ids:
-                supabase_admin.table('clientes_agentes').update({
-                    'usuario_ativo': False
+                supabase_admin.table('user_whatsapp').update({
+                    'ativo': False
                 }).eq('user_id', user_id).execute()
             
             return jsonify({'success': True, 'message': f'{len(user_ids)} usuários desativados com sucesso!'})
@@ -897,9 +1099,22 @@ def admin_bulk_actions():
             # Exportar dados (retornar dados para download)
             export_data = []
             for user_id in user_ids:
-                user_record = supabase_admin.table('clientes_agentes').select('*').eq('user_id', user_id).execute()
-                if user_record.data:
-                    export_data.append(user_record.data[0])
+                # Buscar números do usuário
+                numeros = get_user_whatsapp_numbers(user_id)
+                # Buscar empresas do usuário
+                empresas = get_user_companies(user_id)
+                # Buscar info do usuário
+                user_info = supabase_admin.table('users').select('email, name, role').eq('id', user_id).execute()
+                
+                user_data = {
+                    'user_id': user_id,
+                    'email': user_info.data[0].get('email', 'N/A') if user_info.data else 'N/A',
+                    'nome': user_info.data[0].get('name', 'N/A') if user_info.data else 'N/A',
+                    'role': user_info.data[0].get('role', 'N/A') if user_info.data else 'N/A',
+                    'numeros': numeros,
+                    'empresas': empresas
+                }
+                export_data.append(user_data)
             
             return jsonify({'success': True, 'data': export_data, 'message': 'Dados exportados com sucesso!'})
             
@@ -908,4 +1123,153 @@ def admin_bulk_actions():
             
     except Exception as e:
         print(f"[ERROR] Erro em ações em massa: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': 'Erro interno do servidor'})
+
+
+
+@bp.route('/debug-direct')
+@login_required 
+def debug_direct():
+    """Teste direto da função get_user_companies"""
+    try:
+        user_id = session.get('user', {}).get('id')
+        print(f"[DEBUG DIRECT] === INICIANDO TESTE DIRETO ===")
+        print(f"[DEBUG DIRECT] User ID: {user_id}")
+        
+        # Chamar diretamente a função get_user_companies
+        print(f"[DEBUG DIRECT] Chamando get_user_companies({user_id})...")
+        empresas = get_user_companies(user_id)
+        print(f"[DEBUG DIRECT] Resultado: {empresas}")
+        print(f"[DEBUG DIRECT] === FIM TESTE DIRETO ===")
+        
+        return jsonify({
+            "user_id": user_id,
+            "empresas": empresas,
+            "total": len(empresas)
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG DIRECT ERROR] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)})
+
+
+@bp.route('/debug-join')
+@login_required 
+def debug_join():
+    """Debug detalhado do JOIN"""
+    try:
+        user_id = session.get('user', {}).get('id')
+        print(f"[DEBUG JOIN] User ID: {user_id}")
+        
+        # 1. Verificar user_empresas sem JOIN
+        print("[DEBUG JOIN] 1. Verificando user_empresas...")
+        user_empresas = supabase.table('user_empresas').select('*').eq('user_id', user_id).execute()
+        print(f"[DEBUG JOIN] user_empresas encontrados: {len(user_empresas.data)}")
+        
+        result = {
+            "user_id": user_id,
+            "step1_user_empresas": user_empresas.data,
+            "step2_join_results": [],
+            "step3_manual_lookup": []
+        }
+        
+        if not user_empresas.data:
+            return jsonify(result)
+        
+        # 2. Verificar JOIN com diferentes sintaxes
+        print("[DEBUG JOIN] 2. Testando JOIN com diferentes sintaxes...")
+        
+        # Sintaxe atual
+        try:
+            join1 = supabase.table('user_empresas').select(
+                '*, cad_clientes_sistema!inner(id, nome_cliente, cnpjs)'
+            ).eq('user_id', user_id).eq('ativo', True).execute()
+            result["step2_join_results"].append({
+                "syntax": "!inner",
+                "success": True,
+                "data": join1.data
+            })
+        except Exception as e:
+            result["step2_join_results"].append({
+                "syntax": "!inner", 
+                "success": False,
+                "error": str(e)
+            })
+        
+        # Sintaxe alternativa 1
+        try:
+            join2 = supabase.table('user_empresas').select(
+                '*, cad_clientes_sistema(id, nome_cliente, cnpjs)'
+            ).eq('user_id', user_id).eq('ativo', True).execute()
+            result["step2_join_results"].append({
+                "syntax": "sem !inner",
+                "success": True,
+                "data": join2.data
+            })
+        except Exception as e:
+            result["step2_join_results"].append({
+                "syntax": "sem !inner",
+                "success": False,
+                "error": str(e)
+            })
+        
+        # 3. Lookup manual dos cliente_sistema_ids
+        print("[DEBUG JOIN] 3. Fazendo lookup manual...")
+        for vinculo in user_empresas.data:
+            cliente_sistema_id = vinculo.get('cliente_sistema_id')
+            if cliente_sistema_id:
+                try:
+                    cliente = supabase.table('cad_clientes_sistema').select('*').eq('id', cliente_sistema_id).execute()
+                    result["step3_manual_lookup"].append({
+                        "cliente_sistema_id": cliente_sistema_id,
+                        "found": len(cliente.data) > 0,
+                        "data": cliente.data[0] if cliente.data else None
+                    })
+                except Exception as e:
+                    result["step3_manual_lookup"].append({
+                        "cliente_sistema_id": cliente_sistema_id,
+                        "found": False,
+                        "error": str(e)
+                    })
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"[DEBUG JOIN ERROR] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)})
+
+
+@bp.route('/debug-empresas')
+@login_required
+def debug_empresas():
+    """Endpoint para debugar empresas"""
+    try:
+        user_id = session.get('user', {}).get('id')
+        print(f"[DEBUG] User ID da sessão: {user_id}")
+        
+        if not user_id:
+            return jsonify({"error": "User ID não encontrado na sessão", "session": dict(session)})
+        
+        # Buscar empresas
+        empresas = get_user_companies(user_id)
+        print(f"[DEBUG] Empresas retornadas: {empresas}")
+        
+        return jsonify({
+            "user_id": user_id,
+            "empresas": empresas,
+            "total_empresas": len(empresas)
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG ERROR] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)})
+
+

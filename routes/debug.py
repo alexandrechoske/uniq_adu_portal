@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, jsonify
+from flask import Blueprint, render_template, session, jsonify, request
 import flask
 import datetime
 import sys
@@ -152,4 +152,51 @@ def recent_logs():
         return jsonify({
             'status': 'error',
             'message': f'Erro ao buscar logs: {str(e)}'
+        }), 500
+
+@bp.route('/query-supabase', methods=['POST'])
+def query_supabase():
+    """
+    Endpoint para executar consultas diretas no Supabase para debug
+    """
+    try:
+        # Verificar bypass de API
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        if not (api_bypass_key and request.headers.get('X-API-Key') == api_bypass_key):
+            return jsonify({'error': 'Acesso negado'}), 403
+        
+        data = request.get_json()
+        table = data.get('table')
+        select_fields = data.get('select', '*')
+        filters = data.get('filters', {})
+        limit = data.get('limit', 100)
+        
+        if not table:
+            return jsonify({'error': 'Tabela não fornecida'}), 400
+        
+        print(f"[DEBUG] Consultando tabela: {table}")
+        
+        # Construir query usando métodos do supabase
+        query = supabase_admin.table(table).select(select_fields)
+        
+        # Aplicar filtros
+        for field, value in filters.items():
+            query = query.eq(field, value)
+        
+        # Aplicar limit
+        query = query.limit(limit)
+        
+        result = query.execute()
+        
+        return jsonify({
+            'status': 'success',
+            'data': result.data,
+            'count': len(result.data) if result.data else 0
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro na query: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
         }), 500

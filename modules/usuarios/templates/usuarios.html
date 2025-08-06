@@ -295,20 +295,17 @@
                         <tr>
                             <th>Usuário</th>
                             <th>Email</th>
-                            <th>Empresas Associadas</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in users %}
                             {% if user.role == 'cliente_unique' %}
-                                {% set empresas_text = user.agent_info.empresas | map(attribute='cnpj') | join(' ') + ' ' + user.agent_info.empresas | map(attribute='razao_social') | join(' ') %}
                                 <tr class="user-row" 
                                     data-user-id="{{ user.id }}"
                                     data-name="{{ user.name | lower }}" 
                                     data-email="{{ user.email | lower }}" 
-                                    data-role="{{ user.role }}"
-                                    data-empresas="{{ empresas_text | lower }}">
+                                    data-role="{{ user.role }}">
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                                             <div style="width: 32px; height: 32px; background: var(--color-success-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #059669;">
@@ -321,27 +318,6 @@
                                         </div>
                                     </td>
                                     <td>{{ user.email }}</td>
-                                    <td>
-                                        {% if user.agent_info and user.agent_info.empresas %}
-                                            <div class="empresas-list">
-                                                {% for empresa in user.agent_info.empresas[:3] %}
-                                                    <div class="empresa-item">
-                                                        <div class="empresa-cnpj">{{ empresa.cnpj }}</div>
-                                                        <div class="empresa-razao">{{ empresa.razao_social }}</div>
-                                                    </div>
-                                                {% endfor %}
-                                                {% if user.agent_info.empresas | length > 3 %}
-                                                    <div class="empresa-item">
-                                                        <div class="empresa-cnpj">+ {{ user.agent_info.empresas | length - 3 }} empresas</div>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        {% else %}
-                                            <span style="color: var(--color-text-muted); font-style: italic;">
-                                                Nenhuma empresa associada
-                                            </span>
-                                        {% endif %}
-                                    </td>
                                     <td>
                                         <div style="display: flex; gap: 0.5rem;">
                                             <button onclick="openEditModal('{{ user.id }}')" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
@@ -378,60 +354,66 @@
         
         <form id="editUserForm" method="POST">
             <div class="modal-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="edit-name">Nome *</label>
-                        <input type="text" id="edit-name" name="name" class="form-input" required>
-                    </div>
+                <!-- Lado Esquerdo: Formulário de Edição -->
+                <div class="edit-form-section">
+                    <h4 style="margin: 0 0 1rem 0; color: var(--color-text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="mdi mdi-account-edit"></i>
+                        Dados do Usuário
+                    </h4>
                     
-                    <div class="form-group">
-                        <label class="form-label" for="edit-email">Email *</label>
-                        <input type="email" id="edit-email" name="email" class="form-input" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="edit-role">Role *</label>
-                        <select id="edit-role" name="role" class="form-input" required>
-                            <option value="">Selecione uma role</option>
-                            <option value="admin">Administrador</option>
-                            <option value="interno_unique">Equipe Interna</option>
-                            <option value="cliente_unique">Cliente</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="edit-is_active">Status</label>
-                        <select id="edit-is_active" name="is_active" class="form-input">
-                            <option value="true">Ativo</option>
-                            <option value="false">Inativo</option>
-                        </select>
+                    <div class="form-grid" style="grid-template-columns: 1fr; gap: var(--spacing-md);">
+                        <div class="form-group">
+                            <label class="form-label" for="edit-name">Nome Completo *</label>
+                            <input type="text" id="edit-name" name="name" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="edit-email">Email *</label>
+                            <input type="email" id="edit-email" name="email" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="edit-role">Tipo de Usuário *</label>
+                            <select id="edit-role" name="role" class="form-input" required>
+                                <option value="">Selecione uma role</option>
+                                <option value="admin">Administrador</option>
+                                <option value="interno_unique">Equipe Interna</option>
+                                <option value="cliente_unique">Cliente</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="edit-is_active">Status</label>
+                            <select id="edit-is_active" name="is_active" class="form-input">
+                                <option value="true">Ativo</option>
+                                <option value="false">Inativo</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Seção de empresas para clientes e usuários internos -->
+                <!-- Lado Direito: Seção de Empresas -->
                 <div id="edit-empresas-section" class="empresas-section" style="display: none;">
-                    <div class="section-header" style="margin-bottom: 1rem;">
-                        <h4 style="margin: 0; color: var(--color-text-primary);">
-                            <i class="mdi mdi-domain"></i>
-                            Empresas Associadas
-                        </h4>
-                    </div>
+                    <h4 style="margin: 0 0 1rem 0; color: var(--color-text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="mdi mdi-domain"></i>
+                        Empresas Associadas
+                    </h4>
                     
                     <div class="empresas-controls" style="margin-bottom: 1rem;">
                         <div class="form-group" style="margin-bottom: 0.5rem;">
-                            <label class="form-label" for="edit-cnpj-search">Buscar por CNPJ ou Nome da Empresa</label>
-                            <input type="text" id="edit-cnpj-search" class="form-input" placeholder="Digite o CNPJ (com ou sem formatação) ou nome da empresa..." autocomplete="off">
-                            <small style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
-                                Exemplos: 75.339.051/0001-41, 75339051000141 ou UNIQUE ADUANEIRA
+                            <label class="form-label" for="edit-cnpj-search">Buscar Empresa</label>
+                            <input type="text" id="edit-cnpj-search" class="form-input" placeholder="CNPJ ou nome da empresa..." autocomplete="off">
+                            <small style="color: var(--color-text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">
+                                Ex: 75.339.051/0001-41 ou UNIQUE ADUANEIRA
                             </small>
                         </div>
-                        <button type="button" id="edit-btn-buscar-empresa" class="btn btn-outline">
+                        <button type="button" id="edit-btn-buscar-empresa" class="btn btn-outline" style="width: 100%;">
                             <i class="mdi mdi-magnify"></i>
                             Buscar Empresa
                         </button>
                     </div>
                     
-                    <div id="edit-empresas-list" class="empresas-list">
+                    <div id="edit-empresas-list" class="empresas-list" style="max-height: 300px; overflow-y: auto;">
                         <!-- Lista de empresas será carregada aqui -->
                     </div>
                 </div>

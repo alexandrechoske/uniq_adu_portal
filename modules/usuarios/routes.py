@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+import re
+import time
 import uuid
 import datetime
 import json
@@ -117,57 +119,45 @@ def carregar_usuarios():
         
         print(f"[DEBUG] {len(users)} usuários encontrados")
         
-        # 2. Buscar todas as associações de empresas de uma vez
+        # 2. Buscar todas as associações de empresas na nova estrutura
         def _buscar_todas_empresas():
-            return supabase_admin.table('clientes_agentes').select('user_id, empresa').execute()
+            return supabase_admin.table('user_empresas').select('''
+                user_id,
+                cliente_sistema_id,
+                ativo,
+                cad_clientes_sistema(
+                    id,
+                    nome_cliente,
+                    cnpjs,
+                    ativo
+                )
+            ''').eq('ativo', True).execute()
         
         empresas_response = retry_supabase_operation(_buscar_todas_empresas)
         
-        # Criar mapa de usuário -> empresas
+        # Criar mapa de usuário -> empresas (nova estrutura)
         user_empresas_map = {}
-        all_cnpjs = set()
         
         if empresas_response.data:
-            for item in empresas_response.data:
-                user_id = item.get('user_id')
-                empresas = item.get('empresa', [])
+            print(f"[DEBUG] {len(empresas_response.data)} vínculos de empresas encontrados")
+            for vinculo in empresas_response.data:
+                user_id = vinculo.get('user_id')
+                empresa_info = vinculo.get('cad_clientes_sistema')
                 
-                # Normalizar formato da lista de empresas
-                if isinstance(empresas, str):
-                    try:
-                        empresas = json.loads(empresas)
-                    except json.JSONDecodeError:
-                        empresas = [empresas] if empresas else []
-                elif not isinstance(empresas, list):
-                    empresas = []
+                if not user_id or not empresa_info:
+                    continue
                 
-                user_empresas_map[user_id] = empresas
-                all_cnpjs.update(empresas)
+                if user_id not in user_empresas_map:
+                    user_empresas_map[user_id] = []
+                
+                user_empresas_map[user_id].append({
+                    'id': empresa_info.get('id'),
+                    'nome_cliente': empresa_info.get('nome_cliente'),
+                    'cnpjs': empresa_info.get('cnpjs', []),
+                    'vinculo_ativo': vinculo.get('ativo')
+                })
         
-        # 3. Buscar informações de todas as empresas em lotes
-        empresas_info_map = {}
-        if all_cnpjs:
-            cnpjs_list = list(all_cnpjs)
-            print(f"[DEBUG] Buscando informações de {len(cnpjs_list)} empresas em lotes...")
-            
-            # Buscar em lotes de 50 para evitar URLs muito grandes
-            batch_size = 50
-            for i in range(0, len(cnpjs_list), batch_size):
-                batch = cnpjs_list[i:i + batch_size]
-                try:
-                    def _buscar_lote_empresas():
-                        return supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').in_('cnpj', batch).execute()
-                    
-                    batch_response = retry_supabase_operation(_buscar_lote_empresas)
-                    
-                    if batch_response.data:
-                        for empresa in batch_response.data:
-                            empresas_info_map[empresa['cnpj']] = empresa
-                            
-                except Exception as e:
-                    print(f"[DEBUG] Erro ao buscar lote de empresas: {str(e)}")
-        
-        # 4. Montar dados finais dos usuários
+        # 3. Montar dados finais dos usuários com nova estrutura
         for user in users:
             if not isinstance(user, dict):
                 continue
@@ -175,13 +165,17 @@ def carregar_usuarios():
             # Incluir tanto cliente_unique quanto interno_unique
             if user.get('role') in ['cliente_unique', 'interno_unique']:
                 user_id = user.get('id')
-                empresas_cnpjs = user_empresas_map.get(user_id, [])
+                empresas_info = user_empresas_map.get(user_id, [])
                 
+                # Adaptar formato para compatibilidade com o frontend
                 empresas_detalhadas = []
-                for cnpj in empresas_cnpjs:
-                    if isinstance(cnpj, str) and cnpj:
-                        empresa_info = empresas_info_map.get(cnpj, {'cnpj': cnpj, 'razao_social': None})
-                        empresas_detalhadas.append(empresa_info)
+                for empresa in empresas_info:
+                    # Mostrar apenas o nome da empresa na listagem (conforme solicitado)
+                    empresas_detalhadas.append({
+                        'nome_cliente': empresa.get('nome_cliente'),
+                        'id': empresa.get('id'),
+                        'cnpjs_count': len(empresa.get('cnpjs', []))  # Apenas contador
+                    })
                 
                 user['agent_info'] = {'empresas': empresas_detalhadas}
             else:
@@ -400,7 +394,18 @@ def salvar(user_id=None):
             except Exception as auth_error:
                 print(f"[DEBUG] Erro na criação do usuário: {str(auth_error)}")
                 print(f"[DEBUG] Tipo do erro: {type(auth_error)}")
-                flash(f'Erro ao criar usuário: {str(auth_error)}', 'error')
+                
+                # Tratar erros específicos do Supabase Auth
+                error_message = str(auth_error)
+                if "A user with this email address has already been registered" in error_message:
+                    flash('Este email já está cadastrado no sistema. Use outro email ou faça login.', 'error')
+                elif "email" in error_message.lower():
+                    flash('Erro relacionado ao email. Verifique se o formato está correto.', 'error')
+                elif "password" in error_message.lower():
+                    flash('Erro relacionado à senha. Verifique se atende aos critérios mínimos.', 'error')
+                else:
+                    flash(f'Erro ao criar usuário: {error_message}', 'error')
+                
                 return redirect(url_for('usuarios.novo'))
 
         return redirect(url_for('usuarios.index'))
@@ -465,15 +470,18 @@ def deletar(user_id):
 @login_required
 @role_required(['admin'])
 def api_empresas():
-    """API para buscar empresas disponíveis"""
+    """API para buscar empresas disponíveis com IDs"""
     try:
-        empresas_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').execute()
+        # Usar tabela cad_clientes_sistema ao invés da view para ter IDs
+        empresas_response = supabase_admin.table('cad_clientes_sistema').select('id, cnpjs, nome_cliente, ativo').eq('ativo', True).order('nome_cliente').execute()
         
         if empresas_response.data:
             empresas = [
                 {
-                    'cnpj': empresa['cnpj'],
-                    'razao_social': empresa['razao_social']
+                    'id': empresa['id'],
+                    'cnpj': empresa['cnpjs'],  # cnpjs é o nome real da coluna
+                    'nome_cliente': empresa['nome_cliente'],
+                    'razao_social': empresa['nome_cliente']  # Para compatibilidade
                 }
                 for empresa in empresas_response.data
             ]
@@ -485,41 +493,140 @@ def api_empresas():
         print(f"[DEBUG] Erro ao buscar empresas: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+@bp.route('/api/usuarios')
+@login_required
+@role_required(['admin'])
+def api_usuarios():
+    """API para retornar todos os usuários"""
+    try:
+        users = get_cached_users()
+        
+        # Simplificar estrutura para API
+        usuarios_api = []
+        for user in users:
+            usuarios_api.append({
+                'id': user.get('id'),
+                'nome': user.get('nome'),
+                'email': user.get('email'),
+                'cargo': user.get('cargo'),
+                'ativo': user.get('ativo', True)
+            })
+        
+        return jsonify(usuarios_api)
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro na API de usuários: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @bp.route('/<user_id>/empresas', methods=['POST'])
 @login_required
 @role_required(['admin'])
 def associar_empresas(user_id):
-    """Associar empresas a um usuário cliente"""
+    """Associar empresas a um usuário cliente - MIGRADO PARA NOVA ESTRUTURA"""
     try:
-        empresas_selecionadas = request.json.get('empresas', [])
+        empresas_data = request.json.get('empresas', [])
         
-        # Verificar se o usuário é do tipo cliente_unique
+        # Verificar se o usuário existe e é válido
         user_response = supabase_admin.table('users').select('role').eq('id', user_id).execute()
-        if not user_response.data or user_response.data[0]['role'] != 'cliente_unique':
-            return jsonify({'success': False, 'error': 'Usuário deve ser do tipo cliente_unique'})
+        if not user_response.data:
+            return jsonify({'success': False, 'error': 'Usuário não encontrado'})
         
-        # Verificar se já existe associação
-        existing_response = supabase_admin.table('clientes_agentes').select('id').eq('user_id', user_id).execute()
+        user_role = user_response.data[0]['role']
+        if user_role not in ['cliente_unique', 'interno_unique']:
+            return jsonify({'success': False, 'error': 'Usuário deve ser do tipo cliente_unique ou interno_unique'})
         
-        association_data = {
-            'user_id': user_id,
-            'empresa': empresas_selecionadas,
-            'updated_at': datetime.datetime.now().isoformat()
-        }
+        # Limpar associações existentes da nova estrutura
+        supabase_admin.from_('user_empresas').delete().eq('user_id', user_id).execute()
         
-        if existing_response.data:
-            # Atualizar associação existente
-            response = supabase_admin.table('clientes_agentes').update(association_data).eq('user_id', user_id).execute()
+        # Processar empresas recebidas
+        vinculos_criados = 0
+        erros = []
+        
+        for empresa_info in empresas_data:
+            try:
+                # Se recebemos um ID, usar diretamente
+                if isinstance(empresa_info, dict) and 'id' in empresa_info:
+                    cliente_sistema_id = empresa_info['id']
+                elif isinstance(empresa_info, int):
+                    cliente_sistema_id = empresa_info
+                elif isinstance(empresa_info, str):
+                    # Se é string, pode ser CNPJ - precisamos converter para ID
+                    cnpj = empresa_info.strip()
+                    empresa_response = supabase_admin.table('cad_clientes_sistema').select('id').eq('cnpjs', cnpj).eq('ativo', True).execute()
+                    
+                    if not empresa_response.data:
+                        erros.append(f"Empresa não encontrada para CNPJ: {cnpj}")
+                        continue
+                    
+                    cliente_sistema_id = empresa_response.data[0]['id']
+                else:
+                    erros.append(f"Formato de empresa inválido: {empresa_info}")
+                    continue
+                
+                # Criar vínculo na nova estrutura
+                supabase_admin.from_('user_empresas').insert({
+                    'user_id': user_id,
+                    'cliente_sistema_id': cliente_sistema_id,
+                    'ativo': True,
+                    'observacoes': 'Migrado do sistema anterior'
+                }).execute()
+                
+                vinculos_criados += 1
+                
+            except Exception as e:
+                erros.append(f"Erro ao processar empresa {empresa_info}: {str(e)}")
+        
+        # Manter compatibilidade com sistema antigo (tabela clientes_agentes)
+        # Isso será removido futuramente
+        try:
+            # Extrair apenas CNPJs para o sistema antigo
+            cnpjs_compatibilidade = []
+            for empresa_info in empresas_data:
+                if isinstance(empresa_info, dict) and 'cnpj' in empresa_info:
+                    cnpjs_compatibilidade.append(empresa_info['cnpj'])
+                elif isinstance(empresa_info, str):
+                    cnpjs_compatibilidade.append(empresa_info)
+            
+            if cnpjs_compatibilidade:
+                # Manter sistema antigo funcionando
+                existing_response = supabase_admin.table('clientes_agentes').select('id').eq('user_id', user_id).execute()
+                
+                association_data = {
+                    'user_id': user_id,
+                    'empresa': cnpjs_compatibilidade,
+                    'updated_at': datetime.datetime.now().isoformat()
+                }
+                
+                if existing_response.data:
+                    supabase_admin.table('clientes_agentes').update(association_data).eq('user_id', user_id).execute()
+                else:
+                    association_data['id'] = str(uuid.uuid4())
+                    association_data['created_at'] = datetime.datetime.now().isoformat()
+                    supabase_admin.table('clientes_agentes').insert(association_data).execute()
+        except Exception as e:
+            print(f"[DEBUG] Erro na compatibilidade com sistema antigo: {e}")
+        
+        # Invalidar cache
+        invalidate_users_cache()
+        
+        # Resposta
+        if vinculos_criados > 0:
+            message = f"{vinculos_criados} empresas associadas com sucesso!"
+            if erros:
+                message += f" ({len(erros)} erros encontrados)"
+            
+            return jsonify({
+                'success': True, 
+                'message': message,
+                'vinculos_criados': vinculos_criados,
+                'erros': erros
+            })
         else:
-            # Criar nova associação
-            association_data['id'] = str(uuid.uuid4())
-            association_data['created_at'] = datetime.datetime.now().isoformat()
-            response = supabase_admin.table('clientes_agentes').insert(association_data).execute()
-        
-        if response.data:
-            return jsonify({'success': True, 'message': 'Empresas associadas com sucesso!'})
-        else:
-            return jsonify({'success': False, 'error': 'Erro ao associar empresas'})
+            return jsonify({
+                'success': False, 
+                'error': 'Nenhuma empresa foi associada',
+                'erros': erros
+            })
             
     except Exception as e:
         print(f"[DEBUG] Erro ao associar empresas: {str(e)}")
@@ -529,23 +636,68 @@ def associar_empresas(user_id):
 @login_required
 @role_required(['admin'])
 def obter_empresas_usuario(user_id):
-    """Obter empresas associadas a um usuário"""
+    """Obter empresas associadas a um usuário - NOVA ESTRUTURA"""
     try:
+        # Buscar da nova estrutura relacional primeiro
+        result = supabase_admin.from_('user_empresas').select('cliente_sistema_id, observacoes, cad_clientes_sistema(id, cnpjs, nome_cliente)').eq('user_id', user_id).eq('ativo', True).execute()
+        
+        if result.data:
+            # Temos dados na nova estrutura
+            empresas = []
+            for item in result.data:
+                empresa_info = item.get('cad_clientes_sistema', {})
+                empresas.append({
+                    'id': empresa_info.get('id'),
+                    'cnpj': empresa_info.get('cnpjs'),  # cnpjs é o nome real da coluna
+                    'nome_cliente': empresa_info.get('nome_cliente'),
+                    'razao_social': empresa_info.get('nome_cliente'),  # Para compatibilidade
+                    'observacoes': item.get('observacoes', '')
+                })
+            
+            return jsonify({'success': True, 'empresas': empresas, 'source': 'nova_estrutura'})
+        
+        # Fallback: buscar da estrutura antiga se não encontrar na nova
         response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
         
         if response.data and response.data[0].get('empresa'):
-            empresas = response.data[0]['empresa']
-            if isinstance(empresas, str):
+            empresas_antigas = response.data[0]['empresa']
+            if isinstance(empresas_antigas, str):
                 try:
-                    empresas = json.loads(empresas)
+                    empresas_antigas = json.loads(empresas_antigas)
                 except json.JSONDecodeError:
-                    empresas = [empresas] if empresas else []
-            elif not isinstance(empresas, list):
-                empresas = []
+                    empresas_antigas = [empresas_antigas] if empresas_antigas else []
+            elif not isinstance(empresas_antigas, list):
+                empresas_antigas = []
             
-            return jsonify({'success': True, 'empresas': empresas})
+            # Converter CNPJs para estrutura com IDs
+            empresas = []
+            for cnpj in empresas_antigas:
+                if isinstance(cnpj, str):
+                    # Buscar ID da empresa pelo CNPJ
+                    empresa_response = supabase_admin.table('cad_clientes_sistema').select('id, cnpjs, nome_cliente').eq('cnpjs', cnpj).eq('ativo', True).execute()
+                    
+                    if empresa_response.data:
+                        empresa = empresa_response.data[0]
+                        empresas.append({
+                            'id': empresa['id'],
+                            'cnpj': empresa['cnpjs'],
+                            'nome_cliente': empresa['nome_cliente'],
+                            'razao_social': empresa['nome_cliente'],
+                            'observacoes': 'Migrado do sistema anterior'
+                        })
+                    else:
+                        # Empresa não encontrada na nova estrutura
+                        empresas.append({
+                            'id': None,
+                            'cnpj': cnpj,
+                            'nome_cliente': f"Empresa não encontrada ({cnpj})",
+                            'razao_social': f"Empresa não encontrada ({cnpj})",
+                            'observacoes': 'ERRO: Empresa não encontrada na nova estrutura'
+                        })
+            
+            return jsonify({'success': True, 'empresas': empresas, 'source': 'estrutura_antiga'})
         else:
-            return jsonify({'success': True, 'empresas': []})
+            return jsonify({'success': True, 'empresas': [], 'source': 'nenhuma'})
             
     except Exception as e:
         print(f"[DEBUG] Erro ao obter empresas do usuário: {str(e)}")
@@ -553,7 +705,11 @@ def obter_empresas_usuario(user_id):
 
 def limpar_cnpj(cnpj):
     """Remove formatação do CNPJ deixando apenas números"""
-    return re.sub(r'[^0-9]', '', cnpj)
+    if not cnpj:
+        return ""
+    # Garantir que é string
+    cnpj_str = str(cnpj)
+    return re.sub(r'[^0-9]', '', cnpj_str)
 
 def formatar_cnpj(cnpj_limpo):
     """Aplica formatação padrão XX.XXX.XXX/XXXX-XX ao CNPJ"""
@@ -585,17 +741,17 @@ def buscar_empresa():
             print(f"[DEBUG] CNPJ limpo: {cnpj_limpo}")
             print(f"[DEBUG] CNPJ formatado: {cnpj_formatado}")
             
-            # Buscar primeiro com formatação
-            empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj_formatado).execute()
+            # Buscar primeiro com formatação na tabela cad_clientes_sistema
+            empresa_response = supabase_admin.table('cad_clientes_sistema').select('id, cnpjs, nome_cliente').eq('cnpjs', cnpj_formatado).eq('ativo', True).execute()
             
             # Se não encontrar, tenta sem formatação
             if not empresa_response.data:
-                empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj_limpo).execute()
+                empresa_response = supabase_admin.table('cad_clientes_sistema').select('id, cnpjs, nome_cliente').eq('cnpjs', cnpj_limpo).eq('ativo', True).execute()
                 
         else:
             # Busca por razão social (usando ilike para busca parcial case-insensitive)
             print(f"[DEBUG] Buscando por razão social: {termo_busca}")
-            empresa_response = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').ilike('razao_social', f'%{termo_busca}%').limit(10).execute()
+            empresa_response = supabase_admin.table('cad_clientes_sistema').select('id, cnpjs, nome_cliente').ilike('nome_cliente', f'%{termo_busca}%').eq('ativo', True).limit(10).execute()
         
         if empresa_response.data and len(empresa_response.data) > 0:
             if len(empresa_response.data) == 1:
@@ -604,8 +760,10 @@ def buscar_empresa():
                 return jsonify({
                     'success': True,
                     'empresa': {
-                        'cnpj': empresa['cnpj'],
-                        'razao_social': empresa['razao_social']
+                        'id': empresa['id'],
+                        'cnpj': empresa['cnpjs'],  # cnpjs é o nome real da coluna
+                        'nome_cliente': empresa['nome_cliente'],
+                        'razao_social': empresa['nome_cliente']  # Para compatibilidade
                     }
                 })
             else:
@@ -613,8 +771,10 @@ def buscar_empresa():
                 empresas = []
                 for emp in empresa_response.data:
                     empresas.append({
-                        'cnpj': emp['cnpj'],
-                        'razao_social': emp['razao_social']
+                        'id': emp['id'],
+                        'cnpj': emp['cnpjs'],  # cnpjs é o nome real da coluna
+                        'nome_cliente': emp['nome_cliente'],
+                        'razao_social': emp['nome_cliente']  # Para compatibilidade
                     })
                 return jsonify({
                     'success': True,
@@ -686,7 +846,14 @@ def definir_lista_empresas(user_id):
         cnpjs_invalidos = []
         
         for cnpj in cnpjs:
-            cnpj_limpo = limpar_cnpj(cnpj)
+            # Garantir que cnpj é uma string
+            if isinstance(cnpj, list):
+                # Se for lista, pegar primeiro elemento
+                cnpj_str = str(cnpj[0]) if cnpj else ""
+            else:
+                cnpj_str = str(cnpj)
+            
+            cnpj_limpo = limpar_cnpj(cnpj_str)
             
             # Verificar se empresa existe na base
             def _verificar_cnpj():
@@ -1212,40 +1379,55 @@ def obter_dados_usuario(user_id):
         user = user_response.data[0]
         print(f"[DEBUG] Dados do usuário encontrados: {user}")
         
-        # Se for cliente_unique, buscar empresas associadas e detalhar com razão social
-        if user.get('role') == 'cliente_unique':
-            empresas_response = supabase_admin.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
-            empresas = []
-            if empresas_response.data and empresas_response.data[0].get('empresa'):
-                empresas = empresas_response.data[0]['empresa']
-                if isinstance(empresas, str):
-                    try:
-                        empresas = json.loads(empresas)
-                    except json.JSONDecodeError:
-                        empresas = [empresas] if empresas else []
-                elif not isinstance(empresas, list):
-                    empresas = []
-            empresas_detalhadas = []
-            for cnpj in empresas:
-                if isinstance(cnpj, str):
-                    try:
-                        empresa_info = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social').eq('cnpj', cnpj).execute()
-                        if empresa_info.data and len(empresa_info.data) > 0:
-                            empresa_data = empresa_info.data[0]
-                            razao = empresa_data.get('razao_social')
+        # Se for cliente_unique ou interno_unique, buscar empresas associadas e detalhar com razão social
+        if user.get('role') in ['cliente_unique', 'interno_unique']:
+            print(f"[DEBUG] Usuário {user_id} tem role {user.get('role')}, buscando empresas associadas")
+            
+            try:
+                # Buscar na nova estrutura user_empresas + cad_clientes_sistema
+                empresas_response = supabase_admin.table('user_empresas').select('''
+                    id,
+                    cliente_sistema_id,
+                    ativo,
+                    data_vinculo,
+                    cad_clientes_sistema(
+                        id,
+                        nome_cliente,
+                        cnpjs,
+                        ativo
+                    )
+                ''').eq('user_id', user_id).eq('ativo', True).execute()
+                
+                empresas_detalhadas = []
+                if empresas_response.data:
+                    print(f"[DEBUG] Empresas encontradas na nova estrutura: {len(empresas_response.data)}")
+                    
+                    for vinculo in empresas_response.data:
+                        empresa_info = vinculo.get('cad_clientes_sistema')
+                        if empresa_info:
                             empresas_detalhadas.append({
-                                'cnpj': empresa_data.get('cnpj'),
-                                'razao_social': razao if razao else None
+                                'id': empresa_info.get('id'),
+                                'nome_cliente': empresa_info.get('nome_cliente'),
+                                'cnpjs': empresa_info.get('cnpjs', []),
+                                'vinculo_id': vinculo.get('id'),
+                                'data_vinculo': vinculo.get('data_vinculo'),
+                                'ativo': vinculo.get('ativo')
                             })
-                        else:
-                            empresas_detalhadas.append({'cnpj': cnpj})
-                    except Exception as empresa_error:
-                        print(f"[DEBUG] Erro ao buscar dados da empresa {cnpj}: {str(empresa_error)}")
-                        empresas_detalhadas.append({'cnpj': cnpj})
-            user['empresas'] = empresas_detalhadas
+                            print(f"[DEBUG] Empresa detalhada: {empresa_info.get('nome_cliente')} (CNPJs: {len(empresa_info.get('cnpjs', []))})")
+                
+                user['empresas'] = empresas_detalhadas
+                print(f"[DEBUG] Total de empresas detalhadas: {len(empresas_detalhadas)}")
+                
+            except Exception as e:
+                print(f"[DEBUG] Erro ao buscar empresas: {str(e)}")
+                import traceback
+                print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+                user['empresas'] = []
         else:
             user['empresas'] = []
-        return jsonify({'success': True, 'user': user})
+            print(f"[DEBUG] Usuário com role {user.get('role')} não tem empresas associadas")
+        
+        return jsonify({'success': True, 'data': user})
         
     except Exception as e:
         print(f"[DEBUG] Erro ao obter dados do usuário: {str(e)}")
@@ -1295,3 +1477,299 @@ def clear_cache():
             'success': False,
             'error': str(e)
         }), 500
+
+# ====================================================
+# NOVAS ROTAS PARA RELACIONAMENTOS E WHATSAPP
+# ====================================================
+
+@bp.route('/api/usuarios-empresas')
+@login_required
+@role_required(['admin'])
+def api_usuarios_empresas():
+    """API para listar usuários com suas empresas vinculadas"""
+    try:
+        # Buscar dados da view v_usuarios_empresas
+        result = supabase_admin.from_('v_usuarios_empresas').select('*').order('user_email').execute()
+        
+        return jsonify({
+            'success': True,
+            'data': result.data or []
+        })
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar usuários-empresas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/<user_id>/vincular-empresa', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def vincular_empresa(user_id):
+    """Vincula uma empresa a um usuário"""
+    try:
+        data = request.get_json()
+        cliente_sistema_id = data.get('cliente_sistema_id')
+        observacoes = data.get('observacoes', '')
+        
+        if not cliente_sistema_id:
+            return jsonify({
+                'success': False,
+                'error': 'ID da empresa é obrigatório'
+            }), 400
+        
+        # Verificar se vínculo já existe
+        existing = supabase_admin.from_('user_empresas').select('id').eq('user_id', user_id).eq('cliente_sistema_id', cliente_sistema_id).execute()
+        
+        if existing.data:
+            return jsonify({
+                'success': False,
+                'error': 'Usuário já está vinculado a esta empresa'
+            }), 400
+        
+        # Criar vínculo
+        result = supabase_admin.from_('user_empresas').insert({
+            'user_id': user_id,
+            'cliente_sistema_id': cliente_sistema_id,
+            'observacoes': observacoes,
+            'ativo': True
+        }).execute()
+        
+        invalidate_users_cache()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Empresa vinculada com sucesso',
+            'data': result.data[0] if result.data else None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao vincular empresa: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/<user_id>/desvincular-empresa', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def desvincular_empresa(user_id):
+    """Desvincula uma empresa de um usuário"""
+    try:
+        data = request.get_json()
+        cliente_sistema_id = data.get('cliente_sistema_id')
+        
+        if not cliente_sistema_id:
+            return jsonify({
+                'success': False,
+                'error': 'ID da empresa é obrigatório'
+            }), 400
+        
+        # Remover vínculo
+        result = supabase_admin.from_('user_empresas').delete().eq('user_id', user_id).eq('cliente_sistema_id', cliente_sistema_id).execute()
+        
+        invalidate_users_cache()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Empresa desvinculada com sucesso'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao desvincular empresa: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/<user_id>/empresas-vinculadas')
+@login_required
+@role_required(['admin'])
+def empresas_vinculadas(user_id):
+    """Lista empresas vinculadas a um usuário"""
+    try:
+        result = supabase_admin.from_('v_usuarios_empresas').select('*').eq('user_id', user_id).execute()
+        
+        return jsonify({
+            'success': True,
+            'data': result.data or []
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar empresas vinculadas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ====================================================
+# ROTAS PARA WHATSAPP
+# ====================================================
+
+@bp.route('/<user_id>/whatsapp', methods=['GET'])
+@login_required
+@role_required(['admin'])
+def listar_whatsapp(user_id):
+    """Lista números WhatsApp de um usuário"""
+    try:
+        result = supabase_admin.from_('user_whatsapp').select('*, cad_clientes_sistema(nome_cliente)').eq('user_id', user_id).eq('ativo', True).order('principal', desc=True).execute()
+        
+        return jsonify({
+            'success': True,
+            'data': result.data or []
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar WhatsApp: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/<user_id>/whatsapp', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def adicionar_whatsapp(user_id):
+    """Adiciona número WhatsApp a um usuário"""
+    try:
+        data = request.get_json()
+        
+        numero_whatsapp = data.get('numero_whatsapp', '').strip()
+        nome_contato = data.get('nome_contato', '').strip()
+        tipo_numero = data.get('tipo_numero', 'pessoal')
+        cliente_sistema_id = data.get('cliente_sistema_id')
+        principal = data.get('principal', False)
+        observacoes = data.get('observacoes', '')
+        
+        # Validações
+        if not numero_whatsapp or not nome_contato:
+            return jsonify({
+                'success': False,
+                'error': 'Número e nome do contato são obrigatórios'
+            }), 400
+        
+        # Validar formato do número (internacional)
+        if not re.match(r'^\+[1-9]\d{1,14}$', numero_whatsapp):
+            return jsonify({
+                'success': False,
+                'error': 'Formato do número inválido. Use formato internacional (+5511999999999)'
+            }), 400
+        
+        # Verificar se número já existe para este usuário
+        existing = supabase_admin.from_('user_whatsapp').select('id').eq('user_id', user_id).eq('numero_whatsapp', numero_whatsapp).execute()
+        
+        if existing.data:
+            return jsonify({
+                'success': False,
+                'error': 'Este número já está cadastrado para o usuário'
+            }), 400
+        
+        # Se definir como principal, remover principal dos outros
+        if principal:
+            supabase_admin.from_('user_whatsapp').update({'principal': False}).eq('user_id', user_id).execute()
+        
+        # Inserir novo WhatsApp
+        whatsapp_data = {
+            'user_id': user_id,
+            'numero_whatsapp': numero_whatsapp,
+            'nome_contato': nome_contato,
+            'tipo_numero': tipo_numero,
+            'principal': principal,
+            'ativo': True,
+            'observacoes': observacoes
+        }
+        
+        if cliente_sistema_id:
+            whatsapp_data['cliente_sistema_id'] = cliente_sistema_id
+        
+        result = supabase_admin.from_('user_whatsapp').insert(whatsapp_data).execute()
+        
+        return jsonify({
+            'success': True,
+            'message': 'WhatsApp adicionado com sucesso',
+            'data': result.data[0] if result.data else None
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao adicionar WhatsApp: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/whatsapp/<int:whatsapp_id>', methods=['DELETE'])
+@login_required
+@role_required(['admin'])
+def remover_whatsapp(whatsapp_id):
+    """Remove número WhatsApp"""
+    try:
+        result = supabase_admin.from_('user_whatsapp').delete().eq('id', whatsapp_id).execute()
+        
+        return jsonify({
+            'success': True,
+            'message': 'WhatsApp removido com sucesso'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao remover WhatsApp: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/whatsapp/<int:whatsapp_id>/principal', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def definir_whatsapp_principal(whatsapp_id):
+    """Define WhatsApp como principal"""
+    try:
+        # Buscar WhatsApp para saber qual usuário
+        whatsapp = supabase_admin.from_('user_whatsapp').select('user_id').eq('id', whatsapp_id).single().execute()
+        
+        if not whatsapp.data:
+            return jsonify({
+                'success': False,
+                'error': 'WhatsApp não encontrado'
+            }), 404
+        
+        user_id = whatsapp.data['user_id']
+        
+        # Remover principal dos outros
+        supabase_admin.from_('user_whatsapp').update({'principal': False}).eq('user_id', user_id).execute()
+        
+        # Definir este como principal
+        supabase_admin.from_('user_whatsapp').update({'principal': True}).eq('id', whatsapp_id).execute()
+        
+        return jsonify({
+            'success': True,
+            'message': 'WhatsApp definido como principal'
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao definir WhatsApp principal: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ====================================================
+# FUNÇÕES AUXILIARES PARA NOVA ESTRUTURA
+# ====================================================
+
+def get_user_companies_new(user_id):
+    """Busca empresas vinculadas ao usuário na nova estrutura"""
+    try:
+        result = supabase_admin.rpc('get_user_cnpjs', {'user_id_param': user_id}).execute()
+        return result.data or []
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar CNPJs do usuário: {e}")
+        return []
+
+def get_user_whatsapp_numbers(user_id):
+    """Busca números WhatsApp do usuário"""
+    try:
+        result = supabase_admin.from_('user_whatsapp').select('*').eq('user_id', user_id).eq('ativo', True).execute()
+        return result.data or []
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar WhatsApp do usuário: {e}")
+        return []

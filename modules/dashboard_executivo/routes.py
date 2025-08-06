@@ -342,11 +342,19 @@ def load_data():
         # Query base da view com dados de despesas (já filtrada)
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
-        # Filtrar por empresa se for cliente
+        # NOVA REGRA: Filtrar por CNPJs das empresas vinculadas se for cliente
         if user_role == 'cliente_unique':
-            user_companies = get_user_companies(user_data)
-            if user_companies:
-                query = query.in_('cnpj_importador', user_companies)
+            user_cnpjs = get_user_companies(user_data)
+            if user_cnpjs:
+                query = query.in_('cnpj_importador', user_cnpjs)
+                print(f"[DASHBOARD_EXECUTIVO] Query filtrada por CNPJs das empresas vinculadas: {user_cnpjs}")
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] Usuário cliente sem CNPJs vinculados - retornando vazio")
+                return jsonify({
+                    'success': False,
+                    'error': 'Usuário sem empresas vinculadas',
+                    'data': []
+                })
         
         # Executar query
         result = query.execute()
@@ -1093,12 +1101,18 @@ def force_refresh_dashboard():
         # Query base da view com dados de despesas - SEMPRE buscar dados frescos (já filtrada)
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
-        # Filtrar por empresa se for cliente
+        # NOVA REGRA: Filtrar por CNPJs das empresas vinculadas se for cliente
         if user_role == 'cliente_unique':
-            user_companies = get_user_companies(user_data)
-            if user_companies:
-                print(f"[DASHBOARD_EXECUTIVO] Filtrando por empresas: {user_companies}")
-                query = query.in_('cnpj_importador', user_companies)
+            user_cnpjs = get_user_companies(user_data)
+            if user_cnpjs:
+                print(f"[DASHBOARD_EXECUTIVO] Filtrando por CNPJs das empresas vinculadas: {user_cnpjs}")
+                query = query.in_('cnpj_importador', user_cnpjs)
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] Usuário cliente sem CNPJs vinculados")
+                return jsonify({
+                    'success': False,
+                    'error': 'Usuário sem empresas vinculadas'
+                })
         
         # Executar query
         result = query.execute()

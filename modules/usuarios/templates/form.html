@@ -16,10 +16,11 @@
         <div class="actions-left">
             {{ breadcrumb([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
-                {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
-                {'name': 'Gerenciar Usuários', 'icon': 'mdi mdi-account-group', 'url': url_for('usuarios.index')},
+                {'name': 'Usuários', 'icon': 'mdi mdi-account-group', 'url': url_for('usuarios.index')},
                 {'name': ('Editar Usuário' if user else 'Novo Usuário'), 'icon': 'mdi mdi-account-edit'}
             ]) }}
+        </div>
+        <div class="actions-right">
             <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline">
                 <i class="mdi mdi-arrow-left"></i>
                 Voltar
@@ -33,45 +34,53 @@
             <div class="form-card">
                 <div class="form-header">
                     <div class="form-icon">
-                        <i class="mdi mdi-account-plus"></i>
+                        <i class="mdi mdi-account-{{ 'edit' if user else 'plus' }}"></i>
                     </div>
-                    <h2 class="form-title">
-                        {% if user %}Editar Usuário{% else %}Criar Novo Usuário{% endif %}
-                    </h2>
+                    <h1 class="form-title">
+                        {% if user %}
+                            Editar Usuário
+                        {% else %}
+                            Novo Usuário
+                        {% endif %}
+                    </h1>
                     <p class="form-subtitle">
                         {% if user %}
-                            Atualize as informações abaixo para modificar o usuário
+                            Atualize as informações do usuário e suas empresas associadas
                         {% else %}
-                            Preencha as informações abaixo para criar um novo usuário
+                            Preencha os dados para criar um novo usuário no sistema
                         {% endif %}
                     </p>
                 </div>
 
-                <!-- Área de feedback -->
+                <!-- Feedback do formulário -->
                 <div id="form-feedback" class="form-feedback" style="display: none;">
                     <i class="mdi mdi-information"></i>
                     <span id="feedback-message"></span>
                 </div>
 
-                <!-- Área de loading -->
+                <!-- Mensagens Flash do Backend -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="form-feedback {{ 'error' if category == 'error' else 'success' if category == 'success' else 'warning' if category == 'warning' else 'info' }}">
+                                <i class="mdi mdi-{{ 'alert-circle' if category == 'error' else 'check-circle' if category == 'success' else 'alert' if category == 'warning' else 'information' }}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Loading do formulário -->
                 <div id="form-loading" class="form-loading">
                     <i class="mdi mdi-loading mdi-spin"></i>
-                    Processando...
+                    <span>Processando...</span>
                 </div>
 
-                <form id="userForm" 
-                      method="POST" 
-                      action="{% if user %}{{ url_for('usuarios.salvar', user_id=user.id) }}{% else %}{{ url_for('usuarios.salvar') }}{% endif %}"
-                      {% if user %}data-user-id="{{ user.id }}"{% endif %}>
-                    
+                <form id="userForm" method="POST" data-user-id="{{ user.id if user else '' }}">
                     <div class="form-grid">
-                        <!-- Linha 1: Nome e Email -->
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="name" class="form-label required">
-                                    <i class="mdi mdi-account"></i>
-                                    Nome Completo
-                                </label>
+                                <label for="name" class="form-label required">Nome Completo</label>
                                 <input type="text" 
                                        id="name" 
                                        name="name" 
@@ -79,14 +88,10 @@
                                        value="{{ user.name if user else '' }}" 
                                        required
                                        placeholder="Digite o nome completo">
-                                <div class="form-help">Nome que será exibido no sistema</div>
                             </div>
 
                             <div class="form-group">
-                                <label for="email" class="form-label required">
-                                    <i class="mdi mdi-email"></i>
-                                    Email
-                                </label>
+                                <label for="email" class="form-label required">Email</label>
                                 <input type="email" 
                                        id="email" 
                                        name="email" 
@@ -94,33 +99,57 @@
                                        value="{{ user.email if user else '' }}" 
                                        required
                                        placeholder="usuario@exemplo.com">
-                                <div class="form-help">Email utilizado para login no sistema</div>
                             </div>
                         </div>
 
-                        <!-- Linha 2: Senha (apenas para novos usuários) -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="role" class="form-label required">Perfil do Usuário</label>
+                                <select id="role" name="role" class="form-select" required>
+                                    <option value="">Selecione o perfil</option>
+                                    <option value="admin" {{ 'selected' if user and user.role == 'admin' else '' }}>
+                                        Administrador
+                                    </option>
+                                    <option value="interno_unique" {{ 'selected' if user and user.role == 'interno_unique' else '' }}>
+                                        Equipe Interna
+                                    </option>
+                                    <option value="cliente_unique" {{ 'selected' if user and user.role == 'cliente_unique' else '' }}>
+                                        Cliente
+                                    </option>
+                                </select>
+                                <div class="form-help">Administrador tem acesso completo. Equipe Interna e Clientes têm acessos específicos.</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <div class="form-switch">
+                                    <input type="checkbox" 
+                                           id="is_active" 
+                                           name="is_active" 
+                                           value="true" 
+                                           class="switch-input"
+                                           {{ 'checked' if not user or user.is_active else '' }}>
+                                    <label for="is_active" class="switch-label">Usuário Ativo</label>
+                                </div>
+                                <div class="form-help">Usuários inativos não conseguem fazer login no sistema.</div>
+                            </div>
+                        </div>
+
                         {% if not user %}
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="password" class="form-label required">
-                                    <i class="mdi mdi-lock"></i>
-                                    Senha
-                                </label>
+                                <label for="password" class="form-label required">Senha</label>
                                 <input type="password" 
                                        id="password" 
                                        name="password" 
                                        class="form-input" 
                                        required
                                        minlength="6"
-                                       placeholder="Digite uma senha segura">
-                                <div class="form-help">Mínimo de 6 caracteres. O usuário poderá alterar posteriormente</div>
+                                       placeholder="Mínimo 6 caracteres">
                             </div>
 
                             <div class="form-group">
-                                <label for="confirm_password" class="form-label required">
-                                    <i class="mdi mdi-lock-check"></i>
-                                    Confirmar Senha
-                                </label>
+                                <label for="confirm_password" class="form-label required">Confirmar Senha</label>
                                 <input type="password" 
                                        id="confirm_password" 
                                        name="confirm_password" 
@@ -128,178 +157,84 @@
                                        required
                                        minlength="6"
                                        placeholder="Digite a senha novamente">
-                                <div class="form-help">Repita a senha para confirmação</div>
                             </div>
                         </div>
                         {% endif %}
 
-                        <!-- Linha 3: Role e Status -->
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="role" class="form-label required">
-                                    <i class="mdi mdi-shield-account"></i>
-                                    Nível de Acesso
-                                </label>
-                                <select id="role" name="role" class="form-select" required>
-                                    <option value="">Selecione o nível de acesso</option>
-                                    <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>
-                                        Administrador - Acesso total ao sistema
-                                    </option>
-                                    <option value="interno_unique" {% if user and user.role == 'interno_unique' %}selected{% endif %}>
-                                        Equipe Interna - Acesso aos módulos operacionais
-                                    </option>
-                                    <option value="cliente_unique" {% if user and user.role == 'cliente_unique' %}selected{% endif %}>
-                                        Cliente - Acesso limitado aos dados da empresa
-                                    </option>
-                                </select>
-                                <div class="form-help">Define quais funcionalidades o usuário pode acessar</div>
+                        <!-- Seção de Empresas -->
+                        <div id="empresas-section" class="empresas-section full-width" style="display: none;">
+                            <div class="empresas-header">
+                                <h3 class="empresas-title">
+                                    <i class="mdi mdi-domain"></i>
+                                    Empresas Associadas
+                                </h3>
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label">
-                                    <i class="mdi mdi-account-check"></i>
-                                    Status da Conta
-                                </label>
-                                <div class="form-switch">
-                                    <input type="checkbox" 
-                                           id="is_active" 
-                                           name="is_active" 
-                                           class="switch-input"
-                                           value="true"
-                                           {% if not user or user.is_active %}checked{% endif %}>
-                                    <label for="is_active" class="switch-label">
-                                        Conta ativa no sistema
-                                    </label>
-                                </div>
-                                <div class="form-help">Usuários inativos não conseguem fazer login</div>
-                            </div>
-                        </div>
-
-                        <!-- Seção de Empresas (para clientes e usuários internos) -->
-                        <div id="empresas-section" class="form-group full-width" 
-                             style="{% if not user or (user.role != 'cliente_unique' and user.role != 'interno_unique') %}display: none;{% endif %}">
-                            <div class="empresas-section">
-                                <div class="empresas-header">
-                                    <h3 class="empresas-title">
-                                        <i class="mdi mdi-domain"></i>
-                                        Empresas Associadas
-                                    </h3>
-                                    <button type="button" id="open-empresas-modal" class="btn btn-outline">
-                                        <i class="mdi mdi-pencil"></i>
-                                        Editar Empresas
+                                <label class="form-label">Buscar e Adicionar Empresa</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" 
+                                           id="cnpj-search" 
+                                           class="form-input" 
+                                           placeholder="Digite o CNPJ (com ou sem formatação) ou nome da empresa..."
+                                           autocomplete="off"
+                                           style="flex: 1;">
+                                    <button type="button" 
+                                            id="btn-buscar-empresa" 
+                                            class="btn btn-primary btn-sm">
+                                        <i class="mdi mdi-magnify"></i>
+                                        Buscar
                                     </button>
                                 </div>
-                                <div id="empresas-list-crud" class="empresas-list-crud" style="margin-bottom:12px;"></div>
+                                <div class="form-help">
+                                    Busque empresas por CNPJ ou razão social para associar ao usuário
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Modal de CRUD de Empresas -->
-                        <div id="empresas-modal" class="modal" style="display:none;">
-                            <div class="modal-content" style="max-width:400px;">
-                                <div class="modal-header">
-                                    <h3 class="modal-title"><i class="mdi mdi-domain"></i> Editar Empresas Associadas</h3>
-                                    <button type="button" id="close-empresas-modal" class="btn btn-outline" style="float:right;">
-                                        <i class="mdi mdi-close"></i>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <div style="display:flex; gap:8px; margin-bottom:12px;">
-                                        <input type="text" id="novo-cnpj" class="form-input" placeholder="Adicionar CNPJ manualmente">
-                                        <button type="button" class="btn btn-success" id="btn-add-empresa">
-                                            <i class="mdi mdi-plus"></i> Adicionar
-                                        </button>
-                                    </div>
-                                    <div id="empresas-list-modal" class="empresas-list-crud" style="margin-bottom:12px;"></div>
-                                </div>
+                            <!-- Lista de empresas selecionadas -->
+                            <div id="empresas-list" class="empresas-list">
+                                <p style="color: var(--color-text-muted); font-style: italic;">
+                                    Nenhuma empresa selecionada
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Ações do Formulário -->
                     <div class="form-actions">
                         <a href="{{ url_for('usuarios.index') }}" class="btn btn-outline">
-                            <i class="mdi mdi-close"></i>
+                            <i class="mdi mdi-cancel"></i>
                             Cancelar
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="mdi mdi-check"></i>
-                            {% if user %}Atualizar{% else %}Criar{% endif %} Usuário
+                            <i class="mdi mdi-{{ 'content-save' if user else 'plus' }}"></i>
+                            {% if user %}Salvar Alterações{% else %}Criar Usuário{% endif %}
                         </button>
                     </div>
                 </form>
             </div>
 
             <!-- Card de Informações -->
+            {% if user %}
             <div class="form-card">
-                <h3 style="margin: 0 0 var(--spacing-md) 0; color: var(--color-text-primary);">
-                    <i class="mdi mdi-information"></i>
-                    Informações Importantes
+                <h3 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 8px;">
+                    <i class="mdi mdi-information-outline"></i>
+                    Informações Adicionais
                 </h3>
-                
-                <div style="display: grid; gap: var(--spacing-md);">
-                    <div style="padding: var(--spacing-md); background: var(--color-info-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
-                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-info); font-size: 0.875rem;">
-                            <i class="mdi mdi-shield-account"></i>
-                            Níveis de Acesso
-                        </h4>
-                        <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--color-text-secondary); font-size: 0.875rem;">
-                            <li><strong>Administrador:</strong> Acesso completo a todas as funcionalidades</li>
-                            <li><strong>Equipe Interna:</strong> Acesso aos módulos operacionais e relatórios</li>
-                            <li><strong>Cliente:</strong> Acesso limitado apenas aos dados de suas empresas</li>
-                        </ul>
+                <div style="display: grid; gap: 12px; font-size: 0.875rem;">
+                    <div>
+                        <strong>ID:</strong> {{ user.id }}
                     </div>
-
-                    <div style="padding: var(--spacing-md); background: var(--color-warning-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-warning);">
-                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-warning); font-size: 0.875rem;">
-                            <i class="mdi mdi-domain"></i>
-                            Associação de Empresas
-                        </h4>
-                        <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
-                            Usuários do tipo "Cliente" devem ter pelo menos uma empresa associada para visualizar dados no sistema.
-                            A associação define quais informações o cliente pode acessar.
-                        </p>
+                    <div>
+                        <strong>Criado em:</strong> 
+                        {{ user.created_at.strftime('%d/%m/%Y às %H:%M') if user.created_at else 'Não disponível' }}
                     </div>
-
-                    {% if not user %}
-                    <div style="padding: var(--spacing-md); background: var(--color-info-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
-                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-info); font-size: 0.875rem;">
-                            <i class="mdi mdi-lock"></i>
-                            Política de Senhas
-                        </h4>
-                        <ul style="margin: 0; padding-left: var(--spacing-lg); color: var(--color-text-secondary); font-size: 0.875rem;">
-                            <li>Mínimo de 6 caracteres</li>
-                            <li>O usuário pode alterar a senha após o primeiro login</li>
-                            <li>Recomendamos usar letras, números e símbolos</li>
-                            <li>A senha é criptografada e armazenada de forma segura</li>
-                        </ul>
+                    <div>
+                        <strong>Última atualização:</strong> 
+                        {{ user.updated_at.strftime('%d/%m/%Y às %H:%M') if user.updated_at else 'Não disponível' }}
                     </div>
-                    {% endif %}
-
-                    {% if user %}
-                    <div style="padding: var(--spacing-md); background: var(--color-info-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
-                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-info); font-size: 0.875rem;">
-                            <i class="mdi mdi-lock-reset"></i>
-                            Gerenciamento de Senha
-                        </h4>
-                        <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
-                            Para alterar a senha deste usuário, utilize as opções de recuperação de senha no sistema de autenticação.
-                            Por segurança, senhas não podem ser editadas diretamente por administradores.
-                        </p>
-                    </div>
-                    
-                    <div style="padding: var(--spacing-md); background: var(--color-success-light); border-radius: var(--radius-md); border-left: 3px solid var(--color-success);">
-                        <h4 style="margin: 0 0 var(--spacing-xs) 0; color: var(--color-success); font-size: 0.875rem;">
-                            <i class="mdi mdi-calendar"></i>
-                            Última Atualização
-                        </h4>
-                        <p style="margin: 0; color: var(--color-text-secondary); font-size: 0.875rem;">
-                            Este usuário foi atualizado pela última vez em: 
-                            <strong>{{ user.updated_at.strftime('%d/%m/%Y às %H:%M') if user.updated_at else 'Não informado' }}</strong>
-                        </p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -308,15 +243,25 @@
 {% block extra_js %}
 <script src="{{ url_for('usuarios.static', filename='js/form.js') }}"></script>
 <script>
-// Controle de feedback e loading
+// Sistema de gerenciamento do formulário de usuários
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[DEBUG] Inicializando formulário de usuários');
+
     const form = document.getElementById('userForm');
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const roleSelect = document.getElementById('role');
+    const empresasSection = document.getElementById('empresas-section');
+    const btnBuscarEmpresa = document.getElementById('btn-buscar-empresa');
+    const cnpjSearchInput = document.getElementById('cnpj-search');
+    const empresasList = document.getElementById('empresas-list');
+
+    // Estado do formulário
+    let empresasSelecionadas = [];
+
+    // === FEEDBACK SYSTEM ===
     const feedback = document.getElementById('form-feedback');
     const feedbackMessage = document.getElementById('feedback-message');
     const loading = document.getElementById('form-loading');
-    
-    // Função para mostrar feedback
+
     function showFeedback(message, type = 'info') {
         feedback.className = `form-feedback ${type}`;
         feedbackMessage.textContent = message;
@@ -329,61 +274,363 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 5000);
         }
     }
-    
-    // Função para mostrar loading
+
     function showLoading(show = true) {
         if (show) {
             loading.classList.add('active');
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
+            form.querySelector('button[type="submit"]').classList.add('loading');
+            form.querySelector('button[type="submit"]').disabled = true;
         } else {
             loading.classList.remove('active');
-            submitBtn.classList.remove('loading');
-            submitBtn.disabled = false;
+            form.querySelector('button[type="submit"]').classList.remove('loading');
+            form.querySelector('button[type="submit"]').disabled = false;
         }
     }
-    
-    // Interceptar submit do formulário
-    form.addEventListener('submit', function(e) {
-        // Validar senhas se for novo usuário
-        const passwordField = document.getElementById('password');
-        const confirmPasswordField = document.getElementById('confirm_password');
-        
-        if (passwordField && confirmPasswordField) {
-            const password = passwordField.value;
-            const confirmPassword = confirmPasswordField.value;
-            
-            if (password !== confirmPassword) {
-                e.preventDefault();
-                showFeedback('As senhas não coincidem', 'error');
-                confirmPasswordField.focus();
-                return false;
-            }
-            
-            if (password.length < 6) {
-                e.preventDefault();
-                showFeedback('A senha deve ter pelo menos 6 caracteres', 'error');
-                passwordField.focus();
-                return false;
-            }
+
+    // === CONTROLE DE PERFIL ===
+    function handleRoleChange() {
+        const role = roleSelect.value;
+        console.log('[DEBUG] Role alterada para:', role);
+
+        if (role === 'cliente_unique' || role === 'interno_unique') {
+            empresasSection.style.display = 'block';
+        } else {
+            empresasSection.style.display = 'none';
+            empresasSelecionadas = [];
+            updateEmpresasList();
         }
+    }
+
+    if (roleSelect) {
+        roleSelect.addEventListener('change', handleRoleChange);
         
-        showLoading(true);
-        showFeedback('Salvando usuário...', 'info');
-    });
-    
-    // Mostrar mensagens flash como feedback
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                showFeedback('{{ message|safe }}', '{{ "error" if category == "error" else "success" if category == "success" else "warning" }}');
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    
+        // Verificar role inicial
+        if (roleSelect.value === 'cliente_unique' || roleSelect.value === 'interno_unique') {
+            empresasSection.style.display = 'block';
+        }
+    }
+
+    // === BUSCA DE EMPRESAS ===
+    function buscarEmpresa() {
+        const termo = cnpjSearchInput.value.trim();
+        
+        if (!termo) {
+            showFeedback('Digite um CNPJ ou nome da empresa para buscar', 'warning');
+            return;
+        }
+
+        console.log('[DEBUG] Buscando empresa:', termo);
+
+        fetch('/usuarios/api/empresas/buscar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ cnpj: termo })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.multiple) {
+                    // Múltiplas empresas - mostrar seletor
+                    mostrarSeletorEmpresas(data.empresas);
+                } else {
+                    // Uma empresa - adicionar diretamente
+                    const empresa = data.empresa;
+                    adicionarEmpresa(empresa);
+                    cnpjSearchInput.value = '';
+                }
+            } else {
+                showFeedback('Erro ao buscar empresa: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('[DEBUG] Erro ao buscar empresa:', error);
+            showFeedback('Erro de conexão ao buscar empresa', 'error');
         });
-    
-    // Validação em tempo real da confirmação de senha
+    }
+
+    function mostrarSeletorEmpresas(empresas) {
+        // Remove seletor anterior se existir
+        const seletorExistente = document.getElementById('empresa-selector');
+        if (seletorExistente) {
+            seletorExistente.remove();
+        }
+
+        // Criar seletor
+        const seletor = document.createElement('div');
+        seletor.id = 'empresa-selector';
+        seletor.style.cssText = `
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            width: 100%;
+            margin-top: 2px;
+        `;
+
+        empresas.forEach(empresa => {
+            const opcao = document.createElement('div');
+            opcao.style.cssText = `
+                padding: 12px;
+                border-bottom: 1px solid #eee;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            `;
+
+            // Formatear CNPJs
+            let cnpjDisplay = '';
+            if (Array.isArray(empresa.cnpj)) {
+                cnpjDisplay = empresa.cnpj.join(', ');
+            } else {
+                cnpjDisplay = empresa.cnpj;
+            }
+
+            opcao.innerHTML = `
+                <div style="font-weight: bold; color: #1f2937;">${empresa.nome_cliente || empresa.razao_social}</div>
+                <div style="font-size: 0.9em; color: #666;">${cnpjDisplay}</div>
+            `;
+
+            opcao.addEventListener('click', () => {
+                adicionarEmpresa(empresa);
+                seletor.remove();
+                cnpjSearchInput.value = '';
+            });
+
+            opcao.addEventListener('mouseover', () => {
+                opcao.style.backgroundColor = '#f3f4f6';
+            });
+
+            opcao.addEventListener('mouseout', () => {
+                opcao.style.backgroundColor = 'white';
+            });
+
+            seletor.appendChild(opcao);
+        });
+
+        // Posicionar seletor
+        const inputContainer = cnpjSearchInput.parentNode;
+        inputContainer.style.position = 'relative';
+        inputContainer.appendChild(seletor);
+    }
+
+    function adicionarEmpresa(empresa) {
+        // Verificar se já foi adicionada
+        const jaExiste = empresasSelecionadas.find(e => e.id === empresa.id);
+        if (jaExiste) {
+            showFeedback('Esta empresa já foi adicionada', 'warning');
+            return;
+        }
+
+        empresasSelecionadas.push(empresa);
+        updateEmpresasList();
+        showFeedback(`Empresa "${empresa.nome_cliente || empresa.razao_social}" adicionada`, 'success');
+    }
+
+    function removerEmpresa(empresaId) {
+        empresasSelecionadas = empresasSelecionadas.filter(e => e.id !== empresaId);
+        updateEmpresasList();
+        showFeedback('Empresa removida', 'info');
+    }
+
+    function updateEmpresasList() {
+        if (empresasSelecionadas.length === 0) {
+            empresasList.innerHTML = '<p style="color: var(--color-text-muted); font-style: italic;">Nenhuma empresa selecionada</p>';
+            return;
+        }
+
+        const html = empresasSelecionadas.map(empresa => {
+            let cnpjDisplay = '';
+            if (Array.isArray(empresa.cnpj)) {
+                cnpjDisplay = empresa.cnpj.join(', ');
+            } else {
+                cnpjDisplay = empresa.cnpj;
+            }
+
+            return `
+                <div class="empresa-item" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px;
+                    background: #f0f9ff;
+                    border: 1px solid #0ea5e9;
+                    border-radius: 6px;
+                    margin-bottom: 8px;
+                ">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #0c4a6e;">${empresa.nome_cliente || empresa.razao_social}</div>
+                        <div style="color: #6b7280; font-size: 0.875rem;">${cnpjDisplay}</div>
+                    </div>
+                    <button type="button" 
+                            onclick="removerEmpresa(${empresa.id})" 
+                            style="
+                                background: #dc2626;
+                                color: white;
+                                border: none;
+                                border-radius: 4px;
+                                padding: 6px 8px;
+                                cursor: pointer;
+                                font-size: 0.8rem;
+                            ">
+                        <i class="mdi mdi-trash-can"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        empresasList.innerHTML = html;
+    }
+
+    // Expor função para os botões
+    window.removerEmpresa = removerEmpresa;
+
+    // Event listeners
+    if (btnBuscarEmpresa) {
+        btnBuscarEmpresa.addEventListener('click', buscarEmpresa);
+    }
+
+    if (cnpjSearchInput) {
+        cnpjSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarEmpresa();
+            }
+        });
+    }
+
+    // === VALIDAÇÃO E ENVIO ===
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Verificar se há mensagens flash de erro - se sim, não interceptar
+            const flashMessages = document.querySelectorAll('.form-feedback:not(#form-feedback)');
+            const hasErrorFlash = Array.from(flashMessages).some(msg => msg.classList.contains('error'));
+            
+            if (hasErrorFlash) {
+                // Não interceptar - deixar o form ser enviado normalmente para mostrar as mensagens
+                console.log('[DEBUG] Mensagem flash de erro detectada, permitindo envio normal');
+                return true;
+            }
+            
+            e.preventDefault();
+            
+            // Validações básicas
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirm_password');
+            
+            if (password && confirmPassword) {
+                if (password.value !== confirmPassword.value) {
+                    showFeedback('As senhas não coincidem', 'error');
+                    return;
+                }
+                
+                if (password.value.length < 6) {
+                    showFeedback('A senha deve ter pelo menos 6 caracteres', 'error');
+                    return;
+                }
+            }
+
+            // Validar email
+            const emailInput = document.getElementById('email');
+            if (emailInput) {
+                const email = emailInput.value.trim();
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                
+                if (!emailRegex.test(email)) {
+                    showFeedback('Formato de email inválido', 'error');
+                    emailInput.focus();
+                    return;
+                }
+            }
+
+            showLoading(true);
+            showFeedback('Salvando usuário...', 'info');
+
+            // Submeter formulário
+            const formData = new FormData(form);
+            
+            fetch(form.action || window.location.pathname, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.redirected) {
+                    // Se houve redirecionamento, significa que deu certo
+                    showFeedback('Usuário salvo com sucesso!', 'success');
+                    
+                    // Se há empresas selecionadas e é um novo usuário, associar empresas
+                    if (empresasSelecionadas.length > 0 && !form.dataset.userId) {
+                        // Extrair ID do usuário da URL de redirecionamento
+                        const url = new URL(response.url);
+                        if (url.pathname.includes('/usuarios/')) {
+                            // Assumir que voltou para a lista, usuário foi criado
+                            setTimeout(() => {
+                                window.location.href = response.url;
+                            }, 1500);
+                        } else {
+                            window.location.href = response.url;
+                        }
+                    } else {
+                        setTimeout(() => {
+                            window.location.href = response.url;
+                        }, 1500);
+                    }
+                } else {
+                    return response.text();
+                }
+            })
+            .then(html => {
+                if (html) {
+                    // Se retornou HTML, verificar por mensagens de erro
+                    if (html.includes('alert-danger') || html.includes('error') || html.includes('form-feedback error')) {
+                        showFeedback('Erro ao salvar usuário. Recarregando página...', 'error');
+                        // Recarregar página para mostrar mensagens flash
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showFeedback('Usuário salvo com sucesso!', 'success');
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('usuarios.index') }}";
+                        }, 1500);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('[DEBUG] Erro ao salvar:', error);
+                showFeedback('Erro de conexão. Recarregando página...', 'error');
+                // Recarregar página para mostrar mensagens flash
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+        });
+    }
+
+    // === VALIDAÇÃO EM TEMPO REAL ===
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+            const email = this.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email && !emailRegex.test(email)) {
+                this.classList.add('error');
+                showFeedback('Formato de email inválido', 'warning');
+            } else {
+                this.classList.remove('error');
+            }
+        });
+    }
+
+    // Validação de confirmação de senha
     const passwordField = document.getElementById('password');
     const confirmPasswordField = document.getElementById('confirm_password');
     
@@ -393,10 +640,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const confirmPassword = confirmPasswordField.value;
             
             if (confirmPassword && password !== confirmPassword) {
-                confirmPasswordField.setCustomValidity('As senhas não coincidem');
                 confirmPasswordField.classList.add('error');
             } else {
-                confirmPasswordField.setCustomValidity('');
                 confirmPasswordField.classList.remove('error');
             }
         }
@@ -404,133 +649,8 @@ document.addEventListener('DOMContentLoaded', function() {
         passwordField.addEventListener('input', validatePasswordMatch);
         confirmPasswordField.addEventListener('input', validatePasswordMatch);
     }
-    
-    const userId = document.getElementById('userForm')?.dataset?.userId;
-    const empresasListCrud = document.getElementById('empresas-list-crud');
-    const openEmpresasModalBtn = document.getElementById('open-empresas-modal');
-    const empresasModal = document.getElementById('empresas-modal');
-    const closeEmpresasModalBtn = document.getElementById('close-empresas-modal');
-    const empresasListModal = document.getElementById('empresas-list-modal');
-    const addEmpresaBtn = document.getElementById('btn-add-empresa');
-    const novoCnpjInput = document.getElementById('novo-cnpj');
 
-    function renderEmpresasCrud(target) {
-        if (!userId) return;
-        
-        fetch(`/usuarios/${userId}/empresas-detalhadas`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    const html = (data.empresas && data.empresas.length > 0)
-                        ? data.empresas.map(emp => `
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span style="font-weight:600;">${emp.cnpj}</span>
-                                ${emp.razao_social ? `<span style="color:var(--color-text-muted); font-size:0.8em;">- ${emp.razao_social}</span>` : ''}
-                                <button class="btn btn-danger btn-sm btn-remove-empresa" data-cnpj="${emp.cnpj}" title="Remover empresa"><i class="mdi mdi-delete"></i></button>
-                            </div>
-                        `).join('')
-                        : '<span style="color:var(--color-text-muted); font-style:italic;">Nenhuma empresa associada</span>';
-                    if (target) target.innerHTML = html;
-                } else {
-                    showFeedback('Erro ao carregar empresas: ' + data.error, 'error');
-                }
-            })
-            .catch(error => {
-                showFeedback('Erro ao carregar empresas: ' + error.message, 'error');
-            });
-    }
-    
-    if (userId && empresasListCrud) {
-        renderEmpresasCrud(empresasListCrud);
-    }
-    
-    if (openEmpresasModalBtn && empresasModal && empresasListModal) {
-        openEmpresasModalBtn.onclick = function() {
-            empresasModal.style.display = 'flex';
-            renderEmpresasCrud(empresasListModal);
-        };
-        closeEmpresasModalBtn.onclick = function() {
-            empresasModal.style.display = 'none';
-        };
-        empresasModal.onclick = function(e) {
-            if (e.target === empresasModal) empresasModal.style.display = 'none';
-        };
-    }
-    
-    if (addEmpresaBtn && novoCnpjInput && empresasListModal) {
-        addEmpresaBtn.onclick = function() {
-            const cnpj = novoCnpjInput.value.trim();
-            if (!cnpj) {
-                showFeedback('Digite um CNPJ válido', 'warning');
-                return;
-            }
-            
-            addEmpresaBtn.classList.add('loading');
-            addEmpresaBtn.disabled = true;
-            
-            fetch(`/usuarios/${userId}/empresas/adicionar`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({cnpj})
-            })
-            .then(r => r.json())
-            .then(data => {
-                addEmpresaBtn.classList.remove('loading');
-                addEmpresaBtn.disabled = false;
-                
-                if (data.success) {
-                    novoCnpjInput.value = '';
-                    renderEmpresasCrud(empresasListModal);
-                    renderEmpresasCrud(empresasListCrud);
-                    showFeedback(data.message, 'success');
-                } else {
-                    showFeedback('Erro: ' + data.error, 'error');
-                }
-            })
-            .catch(error => {
-                addEmpresaBtn.classList.remove('loading');
-                addEmpresaBtn.disabled = false;
-                showFeedback('Erro de conexão: ' + error.message, 'error');
-            });
-        };
-    }
-    
-    if (empresasListModal) {
-        empresasListModal.addEventListener('click', function(e) {
-            if (e.target.classList.contains('btn-remove-empresa') || e.target.parentElement.classList.contains('btn-remove-empresa')) {
-                const btn = e.target.classList.contains('btn-remove-empresa') ? e.target : e.target.parentElement;
-                const cnpj = btn.dataset.cnpj;
-                if (!cnpj) return;
-                if (!confirm('Remover esta empresa?')) return;
-                
-                btn.classList.add('loading');
-                btn.disabled = true;
-                
-                fetch(`/usuarios/${userId}/empresas/remover`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({cnpj})
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        renderEmpresasCrud(empresasListModal);
-                        renderEmpresasCrud(empresasListCrud);
-                        showFeedback(data.message, 'success');
-                    } else {
-                        showFeedback('Erro: ' + data.error, 'error');
-                    }
-                })
-                .catch(error => {
-                    showFeedback('Erro de conexão: ' + error.message, 'error');
-                })
-                .finally(() => {
-                    btn.classList.remove('loading');
-                    btn.disabled = false;
-                });
-            }
-        });
-    }
+    console.log('[DEBUG] Formulário de usuários inicializado com sucesso');
 });
 </script>
 {% endblock %}

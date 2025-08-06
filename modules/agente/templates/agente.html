@@ -141,59 +141,62 @@
                         </tr>
                     </thead>
                     <tbody id="users-table-body">
-                        {% for agente in agentes %}
-                        <tr data-user-id="{{ agente.user_id }}">
+                        {% for usuario in usuarios %}
+                        <tr data-user-id="{{ usuario.user_id }}">
                             <td class="user-info-cell">
-                                <div class="user-name-table">{{ agente.nome or 'Nome não informado' }}</div>
-                                <div class="user-email-table">{{ agente.email }}</div>
+                                <div class="user-name-table">{{ usuario.nome or 'Nome não informado' }}</div>
+                                <div class="user-email-table">{{ usuario.email }}</div>
                             </td>
                             <td class="numbers-cell">
                                 <div class="numbers-list-table">
-                                    {% if agente.numeros %}
-                                        {% for numero in agente.numeros %}
-                                        <span class="number-badge">{{ numero }}</span>
+                                    {% if usuario.numeros %}
+                                        {% for numero in usuario.numeros %}
+                                        <span class="number-badge" title="{{ numero.nome }} • {{ numero.tipo|title }}{% if numero.principal %} • Principal{% endif %}">
+                                            {{ numero.numero }}
+                                            {% if numero.principal %}<i class="mdi mdi-star" style="color: var(--color-warning);"></i>{% endif %}
+                                        </span>
                                         {% endfor %}
                                     {% else %}
                                         <span style="color: var(--color-text-muted); font-size: 0.75rem;">Nenhum número</span>
                                     {% endif %}
                                 </div>
                                 <div class="add-number-inline" style="display: none;">
-                                    <input type="text" class="form-input add-number-input" placeholder="Novo número" id="new-number-{{ agente.user_id }}">
-                                    <button class="btn btn-success btn-table" onclick="adminAddNumber('{{ agente.user_id }}')">
+                                    <input type="text" class="form-input add-number-input" placeholder="Novo número" id="new-number-{{ usuario.user_id }}">
+                                    <button class="btn btn-success btn-table" onclick="adminAddNumber('{{ usuario.user_id }}')">
                                         <i class="mdi mdi-plus"></i>
                                     </button>
                                 </div>
                             </td>
                             <td class="companies-cell">
-                                {% if agente.empresas and agente.empresas|length > 0 %}
-                                    <span class="companies-count">{{ agente.empresas|length }} empresa(s)</span>
+                                {% if usuario.empresas %}
+                                    <span class="companies-count">{{ usuario.empresas|length }} empresa(s)</span>
+                                    <div style="font-size: 0.75rem; color: var(--color-text-muted);">
+                                        {% for empresa in usuario.empresas[:2] %}
+                                            {{ empresa }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                        {% if usuario.empresas|length > 2 %}...{% endif %}
+                                    </div>
                                 {% else %}
                                     <span style="color: var(--color-text-muted); font-size: 0.75rem;">Nenhuma empresa</span>
                                 {% endif %}
                             </td>
                             <td class="status-cell">
-                                {% if agente.usuario_ativo %}
-                                    <span class="status-badge status-active">
-                                        <i class="mdi mdi-check-circle"></i>
-                                        Ativo
-                                    </span>
+                                {% if usuario.ativo %}
+                                    <span class="status-badge status-active"><i class="mdi mdi-check-circle"></i> Ativo</span>
                                 {% else %}
-                                    <span class="status-badge status-inactive">
-                                        <i class="mdi mdi-close-circle"></i>
-                                        Inativo
-                                    </span>
+                                    <span class="status-badge status-inactive"><i class="mdi mdi-close-circle"></i> Inativo</span>
                                 {% endif %}
                             </td>
                             <td class="actions-cell">
-                                <button class="btn btn-primary btn-table" onclick="showUserDetails('{{ agente.user_id }}')">
+                                <button class="btn btn-primary btn-table" onclick="showUserDetails('{{ usuario.user_id }}')" title="Visualizar detalhes">
                                     <i class="mdi mdi-eye"></i>
                                 </button>
-                                {% if agente.usuario_ativo %}
-                                    <button class="btn btn-warning btn-table" onclick="adminToggleUser('{{ agente.user_id }}', false)">
+                                {% if usuario.ativo %}
+                                    <button class="btn btn-warning btn-table" onclick="adminToggleUser('{{ usuario.user_id }}', false)" title="Desativar">
                                         <i class="mdi mdi-pause"></i>
                                     </button>
                                 {% else %}
-                                    <button class="btn btn-success btn-table" onclick="adminToggleUser('{{ agente.user_id }}', true)">
+                                    <button class="btn btn-success btn-table" onclick="adminToggleUser('{{ usuario.user_id }}', true)" title="Ativar">
                                         <i class="mdi mdi-play"></i>
                                     </button>
                                 {% endif %}
@@ -201,7 +204,7 @@
                         </tr>
                         {% endfor %}
 
-                        {% if not agentes %}
+                        {% if not usuarios %}
                         <tr>
                             <td colspan="5" class="empty-state">
                                 <i class="mdi mdi-account-off"></i>
@@ -244,7 +247,7 @@
     {% else %}
     <!-- ===== ÁREA DO USUÁRIO COMUM ===== -->
     <div class="main-content agent-grid">
-        {% if user_data and user_data.usuario_ativo %}
+        {% if user_data and user_data.tem_numeros %}
         <!-- Agente Configurado -->
         <div class="agent-card agent-main-card">
             <!-- Header com Status -->
@@ -253,10 +256,10 @@
                     <i class="mdi mdi-robot"></i>
                 </div>
                 <div>
-                    <h2 class="card-title">Agente Unique</h2>
+                    <h2 class="card-title">Agente Unique Ativo</h2>
                     <span class="agent-status-badge">
-                        <span class="status-dot"></span>
-                        Ativo
+                        <i class="mdi mdi-check-circle"></i>
+                        {{ user_data.numeros|length }} número(s) ativo(s)
                     </span>
                 </div>
             </div>
@@ -264,20 +267,35 @@
             <!-- Seção de Números -->
             <div class="form-section">
                 <h3 class="form-section-title">
-                    <i class="mdi mdi-whatsapp"></i>
-                    Números do WhatsApp
+                    <i class="mdi mdi-phone"></i>
+                    Números WhatsApp
                 </h3>
                 
-                {% if user_data.numero %}
+                {% if user_data.numeros %}
                 <div class="numbers-grid">
-                    {% for numero in user_data.numero %}
-                    <div class="number-item">
-                        <span class="number-text">{{ numero }}</span>
+                    {% for numero in user_data.numeros %}
+                    <div class="number-item" data-numero-id="{{ numero.id }}">
+                        <div style="flex: 1;">
+                            <div class="number-text">
+                                {{ numero.numero_whatsapp }}
+                                {% if numero.principal %}
+                                    <span style="color: var(--color-primary); font-size: 0.75rem; margin-left: 0.5rem;">★ Principal</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
+                                {{ numero.nome_contato }} • {{ numero.tipo_numero|title }}
+                            </div>
+                        </div>
                         <div class="number-actions">
-                            <button class="btn btn-danger btn-icon btn-remove-numero" 
-                                    data-numero="{{ numero }}" 
-                                    onclick="removeNumber('{{ numero }}')"
-                                    title="Remover número">
+                            {% if not numero.principal %}
+                            <button class="btn-icon btn btn-primary" onclick="setPrincipal('{{ numero.id }}')" title="Definir como principal">
+                                <i class="mdi mdi-star"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn-icon btn btn-warning" onclick="editNumber('{{ numero.id }}', '{{ numero.nome_contato }}', '{{ numero.tipo_numero }}')" title="Editar">
+                                <i class="mdi mdi-pencil"></i>
+                            </button>
+                            <button class="btn-icon btn btn-danger" onclick="removeNumber('{{ numero.id }}')" title="Remover">
                                 <i class="mdi mdi-delete"></i>
                             </button>
                         </div>
@@ -287,44 +305,86 @@
                 {% endif %}
                 
                 <!-- Adicionar Novo Número -->
-                <div class="add-number-section">
-                    <h4 style="margin: 0 0 var(--spacing-sm) 0; color: var(--color-text-primary);">
-                        <i class="mdi mdi-plus-circle"></i>
-                        Adicionar Novo Número
-                    </h4>
-                    <div class="add-number-form">
-                        <div class="input-group" style="flex: 1;">
-                            <i class="mdi mdi-whatsapp input-icon"></i>
-                            <input type="text" 
-                                   id="novo-numero" 
-                                   class="form-input with-icon" 
-                                   placeholder="Ex: 5511999999999"
-                                   autocomplete="tel">
+                <div class="add-number-section" onclick="showAddNumberForm()">
+                    <div id="add-number-placeholder">
+                        <i class="mdi mdi-plus-circle" style="font-size: 2rem; color: var(--color-primary); margin-bottom: var(--spacing-sm);"></i>
+                        <p style="margin: 0; color: var(--color-text-secondary); font-weight: 500;">Adicionar Novo Número</p>
+                        <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-muted);">Clique para adicionar outro número WhatsApp</p>
+                    </div>
+                    <div id="add-number-form" class="add-number-form" style="display: none;" onclick="event.stopPropagation()">
+                        <div style="width: 100%; max-width: 400px;">
+                            <div class="form-group">
+                                <label class="form-label">Número WhatsApp</label>
+                                <input type="tel" id="novo-numero" class="form-input" placeholder="(11) 99999-9999" maxlength="20">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nome para identificação</label>
+                                <input type="text" id="nome-contato" class="form-input" placeholder="Ex: João - Comercial" maxlength="50">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de número</label>
+                                <select id="tipo-numero" class="form-input">
+                                    <option value="pessoal">Pessoal</option>
+                                    <option value="comercial">Comercial</option>
+                                    <option value="suporte">Suporte</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: var(--spacing-sm); justify-content: center;">
+                                <button type="button" class="btn btn-success" id="btn-add-numero" onclick="addNumber()">
+                                    <i class="mdi mdi-plus"></i> Adicionar
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="hideAddNumberForm()">
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
-                        <button class="btn btn-success" id="btn-add-numero" onclick="addNumber()">
-                            <i class="mdi mdi-plus"></i>
-                            Adicionar
-                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Seção de Empresas -->
-            {% if user_data.empresa %}
+            {% if user_data.empresas %}
             <div class="form-section">
                 <h3 class="form-section-title">
                     <i class="mdi mdi-domain"></i>
-                    Empresas Associadas
+                    Empresas Vinculadas
                 </h3>
                 <div class="companies-list">
-                    {% for empresa in user_data.empresa %}
+                    {% for empresa in user_data.empresas %}
                     <div class="company-item">
-                        <div class="company-cnpj">{{ empresa.cnpj if empresa.cnpj else empresa }}</div>
-                        {% if empresa.razao_social %}
-                        <div class="company-name">{{ empresa.razao_social }}</div>
-                        {% endif %}
+                        <div class="company-name">
+                            <i class="mdi mdi-office-building" style="margin-right: var(--spacing-xs);"></i>
+                            {{ empresa.nome_cliente }}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: var(--spacing-xs);">
+                            <i class="mdi mdi-file-document-outline"></i>
+                            {% if empresa.total_cnpjs > 0 %}
+                                {{ empresa.total_cnpjs }} CNPJ(s) vinculado(s)
+                            {% else %}
+                                Nenhum CNPJ vinculado
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 2px;">
+                            <i class="mdi mdi-calendar-check"></i>
+                            Vinculado em {{ empresa.data_vinculo_formatada }}
+                        </div>
                     </div>
                     {% endfor %}
+                </div>
+                
+                <!-- Resumo das empresas -->
+                <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-background); border-radius: var(--radius-md); border-left: 3px solid var(--color-info);">
+                    <div style="font-size: 0.875rem; color: var(--color-text-secondary);">
+                        <i class="mdi mdi-information-outline" style="margin-right: var(--spacing-xs);"></i>
+                        <strong>Resumo:</strong> 
+                        Você tem acesso a {{ user_data.empresas|length }} empresa(s) no sistema.
+                        {% set total_cnpjs = user_data.empresas | map(attribute='total_cnpjs') | sum %}
+                        {% if total_cnpjs > 0 %}
+                            Total de {{ total_cnpjs }} CNPJ(s) disponível(eis) para consultas e relatórios.
+                        {% else %}
+                            Configure os CNPJs nas empresas para liberar o acesso completo.
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             {% endif %}
@@ -332,7 +392,7 @@
             <!-- Ações -->
             <div style="margin-top: var(--spacing-lg); display: flex; gap: var(--spacing-md); flex-wrap: wrap;">
                 <button class="btn btn-danger" id="btn-cancelar-adesao" onclick="cancelSubscription()">
-                    <i class="mdi mdi-stop"></i>
+                    <i class="mdi mdi-cancel"></i>
                     Cancelar Adesão
                 </button>
             </div>
@@ -350,50 +410,72 @@
             
             <form method="POST" action="{{ url_for('agente.index') }}">
                 <div class="form-section">
-                    <h3 class="form-section-title">
-                        <i class="mdi mdi-whatsapp"></i>
-                        Número do WhatsApp
-                    </h3>
-                    <div class="input-group">
-                        <i class="mdi mdi-whatsapp input-icon"></i>
-                        <input type="text" 
+                    <div class="form-group">
+                        <label for="numero_whatsapp" class="form-label">
+                            <i class="mdi mdi-phone"></i>
+                            Número WhatsApp
+                        </label>
+                        <input type="tel" 
                                id="numero_whatsapp" 
                                name="numero_whatsapp" 
-                               class="form-input with-icon" 
-                               placeholder="Ex: 5511999999999" 
-                               autocomplete="tel"
-                               required>
+                               class="form-input" 
+                               placeholder="(11) 99999-9999" 
+                               required 
+                               maxlength="20">
+                        <div class="form-help">Digite o número com DDD, sem espaços ou símbolos</div>
                     </div>
-                    <div class="form-help">
-                        Digite seu número completo com código do país (55) e DDD
+                    
+                    <div class="form-group">
+                        <label for="nome_contato" class="form-label">
+                            <i class="mdi mdi-account"></i>
+                            Nome para identificação
+                        </label>
+                        <input type="text" 
+                               id="nome_contato" 
+                               name="nome_contato" 
+                               class="form-input" 
+                               placeholder="Ex: João - Comercial" 
+                               required 
+                               maxlength="50">
+                        <div class="form-help">Nome para identificar este número</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tipo_numero" class="form-label">
+                            <i class="mdi mdi-tag"></i>
+                            Tipo de número
+                        </label>
+                        <select id="tipo_numero" name="tipo_numero" class="form-input">
+                            <option value="pessoal">Pessoal</option>
+                            <option value="comercial">Comercial</option>
+                            <option value="suporte">Suporte</option>
+                        </select>
                     </div>
                 </div>
                 
                 <div class="form-section">
-                    <h3 class="form-section-title">
-                        <i class="mdi mdi-file-document"></i>
-                        Termos de Uso
-                    </h3>
-                    <p class="terms-text">
-                        Ao ativar o Agente Unique, você concorda que poderemos enviar mensagens 
-                        automatizadas para o número informado com informações sobre seus processos 
-                        de importação. Você pode desativar o serviço a qualquer momento.
-                    </p>
-                    <div class="checkbox-group">
-                        <input type="checkbox" 
-                               id="aceite_terms" 
-                               name="aceite_terms" 
-                               class="checkbox-input"
-                               required>
-                        <label for="aceite_terms" class="checkbox-label">
-                            Eu aceito os termos de uso do Agente Unique
-                        </label>
+                    <div class="terms-section">
+                        <h3 class="terms-title">Termos de Uso</h3>
+                        <div class="terms-text">
+                            <p>Ao ativar o Agente Unique, você concorda que:</p>
+                            <ul>
+                                <li>O sistema poderá enviar mensagens via WhatsApp</li>
+                                <li>Você é responsável pelo número informado</li>
+                                <li>O serviço pode ser suspenso por uso inadequado</li>
+                            </ul>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="aceite_terms" name="aceite_terms" class="checkbox-input" required>
+                            <label for="aceite_terms" class="checkbox-label">
+                                Eu li e aceito os termos de uso
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
                 <button type="submit" class="btn btn-success" id="btn-ativar-agente">
                     <i class="mdi mdi-check"></i>
-                    Ativar Agente
+                    Ativar Agente Unique
                 </button>
             </form>
         </div>

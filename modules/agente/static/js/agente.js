@@ -82,18 +82,66 @@ function validatePhoneNumber(number) {
         return { valid: false, message: 'Número deve ter entre 10 e 15 dígitos' };
     }
     
-    // Verifica se é número brasileiro (código 55)
+    let formatted;
+    
+    // Se já tem 13 dígitos e começa com 55, mantém
     if (cleaned.length === 13 && cleaned.startsWith('55')) {
-        return { valid: true, formatted: cleaned };
+        formatted = `+${cleaned}`;
+    }
+    // Se tem 11 dígitos (formato brasileiro sem código de país)
+    else if (cleaned.length === 11) {
+        formatted = `+55${cleaned}`;
+    }
+    // Se tem 10 dígitos (sem o 9 no celular), adiciona o 9
+    else if (cleaned.length === 10 && ['6', '7', '8', '9'].includes(cleaned[2])) {
+        formatted = `+55${cleaned.slice(0, 2)}9${cleaned.slice(2)}`;
+    }
+    // Se tem 12 dígitos mas não começa com 55, assume que é 55 + número
+    else if (cleaned.length === 12) {
+        formatted = `+55${cleaned.slice(2)}`;
+    }
+    // Se tem 14 dígitos e começa com 55, remove um dígito extra
+    else if (cleaned.length === 14 && cleaned.startsWith('55')) {
+        formatted = `+${cleaned.slice(0, 13)}`;
+    }
+    // Se tem 15 dígitos e começa com 55, só adiciona o +
+    else if (cleaned.length === 15 && cleaned.startsWith('55')) {
+        formatted = `+${cleaned}`;
+    }
+    // Se não conseguiu identificar o padrão, tenta formato mínimo +55
+    else if (cleaned.length >= 10) {
+        const phonePart = cleaned.slice(-11);
+        formatted = `+55${phonePart}`;
+    }
+    else {
+        return { valid: false, message: 'Formato de número inválido' };
     }
     
-    // Se tem 11 dígitos, assume que é brasileiro sem código do país
-    if (cleaned.length === 11) {
-        return { valid: true, formatted: '55' + cleaned };
+    // Validação final do formato
+    if (formatted.length !== 14) {
+        return { valid: false, message: `Formato inválido. Esperado: +5511999999999 (14 caracteres), recebido: ${formatted.length}` };
     }
     
-    // Aceita outros formatos
-    return { valid: true, formatted: cleaned };
+    if (!formatted.startsWith('+55')) {
+        return { valid: false, message: 'Número deve ser brasileiro (+55)' };
+    }
+    
+    const phonePart = formatted.slice(3); // Remove +55
+    if (phonePart.length !== 11) {
+        return { valid: false, message: 'Parte do telefone deve ter 11 dígitos' };
+    }
+    
+    const areaCode = phonePart.slice(0, 2);
+    if (!/^\d{2}$/.test(areaCode) || parseInt(areaCode) < 11 || parseInt(areaCode) > 99) {
+        return { valid: false, message: `Código de área inválido: ${areaCode}` };
+    }
+    
+    const firstDigit = phonePart[2];
+    if (!['2', '3', '4', '5', '9'].includes(firstDigit)) {
+        return { valid: false, message: `Primeiro dígito do telefone inválido: ${firstDigit}` };
+    }
+    
+    return { valid: true, formatted: formatted };
 }
 
 function setButtonLoading(button, loading) {
@@ -109,12 +157,22 @@ function setButtonLoading(button, loading) {
 // === GERENCIAMENTO DE NÚMEROS ===
 function addNumber() {
     const input = document.getElementById('novo-numero');
+    const nomeInput = document.getElementById('nome-contato');
+    const tipoSelect = document.getElementById('tipo-numero');
     const button = document.getElementById('btn-add-numero');
     const numero = input.value.trim();
+    const nomeContato = nomeInput ? nomeInput.value.trim() : '';
+    const tipoNumero = tipoSelect ? tipoSelect.value : 'pessoal';
     
     if (!numero) {
         toast.warning('Campo obrigatório', 'Por favor, informe um número de WhatsApp');
         input.focus();
+        return;
+    }
+    
+    if (!nomeContato) {
+        toast.warning('Campo obrigatório', 'Por favor, informe um nome para identificar este número');
+        nomeInput.focus();
         return;
     }
     
@@ -130,13 +188,19 @@ function addNumber() {
     fetch('/agente/ajax/add-numero', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numero: validation.formatted })
+        body: JSON.stringify({ 
+            numero: validation.formatted,
+            nome_contato: nomeContato,
+            tipo_numero: tipoNumero
+        })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             toast.success('Sucesso!', data.message || 'Número adicionado com sucesso');
             input.value = '';
+            if (nomeInput) nomeInput.value = '';
+            if (tipoSelect) tipoSelect.value = 'pessoal';
             setTimeout(() => window.location.reload(), 1000);
         } else {
             toast.error('Erro', data.message || 'Não foi possível adicionar o número');
@@ -151,18 +215,18 @@ function addNumber() {
     });
 }
 
-function removeNumber(numero) {
-    if (!confirm(`Tem certeza que deseja remover o número ${numero}?`)) {
+function removeNumber(numeroId, numeroDisplay) {
+    if (!confirm(`Tem certeza que deseja remover o número ${numeroDisplay}?`)) {
         return;
     }
     
-    const button = document.querySelector(`[data-numero="${numero}"]`);
+    const button = document.querySelector(`[data-numero-id="${numeroId}"]`);
     if (button) setButtonLoading(button, true);
     
     fetch('/agente/ajax/remove-numero', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numero })
+        body: JSON.stringify({ numero_id: numeroId })
     })
     .then(response => response.json())
     .then(data => {
@@ -180,6 +244,92 @@ function removeNumber(numero) {
     .finally(() => {
         if (button) setButtonLoading(button, false);
     });
+}
+
+function setPrincipal(numeroId, numeroDisplay) {
+    if (!confirm(`Definir ${numeroDisplay} como número principal?`)) {
+        return;
+    }
+    
+    const button = document.querySelector(`[data-principal-id="${numeroId}"]`);
+    if (button) setButtonLoading(button, true);
+    
+    fetch('/agente/ajax/set-principal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numero_id: numeroId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            toast.success('Sucesso!', data.message || 'Número principal atualizado');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            toast.error('Erro', data.message || 'Não foi possível definir como principal');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        toast.error('Erro de conexão', 'Verifique sua conexão e tente novamente');
+    })
+    .finally(() => {
+        if (button) setButtonLoading(button, false);
+    });
+}
+
+function editNumber(numeroId) {
+    const numeroCard = document.querySelector(`[data-numero-id="${numeroId}"]`).closest('.numero-card');
+    if (!numeroCard) return;
+    
+    // Aqui você pode implementar um modal de edição ou edição inline
+    // Por enquanto, vou mostrar um toast informativo
+    toast.info('Função de edição', 'Edição de números será implementada em breve');
+}
+
+function showAddNumberForm() {
+    const placeholder = document.getElementById('add-number-placeholder');
+    const addForm = document.getElementById('add-number-form');
+    const addSection = document.querySelector('.add-number-section');
+    
+    if (placeholder && addForm) {
+        placeholder.style.display = 'none';
+        addForm.style.display = 'block';
+        
+        // Desabilitar o onclick do elemento pai para evitar conflitos
+        if (addSection) {
+            addSection.style.pointerEvents = 'none';
+            addForm.style.pointerEvents = 'all';
+        }
+        
+        // Focar no primeiro input
+        const firstInput = addForm.querySelector('input');
+        if (firstInput) {
+            setTimeout(() => firstInput.focus(), 100);
+        }
+    }
+}
+
+function hideAddNumberForm() {
+    const placeholder = document.getElementById('add-number-placeholder');
+    const addForm = document.getElementById('add-number-form');
+    const addSection = document.querySelector('.add-number-section');
+    
+    if (placeholder && addForm) {
+        placeholder.style.display = 'block';
+        addForm.style.display = 'none';
+        
+        // Reabilitar o onclick do elemento pai
+        if (addSection) {
+            addSection.style.pointerEvents = 'auto';
+        }
+        
+        // Limpar campos
+        const inputs = addForm.querySelectorAll('input');
+        inputs.forEach(input => input.value = '');
+        
+        const selects = addForm.querySelectorAll('select');
+        selects.forEach(select => select.selectedIndex = 0);
+    }
 }
 
 function cancelSubscription() {
@@ -564,11 +714,22 @@ async function adminToggleUser(userId, activate) {
 async function adminAddNumber(userId) {
     try {
         const input = document.getElementById(`new-number-${userId}`);
+        const nomeInput = document.getElementById(`new-nome-${userId}`);
+        const tipoSelect = document.getElementById(`new-tipo-${userId}`);
+        
         const numero = input.value.trim();
+        const nomeContato = nomeInput ? nomeInput.value.trim() : '';
+        const tipoNumero = tipoSelect ? tipoSelect.value : 'pessoal';
         
         if (!numero) {
             toast.warning('Campo obrigatório', 'Digite um número válido');
             input.focus();
+            return;
+        }
+        
+        if (!nomeContato) {
+            toast.warning('Campo obrigatório', 'Digite um nome para identificar o número');
+            nomeInput.focus();
             return;
         }
         
@@ -580,14 +741,16 @@ async function adminAddNumber(userId) {
             return;
         }
         
-        console.log('[ADMIN] Adicionando número:', { userId, numero: validation.formatted });
+        console.log('[ADMIN] Adicionando número:', { userId, numero: validation.formatted, nomeContato, tipoNumero });
         
         const response = await fetch('/agente/admin/add-numero', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 user_id: userId, 
-                numero: validation.formatted 
+                numero: validation.formatted,
+                nome_contato: nomeContato,
+                tipo_numero: tipoNumero
             })
         });
         
@@ -596,13 +759,11 @@ async function adminAddNumber(userId) {
         if (data.success) {
             toast.success('Sucesso!', data.message);
             input.value = '';
+            if (nomeInput) nomeInput.value = '';
+            if (tipoSelect) tipoSelect.value = 'pessoal';
             
-            // Atualizar dados locais
-            const user = adminData.users.find(u => u.user_id === userId);
-            if (user) {
-                user.numeros.push(validation.formatted);
-                filterUsers(); // Reaplica filtros
-            }
+            // Recarregar dados
+            await loadAdminData();
         } else {
             toast.error('Erro', data.message);
         }
@@ -612,13 +773,13 @@ async function adminAddNumber(userId) {
     }
 }
 
-async function adminRemoveNumber(userId, numero) {
-    if (!confirm(`Tem certeza que deseja remover o número ${numero}?`)) {
+async function adminRemoveNumber(userId, numeroId, numeroDisplay) {
+    if (!confirm(`Tem certeza que deseja remover o número ${numeroDisplay}?`)) {
         return;
     }
     
     try {
-        console.log('[ADMIN] Removendo número:', { userId, numero });
+        console.log('[ADMIN] Removendo número:', { userId, numeroId, numeroDisplay });
         
         const response = await fetch('/agente/admin/remove-numero', {
             method: 'POST',
@@ -628,7 +789,7 @@ async function adminRemoveNumber(userId, numero) {
             },
             body: JSON.stringify({ 
                 user_id: userId, 
-                numero: numero 
+                numero_id: numeroId
             })
         });
         
@@ -637,23 +798,61 @@ async function adminRemoveNumber(userId, numero) {
         if (data.success) {
             toast.success('Sucesso!', data.message);
             
-            // Atualizar dados locais
-            const user = adminData.users.find(u => u.user_id === userId);
-            if (user) {
-                user.numeros = user.numeros.filter(n => n !== numero);
-                filterUsers(); // Reaplica filtros
-                
-                // Se o modal estiver aberto, atualizar ele também
-                const modal = document.getElementById('user-details-modal');
-                if (modal.classList.contains('show')) {
-                    showUserDetails(userId);
-                }
+            // Recarregar dados
+            await loadAdminData();
+            
+            // Se o modal estiver aberto, atualizar ele também
+            const modal = document.getElementById('user-details-modal');
+            if (modal && modal.classList.contains('show')) {
+                showUserDetails(userId);
             }
         } else {
             toast.error('Erro', data.message);
         }
     } catch (error) {
         console.error('[ADMIN] Erro ao remover número:', error);
+        toast.error('Erro de conexão', 'Verifique sua conexão e tente novamente');
+    }
+}
+
+async function adminSetPrincipal(userId, numeroId, numeroDisplay) {
+    if (!confirm(`Definir ${numeroDisplay} como número principal para este usuário?`)) {
+        return;
+    }
+    
+    try {
+        console.log('[ADMIN] Definindo número principal:', { userId, numeroId, numeroDisplay });
+        
+        const response = await fetch('/agente/admin/set-principal', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-API-Key': 'uniq_api_2025_dev_bypass_key'
+            },
+            body: JSON.stringify({ 
+                user_id: userId, 
+                numero_id: numeroId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            toast.success('Sucesso!', data.message);
+            
+            // Recarregar dados
+            await loadAdminData();
+            
+            // Se o modal estiver aberto, atualizar ele também
+            const modal = document.getElementById('user-details-modal');
+            if (modal && modal.classList.contains('show')) {
+                showUserDetails(userId);
+            }
+        } else {
+            toast.error('Erro', data.message);
+        }
+    } catch (error) {
+        console.error('[ADMIN] Erro ao definir número principal:', error);
         toast.error('Erro de conexão', 'Verifique sua conexão e tente novamente');
     }
 }

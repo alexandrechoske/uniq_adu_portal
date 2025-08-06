@@ -1165,3 +1165,169 @@
     font-size: 0.75rem;
     border-radius: var(--radius-sm);
 }
+
+/* === NOVOS ESTILOS PARA ESTRUTURA MÚLTIPLOS NÚMEROS === */
+
+/* Card de número individual */
+.numero-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    transition: all 0.2s ease;
+}
+
+.numero-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.numero-card.principal {
+    border-color: var(--color-success);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.02) 0%, var(--color-surface) 100%);
+}
+
+/* Header do número */
+.numero-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+}
+
+.numero-info {
+    flex: 1;
+}
+
+.numero-display {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.numero-meta {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Badges para tipo e principal */
+.tipo-badge {
+    background: var(--color-info-light);
+    color: var(--color-info);
+    padding: 2px var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.tipo-badge.comercial {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+}
+
+.tipo-badge.pessoal {
+    background: var(--color-info-light);
+    color: var(--color-info);
+}
+
+.principal-badge {
+    background: var(--color-success-light);
+    color: var(--color-success);
+    padding: 2px var(--spacing-xs);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.nome-contato {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin-top: var(--spacing-xs);
+}
+
+/* Ações do número */
+.numero-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-shrink: 0;
+}
+
+.numero-actions .btn {
+    padding: var(--spacing-xs);
+    font-size: 0.8rem;
+    min-width: auto;
+}
+
+/* Estados especiais */
+.numero-card.inativo {
+    opacity: 0.7;
+    border-color: var(--color-border);
+    background: var(--color-surface-hover);
+}
+
+.numero-card.inativo .numero-display {
+    color: var(--color-text-muted);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .numero-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .numero-actions {
+        align-self: stretch;
+        justify-content: space-around;
+    }
+    
+    .numero-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Estilos para o admin panel */
+.numero-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+.numero-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-text-primary);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0.9;
+}
+
+.numero-lista-admin {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    max-width: 200px;
+}
+
+.numero-lista-admin .number-badge {
+    position: relative;
+}
+
+/* Estados de loading para botões específicos */
+.btn[data-numero-id]:disabled,
+.btn[data-principal-id]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
