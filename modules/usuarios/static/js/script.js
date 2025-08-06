@@ -128,6 +128,25 @@ function initializeElements() {
         // Notificações
         notificationArea: document.getElementById('notification-area')
     };
+    
+    // Debug: verificar se elementos críticos existem
+    console.log('[DEBUG] initializeElements - verificando elementos críticos:', {
+        'empresaSearch exists': !!elements.empresaSearch,
+        'btnAddEmpresa exists': !!elements.btnAddEmpresa,
+        'empresasList exists': !!elements.empresasList,
+        'empresasCount exists': !!elements.empresasCount,
+        'empresaSearchResults exists': !!elements.empresaSearchResults
+    });
+    
+    if (!elements.empresaSearch) {
+        console.error('[DEBUG] ERRO: elemento #empresa-search não encontrado!');
+    }
+    if (!elements.btnAddEmpresa) {
+        console.error('[DEBUG] ERRO: elemento #btn-add-empresa não encontrado!');
+    }
+    if (!elements.empresasList) {
+        console.error('[DEBUG] ERRO: elemento #empresas-list não encontrado!');
+    }
 }
 
 /**
@@ -152,6 +171,56 @@ function initializeEventListeners() {
     // Empresas
     elements.empresaSearch?.addEventListener('input', handleEmpresaSearch);
     elements.btnAddEmpresa?.addEventListener('click', handleAddEmpresa);
+    
+    console.log('[DEBUG] initializeEventListeners - event listeners de empresas configurados:', {
+        'empresaSearch listener': !!elements.empresaSearch,
+        'btnAddEmpresa listener': !!elements.btnAddEmpresa,
+        'btnAddEmpresa disabled': elements.btnAddEmpresa?.disabled
+    });
+    
+    // Debug avançado para btnAddEmpresa - VERSÃO ROBUSTA
+    if (elements.btnAddEmpresa) {
+        console.log('[DEBUG INIT] Configurando debug avançado para btnAddEmpresa:', elements.btnAddEmpresa);
+        
+        // Verificar se já tem listeners
+        const existingListeners = elements.btnAddEmpresa.cloneNode(true);
+        console.log('[DEBUG INIT] Elemento original:', elements.btnAddEmpresa);
+        
+        // Adicionar listener de debug que executa antes do handleAddEmpresa
+        elements.btnAddEmpresa.addEventListener('click', function(e) {
+            console.log('[DEBUG CLICK] ========== INÍCIO CLICK DEBUG ==========');
+            console.log('[DEBUG CLICK] Event object:', e);
+            console.log('[DEBUG CLICK] Target:', e.target);
+            console.log('[DEBUG CLICK] CurrentTarget:', e.currentTarget);
+            console.log('[DEBUG CLICK] Button disabled:', this.disabled);
+            console.log('[DEBUG CLICK] Button innerHTML:', this.innerHTML);
+            console.log('[DEBUG CLICK] Selected empresa global:', selectedEmpresa);
+            console.log('[DEBUG CLICK] Search input value:', elements.empresaSearchInput?.value || 'N/A');
+            console.log('[DEBUG CLICK] Search dataset:', {
+                selectedId: elements.empresaSearch?.dataset?.selectedId,
+                selectedCnpj: elements.empresaSearch?.dataset?.selectedCnpj,
+                selectedNome: elements.empresaSearch?.dataset?.selectedNome
+            });
+            
+            // Testar se handleAddEmpresa existe
+            if (typeof handleAddEmpresa === 'function') {
+                console.log('[DEBUG CLICK] handleAddEmpresa é uma função válida');
+                console.log('[DEBUG CLICK] Forçando execução de handleAddEmpresa...');
+                try {
+                    handleAddEmpresa();
+                    console.log('[DEBUG CLICK] handleAddEmpresa executada com sucesso!');
+                } catch (error) {
+                    console.error('[DEBUG CLICK] ERRO ao executar handleAddEmpresa:', error);
+                }
+            } else {
+                console.error('[DEBUG CLICK] handleAddEmpresa NÃO é uma função!', typeof handleAddEmpresa);
+            }
+            
+            console.log('[DEBUG CLICK] ========== FIM CLICK DEBUG ==========');
+        }, true); // Usar capture = true para executar antes
+        
+        console.log('[DEBUG INIT] Debug listener configurado com capture=true');
+    }
     
     // WhatsApp
     elements.btnAddWhatsapp?.addEventListener('click', handleAddWhatsapp);
@@ -329,12 +398,44 @@ function closeModal() {
  * Mostra o modal
  */
 function showModal() {
+    console.log('[DEBUG] showModal - abrindo modal...');
+    
     elements.modal?.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     
-    // Focus no primeiro campo
+    // Focus no primeiro campo e verificar elementos
     setTimeout(() => {
         elements.userName?.focus();
+        
+        // Re-verificar elementos após modal abrir
+        console.log('[DEBUG] showModal - verificando elementos após abertura:', {
+            'empresaSearch exists': !!document.getElementById('empresa-search'),
+            'btnAddEmpresa exists': !!document.getElementById('btn-add-empresa'),
+            'empresasList exists': !!document.getElementById('empresas-list'),
+            'empresasCount exists': !!document.getElementById('empresas-count')
+        });
+        
+        // Re-configurar elementos se necessário
+        if (!elements.empresaSearch) {
+            elements.empresaSearch = document.getElementById('empresa-search');
+            elements.btnAddEmpresa = document.getElementById('btn-add-empresa');
+            elements.empresasList = document.getElementById('empresas-list');
+            elements.empresasCount = document.getElementById('empresas-count');
+            elements.empresaSearchResults = document.getElementById('empresa-search-results');
+            
+            console.log('[DEBUG] showModal - elementos re-configurados:', {
+                'empresaSearch': !!elements.empresaSearch,
+                'btnAddEmpresa': !!elements.btnAddEmpresa,
+                'empresasList': !!elements.empresasList
+            });
+            
+            // Re-configurar event listeners
+            if (elements.empresaSearch && elements.btnAddEmpresa) {
+                elements.empresaSearch.addEventListener('input', handleEmpresaSearch);
+                elements.btnAddEmpresa.addEventListener('click', handleAddEmpresa);
+                console.log('[DEBUG] showModal - event listeners re-configurados');
+            }
+        }
     }, 100);
 }
 
@@ -522,11 +623,26 @@ function hideEmpresaSearchResults() {
  * Adiciona empresa à lista
  */
 function handleAddEmpresa() {
+    console.log('[DEBUG] ================== HANDLEADDEMPRESA INICIADA ==================');
+    console.log('[DEBUG] handleAddEmpresa - FUNÇÃO CHAMADA! Timestamp:', new Date().toISOString());
+    console.log('[DEBUG] handleAddEmpresa - Verificando elementos:', {
+        'elements.empresaSearch exists': !!elements.empresaSearch,
+        'elements.empresaSearch.dataset': elements.empresaSearch?.dataset || 'N/A'
+    });
+    
     const empresaId = elements.empresaSearch.dataset.selectedId;
     const empresaCnpj = elements.empresaSearch.dataset.selectedCnpj;
     const empresaNome = elements.empresaSearch.dataset.selectedNome;
     
+    console.log('[DEBUG] handleAddEmpresa - dados selecionados:', {
+        empresaId: empresaId,
+        empresaCnpj: empresaCnpj,
+        empresaNome: empresaNome,
+        'typeof empresaId': typeof empresaId
+    });
+    
     if (!empresaId || !empresaCnpj || !empresaNome) {
+        console.log('[DEBUG] handleAddEmpresa - DADOS INVÁLIDOS, saindo da função');
         showNotification('Selecione uma empresa válida', NOTIFICATION_TYPES.WARNING);
         return;
     }
@@ -534,16 +650,21 @@ function handleAddEmpresa() {
     // Verificar se já está na lista
     const existingItem = elements.empresasList.querySelector(`[data-empresa-id="${empresaId}"]`);
     if (existingItem) {
+        console.log('[DEBUG] handleAddEmpresa - EMPRESA JÁ EXISTE NA LISTA');
         showNotification('Empresa já está na lista', NOTIFICATION_TYPES.WARNING);
         return;
     }
     
     // Adicionar à lista
-    addEmpresaToList({
+    const empresaData = {
         id: empresaId,
         cnpjs: empresaCnpj,
         nome_cliente: empresaNome
-    });
+    };
+    
+    console.log('[DEBUG] handleAddEmpresa - dados para addEmpresaToList:', empresaData);
+    
+    addEmpresaToList(empresaData);
     
     // Limpar busca
     elements.empresaSearch.value = '';
@@ -553,6 +674,7 @@ function handleAddEmpresa() {
     elements.btnAddEmpresa.disabled = true;
     hideEmpresaSearchResults();
     
+    console.log('[DEBUG] handleAddEmpresa - PROCESSO CONCLUÍDO');
     showNotification('Empresa adicionada à lista', NOTIFICATION_TYPES.SUCCESS);
 }
 
@@ -560,6 +682,8 @@ function handleAddEmpresa() {
  * Adiciona empresa à lista visualmente
  */
 function addEmpresaToList(empresa) {
+    console.log('[DEBUG] addEmpresaToList - empresa recebida:', empresa);
+    
     // Remover empty state se existir
     const emptyState = elements.empresasList.querySelector('.empty-list');
     if (emptyState) {
@@ -569,6 +693,14 @@ function addEmpresaToList(empresa) {
     const empresaElement = document.createElement('div');
     empresaElement.className = 'empresa-item fade-in';
     empresaElement.dataset.empresaId = empresa.id;
+    
+    console.log('[DEBUG] addEmpresaToList - elemento criado:', {
+        element: empresaElement,
+        className: empresaElement.className,
+        'dataset.empresaId': empresaElement.dataset.empresaId,
+        'empresa.id': empresa.id
+    });
+    
     empresaElement.innerHTML = `
         <div class="empresa-info">
             <div class="empresa-name">${empresa.nome_cliente}</div>
@@ -582,6 +714,19 @@ function addEmpresaToList(empresa) {
     `;
     
     elements.empresasList.appendChild(empresaElement);
+    
+    // Verificar se foi adicionado corretamente
+    console.log('[DEBUG] addEmpresaToList - elemento após appendChild:', {
+        'dataset.empresaId': empresaElement.dataset.empresaId,
+        'in DOM': document.contains(empresaElement)
+    });
+    
+    // Verificar estado atual da lista
+    console.log('[DEBUG] addEmpresaToList - estado da lista após adição:', {
+        'total children': elements.empresasList.children.length,
+        'empresa-items': elements.empresasList.querySelectorAll('.empresa-item').length
+    });
+    
     updateEmpresasCount();
 }
 
@@ -641,6 +786,24 @@ function clearEmpresasList() {
  */
 function updateEmpresasCount() {
     const count = elements.empresasList.querySelectorAll('.empresa-item').length;
+    const allChildren = elements.empresasList.children.length;
+    
+    console.log('[DEBUG] updateEmpresasCount:', {
+        'empresaItems (.empresa-item)': count,
+        'total children': allChildren,
+        'empresasList innerHTML': elements.empresasList.innerHTML.slice(0, 200) + '...'
+    });
+    
+    // Verificar cada filho individualmente
+    Array.from(elements.empresasList.children).forEach((child, index) => {
+        console.log(`[DEBUG] Child ${index}:`, {
+            className: child.className,
+            hasEmpresaItem: child.classList.contains('empresa-item'),
+            dataEmpresaId: child.dataset.empresaId,
+            tagName: child.tagName
+        });
+    });
+    
     elements.empresasCount.textContent = count;
 }
 
@@ -648,12 +811,44 @@ function updateEmpresasCount() {
  * Obtém lista atual de empresas
  */
 function getCurrentEmpresas() {
+    console.log('[DEBUG] getCurrentEmpresas - Iniciando...');
+    
+    if (!elements.empresasList) {
+        console.log('[DEBUG] ERRO: elements.empresasList não existe!');
+        return [];
+    }
+    
     const empresaItems = elements.empresasList.querySelectorAll('.empresa-item');
-    return Array.from(empresaItems).map(item => ({
-        id: parseInt(item.dataset.empresaId), // Converter para número
-        nome_cliente: item.querySelector('.empresa-name').textContent,
-        cnpjs: item.querySelector('.empresa-cnpj').textContent
-    }));
+    console.log('[DEBUG] Número de items .empresa-item encontrados:', empresaItems.length);
+    
+    // Log detalhado de cada item
+    for (let i = 0; i < empresaItems.length; i++) {
+        const item = empresaItems[i];
+        console.log(`[DEBUG] Item ${i}:`, {
+            element: item,
+            dataset: item.dataset,
+            empresaId: item.dataset.empresaId,
+            classList: item.classList.toString()
+        });
+    }
+    
+    const result = Array.from(empresaItems).map((item, index) => {
+        const id = parseInt(item.dataset.empresaId);
+        const nomeElement = item.querySelector('.empresa-name');
+        const cnpjElement = item.querySelector('.empresa-cnpj');
+        
+        const empresa = {
+            id: id,
+            nome_cliente: nomeElement ? nomeElement.textContent : 'N/A',
+            cnpjs: cnpjElement ? cnpjElement.textContent : 'N/A'
+        };
+        
+        console.log(`[DEBUG] Empresa ${index} mapeada:`, empresa);
+        return empresa;
+    });
+    
+    console.log('[DEBUG] Resultado final getCurrentEmpresas:', result);
+    return result;
 }
 
 // =================================
