@@ -601,7 +601,7 @@
     box-shadow: var(--shadow-lg);
     max-width: 90vw;
     max-height: 90vh;
-    width: 800px;
+    width: 1200px;
     display: flex;
     flex-direction: column;
     transform: scale(0.9) translateY(50px);
@@ -1098,16 +1098,182 @@
     color: var(--text-white);
 }
 
-/* WhatsApp Form */
+/* WhatsApp Form - Layout Simplificado */
 .whatsapp-form-container {
     margin-bottom: 2rem;
 }
 
 .whatsapp-form-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1fr 1fr auto;
     gap: 1rem;
     align-items: end;
+}
+
+/* Corrige alinhamento específico dos form-groups no WhatsApp */
+.whatsapp-form-grid .form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Label alinhado no topo de cada coluna */
+.whatsapp-form-grid .form-label {
+    margin-bottom: 0.5rem;
+    min-height: 1.2rem;
+}
+
+/* Input alinhado na mesma linha */
+.whatsapp-form-grid .form-input {
+    margin-bottom: 0;
+}
+
+/* Botão alinhado na base */
+.whatsapp-form-grid .form-group-btn {
+    align-self: end;
+}
+
+/* Input e select ocupam largura total */
+.whatsapp-form-grid .form-input,
+.whatsapp-form-grid .form-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    transition: var(--transition);
+    background: var(--bg-white);
+}
+
+.whatsapp-form-grid .form-input:focus,
+.whatsapp-form-grid .form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Botão de adicionar ocupa coluna inteira */
+.whatsapp-form-grid .form-group-btn {
+    grid-column: span 1;
+    display: flex;
+    align-items: end;
+    padding-top: 1.5rem; /* Espaço para alinhar com outros campos */
+}
+
+@media (min-width: 768px) {
+    .whatsapp-form-grid .form-group-btn {
+        grid-column: span 2; /* Desktop: ocupa as 2 colunas */
+        justify-content: flex-start;
+    }
+}
+
+/* =================================
+   LAYOUT REORGANIZADO DAS SEÇÕES
+   ================================= */
+
+/* Container principal das seções */
+.form-sections-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Container das duas primeiras seções (Informações + Empresas) lado a lado */
+.form-sections-row {
+    display: flex;
+    gap: 2rem;
+}
+
+/* Seção de Informações (50% da largura) */
+.form-section-informacoes {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    height: fit-content;
+}
+
+/* Seção de Empresas (50% da largura) */
+.form-section-empresas {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    height: fit-content;
+}
+
+/* Seção de WhatsApp (largura total) */
+.form-section-whatsapp {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* Cabeçalho das seções */
+.user-form .form-section .section-header,
+.user-form .form-section-informacoes .section-header,
+.user-form .form-section-empresas .section-header,
+.user-form .form-section-whatsapp .section-header {
+    padding: 1rem 1.5rem;
+    background: var(--bg-gray-50);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Conteúdo das seções */
+.user-form .form-section .section-content,
+.user-form .form-section-informacoes .section-content,
+.user-form .form-section-empresas .section-content,
+.user-form .form-section-whatsapp .section-content {
+    padding: 1.5rem;
+}
+
+/* Indicador visual de seção ativa */
+.user-form .form-section.active,
+.user-form .form-section-informacoes.active,
+.user-form .form-section-empresas.active,
+.user-form .form-section-whatsapp.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+/* Responsividade para mobile */
+@media (max-width: 768px) {
+    .form-sections-row {
+        flex-direction: column;
+    }
+}
+
+/* Cabeçalho das seções mais compacto */
+.user-form .form-section .section-header {
+    padding: 1rem 1.5rem;
+}
+
+.user-form .form-section .section-content {
+    padding: 1.5rem;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+/* Scrollbar personalizada para seções se necessário */
+.user-form .form-section .section-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.user-form .form-section .section-content::-webkit-scrollbar-track {
+    background: var(--bg-gray-100);
+    border-radius: 3px;
+}
+
+.user-form .form-section .section-content::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 3px;
+}
+
+/* Indicador visual de seção ativa */
+.user-form .form-section.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
 }
 
 /* Delete Confirmation */
@@ -1221,6 +1387,29 @@
     }
 }
 
+/* Responsividade para layout horizontal do modal */
+@media (max-width: 1400px) {
+    .modal-container {
+        width: 1000px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .modal-container {
+        width: 90vw;
+    }
+    
+    .form-sections-container {
+        grid-template-columns: 1fr; /* Volta para 1 coluna */
+        gap: 1.5rem;
+    }
+    
+    .user-form .form-section {
+        grid-column: span 1; /* Todas as seções ocupam largura total */
+        min-height: auto;
+    }
+}
+
 @media (max-width: 768px) {
     .usuarios-container {
         padding: 1rem;
@@ -1256,6 +1445,11 @@
     .whatsapp-form-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+    
+    .whatsapp-form-grid .form-group-btn {
+        grid-column: span 1;
+        padding-top: 1rem;
     }
 }
 

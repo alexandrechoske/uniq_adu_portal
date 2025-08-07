@@ -222,12 +222,18 @@
                     <p>Carregando dados...</p>
                 </div>
 
-                <!-- Seção 1: Informações do Usuário -->
-                <div class="form-section">
+                <!-- Container das Seções em Layout Reorganizado -->
+                <div class="form-sections-container">
+                    
+                    <!-- Row: Informações + Empresas lado a lado -->
+                    <div class="form-sections-row">
+                        
+                        <!-- Seção 1: Informações do Usuário -->
+                        <div class="form-section-informacoes active">
                     <div class="section-header">
                         <h3 class="section-title">
                             <i class="mdi mdi-account"></i>
-                            Informações do Usuário
+                            Informações
                         </h3>
                     </div>
                     <div class="section-content">
@@ -272,15 +278,13 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Seção 2: Empresas Associadas -->
-                <div id="empresas-section" class="form-section hidden">
+                        <!-- Seção 2: Empresas Associadas -->
+                        <div id="empresas-section" class="form-section-empresas hidden">
                     <div class="section-header">
                         <h3 class="section-title">
                             <i class="mdi mdi-domain"></i>
-                            Empresas Associadas
+                            Empresas
                         </h3>
                         <p class="section-subtitle">Empresas que este usuário pode acessar</p>
                     </div>
@@ -315,15 +319,14 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </div> <!-- Fecha form-sections-row -->
 
-                <!-- Seção 3: Números de WhatsApp -->
-                <div id="whatsapp-section" class="form-section">
+                    <!-- Seção 3: WhatsApp (largura total) -->
+                    <div id="whatsapp-section" class="form-section-whatsapp">
                     <div class="section-header">
                         <h3 class="section-title">
                             <i class="mdi mdi-whatsapp"></i>
-                            Números de WhatsApp
+                            WhatsApp
                         </h3>
                         <p class="section-subtitle">Números para comunicação e notificações</p>
                     </div>
@@ -338,15 +341,6 @@
                                 <div class="form-group">
                                     <label for="whatsapp-numero" class="form-label required">Número WhatsApp</label>
                                     <input type="text" id="whatsapp-numero" class="form-input" placeholder="(11)987654321" maxlength="15">
-                                    <span class="form-hint">Formato: (dd)xxxxxxxxx - DDD + 9 dígitos (somente celular)</span>
-                                </div>
-                                <div class="form-group">
-                                    <label for="whatsapp-tipo" class="form-label">Tipo</label>
-                                    <select id="whatsapp-tipo" class="form-select">
-                                        <option value="pessoal">Pessoal</option>
-                                        <option value="empresarial">Empresarial</option>
-                                        <option value="suporte">Suporte</option>
-                                    </select>
                                 </div>
                                 <div class="form-group-btn">
                                     <button type="button" id="btn-add-whatsapp" class="btn btn-secondary">
@@ -375,6 +369,7 @@
                         </div>
                     </div>
                 </div>
+                </div> <!-- Fecha form-sections-container -->
             </form>
         </div>
 
