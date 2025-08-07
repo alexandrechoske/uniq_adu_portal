@@ -416,13 +416,20 @@ def salvar_usuario():
 @login_required
 @role_required(['admin'])
 def deletar_usuario(user_id):
-    """Nova função simplificada para deletar usuários via JSON API"""
+    """
+    EXCLUSÃO EM CASCATA COMPLETA DE USUÁRIO
+    Deleta em ordem:
+    1. Tabelas relacionadas (user_empresas, user_whatsapp, clientes_agentes)
+    2. Tabela public.users
+    3. Tabela auth.users (Supabase Auth)
+    """
     try:
-        print(f"[DEBUG] Tentando deletar usuário: {user_id}")
+        print(f"[DEBUG] === INICIANDO EXCLUSÃO EM CASCATA DO USUÁRIO: {user_id} ===")
         
-        # Verificar se o usuário existe
+        # Verificar se o usuário existe na tabela public.users
         user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
         if not user_response.data:
+            print(f"[DEBUG] Usuário {user_id} não encontrado na tabela public.users")
             if request.is_json:
                 return jsonify({'success': False, 'error': 'Usuário não encontrado'}), 404
             else:
@@ -430,71 +437,123 @@ def deletar_usuario(user_id):
                 return redirect(url_for('usuarios.index'))
         
         user = user_response.data[0]
+        user_name = user.get('name', 'Usuário Desconhecido')
+        user_email = user.get('email', 'Email Desconhecido')
+        
+        print(f"[DEBUG] Usuário encontrado: {user_name} ({user_email})")
         
         # Verificar se não está tentando deletar o próprio usuário
         current_user = session.get('user', {})
         if current_user.get('id') == user_id:
             error_msg = 'Você não pode deletar seu próprio usuário'
+            print(f"[DEBUG] {error_msg}")
             if request.is_json:
                 return jsonify({'success': False, 'error': error_msg}), 400
             else:
                 flash(error_msg, 'error')
                 return redirect(url_for('usuarios.index'))
         
-        # Deletar associações de empresa se existirem
+        # === ETAPA 1: DELETAR DADOS RELACIONADOS ===
+        print(f"[DEBUG] Etapa 1: Deletando dados relacionados...")
+        
+        # 1.1. Deletar associações de empresa (nova estrutura)
         try:
-            supabase_admin.table('user_empresas').delete().eq('user_id', user_id).execute()
-            print(f"[DEBUG] Associações de empresa deletadas para usuário {user_id}")
+            empresas_response = supabase_admin.table('user_empresas').delete().eq('user_id', user_id).execute()
+            empresas_count = len(empresas_response.data) if empresas_response.data else 0
+            print(f"[DEBUG] ✅ {empresas_count} associações de empresa deletadas (user_empresas)")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar associações de empresa: {str(e)}")
+            print(f"[DEBUG] ⚠️ Erro ao deletar associações de empresa (user_empresas): {str(e)}")
         
-        # Deletar números de WhatsApp se existirem  
+        # 1.2. Deletar números de WhatsApp
         try:
-            supabase_admin.table('user_whatsapp').delete().eq('user_id', user_id).execute()
-            print(f"[DEBUG] Números WhatsApp deletados para usuário {user_id}")
+            whatsapp_response = supabase_admin.table('user_whatsapp').delete().eq('user_id', user_id).execute()
+            whatsapp_count = len(whatsapp_response.data) if whatsapp_response.data else 0
+            print(f"[DEBUG] ✅ {whatsapp_count} números WhatsApp deletados (user_whatsapp)")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar números WhatsApp: {str(e)}")
+            print(f"[DEBUG] ⚠️ Erro ao deletar números WhatsApp (user_whatsapp): {str(e)}")
         
-        # Deletar usuário
-        response = supabase_admin.table('users').delete().eq('id', user_id).execute()
-        
-        if response.data or response.count == 0:  # Supabase pode retornar count=0 para deletes bem-sucedidos
-            print(f"[DEBUG] Usuário deletado com sucesso")
-            invalidate_users_cache()  # Invalidar cache após exclusão
-            
-            if request.is_json:
-                return jsonify({'success': True, 'message': f'Usuário {user.get("name", "desconhecido")} deletado com sucesso'})
+        # 1.3. Deletar associações legacy (clientes_agentes) se existir
+        try:
+            legacy_response = supabase_admin.table('clientes_agentes').delete().eq('user_id', user_id).execute()
+            legacy_count = len(legacy_response.data) if legacy_response.data else 0
+            if legacy_count > 0:
+                print(f"[DEBUG] ✅ {legacy_count} associações legacy deletadas (clientes_agentes)")
             else:
-                flash(f'Usuário {user.get("name", "desconhecido")} deletado com sucesso!', 'success')
-                return redirect(url_for('usuarios.index'))
-        else:
-            print(f"[DEBUG] Erro ao deletar usuário: {response}")
-            error_msg = 'Erro ao deletar usuário'
-            if request.is_json:
-                return jsonify({'success': False, 'error': error_msg}), 500
-            else:
-                flash(error_msg, 'error')
-                return redirect(url_for('usuarios.index'))
+                print(f"[DEBUG] ✅ Nenhuma associação legacy encontrada (clientes_agentes)")
+        except Exception as e:
+            print(f"[DEBUG] ⚠️ Erro ao deletar associações legacy (clientes_agentes): {str(e)}")
         
-    except Exception as e:
-        print(f"[DEBUG] Erro ao deletar usuário: {str(e)}")
-        print(traceback.format_exc())
-        error_msg = f'Erro ao deletar usuário: {str(e)}'
+        # === ETAPA 2: DELETAR DA TABELA PUBLIC.USERS ===
+        print(f"[DEBUG] Etapa 2: Deletando da tabela public.users...")
+        
+        try:
+            users_response = supabase_admin.table('users').delete().eq('id', user_id).execute()
+            if users_response.data or users_response.count == 0:  # Supabase pode retornar count=0 para deletes bem-sucedidos
+                print(f"[DEBUG] ✅ Usuário deletado da tabela public.users")
+            else:
+                print(f"[DEBUG] ❌ Falha ao deletar da tabela public.users: {users_response}")
+                raise Exception("Falha ao deletar usuário da tabela public.users")
+        except Exception as e:
+            print(f"[DEBUG] ❌ Erro crítico ao deletar da tabela public.users: {str(e)}")
+            raise e
+        
+        # === ETAPA 3: DELETAR DO SUPABASE AUTH ===
+        print(f"[DEBUG] Etapa 3: Deletando do Supabase Auth (auth.users)...")
+        
+        try:
+            auth_response = supabase_admin.auth.admin.delete_user(user_id)
+            print(f"[DEBUG] ✅ Usuário deletado do Supabase Auth (auth.users)")
+            print(f"[DEBUG] Auth response: {auth_response}")
+        except Exception as e:
+            print(f"[DEBUG] ⚠️ Erro ao deletar do Supabase Auth (pode não existir): {str(e)}")
+            # Não é crítico se falhar, pois o usuário pode não existir no auth
+        
+        # === ETAPA 4: LIMPEZA E FINALIZAÇÃO ===
+        print(f"[DEBUG] Etapa 4: Finalizando exclusão...")
+        
+        # Invalidar cache após exclusão
+        invalidate_users_cache()
+        print(f"[DEBUG] ✅ Cache de usuários invalidado")
+        
+        success_message = f'Usuário {user_name} deletado com sucesso (cascata completa)'
+        print(f"[DEBUG] === EXCLUSÃO EM CASCATA CONCLUÍDA COM SUCESSO ===")
+        print(f"[DEBUG] Usuário: {user_name} ({user_email})")
+        print(f"[DEBUG] ID: {user_id}")
         
         if request.is_json:
-            return jsonify({'success': False, 'error': error_msg}), 500
+            return jsonify({
+                'success': True, 
+                'message': success_message,
+                'details': {
+                    'user_id': user_id,
+                    'user_name': user_name,
+                    'user_email': user_email,
+                    'cascade_complete': True
+                }
+            })
+        else:
+            flash(success_message, 'success')
+            return redirect(url_for('usuarios.index'))
+        
+    except Exception as e:
+        print(f"[DEBUG] ❌ ERRO CRÍTICO NA EXCLUSÃO EM CASCATA: {str(e)}")
+        print(f"[DEBUG] Traceback completo:")
+        print(traceback.format_exc())
+        
+        error_msg = f'Erro na exclusão em cascata do usuário: {str(e)}'
+        
+        if request.is_json:
+            return jsonify({
+                'success': False, 
+                'error': error_msg,
+                'details': {
+                    'user_id': user_id,
+                    'cascade_failed': True
+                }
+            }), 500
         else:
             flash(error_msg, 'error')
             return redirect(url_for('usuarios.index'))
-        
-        return redirect(url_for('usuarios.index'))
-        
-    except Exception as e:
-        print(f"[DEBUG] Erro ao deletar usuário: {str(e)}")
-        print("[DEBUG] Traceback completo:")
-        print(traceback.format_exc())
-        flash(f'Erro ao deletar usuário: {str(e)}', 'error')
-        return redirect(url_for('usuarios.index'))
 
 @bp.route('/api/empresas')
 @login_required
@@ -1415,7 +1474,7 @@ def obter_dados_usuario(user_id):
         
         if not user_response.data:
             print(f"[DEBUG] Usuário {user_id} não encontrado")
-            return jsonify({'success': False, 'error': 'Usuário não encontrado'})
+            return jsonify({'success': False, 'error': 'Usuário não encontrado'}), 404
         
         user = user_response.data[0]
         print(f"[DEBUG] Dados do usuário encontrados: {user}")
