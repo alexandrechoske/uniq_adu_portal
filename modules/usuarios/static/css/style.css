@@ -1,5 +1,6 @@
 /* =================================
-   USUARIOS MODULE - CUSTOM STYLES
+   USUARIOS MODULE - REDESIGN 2025
+   Sistema moderno com KPIs e organização por perfil
    ================================= */
 
 /* Variáveis CSS - Cores da Brand Unique Aduaneira */
@@ -30,11 +31,11 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     
-    --border-radius: 0.5rem;
-    --border-radius-sm: 0.25rem;
-    --border-radius-lg: 0.75rem;
+    --border-radius: 0.75rem;
+    --border-radius-sm: 0.5rem;
+    --border-radius-lg: 1rem;
     
-    --transition: all 0.2s ease-in-out;
+    --transition: all 0.3s ease;
 }
 
 /* =================================
@@ -42,84 +43,52 @@
    ================================= */
 
 .usuarios-container {
-    padding: 0;
-    max-width: none;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.25rem;
     background-color: var(--bg-gray-50);
+    min-height: 100vh;
 }
 
 /* Actions Bar */
 .actions-bar {
-    background: var(--bg-white);
-    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
     padding: 1rem 1.5rem;
-    margin-bottom: 1.5rem;
+    background: var(--bg-white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
 }
 
 .actions-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
-}
-
-/* Page Header */
-.page-header {
-    background: var(--bg-white);
-    border-radius: var(--border-radius);
-    padding: 2rem 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-color);
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 2rem;
-}
-
-.header-left {
     flex: 1;
 }
 
-.page-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
+.actions-right {
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
-.page-title i {
-    font-size: 2.25rem;
-    color: var(--primary-color);
-}
+/* =================================
+   CONTROLES E FILTROS
+   ================================= */
 
-.page-subtitle {
-    font-size: 1.125rem;
-    color: var(--text-secondary);
-    margin: 0;
-}
-
-.header-right {
-    display: flex;
-    gap: 1rem;
-}
-
-/* Controls Section */
 .controls-section {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    gap: 2rem;
     background: var(--bg-white);
     padding: 1.5rem;
     border-radius: var(--border-radius);
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
 }
@@ -145,7 +114,7 @@
 
 .search-input {
     width: 100%;
-    padding: 0.75rem 1rem 0.75rem 3rem;
+    padding: 0.875rem 1rem 0.875rem 3rem;
     border: 2px solid var(--border-color);
     border-radius: var(--border-radius);
     font-size: 1rem;
@@ -159,9 +128,362 @@
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
-.controls-right {
+.filter-controls {
     display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.filter-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    background: var(--bg-white);
+    transition: var(--transition);
+    min-width: 150px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* =================================
+   SEÇÕES DE USUÁRIOS POR PERFIL
+   ================================= */
+
+.users-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.role-section {
+    background: var(--bg-white);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.role-section:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    background: var(--bg-gray-50);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.section-icon.kpi-success {
+    background: var(--kpi-success-light);
+    color: var(--kpi-success);
+}
+
+.section-icon.kpi-info {
+    background: var(--kpi-info-light);
+    color: var(--kpi-info);
+}
+
+.section-icon.kpi-warning {
+    background: var(--kpi-warning-light);
+    color: var(--kpi-warning);
+}
+
+.section-info h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.section-info p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.section-count {
+    display: flex;
+    align-items: center;
+}
+
+.count-badge {
+    background: var(--primary-color);
+    color: var(--text-white);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 700;
+    min-width: 3rem;
+    text-align: center;
+}
+
+.count-badge.count-admin {
+    background: var(--kpi-success);
+}
+
+.count-badge.count-interno {
+    background: var(--kpi-info);
+}
+
+.count-badge.count-clientes {
+    background: var(--kpi-warning);
+}
+
+/* =================================
+   GRID DE USUÁRIOS
+   ================================= */
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+/* =================================
+   CARDS DE USUÁRIOS
+   ================================= */
+
+.user-card {
+    background: var(--bg-white);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+    position: relative;
+}
+
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.user-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.25rem 1.25rem 0;
+}
+
+.user-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.user-status.active {
+    background: var(--success-color);
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+}
+
+.user-status.inactive {
+    background: var(--text-muted);
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2);
+}
+
+.user-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.user-card:hover .user-actions {
+    opacity: 1;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.875rem;
+}
+
+.btn-edit {
+    background: var(--info-color);
+    color: var(--text-white);
+}
+
+.btn-edit:hover {
+    background: #2980B9;
+    transform: scale(1.1);
+}
+
+.btn-delete {
+    background: var(--danger-color);
+    color: var(--text-white);
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+    transform: scale(1.1);
+}
+
+.user-card-content {
+    padding: 0 1.25rem 1.25rem;
+}
+
+.user-info {
+    margin-bottom: 1rem;
+}
+
+.user-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+    line-height: 1.3;
+}
+
+.user-email {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+    word-break: break-word;
+}
+
+.user-cargo {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    display: inline-block;
+}
+
+.user-meta {
+    display: flex;
+    flex-direction: column;
     gap: 0.75rem;
+}
+
+/* Role Badges */
+.role-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.role-badge.role-admin {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+.role-badge.role-interno_unique {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--info-color);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.role-badge.role-cliente_unique {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning-color);
+    border: 1px solid rgba(243, 156, 18, 0.2);
+}
+
+.user-companies, .user-whatsapp {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.user-companies i, .user-whatsapp i {
+    color: var(--primary-color);
+}
+
+/* =================================
+   ESTADO VAZIO
+   ================================= */
+
+.empty-state-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.empty-state {
+    text-align: center;
+    max-width: 400px;
+    padding: 3rem;
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: var(--bg-gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 2.5rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+}
+
+.empty-state p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin: 0 0 2rem 0;
 }
 
 /* =================================
@@ -174,7 +496,7 @@
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-sm);
     font-size: 0.875rem;
     font-weight: 600;
     text-decoration: none;
@@ -222,219 +544,6 @@
     box-shadow: var(--shadow-md);
 }
 
-/* Action Buttons */
-.btn-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    transition: var(--transition);
-    font-size: 1.125rem;
-}
-
-.btn-edit {
-    background: rgba(52, 152, 219, 0.1);
-    color: var(--primary-color);
-}
-
-.btn-edit:hover {
-    background: rgba(52, 152, 219, 0.2);
-    transform: translateY(-1px);
-}
-
-.btn-delete {
-    background: rgba(231, 76, 60, 0.1);
-    color: var(--danger-color);
-}
-
-.btn-delete:hover {
-    background: rgba(231, 76, 60, 0.2);
-    transform: translateY(-1px);
-}
-
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-/* =================================
-   TABELA DE USUÁRIOS
-   ================================= */
-
-.table-container {
-    background: var(--bg-white);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-color);
-    overflow: hidden;
-}
-
-.table-wrapper {
-    overflow-x: auto;
-}
-
-.users-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--bg-white);
-}
-
-.users-table thead {
-    background: var(--bg-gray-50);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.users-table th {
-    padding: 1rem 1.5rem;
-    text-align: left;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.users-table th i {
-    margin-right: 0.5rem;
-    color: var(--text-muted);
-}
-
-.users-table tbody tr {
-    border-bottom: 1px solid var(--border-light);
-    transition: var(--transition);
-}
-
-.users-table tbody tr:hover {
-    background: var(--bg-gray-50);
-}
-
-.users-table td {
-    padding: 1rem 1.5rem;
-    vertical-align: middle;
-}
-
-/* User Info Column */
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.user-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    background: var(--primary-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-white);
-    font-size: 1.5rem;
-}
-
-.user-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.user-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-}
-
-.user-cargo {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-/* Email Column */
-.email-text {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    font-family: 'Courier New', monospace;
-}
-
-/* Role Badges */
-.role-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    border-radius: var(--border-radius-sm);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-}
-
-.role-admin {
-    background: rgba(156, 39, 176, 0.1);
-    color: #9c27b0;
-}
-
-.role-interno_unique {
-    background: rgba(52, 152, 219, 0.1);
-    color: var(--primary-color);
-}
-
-.role-cliente_unique {
-    background: rgba(76, 175, 80, 0.1);
-    color: #4caf50;
-}
-
-/* Status Badges */
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    border-radius: var(--border-radius-sm);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-}
-
-.status-active {
-    background: rgba(39, 174, 96, 0.1);
-    color: var(--success-color);
-}
-
-.status-inactive {
-    background: rgba(231, 76, 60, 0.1);
-    color: var(--danger-color);
-}
-
-/* Empty State */
-.empty-row td {
-    padding: 3rem 1.5rem;
-    text-align: center;
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    color: var(--text-muted);
-}
-
-.empty-state i {
-    font-size: 3rem;
-    opacity: 0.5;
-}
-
-.empty-state p {
-    font-size: 1.125rem;
-    margin: 0;
-}
-
 /* =================================
    MODAL
    ================================= */
@@ -449,11 +558,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    padding: 1rem;
+    z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: var(--transition);
 }
 
 .modal-overlay:not(.hidden) {
@@ -465,29 +573,28 @@
     background: var(--bg-white);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-lg);
-    width: 100%;
-    max-width: 900px;
+    max-width: 90vw;
     max-height: 90vh;
+    width: 800px;
     display: flex;
     flex-direction: column;
-    transform: scale(0.95);
-    transition: transform 0.3s ease;
+    transform: scale(0.9) translateY(50px);
+    transition: var(--transition);
 }
 
 .modal-overlay:not(.hidden) .modal-container {
-    transform: scale(1);
+    transform: scale(1) translateY(0);
 }
 
 .modal-small {
-    max-width: 500px;
+    width: 450px;
 }
 
 .modal-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1.5rem 2rem;
     background: var(--bg-gray-50);
     border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
@@ -651,7 +758,7 @@
     width: 100%;
     padding: 0.75rem 1rem;
     border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-sm);
     font-size: 1rem;
     transition: var(--transition);
     background: var(--bg-white);
@@ -731,7 +838,7 @@
 }
 
 /* =================================
-   EMPRESAS SECTION
+   EMPRESAS E WHATSAPP (continuado do antigo)
    ================================= */
 
 .empresa-search-container {
@@ -757,10 +864,10 @@
     background: var(--bg-white);
     border: 2px solid var(--primary-color);
     border-top: none;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
     max-height: 200px;
     overflow-y: auto;
-    z-index: 9999; /* Aumentar z-index para ficar acima do modal */
+    z-index: 9999;
     box-shadow: var(--shadow-md);
 }
 
@@ -795,7 +902,7 @@
 .empresas-list-container,
 .whatsapp-list-container {
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-sm);
     overflow: hidden;
 }
 
@@ -816,15 +923,6 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-}
-
-.count-badge {
-    background: var(--primary-color);
-    color: var(--text-white);
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--border-radius-sm);
-    font-size: 0.75rem;
-    font-weight: 600;
 }
 
 .empresas-list,
@@ -881,7 +979,7 @@
     font-weight: 600;
     color: var(--text-primary);
     font-size: 0.875rem;
-    margin-bottom: 0.25rem;
+    margin: 0 0 0.25rem 0;
 }
 
 .empresa-cnpj,
@@ -893,14 +991,12 @@
 
 .whatsapp-details {
     display: flex;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .tipo-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.125rem 0.5rem;
+    padding: 0.125rem 0.375rem;
     border-radius: var(--border-radius-sm);
     font-size: 0.625rem;
     font-weight: 600;
@@ -908,43 +1004,39 @@
 }
 
 .tipo-pessoal {
-    background: rgba(76, 175, 80, 0.1);
-    color: #4caf50;
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--info-color);
 }
 
 .tipo-empresarial {
-    background: rgba(52, 152, 219, 0.1);
-    color: var(--primary-color);
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning-color);
 }
 
 .tipo-suporte {
-    background: rgba(255, 152, 0, 0.1);
-    color: #ff9800;
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
 }
 
 .principal-badge {
-    background: rgba(255, 193, 7, 0.2);
-    color: #ff8f00;
-    padding: 0.25rem 0.5rem;
+    background: var(--primary-color);
+    color: var(--text-white);
+    padding: 0.125rem 0.375rem;
     border-radius: var(--border-radius-sm);
     font-size: 0.625rem;
     font-weight: 600;
     text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
 }
 
 .item-actions {
     display: flex;
     gap: 0.5rem;
-    margin-left: 1rem;
 }
 
 .btn-remove,
 .btn-principal {
-    width: 2rem;
-    height: 2rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border: none;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
@@ -952,41 +1044,37 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
 }
 
 .btn-remove {
-    background: rgba(231, 76, 60, 0.1);
-    color: var(--danger-color);
+    background: var(--danger-color);
+    color: var(--text-white);
 }
 
 .btn-remove:hover {
-    background: rgba(231, 76, 60, 0.2);
+    background: #c0392b;
+    transform: scale(1.1);
 }
 
 .btn-principal {
-    background: rgba(255, 193, 7, 0.1);
-    color: #ff8f00;
+    background: var(--bg-gray-200);
+    color: var(--text-muted);
 }
 
 .btn-principal:hover {
-    background: rgba(255, 193, 7, 0.2);
+    background: var(--primary-color);
+    color: var(--text-white);
 }
 
 .btn-principal.active {
-    background: rgba(255, 193, 7, 0.3);
+    background: var(--primary-color);
+    color: var(--text-white);
 }
 
-/* =================================
-   WHATSAPP SECTION
-   ================================= */
-
+/* WhatsApp Form */
 .whatsapp-form-container {
     margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: var(--bg-gray-50);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-light);
 }
 
 .whatsapp-form-grid {
@@ -996,77 +1084,73 @@
     align-items: end;
 }
 
-/* =================================
-   DELETE MODAL
-   ================================= */
-
+/* Delete Confirmation */
 .delete-confirm-content {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
+    text-align: center;
     padding: 2rem;
 }
 
 .delete-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: rgba(231, 76, 60, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--danger-color);
-    font-size: 3rem;
-}
-
-.delete-message {
-    flex: 1;
+    font-size: 2.5rem;
 }
 
 .delete-message p {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 1rem 0;
     color: var(--text-primary);
 }
 
 .delete-warning {
-    font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--danger-color);
+    font-weight: 600;
 }
 
 /* =================================
-   NOTIFICATIONS
+   NOTIFICAÇÕES
    ================================= */
 
 .notification-area {
     margin-bottom: 1.5rem;
-    border-radius: var(--border-radius);
     padding: 1rem 1.5rem;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
     border-left: 4px solid;
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
 }
 
 .notification-area.success {
     background: rgba(39, 174, 96, 0.1);
-    border-color: var(--success-color);
     color: var(--success-color);
+    border-left-color: var(--success-color);
 }
 
 .notification-area.error {
     background: rgba(231, 76, 60, 0.1);
-    border-color: var(--danger-color);
     color: var(--danger-color);
+    border-left-color: var(--danger-color);
 }
 
 .notification-area.warning {
     background: rgba(243, 156, 18, 0.1);
-    border-color: var(--warning-color);
     color: var(--warning-color);
+    border-left-color: var(--warning-color);
 }
 
 .notification-area.info {
     background: rgba(52, 152, 219, 0.1);
-    border-color: var(--info-color);
     color: var(--info-color);
+    border-left-color: var(--info-color);
 }
 
 /* =================================
-   UTILITIES
+   UTILITÁRIOS
    ================================= */
 
 .hidden {
@@ -1092,48 +1176,54 @@
 .mt-3 { margin-top: 1.5rem; }
 
 /* =================================
-   RESPONSIVE DESIGN
+   RESPONSIVIDADE
    ================================= */
 
-@media (max-width: 768px) {
-    .header-content {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 1.5rem;
-    }
-    
-    .page-title {
-        font-size: 1.75rem;
+@media (max-width: 1024px) {
+    .users-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     }
     
     .controls-section {
         flex-direction: column;
+        gap: 1.5rem;
         align-items: stretch;
-        gap: 1rem;
     }
     
-    .search-container {
-        max-width: none;
-    }
-    
-    .controls-right {
+    .filter-controls {
         justify-content: center;
     }
-    
-    .modal-container {
-        margin: 0.5rem;
-        max-width: none;
-        max-height: calc(100vh - 1rem);
-    }
-    
-    .modal-header,
-    .modal-footer,
-    .section-content {
+}
+
+@media (max-width: 768px) {
+    .usuarios-container {
         padding: 1rem;
     }
     
-    .form-grid {
+    .actions-bar {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .users-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .modal-container {
+        width: 95vw;
+        margin: 1rem;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
         gap: 1rem;
     }
     
@@ -1141,72 +1231,26 @@
         grid-template-columns: 1fr;
         gap: 1rem;
     }
-    
-    .search-add-wrapper {
-        flex-direction: column;
-    }
-    
-    .users-table {
-        font-size: 0.875rem;
-    }
-    
-    .users-table th,
-    .users-table td {
-        padding: 0.75rem 1rem;
-    }
-    
-    .user-info {
-        gap: 0.5rem;
-    }
-    
-    .user-avatar {
-        width: 2rem;
-        height: 2rem;
-        font-size: 1.25rem;
-    }
-    
-    .action-buttons {
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-    
-    .btn-action {
-        width: 2rem;
-        height: 2rem;
-        font-size: 1rem;
-    }
 }
 
 @media (max-width: 480px) {
-    .page-header {
-        padding: 1.5rem 1rem;
+    .section-title {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
     }
     
-    .controls-section {
-        padding: 1rem;
+    .user-card-header {
+        padding: 1rem 1rem 0;
     }
     
-    .table-container {
-        border-radius: 0;
-        margin: 0 -1rem;
-    }
-    
-    .users-table th,
-    .users-table td {
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .page-title {
-        font-size: 1.5rem;
-    }
-    
-    .page-title i {
-        font-size: 1.75rem;
+    .user-card-content {
+        padding: 0 1rem 1rem;
     }
 }
 
 /* =================================
-   ANIMATIONS
+   ANIMAÇÕES
    ================================= */
 
 .fade-in {
@@ -1218,22 +1262,18 @@
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
     }
 }
 
@@ -1242,29 +1282,314 @@
    ================================= */
 
 @media print {
-    .modal-overlay,
+    .actions-bar,
     .controls-section,
-    .action-buttons,
-    .btn {
+    .user-actions,
+    .modal-overlay {
         display: none !important;
     }
     
-    .page-header {
-        border: none;
+    .usuarios-container {
+        background: white;
         box-shadow: none;
     }
     
-    .table-container {
-        border: none;
+    .user-card {
+        break-inside: avoid;
         box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* =================================
+   EMPRESAS E WHATSAPP
+   ================================= */
+
+/* Busca de Empresas */
+.empresa-search-container {
+    margin-bottom: 1.5rem;
+}
+
+.search-add-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.empresa-search-input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.search-result-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-light);
+    transition: var(--transition);
+}
+
+.search-result-item:hover {
+    background-color: var(--bg-gray-50);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item.error {
+    color: var(--danger-color);
+    cursor: default;
+}
+
+.search-result-item.error:hover {
+    background-color: transparent;
+}
+
+.empresa-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.empresa-info strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.empresa-info .cnpj {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Lista de Empresas */
+.empresas-list-container,
+.whatsapp-list-container {
+    margin-top: 1rem;
+}
+
+.list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.list-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.count-badge {
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.empresas-list,
+.whatsapp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.empresa-list-item,
+.whatsapp-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+}
+
+.empresa-list-item:hover,
+.whatsapp-list-item:hover {
+    border-color: var(--primary-light);
+    box-shadow: var(--shadow-sm);
+}
+
+.empresa-item-info,
+.whatsapp-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.empresa-nome,
+.whatsapp-numero {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.empresa-cnpj {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-family: monospace;
+}
+
+.whatsapp-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+}
+
+.whatsapp-nome {
+    color: var(--text-secondary);
+}
+
+.whatsapp-tipo {
+    background-color: var(--bg-gray-100);
+    color: var(--text-secondary);
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.badge-principal {
+    background-color: var(--success-color);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.whatsapp-list-item.principal {
+    border-color: var(--success-color);
+    background-color: rgba(39, 174, 96, 0.05);
+}
+
+.whatsapp-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-remove,
+.btn-principal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.875rem;
+}
+
+.btn-remove {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-remove:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
+}
+
+.btn-principal {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.btn-principal:hover {
+    background-color: #e67e22;
+    transform: scale(1.05);
+}
+
+.empty-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.empty-list i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.empty-list p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* WhatsApp Form */
+.whatsapp-form-container {
+    margin-bottom: 1.5rem;
+}
+
+.whatsapp-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.form-group-btn {
+    display: flex;
+    align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+    .search-add-wrapper {
+        flex-direction: column;
+        gap: 0.5rem;
     }
     
-    .users-table {
-        border: 1px solid #000;
+    .whatsapp-form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
     }
     
-    .users-table th,
-    .users-table td {
-        border: 1px solid #000;
+    .empresa-list-item,
+    .whatsapp-list-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .whatsapp-actions {
+        justify-content: flex-end;
     }
 }

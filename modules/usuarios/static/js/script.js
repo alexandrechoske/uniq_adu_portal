@@ -1,12 +1,13 @@
 /**
- * MÓDULO DE GERENCIAMENTO DE USUÁRIOS
- * Sistema completo de CRUD com gestão de empresas e WhatsApp
+ * MÓDULO DE GERENCIAMENTO DE USUÁRIOS - REDESIGN 2025
+ * Sistema moderno com KPIs e organização por perfil
  * 
  * Funcionalidades:
  * - CRUD de usuários
- * - Gestão de empresas associadas
- * - Gestão de números WhatsApp
- * - Busca e filtros
+ * - KPIs em tempo real
+ * - Organização por perfil/role
+ * - Cards modernos em vez de tabela
+ * - Filtros avançados
  * - Interface responsiva
  */
 
@@ -16,7 +17,6 @@
 
 const CONFIG = {
     API_BASE_URL: '/usuarios',
-    API_BYPASS_KEY: 'uniq_api_2025_dev_bypass_key',
     DEBOUNCE_DELAY: 300,
     MAX_RETRIES: 3,
     RETRY_DELAY: 1000
@@ -34,18 +34,46 @@ const MODAL_MODES = {
     EDIT: 'edit'
 };
 
+const ROLE_CONFIG = {
+    admin: {
+        label: 'Administrador',
+        icon: 'mdi-shield-crown',
+        color: 'success',
+        description: 'Acesso total ao sistema'
+    },
+    interno_unique: {
+        label: 'Equipe Interna',
+        icon: 'mdi-account-tie',
+        color: 'info',
+        description: 'Colaboradores da Unique'
+    },
+    cliente_unique: {
+        label: 'Cliente',
+        icon: 'mdi-domain',
+        color: 'warning',
+        description: 'Empresas clientes'
+    }
+};
+
 // =================================
 // ESTADO GLOBAL DA APLICAÇÃO
 // =================================
 
 let appState = {
+    users: [],
+    filteredUsers: [],
     currentUser: null,
     currentMode: null,
     originalEmpresas: [],
     originalWhatsapp: [],
     searchTimeout: null,
     isLoading: false,
-    empresaSearchTimeout: null
+    empresaSearchTimeout: null,
+    activeFilters: {
+        search: '',
+        role: '',
+        status: ''
+    }
 };
 
 // =================================
@@ -59,11 +87,11 @@ let elements = {};
 // =================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[USUARIOS] Inicializando módulo de usuários...');
+    console.log('[USUARIOS] Inicializando módulo de usuários redesenhado...');
     
     initializeElements();
     initializeEventListeners();
-    initializeTableSearch();
+    loadUsersData();
     
     console.log('[USUARIOS] Módulo inicializado com sucesso');
 });
@@ -73,80 +101,59 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initializeElements() {
     elements = {
-        // Tabela e busca
-        searchInput: document.getElementById('search-usuarios'),
-        usersTable: document.querySelector('.users-table tbody'),
-        refreshBtn: document.getElementById('btn-refresh'),
+        // Buttons
+        btnNovoUsuario: document.getElementById('btn-novo-usuario'),
+        btnNovoUsuarioEmpty: document.getElementById('btn-novo-usuario-empty'),
+        btnRefresh: document.getElementById('btn-refresh'),
+        btnCloseModal: document.getElementById('btn-close-modal'),
+        btnSave: document.getElementById('btn-save'),
+        btnCancel: document.getElementById('btn-cancel'),
         
-        // Modal principal
-        modal: document.getElementById('modal-usuario'),
+        // Modal
+        modalUsuario: document.getElementById('modal-usuario'),
         modalTitle: document.getElementById('modal-title'),
-        modalForm: document.getElementById('form-usuario'),
+        modalDeleteConfirm: document.getElementById('modal-delete-confirm'),
+        
+        // Form
+        formUsuario: document.getElementById('form-usuario'),
         formLoading: document.getElementById('form-loading'),
         
-        // Botões do modal
-        btnNovoUsuario: document.getElementById('btn-novo-usuario'),
-        btnCloseModal: document.getElementById('btn-close-modal'),
-        btnCancel: document.getElementById('btn-cancel'),
-        btnSave: document.getElementById('btn-save'),
-        saveText: document.getElementById('save-text'),
+        // Search and Filters
+        searchInput: document.getElementById('search-usuarios'),
+        filterPerfil: document.getElementById('filter-perfil'),
+        filterStatus: document.getElementById('filter-status'),
         
-        // Campos do formulário
-        userName: document.getElementById('user-name'),
-        userEmail: document.getElementById('user-email'),
-        userRole: document.getElementById('user-role'),
-        userActive: document.getElementById('user-active'),
-        userPassword: document.getElementById('user-password'),
-        userConfirmPassword: document.getElementById('user-confirm-password'),
+        // KPI Elements
+        kpiTotalUsuarios: document.getElementById('kpi-total-usuarios'),
+        kpiAdmin: document.getElementById('kpi-admin'),
+        kpiInterno: document.getElementById('kpi-interno'),
+        kpiClientes: document.getElementById('kpi-clientes'),
+        kpiAtivos: document.getElementById('kpi-ativos'),
         
-        // Seções do formulário
-        passwordSection: document.getElementById('password-section'),
-        empresasSection: document.getElementById('empresas-section'),
-        whatsappSection: document.getElementById('whatsapp-section'),
+        // Sections
+        sectionAdmin: document.getElementById('section-admin'),
+        sectionInterno: document.getElementById('section-interno'),
+        sectionClientes: document.getElementById('section-clientes'),
         
-        // Empresas
-        empresaSearch: document.getElementById('empresa-search'),
-        empresaSearchResults: document.getElementById('empresa-search-results'),
-        btnAddEmpresa: document.getElementById('btn-add-empresa'),
-        empresasList: document.getElementById('empresas-list'),
-        empresasCount: document.getElementById('empresas-count'),
+        // Grids
+        gridAdmin: document.getElementById('grid-admin'),
+        gridInterno: document.getElementById('grid-interno'),
+        gridClientes: document.getElementById('grid-clientes'),
         
-        // WhatsApp
-        whatsappNumero: document.getElementById('whatsapp-numero'),
-        whatsappNome: document.getElementById('whatsapp-nome'),
-        whatsappTipo: document.getElementById('whatsapp-tipo'),
-        btnAddWhatsapp: document.getElementById('btn-add-whatsapp'),
-        whatsappList: document.getElementById('whatsapp-list'),
-        whatsappCount: document.getElementById('whatsapp-count'),
+        // Counts
+        countAdmin: document.getElementById('count-admin'),
+        countInterno: document.getElementById('count-interno'),
+        countClientes: document.getElementById('count-clientes'),
         
-        // Modal de confirmação
-        deleteModal: document.getElementById('modal-delete-confirm'),
-        deleteUserName: document.getElementById('delete-user-name'),
-        btnCancelDelete: document.getElementById('btn-cancel-delete'),
-        btnConfirmDelete: document.getElementById('btn-confirm-delete'),
+        // Empty State
+        emptyState: document.getElementById('empty-state'),
         
-        // Notificações
-        notificationArea: document.getElementById('notification-area')
+        // Notification
+        notificationArea: document.getElementById('notification-area'),
+        
+        // User Card Template
+        userCardTemplate: document.getElementById('user-card-template')
     };
-    
-    // Debug: verificar se elementos críticos existem
-    console.log('[DEBUG] initializeElements - verificando elementos críticos:', {
-        'empresaSearch exists': !!elements.empresaSearch,
-        'btnAddEmpresa exists': !!elements.btnAddEmpresa,
-        'empresasList exists': !!elements.empresasList,
-        'empresasCount exists': !!elements.empresasCount,
-        'empresaSearchResults exists': !!elements.empresaSearchResults
-    });
-    
-    if (!elements.empresaSearch) {
-        console.error('[DEBUG] ERRO: elemento #empresa-search não encontrado!');
-    }
-    if (!elements.btnAddEmpresa) {
-        console.error('[DEBUG] ERRO: elemento #btn-add-empresa não encontrado!');
-    }
-    if (!elements.empresasList) {
-        console.error('[DEBUG] ERRO: elemento #empresas-list não encontrado!');
-    }
 }
 
 /**
@@ -154,144 +161,388 @@ function initializeElements() {
  */
 function initializeEventListeners() {
     // Botões principais
-    elements.btnNovoUsuario?.addEventListener('click', () => openModalForCreate());
-    elements.refreshBtn?.addEventListener('click', () => refreshUsersList());
-    
-    // Modal
-    elements.btnCloseModal?.addEventListener('click', () => closeModal());
-    elements.btnCancel?.addEventListener('click', () => closeModal());
-    elements.modal?.addEventListener('click', (e) => {
-        if (e.target === elements.modal) closeModal();
-    });
-    
-    // Formulário
-    elements.modalForm?.addEventListener('submit', handleFormSubmit);
-    elements.userRole?.addEventListener('change', handleRoleChange);
-    
-    // Empresas
-    elements.empresaSearch?.addEventListener('input', handleEmpresaSearch);
-    elements.btnAddEmpresa?.addEventListener('click', handleAddEmpresa);
-    
-    console.log('[DEBUG] initializeEventListeners - event listeners de empresas configurados:', {
-        'empresaSearch listener': !!elements.empresaSearch,
-        'btnAddEmpresa listener': !!elements.btnAddEmpresa,
-        'btnAddEmpresa disabled': elements.btnAddEmpresa?.disabled
-    });
-    
-    // Debug avançado para btnAddEmpresa - VERSÃO ROBUSTA
-    if (elements.btnAddEmpresa) {
-        console.log('[DEBUG INIT] Configurando debug avançado para btnAddEmpresa:', elements.btnAddEmpresa);
-        
-        // Verificar se já tem listeners
-        const existingListeners = elements.btnAddEmpresa.cloneNode(true);
-        console.log('[DEBUG INIT] Elemento original:', elements.btnAddEmpresa);
-        
-        // Adicionar listener de debug que executa antes do handleAddEmpresa
-        elements.btnAddEmpresa.addEventListener('click', function(e) {
-            console.log('[DEBUG CLICK] ========== INÍCIO CLICK DEBUG ==========');
-            console.log('[DEBUG CLICK] Event object:', e);
-            console.log('[DEBUG CLICK] Target:', e.target);
-            console.log('[DEBUG CLICK] CurrentTarget:', e.currentTarget);
-            console.log('[DEBUG CLICK] Button disabled:', this.disabled);
-            console.log('[DEBUG CLICK] Button innerHTML:', this.innerHTML);
-            console.log('[DEBUG CLICK] Selected empresa global:', selectedEmpresa);
-            console.log('[DEBUG CLICK] Search input value:', elements.empresaSearchInput?.value || 'N/A');
-            console.log('[DEBUG CLICK] Search dataset:', {
-                selectedId: elements.empresaSearch?.dataset?.selectedId,
-                selectedCnpj: elements.empresaSearch?.dataset?.selectedCnpj,
-                selectedNome: elements.empresaSearch?.dataset?.selectedNome
-            });
-            
-            // Testar se handleAddEmpresa existe
-            if (typeof handleAddEmpresa === 'function') {
-                console.log('[DEBUG CLICK] handleAddEmpresa é uma função válida');
-                console.log('[DEBUG CLICK] Forçando execução de handleAddEmpresa...');
-                try {
-                    handleAddEmpresa();
-                    console.log('[DEBUG CLICK] handleAddEmpresa executada com sucesso!');
-                } catch (error) {
-                    console.error('[DEBUG CLICK] ERRO ao executar handleAddEmpresa:', error);
-                }
-            } else {
-                console.error('[DEBUG CLICK] handleAddEmpresa NÃO é uma função!', typeof handleAddEmpresa);
-            }
-            
-            console.log('[DEBUG CLICK] ========== FIM CLICK DEBUG ==========');
-        }, true); // Usar capture = true para executar antes
-        
-        console.log('[DEBUG INIT] Debug listener configurado com capture=true');
+    if (elements.btnNovoUsuario) {
+        elements.btnNovoUsuario.addEventListener('click', openModalForCreate);
     }
     
-    // WhatsApp
-    elements.btnAddWhatsapp?.addEventListener('click', handleAddWhatsapp);
+    if (elements.btnNovoUsuarioEmpty) {
+        elements.btnNovoUsuarioEmpty.addEventListener('click', openModalForCreate);
+    }
     
-    // Modal de exclusão
-    elements.btnCancelDelete?.addEventListener('click', () => hideDeleteModal());
-    elements.btnConfirmDelete?.addEventListener('click', handleConfirmDelete);
+    if (elements.btnRefresh) {
+        elements.btnRefresh.addEventListener('click', refreshData);
+    }
     
-    // Botões da tabela (delegação de eventos)
-    elements.usersTable?.addEventListener('click', handleTableButtonClick);
+    // Modal
+    if (elements.btnCloseModal) {
+        elements.btnCloseModal.addEventListener('click', closeModal);
+    }
     
-    // Escape key para fechar modais
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (!elements.modal?.classList.contains('hidden')) {
+    if (elements.btnCancel) {
+        elements.btnCancel.addEventListener('click', closeModal);
+    }
+    
+    if (elements.modalUsuario) {
+        elements.modalUsuario.addEventListener('click', function(e) {
+            if (e.target === elements.modalUsuario) {
                 closeModal();
             }
-            if (!elements.deleteModal?.classList.contains('hidden')) {
-                hideDeleteModal();
-            }
+        });
+    }
+    
+    // Formulário
+    if (elements.formUsuario) {
+        elements.formUsuario.addEventListener('submit', handleFormSubmit);
+    }
+    
+    // Search e Filters
+    if (elements.searchInput) {
+        elements.searchInput.addEventListener('input', handleSearchInput);
+    }
+    
+    if (elements.filterPerfil) {
+        elements.filterPerfil.addEventListener('change', handleFilterChange);
+    }
+    
+    if (elements.filterStatus) {
+        elements.filterStatus.addEventListener('change', handleFilterChange);
+    }
+    
+    // Role change no formulário
+    const roleSelect = document.getElementById('role');
+    if (roleSelect) {
+        roleSelect.addEventListener('change', handleRoleChange);
+    }
+    
+    // Empresas e WhatsApp
+    initializeEmpresasEventListeners();
+    initializeWhatsappEventListeners();
+    
+    // ESC para fechar modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !elements.modalUsuario.classList.contains('hidden')) {
+            closeModal();
         }
     });
 }
 
 /**
- * Inicializa a busca na tabela
+ * Carrega dados dos usuários
  */
-function initializeTableSearch() {
-    if (!elements.searchInput) return;
+async function loadUsersData() {
+    try {
+        showLoading(true);
+        
+        const response = await apiRequest('/api/usuarios');
+        console.log('[USUARIOS] Resposta bruta da API:', response);
+        
+        // Verificar estrutura da resposta
+        let users = [];
+        
+        if (Array.isArray(response)) {
+            // Resposta é array direto
+            users = response;
+            console.log('[USUARIOS] Resposta é array direto com', users.length, 'usuários');
+        } else if (response.success && response.data) {
+            // Resposta é objeto com success/data
+            users = response.data;
+            console.log('[USUARIOS] Resposta tem success/data com', users.length, 'usuários');
+        } else if (response.data && Array.isArray(response.data)) {
+            // Resposta tem data mas sem success
+            users = response.data;
+            console.log('[USUARIOS] Resposta tem data sem success com', users.length, 'usuários');
+        } else {
+            // Fallback - tentar usar response diretamente
+            users = response || [];
+            console.log('[USUARIOS] Usando fallback com', users.length, 'usuários');
+        }
+        
+        console.log('[USUARIOS] Usuários processados:', users);
+        
+        appState.users = users;
+        updateKPIs();
+        filterAndDisplayUsers();
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao carregar dados:', error);
+        showNotification('Erro ao carregar usuários: ' + error.message, NOTIFICATION_TYPES.ERROR);
+        appState.users = [];
+        updateKPIs();
+        showEmptyState();
+    } finally {
+        showLoading(false);
+    }
+}
+
+/**
+ * Atualiza KPIs com base nos dados
+ */
+function updateKPIs() {
+    const users = appState.users;
     
-    elements.searchInput.addEventListener('input', (e) => {
-        clearTimeout(appState.searchTimeout);
-        appState.searchTimeout = setTimeout(() => {
-            filterUsersTable(e.target.value);
-        }, CONFIG.DEBOUNCE_DELAY);
+    // Total de usuários
+    const total = users.length;
+    elements.kpiTotalUsuarios.textContent = total;
+    
+    // Contar por role
+    const adminCount = users.filter(u => u.role === 'admin').length;
+    const internoCount = users.filter(u => u.role === 'interno_unique').length;
+    const clientesCount = users.filter(u => u.role === 'cliente_unique').length;
+    
+    // Usuários ativos
+    const ativosCount = users.filter(u => u.ativo === true || u.ativo === 'true').length;
+    
+    // Atualizar KPIs
+    elements.kpiAdmin.textContent = adminCount;
+    elements.kpiInterno.textContent = internoCount;
+    elements.kpiClientes.textContent = clientesCount;
+    elements.kpiAtivos.textContent = ativosCount;
+    
+    console.log('[USUARIOS] KPIs atualizados:', {
+        total, adminCount, internoCount, clientesCount, ativosCount
     });
 }
 
+/**
+ * Manipula input de busca com debounce
+ */
+function handleSearchInput(e) {
+    clearTimeout(appState.searchTimeout);
+    
+    appState.searchTimeout = setTimeout(() => {
+        appState.activeFilters.search = e.target.value.trim().toLowerCase();
+        filterAndDisplayUsers();
+    }, CONFIG.DEBOUNCE_DELAY);
+}
+
+/**
+ * Manipula mudança de filtros
+ */
+function handleFilterChange() {
+    appState.activeFilters.role = elements.filterPerfil.value;
+    appState.activeFilters.status = elements.filterStatus.value;
+    filterAndDisplayUsers();
+}
+
+/**
+ * Filtra e exibe usuários baseado nos filtros ativos
+ */
+function filterAndDisplayUsers() {
+    let filtered = [...appState.users];
+    
+    // Filtro de busca
+    if (appState.activeFilters.search) {
+        filtered = filtered.filter(user => {
+            const searchTerm = appState.activeFilters.search;
+            return (
+                user.nome?.toLowerCase().includes(searchTerm) ||
+                user.email?.toLowerCase().includes(searchTerm) ||
+                ROLE_CONFIG[user.role]?.label.toLowerCase().includes(searchTerm)
+            );
+        });
+    }
+    
+    // Filtro de role
+    if (appState.activeFilters.role) {
+        filtered = filtered.filter(user => user.role === appState.activeFilters.role);
+    }
+    
+    // Filtro de status
+    if (appState.activeFilters.status) {
+        const isActive = appState.activeFilters.status === 'active';
+        filtered = filtered.filter(user => (user.ativo === true || user.ativo === 'true') === isActive);
+    }
+    
+    appState.filteredUsers = filtered;
+    displayUsersByRole();
+}
+
+/**
+ * Exibe usuários organizados por role
+ */
+function displayUsersByRole() {
+    console.log('[USUARIOS] Separando usuários por role. Total filtrado:', appState.filteredUsers.length);
+    
+    // Separar usuários por role
+    const usersByRole = {
+        admin: appState.filteredUsers.filter(u => u.role === 'admin'),
+        interno_unique: appState.filteredUsers.filter(u => u.role === 'interno_unique'),
+        cliente_unique: appState.filteredUsers.filter(u => u.role === 'cliente_unique')
+    };
+    
+    console.log('[USUARIOS] Usuários por role:', usersByRole);
+    
+    // Atualizar contadores das seções
+    elements.countAdmin.textContent = usersByRole.admin.length;
+    elements.countInterno.textContent = usersByRole.interno_unique.length;
+    elements.countClientes.textContent = usersByRole.cliente_unique.length;
+    
+    // Renderizar usuários em cada seção
+    renderUsersInGrid(elements.gridAdmin, usersByRole.admin);
+    renderUsersInGrid(elements.gridInterno, usersByRole.interno_unique);
+    renderUsersInGrid(elements.gridClientes, usersByRole.cliente_unique);
+    
+    // Mostrar/ocultar seções baseado na presença de usuários
+    toggleSectionVisibility(elements.sectionAdmin, usersByRole.admin.length > 0);
+    toggleSectionVisibility(elements.sectionInterno, usersByRole.interno_unique.length > 0);
+    toggleSectionVisibility(elements.sectionClientes, usersByRole.cliente_unique.length > 0);
+    
+    // Mostrar empty state se não há usuários filtrados
+    const hasUsers = appState.filteredUsers.length > 0;
+    showEmptyState(!hasUsers);
+}
+
+/**
+ * Renderiza usuários em um grid específico
+ */
+function renderUsersInGrid(gridElement, users) {
+    if (!gridElement) {
+        console.warn('[USUARIOS] Grid element não encontrado para renderização');
+        return;
+    }
+    
+    console.log('[USUARIOS] Renderizando', users.length, 'usuários no grid', gridElement.id);
+    
+    gridElement.innerHTML = '';
+    
+    users.forEach((user, index) => {
+        console.log(`[USUARIOS] Criando card ${index + 1}:`, user);
+        const cardElement = createUserCard(user);
+        gridElement.appendChild(cardElement);
+    });
+    
+    console.log('[USUARIOS] Renderização completa para grid', gridElement.id);
+}
+
+/**
+ * Cria card de usuário
+ */
+function createUserCard(user) {
+    const template = elements.userCardTemplate.content.cloneNode(true);
+    
+    // Substituir placeholders
+    const cardHtml = template.querySelector('.user-card').outerHTML
+        .replace(/\{user_id\}/g, user.id)
+        .replace(/\{user_name\}/g, user.nome || 'Sem nome')
+        .replace(/\{user_email\}/g, user.email || 'Sem email')
+        .replace(/\{role\}/g, user.role)
+        .replace(/\{role_label\}/g, ROLE_CONFIG[user.role]?.label || user.role)
+        .replace(/\{status\}/g, (user.ativo === true || user.ativo === 'true') ? 'active' : 'inactive')
+        .replace(/\{status_class\}/g, (user.ativo === true || user.ativo === 'true') ? 'active' : 'inactive')
+        .replace(/\{user_cargo_html\}/g, '') // Campo cargo removido
+        .replace(/\{empresas_info\}/g, generateEmpresasInfo(user))
+        .replace(/\{whatsapp_info\}/g, generateWhatsappInfo(user));
+    
+    // Criar elemento DOM
+    const div = document.createElement('div');
+    div.innerHTML = cardHtml;
+    
+    return div.firstElementChild;
+}
+
+/**
+ * Gera informações de empresas para o card
+ */
+function generateEmpresasInfo(user) {
+    // Usar a estrutura correta retornada pela API
+    const empresas = user.agent_info?.empresas || [];
+    const empresasCount = empresas.length;
+    
+    if (empresasCount > 0) {
+        return `<div class="user-companies">
+            <i class="mdi mdi-domain"></i>
+            ${empresasCount} empresa(s)
+        </div>`;
+    }
+    
+    return '';
+}
+
+/**
+ * Gera informações de WhatsApp para o card
+ */
+function generateWhatsappInfo(user) {
+    // Usar a estrutura correta retornada pela API
+    const whatsappNumbers = user.whatsapp_numbers || [];
+    const whatsappCount = whatsappNumbers.length;
+    
+    if (whatsappCount > 0) {
+        return `<div class="user-whatsapp">
+            <i class="mdi mdi-whatsapp"></i>
+            ${whatsappCount} número(s)
+        </div>`;
+    }
+    
+    return '';
+}
+    
+
+/**
+ * Toggle visibilidade da seção
+ */
+function toggleSectionVisibility(sectionElement, show) {
+    if (sectionElement) {
+        if (show) {
+            sectionElement.classList.remove('hidden');
+        } else {
+            sectionElement.classList.add('hidden');
+        }
+    }
+}
+
+/**
+ * Mostra/oculta estado vazio
+ */
+function showEmptyState(show = true) {
+    if (elements.emptyState) {
+        if (show) {
+            elements.emptyState.classList.remove('hidden');
+        } else {
+            elements.emptyState.classList.add('hidden');
+        }
+    }
+}
+
+/**
+ * Mostra/oculta loading
+ */
+function showLoading(show = true) {
+    // Implementar loading visual se necessário
+    appState.isLoading = show;
+    
+    if (elements.btnRefresh) {
+        elements.btnRefresh.disabled = show;
+        if (show) {
+            elements.btnRefresh.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Carregando...';
+        } else {
+            elements.btnRefresh.innerHTML = '<i class="mdi mdi-refresh"></i> Atualizar';
+        }
+    }
+}
+
+/**
+ * Atualiza dados
+ */
+async function refreshData() {
+    await loadUsersData();
+    showNotification('Dados atualizados com sucesso!', NOTIFICATION_TYPES.SUCCESS);
+}
+
 // =================================
-// GERENCIAMENTO DE MODAL
+// MODAL E FORMULÁRIO
 // =================================
 
 /**
  * Abre modal para criar novo usuário
  */
 function openModalForCreate() {
-    console.log('[USUARIOS] Abrindo modal para novo usuário');
-    
     appState.currentMode = MODAL_MODES.CREATE;
     appState.currentUser = null;
-    appState.originalEmpresas = [];
-    appState.originalWhatsapp = [];
     
-    // Atualizar título e textos
     elements.modalTitle.textContent = 'Novo Usuário';
-    elements.saveText.textContent = 'Criar Usuário';
-    
-    // Limpar formulário
     clearForm();
-    
-    // Mostrar campos de senha
     showPasswordSection();
-    
-    // Ocultar seção de empresas por padrão
     hideEmpresasSection();
-    
-    // Limpar listas
-    clearEmpresasList();
-    clearWhatsappList();
-    
-    // Mostrar modal
     showModal();
 }
 
@@ -299,181 +550,88 @@ function openModalForCreate() {
  * Abre modal para editar usuário existente
  */
 async function openModalForEdit(userId) {
-    console.log(`[USUARIOS] Abrindo modal para editar usuário: ${userId}`);
-    
-    appState.currentMode = MODAL_MODES.EDIT;
-    appState.currentUser = { id: userId };
-    
-    // Atualizar título e textos
-    elements.modalTitle.textContent = 'Editar Usuário';
-    elements.saveText.textContent = 'Salvar Alterações';
-    
-    // Ocultar campos de senha
-    hidePasswordSection();
-    
-    // Mostrar loading
-    showFormLoading();
-    
-    // Mostrar modal
-    showModal();
-    
     try {
-        // Carregar dados do usuário
-        await loadUserData(userId);
+        appState.currentMode = MODAL_MODES.EDIT;
+        elements.modalTitle.textContent = 'Editar Usuário';
+        
+        showModal();
+        showFormLoading();
+        
+        const userData = await loadUserData(userId);
+        fillUserForm(userData);
+        
+        hideFormLoading();
         
     } catch (error) {
-        console.error('[USUARIOS] Erro ao carregar dados:', error);
-        showNotification('Erro ao carregar dados do usuário', NOTIFICATION_TYPES.ERROR);
+        console.error('[USUARIOS] Erro ao carregar dados do usuário:', error);
+        showNotification('Erro ao carregar dados do usuário: ' + error.message, NOTIFICATION_TYPES.ERROR);
         closeModal();
-    } finally {
-        hideFormLoading();
     }
 }
 
 /**
- * Carrega os dados completos do usuário
+ * Carrega dados completos do usuário
  */
 async function loadUserData(userId) {
-    console.log(`[USUARIOS] Carregando dados do usuário: ${userId}`);
+    console.log('[USUARIOS] Carregando dados do usuário:', userId);
+    const response = await apiRequest(`/${userId}/dados`);
     
-    const [userData, empresasData, whatsappData] = await Promise.all([
-        apiRequest(`/${userId}/dados`, 'GET'),
-        apiRequest(`/${userId}/empresas`, 'GET'),
-        apiRequest(`/${userId}/whatsapp`, 'GET')
-    ]);
+    console.log('[USUARIOS] Resposta da API para dados do usuário:', response);
     
-    if (!userData.success) {
-        throw new Error(userData.error || 'Erro ao carregar dados do usuário');
+    if (!response.success) {
+        throw new Error(response.error || 'Erro ao carregar dados do usuário');
     }
     
-    // Preencher dados básicos
-    fillUserForm(userData.data);
-    
-    // Carregar empresas se aplicável
-    if (empresasData.success && empresasData.empresas) {
-        appState.originalEmpresas = [...empresasData.empresas];
-        populateEmpresasList(empresasData.empresas);
+    if (!response.data) {
+        throw new Error('Dados do usuário não encontrados na resposta');
     }
     
-    // Carregar WhatsApp
-    if (whatsappData.success && whatsappData.data) {
-        appState.originalWhatsapp = [...whatsappData.data];
-        populateWhatsappList(whatsappData.data);
-    }
-    
-    // Ajustar visibilidade das seções baseado no role
-    handleRoleChange();
-    
-    console.log('[USUARIOS] Dados carregados com sucesso');
+    // A API retorna os dados em response.data, não response.user
+    appState.currentUser = response.data;
+    return response.data;
 }
 
 /**
- * Preenche o formulário com dados do usuário
+ * Preenche formulário com dados do usuário
  */
 function fillUserForm(user) {
-    elements.userName.value = user.name || '';
-    elements.userEmail.value = user.email || '';
-    elements.userRole.value = user.role || '';
-    elements.userActive.checked = user.is_active !== false;
+    if (!user) {
+        console.error('[USUARIOS] Usuário não definido para preencher formulário');
+        throw new Error('Dados do usuário não foram carregados corretamente');
+    }
     
-    // Salvar dados do usuário atual
-    appState.currentUser = { ...user };
-}
-
-/**
- * Fecha o modal
- */
-function closeModal() {
-    console.log('[USUARIOS] Fechando modal');
+    console.log('[USUARIOS] Preenchendo formulário com dados:', user);
     
-    hideModal();
-    clearForm();
-    appState.currentUser = null;
-    appState.currentMode = null;
-    appState.originalEmpresas = [];
-    appState.originalWhatsapp = [];
-}
-
-/**
- * Mostra o modal
- */
-function showModal() {
-    console.log('[DEBUG] showModal - abrindo modal...');
+    // A API retorna 'name' ao invés de 'nome'
+    document.getElementById('nome').value = user.name || user.nome || '';
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('role').value = user.role || '';
+    // A API retorna 'is_active' ao invés de 'ativo'
+    document.getElementById('ativo').checked = user.is_active === true || user.ativo === true || user.ativo === 'true';
     
-    elements.modal?.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    handleRoleChange();
+    hidePasswordSection();
     
-    // Focus no primeiro campo e verificar elementos
-    setTimeout(() => {
-        elements.userName?.focus();
-        
-        // Re-verificar elementos após modal abrir
-        console.log('[DEBUG] showModal - verificando elementos após abertura:', {
-            'empresaSearch exists': !!document.getElementById('empresa-search'),
-            'btnAddEmpresa exists': !!document.getElementById('btn-add-empresa'),
-            'empresasList exists': !!document.getElementById('empresas-list'),
-            'empresasCount exists': !!document.getElementById('empresas-count')
-        });
-        
-        // Re-configurar elementos se necessário
-        if (!elements.empresaSearch) {
-            elements.empresaSearch = document.getElementById('empresa-search');
-            elements.btnAddEmpresa = document.getElementById('btn-add-empresa');
-            elements.empresasList = document.getElementById('empresas-list');
-            elements.empresasCount = document.getElementById('empresas-count');
-            elements.empresaSearchResults = document.getElementById('empresa-search-results');
-            
-            console.log('[DEBUG] showModal - elementos re-configurados:', {
-                'empresaSearch': !!elements.empresaSearch,
-                'btnAddEmpresa': !!elements.btnAddEmpresa,
-                'empresasList': !!elements.empresasList
-            });
-            
-            // Re-configurar event listeners
-            if (elements.empresaSearch && elements.btnAddEmpresa) {
-                elements.empresaSearch.addEventListener('input', handleEmpresaSearch);
-                elements.btnAddEmpresa.addEventListener('click', handleAddEmpresa);
-                console.log('[DEBUG] showModal - event listeners re-configurados');
-            }
-        }
-    }, 100);
+    // Carregar empresas e WhatsApp se necessário
+    // Empresas são permitidas para cliente_unique E interno_unique
+    if (user.role === 'cliente_unique' || user.role === 'interno_unique') {
+        showEmpresasSection();
+        loadUserEmpresas(user.id);
+    } else {
+        hideEmpresasSection();
+    }
+    
+    loadUserWhatsapp(user.id);
 }
-
-/**
- * Oculta o modal
- */
-function hideModal() {
-    elements.modal?.classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-/**
- * Mostra indicador de loading no formulário
- */
-function showFormLoading() {
-    elements.formLoading?.classList.remove('hidden');
-    elements.modalForm?.style.setProperty('display', 'none');
-}
-
-/**
- * Oculta indicador de loading no formulário
- */
-function hideFormLoading() {
-    elements.formLoading?.classList.add('hidden');
-    elements.modalForm?.style.removeProperty('display');
-}
-
-// =================================
-// GERENCIAMENTO DE SEÇÕES
-// =================================
 
 /**
  * Manipula mudança no campo Role
  */
 function handleRoleChange() {
-    const role = elements.userRole?.value;
+    const role = document.getElementById('role').value;
     
-    if (role === 'interno_unique' || role === 'cliente_unique') {
+    // Mostrar empresas para cliente_unique E interno_unique
+    if (role === 'cliente_unique' || role === 'interno_unique') {
         showEmpresasSection();
     } else {
         hideEmpresasSection();
@@ -481,577 +639,100 @@ function handleRoleChange() {
 }
 
 /**
- * Mostra seção de empresas
+ * Mostra/oculta seções do formulário
  */
 function showEmpresasSection() {
-    elements.empresasSection?.classList.remove('hidden');
+    const section = document.getElementById('empresas-section');
+    if (section) section.classList.remove('hidden');
 }
 
-/**
- * Oculta seção de empresas
- */
 function hideEmpresasSection() {
-    elements.empresasSection?.classList.add('hidden');
+    const section = document.getElementById('empresas-section');
+    if (section) section.classList.add('hidden');
 }
 
-/**
- * Mostra seção de senha
- */
 function showPasswordSection() {
-    elements.passwordSection?.classList.remove('hidden');
-    elements.userPassword.required = true;
-    elements.userConfirmPassword.required = true;
+    const section = document.getElementById('password-section');
+    const senhaField = document.getElementById('senha');
+    const confirmarSenhaField = document.getElementById('confirmar_senha');
+    
+    if (section) {
+        section.classList.remove('hidden');
+        // Tornar campos obrigatórios quando seção estiver visível
+        if (senhaField) senhaField.required = true;
+        if (confirmarSenhaField) confirmarSenhaField.required = true;
+    }
 }
 
-/**
- * Oculta seção de senha
- */
 function hidePasswordSection() {
-    elements.passwordSection?.classList.add('hidden');
-    elements.userPassword.required = false;
-    elements.userConfirmPassword.required = false;
-}
-
-// =================================
-// GERENCIAMENTO DE EMPRESAS
-// =================================
-
-/**
- * Manipula busca de empresas
- */
-function handleEmpresaSearch(e) {
-    const query = e.target.value.trim();
+    const section = document.getElementById('password-section');
+    const senhaField = document.getElementById('senha');
+    const confirmarSenhaField = document.getElementById('confirmar_senha');
     
-    clearTimeout(appState.empresaSearchTimeout);
-    
-    if (query.length < 3) {
-        hideEmpresaSearchResults();
-        elements.btnAddEmpresa.disabled = true;
-        return;
-    }
-    
-    appState.empresaSearchTimeout = setTimeout(async () => {
-        await searchEmpresas(query);
-    }, CONFIG.DEBOUNCE_DELAY);
-}
-
-/**
- * Busca empresas na API
- */
-async function searchEmpresas(query) {
-    console.log(`[USUARIOS] Buscando empresas: ${query}`);
-    
-    try {
-        const response = await apiRequest('/api/empresas/buscar', 'POST', { cnpj: query });
-        
-        if (response.success) {
-            if (response.empresas && response.empresas.length > 0) {
-                showEmpresaSearchResults(response.empresas);
-            } else if (response.empresa) {
-                showEmpresaSearchResults([response.empresa]);
-            } else {
-                showEmpresaSearchResults([]);
-            }
-        } else {
-            showEmpresaSearchResults([]);
+    if (section) {
+        section.classList.add('hidden');
+        // Remover obrigatoriedade quando seção estiver oculta
+        if (senhaField) {
+            senhaField.required = false;
+            senhaField.value = '';
         }
-    } catch (error) {
-        console.error('[USUARIOS] Erro ao buscar empresas:', error);
-        showEmpresaSearchResults([]);
-    }
-}
-
-/**
- * Mostra resultados da busca de empresas
- */
-function showEmpresaSearchResults(empresas) {
-    const resultsContainer = elements.empresaSearchResults;
-    
-    if (empresas.length === 0) {
-        resultsContainer.innerHTML = `
-            <div class="search-result-item">
-                <div class="search-result-name">Nenhuma empresa encontrada</div>
-            </div>
-        `;
-        elements.btnAddEmpresa.disabled = true;
-    } else {
-        resultsContainer.innerHTML = empresas.map(empresa => `
-            <div class="search-result-item" data-empresa-id="${empresa.id}" data-empresa-cnpj="${empresa.cnpj || empresa.cnpjs}">
-                <div class="search-result-name">${empresa.nome_cliente || empresa.razao_social}</div>
-                <div class="search-result-cnpj">${empresa.cnpj || empresa.cnpjs}</div>
-            </div>
-        `).join('');
-        
-        // Adicionar event listeners aos resultados
-        resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
-            if (!item.textContent.includes('Nenhuma empresa')) {
-                item.addEventListener('click', () => selectEmpresaFromSearch(item));
-            }
-        });
-        
-        elements.btnAddEmpresa.disabled = false;
-    }
-    
-    resultsContainer.classList.remove('hidden');
-}
-
-/**
- * Seleciona empresa dos resultados
- */
-function selectEmpresaFromSearch(item) {
-    const empresaId = item.dataset.empresaId;
-    const empresaCnpj = item.dataset.empresaCnpj;
-    const empresaNome = item.querySelector('.search-result-name').textContent;
-    
-    elements.empresaSearch.value = `${empresaNome} - ${empresaCnpj}`;
-    elements.empresaSearch.dataset.selectedId = empresaId;
-    elements.empresaSearch.dataset.selectedCnpj = empresaCnpj;
-    elements.empresaSearch.dataset.selectedNome = empresaNome;
-    
-    hideEmpresaSearchResults();
-    elements.btnAddEmpresa.disabled = false;
-}
-
-/**
- * Oculta resultados da busca
- */
-function hideEmpresaSearchResults() {
-    elements.empresaSearchResults?.classList.add('hidden');
-}
-
-/**
- * Adiciona empresa à lista
- */
-function handleAddEmpresa() {
-    console.log('[DEBUG] ================== HANDLEADDEMPRESA INICIADA ==================');
-    console.log('[DEBUG] handleAddEmpresa - FUNÇÃO CHAMADA! Timestamp:', new Date().toISOString());
-    console.log('[DEBUG] handleAddEmpresa - Verificando elementos:', {
-        'elements.empresaSearch exists': !!elements.empresaSearch,
-        'elements.empresaSearch.dataset': elements.empresaSearch?.dataset || 'N/A'
-    });
-    
-    const empresaId = elements.empresaSearch.dataset.selectedId;
-    const empresaCnpj = elements.empresaSearch.dataset.selectedCnpj;
-    const empresaNome = elements.empresaSearch.dataset.selectedNome;
-    
-    console.log('[DEBUG] handleAddEmpresa - dados selecionados:', {
-        empresaId: empresaId,
-        empresaCnpj: empresaCnpj,
-        empresaNome: empresaNome,
-        'typeof empresaId': typeof empresaId
-    });
-    
-    if (!empresaId || !empresaCnpj || !empresaNome) {
-        console.log('[DEBUG] handleAddEmpresa - DADOS INVÁLIDOS, saindo da função');
-        showNotification('Selecione uma empresa válida', NOTIFICATION_TYPES.WARNING);
-        return;
-    }
-    
-    // Verificar se já está na lista
-    const existingItem = elements.empresasList.querySelector(`[data-empresa-id="${empresaId}"]`);
-    if (existingItem) {
-        console.log('[DEBUG] handleAddEmpresa - EMPRESA JÁ EXISTE NA LISTA');
-        showNotification('Empresa já está na lista', NOTIFICATION_TYPES.WARNING);
-        return;
-    }
-    
-    // Adicionar à lista
-    const empresaData = {
-        id: empresaId,
-        cnpjs: empresaCnpj,
-        nome_cliente: empresaNome
-    };
-    
-    console.log('[DEBUG] handleAddEmpresa - dados para addEmpresaToList:', empresaData);
-    
-    addEmpresaToList(empresaData);
-    
-    // Limpar busca
-    elements.empresaSearch.value = '';
-    delete elements.empresaSearch.dataset.selectedId;
-    delete elements.empresaSearch.dataset.selectedCnpj;
-    delete elements.empresaSearch.dataset.selectedNome;
-    elements.btnAddEmpresa.disabled = true;
-    hideEmpresaSearchResults();
-    
-    console.log('[DEBUG] handleAddEmpresa - PROCESSO CONCLUÍDO');
-    showNotification('Empresa adicionada à lista', NOTIFICATION_TYPES.SUCCESS);
-}
-
-/**
- * Adiciona empresa à lista visualmente
- */
-function addEmpresaToList(empresa) {
-    console.log('[DEBUG] addEmpresaToList - empresa recebida:', empresa);
-    
-    // Remover empty state se existir
-    const emptyState = elements.empresasList.querySelector('.empty-list');
-    if (emptyState) {
-        emptyState.remove();
-    }
-    
-    const empresaElement = document.createElement('div');
-    empresaElement.className = 'empresa-item fade-in';
-    empresaElement.dataset.empresaId = empresa.id;
-    
-    console.log('[DEBUG] addEmpresaToList - elemento criado:', {
-        element: empresaElement,
-        className: empresaElement.className,
-        'dataset.empresaId': empresaElement.dataset.empresaId,
-        'empresa.id': empresa.id
-    });
-    
-    empresaElement.innerHTML = `
-        <div class="empresa-info">
-            <div class="empresa-name">${empresa.nome_cliente}</div>
-            <div class="empresa-cnpj">${Array.isArray(empresa.cnpj) ? empresa.cnpj[0] : (empresa.cnpj || empresa.cnpjs || 'CNPJ não informado')}</div>
-        </div>
-        <div class="item-actions">
-            <button type="button" class="btn-remove" onclick="removeEmpresaFromList(this)" title="Remover empresa">
-                <i class="mdi mdi-delete"></i>
-            </button>
-        </div>
-    `;
-    
-    elements.empresasList.appendChild(empresaElement);
-    
-    // Verificar se foi adicionado corretamente
-    console.log('[DEBUG] addEmpresaToList - elemento após appendChild:', {
-        'dataset.empresaId': empresaElement.dataset.empresaId,
-        'in DOM': document.contains(empresaElement)
-    });
-    
-    // Verificar estado atual da lista
-    console.log('[DEBUG] addEmpresaToList - estado da lista após adição:', {
-        'total children': elements.empresasList.children.length,
-        'empresa-items': elements.empresasList.querySelectorAll('.empresa-item').length
-    });
-    
-    updateEmpresasCount();
-}
-
-/**
- * Remove empresa da lista
- */
-function removeEmpresaFromList(button) {
-    const empresaItem = button.closest('.empresa-item');
-    if (empresaItem) {
-        empresaItem.remove();
-        updateEmpresasCount();
-        
-        // Adicionar empty state se necessário
-        if (elements.empresasList.children.length === 0) {
-            elements.empresasList.innerHTML = `
-                <div class="empty-list">
-                    <i class="mdi mdi-domain-off"></i>
-                    <p>Nenhuma empresa associada</p>
-                </div>
-            `;
+        if (confirmarSenhaField) {
+            confirmarSenhaField.required = false;
+            confirmarSenhaField.value = '';
         }
-        
-        showNotification('Empresa removida da lista', NOTIFICATION_TYPES.SUCCESS);
     }
 }
 
 /**
- * Popula lista de empresas com dados carregados
+ * Mostra/oculta modal
  */
-function populateEmpresasList(empresas) {
+function showModal() {
+    if (elements.modalUsuario) {
+        elements.modalUsuario.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal() {
+    if (elements.modalUsuario) {
+        elements.modalUsuario.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    clearForm();
+    appState.currentUser = null;
+    appState.currentMode = null;
+}
+
+/**
+ * Mostra/oculta loading do formulário
+ */
+function showFormLoading() {
+    if (elements.formLoading) {
+        elements.formLoading.classList.remove('hidden');
+    }
+}
+
+function hideFormLoading() {
+    if (elements.formLoading) {
+        elements.formLoading.classList.add('hidden');
+    }
+}
+
+/**
+ * Limpa formulário
+ */
+function clearForm() {
+    if (elements.formUsuario) {
+        elements.formUsuario.reset();
+    }
+    
     clearEmpresasList();
-    
-    if (!empresas || empresas.length === 0) {
-        return;
-    }
-    
-    empresas.forEach(empresa => {
-        addEmpresaToList(empresa);
-    });
-}
-
-/**
- * Limpa lista de empresas
- */
-function clearEmpresasList() {
-    elements.empresasList.innerHTML = `
-        <div class="empty-list">
-            <i class="mdi mdi-domain-off"></i>
-            <p>Nenhuma empresa associada</p>
-        </div>
-    `;
-    updateEmpresasCount();
-}
-
-/**
- * Atualiza contador de empresas
- */
-function updateEmpresasCount() {
-    const count = elements.empresasList.querySelectorAll('.empresa-item').length;
-    const allChildren = elements.empresasList.children.length;
-    
-    console.log('[DEBUG] updateEmpresasCount:', {
-        'empresaItems (.empresa-item)': count,
-        'total children': allChildren,
-        'empresasList innerHTML': elements.empresasList.innerHTML.slice(0, 200) + '...'
-    });
-    
-    // Verificar cada filho individualmente
-    Array.from(elements.empresasList.children).forEach((child, index) => {
-        console.log(`[DEBUG] Child ${index}:`, {
-            className: child.className,
-            hasEmpresaItem: child.classList.contains('empresa-item'),
-            dataEmpresaId: child.dataset.empresaId,
-            tagName: child.tagName
-        });
-    });
-    
-    elements.empresasCount.textContent = count;
-}
-
-/**
- * Obtém lista atual de empresas
- */
-function getCurrentEmpresas() {
-    console.log('[DEBUG] getCurrentEmpresas - Iniciando...');
-    
-    if (!elements.empresasList) {
-        console.log('[DEBUG] ERRO: elements.empresasList não existe!');
-        return [];
-    }
-    
-    const empresaItems = elements.empresasList.querySelectorAll('.empresa-item');
-    console.log('[DEBUG] Número de items .empresa-item encontrados:', empresaItems.length);
-    
-    // Log detalhado de cada item
-    for (let i = 0; i < empresaItems.length; i++) {
-        const item = empresaItems[i];
-        console.log(`[DEBUG] Item ${i}:`, {
-            element: item,
-            dataset: item.dataset,
-            empresaId: item.dataset.empresaId,
-            classList: item.classList.toString()
-        });
-    }
-    
-    const result = Array.from(empresaItems).map((item, index) => {
-        const id = parseInt(item.dataset.empresaId);
-        const nomeElement = item.querySelector('.empresa-name');
-        const cnpjElement = item.querySelector('.empresa-cnpj');
-        
-        const empresa = {
-            id: id,
-            nome_cliente: nomeElement ? nomeElement.textContent : 'N/A',
-            cnpjs: cnpjElement ? cnpjElement.textContent : 'N/A'
-        };
-        
-        console.log(`[DEBUG] Empresa ${index} mapeada:`, empresa);
-        return empresa;
-    });
-    
-    console.log('[DEBUG] Resultado final getCurrentEmpresas:', result);
-    return result;
-}
-
-// =================================
-// GERENCIAMENTO DE WHATSAPP
-// =================================
-
-/**
- * Adiciona número WhatsApp
- */
-function handleAddWhatsapp() {
-    const numero = elements.whatsappNumero.value.trim();
-    const nome = elements.whatsappNome.value.trim();
-    const tipo = elements.whatsappTipo.value;
-    
-    // Validações
-    if (!numero || !nome) {
-        showNotification('Número e nome são obrigatórios', NOTIFICATION_TYPES.WARNING);
-        return;
-    }
-    
-    // Validar formato do número
-    const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(numero)) {
-        showNotification('Formato do número inválido. Use formato internacional (+55...)', NOTIFICATION_TYPES.WARNING);
-        return;
-    }
-    
-    // Verificar se já existe
-    const existingItem = elements.whatsappList.querySelector(`[data-whatsapp-numero="${numero}"]`);
-    if (existingItem) {
-        showNotification('Número já está na lista', NOTIFICATION_TYPES.WARNING);
-        return;
-    }
-    
-    // Adicionar à lista
-    addWhatsappToList({
-        numero_whatsapp: numero,
-        nome_contato: nome,
-        tipo_numero: tipo,
-        principal: false
-    });
-    
-    // Limpar campos
-    elements.whatsappNumero.value = '';
-    elements.whatsappNome.value = '';
-    elements.whatsappTipo.value = 'pessoal';
-    
-    showNotification('Número WhatsApp adicionado à lista', NOTIFICATION_TYPES.SUCCESS);
-}
-
-/**
- * Adiciona WhatsApp à lista visualmente
- */
-function addWhatsappToList(whatsapp) {
-    // Remover empty state se existir
-    const emptyState = elements.whatsappList.querySelector('.empty-list');
-    if (emptyState) {
-        emptyState.remove();
-    }
-    
-    const whatsappElement = document.createElement('div');
-    whatsappElement.className = 'whatsapp-item fade-in';
-    whatsappElement.dataset.whatsappId = whatsapp.id || 'new';
-    whatsappElement.dataset.whatsappNumero = whatsapp.numero_whatsapp;
-    
-    const principalBadge = whatsapp.principal ? 
-        '<span class="principal-badge"><i class="mdi mdi-star"></i> Principal</span>' : '';
-    
-    whatsappElement.innerHTML = `
-        <div class="whatsapp-info">
-            <div class="whatsapp-name">${whatsapp.nome_contato}</div>
-            <div class="whatsapp-details">
-                <span>${whatsapp.numero_whatsapp}</span>
-                <span class="tipo-badge tipo-${whatsapp.tipo_numero}">${whatsapp.tipo_numero}</span>
-                ${principalBadge}
-            </div>
-        </div>
-        <div class="item-actions">
-            <button type="button" class="btn-principal ${whatsapp.principal ? 'active' : ''}" 
-                    onclick="toggleWhatsappPrincipal(this)" 
-                    title="${whatsapp.principal ? 'Principal' : 'Definir como principal'}">
-                <i class="mdi mdi-star"></i>
-            </button>
-            <button type="button" class="btn-remove" onclick="removeWhatsappFromList(this)" title="Remover número">
-                <i class="mdi mdi-delete"></i>
-            </button>
-        </div>
-    `;
-    
-    elements.whatsappList.appendChild(whatsappElement);
-    updateWhatsappCount();
-}
-
-/**
- * Remove WhatsApp da lista
- */
-function removeWhatsappFromList(button) {
-    const whatsappItem = button.closest('.whatsapp-item');
-    if (whatsappItem) {
-        whatsappItem.remove();
-        updateWhatsappCount();
-        
-        // Adicionar empty state se necessário
-        if (elements.whatsappList.children.length === 0) {
-            elements.whatsappList.innerHTML = `
-                <div class="empty-list">
-                    <i class="mdi mdi-phone-off"></i>
-                    <p>Nenhum número cadastrado</p>
-                </div>
-            `;
-        }
-        
-        showNotification('Número removido da lista', NOTIFICATION_TYPES.SUCCESS);
-    }
-}
-
-/**
- * Alterna status principal do WhatsApp
- */
-function toggleWhatsappPrincipal(button) {
-    const whatsappItem = button.closest('.whatsapp-item');
-    const allItems = elements.whatsappList.querySelectorAll('.whatsapp-item');
-    
-    // Remover principal de todos
-    allItems.forEach(item => {
-        const btn = item.querySelector('.btn-principal');
-        const badge = item.querySelector('.principal-badge');
-        
-        btn.classList.remove('active');
-        btn.title = 'Definir como principal';
-        if (badge) badge.remove();
-    });
-    
-    // Definir este como principal
-    button.classList.add('active');
-    button.title = 'Principal';
-    
-    const whatsappInfo = whatsappItem.querySelector('.whatsapp-details');
-    const principalBadge = document.createElement('span');
-    principalBadge.className = 'principal-badge';
-    principalBadge.innerHTML = '<i class="mdi mdi-star"></i> Principal';
-    whatsappInfo.appendChild(principalBadge);
-    
-    showNotification('Número definido como principal', NOTIFICATION_TYPES.SUCCESS);
-}
-
-/**
- * Popula lista de WhatsApp com dados carregados
- */
-function populateWhatsappList(whatsappList) {
     clearWhatsappList();
-    
-    if (!whatsappList || whatsappList.length === 0) {
-        return;
-    }
-    
-    whatsappList.forEach(whatsapp => {
-        addWhatsappToList(whatsapp);
-    });
-}
-
-/**
- * Limpa lista de WhatsApp
- */
-function clearWhatsappList() {
-    elements.whatsappList.innerHTML = `
-        <div class="empty-list">
-            <i class="mdi mdi-phone-off"></i>
-            <p>Nenhum número cadastrado</p>
-        </div>
-    `;
-    updateWhatsappCount();
-}
-
-/**
- * Atualiza contador de WhatsApp
- */
-function updateWhatsappCount() {
-    const count = elements.whatsappList.querySelectorAll('.whatsapp-item').length;
-    elements.whatsappCount.textContent = count;
-}
-
-/**
- * Obtém lista atual de WhatsApp
- */
-function getCurrentWhatsapp() {
-    const whatsappItems = elements.whatsappList.querySelectorAll('.whatsapp-item');
-    return Array.from(whatsappItems).map(item => {
-        const isPrincipal = item.querySelector('.btn-principal').classList.contains('active');
-        const tipo = item.querySelector('.tipo-badge').textContent;
-        
-        return {
-            id: item.dataset.whatsappId !== 'new' ? item.dataset.whatsappId : null,
-            numero_whatsapp: item.dataset.whatsappNumero,
-            nome_contato: item.querySelector('.whatsapp-name').textContent,
-            tipo_numero: tipo,
-            principal: isPrincipal
-        };
-    });
 }
 
 // =================================
-// CRUD DE USUÁRIOS
+// CRUD OPERATIONS
 // =================================
 
 /**
@@ -1060,44 +741,26 @@ function getCurrentWhatsapp() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
-    if (appState.isLoading) {
-        console.log('[USUARIOS] Já está processando, ignorando envio');
-        return;
-    }
-    
-    console.log('[USUARIOS] Iniciando salvamento...');
-    
-    // Validar formulário
     if (!validateForm()) {
         return;
     }
     
-    appState.isLoading = true;
-    showSaveLoading();
-    
     try {
-        let result;
+        showSaveLoading();
+        
         if (appState.currentMode === MODAL_MODES.CREATE) {
-            result = await createUser();
+            await createUser();
         } else {
-            result = await updateUser();
+            await updateUser();
         }
         
-        // Sucesso - fechar modal e atualizar
-        console.log('[USUARIOS] Salvamento bem-sucedido');
         closeModal();
-        showNotification('Usuário salvo com sucesso!', NOTIFICATION_TYPES.SUCCESS);
-        
-        // Aguardar um pouco antes de recarregar para mostrar a notificação
-        setTimeout(() => {
-            refreshUsersList();
-        }, 1000);
+        await loadUsersData(); // Recarregar dados
         
     } catch (error) {
-        console.error('[USUARIOS] Erro ao salvar:', error);
-        showNotification(error.message || 'Erro ao salvar usuário', NOTIFICATION_TYPES.ERROR);
+        console.error('[USUARIOS] Erro ao salvar usuário:', error);
+        showNotification('Erro ao salvar usuário: ' + error.message, NOTIFICATION_TYPES.ERROR);
     } finally {
-        appState.isLoading = false;
         hideSaveLoading();
     }
 }
@@ -1106,345 +769,102 @@ async function handleFormSubmit(e) {
  * Cria novo usuário
  */
 async function createUser() {
-    console.log('[USUARIOS] Criando novo usuário...');
-    
-    // 1. Criar usuário
     const userData = collectUserFormData();
-    const userResponse = await apiRequest('/salvar', 'POST', userData);
     
-    if (!userResponse.success) {
-        throw new Error(userResponse.error || 'Erro ao criar usuário');
+    const response = await apiRequest('/salvar', 'POST', userData);
+    
+    if (!response.success) {
+        throw new Error(response.error || 'Erro ao criar usuário');
     }
     
-    const userId = userResponse.user_id || userResponse.id;
-    if (!userId) {
-        throw new Error('ID do usuário não retornado');
-    }
+    const userId = response.user_id;
     
-    // 2. Associar empresas se aplicável
-    const role = elements.userRole.value;
-    if (role === 'interno_unique' || role === 'cliente_unique') {
+    // Salvar empresas e WhatsApp se necessário
+    // Empresas são permitidas para cliente_unique E interno_unique
+    if (userData.role === 'cliente_unique' || userData.role === 'interno_unique') {
         await saveUserEmpresas(userId);
     }
     
-    // 3. Salvar WhatsApp
     await saveUserWhatsapp(userId);
     
-    console.log('[USUARIOS] Usuário criado com sucesso');
+    showNotification('Usuário criado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
 
 /**
  * Atualiza usuário existente
  */
 async function updateUser() {
-    console.log(`[USUARIOS] Atualizando usuário: ${appState.currentUser.id}`);
-    
+    const userData = collectUserFormData();
     const userId = appState.currentUser.id;
     
-    // 1. Atualizar dados básicos
-    const userData = collectUserFormData();
-    userData.user_id = userId; // Adicionar ID para edição
-    delete userData.password; // Não enviar senha na atualização
-    delete userData.confirm_password;
+    const response = await apiRequest(`/api/user/${userId}`, 'PUT', userData);
     
-    const userResponse = await apiRequest('/salvar', 'POST', userData);
-    
-    if (!userResponse.success) {
-        throw new Error(userResponse.error || 'Erro ao atualizar usuário');
+    if (!response.success) {
+        throw new Error(response.error || 'Erro ao atualizar usuário');
     }
     
-    // 2. Atualizar empresas se aplicável
-    const role = elements.userRole.value;
-    if (role === 'interno_unique' || role === 'cliente_unique') {
+    // Salvar empresas e WhatsApp se necessário
+    // Empresas são permitidas para cliente_unique E interno_unique
+    if (userData.role === 'cliente_unique' || userData.role === 'interno_unique') {
         await saveUserEmpresas(userId);
     }
     
-    // 3. Atualizar WhatsApp
     await saveUserWhatsapp(userId);
     
-    console.log('[USUARIOS] Usuário atualizado com sucesso');
+    showNotification('Usuário atualizado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
 
 /**
- * Coleta dados do formulário de usuário
+ * Coleta dados do formulário
  */
 function collectUserFormData() {
-    const formData = new FormData(elements.modalForm);
-    
     return {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        role: formData.get('role'),
-        is_active: formData.get('is_active') ? 'true' : 'false',
-        password: formData.get('password'),
-        confirm_password: formData.get('confirm_password')
+        name: document.getElementById('nome').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        role: document.getElementById('role').value,
+        is_active: document.getElementById('ativo').checked,
+        password: document.getElementById('senha')?.value,
+        confirm_password: document.getElementById('confirmar_senha')?.value
     };
 }
 
 /**
- * Salva empresas do usuário
- */
-async function saveUserEmpresas(userId) {
-    console.log(`[USUARIOS] Salvando empresas do usuário: ${userId}`);
-    
-    const currentEmpresas = getCurrentEmpresas();
-    const empresaIds = currentEmpresas.map(emp => emp.id).filter(id => !isNaN(id)); // Filtrar IDs válidos
-    
-    console.log(`[USUARIOS] IDs de empresas para salvar:`, empresaIds);
-    
-    // SEMPRE enviar para API, mesmo que array vazio (para remover empresas)
-    console.log(`[USUARIOS] Enviando ${empresaIds.length} empresas para API (0 = remover todas)`);
-    
-    const response = await apiRequest(`/${userId}/empresas`, 'POST', {
-        empresas: empresaIds
-    });
-    
-    if (!response.success) {
-        throw new Error(response.error || 'Erro ao salvar empresas');
-    }
-    
-    console.log('[USUARIOS] Empresas salvas com sucesso');
-}
-
-/**
- * Salva números WhatsApp do usuário
- */
-async function saveUserWhatsapp(userId) {
-    console.log(`[USUARIOS] Salvando WhatsApp do usuário: ${userId}`);
-    
-    const currentWhatsapp = getCurrentWhatsapp();
-    const originalWhatsapp = appState.originalWhatsapp || [];
-    
-    // Determinar ações necessárias
-    const toCreate = currentWhatsapp.filter(curr => !curr.id);
-    const toUpdate = currentWhatsapp.filter(curr => curr.id);
-    const toDelete = originalWhatsapp.filter(orig => 
-        !currentWhatsapp.some(curr => curr.id === orig.id)
-    );
-    
-    // Criar novos números
-    for (const whatsapp of toCreate) {
-        await apiRequest(`/${userId}/whatsapp`, 'POST', whatsapp);
-    }
-    
-    // Deletar números removidos
-    for (const whatsapp of toDelete) {
-        if (whatsapp.id) {
-            await apiRequest(`/whatsapp/${whatsapp.id}`, 'DELETE');
-        }
-    }
-    
-    // Atualizar número principal se necessário
-    const principalNumber = currentWhatsapp.find(w => w.principal);
-    if (principalNumber && principalNumber.id) {
-        await apiRequest(`/whatsapp/${principalNumber.id}/principal`, 'POST');
-    }
-    
-    console.log('[USUARIOS] WhatsApp salvo com sucesso');
-}
-
-/**
- * Deleta usuário
- */
-async function deleteUser(userId, userName) {
-    console.log(`[USUARIOS] Deletando usuário: ${userId}`);
-    
-    if (!confirm(`Tem certeza que deseja excluir o usuário "${userName}"?\n\nEsta ação não pode ser desfeita.`)) {
-        return;
-    }
-    
-    try {
-        const response = await apiRequest(`/deletar/${userId}`, 'POST');
-        
-        if (response.success) {
-            // Remover linha da tabela
-            const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
-            if (userRow) {
-                userRow.remove();
-            }
-            
-            showNotification(response.message || 'Usuário excluído com sucesso!', NOTIFICATION_TYPES.SUCCESS);
-        } else {
-            throw new Error(response.error || 'Erro ao excluir usuário');
-        }
-        
-    } catch (error) {
-        console.error('[USUARIOS] Erro ao deletar:', error);
-        showNotification(error.message || 'Erro ao excluir usuário', NOTIFICATION_TYPES.ERROR);
-    }
-}
-
-// =================================
-// MANIPULAÇÃO DA TABELA
-// =================================
-
-/**
- * Manipula cliques nos botões da tabela
- */
-function handleTableButtonClick(e) {
-    const button = e.target.closest('button');
-    if (!button) return;
-    
-    const userId = button.dataset.userId;
-    const userName = button.dataset.userName;
-    
-    if (button.classList.contains('btn-edit')) {
-        openModalForEdit(userId);
-    } else if (button.classList.contains('btn-delete')) {
-        showDeleteConfirmation(userId, userName);
-    }
-}
-
-/**
- * Filtra tabela de usuários
- */
-function filterUsersTable(query) {
-    const rows = elements.usersTable?.querySelectorAll('tr.user-row');
-    if (!rows) return;
-    
-    const searchTerm = query.toLowerCase().trim();
-    let visibleCount = 0;
-    
-    rows.forEach(row => {
-        if (!searchTerm) {
-            row.style.display = '';
-            visibleCount++;
-            return;
-        }
-        
-        const name = row.querySelector('.user-name')?.textContent.toLowerCase() || '';
-        const email = row.querySelector('.email-text')?.textContent.toLowerCase() || '';
-        const role = row.querySelector('.role-badge')?.textContent.toLowerCase() || '';
-        
-        const matches = name.includes(searchTerm) || 
-                       email.includes(searchTerm) || 
-                       role.includes(searchTerm);
-        
-        row.style.display = matches ? '' : 'none';
-        if (matches) visibleCount++;
-    });
-    
-    // Mostrar mensagem se nenhum resultado
-    updateEmptyState(visibleCount === 0 && searchTerm);
-}
-
-/**
- * Atualiza estado vazio da tabela
- */
-function updateEmptyState(showEmpty) {
-    const existingEmpty = elements.usersTable?.querySelector('.search-empty-row');
-    
-    if (showEmpty) {
-        if (!existingEmpty) {
-            const emptyRow = document.createElement('tr');
-            emptyRow.className = 'search-empty-row';
-            emptyRow.innerHTML = `
-                <td colspan="5" class="empty-message">
-                    <div class="empty-state">
-                        <i class="mdi mdi-magnify-close"></i>
-                        <p>Nenhum usuário encontrado para esta busca</p>
-                    </div>
-                </td>
-            `;
-            elements.usersTable.appendChild(emptyRow);
-        }
-    } else {
-        if (existingEmpty) {
-            existingEmpty.remove();
-        }
-    }
-}
-
-/**
- * Atualiza lista de usuários
- */
-function refreshUsersList() {
-    console.log('[USUARIOS] Atualizando lista de usuários...');
-    window.location.reload();
-}
-
-// =================================
-// MODAL DE CONFIRMAÇÃO
-// =================================
-
-/**
- * Mostra modal de confirmação de exclusão
- */
-function showDeleteConfirmation(userId, userName) {
-    elements.deleteUserName.textContent = userName;
-    elements.deleteModal.classList.remove('hidden');
-    
-    // Configurar botão de confirmação
-    elements.btnConfirmDelete.onclick = () => {
-        hideDeleteModal();
-        deleteUser(userId, userName);
-    };
-}
-
-/**
- * Oculta modal de confirmação
- */
-function hideDeleteModal() {
-    elements.deleteModal?.classList.add('hidden');
-}
-
-/**
- * Manipula confirmação de exclusão
- */
-function handleConfirmDelete() {
-    // A lógica está no onclick configurado em showDeleteConfirmation
-}
-
-// =================================
-// VALIDAÇÃO
-// =================================
-
-/**
- * Valida formulário antes do envio
+ * Valida formulário
  */
 function validateForm() {
-    const errors = [];
+    const nome = document.getElementById('nome').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const role = document.getElementById('role').value;
     
-    // Validações básicas
-    if (!elements.userName.value.trim()) {
-        errors.push('Nome é obrigatório');
+    if (!nome) {
+        showNotification('Nome é obrigatório', NOTIFICATION_TYPES.ERROR);
+        return false;
     }
     
-    if (!elements.userEmail.value.trim()) {
-        errors.push('Email é obrigatório');
-    } else if (!isValidEmail(elements.userEmail.value)) {
-        errors.push('Email inválido');
+    if (!email || !isValidEmail(email)) {
+        showNotification('Email válido é obrigatório', NOTIFICATION_TYPES.ERROR);
+        return false;
     }
     
-    if (!elements.userRole.value) {
-        errors.push('Perfil é obrigatório');
+    if (!role) {
+        showNotification('Perfil é obrigatório', NOTIFICATION_TYPES.ERROR);
+        return false;
     }
     
-    // Validações de senha (apenas para criação)
+    // Validar senha apenas para novo usuário
     if (appState.currentMode === MODAL_MODES.CREATE) {
-        if (!elements.userPassword.value) {
-            errors.push('Senha é obrigatória');
-        } else if (elements.userPassword.value.length < 6) {
-            errors.push('Senha deve ter pelo menos 6 caracteres');
+        const senha = document.getElementById('senha').value;
+        const confirmarSenha = document.getElementById('confirmar_senha').value;
+        
+        if (!senha || senha.length < 6) {
+            showNotification('Senha deve ter pelo menos 6 caracteres', NOTIFICATION_TYPES.ERROR);
+            return false;
         }
         
-        if (elements.userPassword.value !== elements.userConfirmPassword.value) {
-            errors.push('Senhas não coincidem');
+        if (senha !== confirmarSenha) {
+            showNotification('Senhas não coincidem', NOTIFICATION_TYPES.ERROR);
+            return false;
         }
-    }
-    
-    // Validar WhatsApp se houver números
-    const whatsappItems = elements.whatsappList.querySelectorAll('.whatsapp-item');
-    whatsappItems.forEach((item, index) => {
-        const numero = item.dataset.whatsappNumero;
-        if (numero && !isValidWhatsApp(numero)) {
-            errors.push(`Número WhatsApp ${index + 1} inválido`);
-        }
-    });
-    
-    if (errors.length > 0) {
-        showNotification(errors.join('\n'), NOTIFICATION_TYPES.ERROR);
-        return false;
     }
     
     return true;
@@ -1454,16 +874,767 @@ function validateForm() {
  * Valida formato de email
  */
 function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 /**
- * Valida formato de WhatsApp
+ * Mostra/oculta loading no botão salvar
  */
-function isValidWhatsApp(numero) {
-    const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    return phoneRegex.test(numero);
+function showSaveLoading() {
+    if (elements.btnSave) {
+        elements.btnSave.disabled = true;
+        elements.btnSave.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+    }
+}
+
+function hideSaveLoading() {
+    if (elements.btnSave) {
+        elements.btnSave.disabled = false;
+        elements.btnSave.innerHTML = '<i class="mdi mdi-check"></i> <span id="save-text">Salvar</span>';
+    }
+}
+
+// =================================
+// FUNÇÕES GLOBAIS (para onclick dos cards)
+// =================================
+
+/**
+ * Abre modal de edição (chamada pelos cards)
+ */
+window.openEditModal = function(userId) {
+    openModalForEdit(userId);
+};
+
+/**
+ * Deleta usuário (chamada pelos cards)
+ */
+window.deleteUser = function(userId, userName) {
+    showDeleteConfirmation(userId, userName);
+};
+
+/**
+ * Remove empresa da lista (chamada pelos botões)
+ */
+window.removeEmpresaFromList = function(empresaId) {
+    console.log(`[DEBUG] removeEmpresaFromList chamada com ID: ${empresaId} (tipo: ${typeof empresaId})`);
+    console.log(`[DEBUG] Estado atual appState.originalEmpresas:`, appState.originalEmpresas);
+    
+    // Converter para string para comparação consistente (fix type comparison)
+    const idToRemove = String(empresaId);
+    
+    const before = appState.originalEmpresas.length;
+    appState.originalEmpresas = appState.originalEmpresas.filter(e => String(e.id) !== idToRemove);
+    const after = appState.originalEmpresas.length;
+    
+    console.log(`[DEBUG] Removido: ${before - after} items`);
+    console.log(`[DEBUG] Estado após remoção:`, appState.originalEmpresas);
+    
+    renderEmpresasList();
+    updateEmpresasCount();
+};
+
+/**
+ * Remove WhatsApp da lista (chamada pelos botões)
+ */
+window.removeWhatsappFromList = function(whatsappId) {
+    console.log(`[DEBUG] removeWhatsappFromList chamada com ID: ${whatsappId} (tipo: ${typeof whatsappId})`);
+    console.log(`[DEBUG] Estado atual appState.originalWhatsapp:`, appState.originalWhatsapp);
+    
+    // Converter para string para comparação consistente (fix type comparison)
+    const idToRemove = String(whatsappId);
+    
+    const before = appState.originalWhatsapp.length;
+    appState.originalWhatsapp = appState.originalWhatsapp.filter(w => String(w.id) !== idToRemove);
+    const after = appState.originalWhatsapp.length;
+    
+    console.log(`[DEBUG] Removido: ${before - after} items`);
+    console.log(`[DEBUG] Estado após remoção:`, appState.originalWhatsapp);
+    
+    renderWhatsappList();
+    updateWhatsappCount();
+};
+
+/**
+ * Define WhatsApp como principal (chamada pelos botões)
+ */
+window.setWhatsappAsPrincipal = function(whatsappId) {
+    console.log(`[DEBUG] setWhatsappAsPrincipal chamada com ID: ${whatsappId} (tipo: ${typeof whatsappId})`);
+    
+    // Converter para string para comparação consistente
+    const idToSet = String(whatsappId);
+    
+    // Definir apenas um WhatsApp como principal
+    appState.originalWhatsapp.forEach(w => {
+        w.principal = String(w.id) === idToSet;
+    });
+    console.log(`[DEBUG] WhatsApp principal definido para ID: ${idToSet}`);
+    console.log(`[DEBUG] Estado após definir principal:`, appState.originalWhatsapp);
+    
+    renderWhatsappList();
+    updateWhatsappCount();
+};
+
+/**
+ * Mostra modal de confirmação de exclusão
+ */
+function showDeleteConfirmation(userId, userName) {
+    const deleteModal = elements.modalDeleteConfirm;
+    const deleteUserName = document.getElementById('delete-user-name');
+    const btnConfirmDelete = document.getElementById('btn-confirm-delete');
+    
+    if (deleteUserName) {
+        deleteUserName.textContent = userName;
+    }
+    
+    if (btnConfirmDelete) {
+        btnConfirmDelete.onclick = () => confirmDelete(userId);
+    }
+    
+    if (deleteModal) {
+        deleteModal.classList.remove('hidden');
+    }
+}
+
+/**
+ * Confirma exclusão do usuário
+ */
+async function confirmDelete(userId) {
+    try {
+        const response = await apiRequest(`/deletar/${userId}`, 'POST');
+        
+        if (!response.success) {
+            throw new Error(response.error || 'Erro ao excluir usuário');
+        }
+        
+        hideDeleteModal();
+        await loadUsersData();
+        showNotification('Usuário excluído com sucesso!', NOTIFICATION_TYPES.SUCCESS);
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao excluir usuário:', error);
+        showNotification('Erro ao excluir usuário: ' + error.message, NOTIFICATION_TYPES.ERROR);
+    }
+}
+
+/**
+ * Oculta modal de confirmação
+ */
+function hideDeleteModal() {
+    if (elements.modalDeleteConfirm) {
+        elements.modalDeleteConfirm.classList.add('hidden');
+    }
+}
+
+// =================================
+// EMPRESAS E WHATSAPP (Placeholder - implementar conforme necessário)
+// =================================
+
+function initializeEmpresasEventListeners() {
+    console.log('[USUARIOS] Inicializando listeners de empresas');
+    
+    const empresaSearchInput = document.getElementById('empresa-search');
+    const btnAddEmpresa = document.getElementById('btn-add-empresa');
+    
+    if (empresaSearchInput) {
+        empresaSearchInput.addEventListener('input', handleEmpresaSearch);
+        empresaSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleEmpresaAdd();
+            }
+        });
+    }
+    
+    if (btnAddEmpresa) {
+        btnAddEmpresa.addEventListener('click', handleEmpresaAdd);
+    }
+}
+
+function initializeWhatsappEventListeners() {
+    console.log('[USUARIOS] Inicializando listeners de WhatsApp');
+    
+    const btnAddWhatsapp = document.getElementById('btn-add-whatsapp');
+    const whatsappNumeroInput = document.getElementById('whatsapp-numero');
+    
+    if (btnAddWhatsapp) {
+        btnAddWhatsapp.addEventListener('click', handleWhatsappAdd);
+    }
+    
+    if (whatsappNumeroInput) {
+        // Formatação automática enquanto digita
+        whatsappNumeroInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove não dígitos
+            
+            if (value.length >= 2) {
+                value = `(${value.substring(0, 2)})${value.substring(2)}`;
+            }
+            
+            e.target.value = value;
+        });
+        
+        // Enter para adicionar
+        whatsappNumeroInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleWhatsappAdd();
+            }
+        });
+        
+        // Validação em tempo real
+        whatsappNumeroInput.addEventListener('blur', function(e) {
+            const value = e.target.value.trim();
+            if (value) {
+                const validation = validateWhatsappNumber(value);
+                if (!validation.valid) {
+                    e.target.style.borderColor = 'var(--danger-color)';
+                    e.target.title = validation.message;
+                } else {
+                    e.target.style.borderColor = 'var(--success-color)';
+                    e.target.title = 'Formato válido';
+                    e.target.value = validation.numeroFormatado;
+                }
+            } else {
+                e.target.style.borderColor = '';
+                e.target.title = '';
+            }
+        });
+    }
+}
+
+/**
+ * Manipula busca de empresas
+ */
+function handleEmpresaSearch(e) {
+    clearTimeout(appState.empresaSearchTimeout);
+    
+    const termo = e.target.value.trim();
+    const resultsContainer = document.getElementById('empresa-search-results');
+    const btnAdd = document.getElementById('btn-add-empresa');
+    
+    if (termo.length < 3) {
+        if (resultsContainer) {
+            resultsContainer.classList.add('hidden');
+            resultsContainer.innerHTML = '';
+        }
+        if (btnAdd) btnAdd.disabled = true;
+        return;
+    }
+    
+    appState.empresaSearchTimeout = setTimeout(async () => {
+        try {
+            console.log('[USUARIOS] Buscando empresas para termo:', termo);
+            
+            const response = await apiRequest('/api/empresas/buscar', 'POST', { cnpj: termo });
+            
+            if (response.success) {
+                displayEmpresaSearchResults(response, resultsContainer);
+                if (btnAdd) btnAdd.disabled = false;
+            } else {
+                if (resultsContainer) {
+                    resultsContainer.innerHTML = '<div class="search-result-item">Nenhuma empresa encontrada</div>';
+                    resultsContainer.classList.remove('hidden');
+                }
+                if (btnAdd) btnAdd.disabled = true;
+            }
+        } catch (error) {
+            console.error('[USUARIOS] Erro ao buscar empresas:', error);
+            if (resultsContainer) {
+                resultsContainer.innerHTML = '<div class="search-result-item error">Erro na busca</div>';
+                resultsContainer.classList.remove('hidden');
+            }
+            if (btnAdd) btnAdd.disabled = true;
+        }
+    }, CONFIG.DEBOUNCE_DELAY);
+}
+
+/**
+ * Exibe resultados da busca de empresas
+ */
+function displayEmpresaSearchResults(response, container) {
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (response.multiple && response.empresas) {
+        // Múltiplas empresas
+        response.empresas.forEach(empresa => {
+            const item = createEmpresaSearchResultItem(empresa);
+            container.appendChild(item);
+        });
+    } else if (response.empresa) {
+        // Uma empresa
+        const item = createEmpresaSearchResultItem(response.empresa);
+        container.appendChild(item);
+    }
+    
+    container.classList.remove('hidden');
+}
+
+/**
+ * Cria item de resultado da busca
+ */
+function createEmpresaSearchResultItem(empresa) {
+    const div = document.createElement('div');
+    div.className = 'search-result-item';
+    div.innerHTML = `
+        <div class="empresa-info">
+            <strong>${empresa.nome_cliente}</strong>
+            <span class="cnpj">${Array.isArray(empresa.cnpj) ? empresa.cnpj[0] : empresa.cnpj}</span>
+        </div>
+    `;
+    
+    div.addEventListener('click', () => {
+        selectEmpresaFromSearch(empresa);
+    });
+    
+    return div;
+}
+
+/**
+ * Seleciona empresa da busca
+ */
+function selectEmpresaFromSearch(empresa) {
+    const searchInput = document.getElementById('empresa-search');
+    const resultsContainer = document.getElementById('empresa-search-results');
+    
+    if (searchInput) {
+        searchInput.value = empresa.nome_cliente;
+        searchInput.dataset.selectedEmpresaId = empresa.id;
+        searchInput.dataset.selectedEmpresaNome = empresa.nome_cliente;
+        searchInput.dataset.selectedEmpresaCnpj = Array.isArray(empresa.cnpj) ? empresa.cnpj[0] : empresa.cnpj;
+    }
+    
+    if (resultsContainer) {
+        resultsContainer.classList.add('hidden');
+    }
+}
+
+/**
+ * Adiciona empresa selecionada
+ */
+function handleEmpresaAdd() {
+    const searchInput = document.getElementById('empresa-search');
+    
+    if (!searchInput || !searchInput.dataset.selectedEmpresaId) {
+        showNotification('Selecione uma empresa da lista de resultados', NOTIFICATION_TYPES.WARNING);
+        return;
+    }
+    
+    const empresa = {
+        id: searchInput.dataset.selectedEmpresaId,
+        nome_cliente: searchInput.dataset.selectedEmpresaNome,
+        cnpj: searchInput.dataset.selectedEmpresaCnpj
+    };
+    
+    addEmpresaToList(empresa);
+    
+    // Limpar busca
+    searchInput.value = '';
+    delete searchInput.dataset.selectedEmpresaId;
+    delete searchInput.dataset.selectedEmpresaNome;
+    delete searchInput.dataset.selectedEmpresaCnpj;
+    
+    const resultsContainer = document.getElementById('empresa-search-results');
+    if (resultsContainer) {
+        resultsContainer.classList.add('hidden');
+    }
+    
+    const btnAdd = document.getElementById('btn-add-empresa');
+    if (btnAdd) btnAdd.disabled = true;
+}
+
+/**
+ * Adiciona empresa à lista
+ */
+function addEmpresaToList(empresa) {
+    // Verificar se já existe
+    if (appState.originalEmpresas.some(e => e.id === empresa.id)) {
+        showNotification('Empresa já adicionada à lista', NOTIFICATION_TYPES.WARNING);
+        return;
+    }
+    
+    appState.originalEmpresas.push(empresa);
+    renderEmpresasList();
+    updateEmpresasCount();
+}
+
+/**
+ * Renderiza lista de empresas
+ */
+function renderEmpresasList() {
+    const container = document.getElementById('empresas-list');
+    if (!container) return;
+    
+    if (appState.originalEmpresas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-list">
+                <i class="mdi mdi-domain-off"></i>
+                <p>Nenhuma empresa vinculada</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    appState.originalEmpresas.forEach(empresa => {
+        const item = document.createElement('div');
+        item.className = 'empresa-list-item';
+        item.innerHTML = `
+            <div class="empresa-item-info">
+                <div class="empresa-nome">${empresa.nome_cliente}</div>
+                <div class="empresa-cnpj">${empresa.cnpj}</div>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeEmpresaFromList('${empresa.id}')" title="Remover empresa">
+                <i class="mdi mdi-close"></i>
+            </button>
+        `;
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Atualiza contador de empresas
+ */
+function updateEmpresasCount() {
+    const countElement = document.getElementById('empresas-count');
+    if (countElement) {
+        countElement.textContent = appState.originalEmpresas.length;
+    }
+}
+
+/**
+ * Valida formato do número WhatsApp
+ * Formato esperado: (dd)xxxxxxxxx ou ddxxxxxxxxx (11 dígitos)
+ */
+function validateWhatsappNumber(numero) {
+    if (!numero) return false;
+    
+    // Remover formatação (parênteses, espaços, traços)
+    const numeroLimpo = numero.replace(/[\(\)\s\-]/g, '');
+    
+    // Verificar se tem exatamente 11 dígitos
+    if (!/^\d{11}$/.test(numeroLimpo)) {
+        return {
+            valid: false,
+            message: 'Número deve ter 11 dígitos no formato: (dd)xxxxxxxxx',
+            exemplo: 'Exemplo: (11)987654321 ou 11987654321'
+        };
+    }
+    
+    // Verificar se os dois primeiros dígitos são DDD válido (11-99)
+    const ddd = parseInt(numeroLimpo.substring(0, 2));
+    if (ddd < 11 || ddd > 99) {
+        return {
+            valid: false,
+            message: 'DDD deve estar entre 11 e 99',
+            exemplo: 'Exemplo: (11)987654321 ou 11987654321'
+        };
+    }
+    
+    // Verificar se o terceiro dígito é 9 (celular)
+    if (numeroLimpo[2] !== '9') {
+        return {
+            valid: false,
+            message: 'Número deve ser de celular (terceiro dígito deve ser 9)',
+            exemplo: 'Exemplo: (11)987654321 ou 11987654321'
+        };
+    }
+    
+    return {
+        valid: true,
+        numeroLimpo: numeroLimpo,
+        numeroFormatado: `(${numeroLimpo.substring(0, 2)})${numeroLimpo.substring(2)}`
+    };
+}
+
+/**
+ * Adiciona número WhatsApp
+ */
+function handleWhatsappAdd() {
+    const nomeInput = document.getElementById('whatsapp-nome');
+    const numeroInput = document.getElementById('whatsapp-numero');
+    const tipoSelect = document.getElementById('whatsapp-tipo');
+    
+    if (!numeroInput || !numeroInput.value.trim()) {
+        showNotification('Informe o número do WhatsApp', NOTIFICATION_TYPES.WARNING);
+        return;
+    }
+    
+    // Validar formato do número
+    const validation = validateWhatsappNumber(numeroInput.value.trim());
+    if (!validation.valid) {
+        showNotification(
+            `Formato inválido: ${validation.message}. ${validation.exemplo}`, 
+            NOTIFICATION_TYPES.ERROR
+        );
+        numeroInput.focus();
+        return;
+    }
+    
+    const whatsapp = {
+        id: Date.now(), // ID temporário para novos registros
+        nome: nomeInput ? nomeInput.value.trim() : '',
+        numero: validation.numeroFormatado, // Usar número formatado
+        tipo: tipoSelect ? tipoSelect.value : 'pessoal',
+        principal: appState.originalWhatsapp.length === 0 // Primeiro é principal
+    };
+    
+    // Verificar se número já existe (comparar números limpos)
+    const numeroLimpoExistente = appState.originalWhatsapp.some(w => 
+        w.numero.replace(/[\(\)\s\-]/g, '') === validation.numeroLimpo
+    );
+    
+    if (numeroLimpoExistente) {
+        showNotification('Este número já foi adicionado', NOTIFICATION_TYPES.WARNING);
+        return;
+    }
+    
+    appState.originalWhatsapp.push(whatsapp);
+    renderWhatsappList();
+    updateWhatsappCount();
+    
+    // Limpar campos
+    if (nomeInput) nomeInput.value = '';
+    if (numeroInput) numeroInput.value = '';
+    if (tipoSelect) tipoSelect.value = 'pessoal';
+    
+    // Mostrar confirmação
+    showNotification(
+        `WhatsApp ${validation.numeroFormatado} adicionado com sucesso!`, 
+        NOTIFICATION_TYPES.SUCCESS
+    );
+}
+
+/**
+ * Define WhatsApp como principal
+ */
+function setWhatsappAsPrincipal(whatsappId) {
+    console.log(`[DEBUG] setWhatsappAsPrincipal chamada com ID: ${whatsappId} (tipo: ${typeof whatsappId})`);
+    
+    // Converter para string para comparação consistente
+    const idToSet = String(whatsappId);
+    
+    appState.originalWhatsapp.forEach(w => {
+        w.principal = w.id === whatsappId;
+    });
+    renderWhatsappList();
+}
+
+/**
+ * Renderiza lista de WhatsApp
+ */
+function renderWhatsappList() {
+    const container = document.getElementById('whatsapp-list');
+    if (!container) return;
+    
+    if (appState.originalWhatsapp.length === 0) {
+        container.innerHTML = `
+            <div class="empty-list">
+                <i class="mdi mdi-phone-off"></i>
+                <p>Nenhum número cadastrado</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    appState.originalWhatsapp.forEach(whatsapp => {
+        const item = document.createElement('div');
+        item.className = `whatsapp-list-item ${whatsapp.principal ? 'principal' : ''}`;
+        item.innerHTML = `
+            <div class="whatsapp-item-info">
+                <div class="whatsapp-numero">
+                    ${whatsapp.numero}
+                    ${whatsapp.principal ? '<span class="badge-principal">Principal</span>' : ''}
+                </div>
+                <div class="whatsapp-meta">
+                    ${whatsapp.nome ? `<span class="whatsapp-nome">${whatsapp.nome}</span>` : ''}
+                    <span class="whatsapp-tipo">${whatsapp.tipo}</span>
+                </div>
+            </div>
+            <div class="whatsapp-actions">
+                ${!whatsapp.principal ? `<button type="button" class="btn-principal" onclick="setWhatsappAsPrincipal('${whatsapp.id}')" title="Definir como principal">
+                    <i class="mdi mdi-star"></i>
+                </button>` : ''}
+                <button type="button" class="btn-remove" onclick="removeWhatsappFromList('${whatsapp.id}')" title="Remover número">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Atualiza contador de WhatsApp
+ */
+function updateWhatsappCount() {
+    const countElement = document.getElementById('whatsapp-count');
+    if (countElement) {
+        countElement.textContent = appState.originalWhatsapp.length;
+    }
+}
+
+function clearEmpresasList() {
+    appState.originalEmpresas = [];
+    renderEmpresasList();
+    updateEmpresasCount();
+    
+    // Limpar busca
+    const searchInput = document.getElementById('empresa-search');
+    if (searchInput) {
+        searchInput.value = '';
+        delete searchInput.dataset.selectedEmpresaId;
+        delete searchInput.dataset.selectedEmpresaNome;
+        delete searchInput.dataset.selectedEmpresaCnpj;
+    }
+    
+    const resultsContainer = document.getElementById('empresa-search-results');
+    if (resultsContainer) {
+        resultsContainer.classList.add('hidden');
+    }
+}
+
+function clearWhatsappList() {
+    appState.originalWhatsapp = [];
+    renderWhatsappList();
+    updateWhatsappCount();
+    
+    // Limpar campos
+    const nomeInput = document.getElementById('whatsapp-nome');
+    const numeroInput = document.getElementById('whatsapp-numero');
+    const tipoSelect = document.getElementById('whatsapp-tipo');
+    
+    if (nomeInput) nomeInput.value = '';
+    if (numeroInput) numeroInput.value = '';
+    if (tipoSelect) tipoSelect.value = 'pessoal';
+}
+
+async function loadUserEmpresas(userId) {
+    try {
+        console.log('[USUARIOS] Carregando empresas do usuário:', userId);
+        
+        const response = await apiRequest(`/${userId}/empresas`);
+        
+        if (response.success && response.empresas) {
+            // Mapear empresas para o formato esperado
+            appState.originalEmpresas = response.empresas.map(empresa => ({
+                id: empresa.id,
+                nome_cliente: empresa.nome_cliente || empresa.razao_social,
+                cnpj: Array.isArray(empresa.cnpj) ? empresa.cnpj[0] : empresa.cnpj
+            }));
+            
+            renderEmpresasList();
+            updateEmpresasCount();
+            
+            console.log('[USUARIOS] Empresas carregadas:', appState.originalEmpresas.length);
+        } else {
+            console.log('[USUARIOS] Nenhuma empresa encontrada para o usuário');
+            clearEmpresasList();
+        }
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao carregar empresas:', error);
+        clearEmpresasList();
+    }
+}
+
+async function loadUserWhatsapp(userId) {
+    try {
+        console.log('[USUARIOS] Carregando WhatsApp do usuário:', userId);
+        
+        // Usar o endpoint moderno da API
+        const response = await apiRequest(`/api/user/${userId}/whatsapp`);
+        
+        if (response.success && response.whatsapp) {
+            appState.originalWhatsapp = response.whatsapp.map(whatsapp => ({
+                id: whatsapp.id,
+                nome: whatsapp.nome || '',
+                numero: whatsapp.numero,
+                tipo: whatsapp.tipo || 'pessoal',
+                principal: whatsapp.principal || false
+            }));
+            
+            renderWhatsappList();
+            updateWhatsappCount();
+            
+            console.log('[USUARIOS] WhatsApp carregados:', appState.originalWhatsapp.length);
+            
+            if (response.fallback_used) {
+                console.log('[USUARIOS] Dados WhatsApp vieram do campo telefone (fallback)');
+            }
+        } else {
+            console.log('[USUARIOS] Nenhum WhatsApp encontrado para o usuário');
+            clearWhatsappList();
+        }
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao carregar WhatsApp:', error);
+        clearWhatsappList();
+    }
+}
+
+async function saveUserEmpresas(userId) {
+    try {
+        console.log('[USUARIOS] Salvando empresas do usuário:', userId);
+        
+        if (appState.originalEmpresas.length === 0) {
+            console.log('[USUARIOS] Nenhuma empresa para salvar');
+            return Promise.resolve();
+        }
+        
+        const empresaIds = appState.originalEmpresas.map(e => e.id);
+        
+        const response = await apiRequest(`/api/user/${userId}/empresas`, 'POST', {
+            empresa_ids: empresaIds
+        });
+        
+        if (!response.success) {
+            throw new Error(response.error || 'Erro ao salvar empresas');
+        }
+        
+        console.log('[USUARIOS] Empresas salvas com sucesso');
+        return Promise.resolve();
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao salvar empresas:', error);
+        throw error;
+    }
+}
+
+async function saveUserWhatsapp(userId) {
+    try {
+        console.log('[USUARIOS] Salvando WhatsApp do usuário:', userId);
+        
+        if (appState.originalWhatsapp.length === 0) {
+            console.log('[USUARIOS] Nenhum WhatsApp para salvar');
+            return Promise.resolve();
+        }
+        
+        const whatsappData = appState.originalWhatsapp.map(w => ({
+            nome: w.nome,
+            numero: w.numero,
+            tipo: w.tipo,
+            principal: w.principal
+        }));
+        
+        const response = await apiRequest(`/api/user/${userId}/whatsapp`, 'POST', {
+            whatsapp: whatsappData
+        });
+        
+        if (!response.success) {
+            throw new Error(response.error || 'Erro ao salvar WhatsApp');
+        }
+        
+        console.log('[USUARIOS] WhatsApp salvos com sucesso');
+        return Promise.resolve();
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao salvar WhatsApp:', error);
+        throw error;
+    }
 }
 
 // =================================
@@ -1471,148 +1642,66 @@ function isValidWhatsApp(numero) {
 // =================================
 
 /**
- * Limpa todos os campos do formulário
- */
-function clearForm() {
-    elements.modalForm?.reset();
-    
-    // Limpar dados extras
-    delete elements.empresaSearch?.dataset.selectedId;
-    delete elements.empresaSearch?.dataset.selectedCnpj;
-    delete elements.empresaSearch?.dataset.selectedNome;
-    
-    // Resetar estados
-    elements.userActive.checked = true;
-    elements.btnAddEmpresa.disabled = true;
-    
-    // Limpar listas
-    clearEmpresasList();
-    clearWhatsappList();
-    
-    // Ocultar resultados de busca
-    hideEmpresaSearchResults();
-}
-
-/**
- * Mostra loading no botão salvar
- */
-function showSaveLoading() {
-    elements.btnSave.disabled = true;
-    elements.saveText.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
-}
-
-/**
- * Oculta loading no botão salvar
- */
-function hideSaveLoading() {
-    elements.btnSave.disabled = false;
-    const text = appState.currentMode === MODAL_MODES.CREATE ? 'Criar Usuário' : 'Salvar Alterações';
-    elements.saveText.textContent = text;
-}
-
-/**
  * Mostra notificação
  */
 function showNotification(message, type = NOTIFICATION_TYPES.INFO) {
     if (!elements.notificationArea) return;
     
-    // Remover classes de tipo existentes
-    elements.notificationArea.className = 'notification-area';
-    
-    // Adicionar classe do tipo
-    elements.notificationArea.classList.add(type);
-    
-    // Definir ícone baseado no tipo
-    let icon = 'mdi-information';
-    switch (type) {
-        case NOTIFICATION_TYPES.SUCCESS:
-            icon = 'mdi-check-circle';
-            break;
-        case NOTIFICATION_TYPES.ERROR:
-            icon = 'mdi-alert-circle';
-            break;
-        case NOTIFICATION_TYPES.WARNING:
-            icon = 'mdi-alert';
-            break;
-    }
-    
-    // Definir conteúdo
-    elements.notificationArea.innerHTML = `
-        <i class="mdi ${icon}"></i>
-        <span>${message}</span>
-    `;
-    
-    // Mostrar notificação
+    elements.notificationArea.textContent = message;
+    elements.notificationArea.className = `notification-area ${type}`;
     elements.notificationArea.classList.remove('hidden');
     
-    // Auto-ocultar após 5 segundos (exceto erros)
-    if (type !== NOTIFICATION_TYPES.ERROR) {
-        setTimeout(() => {
-            elements.notificationArea?.classList.add('hidden');
-        }, 5000);
-    }
+    // Auto-ocultar após 5 segundos
+    setTimeout(() => {
+        elements.notificationArea.classList.add('hidden');
+    }, 5000);
 }
 
 /**
  * Requisição à API com retry e tratamento de erros
  */
 async function apiRequest(endpoint, method = 'GET', data = null) {
-    const url = `${CONFIG.API_BASE_URL}${endpoint}`;
+    const url = CONFIG.API_BASE_URL + endpoint;
     
     const options = {
         method,
         headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': CONFIG.API_BYPASS_KEY
-        }
+            'Content-Type': 'application/json'
+            // REMOVIDO: X-API-Key - usar autenticação de sessão normal
+        },
+        credentials: 'same-origin'  // Incluir cookies de sessão
     };
     
     if (data && method !== 'GET') {
-        if (data instanceof FormData) {
-            options.body = data;
-            delete options.headers['Content-Type']; // Let browser set it for FormData
-        } else {
-            options.body = JSON.stringify(data);
-        }
+        options.body = JSON.stringify(data);
     }
     
-    for (let attempt = 1; attempt <= CONFIG.MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt < CONFIG.MAX_RETRIES; attempt++) {
         try {
-            console.log(`[API] ${method} ${url} (tentativa ${attempt})`);
-            
             const response = await fetch(url, options);
             
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Erro de comunicação' }));
-                throw new Error(errorData.error || `Erro HTTP ${response.status}`);
+            // Verificar se foi redirecionado para login
+            if (response.url && response.url.includes('/auth/login')) {
+                throw new Error('Sessão expirada. Por favor, faça login novamente.');
             }
             
             const result = await response.json();
-            console.log(`[API] Resposta recebida:`, result);
+            
+            if (!response.ok) {
+                throw new Error(result.error || `HTTP ${response.status}`);
+            }
             
             return result;
             
         } catch (error) {
-            console.error(`[API] Erro na tentativa ${attempt}:`, error);
-            
-            if (attempt === CONFIG.MAX_RETRIES) {
+            if (attempt === CONFIG.MAX_RETRIES - 1) {
                 throw error;
             }
             
-            // Aguardar antes da próxima tentativa
             await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY));
         }
     }
 }
-
-// =================================
-// FUNÇÕES GLOBAIS (para onclick)
-// =================================
-
-// Estas funções precisam estar no escopo global para funcionar com onclick
-window.removeEmpresaFromList = removeEmpresaFromList;
-window.removeWhatsappFromList = removeWhatsappFromList;
-window.toggleWhatsappPrincipal = toggleWhatsappPrincipal;
 
 // =================================
 // DEBUG E LOGGING
@@ -1621,13 +1710,12 @@ window.toggleWhatsappPrincipal = toggleWhatsappPrincipal;
 if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
     console.log('[USUARIOS] Modo debug ativado');
     
-    // Adicionar funções de debug ao window para acesso via console
+    // Exposer algumas funções para debug
     window.usuariosDebug = {
         appState,
         elements,
-        CONFIG,
-        getCurrentEmpresas,
-        getCurrentWhatsapp,
-        apiRequest
+        loadUsersData,
+        updateKPIs,
+        filterAndDisplayUsers
     };
 }

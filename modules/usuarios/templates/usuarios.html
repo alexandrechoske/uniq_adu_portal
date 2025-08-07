@@ -4,6 +4,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -17,23 +19,67 @@
                 {'name': 'Usuários', 'icon': 'mdi mdi-account-multiple'}
             ]) }}
         </div>
+        <div class="actions-right">
+            <button id="btn-refresh" class="btn btn-secondary">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+            <button id="btn-novo-usuario" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Novo Usuário
+            </button>
+        </div>
     </div>
 
-    <!-- Header Section -->
-    <div class="page-header">
-        <div class="header-content">
-            <div class="header-left">
-                <h1 class="page-title">
-                    <i class="mdi mdi-account-multiple text-blue-600"></i>
-                    Gerenciamento de Usuários
-                </h1>
-                <p class="page-subtitle">Gerencie usuários, permissões e configurações do sistema</p>
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-multiple"></i>
             </div>
-            <div class="header-right">
-                <button id="btn-novo-usuario" class="btn btn-primary">
-                    <i class="mdi mdi-plus"></i>
-                    Novo Usuário
-                </button>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Usuários</p>
+                <p class="kpi-value" id="kpi-total-usuarios">{{ users|length if users else 0 }}</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-shield-crown"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Administradores</p>
+                <p class="kpi-value" id="kpi-admin">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-tie"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Equipe Interna</p>
+                <p class="kpi-value" id="kpi-interno">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-domain"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Clientes</p>
+                <p class="kpi-value" id="kpi-clientes">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-emerald">
+            <div class="kpi-icon">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Ativos</p>
+                <p class="kpi-value" id="kpi-ativos">0</p>
             </div>
         </div>
     </div>
@@ -47,130 +93,113 @@
                     type="text" 
                     id="search-usuarios" 
                     class="search-input" 
-                    placeholder="Buscar por nome ou email..."
+                    placeholder="Buscar por nome, email ou perfil..."
                     autocomplete="off"
                 >
             </div>
         </div>
-        <div class="controls-right">
-            <button id="btn-refresh" class="btn btn-secondary">
-                <i class="mdi mdi-refresh"></i>
-                Atualizar
-            </button>
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label for="filter-perfil" class="filter-label">Perfil:</label>
+                <select id="filter-perfil" class="filter-select">
+                    <option value="">Todos os perfis</option>
+                    <option value="admin">Administradores</option>
+                    <option value="interno_unique">Equipe Interna</option>
+                    <option value="cliente_unique">Clientes</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-status" class="filter-label">Status:</label>
+                <select id="filter-status" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="active">Ativos</option>
+                    <option value="inactive">Inativos</option>
+                </select>
+            </div>
         </div>
     </div>
 
     <!-- Notification Area -->
     <div id="notification-area" class="notification-area hidden"></div>
 
-    <!-- Users Table -->
-    <div class="table-container">
-        <div class="table-wrapper">
-            <table class="users-table">
-                <thead>
-                    <tr>
-                        <th class="th-nome">
-                            <i class="mdi mdi-account"></i>
-                            Nome
-                        </th>
-                        <th class="th-email">
-                            <i class="mdi mdi-email"></i>
-                            Email
-                        </th>
-                        <th class="th-role">
-                            <i class="mdi mdi-shield-account"></i>
-                            Perfil
-                        </th>
-                        <th class="th-status">
-                            <i class="mdi mdi-check-circle"></i>
-                            Status
-                        </th>
-                        <th class="th-acoes">
-                            <i class="mdi mdi-cog"></i>
-                            Ações
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="usuarios-tbody">
-                    {% if users %}
-                        {% for user in users %}
-                        <tr data-user-id="{{ user.id }}" class="user-row">
-                            <td class="td-nome">
-                                <div class="user-info">
-                                    <div class="user-avatar">
-                                        <i class="mdi mdi-account-circle"></i>
-                                    </div>
-                                    <div class="user-details">
-                                        <span class="user-name">{{ user.name or 'Nome não informado' }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="td-email">
-                                <span class="email-text">{{ user.email }}</span>
-                            </td>
-                            <td class="td-role">
-                                <span class="role-badge role-{{ user.role }}">
-                                    {% if user.role == 'admin' %}
-                                        <i class="mdi mdi-shield-crown"></i>
-                                        Administrador
-                                    {% elif user.role == 'interno_unique' %}
-                                        <i class="mdi mdi-account-tie"></i>
-                                        Interno Unique
-                                    {% elif user.role == 'cliente_unique' %}
-                                        <i class="mdi mdi-account-group"></i>
-                                        Cliente
-                                    {% else %}
-                                        <i class="mdi mdi-help-circle"></i>
-                                        {{ user.role }}
-                                    {% endif %}
-                                </span>
-                            </td>
-                            <td class="td-status">
-                                {% if user.is_active %}
-                                    <span class="status-badge status-active">
-                                        <i class="mdi mdi-check-circle"></i>
-                                        Ativo
-                                    </span>
-                                {% else %}
-                                    <span class="status-badge status-inactive">
-                                        <i class="mdi mdi-close-circle"></i>
-                                        Inativo
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td class="td-acoes">
-                                <div class="action-buttons">
-                                    <button 
-                                        class="btn-action btn-edit" 
-                                        data-user-id="{{ user.id }}"
-                                        title="Editar usuário"
-                                    >
-                                        <i class="mdi mdi-pencil"></i>
-                                    </button>
-                                    <button 
-                                        class="btn-action btn-delete" 
-                                        data-user-id="{{ user.id }}"
-                                        data-user-name="{{ user.name }}"
-                                        title="Deletar usuário"
-                                    >
-                                        <i class="mdi mdi-delete"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr class="empty-row">
-                            <td colspan="5" class="empty-message">
-                                <div class="empty-state">
-                                    <i class="mdi mdi-account-off"></i>
-                                    <p>Nenhum usuário encontrado</p>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+    <!-- Users Cards by Role -->
+    <div class="users-sections">
+        <!-- Administradores -->
+        <div class="role-section" id="section-admin">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-icon kpi-success">
+                        <i class="mdi mdi-shield-crown"></i>
+                    </div>
+                    <div class="section-info">
+                        <h3>Administradores</h3>
+                        <p>Usuários com acesso total ao sistema</p>
+                    </div>
+                </div>
+                <div class="section-count">
+                    <span class="count-badge count-admin" id="count-admin">0</span>
+                </div>
+            </div>
+            <div class="users-grid" id="grid-admin">
+                <!-- Usuários admin serão inseridos aqui -->
+            </div>
+        </div>
+
+        <!-- Equipe Interna -->
+        <div class="role-section" id="section-interno">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-icon kpi-info">
+                        <i class="mdi mdi-account-tie"></i>
+                    </div>
+                    <div class="section-info">
+                        <h3>Equipe Interna</h3>
+                        <p>Colaboradores da Unique Aduaneira</p>
+                    </div>
+                </div>
+                <div class="section-count">
+                    <span class="count-badge count-interno" id="count-interno">0</span>
+                </div>
+            </div>
+            <div class="users-grid" id="grid-interno">
+                <!-- Usuários internos serão inseridos aqui -->
+            </div>
+        </div>
+
+        <!-- Clientes -->
+        <div class="role-section" id="section-clientes">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-icon kpi-warning">
+                        <i class="mdi mdi-domain"></i>
+                    </div>
+                    <div class="section-info">
+                        <h3>Clientes</h3>
+                        <p>Empresas e usuários clientes</p>
+                    </div>
+                </div>
+                <div class="section-count">
+                    <span class="count-badge count-clientes" id="count-clientes">0</span>
+                </div>
+            </div>
+            <div class="users-grid" id="grid-clientes">
+                <!-- Usuários clientes serão inseridos aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State (when no users) -->
+    <div id="empty-state" class="empty-state-container hidden">
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="mdi mdi-account-multiple-outline"></i>
+            </div>
+            <h3>Nenhum usuário encontrado</h3>
+            <p>Ajuste os filtros ou crie um novo usuário</p>
+            <button id="btn-novo-usuario-empty" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Criar Primeiro Usuário
+            </button>
         </div>
     </div>
 </div>
@@ -204,40 +233,25 @@
                     <div class="section-content">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="user-name" class="form-label required">Nome</label>
-                                <input 
-                                    type="text" 
-                                    id="user-name" 
-                                    name="name" 
-                                    class="form-input" 
-                                    placeholder="Digite o nome completo"
-                                    required
-                                >
+                                <label for="nome" class="form-label required">Nome Completo</label>
+                                <input type="text" id="nome" name="nome" class="form-input" required>
                             </div>
                             <div class="form-group">
-                                <label for="user-email" class="form-label required">Email</label>
-                                <input 
-                                    type="email" 
-                                    id="user-email" 
-                                    name="email" 
-                                    class="form-input" 
-                                    placeholder="Digite o email"
-                                    required
-                                >
+                                <label for="email" class="form-label required">Email</label>
+                                <input type="email" id="email" name="email" class="form-input" required>
                             </div>
                             <div class="form-group">
-                                <label for="user-role" class="form-label required">Perfil</label>
-                                <select id="user-role" name="role" class="form-select" required>
+                                <label for="role" class="form-label required">Perfil de Acesso</label>
+                                <select id="role" name="role" class="form-select" required>
                                     <option value="">Selecione um perfil</option>
                                     <option value="admin">Administrador</option>
-                                    <option value="interno_unique">Interno Unique</option>
+                                    <option value="interno_unique">Equipe Interna</option>
                                     <option value="cliente_unique">Cliente</option>
                                 </select>
                             </div>
                             <div class="form-group status-group">
-                                <label class="form-label">Status</label>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" id="user-active" name="is_active" checked>
+                                    <input type="checkbox" id="ativo" name="ativo" checked>
                                     <span class="toggle-slider"></span>
                                     <span class="toggle-label">Usuário Ativo</span>
                                 </label>
@@ -248,27 +262,13 @@
                         <div id="password-section" class="password-section">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="user-password" class="form-label required">Senha</label>
-                                    <input 
-                                        type="password" 
-                                        id="user-password" 
-                                        name="password" 
-                                        class="form-input" 
-                                        placeholder="Digite a senha"
-                                        minlength="6"
-                                    >
-                                    <small class="form-hint">Mínimo de 6 caracteres</small>
+                                    <label for="senha" class="form-label required">Senha</label>
+                                    <input type="password" id="senha" name="senha" class="form-input" required>
+                                    <span class="form-hint">Mínimo 6 caracteres</span>
                                 </div>
                                 <div class="form-group">
-                                    <label for="user-confirm-password" class="form-label required">Confirmar Senha</label>
-                                    <input 
-                                        type="password" 
-                                        id="user-confirm-password" 
-                                        name="confirm_password" 
-                                        class="form-input" 
-                                        placeholder="Confirme a senha"
-                                        minlength="6"
-                                    >
+                                    <label for="confirmar_senha" class="form-label required">Confirmar Senha</label>
+                                    <input type="password" id="confirmar_senha" name="confirmar_senha" class="form-input" required>
                                 </div>
                             </div>
                         </div>
@@ -289,23 +289,14 @@
                         <div class="empresa-search-container">
                             <div class="search-add-wrapper">
                                 <div class="empresa-search-input-wrapper">
-                                    <i class="mdi mdi-magnify search-icon"></i>
-                                    <input 
-                                        type="text" 
-                                        id="empresa-search" 
-                                        class="form-input" 
-                                        placeholder="Buscar empresa por nome ou CNPJ..."
-                                        autocomplete="off"
-                                    >
+                                    <input type="text" id="empresa-search" class="form-input" placeholder="Buscar empresa por nome ou CNPJ...">
+                                    <div id="empresa-search-results" class="search-results hidden"></div>
                                 </div>
-                                <button type="button" id="btn-add-empresa" class="btn btn-secondary">
+                                <button type="button" id="btn-add-empresa" class="btn btn-secondary" disabled>
                                     <i class="mdi mdi-plus"></i>
                                     Adicionar
                                 </button>
                             </div>
-                            
-                            <!-- Resultados da busca -->
-                            <div id="empresa-search-results" class="search-results hidden"></div>
                         </div>
 
                         <!-- Lista de Empresas Associadas -->
@@ -314,13 +305,13 @@
                                 <h4 class="list-title">
                                     <i class="mdi mdi-domain"></i>
                                     Empresas Vinculadas
+                                    <span class="count-badge" id="empresas-count">0</span>
                                 </h4>
-                                <span id="empresas-count" class="count-badge">0</span>
                             </div>
                             <div id="empresas-list" class="empresas-list">
                                 <div class="empty-list">
                                     <i class="mdi mdi-domain-off"></i>
-                                    <p>Nenhuma empresa associada</p>
+                                    <p>Nenhuma empresa vinculada</p>
                                 </div>
                             </div>
                         </div>
@@ -341,24 +332,13 @@
                         <div class="whatsapp-form-container">
                             <div class="whatsapp-form-grid">
                                 <div class="form-group">
-                                    <label for="whatsapp-numero" class="form-label">Número</label>
-                                    <input 
-                                        type="tel" 
-                                        id="whatsapp-numero" 
-                                        class="form-input" 
-                                        placeholder="+5511999999999"
-                                        pattern="^\+[1-9]\d{1,14}$"
-                                    >
-                                    <small class="form-hint">Formato internacional (+55...)</small>
+                                    <label for="whatsapp-nome" class="form-label">Nome/Identificação</label>
+                                    <input type="text" id="whatsapp-nome" class="form-input" placeholder="Ex: Pessoal, Trabalho, Suporte...">
                                 </div>
                                 <div class="form-group">
-                                    <label for="whatsapp-nome" class="form-label">Nome do Contato</label>
-                                    <input 
-                                        type="text" 
-                                        id="whatsapp-nome" 
-                                        class="form-input" 
-                                        placeholder="Ex: João Silva"
-                                    >
+                                    <label for="whatsapp-numero" class="form-label required">Número WhatsApp</label>
+                                    <input type="text" id="whatsapp-numero" class="form-input" placeholder="(11)987654321" maxlength="15">
+                                    <span class="form-hint">Formato: (dd)xxxxxxxxx - DDD + 9 dígitos (somente celular)</span>
                                 </div>
                                 <div class="form-group">
                                     <label for="whatsapp-tipo" class="form-label">Tipo</label>
@@ -383,8 +363,8 @@
                                 <h4 class="list-title">
                                     <i class="mdi mdi-whatsapp"></i>
                                     Números Cadastrados
+                                    <span class="count-badge" id="whatsapp-count">0</span>
                                 </h4>
-                                <span id="whatsapp-count" class="count-badge">0</span>
                             </div>
                             <div id="whatsapp-list" class="whatsapp-list">
                                 <div class="empty-list">
@@ -440,6 +420,35 @@
         </div>
     </div>
 </div>
+
+<!-- Template para Card de Usuário -->
+<template id="user-card-template">
+    <div class="user-card" data-user-id="{user_id}" data-role="{role}" data-status="{status}">
+        <div class="user-card-header">
+            <div class="user-status {status_class}"></div>
+            <div class="user-actions">
+                <button class="btn-action btn-edit" title="Editar usuário" onclick="openEditModal('{user_id}')">
+                    <i class="mdi mdi-pencil"></i>
+                </button>
+                <button class="btn-action btn-delete" title="Excluir usuário" onclick="deleteUser('{user_id}', '{user_name}')">
+                    <i class="mdi mdi-delete"></i>
+                </button>
+            </div>
+        </div>
+        <div class="user-card-content">
+            <div class="user-info">
+                <h4 class="user-name">{user_name}</h4>
+                <p class="user-email">{user_email}</p>
+                {user_cargo_html}
+            </div>
+            <div class="user-meta">
+                <div class="role-badge role-{role}">{role_label}</div>
+                {empresas_info}
+                {whatsapp_info}
+            </div>
+        </div>
+    </div>
+</template>
 
 {% endblock %}
 
