@@ -10,6 +10,86 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
+// Função para atualizar KPIs
+function updateKPIs() {
+    console.log('[CLIENTES SISTEMA] Atualizando KPIs...');
+    
+    const totalClientes = clientes.length;
+    const totalCnpjs = clientes.reduce((total, cliente) => {
+        return total + (cliente.cnpjs ? cliente.cnpjs.length : 0);
+    }, 0);
+    
+    const comLogos = clientes.filter(cliente => 
+        cliente.logo_url && cliente.logo_url.trim() !== ''
+    ).length;
+    
+    const semLogos = totalClientes - comLogos;
+    
+    // Atualizar elementos KPI
+    const updateKPI = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            // Animação de contagem se o valor mudou
+            const currentValue = parseInt(element.textContent) || 0;
+            if (currentValue !== value) {
+                animateCountUp(element, currentValue, value);
+            }
+        }
+    };
+    
+    updateKPI('kpi-total-clientes', totalClientes);
+    updateKPI('kpi-total-cnpjs', totalCnpjs);
+    updateKPI('kpi-com-logos', comLogos);
+    updateKPI('kpi-sem-logos', semLogos);
+    
+    // Atualizar contador da tabela
+    const countDisplay = document.getElementById('count-display');
+    if (countDisplay) {
+        const text = totalClientes === 1 ? 'cliente' : 'clientes';
+        countDisplay.textContent = `${totalClientes} ${text}`;
+    }
+}
+
+// Animação de contagem para KPIs
+function animateCountUp(element, start, end, duration = 800) {
+    const startTime = performance.now();
+    const range = end - start;
+    
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function para suavizar a animação
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        
+        const current = Math.round(start + (range * easeOutQuart));
+        element.textContent = current;
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    
+    requestAnimationFrame(update);
+}
+
+// Função para mostrar/esconder empty state
+function toggleEmptyState() {
+    const tbody = document.getElementById('clientes-tbody');
+    const emptyState = document.getElementById('empty-state');
+    const tableSection = document.querySelector('.enhanced-table-section');
+    
+    if (clientes.length === 0) {
+        if (tbody) tbody.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'block';
+        if (tableSection) tableSection.style.display = 'none';
+    } else {
+        if (tbody) tbody.style.display = '';
+        if (emptyState) emptyState.style.display = 'none';
+        if (tableSection) tableSection.style.display = 'block';
+    }
+}
+
 function setupEventListeners() {
     console.log('[CLIENTES SISTEMA] Configurando event listeners...');
     
@@ -170,10 +250,13 @@ async function loadClientes() {
         if (result.success) {
             clientes = result.data;
             renderClientes();
+            updateKPIs();
             console.log(`[CLIENTES SISTEMA] ${clientes.length} clientes carregados`);
         } else {
             console.error('[CLIENTES SISTEMA] Erro ao carregar clientes:', result.error);
             showError('Erro ao carregar clientes: ' + result.error);
+            // Ainda assim atualizar KPIs para mostrar zero
+            updateKPIs();
         }
     } catch (error) {
         console.error('[CLIENTES SISTEMA] Erro na requisição:', error);
@@ -212,84 +295,100 @@ function renderClientes() {
         console.log(`[CLIENTES SISTEMA] ${filteredClientes.length} clientes após filtro`);
     }
     
-    // Verificar se não há resultados
-    if (filteredClientes.length === 0) {
+    // Atualizar KPIs e empty state
+    updateKPIs();
+    toggleEmptyState();
+    
+    // Verificar se não há resultados após filtro
+    if (filteredClientes.length === 0 && searchTerm) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="5" style="text-align: center; color: var(--color-text-muted); padding: 2rem;">
-                    ${searchTerm ? 
-                        `<div>
-                            <i class="mdi mdi-magnify" style="font-size: 2rem; opacity: 0.5; margin-bottom: 1rem; display: block;"></i>
-                            <strong>Nenhum cliente encontrado</strong><br>
-                            <small>Tente buscar por outro termo</small>
-                        </div>` :
-                        `<div>
-                            <i class="mdi mdi-domain" style="font-size: 2rem; opacity: 0.5; margin-bottom: 1rem; display: block;"></i>
-                            <strong>Nenhum cliente cadastrado</strong><br>
-                            <small>Clique em "Novo Cliente" para começar</small>
-                        </div>`
-                    }
+                <td colspan="5" class="empty-search-state">
+                    <div class="empty-search-content">
+                        <i class="mdi mdi-magnify-close"></i>
+                        <h4>Nenhum resultado encontrado</h4>
+                        <p>Não encontramos clientes que correspondam ao termo "<strong>${searchTerm}</strong>"</p>
+                        <button onclick="clearFilters()" class="btn btn-outline">
+                            <i class="mdi mdi-filter-remove"></i>
+                            Limpar Filtros
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
         return;
     }
     
-    // Renderizar clientes filtrados
+    // Se não há clientes, mostrar empty state (controlado por toggleEmptyState)
+    if (clientes.length === 0) {
+        return;
+    }
+    
+    // Renderizar clientes filtrados com novos estilos
     tbody.innerHTML = filteredClientes.map(cliente => {
-        // Logo
+        // Logo com novos estilos
         const logoDisplay = cliente.logo_url ? 
-            `<img src="${cliente.logo_url}" alt="Logo ${cliente.nome_cliente}" class="logo-preview" style="max-width: 48px; max-height: 48px; border-radius: 4px;">` :
-            '<div class="logo-placeholder"><i class="mdi mdi-image"></i></div>';
+            `<img src="${cliente.logo_url}" alt="Logo ${cliente.nome_cliente}" class="table-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <div class="table-logo-placeholder" style="display: none;"><i class="mdi mdi-image-off"></i></div>` :
+            '<div class="table-logo-placeholder"><i class="mdi mdi-image-off"></i></div>';
             
         // Nome do cliente com destaque na busca
         const nomeDisplay = searchTerm ? 
             highlightSearchTerm(cliente.nome_cliente, searchTerm) : 
             cliente.nome_cliente;
             
-        // Renderizar CNPJs como array simples de strings
+        // Renderizar CNPJs com novo layout
         const cnpjsDisplay = (cliente.cnpjs && cliente.cnpjs.length > 0) ? 
-            `<div class="cnpj-list-compact">
-                ${cliente.cnpjs.slice(0, 3).map(cnpj => {
+            `<div class="cnpj-list-table">
+                ${cliente.cnpjs.slice(0, 4).map(cnpj => {
                     const cnpjFormatado = formatCnpj(cnpj);
                     const cnpjDestacado = searchTerm ? 
                         highlightSearchTerm(cnpjFormatado, searchTerm) : 
                         cnpjFormatado;
-                    return `<span class="cnpj-badge-small">${cnpjDestacado}</span>`;
+                    return `<span class="cnpj-badge-table">${cnpjDestacado}</span>`;
                 }).join('')}
-                ${cliente.cnpjs.length > 3 ? 
-                    `<span class="cnpj-badge-small">+${cliente.cnpjs.length - 3}</span>` : 
+                ${cliente.cnpjs.length > 4 ? 
+                    `<span class="cnpj-badge-table" style="background: #6b7280; color: white;">+${cliente.cnpjs.length - 4}</span>` : 
                     ''
                 }
             </div>` :
-            '<span style="color: #6B7280; font-style: italic;">Nenhum CNPJ</span>';
+            '<span style="color: #9ca3af; font-style: italic;">Nenhum CNPJ associado</span>';
             
-        // Total de CNPJs
+        // Total de CNPJs com badge
         const totalCnpjs = cliente.cnpjs ? cliente.cnpjs.length : 0;
         
         return `
             <tr>
-                <td>${logoDisplay}</td>
+                <td style="text-align: center;">${logoDisplay}</td>
                 <td>
-                    <div class="cliente-name">${nomeDisplay}</div>
+                    <div class="cliente-name-cell">${nomeDisplay}</div>
                 </td>
                 <td>${cnpjsDisplay}</td>
-                <td>
-                    <span class="cnpj-count">${totalCnpjs}</span>
+                <td style="text-align: center;">
+                    <span class="cnpj-count-badge">${totalCnpjs}</span>
                 </td>
-                <td class="action-buttons">
-                    <button onclick="editCliente(${cliente.id})" class="btn-edit">
-                        <i class="mdi mdi-pencil"></i>
-                        Editar
-                    </button>
-                    <button onclick="deleteCliente(${cliente.id})" class="btn-danger">
-                        <i class="mdi mdi-delete"></i>
-                        Excluir
-                    </button>
+                <td>
+                    <div class="action-buttons">
+                        <button onclick="editCliente(${cliente.id})" class="btn-table-action btn-table-edit" title="Editar cliente">
+                            <i class="mdi mdi-pencil"></i>
+                            Editar
+                        </button>
+                        <button onclick="deleteCliente(${cliente.id})" class="btn-table-action btn-table-delete" title="Excluir cliente">
+                            <i class="mdi mdi-delete"></i>
+                            Excluir
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
+    
+    // Atualizar contador específico da busca se filtrada
+    const countDisplay = document.getElementById('count-display');
+    if (countDisplay && searchTerm) {
+        const text = filteredClientes.length === 1 ? 'cliente encontrado' : 'clientes encontrados';
+        countDisplay.textContent = `${filteredClientes.length} ${text}`;
+    }
 }
 
 function openModal(cliente = null) {

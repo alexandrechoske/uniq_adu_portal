@@ -3,90 +3,13 @@
 {% block title %}Logos Clientes - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/usuarios.css') }}">
 <link rel="stylesheet" href="{{ url_for('config.static', filename='css/config.css') }}">
-<style>
-    /* Estilos específicos para CRUD de clientes */
-    .cnpj-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-    
-    .cnpj-badge {
-        background: #E5E7EB;
-        color: #374151;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    
-    .logo-preview {
-        max-width: 48px;
-        max-height: 48px;
-        object-fit: contain;
-        border: 1px solid #D1D5DB;
-        border-radius: 4px;
-    }
-    
-    .logo-placeholder {
-        width: 48px;
-        height: 48px;
-        background-color: #F3F4F6;
-        border: 1px solid #D1D5DB;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6B7280;
-        font-size: 1.5rem;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    
-    .btn-edit,
-    .btn-danger {
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        text-decoration: none;
-        transition: all 0.2s;
-        border: none;
-        cursor: pointer;
-    }
-    
-    .btn-edit {
-        color: #2563EB;
-        background: transparent;
-    }
-    
-    .btn-edit:hover {
-        color: #1D4ED8;
-        background: rgba(37, 99, 235, 0.1);
-    }
-    
-    .btn-danger {
-        color: #DC2626;
-        background: transparent;
-    }
-    
-    .btn-danger:hover {
-        color: #B91C1C;
-        background: rgba(220, 38, 38, 0.1);
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="usuarios-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">
         <div class="actions-left">
@@ -95,6 +18,12 @@
                 {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
                 {'name': 'Logos de Clientes', 'icon': 'mdi mdi-domain'}
             ]) }}
+        </div>
+        <div class="actions-right">
+            <button id="btn-refresh" class="btn btn-secondary">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
             <button id="btn-adicionar" class="btn btn-primary">
                 <i class="mdi mdi-plus"></i>
                 Novo Cliente
@@ -102,41 +31,124 @@
         </div>
     </div>
 
-    <div class="main-content">
-        <div class="filters-section">
-            <div class="filters-grid">
-                <div class="filter-group">
-                    <label class="filter-label" for="search-input">Buscar cliente</label>
-                    <input type="text" id="search-input" class="filter-input" placeholder="Nome, CNPJ ou razão social...">
-                </div>
-                <div class="filter-group">
-                    <button type="button" id="clear-filters" class="btn btn-outline" style="margin-top: auto;">
-                        <i class="mdi mdi-filter-remove"></i>
-                        Limpar Filtros
-                    </button>
-                </div>
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-domain"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Clientes</p>
+                <p class="kpi-value" id="kpi-total-clientes">0</p>
             </div>
         </div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-office-building"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total CNPJs</p>
+                <p class="kpi-value" id="kpi-total-cnpjs">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-image-multiple"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Com Logos</p>
+                <p class="kpi-value" id="kpi-com-logos">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-image-off"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Sem Logos</p>
+                <p class="kpi-value" id="kpi-sem-logos">0</p>
+            </div>
+        </div>
+    </div>
 
-        <div class="users-table-container" style="margin-top: 2rem;">
-            <table class="users-table">
+    <!-- Controls Section -->
+    <div class="controls-section">
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="mdi mdi-magnify search-icon"></i>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    class="search-input" 
+                    placeholder="Buscar por nome, CNPJ ou razão social..."
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+        
+        <div class="filter-controls">
+            <button type="button" id="clear-filters" class="btn btn-outline">
+                <i class="mdi mdi-filter-remove"></i>
+                Limpar Filtros
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="enhanced-table-section">
+        <div class="enhanced-table-header">
+            <h3 class="enhanced-table-title">
+                <i class="mdi mdi-domain"></i>
+                Clientes Cadastrados
+            </h3>
+            <div class="enhanced-table-controls">
+                <span class="enhanced-table-count" id="table-count">
+                    <i class="mdi mdi-counter"></i>
+                    <span id="count-display">0 clientes</span>
+                </span>
+            </div>
+        </div>
+        
+        <div class="enhanced-table-container">
+            <table class="enhanced-data-table">
                 <thead>
                     <tr>
-                        <th>Logo</th>
+                        <th style="width: 80px;">Logo</th>
                         <th>Cliente</th>
                         <th>CNPJs Associados</th>
-                        <th>Total CNPJs</th>
-                        <th>Ações</th>
+                        <th style="width: 100px; text-align: center;">Total CNPJs</th>
+                        <th style="width: 120px; text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="clientes-tbody">
                     <tr>
-                        <td colspan="5" style="text-align: center; color: var(--color-text-muted);">
-                            Carregando...
+                        <td colspan="5" class="loading-state">
+                            <div class="loading-spinner">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando clientes...
+                            </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">
+                <i class="mdi mdi-domain-off"></i>
+            </div>
+            <h3 class="empty-state-title">Nenhum cliente encontrado</h3>
+            <p class="empty-state-description">
+                Não há clientes cadastrados ou nenhum cliente corresponde aos filtros aplicados.
+            </p>
+            <button id="btn-add-first-client" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Adicionar Primeiro Cliente
+            </button>
         </div>
     </div>
 </div>
@@ -153,46 +165,91 @@
                 <i class="mdi mdi-close"></i>
             </button>
         </div>
+        
         <form id="form-cliente" method="POST">
             <div class="modal-body">
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="nome_cliente" class="form-label required">Nome do Cliente</label>
-                        <input type="text" id="nome_cliente" name="nome_cliente" required class="form-input" placeholder="Nome do cliente no sistema">
+                        <input 
+                            type="text" 
+                            id="nome_cliente" 
+                            name="nome_cliente" 
+                            required 
+                            class="form-input" 
+                            placeholder="Nome do cliente no sistema"
+                        >
+                        <p class="form-help">Nome que será exibido no sistema para identificar o cliente</p>
                     </div>
+                    
                     <div class="form-group">
-                        <label for="cnpjs" class="form-label required">CNPJs</label>
-                        <div id="cnpjs-container">
+                        <label for="cnpjs" class="form-label required">CNPJs Associados</label>
+                        <div id="cnpjs-container" class="cnpj-management">
                             <div class="cnpj-input-group">
-                                <input type="text" id="cnpj-input" class="form-input" placeholder="Digite o CNPJ (apenas números ou com formatação)" maxlength="18">
+                                <input 
+                                    type="text" 
+                                    id="cnpj-input" 
+                                    class="form-input" 
+                                    placeholder="Digite o CNPJ (apenas números ou com formatação)" 
+                                    maxlength="18"
+                                >
                                 <button type="button" id="add-cnpj" class="btn btn-outline">
                                     <i class="mdi mdi-plus"></i>
                                     Adicionar
                                 </button>
                             </div>
+                            
                             <div id="selected-cnpjs" class="selected-cnpjs-list">
                                 <!-- CNPJs selecionados aparecerão aqui -->
                             </div>
                         </div>
-                        <p class="form-help">Digite um CNPJ e clique em "Adicionar" para criar a lista</p>
+                        <p class="form-help">Digite um CNPJ válido e clique em "Adicionar" para incluir na lista</p>
                     </div>
-                    <div class="form-group">
-                        <label for="logo_file" class="form-label">Upload do Logo</label>
-                        <input type="file" id="logo_file" accept="image/*" class="form-input">
-                        <p class="form-help">Formatos aceitos: JPG, PNG, GIF</p>
+                    
+                    <div class="logo-upload-section">
+                        <h4 class="section-title">
+                            <i class="mdi mdi-image"></i>
+                            Logo do Cliente
+                        </h4>
+                        
+                        <div class="logo-upload-options">
+                            <div class="form-group">
+                                <label for="logo_file" class="form-label">Upload do Arquivo</label>
+                                <input type="file" id="logo_file" accept="image/*" class="form-input">
+                                <p class="form-help">Formatos aceitos: JPG, PNG, GIF, SVG (máx. 2MB)</p>
+                            </div>
+                            
+                            <div class="upload-divider">
+                                <span>ou</span>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="logo_url" class="form-label">URL da Imagem</label>
+                                <input 
+                                    type="url" 
+                                    id="logo_url" 
+                                    name="logo_url" 
+                                    class="form-input" 
+                                    placeholder="https://exemplo.com/logo.png"
+                                >
+                                <p class="form-help">Insira uma URL válida de imagem disponível na internet</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview do Logo -->
+                        <div id="logo-preview" class="logo-preview-container hidden">
+                            <label class="form-label">Preview do Logo</label>
+                            <div class="logo-preview-wrapper">
+                                <img id="logo-preview-img" src="" alt="Preview" class="logo-preview-image">
+                                <button type="button" id="remove-preview" class="remove-preview-btn">
+                                    <i class="mdi mdi-close"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="logo_url" class="form-label">URL do Logo (opcional)</label>
-                        <input type="url" id="logo_url" name="logo_url" class="form-input" placeholder="https://exemplo.com/logo.png">
-                        <p class="form-help">Ou insira uma URL diretamente</p>
-                    </div>
-                </div>
-                <!-- Preview do Logo -->
-                <div id="logo-preview" class="preview-container hidden">
-                    <label class="form-label">Preview</label>
-                    <img id="logo-preview-img" src="" alt="Preview" class="preview-image">
                 </div>
             </div>
+            
             <div class="modal-actions">
                 <button type="button" onclick="closeClienteModal()" class="btn btn-outline">
                     <i class="mdi mdi-close"></i>
@@ -200,7 +257,7 @@
                 </button>
                 <button type="submit" id="btn-salvar" class="btn btn-primary">
                     <i class="mdi mdi-check"></i>
-                    Salvar
+                    <span id="btn-salvar-text">Salvar Cliente</span>
                 </button>
             </div>
         </form>
@@ -209,13 +266,71 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@mdi/font@7.0.96/js/materialdesignicons.min.js"></script>
 <script src="{{ url_for('config.static', filename='js/logos-clientes-sistema.js') }}"></script>
+
 <script>
+// Funções globais para o modal
 function closeClienteModal() {
-    document.getElementById('modal-cliente').style.display = 'none';
-    document.getElementById('form-cliente').reset();
-    document.getElementById('logo-preview').classList.add('hidden');
-    selectedCnpjs = [];
-    renderSelectedCnpjs();
+    const modal = document.getElementById('modal-cliente');
+    const form = document.getElementById('form-cliente');
+    
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    if (form) {
+        form.reset();
+    }
+    
+    // Limpar preview
+    const preview = document.getElementById('logo-preview');
+    if (preview) {
+        preview.classList.add('hidden');
+    }
+    
+    // Resetar variáveis globais se existirem
+    if (typeof selectedCnpjs !== 'undefined') {
+        selectedCnpjs = [];
+        if (typeof renderSelectedCnpjs === 'function') {
+            renderSelectedCnpjs();
+        }
+    }
 }
+
+// Event listeners para botões de ação
+document.addEventListener('DOMContentLoaded', function() {
+    // Botão refresh
+    const btnRefresh = document.getElementById('btn-refresh');
+    if (btnRefresh) {
+        btnRefresh.addEventListener('click', function() {
+            if (typeof loadClientes === 'function') {
+                loadClientes();
+            }
+        });
+    }
+    
+    // Botão adicionar do empty state
+    const btnAddFirst = document.getElementById('btn-add-first-client');
+    if (btnAddFirst) {
+        btnAddFirst.addEventListener('click', function() {
+            if (typeof openModal === 'function') {
+                openModal();
+            }
+        });
+    }
+    
+    // Preview de logo - remover
+    const removePreview = document.getElementById('remove-preview');
+    if (removePreview) {
+        removePreview.addEventListener('click', function() {
+            const preview = document.getElementById('logo-preview');
+            const logoUrl = document.getElementById('logo_url');
+            const logoFile = document.getElementById('logo_file');
+            
+            if (preview) preview.classList.add('hidden');
+            if (logoUrl) logoUrl.value = '';
+            if (logoFile) logoFile.value = '';
+        });
+    }
+});
 </script>
 {% endblock %}
