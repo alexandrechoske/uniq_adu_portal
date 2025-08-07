@@ -1,3 +1,39 @@
+/* Novo layout do Menu Principal - separado do teste
+   Mantém paleta e tokens definidos em menu.css */
+
+.menu-layout {display:flex;gap:2rem;align-items:flex-start;}
+.menu-sidebar {width:300px;flex-shrink:0;background:var(--color-surface);border:1px solid var(--color-border-light);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow-sm);position:sticky;top:4.5rem;max-height:calc(100vh - 5rem);overflow:auto;}
+.menu-sidebar h4 {margin:0 0 1rem;font-size:.75rem;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.5rem;}
+.company-list {display:flex;flex-direction:column;gap:.5rem;}
+.company-item {border:1px solid var(--color-border-light);border-radius:8px;padding:.7rem .75rem .55rem;background:var(--color-surface-hover);cursor:pointer;display:flex;flex-direction:column;gap:.35rem;transition:background var(--transition-fast),border-color var(--transition-fast);}
+.company-item:hover {background:#f1f5f9;border-color:var(--color-border);} 
+.company-item.active {border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary-light);background:#eff6ff;}
+.company-name {font-size:.70rem;font-weight:600;color:var(--color-text-primary);line-height:1.1;letter-spacing:.5px;}
+.company-cnpjs {display:flex;flex-wrap:wrap;gap:4px;}
+.cnpj-badge {background:#e2e8f0;color:#334155;font-size:.58rem;font-weight:500;padding:2px 4px;border-radius:4px;letter-spacing:.25px;}
+.empty-companies {font-size:.7rem;color:var(--color-text-muted);padding:.5rem .25rem;border:1px dashed var(--color-border);border-radius:8px;background:var(--color-surface-hover);}
+.menu-main {flex:1;display:flex;flex-direction:column;gap:2rem;}
+.section-block {background:var(--color-surface);border:1px solid var(--color-border-light);border-radius:var(--radius-lg);padding:1.5rem 1.5rem 1.75rem;box-shadow:var(--shadow-sm);}
+.section-block-header {display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;}
+.section-block-header h3 {margin:0;font-size:1.05rem;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:.6rem;}
+.section-block-header h3 i {color:var(--color-secondary);font-size:1.25rem;}
+.module-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;}
+.module-card {border:1px solid var(--color-border);background:var(--color-surface);border-radius:14px;padding:1rem 1rem 1.1rem;display:flex;flex-direction:column;gap:.65rem;position:relative;text-decoration:none;transition:all var(--transition-fast);min-height:150px;overflow:hidden;}
+.module-card:before {content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(59,130,246,0.08),rgba(59,130,246,0) 60%);opacity:0;transition:opacity .4s;}
+.module-card:hover {transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--color-primary);}
+.module-card:hover:before {opacity:1;}
+.module-icon {width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:var(--color-primary);background:var(--color-primary-light);box-shadow:inset 0 0 0 1px rgba(59,130,246,.35);}
+.module-card[data-module="logout"] .module-icon {background:var(--color-danger-light);color:var(--color-danger);box-shadow:inset 0 0 0 1px rgba(239,68,68,.35);} 
+.module-title {margin:0;font-size:.95rem;font-weight:600;color:var(--color-text-primary);}
+.module-desc {margin:0;font-size:.70rem;line-height:1.15rem;color:var(--color-text-muted);}
+.role-badge {position:absolute;top:.6rem;right:.6rem;background:#334155;color:#fff;font-size:.55rem;font-weight:600;padding:3px 6px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase;opacity:.85;}
+.role-badge.admin {background:#1e3a8a;}
+.role-badge.interno {background:#0f766e;}
+.role-badge.cliente {background:#be123c;}
+.layout-note {font-size:.55rem;margin-top:.75rem;color:var(--color-text-light);text-transform:uppercase;letter-spacing:.1em;}
+@media (max-width:1100px){.menu-layout{flex-direction:column;}.menu-sidebar{position:relative;width:100%;max-height:none;order:1;}.menu-main{order:2;}.company-list{flex-direction:row;flex-wrap:wrap;}.company-item{flex:1 1 180px;}}
+
+
 /* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
 :root {
     /* Paleta de cores minimalista */

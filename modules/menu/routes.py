@@ -33,6 +33,14 @@ def ferramentas():
 def configuracoes():
     return render_template('configuracoes.html')
 
+@bp.route('/test-menu-restyle')
+@login_required
+def test_menu_restyle():
+    """Página de teste para nova versão do layout do menu (admin/interno vs cliente)."""
+    user = session.get('user', {})
+    user_companies_info = user.get('user_companies_info', [])
+    return render_template('test_menu_restyle.html', user_companies_info=user_companies_info)
+
 @bp.route('/api/user-companies-debug')
 @login_required
 def user_companies_debug():

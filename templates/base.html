@@ -684,14 +684,14 @@
             </a>
             {% endif %} -->
 
-            <!-- Agente Unique (apenas para admin e cliente_unique) -->
+            <!-- Agente Unique (apenas para admin e cliente_unique)
             {% if session.get('user', {}).get('role') in ['admin', 'cliente_unique'] %}
             <a href="{{ url_for('agente.index') }}" 
                class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
                 <i class="mdi mdi-chat text-xl"></i>
                 <span class="sidebar-text">Agente Unique</span>
             </a>
-            {% endif %}
+            {% endif %} -->
 
             <!-- Usuários (apenas para admins) -->
             {% if session.get('user', {}).get('role') == 'admin' %}
