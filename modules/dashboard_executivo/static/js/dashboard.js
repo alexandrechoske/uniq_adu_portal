@@ -279,7 +279,12 @@ function initializeEnhancedTable() {
         const isKingspanClient = operation.importador && operation.importador.toUpperCase().includes('KING');
         const materialColumn = hasKingspanInCurrentData ? 
             `<td>${isKingspanClient ? (operation.mercadoria || '-') : '-'}</td>` : '';
-        const urfColumn = `<td>${operation.urf_despacho_normalizado || operation.urf_despacho || '-'}</td>`;
+        
+        // CORREÇÃO: Tratar "N/A" como valor inválido no fallback URF
+        const urfValue = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A') 
+                         ? operation.urf_despacho_normalizado 
+                         : (operation.urf_despacho || '-');
+        const urfColumn = `<td>${urfValue}</td>`;
         
         return `
             <td>
@@ -2353,7 +2358,11 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-canal', operation.canal, true);
     updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
     updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
-    updateElementValue('detail-urf-despacho', operation.urf_despacho_normalizado || operation.urf_despacho);
+    // CORREÇÃO: Tratar "N/A" como valor inválido no fallback
+    const urfDespacho = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A') 
+                        ? operation.urf_despacho_normalizado 
+                        : operation.urf_despacho;
+    updateElementValue('detail-urf-despacho', urfDespacho);
     
     // Update financial summary using new category-based system
     updateFinancialSummary(operation);

@@ -609,7 +609,7 @@ class DashboardImportacoesResumido {
             if (!tableData || tableData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="10" style="text-align: center; padding: 2rem; color: #6b7280;">
+                        <td colspan="11" style="text-align: center; padding: 2rem; color: #6b7280;">
                             Nenhum dado encontrado
                         </td>
                     </tr>
@@ -644,6 +644,7 @@ class DashboardImportacoesResumido {
                         ${row.canal ? `<div class="canal-indicator" style="background-color: ${row.canal_color || '#9E9E9E'}"></div>` : ''}
                     </td>
                     <td>${row.data_entrega || ''}</td>
+                    <td>${row.urf_destino || '-'}</td>
                 `;
                 
                 tbody.appendChild(tr);
@@ -655,6 +656,7 @@ class DashboardImportacoesResumido {
                 const tr = document.createElement('tr');
                 tr.classList.add('empty-row');
                 tr.innerHTML = `
+                    <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>

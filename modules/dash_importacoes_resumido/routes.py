@@ -299,7 +299,8 @@ def get_dashboard_data():
             'data_chegada': 'data_chegada', 
             'data_registro': 'data_registro',
             'canal': 'canal',
-            'data_entrega': 'data_desembaraco'  # Mapear para data_desembaraco que é o equivalente
+            'data_entrega': 'data_desembaraco',  # Mapear para data_desembaraco que é o equivalente
+            'urf_destino': 'urf_despacho'  # CORREÇÃO: Adicionar campo URF de despacho
         }
         
         # Criar DataFrame padronizado usando apenas as colunas que existem
@@ -337,7 +338,8 @@ def get_dashboard_data():
                 'data_registro': str(row.get('data_registro', '') or ''),
                 'canal': str(row.get('canal', '') or ''),
                 'canal_color': get_canal_color(str(row.get('canal', '') or '')),
-                'data_entrega': str(row.get('data_entrega', '') or '')
+                'data_entrega': str(row.get('data_entrega', '') or ''),
+                'urf_destino': str(row.get('urf_destino', '') or '')  # CORREÇÃO: Adicionar campo URF
             })
         
         # Obter cotações
