@@ -455,17 +455,15 @@ function generateEmpresasInfo(user) {
     const empresasCount = empresas.length;
     
     if (empresasCount > 0) {
-        const empresaText = empresasCount === 1 ? 'empresa' : 'empresas';
-        return `<div class="user-companies">
+        return `<span class="user-companies" title="${empresasCount} empresa(s) vinculada(s)">
             <i class="mdi mdi-domain"></i>
-            <span><strong>${empresasCount}</strong> ${empresaText} vinculada${empresasCount > 1 ? 's' : ''}</span>
-        </div>`;
+            <span>${empresasCount}</span>
+        </span>`;
     }
     
-    return `<div class="user-companies">
+    return `<span class="user-companies no-data" title="Nenhuma empresa vinculada">
         <i class="mdi mdi-domain-off"></i>
-        <span>Nenhuma empresa vinculada</span>
-    </div>`;
+    </span>`;
 }
 
 /**
@@ -477,17 +475,15 @@ function generateWhatsappInfo(user) {
     const whatsappCount = whatsappNumbers.length;
     
     if (whatsappCount > 0) {
-        const numeroText = whatsappCount === 1 ? 'número' : 'números';
-        return `<div class="user-whatsapp">
+        return `<span class="user-whatsapp" title="${whatsappCount} número(s) cadastrado(s)">
             <i class="mdi mdi-whatsapp"></i>
-            <span><strong>${whatsappCount}</strong> ${numeroText} cadastrado${whatsappCount > 1 ? 's' : ''}</span>
-        </div>`;
+            <span>${whatsappCount}</span>
+        </span>`;
     }
     
-    return `<div class="user-whatsapp">
+    return `<span class="user-whatsapp no-data" title="Nenhum número cadastrado">
         <i class="mdi mdi-phone-off"></i>
-        <span>Nenhum número cadastrado</span>
-    </div>`;
+    </span>`;
 }
     
 
