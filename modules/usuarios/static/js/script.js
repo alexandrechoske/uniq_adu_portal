@@ -214,6 +214,12 @@ function initializeEventListeners() {
         roleSelect.addEventListener('change', handleRoleChange);
     }
     
+    // Modal de exclusão
+    const btnCancelDelete = document.getElementById('btn-cancel-delete');
+    if (btnCancelDelete) {
+        btnCancelDelete.addEventListener('click', hideDeleteModal);
+    }
+    
     // Empresas e WhatsApp
     initializeEmpresasEventListeners();
     initializeWhatsappEventListeners();
