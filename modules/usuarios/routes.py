@@ -119,19 +119,22 @@ def carregar_usuarios():
         
         # 2. Buscar todas as associações de empresas na nova estrutura
         def _buscar_todas_empresas():
-            return supabase_admin.table('user_empresas').select('''
-                user_id,
-                cliente_sistema_id,
-                ativo,
-                cad_clientes_sistema(
-                    id,
-                    nome_cliente,
-                    cnpjs,
-                    ativo
-                )
-            ''').eq('ativo', True).execute()
+            # Buscar apenas os vínculos ativos
+            return supabase_admin.table('user_empresas').select('user_id, cliente_sistema_id, ativo').eq('ativo', True).execute()
         
         empresas_response = retry_supabase_operation(_buscar_todas_empresas)
+        
+        # 3. Buscar todas as empresas do sistema para poder fazer o mapeamento
+        def _buscar_clientes_sistema():
+            return supabase_admin.table('cad_clientes_sistema').select('id, nome_cliente, cnpjs, ativo').eq('ativo', True).execute()
+        
+        clientes_response = retry_supabase_operation(_buscar_clientes_sistema)
+        
+        # Criar mapa de empresa_id -> dados da empresa
+        empresas_data_map = {}
+        if clientes_response.data:
+            for empresa in clientes_response.data:
+                empresas_data_map[empresa['id']] = empresa
         
         # Criar mapa de usuário -> empresas (nova estrutura)
         user_empresas_map = {}
@@ -140,9 +143,14 @@ def carregar_usuarios():
             print(f"[DEBUG] {len(empresas_response.data)} vínculos de empresas encontrados")
             for vinculo in empresas_response.data:
                 user_id = vinculo.get('user_id')
-                empresa_info = vinculo.get('cad_clientes_sistema')
+                cliente_sistema_id = vinculo.get('cliente_sistema_id')
                 
-                if not user_id or not empresa_info:
+                if not user_id or not cliente_sistema_id:
+                    continue
+                
+                # Buscar dados da empresa no mapa
+                empresa_info = empresas_data_map.get(cliente_sistema_id)
+                if not empresa_info:
                     continue
                 
                 if user_id not in user_empresas_map:
@@ -155,7 +163,7 @@ def carregar_usuarios():
                     'vinculo_ativo': vinculo.get('ativo')
                 })
         
-        # 3. Buscar números de WhatsApp de todos os usuários
+        # 4. Buscar números de WhatsApp de todos os usuários
         def _buscar_whatsapp():
             return supabase_admin.table('user_whatsapp').select('*').eq('ativo', True).execute()
         
@@ -173,7 +181,7 @@ def carregar_usuarios():
                         user_whatsapp_map[user_id] = []
                     user_whatsapp_map[user_id].append(whatsapp)
 
-        # 4. Montar dados finais dos usuários com nova estrutura
+        # 5. Montar dados finais dos usuários com nova estrutura
         for user in users:
             if not isinstance(user, dict):
                 continue
@@ -1485,34 +1493,20 @@ def obter_dados_usuario(user_id):
             print(f"[DEBUG] Usuário {user_id} tem role {user.get('role')}, buscando empresas associadas")
             
             try:
-                # Buscar na nova estrutura user_empresas + cad_clientes_sistema
-                empresas_response = supabase_admin.table('user_empresas').select('''
-                    id,
-                    cliente_sistema_id,
-                    ativo,
-                    data_vinculo,
-                    cad_clientes_sistema(
-                        id,
-                        nome_cliente,
-                        cnpjs,
-                        ativo
-                    )
-                ''').eq('user_id', user_id).eq('ativo', True).execute()
+                # Usar a mesma lógica que funciona no endpoint /empresas
+                result = supabase_admin.from_('user_empresas').select('cliente_sistema_id, observacoes, cad_clientes_sistema(id, cnpjs, nome_cliente)').eq('user_id', user_id).eq('ativo', True).execute()
                 
                 empresas_detalhadas = []
-                if empresas_response.data:
-                    print(f"[DEBUG] Empresas encontradas na nova estrutura: {len(empresas_response.data)}")
-                    
-                    for vinculo in empresas_response.data:
-                        empresa_info = vinculo.get('cad_clientes_sistema')
+                if result.data:
+                    print(f"[DEBUG] Empresas encontradas na nova estrutura: {len(result.data)}")
+                    for item in result.data:
+                        empresa_info = item.get('cad_clientes_sistema', {})
                         if empresa_info:
                             empresas_detalhadas.append({
                                 'id': empresa_info.get('id'),
                                 'nome_cliente': empresa_info.get('nome_cliente'),
                                 'cnpjs': empresa_info.get('cnpjs', []),
-                                'vinculo_id': vinculo.get('id'),
-                                'data_vinculo': vinculo.get('data_vinculo'),
-                                'ativo': vinculo.get('ativo')
+                                'observacoes': item.get('observacoes', '')
                             })
                             print(f"[DEBUG] Empresa detalhada: {empresa_info.get('nome_cliente')} (CNPJs: {len(empresa_info.get('cnpjs', []))})")
                 

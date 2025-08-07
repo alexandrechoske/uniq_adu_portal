@@ -455,13 +455,17 @@ function generateEmpresasInfo(user) {
     const empresasCount = empresas.length;
     
     if (empresasCount > 0) {
+        const empresaText = empresasCount === 1 ? 'empresa' : 'empresas';
         return `<div class="user-companies">
             <i class="mdi mdi-domain"></i>
-            ${empresasCount} empresa(s)
+            <span><strong>${empresasCount}</strong> ${empresaText} vinculada${empresasCount > 1 ? 's' : ''}</span>
         </div>`;
     }
     
-    return '';
+    return `<div class="user-companies">
+        <i class="mdi mdi-domain-off"></i>
+        <span>Nenhuma empresa vinculada</span>
+    </div>`;
 }
 
 /**
@@ -473,13 +477,17 @@ function generateWhatsappInfo(user) {
     const whatsappCount = whatsappNumbers.length;
     
     if (whatsappCount > 0) {
+        const numeroText = whatsappCount === 1 ? 'número' : 'números';
         return `<div class="user-whatsapp">
             <i class="mdi mdi-whatsapp"></i>
-            ${whatsappCount} número(s)
+            <span><strong>${whatsappCount}</strong> ${numeroText} cadastrado${whatsappCount > 1 ? 's' : ''}</span>
         </div>`;
     }
     
-    return '';
+    return `<div class="user-whatsapp">
+        <i class="mdi mdi-phone-off"></i>
+        <span>Nenhum número cadastrado</span>
+    </div>`;
 }
     
 
