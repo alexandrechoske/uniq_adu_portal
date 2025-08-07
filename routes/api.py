@@ -15,6 +15,65 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint('api', __name__)
 
+@bp.route('/test-new-structure')
+def test_new_structure():
+    """Endpoint para testar a nova estrutura de tabelas relacionadas"""
+    try:
+        # Verificar se é uma requisição com API bypass
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        request_api_key = request.headers.get('X-API-Key')
+        
+        if not (api_bypass_key and request_api_key == api_bypass_key):
+            return jsonify({'error': 'API key required'}), 401
+        
+        results = {}
+        
+        # 1. Testar tabela users
+        try:
+            users_response = supabase_admin.table('users').select('id, email, name, role').limit(3).execute()
+            results['users'] = {
+                'status': 'success',
+                'count': len(users_response.data),
+                'sample': users_response.data
+            }
+        except Exception as e:
+            results['users'] = {'status': 'error', 'error': str(e)}
+        
+        # 2. Testar tabela user_empresas
+        try:
+            user_empresas_response = supabase_admin.table('user_empresas').select('*').limit(3).execute()
+            results['user_empresas'] = {
+                'status': 'success',
+                'count': len(user_empresas_response.data),
+                'sample': user_empresas_response.data
+            }
+        except Exception as e:
+            results['user_empresas'] = {'status': 'error', 'error': str(e)}
+        
+        # 3. Testar tabela cad_clientes_sistema
+        try:
+            clientes_response = supabase_admin.table('cad_clientes_sistema').select('*').limit(3).execute()
+            results['cad_clientes_sistema'] = {
+                'status': 'success',
+                'count': len(clientes_response.data),
+                'sample': clientes_response.data
+            }
+        except Exception as e:
+            results['cad_clientes_sistema'] = {'status': 'error', 'error': str(e)}
+        
+        return jsonify({
+            'success': True,
+            'message': 'Teste da nova estrutura de tabelas',
+            'results': results
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 def clean_data_for_json(data):
     """
     Limpa dados removendo valores NaN, NaT e outros valores problemáticos para JSON
@@ -88,73 +147,89 @@ def get_user_companies(user_data):
             user_id = user_data['id']
             print(f"[API] Buscando CNPJs para user_id: {user_id} (role: {user_role})")
             
-            # NOVA ESTRUTURA: user_empresas -> cad_clientes_sistema -> cnpjs
-            # Relação 1: usuário -> user_empresas (user_id)
-            # Relação 2: user_empresas -> cad_clientes_sistema (cliente_sistema_id)
-            # Relação 3: cad_clientes_sistema -> cnpjs (campo cnpjs)
+            # NOVA ESTRUTURA: users -> user_empresas -> cad_clientes_sistema -> cnpjs[]
+            print(f"[API] 1. Buscando vínculos na tabela user_empresas...")
             
-            # Primeiro buscar os vínculos do usuário
-            empresas_response = supabase_admin.table('user_empresas').select('cliente_sistema_id').eq('user_id', user_id).eq('ativo', True).execute()
+            # Buscar vínculos ativos do usuário
+            user_empresas_response = supabase_admin.table('user_empresas')\
+                .select('cliente_sistema_id, ativo, data_vinculo')\
+                .eq('user_id', user_id)\
+                .eq('ativo', True)\
+                .execute()
             
-            print(f"[API] user_empresas encontrados: {len(empresas_response.data) if empresas_response.data else 0} registros")
+            print(f"[API] user_empresas encontrados: {len(user_empresas_response.data) if user_empresas_response.data else 0}")
+            print(f"[API] Dados user_empresas: {user_empresas_response.data}")
+            
+            if not user_empresas_response.data:
+                print(f"[API] Nenhum vínculo ativo encontrado na tabela user_empresas")
+                return []
+            
+            # Extrair IDs das empresas vinculadas
+            cliente_sistema_ids = [vinculo['cliente_sistema_id'] for vinculo in user_empresas_response.data]
+            print(f"[API] IDs das empresas vinculadas: {cliente_sistema_ids}")
+            
+            # Buscar dados das empresas
+            print(f"[API] 2. Buscando dados das empresas na tabela cad_clientes_sistema...")
+            
+            empresas_response = supabase_admin.table('cad_clientes_sistema')\
+                .select('id, nome_cliente, cnpjs, ativo')\
+                .in_('id', cliente_sistema_ids)\
+                .eq('ativo', True)\
+                .execute()
+            
+            print(f"[API] Empresas encontradas: {len(empresas_response.data) if empresas_response.data else 0}")
+            print(f"[API] Dados das empresas: {empresas_response.data}")
+            
+            if not empresas_response.data:
+                print(f"[API] Nenhuma empresa ativa encontrada")
+                return []
+            
+            # Extrair CNPJs das empresas
+            print(f"[API] 3. Extraindo CNPJs das empresas...")
             
             all_cnpjs = []
+            empresas_info = []
             
-            if empresas_response.data:
-                # Buscar detalhes das empresas para cada cliente_sistema_id
-                for vinculo in empresas_response.data:
-                    cliente_sistema_id = vinculo.get('cliente_sistema_id')
-                    print(f"[API] Buscando dados para cliente_sistema_id: {cliente_sistema_id}")
-                    
-                    # Buscar dados da empresa
-                    empresa_response = supabase_admin.table('cad_clientes_sistema').select('id, nome_cliente, cnpjs').eq('id', cliente_sistema_id).execute()
-                    
-                    if empresa_response.data:
-                        empresa = empresa_response.data[0]
-                        cnpjs_array = empresa.get('cnpjs', [])
-                        nome_cliente = empresa.get('nome_cliente', 'N/A')
-                        
-                        print(f"[API] Empresa: {nome_cliente}, CNPJs: {cnpjs_array}")
-                        
-                        if isinstance(cnpjs_array, list):
-                            for cnpj in cnpjs_array:
-                                if cnpj:
-                                    # Normalizar CNPJ (remover formatação)
-                                    normalized_cnpj = re.sub(r'\D', '', str(cnpj))
-                                    if normalized_cnpj and len(normalized_cnpj) == 14:  # CNPJ deve ter 14 dígitos
-                                        all_cnpjs.append(normalized_cnpj)
-                                        print(f"[API] CNPJ normalizado adicionado: {cnpj} -> {normalized_cnpj}")
+            for empresa in empresas_response.data:
+                empresa_id = empresa.get('id')
+                nome_cliente = empresa.get('nome_cliente', 'N/A')
+                cnpjs_array = empresa.get('cnpjs', [])
                 
-                print(f"[API] Total de CNPJs encontrados para {user_role}: {len(all_cnpjs)}")
-                print(f"[API] CNPJs finais: {all_cnpjs}")
-                return list(set(all_cnpjs))  # Remover duplicatas
+                print(f"[API] Empresa ID {empresa_id}: {nome_cliente}")
+                print(f"[API] CNPJs brutos: {cnpjs_array}")
+                
+                empresas_info.append({
+                    'id': empresa_id,
+                    'nome': nome_cliente,
+                    'cnpjs_raw': cnpjs_array
+                })
+                
+                if isinstance(cnpjs_array, list):
+                    for cnpj in cnpjs_array:
+                        if cnpj:
+                            # Normalizar CNPJ (remover formatação)
+                            normalized_cnpj = re.sub(r'\D', '', str(cnpj))
+                            if normalized_cnpj and len(normalized_cnpj) == 14:  # CNPJ deve ter 14 dígitos
+                                all_cnpjs.append(normalized_cnpj)
+                                print(f"[API] CNPJ normalizado: {cnpj} -> {normalized_cnpj}")
+                            else:
+                                print(f"[API] CNPJ inválido ignorado: {cnpj} -> {normalized_cnpj}")
+                else:
+                    print(f"[API] CNPJs não é uma lista para empresa {nome_cliente}: {type(cnpjs_array)}")
             
-            # Fallback para estrutura antiga se não encontrar na nova
-            print(f"[API] Nenhuma empresa encontrada na nova estrutura, tentando estrutura antiga...")
+            # Remover CNPJs duplicados
+            unique_cnpjs = list(set(all_cnpjs))
             
-            agent_response = supabase.table('clientes_agentes').select('empresa').eq('user_id', user_id).execute()
-            print(f"[API] Fallback - Resposta da query clientes_agentes: {agent_response.data}")
+            print(f"[API] === RESULTADO FINAL ===")
+            print(f"[API] Total de empresas: {len(empresas_info)}")
+            print(f"[API] Total de CNPJs únicos: {len(unique_cnpjs)}")
+            print(f"[API] CNPJs finais: {unique_cnpjs}")
+            print(f"[API] Empresas: {[emp['nome'] for emp in empresas_info]}")
             
-            if agent_response.data and agent_response.data[0].get('empresa'):
-                companies = agent_response.data[0].get('empresa')
-                print(f"[API] Fallback - Empresas brutas encontradas: {companies}")
-                
-                if isinstance(companies, str):
-                    companies = [companies]
-                
-                # Normalizar CNPJs (remover formatação)
-                normalized_companies = []
-                for company in companies:
-                    if company:
-                        normalized = re.sub(r'\D', '', str(company))
-                        if len(normalized) == 14:  # Verificar se é CNPJ válido
-                            normalized_companies.append(normalized)
-                            print(f"[API] Fallback - CNPJ normalizado: {company} -> {normalized}")
-                
-                print(f"[API] Fallback - CNPJs normalizados finais: {normalized_companies}")
-                return normalized_companies
+            if unique_cnpjs:
+                return unique_cnpjs
             else:
-                print(f"[API] Nenhuma empresa encontrada para o usuário {user_role} (nova e antiga estrutura)")
+                print(f"[API] Nenhum CNPJ válido encontrado, usuário sem acesso a dados")
                 return []
                 
         except Exception as e:
@@ -502,11 +577,11 @@ def test_user_companies():
         if not (api_bypass_key and request.headers.get('X-API-Key') == api_bypass_key):
             return jsonify({'error': 'API Bypass necessário'}), 403
         
-        # Simular usuário Alexandre para teste
+        # Simular usuário Alexandre para teste - USANDO ID CORRETO DO LOG
         user_data = {
-            'id': 'd50753af-4a16-4c02-9137-6c51a8455826',
+            'id': '13ed3af4-f6a2-4c82-ba21-dce5d33c6756',  # ID correto do log
             'email': 'alexandre.choski@gmail.com',
-            'role': 'cliente_unique'
+            'role': 'interno_unique'  # Role correto do log
         }
         
         print(f"[TEST_API] Testando get_user_companies para: {user_data}")

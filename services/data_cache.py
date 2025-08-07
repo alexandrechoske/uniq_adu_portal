@@ -63,14 +63,79 @@ class DataCacheService:
         
         print(f"[CACHE] Cache limpo para usuário: {user_id}")
     
+    def _get_user_companies_new_structure(self, user_id):
+        """Busca empresas do usuário na nova estrutura de tabelas"""
+        try:
+            from extensions import supabase_admin
+            import re
+            
+            print(f"[PRELOAD] Buscando empresas para user_id: {user_id}")
+            
+            # Buscar vínculos do usuário
+            user_empresas_response = supabase_admin.table('user_empresas')\
+                .select('cliente_sistema_id')\
+                .eq('user_id', user_id)\
+                .eq('ativo', True)\
+                .execute()
+            
+            if not user_empresas_response.data:
+                print(f"[PRELOAD] Nenhum vínculo encontrado")
+                return []
+            
+            cliente_sistema_ids = [v['cliente_sistema_id'] for v in user_empresas_response.data]
+            print(f"[PRELOAD] IDs das empresas: {cliente_sistema_ids}")
+            
+            # Buscar dados das empresas
+            empresas_response = supabase_admin.table('cad_clientes_sistema')\
+                .select('id, nome_cliente, cnpjs')\
+                .in_('id', cliente_sistema_ids)\
+                .eq('ativo', True)\
+                .execute()
+            
+            if not empresas_response.data:
+                print(f"[PRELOAD] Nenhuma empresa encontrada")
+                return []
+            
+            # Extrair CNPJs
+            all_cnpjs = []
+            for empresa in empresas_response.data:
+                cnpjs_array = empresa.get('cnpjs', [])
+                nome = empresa.get('nome_cliente', 'N/A')
+                
+                print(f"[PRELOAD] Empresa: {nome}, CNPJs: {cnpjs_array}")
+                
+                if isinstance(cnpjs_array, list):
+                    for cnpj in cnpjs_array:
+                        if cnpj:
+                            normalized_cnpj = re.sub(r'\D', '', str(cnpj))
+                            if normalized_cnpj and len(normalized_cnpj) == 14:
+                                all_cnpjs.append(normalized_cnpj)
+            
+            unique_cnpjs = list(set(all_cnpjs))
+            print(f"[PRELOAD] CNPJs únicos encontrados: {unique_cnpjs}")
+            
+            return unique_cnpjs
+            
+        except Exception as e:
+            print(f"[PRELOAD] Erro ao buscar empresas: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
     def preload_user_data(self, user_id, user_role, user_companies=None):
-        """Pré-carrega todos os dados do usuário"""
+        """Pré-carrega todos os dados do usuário usando nova estrutura de empresas"""
         print(f"[PRELOAD] === INICIANDO PRÉ-CARREGAMENTO ===")
         print(f"[PRELOAD] Usuário: {user_id}, Role: {user_role}")
         print(f"[PRELOAD] Empresas fornecidas: {user_companies}")
         print(f"[PRELOAD] Tipo empresas: {type(user_companies)}")
         
         try:
+            # Se não foram fornecidas empresas, buscar na nova estrutura
+            if not user_companies and user_role in ['cliente_unique', 'interno_unique']:
+                print(f"[PRELOAD] Buscando empresas na nova estrutura...")
+                user_companies = self._get_user_companies_new_structure(user_id)
+                print(f"[PRELOAD] Empresas encontradas na nova estrutura: {user_companies}")
+            
             # Usar um período mais amplo para garantir que os dados sejam encontrados
             # Buscar dados dos últimos 12 meses para ter certeza de incluir tudo
             data_limite = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
@@ -85,7 +150,7 @@ class DataCacheService:
                 'id, status_processo, canal, data_chegada, '
                 'valor_cif_real, cnpj_importador, importador, '
                 'modal, data_abertura, mercadoria, data_embarque, '
-                'urf_entrada, ref_unique, custo_total, transit_time_real, valor_fob_real'
+                'urf_entrada, ref_unique, transit_time_real, valor_fob_real'
             ).neq('status_processo', 'Despacho Cancelado')
             
             # Não aplicar filtro de data por enquanto - buscar todos os dados
@@ -110,6 +175,14 @@ class DataCacheService:
                 
                 # Aplicar filtro IN para empresas do cliente
                 query = query.in_('cnpj_importador', user_companies)
+            elif user_role == 'interno_unique':
+                if user_companies:
+                    print(f"[PRELOAD] Filtro empresas interno_unique: {user_companies}")
+                    query = query.in_('cnpj_importador', user_companies)
+                else:
+                    print(f"[PRELOAD] interno_unique sem empresas específicas - acesso total")
+            else:
+                print(f"[PRELOAD] Role {user_role} - acesso sem filtro de empresa")
             
             # Executar query
             print(f"[PRELOAD] Executando query...")

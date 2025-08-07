@@ -138,6 +138,61 @@ def login():
                         'is_active': True
                     }
                 
+                # Buscar empresas do usuário na nova estrutura
+                user_companies = []
+                user_companies_info = []
+                
+                if user['role'] in ['cliente_unique', 'interno_unique']:
+                    try:
+                        print(f"[AUTH] Buscando empresas para user_id: {user['id']}")
+                        
+                        # Buscar vínculos do usuário
+                        user_empresas_response = supabase_admin.table('user_empresas')\
+                            .select('cliente_sistema_id, ativo, data_vinculo')\
+                            .eq('user_id', user['id'])\
+                            .eq('ativo', True)\
+                            .execute()
+                        
+                        if user_empresas_response.data:
+                            cliente_sistema_ids = [v['cliente_sistema_id'] for v in user_empresas_response.data]
+                            
+                            # Buscar dados das empresas
+                            empresas_response = supabase_admin.table('cad_clientes_sistema')\
+                                .select('id, nome_cliente, cnpjs, ativo')\
+                                .in_('id', cliente_sistema_ids)\
+                                .eq('ativo', True)\
+                                .execute()
+                            
+                            if empresas_response.data:
+                                for empresa in empresas_response.data:
+                                    cnpjs_array = empresa.get('cnpjs', [])
+                                    
+                                    # Adicionar info da empresa
+                                    user_companies_info.append({
+                                        'id': empresa['id'],
+                                        'nome': empresa['nome_cliente'],
+                                        'cnpjs': cnpjs_array,
+                                        'quantidade_cnpjs': len(cnpjs_array)
+                                    })
+                                    
+                                    # Extrair CNPJs normalizados
+                                    if isinstance(cnpjs_array, list):
+                                        for cnpj in cnpjs_array:
+                                            if cnpj:
+                                                normalized_cnpj = re.sub(r'\D', '', str(cnpj))
+                                                if normalized_cnpj and len(normalized_cnpj) == 14:
+                                                    user_companies.append(normalized_cnpj)
+                                
+                                # Remover duplicatas
+                                user_companies = list(set(user_companies))
+                        
+                        print(f"[AUTH] Empresas encontradas: {len(user_companies_info)}")
+                        print(f"[AUTH] CNPJs únicos: {len(user_companies)}")
+                        print(f"[AUTH] Empresas: {[emp['nome'] for emp in user_companies_info]}")
+                        
+                    except Exception as companies_error:
+                        print(f"[AUTH] Erro ao buscar empresas: {str(companies_error)}")
+                
                 # Criar sessão do usuário
                 session.permanent = True
                 session['user'] = {
@@ -145,7 +200,9 @@ def login():
                     'email': user['email'],
                     'name': user['name'],
                     'role': user['role'],
-                    'is_active': user.get('is_active', True)
+                    'is_active': user.get('is_active', True),
+                    'user_companies': user_companies,
+                    'user_companies_info': user_companies_info
                 }
                 session['created_at'] = datetime.now().timestamp()
                 session['last_activity'] = datetime.now().timestamp()

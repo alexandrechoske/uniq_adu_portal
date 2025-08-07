@@ -116,6 +116,43 @@
             </div>
             {% endif %}
 
+            <!-- Debug de Empresas do Usuário -->
+            {% if user_companies_info %}
+            <div class="menu-section">
+                <h3 class="section-title">
+                    <i class="mdi mdi-office-building"></i>
+                    Suas Empresas ({{ user_companies_info|length }})
+                </h3>
+                <div class="companies-debug">
+                    {% for empresa in user_companies_info %}
+                    <div class="company-card">
+                        <div class="company-header">
+                            <h4>{{ empresa.nome }}</h4>
+                            <span class="cnpj-count">{{ empresa.quantidade_cnpjs }} CNPJ(s)</span>
+                        </div>
+                        <div class="company-cnpjs">
+                            {% for cnpj in empresa.cnpjs %}
+                            <span class="cnpj-badge">{{ cnpj }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="menu-section">
+                <h3 class="section-title">
+                    <i class="mdi mdi-alert-circle"></i>
+                    Empresas
+                </h3>
+                <div class="alert alert-warning">
+                    <i class="mdi mdi-alert-circle"></i>
+                    Nenhuma empresa vinculada ao seu usuário.
+                    <br><small>Entre em contato com o administrador para configurar suas empresas.</small>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Quick Actions -->
             <div class="menu-section">
                 <h3 class="section-title">

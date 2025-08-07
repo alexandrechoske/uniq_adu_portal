@@ -353,3 +353,102 @@
     background: var(--color-text-light);
     color: var(--color-surface);
 }
+
+/* === ESTILOS PARA DEBUG DE EMPRESAS === */
+.companies-debug {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.company-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.company-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary);
+}
+
+.company-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.company-header h4 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.cnpj-count {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.company-cnpjs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+}
+
+.cnpj-badge {
+    background: var(--color-secondary-light);
+    color: var(--color-secondary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.alert {
+    background: var(--color-warning-light);
+    border: 1px solid var(--color-warning);
+    color: var(--color-warning);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+}
+
+.alert i {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.alert small {
+    display: block;
+    margin-top: var(--spacing-xs);
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .company-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+    
+    .company-cnpjs {
+        justify-content: flex-start;
+    }
+    
+    .cnpj-badge {
+        font-size: 0.75rem;
+    }
+}
