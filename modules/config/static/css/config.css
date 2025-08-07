@@ -362,198 +362,129 @@ select.form-input option {
     color: #374151;
 }
 
-/* Estilos específicos para CNPJs múltiplos */
-.cnpj-input-group {
-    display: flex;
-    gap: 8px;
+/* =================================
+   MODAL PADRÃO (alinhado ao estilo geral da aplicação)
+   ================================= */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: none; /* será alterado para flex via JS */
     align-items: center;
-    margin-bottom: 12px;
+    justify-content: center;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+    padding: 2rem 1rem; /* espaço para telas menores */
 }
 
-.cnpj-input-group select {
-    flex: 1;
-}
+body.modal-open { overflow: hidden; }
 
-.selected-cnpjs-list {
+.modal-container {
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2), 0 4px 10px -2px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 960px;
+    max-height: 90vh;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-    min-height: 40px;
-    padding: 8px;
-    border: 1px dashed #D1D5DB;
-    border-radius: 6px;
-    background-color: #F9FAFB;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalFadeScale .25s ease;
 }
 
-.selected-cnpjs-list.empty {
+@keyframes modalFadeScale {
+    0% { opacity: 0; transform: scale(.95) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.75rem;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1F2937;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.modal-body, .modal-content { /* compatibilidade */
+    padding: 1.5rem 1.75rem 2rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.modal-body::-webkit-scrollbar { width: 8px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+.modal-body::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+.modal-actions, .modal-footer { /* compatibilidade */
+    padding: 1rem 1.75rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: .75rem;
+    background: #F9FAFB;
+    border-top: 1px solid #E5E7EB;
+}
+
+.modal-close, .btn-close-modal { /* compatibilidade */
+    background: none;
+    border: none;
+    padding: .25rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #6B7280;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #6B7280;
-    font-style: italic;
-    font-size: 0.875rem;
-}
-
-.selected-cnpjs-list.empty::before {
-    content: "Nenhum CNPJ selecionado";
-}
-
-.cnpj-tag {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background-color: #2563EB;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.cnpj-tag .remove-cnpj {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    font-size: 0.875rem;
-    line-height: 1;
-    opacity: 0.8;
-    transition: opacity 0.2s;
-}
-
-.cnpj-tag .remove-cnpj:hover {
-    opacity: 1;
-}
-
-.cliente-name {
-    font-weight: 600;
-    color: #1F2937;
-}
-
-.cnpj-count {
-    background-color: #E5E7EB;
-    color: #374151;
-    padding: 2px 6px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.cnpj-list-compact {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-width: 300px;
-}
-
-.cnpj-badge-small {
-    background: #F3F4F6;
-    color: #374151;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.625rem;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-@media (max-width: 768px) {
-    .cnpj-input-group {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .cnpj-list-compact {
-        max-width: 100%;
-    }
-}
-
-/* Estilos para filtros */
-.filters-section {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.filters-grid {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 16px;
-    align-items: end;
-}
-
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.filter-label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    margin-bottom: 4px;
-}
-
-.filter-input {
-    width: 100%;
-    border: 1px solid #D1D5DB;
     border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-    background-color: #FFFFFF;
-    position: relative;
+    transition: background .15s, color .15s;
 }
+.modal-close:hover, .btn-close-modal:hover { background: #E5E7EB; color: #374151; }
 
-.filter-input:focus {
+/* Ajustes para inputs dentro do modal (reusar padrões existentes) */
+.modal-container .form-group { margin-bottom: 1rem; }
+.modal-container .form-label { display: block; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #6B7280; margin-bottom: .35rem; }
+.modal-container .form-input, .modal-container input[type="text"], .modal-container input[type="file"], .modal-container select {
+    width: 100%;
+    padding: .65rem .75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: .875rem;
+    background: #FFFFFF;
+    color: #1F2937;
+    transition: border-color .15s, box-shadow .15s;
+}
+.modal-container .form-input:focus, .modal-container input[type="text"]:focus, .modal-container select:focus {
     outline: none;
     border-color: #2563EB;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 
-.filter-input.active {
-    border-color: #059669;
-    background-color: #F0FDF4;
-}
+/* Preview de imagem dentro do modal */
+.preview-container { margin-top: 1rem; }
+.preview-container.hidden { display: none; }
+#logo-preview img, #icone-preview img { max-width: 160px; max-height: 120px; object-fit: contain; border: 1px dashed #E5E7EB; border-radius: 8px; background: #F8FAFC; padding: .5rem; }
 
-.filter-input::placeholder {
-    color: #9CA3AF;
-}
-
-.btn-outline {
-    background-color: transparent;
-    color: #6B7280;
-    border: 1px solid #D1D5DB;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-outline:hover {
-    background-color: #F3F4F6;
-    color: #374151;
-    border-color: #9CA3AF;
-}
-
+/* Responsividade */
 @media (max-width: 768px) {
-    .filters-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .filter-group {
-        width: 100%;
-    }
+    .modal-container { max-width: 100%; height: auto; }
+    .modal-body { max-height: 65vh; }
 }
 
 /* =================================
