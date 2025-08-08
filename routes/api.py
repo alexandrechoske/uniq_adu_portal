@@ -9,6 +9,8 @@ import logging
 import re
 import traceback
 import os
+from services.retry_utils import run_with_retries
+from services.data_cache import data_cache
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -97,165 +99,94 @@ def clean_data_for_json(data):
     elif pd.isna(data) or data is pd.NaT:
         return None
     elif isinstance(data, (np.integer, np.floating)):
-        if np.isnan(data) or np.isinf(data):
+        if isinstance(data, np.floating) and (np.isnan(data) or np.isinf(data)):
             return None
         return float(data) if isinstance(data, np.floating) else int(data)
     else:
         return data
 
-def get_currencies():
-    """Get latest USD and EUR exchange rates"""
-    try:
-        # Use the Banco Central do Brasil API or a public currency API
-        response = requests.get('https://api.exchangerate-api.com/v4/latest/BRL', timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            # We want BRL to USD/EUR rates (how many USD/EUR per 1 BRL)
-            # The API returns USD/EUR to BRL, so we take the inverse
-            usd_rate = 1 / data['rates']['USD']
-            eur_rate = 1 / data['rates']['EUR']
-            return {
-                'USD': round(usd_rate, 4),
-                'EUR': round(eur_rate, 4),
-                'last_updated': data['date']
-            }
-    except Exception as e:
-        logger.error(f"Error fetching currency rates: {str(e)}")
-    
-    # Return default values if API fails
-    return {
-        'USD': 0.00,
-        'EUR': 0.00,
-        'last_updated': datetime.now().strftime('%Y-%m-%d')
-    }
+# Helper: obter empresas do usuário via nova estrutura
+# users -> user_empresas -> cad_clientes_sistema(cnpjs[])
 
 def get_user_companies(user_data):
-    """Get companies that the user has access to - NOVA ESTRUTURA com 3 relações"""
-    print(f"[API] get_user_companies chamado para usuário: {user_data.get('id')}")
-    print(f"[API] User role: {user_data.get('role')}")
-    
-    user_role = user_data.get('role')
-    
-    # Para admin, retornar lista vazia (acesso total)
-    if user_role == 'admin':
-        print(f"[API] Usuário admin - acesso total")
-        return []
-    
-    # Para cliente_unique e interno_unique, buscar empresas associadas via nova estrutura
-    if user_role in ['cliente_unique', 'interno_unique']:
-        try:
-            user_id = user_data['id']
-            print(f"[API] Buscando CNPJs para user_id: {user_id} (role: {user_role})")
-            
-            # NOVA ESTRUTURA: users -> user_empresas -> cad_clientes_sistema -> cnpjs[]
-            print(f"[API] 1. Buscando vínculos na tabela user_empresas...")
-            
-            # Buscar vínculos ativos do usuário
-            user_empresas_response = supabase_admin.table('user_empresas')\
-                .select('cliente_sistema_id, ativo, data_vinculo')\
-                .eq('user_id', user_id)\
-                .eq('ativo', True)\
-                .execute()
-            
-            print(f"[API] user_empresas encontrados: {len(user_empresas_response.data) if user_empresas_response.data else 0}")
-            print(f"[API] Dados user_empresas: {user_empresas_response.data}")
-            
-            if not user_empresas_response.data:
-                print(f"[API] Nenhum vínculo ativo encontrado na tabela user_empresas")
-                return []
-            
-            # Extrair IDs das empresas vinculadas
-            cliente_sistema_ids = [vinculo['cliente_sistema_id'] for vinculo in user_empresas_response.data]
-            print(f"[API] IDs das empresas vinculadas: {cliente_sistema_ids}")
-            
-            # Buscar dados das empresas
-            print(f"[API] 2. Buscando dados das empresas na tabela cad_clientes_sistema...")
-            
-            empresas_response = supabase_admin.table('cad_clientes_sistema')\
-                .select('id, nome_cliente, cnpjs, ativo')\
-                .in_('id', cliente_sistema_ids)\
-                .eq('ativo', True)\
-                .execute()
-            
-            print(f"[API] Empresas encontradas: {len(empresas_response.data) if empresas_response.data else 0}")
-            print(f"[API] Dados das empresas: {empresas_response.data}")
-            
-            if not empresas_response.data:
-                print(f"[API] Nenhuma empresa ativa encontrada")
-                return []
-            
-            # Extrair CNPJs das empresas
-            print(f"[API] 3. Extraindo CNPJs das empresas...")
-            
-            all_cnpjs = []
-            empresas_info = []
-            
-            for empresa in empresas_response.data:
-                empresa_id = empresa.get('id')
-                nome_cliente = empresa.get('nome_cliente', 'N/A')
-                cnpjs_array = empresa.get('cnpjs', [])
-                
-                print(f"[API] Empresa ID {empresa_id}: {nome_cliente}")
-                print(f"[API] CNPJs brutos: {cnpjs_array}")
-                
-                empresas_info.append({
-                    'id': empresa_id,
-                    'nome': nome_cliente,
-                    'cnpjs_raw': cnpjs_array
-                })
-                
-                if isinstance(cnpjs_array, list):
-                    for cnpj in cnpjs_array:
-                        if cnpj:
-                            # Normalizar CNPJ (remover formatação)
-                            normalized_cnpj = re.sub(r'\D', '', str(cnpj))
-                            if normalized_cnpj and len(normalized_cnpj) == 14:  # CNPJ deve ter 14 dígitos
-                                all_cnpjs.append(normalized_cnpj)
-                                print(f"[API] CNPJ normalizado: {cnpj} -> {normalized_cnpj}")
-                            else:
-                                print(f"[API] CNPJ inválido ignorado: {cnpj} -> {normalized_cnpj}")
-                else:
-                    print(f"[API] CNPJs não é uma lista para empresa {nome_cliente}: {type(cnpjs_array)}")
-            
-            # Remover CNPJs duplicados
-            unique_cnpjs = list(set(all_cnpjs))
-            
-            print(f"[API] === RESULTADO FINAL ===")
-            print(f"[API] Total de empresas: {len(empresas_info)}")
-            print(f"[API] Total de CNPJs únicos: {len(unique_cnpjs)}")
-            print(f"[API] CNPJs finais: {unique_cnpjs}")
-            print(f"[API] Empresas: {[emp['nome'] for emp in empresas_info]}")
-            
-            if unique_cnpjs:
-                return unique_cnpjs
-            else:
-                print(f"[API] Nenhum CNPJ válido encontrado, usuário sem acesso a dados")
-                return []
-                
-        except Exception as e:
-            print(f"[API] Erro ao buscar empresas do usuário: {str(e)}")
-            import traceback
-            traceback.print_exc()
+    try:
+        if not user_data:
             return []
-    else:
-        print(f"[API] Usuário role {user_role} não requer filtragem de empresas")
+        user_role = user_data.get('role')
+        user_id = user_data.get('id')
+        if user_role not in ['cliente_unique', 'interno_unique'] or not user_id:
+            # Somente clientes/interno tem filtragem por empresas
+            return []
+
+        # Buscar vínculos ativos do usuário
+        user_empresas_response = (
+            supabase_admin
+            .table('user_empresas')
+            .select('cliente_sistema_id, ativo, data_vinculo')
+            .eq('user_id', user_id)
+            .eq('ativo', True)
+            .execute()
+        )
+        if not user_empresas_response.data:
+            return []
+
+        cliente_sistema_ids = [v['cliente_sistema_id'] for v in user_empresas_response.data]
+        # Buscar dados das empresas
+        empresas_response = (
+            supabase_admin
+            .table('cad_clientes_sistema')
+            .select('id, nome_cliente, cnpjs, ativo')
+            .in_('id', cliente_sistema_ids)
+            .eq('ativo', True)
+            .execute()
+        )
+        if not empresas_response.data:
+            return []
+
+        # Extrair e normalizar CNPJs
+        all_cnpjs = []
+        for empresa in empresas_response.data:
+            cnpjs_array = empresa.get('cnpjs', [])
+            if isinstance(cnpjs_array, list):
+                for cnpj in cnpjs_array:
+                    if not cnpj:
+                        continue
+                    normalized = re.sub(r'\D', '', str(cnpj))
+                    if len(normalized) == 14:
+                        all_cnpjs.append(normalized)
+        return list(set(all_cnpjs))
+    except Exception as e:
+        logger.error(f"Erro get_user_companies: {e}")
+        traceback.print_exc()
         return []
+
+# Helper: obter câmbio (mínimo resiliente)
+
+def get_currencies():
+    try:
+        # Placeholder resiliente: retorne estrutura vazia com timestamp
+        return {
+            'rates': {},
+            'updated_at': datetime.now().isoformat()
+        }
+    except Exception:
+        return {'rates': {}, 'updated_at': datetime.now().isoformat()}
 
 @bp.route('/global-data')
 @login_required
 def global_data():
     """
-    Endpoint que retorna todos os dados globais da aplicação em uma única requisição
-    Inclui: importações, usuários, estatísticas do dashboard, câmbio, etc.
+    Endpoint que retorna todos os dados globais em uma única requisição
+    Inclui: importações, usuários (admin/interno), lista de empresas, câmbio.
     """
     try:
         logger.info("Buscando dados globais da aplicação")
-        
-        user_data = session.get('user')
+        user_data = session.get('user') or {}
+        user_id = user_data.get('id')
         user_role = user_data.get('role')
-        
+
         # Inicializar dados de retorno
-        global_data = {
+        payload = {
             'importacoes': [],
             'usuarios': [],
             'dashboard_stats': {},
@@ -263,127 +194,139 @@ def global_data():
             'companies': [],
             'user_companies': []
         }
-        
-        # 1. Buscar importações/processos
+
+        # 1) Importações/processos (com retries)
         try:
-            logger.info("Buscando dados de importações...")
-            # Filtrar para excluir registros com "Despacho Cancelado"
             query = supabase.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
-            
-            # Aplicar filtros baseados no role do usuário
             if user_role == 'cliente_unique':
                 user_companies = get_user_companies(user_data)
-                global_data['user_companies'] = user_companies
-                
+                payload['user_companies'] = user_companies
                 if user_companies:
-                    # Filtrar por empresas do usuário
                     query = query.in_('cnpj_importador', user_companies)
                 else:
-                    # Se não tem empresas, retornar dados vazios para este usuário
                     query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
-            
-            result = query.execute()
-            importacoes_data = result.data if result.data else []
-            
-            # Processar dados de importações
+
+            def _run_importacoes():
+                return query.execute()
+
+            result = run_with_retries(
+                'api.global_data.importacoes',
+                _run_importacoes,
+                max_attempts=3,
+                base_delay_seconds=0.8,
+                should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+            )
+            importacoes_data = result.data or []
+
             if importacoes_data:
                 df = pd.DataFrame(importacoes_data)
-                
-                # Converter datas para datetime para ordenação adequada - incluindo novos campos
                 date_columns = ['data_embarque', 'data_chegada', 'data_abertura']
                 for col in date_columns:
                     if col in df.columns:
                         df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
-                
-                # Ordenar por data_embarque (mais recente primeiro)
                 if 'data_embarque' in df.columns:
                     df = df.sort_values('data_embarque', ascending=False, na_position='last')
-                
-                # Converter de volta para strings para JSON
                 for col in date_columns:
                     if col in df.columns:
                         df[col] = df[col].dt.strftime('%d/%m/%Y').fillna('')
-                
-                global_data['importacoes'] = df.to_dict('records')
-                
-                # Calcular estatísticas usando campos atualizados
-                global_data['dashboard_stats'] = {
+                payload['importacoes'] = df.to_dict('records')
+                payload['dashboard_stats'] = {
                     'total_processos': len(df),
-                    'aereo': len(df[df['modal'] == 'AEREA']),
-                    'terrestre': len(df[df['modal'] == 'TERRESTRE']),
-                    'maritimo': len(df[df['modal'] == 'MARITIMA']),
-                    'aguardando_chegada': len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)]),
-                    'aguardando_embarque': len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)]),
-                    'di_registrada': len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)])  # Usando carga_status
+                    'aereo': int((df['modal'] == 'AEREA').sum()) if 'modal' in df.columns else 0,
+                    'terrestre': int((df['modal'] == 'TERRESTRE').sum()) if 'modal' in df.columns else 0,
+                    'maritimo': int((df['modal'] == 'MARITIMA').sum()) if 'modal' in df.columns else 0,
+                    'aguardando_chegada': int(df['status_processo'].str.contains('TRANSITO', na=False, case=False).sum()) if 'status_processo' in df.columns else 0,
+                    'aguardando_embarque': int(df['status_processo'].str.contains('DECLARACAO', na=False, case=False).sum()) if 'status_processo' in df.columns else 0,
+                    'di_registrada': int(df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False).sum()) if 'status_processo' in df.columns else 0,
                 }
             else:
-                global_data['dashboard_stats'] = {
+                payload['dashboard_stats'] = {
                     'total_processos': 0, 'aereo': 0, 'terrestre': 0, 'maritimo': 0,
                     'aguardando_chegada': 0, 'aguardando_embarque': 0, 'di_registrada': 0
                 }
-            
-            logger.info(f"Dados de importações processados: {len(global_data['importacoes'])} registros")
-            
         except Exception as e:
-            logger.error(f"Erro ao buscar importações: {str(e)}")
-            global_data['importacoes'] = []
-            global_data['dashboard_stats'] = {}
-          # 2. Buscar usuários (apenas para admin e interno_unique)
+            logger.error(f"Erro ao buscar importações: {e}")
+            payload['importacoes'] = []
+            payload['dashboard_stats'] = {}
+
+        # 2) Usuários (somente admin/interno)
         if user_role in ['admin', 'interno_unique']:
             try:
-                logger.info("Buscando dados de usuários...")
-                usuarios_response = supabase_admin.table('users').select('*').execute()
-                global_data['usuarios'] = usuarios_response.data if usuarios_response.data else []
-                logger.info(f"Dados de usuários processados: {len(global_data['usuarios'])} registros")
+                def _run_users():
+                    return supabase_admin.table('users').select('*').execute()
+                usuarios_response = run_with_retries(
+                    'api.global_data.users',
+                    _run_users,
+                    max_attempts=3,
+                    base_delay_seconds=0.8,
+                    should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+                )
+                payload['usuarios'] = usuarios_response.data or []
             except Exception as e:
-                logger.error(f"Erro ao buscar usuários: {str(e)}")
-                global_data['usuarios'] = []
-        
-        # 3. Buscar lista de empresas disponíveis
+                logger.error(f"Erro ao buscar usuários: {e}")
+                payload['usuarios'] = []
+
+        # 3) Lista de empresas
         try:
-            logger.info("Buscando lista de empresas...")
-            companies_query = supabase.table('importacoes_processos_aberta').select('cnpj_importador', 'importador').execute()
-            
+            def _run_companies():
+                return supabase.table('importacoes_processos_aberta').select('cnpj_importador, importador').execute()
+            companies_query = run_with_retries(
+                'api.global_data.companies',
+                _run_companies,
+                max_attempts=3,
+                base_delay_seconds=0.8,
+                should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+            )
             if companies_query.data:
                 companies_df = pd.DataFrame(companies_query.data)
                 companies_unique = companies_df.drop_duplicates(subset=['cnpj_importador']).to_dict('records')
-                
-                # Filtrar empresas baseado no role do usuário
-                if user_role == 'cliente_unique' and global_data['user_companies']:
-                    companies_unique = [c for c in companies_unique if c['cnpj_importador'] in global_data['user_companies']]
-                
-                global_data['companies'] = companies_unique
-                logger.info(f"Lista de empresas processada: {len(global_data['companies'])} empresas")
-            
+                if user_role == 'cliente_unique' and payload['user_companies']:
+                    companies_unique = [c for c in companies_unique if c['cnpj_importador'] in payload['user_companies']]
+                payload['companies'] = companies_unique
         except Exception as e:
-            logger.error(f"Erro ao buscar empresas: {str(e)}")
-            global_data['companies'] = []
-        
-        # 4. Buscar cotações de câmbio
+            logger.error(f"Erro ao buscar empresas: {e}")
+            payload['companies'] = []
+
+        # 4) Câmbio
         try:
-            logger.info("Buscando cotações de câmbio...")
-            global_data['currencies'] = get_currencies()
+            payload['currencies'] = get_currencies()
         except Exception as e:
-            logger.error(f"Erro ao buscar câmbio: {str(e)}")
-            global_data['currencies'] = get_currencies()  # Retorna valores padrão
-        
+            logger.error(f"Erro ao buscar câmbio: {e}")
+            payload['currencies'] = get_currencies()
+
         logger.info("Dados globais coletados com sucesso")
-        
-        # Limpar dados para evitar problemas de serialização JSON
-        global_data_clean = clean_data_for_json(global_data)
-        
-        return jsonify({
-            'status': 'success',
-            'data': global_data_clean,
-            'timestamp': datetime.now().isoformat()
-        })
-        
+
+        # Limpeza e cache NO SERVIDOR (evitar crescer cookies/sessão)
+        payload_clean = clean_data_for_json(payload)
+        try:
+            if user_id:
+                data_cache.set_cache(user_id, 'global_data', payload_clean)
+                logger.info(f"[GLOBAL_DATA] Cache atualizado para usuário {user_id} (tamanho aprox.: {len(str(payload_clean))} chars)")
+        except Exception as cache_err:
+            logger.warning(f"[GLOBAL_DATA] Falha ao gravar no cache do servidor: {cache_err}")
+
+        return jsonify({'status': 'success', 'data': payload_clean, 'timestamp': datetime.now().isoformat()})
+
     except Exception as e:
-        logger.exception(f"Erro ao buscar dados globais: {str(e)}")
-        return jsonify({
-            'status': 'error',
-            'message': f'Erro ao buscar dados globais: {str(e)}'
-        }), 500
+        logger.exception(f"Erro ao buscar dados globais: {e}")
+        # Fallback: usar cache do servidor se disponível
+        try:
+            user = session.get('user') or {}
+            user_id = user.get('id')
+            if user_id:
+                fallback = data_cache.get_cache(user_id, 'global_data')
+                if fallback:
+                    logger.info(f"[GLOBAL_DATA] Servindo fallback do cache do servidor para usuário {user_id}")
+                    return jsonify({
+                        'status': 'success',
+                        'data': fallback,
+                        'timestamp': datetime.now().isoformat(),
+                        'source': 'server_cache_fallback'
+                    })
+        except Exception as cache_err:
+            logger.warning(f"[GLOBAL_DATA] Erro ao obter fallback do cache: {cache_err}")
+
+        return jsonify({'status': 'error', 'message': f'Erro ao buscar dados globais: {str(e)}'}), 500
 
 @bp.route('/force-refresh', methods=['POST'])
 @login_required

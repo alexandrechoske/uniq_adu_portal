@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session
 from routes.auth import login_required, role_required
 from extensions import supabase_admin
+from services.retry_utils import run_with_retries
 import os
 import uuid
 import re
@@ -65,33 +66,42 @@ def api_cnpj_options():
 def api_logos_clientes():
     """API para listar clientes do sistema com seus CNPJs"""
     try:
-        # Buscar clientes ativos com seus CNPJs em array
-        response = supabase_admin.table('cad_clientes_sistema').select('*').eq('ativo', True).order('nome_cliente').execute()
-        
+        # Buscar clientes ativos com seus CNPJs em array (com retries)
+        def _query():
+            return supabase_admin.table('cad_clientes_sistema').select('*').eq('ativo', True).order('nome_cliente').execute()
+
+        response = run_with_retries(
+            'config.api_logos_clientes',
+            _query,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
+
         # Processar dados para o frontend
         clientes_processados = []
-        for cliente in response.data or []:
-            cliente_processado = {
-                'id': cliente['id'],
-                'nome_cliente': cliente['nome_cliente'],
-                'logo_url': cliente['logo_url'],
-                'cnpjs': cliente['cnpjs'] or [],  # Array de CNPJs
-                'total_cnpjs_ativos': len(cliente['cnpjs'] or []),
-                'created_at': cliente['created_at'],
-                'updated_at': cliente['updated_at']
-            }
-            clientes_processados.append(cliente_processado)
-        
-        return jsonify({
-            'success': True,
-            'data': clientes_processados
-        })
+        for cliente in (response.data or []):
+            clientes_processados.append({
+                'id': cliente.get('id'),
+                'nome_cliente': cliente.get('nome_cliente'),
+                'logo_url': cliente.get('logo_url'),
+                'cnpjs': cliente.get('cnpjs') or [],
+                'total_cnpjs_ativos': len(cliente.get('cnpjs') or []),
+                'created_at': cliente.get('created_at'),
+                'updated_at': cliente.get('updated_at')
+            })
+
+        # Guardar em sessão como fallback leve (não sensível)
+        session['config_last_clientes'] = clientes_processados
+        return jsonify({'success': True, 'data': clientes_processados})
     except Exception as e:
         print(f"[CONFIG] Erro ao buscar clientes do sistema: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        # Fallback: tentar retornar último resultado válido em sessão para não quebrar a página
+        fallback = session.get('config_last_clientes', [])
+        if fallback:
+            print(f"[CONFIG] Retornando fallback de {len(fallback)} clientes do cache de sessão")
+            return jsonify({'success': True, 'data': fallback, 'source': 'session_fallback'}), 200
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @config_bp.route('/api/logos-clientes', methods=['POST'])
 @login_required

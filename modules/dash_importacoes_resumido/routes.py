@@ -9,6 +9,7 @@ import numpy as np
 import json
 import requests
 from services.data_cache import DataCacheService
+from services.retry_utils import run_with_retries
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
@@ -173,7 +174,15 @@ def get_dashboard_data():
                             'pagination': {'total': 0, 'pages': 0, 'current_page': 1, 'per_page': per_page}
                         })
 
-                result = query.limit(100).execute()
+                def _run_query():
+                    return query.limit(100).execute()
+                result = run_with_retries(
+                    'dash_resumido.main_query',
+                    _run_query,
+                    max_attempts=3,
+                    base_delay_seconds=0.8,
+                    should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+                )
                 cached_data = result.data or []
                 print(f"[DEBUG] Dados obtidos direto da view: {len(cached_data)} registros")
             except Exception as e:

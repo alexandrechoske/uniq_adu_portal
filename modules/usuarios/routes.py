@@ -7,6 +7,7 @@ import uuid
 import datetime
 import json
 import traceback
+from services.retry_utils import run_with_retries
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('usuarios', __name__, 
@@ -45,23 +46,14 @@ def invalidate_users_cache():
     print("[DEBUG] Cache de usuários invalidado")
 
 def retry_supabase_operation(operation, max_retries=2, delay=0.5):
-    """Executa operação no Supabase com retry otimizado (menos agressivo)"""
-    for attempt in range(max_retries):
-        try:
-            return operation()
-        except Exception as e:
-            error_msg = str(e).lower()
-            if 'server disconnected' in error_msg or 'connection' in error_msg:
-                if attempt < max_retries - 1:
-                    print(f"[DEBUG] Tentativa {attempt + 1} falhou, tentando novamente em {delay}s...")
-                    time.sleep(delay)
-                    continue
-                else:
-                    print(f"[DEBUG] Todas as tentativas falharam após {max_retries} tentativas")
-                    raise
-            else:
-                # Se não for erro de conexão, falha imediatamente
-                raise
+    """Backwards-compatible wrapper that now delegates to centralized retry utility."""
+    return run_with_retries(
+        'usuarios.retry_op',
+        operation,
+        max_attempts=max_retries,
+        base_delay_seconds=delay,
+        should_retry=lambda e: 'server disconnected' in str(e).lower() or 'timeout' in str(e).lower() or 'connection' in str(e).lower()
+    )
 
 def verificar_empresa_ja_associada(user_id, cnpj):
     """Verifica se uma empresa já está associada ao usuário"""

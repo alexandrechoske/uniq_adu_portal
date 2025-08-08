@@ -10,6 +10,7 @@ import unicodedata
 import re
 import json
 from services.data_cache import DataCacheService
+from services.retry_utils import run_with_retries
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
@@ -367,8 +368,11 @@ def load_data():
         else:
             print(f"[DASHBOARD_EXECUTIVO] Role admin - sem filtro de CNPJs")
         
-        # Executar query
-        result = query.execute()
+        # Executar query com retries contra falhas transitórias
+        def _run_main_query():
+            return query.execute()
+        result = run_with_retries('dashboard_executivo.load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
+                                  should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower())
         
         if not result.data:
             print("[DASHBOARD_EXECUTIVO] Nenhum dado encontrado")
@@ -408,11 +412,17 @@ def load_data():
         
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro ao carregar dados: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': []
-        }), 500
+        # Fallback: se houver dados previamente cacheados, retorne-os para evitar quebra na UX
+        try:
+            user_data = session.get('user', {})
+            user_id = user_data.get('id')
+            cached = data_cache.get_cache(user_id, 'dashboard_v2_data')
+            if cached:
+                print(f"[DASHBOARD_EXECUTIVO] Retornando dados do cache após erro ({len(cached)} registros)")
+                return jsonify({'success': True, 'data': cached, 'total_records': len(cached), 'source': 'server_cache_fallback'})
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': str(e), 'data': []}), 500
 
 @bp.route('/api/kpis')
 @login_required
@@ -423,15 +433,10 @@ def dashboard_kpis():
         # Obter dados do cache
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        
+        # Tentar ler do cache; se vazio, responder amigavelmente
         data = data_cache.get_cache(user_id, 'dashboard_v2_data')
-        
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'Dados não encontrados. Recarregue a página.',
-                'kpis': {}
-            })
+            return jsonify({'success': False, 'error': 'Dados não encontrados. Recarregue a página.', 'kpis': {}})
         
         # Aplicar filtros se existirem
         filtered_data = apply_filters(data)
@@ -635,11 +640,8 @@ def dashboard_kpis():
         
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro ao calcular KPIs: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'kpis': {}
-        }), 500
+        # Fallback seguro
+        return jsonify({'success': False, 'error': str(e), 'kpis': {}}), 200
 
 @bp.route('/api/charts')
 @login_required
@@ -650,15 +652,9 @@ def dashboard_charts():
         # Obter dados do cache
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        
         data = data_cache.get_cache(user_id, 'dashboard_v2_data')
-        
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'Dados não encontrados. Recarregue a página.',
-                'charts': {}
-            })
+            return jsonify({'success': False, 'error': 'Dados não encontrados. Recarregue a página.', 'charts': {}})
         
         # Aplicar filtros se existirem
         filtered_data = apply_filters(data)
@@ -843,11 +839,7 @@ def dashboard_charts():
         
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro ao gerar gráficos: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'charts': {}
-        }), 500
+        return jsonify({'success': False, 'error': str(e), 'charts': {}}), 200
 
 @bp.route('/api/monthly-chart')
 @login_required
@@ -1029,15 +1021,9 @@ def filter_options():
         # Obter dados do cache
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        
         data = data_cache.get_cache(user_id, 'dashboard_v2_data')
-        
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'Dados não encontrados. Recarregue a página.',
-                'options': {}
-            })
+            return jsonify({'success': False, 'error': 'Dados não encontrados. Recarregue a página.', 'options': {}})
         
         df = pd.DataFrame(data)
         
@@ -1091,11 +1077,7 @@ def filter_options():
         
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro ao obter opções de filtro: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'options': {}
-        }), 500
+        return jsonify({'success': False, 'error': str(e), 'options': {}}), 200
 
 @bp.route('/api/force-refresh', methods=['POST'])
 @login_required

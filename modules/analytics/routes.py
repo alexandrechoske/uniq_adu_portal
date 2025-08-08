@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from extensions import supabase_admin
 from routes.auth import role_required
 import logging
+from services.retry_utils import run_with_retries
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -61,7 +62,15 @@ def get_stats():
             query = query.eq('action_type', action_type)
         
         # Executar query
-        response = query.execute()
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_stats',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
         logs = response.data if response.data else []
         # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
         logs = [log for log in logs if not (
@@ -84,7 +93,15 @@ def get_stats():
 
         # Total de logins (todos os tempos)
         try:
-            total_logins_response = supabase_admin.table('access_logs').select('*').eq('action_type', 'login').execute()
+            def _exec_total():
+                return supabase_admin.table('access_logs').select('*').eq('action_type', 'login').execute()
+            total_logins_response = run_with_retries(
+                'analytics.get_stats.total_logins',
+                _exec_total,
+                max_attempts=3,
+                base_delay_seconds=0.8,
+                should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+            )
             total_logins = len([
                 log for log in total_logins_response.data
                 if not (
@@ -157,7 +174,15 @@ def get_charts():
         if action_type != 'all':
             query = query.eq('action_type', action_type)
         
-        response = query.execute()
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_charts',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
         logs = response.data if response.data else []
         # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
         logs = [log for log in logs if not (
@@ -335,7 +360,15 @@ def get_top_users():
         if user_role != 'all':
             query = query.eq('user_role', user_role)
         
-        response = query.execute()
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_top_users',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
         logs = response.data if response.data else []
         # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
         logs = [log for log in logs if not (
@@ -422,7 +455,15 @@ def get_recent_activity():
         if action_type != 'all':
             query = query.eq('action_type', action_type)
         
-        response = query.execute()
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_recent_activity',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
         logs = response.data if response.data else []
         # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
         logs = [log for log in logs if not (

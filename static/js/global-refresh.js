@@ -41,7 +41,7 @@
     async function checkSession() {
         try {
             console.log('[GlobalRefresh] Verificando sessão...');
-            const response = await fetch(CONFIG.CHECK_SESSION_ENDPOINT, {
+            let response = await fetch(CONFIG.CHECK_SESSION_ENDPOINT, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -50,6 +50,18 @@
             });
 
             if (!response.ok) {
+                // Retry rápido em caso de erro transitório (exceto 401)
+                if (response.status !== 401) {
+                    console.warn('[GlobalRefresh] Falha na verificação de sessão, tentando novamente...');
+                    await new Promise(r => setTimeout(r, 600));
+                    response = await fetch(CONFIG.CHECK_SESSION_ENDPOINT, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Cache-Control': 'no-cache'
+                        }
+                    });
+                }
                 if (response.status === 401) {
                     console.warn('[GlobalRefresh] Sessão expirada, redirecionando para login...');
                     window.location.href = '/login';
@@ -80,7 +92,7 @@
         try {
             console.log('[GlobalRefresh] Buscando dados globais...');
             
-            const response = await fetch(CONFIG.GLOBAL_DATA_ENDPOINT, {
+            let response = await fetch(CONFIG.GLOBAL_DATA_ENDPOINT, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -89,7 +101,19 @@
             });
 
             if (!response.ok) {
-                throw new Error(`Erro HTTP: ${response.status}`);
+                // Pequeno retry rápido (uma vez) em caso de 5xx/transiente
+                console.warn('[GlobalRefresh] Primeira tentativa falhou, tentando novamente...');
+                await new Promise(r => setTimeout(r, 700));
+                response = await fetch(CONFIG.GLOBAL_DATA_ENDPOINT, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
             }
 
             const data = await response.json();
@@ -114,11 +138,16 @@
                 
                 return true;
             } else {
-                throw new Error(data.message || 'Erro desconhecido');
+                // Servidor respondeu com erro; não quebrar UX, apenas logar e manter dados atuais
+                console.warn('[GlobalRefresh] Resposta com erro do servidor:', data);
+                return false;
             }
         } catch (error) {
             console.error('[GlobalRefresh] Erro ao buscar dados globais:', error);
-            showNotification('Erro ao atualizar dados: ' + error.message, 'error');
+            // Evitar spam de notificações em erros transitórios
+            if (!isRefreshing) {
+                showNotification('Erro ao atualizar dados: ' + (error?.message || error), 'error');
+            }
             return false;
         }
     }

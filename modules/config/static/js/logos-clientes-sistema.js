@@ -244,23 +244,29 @@ function renderSelectedCnpjs() {
 async function loadClientes() {
     try {
         console.log('[CLIENTES SISTEMA] Carregando clientes...');
-        const response = await fetch('/config/api/logos-clientes');
+        let response = await fetch('/config/api/logos-clientes');
+        if (!response.ok) {
+            // Pequeno retry rápido (uma vez) em caso de 500/transiente
+            console.warn('[CLIENTES SISTEMA] Primeira tentativa falhou, tentando novamente...');
+            await new Promise(r => setTimeout(r, 600));
+            response = await fetch('/config/api/logos-clientes');
+        }
         const result = await response.json();
         
         if (result.success) {
-            clientes = result.data;
+            clientes = result.data || [];
             renderClientes();
             updateKPIs();
-            console.log(`[CLIENTES SISTEMA] ${clientes.length} clientes carregados`);
+            console.log(`[CLIENTES SISTEMA] ${clientes.length} clientes carregados (source: ${result.source || 'live'})`);
         } else {
             console.error('[CLIENTES SISTEMA] Erro ao carregar clientes:', result.error);
             showError('Erro ao carregar clientes: ' + result.error);
-            // Ainda assim atualizar KPIs para mostrar zero
             updateKPIs();
         }
     } catch (error) {
         console.error('[CLIENTES SISTEMA] Erro na requisição:', error);
         showError('Erro ao conectar com o servidor');
+        updateKPIs();
     }
 }
 

@@ -762,6 +762,10 @@
     <script src="{{ url_for('static', filename='js/sidebar-manager.js') }}"></script>
     
     <!-- Sistema Unificado de Loading UX -->
+    <script>
+        // Desabilitar tela de pre-loading global por padrão; manter loaders por componente
+        window.ENABLE_UNIFIED_LOADING = false;
+    </script>
     <script src="{{ url_for('static', filename='js/unified-loading.js') }}"></script>
     <script src="{{ url_for('static', filename='js/page-validator.js') }}"></script>
     {% endif %}

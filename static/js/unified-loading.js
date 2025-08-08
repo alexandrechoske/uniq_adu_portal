@@ -561,7 +561,12 @@ class UnifiedLoadingManager {
 
 // Inicializar quando DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-    // Desativar o pre-loading global especificamente no Dashboard Executivo
+    // Desabilitado por padrão para remover a tela de pre-loading global
+    if (!window.ENABLE_UNIFIED_LOADING) {
+        console.log('[UNIFIED_LOADING] Desativado globalmente (usando somente loaders por componente)');
+        return;
+    }
+    // Mantém exceção do Dashboard Executivo por segurança
     try {
         const path = window.location.pathname || '';
         if (path.includes('/dashboard-executivo')) {
