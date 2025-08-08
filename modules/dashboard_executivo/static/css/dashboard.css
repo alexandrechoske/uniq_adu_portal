@@ -9,16 +9,8 @@
 
 /* Loading Overlay */
 .loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+    /* Desativado especificamente nesta página (popup global) */
+    display: none !important;
 }
 
 .loading-spinner {
@@ -119,6 +111,7 @@
     grid-template-columns: repeat(4, 1fr); /* 4 colunas para melhor distribuição dos 7 KPIs */
     gap: 1rem;
     margin-bottom: 2.5rem;
+    position: relative; /* para overlay local de loading */
 }
 
 /* Ajuste para fonte menor nos KPIs */
@@ -296,6 +289,7 @@
 
 .table-container {
     overflow-x: auto;
+    position: relative; /* para overlay local de loading */
 }
 
 .data-table {
@@ -367,6 +361,30 @@
         height: 300px;
         padding: 15px;
     }
+}
+
+/* === Component Loading (local por componente) === */
+/* Esconder overlay de loading global unificado apenas nesta página */
+#unified-loading-overlay { display: none !important; }
+
+.component-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.component-loading .spinner {
+    margin-bottom: 0;
+}
+
+.spinner.sm {
+    width: 22px;
+    height: 22px;
+    border-width: 3px;
 }
 
 /* Utility Classes */

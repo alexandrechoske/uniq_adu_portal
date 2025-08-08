@@ -39,6 +39,9 @@
     
     <!-- KPI Cards -->
     <div class="kpi-grid">
+        <div id="kpi-loading" class="component-loading">
+            <div class="spinner"></div>
+        </div>
         <!-- Linha 1: Processos Abertos - Chegando Este Mês - Chegando Esta Semana -->
         <div class="kpi-card kpi-info">
             <div class="kpi-icon">
@@ -138,7 +141,7 @@
     <!-- Charts Grid -->
     <div class="charts-grid">
         <!-- Monthly Evolution Chart (70% width) -->
-        <div class="chart-section">
+    <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Evolução Mensal</h2>
                 <div class="period-controls">
@@ -148,36 +151,40 @@
                 </div>
             </div>
             <div class="chart-container">
+        <div id="monthly-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="monthly-chart" class="chart-canvas"></canvas>
             </div>
         </div>
         
         <!-- Status Chart -->
-        <div class="chart-section">
+    <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Distribuição por Status</h2>
             </div>
             <div class="chart-container">
+        <div id="status-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="status-chart" class="chart-canvas"></canvas>
             </div>
         </div>
         
         <!-- Modal Chart (30% width) -->
-        <div class="chart-section">
+    <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Processos e Custos por Modal</h2>
             </div>
             <div class="chart-container">
+        <div id="modal-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="grouped-modal-chart" class="chart-canvas"></canvas>
             </div>
         </div>
         
         <!-- URF Chart -->
-        <div class="chart-section">
+    <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Top 10 URFs</h2>
             </div>
             <div class="chart-container">
+        <div id="urf-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="urf-chart" class="chart-canvas"></canvas>
             </div>
         </div>
@@ -188,6 +195,7 @@
                 <h2 class="chart-title">Principais Materiais</h2>
             </div>
             <div class="table-container">
+                <div id="material-loading" class="component-loading"><div class="spinner"></div></div>
                 <table id="principais-materiais-table" class="data-table">
                     <thead>
                         <tr>
@@ -221,7 +229,8 @@
                 </div>
             </div>
         </div>
-        <div class="enhanced-table-container">
+        <div class="enhanced-table-container" style="position: relative;">
+            <div id="recent-ops-loading" class="component-loading"><div class="spinner"></div></div>
             <table id="recent-operations-table" class="enhanced-data-table">
                 <thead>
                     <tr>
@@ -670,6 +679,53 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('[DASHBOARD_EXECUTIVO] Seção de upload desabilitada para role:', userRole);
     }
+});
+
+// Controlador simples para esconder os loaders por componente quando os dados renderizam
+const DASH_EXEC_HIDE_LOADER = (id) => { const el = document.getElementById(id); if (el) { el.style.display = 'none'; console.log('[DASH_EXEC] Loader hidden:', id); }};
+const DASH_EXEC_TRY_WRAP = (name, id) => {
+    const fn = window[name];
+    if (typeof fn === 'function') {
+        window[name] = function() {
+            const r = fn.apply(this, arguments);
+            try { DASH_EXEC_HIDE_LOADER(id); } catch (_) {}
+            return r;
+        };
+        console.log('[DASH_EXEC] Wrapped function:', name, '-> hides', id);
+    }
+};
+
+// Aplicar wrappers imediatamente após carregar dashboard.js
+DASH_EXEC_TRY_WRAP('updateDashboardKPIs', 'kpi-loading');
+DASH_EXEC_TRY_WRAP('updateRecentOperationsTable', 'recent-ops-loading');
+DASH_EXEC_TRY_WRAP('createPrincipaisMateriaisTableWithValidation', 'material-loading');
+DASH_EXEC_TRY_WRAP('createMonthlyChartWithValidation', 'monthly-loading');
+DASH_EXEC_TRY_WRAP('createStatusChartWithValidation', 'status-loading');
+DASH_EXEC_TRY_WRAP('createGroupedModalChartWithValidation', 'modal-loading');
+DASH_EXEC_TRY_WRAP('createUrfChartWithValidation', 'urf-loading');
+DASH_EXEC_TRY_WRAP('createMaterialChartWithValidation', 'material-loading');
+
+// Fallbacks com MutationObserver caso funções mudem de nome ou executem antes
+document.addEventListener('DOMContentLoaded', function() {
+    const observeRows = (tableSelector, loaderId) => {
+        const table = document.querySelector(tableSelector);
+        if (!table) return;
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const mo = new MutationObserver(() => {
+            if (tbody.children.length > 0) { DASH_EXEC_HIDE_LOADER(loaderId); mo.disconnect(); }
+        });
+        mo.observe(tbody, { childList: true });
+    };
+    observeRows('#recent-operations-table', 'recent-ops-loading');
+    observeRows('#principais-materiais-table', 'material-loading');
+
+    // Safety timeout para não deixar loader preso em caso de erro
+    setTimeout(() => {
+        ['kpi-loading','monthly-loading','status-loading','modal-loading','urf-loading','material-loading','recent-ops-loading']
+            .forEach(DASH_EXEC_HIDE_LOADER);
+        console.warn('[DASH_EXEC] Safety timeout reached. Forced hiding of loaders.');
+    }, 20000);
 });
 </script>
 {% endblock %}
