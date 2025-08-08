@@ -44,6 +44,7 @@
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
+    <div id="kpi-loading" class="component-loading"><div class="spinner"></div></div>
         <div class="kpi-card kpi-primary" id="access-card">
             <div class="kpi-icon">
                 <i class="mdi mdi-eye"></i>
@@ -109,6 +110,7 @@
                 </div>
             </div>
             <div class="chart-container">
+                <div id="daily-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="daily-access-chart" class="chart-canvas"></canvas>
             </div>
         </div>
@@ -120,6 +122,7 @@
                 <h2 class="chart-title">Páginas Mais Acessadas</h2>
             </div>
             <div class="chart-container">
+                <div id="top-pages-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="top-pages-chart" class="chart-canvas"></canvas>
             </div>
         </div>
@@ -130,6 +133,7 @@
                 <h2 class="chart-title">Mapa de Calor por Horário</h2>
             </div>
             <div class="chart-container">
+                <div id="hourly-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="hourly-heatmap-chart" class="chart-canvas"></canvas>
             </div>
         </div>
@@ -140,6 +144,7 @@
                 <h2 class="chart-title">Atividade de Usuários</h2>
             </div>
             <div class="chart-container">
+                <div id="users-activity-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="users-activity-chart" class="chart-canvas"></canvas>
             </div>
         </div>
@@ -159,6 +164,7 @@
             </div>
         </div>
         <div class="enhanced-table-container">
+            <div id="top-users-loading" class="component-loading"><div class="spinner"></div></div>
             <table id="top-users-table" class="enhanced-table">
                 <thead>
                     <tr>
@@ -191,6 +197,7 @@
             </div>
         </div>
         <div class="enhanced-table-container">
+            <div id="recent-activity-loading" class="component-loading"><div class="spinner"></div></div>
             <table id="recent-activity-table" class="enhanced-table">
                 <thead>
                     <tr>
@@ -262,4 +269,51 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="{{ url_for('analytics.static', filename='js/analytics.js') }}"></script>
+<script>
+// Spinners por componente (mesmo padrão do Dashboard Executivo)
+const ANALYTICS_HIDE_LOADER = (id) => { const el = document.getElementById(id); if (el) { el.style.display = 'none'; console.log('[ANALYTICS] Loader hidden:', id); } };
+const ANALYTICS_TRY_WRAP = (name, id) => {
+    const fn = window[name];
+    if (typeof fn === 'function') {
+        window[name] = function() {
+            const r = fn.apply(this, arguments);
+            try { ANALYTICS_HIDE_LOADER(id); } catch (_) {}
+            return r;
+        };
+        console.log('[ANALYTICS] Wrapped function:', name, '-> hides', id);
+    }
+};
+
+// Aplicar wrappers após carregar analytics.js
+document.addEventListener('DOMContentLoaded', function() {
+    ANALYTICS_TRY_WRAP('updateStatsCards', 'kpi-loading');
+    ANALYTICS_TRY_WRAP('createDailyAccessChart', 'daily-loading');
+    ANALYTICS_TRY_WRAP('createTopPagesChart', 'top-pages-loading');
+    ANALYTICS_TRY_WRAP('createUsersActivityChart', 'users-activity-loading');
+    ANALYTICS_TRY_WRAP('createHourlyHeatmapChart', 'hourly-loading');
+    ANALYTICS_TRY_WRAP('updateTopUsersTable', 'top-users-loading');
+    ANALYTICS_TRY_WRAP('updateRecentActivityTable', 'recent-activity-loading');
+
+    // Fallback: observar linhas das tabelas para esconder loaders quando houver conteúdo
+    const observeRows = (tableSelector, loaderId) => {
+        const table = document.querySelector(tableSelector);
+        if (!table) return;
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        const mo = new MutationObserver(() => {
+            if (tbody.children.length > 0) { ANALYTICS_HIDE_LOADER(loaderId); mo.disconnect(); }
+        });
+        mo.observe(tbody, { childList: true });
+    };
+    observeRows('#top-users-table', 'top-users-loading');
+    observeRows('#recent-activity-table', 'recent-activity-loading');
+
+    // Safety timeout para evitar loader preso
+    setTimeout(() => {
+        ['kpi-loading','daily-loading','top-pages-loading','hourly-loading','users-activity-loading','top-users-loading','recent-activity-loading']
+            .forEach(ANALYTICS_HIDE_LOADER);
+        console.warn('[ANALYTICS] Safety timeout reached. Forced hiding of loaders.');
+    }, 20000);
+});
+</script>
 {% endblock %}
