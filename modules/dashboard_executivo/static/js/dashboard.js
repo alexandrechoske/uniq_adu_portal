@@ -683,6 +683,11 @@ function initializeEnhancedTable() {
                          : (operation.urf_despacho || '-');
         const urfColumn = `<td>${urfValue}</td>`;
         
+        // Truncar Exportador/Fornecedor para 18 caracteres
+        const exportadorFull = operation.exportador_fornecedor || '-';
+        const exportadorDisplay = (exportadorFull && exportadorFull.length > 18)
+            ? exportadorFull.substring(0, 18) + '…'
+            : exportadorFull;
         return `
             <td>
                 <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
@@ -692,7 +697,7 @@ function initializeEnhancedTable() {
             <td><strong>${operation.ref_importador || '-'}</strong></td>
             <td>${operation.importador || '-'}</td>
             <td>${formatDate(operation.data_abertura)}</td>
-            <td>${operation.exportador_fornecedor || '-'}</td>
+            <td title="${exportadorFull}">${exportadorDisplay}</td>
             <td>${getModalBadge(operation.modal)}</td>
             <td>${getStatusBadge(operation.status_macro_sistema || operation.status_processo || operation.status)}</td>
             <td><span class="currency-value">${formatCurrency(custoTotal)}</span></td>
@@ -2134,11 +2139,21 @@ function processExpensesByCategory(despesasProcesso) {
             console.warn('[DASHBOARD_EXECUTIVO] Despesas processo não é um array válido:', despesasProcesso);
             return {
                 categorias: {},
-                total: 0
+                total: 0,
+                fretes: { internacional: 0, nacional: 0 },
+                categoriasAjustadas: {}
             };
         }
 
         const categorias = {};
+        // Normalizador reutilizado dentro e fora do loop
+        const normalize = (s) => (s ?? '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+        let freteInternacional = 0;
+        let freteNacional = 0;
         let total = 0;
 
         console.log('[DASHBOARD_EXECUTIVO] Processando', despesasProcesso.length, 'despesas...');
@@ -2159,24 +2174,56 @@ function processExpensesByCategory(despesasProcesso) {
             categorias[categoria] += valor;
             total += valor;
             
+            // Detectar Frete Internacional/Nacional a partir da descrição
+            const descRaw = (despesa.descricao_custo || '').toString();
+            const desc = normalize(descRaw);
+            const hasFrete = desc.includes('FRETE');
+            if (hasFrete) {
+                const isInter = desc.includes('INTER') || desc.includes('EXTER');
+                const isNac = desc.includes('NACIONAL') || desc.includes('DOMEST');
+                if (isInter) {
+                    freteInternacional += valor;
+                    console.log(`[DASHBOARD_EXECUTIVO] + Frete Internacional detectado (+${valor}) -> Total: ${freteInternacional}`);
+                } else if (isNac) {
+                    freteNacional += valor;
+                    console.log(`[DASHBOARD_EXECUTIVO] + Frete Nacional detectado (+${valor}) -> Total: ${freteNacional}`);
+                }
+            }
+
             console.log(`[DASHBOARD_EXECUTIVO] Categoria "${categoria}" agora tem: R$ ${categorias[categoria].toFixed(2)}`);
             console.log(`[DASHBOARD_EXECUTIVO] Total acumulado: R$ ${total.toFixed(2)}`);
         });
 
+        // Ajustar "Outros Custos" removendo os fretes para evitar duplicidade na exibição
+        const categoriasAjustadas = { ...categorias };
+        const keys = Object.keys(categoriasAjustadas);
+        const findKey = (name) => keys.find(k => normalize(k) === normalize(name));
+        const outrosKey = findKey('Outros Custos');
+        if (outrosKey) {
+            const ajuste = Math.min(categoriasAjustadas[outrosKey], freteInternacional + freteNacional);
+            categoriasAjustadas[outrosKey] = Math.max(0, categoriasAjustadas[outrosKey] - ajuste);
+            console.log(`[DASHBOARD_EXECUTIVO] Ajuste em "Outros Custos": -${ajuste} (para não duplicar fretes)`);
+        }
+
         console.log('[DASHBOARD_EXECUTIVO] Resultado final - categorias:', categorias);
+        console.log('[DASHBOARD_EXECUTIVO] Resultado final - categoriasAjustadas:', categoriasAjustadas);
         console.log('[DASHBOARD_EXECUTIVO] Resultado final - total:', total);
         console.log('[DASHBOARD_EXECUTIVO] === FIM processExpensesByCategory ===');
 
         return {
             categorias,
-            total
+            total,
+            fretes: { internacional: freteInternacional, nacional: freteNacional },
+            categoriasAjustadas
         };
 
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao processar despesas por categoria:', error);
         return {
             categorias: {},
-            total: 0
+            total: 0,
+            fretes: { internacional: 0, nacional: 0 },
+            categoriasAjustadas: {}
         };
     }
 }
@@ -2187,11 +2234,11 @@ function processExpensesByCategory(despesasProcesso) {
  */
 function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
     try {
-        const { categorias, total } = expenseData;
+        const { categorias, categoriasAjustadas, fretes, total } = expenseData;
 
         let html = '';
 
-        // CORREÇÃO: Só mostrar Valor CIF se for maior que 0
+        // CORREÇÃO: Só mostrar Valor CIF se for maior que 0 (mantido)
         if (valorCif > 0) {
             html += `
                 <div class="info-item valor-cif-item">
@@ -2201,20 +2248,54 @@ function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
             `;
         }
 
-        // Ordenar categorias por valor (maior para menor)
-        const categoriasOrdenadas = Object.entries(categorias)
-            .sort(([,a], [,b]) => b - a);
+        const normalize = (s) => (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        const catAdj = categoriasAjustadas && Object.keys(categoriasAjustadas).length ? categoriasAjustadas : categorias;
+        const map = {};
+        Object.keys(catAdj || {}).forEach(k => { map[normalize(k)] = { key: k, valor: catAdj[k] || 0 }; });
+        const pick = (names) => {
+            for (const n of names) {
+                const found = map[normalize(n)];
+                if (found) return found.valor;
+            }
+            return 0;
+        };
 
-        categoriasOrdenadas.forEach(([categoria, valor]) => {
-            html += `
-                <div class="info-item">
-                    <label>${categoria} (R$):</label>
-                    <span>${formatCurrency(valor)}</span>
-                </div>
-            `;
+        const ordemFixada = [
+            { label: 'Impostos (R$):', valor: pick(['Impostos']) },
+            { label: 'Outros Custos (R$):', valor: pick(['Outros Custos']) },
+            { label: 'Honorários (R$):', valor: pick(['Honorarios', 'Honorários']) },
+            { label: 'Frete Internacional', valor: (fretes?.internacional) || 0 },
+            { label: 'Frete Nacional', valor: (fretes?.nacional) || 0 },
+            { label: 'Outras Despesas (R$):', valor: pick(['Outras Despesas']) }
+        ];
+
+        // Renderizar itens da ordem fixada se > 0
+        ordemFixada.forEach(item => {
+            if (item.valor && item.valor > 0) {
+                html += `
+                    <div class="info-item">
+                        <label>${item.label}</label>
+                        <span>${formatCurrency(item.valor)}</span>
+                    </div>
+                `;
+            }
         });
 
-        // Total com destaque
+        // Renderizar quaisquer outras categorias restantes que não foram exibidas
+        const usados = new Set(['IMPOSTOS', 'OUTROS CUSTOS', 'HONORARIOS', 'HONORÁRIOS', 'OUTRAS DESPESAS']);
+        Object.entries(catAdj || {}).forEach(([k, v]) => {
+            const nk = normalize(k);
+            if (!usados.has(nk) && v > 0) {
+                html += `
+                    <div class="info-item">
+                        <label>${k} (R$):</label>
+                        <span>${formatCurrency(v)}</span>
+                    </div>
+                `;
+            }
+        });
+
+        // Total com destaque (inclui fretes)
         html += `
             <div class="info-item total-item">
                 <label>Custo Total (R$):</label>
