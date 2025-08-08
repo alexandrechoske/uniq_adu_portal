@@ -96,50 +96,66 @@ def dashboard():
 @login_required
 def get_dashboard_data():
     """API para obter dados do dashboard."""
-    
+
     try:
         # Obter informações do usuário
-        user_id = session.get('user', {}).get('id')
-        user_role = session.get('user', {}).get('role')
-        
+        user = session.get('user', {}) or {}
+        user_id = user.get('id')
+        user_role = user.get('role')
+        user_email = user.get('email')
+
         if not user_id:
             return jsonify({'error': 'Usuário não autenticado'}), 401
-        
+
         print(f"[DEBUG] Dashboard API chamada por user_id: {user_id}, role: {user_role}")
-        
+
         # Obter filtros da requisição
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 10))
         filtro_embarque = request.args.get('filtro_embarque', '')
-        
+
         print(f"[DEBUG] Parâmetros: page={page}, per_page={per_page}, filtro_embarque={filtro_embarque}")
-        
+
+        # Buscar branding (logo e nome da empresa do usuário) na view vw_user_client_logos
+        client_branding = {'name': 'Unique', 'logo_url': '/static/medias/Logo_Unique.png'}
+        try:
+            if user_email:
+                branding_q = supabase_admin.table('vw_user_client_logos') \
+                    .select('empresa, logo_url') \
+                    .eq('user_email', user_email) \
+                    .limit(1).execute()
+                if branding_q.data:
+                    row = branding_q.data[0]
+                    if row.get('empresa'):
+                        client_branding['name'] = row.get('empresa')
+                    if row.get('logo_url'):
+                        client_branding['logo_url'] = row.get('logo_url')
+            print(f"[DEBUG] Branding selecionado: {client_branding}")
+        except Exception as be:
+            print(f"[DEBUG] Erro ao obter branding do cliente: {be}")
+
         # Verificar cache primeiro
         cached_data = session.get('cached_data')
         print(f"[DEBUG] Cache session: {type(cached_data)} com {len(cached_data) if cached_data else 0} registros")
-        
+
         if not cached_data:
             cached_data = data_cache.get_cache(user_id, 'raw_data')
             print(f"[DEBUG] Cache service: {type(cached_data)} com {len(cached_data) if cached_data else 0} registros")
-        
-        # Se ainda não há dados, vamos tentar buscar direto da view vw_importacoes_6_meses_abertos_dash
+
+        # Se ainda não há dados, tentar buscar direto da view
         if not cached_data or not isinstance(cached_data, list):
             print("[DEBUG] Buscando dados direto da view vw_importacoes_6_meses_abertos_dash...")
             try:
-                # Buscar dados direto da view vw_importacoes_6_meses_abertos_dash (já filtrada)
                 query = supabase.table('vw_importacoes_6_meses_abertos_dash').select('*')
-                
-                # NOVA REGRA: Filtrar por CNPJs das empresas vinculadas se for cliente_unique ou interno_unique
+
                 if user_role in ['cliente_unique', 'interno_unique']:
-                    user_data = session.get('user', {})
-                    user_cnpjs = get_user_companies(user_data)
+                    user_cnpjs = get_user_companies(user)
                     print(f"[DEBUG] Role: {user_role}, CNPJs encontrados: {user_cnpjs}")
                     if user_cnpjs:
                         query = query.in_('cnpj_importador', user_cnpjs)
                         print(f"[DEBUG] Query filtrada por CNPJs das empresas vinculadas: {user_cnpjs}")
                     else:
                         print(f"[DEBUG] Usuário {user_role} sem CNPJs vinculados - retornando vazio")
-                        # Se não tem CNPJs vinculados, retornar dados vazios
                         return jsonify({
                             'success': True,
                             'message': 'Usuário sem empresas vinculadas',
@@ -150,26 +166,22 @@ def get_dashboard_data():
                                 'count_terrestre': 0,
                                 'current_time': datetime.now().strftime('%H:%M'),
                                 'current_date': datetime.now().strftime('%d %B').upper(),
-                                'exchange_rates': get_exchange_rates()
+                                'exchange_rates': get_exchange_rates(),
+                                'client': client_branding
                             },
                             'data': [],
                             'pagination': {'total': 0, 'pages': 0, 'current_page': 1, 'per_page': per_page}
                         })
-                else:
-                    print(f"[DEBUG] Role admin - sem filtro de CNPJs")
-                
+
                 result = query.limit(100).execute()
-                if result.data:
-                    cached_data = result.data
-                    print(f"[DEBUG] Dados obtidos direto da view: {len(cached_data)} registros")
-                else:
-                    print("[DEBUG] Nenhum dado encontrado na view")
+                cached_data = result.data or []
+                print(f"[DEBUG] Dados obtidos direto da view: {len(cached_data)} registros")
             except Exception as e:
                 print(f"[DEBUG] Erro ao buscar da view: {e}")
-        
-        if not cached_data or not isinstance(cached_data, list):
+
+        # Se ainda não há dados, retornar dados de exemplo
+        if not cached_data or not isinstance(cached_data, list) or len(cached_data) == 0:
             print("[DEBUG] Retornando dados de exemplo para teste")
-            # Retornar dados de exemplo para teste
             return jsonify({
                 'success': True,
                 'message': 'Dados de exemplo - cache vazio',
@@ -180,60 +192,20 @@ def get_dashboard_data():
                     'count_terrestre': 0,
                     'current_time': datetime.now().strftime('%H:%M'),
                     'current_date': datetime.now().strftime('%d %B').upper(),
-                    'exchange_rates': get_exchange_rates()
+                    'exchange_rates': get_exchange_rates(),
+                    'client': client_branding
                 },
                 'data': [
-                    {
-                        'modal': '1',
-                        'numero': 1,
-                        'numero_di': '25/1641705-4',
-                        'ref_unique': 'UN25/6495',
-                        'ref_importador': '0337/25 - SHANGHAI SCHULZ',
-                        'data_embarque': '16/07/2025',
-                        'data_chegada': '25/07/2025',
-                        'data_registro': '25/07/2025',
-                        'canal': 'Verde',
-                        'canal_color': '#4CAF50',
-                        'data_entrega': '29/07/2025'
-                    },
-                    {
-                        'modal': '4',
-                        'numero': 2,
-                        'numero_di': '25/1641706-2',
-                        'ref_unique': 'UN25/6496',
-                        'ref_importador': '0338/25 - AIRBUS PARTS',
-                        'data_embarque': '18/07/2025',
-                        'data_chegada': '19/07/2025',
-                        'data_registro': '20/07/2025',
-                        'canal': 'Amarelo',
-                        'canal_color': '#FF9800',
-                        'data_entrega': '22/07/2025'
-                    },
-                    {
-                        'modal': '1',
-                        'numero': 3,
-                        'numero_di': '25/1641707-0',
-                        'ref_unique': 'UN25/6497',
-                        'ref_importador': '0339/25 - MARINE SUPPLY',
-                        'data_embarque': '20/07/2025',
-                        'data_chegada': '30/07/2025',
-                        'data_registro': '01/08/2025',
-                        'canal': 'Vermelho',
-                        'canal_color': '#F44336',
-                        'data_entrega': ''
-                    }
+                    { 'modal': '1', 'numero': 1, 'numero_di': '25/1641705-4', 'ref_unique': 'UN25/6495', 'ref_importador': '0337/25 - SHANGHAI SCHULZ', 'data_embarque': '16/07/2025', 'data_chegada': '25/07/2025', 'data_registro': '25/07/2025', 'canal': 'Verde', 'canal_color': '#4CAF50', 'data_entrega': '29/07/2025' },
+                    { 'modal': '4', 'numero': 2, 'numero_di': '25/1641706-2', 'ref_unique': 'UN25/6496', 'ref_importador': '0338/25 - AIRBUS PARTS', 'data_embarque': '18/07/2025', 'data_chegada': '19/07/2025', 'data_registro': '20/07/2025', 'canal': 'Amarelo', 'canal_color': '#FF9800', 'data_entrega': '22/07/2025' },
+                    { 'modal': '1', 'numero': 3, 'numero_di': '25/1641707-0', 'ref_unique': 'UN25/6497', 'ref_importador': '0339/25 - MARINE SUPPLY', 'data_embarque': '20/07/2025', 'data_chegada': '30/07/2025', 'data_registro': '01/08/2025', 'canal': 'Vermelho', 'canal_color': '#F44336', 'data_entrega': '' }
                 ],
-                'pagination': {
-                    'total': 3,
-                    'pages': 1,
-                    'current_page': 1,
-                    'per_page': per_page
-                }
+                'pagination': { 'total': 3, 'pages': 1, 'current_page': 1, 'per_page': per_page }
             })
-        
+
         # Converter para DataFrame
         df = pd.DataFrame(cached_data)
-        
+
         if df.empty:
             return jsonify({
                 'error': 'Cache vazio',
@@ -241,111 +213,90 @@ def get_dashboard_data():
                 'data': [],
                 'pagination': {'total': 0, 'pages': 0, 'current_page': 1}
             }), 404
-        
+
         print(f"[DEBUG] DataFrame criado com {len(df)} registros")
         print(f"[DEBUG] Colunas disponíveis: {list(df.columns)}")
-        
-        # Aplicar filtro adicional por empresa se for cliente_unique ou interno_unique e não foi filtrado na query
+
+        # Aplicar filtro adicional por empresa se necessário
         if user_role in ['cliente_unique', 'interno_unique'] and 'cnpj_importador' in df.columns:
-            user_data = session.get('user', {})
-            user_cnpjs = get_user_companies(user_data)
+            user_cnpjs = get_user_companies(user)
             if user_cnpjs:
-                original_count = len(df)
+                before = len(df)
                 df = df[df['cnpj_importador'].isin(user_cnpjs)]
-                print(f"[DEBUG] Filtrado por CNPJs das empresas vinculadas: {original_count} -> {len(df)} registros")
-                print(f"[DEBUG] CNPJs utilizados no filtro: {user_cnpjs}")
+                print(f"[DEBUG] Filtrado por CNPJs: {before} -> {len(df)} registros")
             else:
-                print(f"[DEBUG] Usuário {user_role} sem CNPJs - DataFrame vazio")
-                df = df.iloc[0:0]  # DataFrame vazio
-        
-        # Aplicar filtro de data de embarque se especificado
-        if filtro_embarque == 'preenchida':
+                df = df.iloc[0:0]
+
+        # Filtro de data de embarque
+        if filtro_embarque == 'preenchida' and 'data_embarque' in df.columns:
             df = df[df['data_embarque'].notna() & (df['data_embarque'] != '')]
             print(f"[DEBUG] Filtrado por data embarque: {len(df)} registros")
-        
-        # Calcular métricas do cabeçalho
+
+        # Métricas
         total_processos = len(df)
-        
-        # Contar por modal - mapeamento flexível
-        modal_counts = df['modal'].value_counts() if 'modal' in df.columns else {}
-        
-        # Mapear diferentes valores de modal para categorias
-        count_maritimo = 0
-        count_aereo = 0
-        count_terrestre = 0
-        
+        modal_counts = df['modal'].value_counts() if 'modal' in df.columns else pd.Series(dtype=int)
+        count_maritimo = count_aereo = count_terrestre = 0
         for modal, count in modal_counts.items():
-            modal_str = str(modal).upper()
-            if modal_str in ['1', 'MARÍTIMO', 'MARÍTIMA', 'MARITIMO', 'SHIP']:
-                count_maritimo += count
-            elif modal_str in ['4', 'AÉREO', 'AÉREA', 'AEREO', 'AIRPLANE', 'PLANE']:
-                count_aereo += count
-            elif modal_str in ['7', 'TERRESTRE', 'RODOVIÁRIO', 'RODOVIARIO', 'TRUCK']:
-                count_terrestre += count
-        
-        print(f"[DEBUG] Modal counts raw: {dict(modal_counts)}")
-        print(f"[DEBUG] Métricas: total={total_processos}, marítimo={count_maritimo}, aéreo={count_aereo}, terrestre={count_terrestre}")
-        
-        # Preparar dados para a tabela
-        df_display = df.copy()
-        
-        # Selecionar colunas necessárias - mapeamento direto baseado na view vw_importacoes_6_meses
+            m = str(modal).upper()
+            if m in ['1', 'MARÍTIMO', 'MARÍTIMA', 'MARITIMO', 'SHIP']:
+                count_maritimo += int(count)
+            elif m in ['4', 'AÉREO', 'AÉREA', 'AEREO', 'AIRPLANE', 'PLANE']:
+                count_aereo += int(count)
+            elif m in ['7', 'TERRESTRE', 'RODOVIÁRIO', 'RODOVIARIO', 'TRUCK']:
+                count_terrestre += int(count)
+
+        # Padronização de colunas
         column_mapping = {
             'modal': 'modal',
             'numero_di': 'numero_di',
-            'ref_unique': 'ref_unique', 
+            'ref_unique': 'ref_unique',
             'ref_importador': 'ref_importador',
             'data_embarque': 'data_embarque',
-            'data_chegada': 'data_chegada', 
+            'data_chegada': 'data_chegada',
             'data_registro': 'data_registro',
             'canal': 'canal',
-            'data_entrega': 'data_desembaraco',  # Mapear para data_desembaraco que é o equivalente
-            'urf_destino': 'urf_despacho'  # CORREÇÃO: Adicionar campo URF de despacho
+            'data_entrega': 'data_desembaraco',
+            'urf_destino': 'urf_despacho'
         }
-        
-        # Criar DataFrame padronizado usando apenas as colunas que existem
+
         standardized_data = []
-        for _, row in df_display.iterrows():
+        for _, r in df.iterrows():
             new_row = {}
-            for std_col, source_col in column_mapping.items():
-                value = row.get(source_col, None)
-                # Converter None para string vazia e garantir que seja string
-                new_row[std_col] = str(value) if value is not None else ''
+            for std_col, src_col in column_mapping.items():
+                val = r[src_col] if src_col in r and pd.notna(r[src_col]) else ''
+                new_row[std_col] = str(val) if val is not None else ''
             standardized_data.append(new_row)
-        
+
         df_display = pd.DataFrame(standardized_data)
-        
+
         # Paginação
         total_records = len(df_display)
-        total_pages = (total_records + per_page - 1) // per_page
-        start_idx = (page - 1) * per_page
+        total_pages = (total_records + per_page - 1) // per_page if per_page > 0 else 1
+        total_pages = max(total_pages, 1)
+        start_idx = max((page - 1), 0) * per_page
         end_idx = start_idx + per_page
-        
-        df_page = df_display.iloc[start_idx:end_idx]
-        
-        # Converter para formato da tabela
+        df_page = df_display.iloc[start_idx:end_idx] if total_records > 0 else df_display
+
+        # Dados da tabela
         table_data = []
-        for idx, row in df_page.iterrows():
-            # Garantir que todos os valores sejam strings e tratar valores None
+        for _, r in df_page.iterrows():
             table_data.append({
-                'modal': str(row.get('modal', '') or ''),
+                'modal': str(r.get('modal', '') or ''),
                 'numero': start_idx + len(table_data) + 1,
-                'numero_di': str(row.get('numero_di', '') or ''),
-                'ref_unique': str(row.get('ref_unique', '') or ''),
-                'ref_importador': str(row.get('ref_importador', '') or ''),
-                'data_embarque': str(row.get('data_embarque', '') or ''),
-                'data_chegada': str(row.get('data_chegada', '') or ''),
-                'data_registro': str(row.get('data_registro', '') or ''),
-                'canal': str(row.get('canal', '') or ''),
-                'canal_color': get_canal_color(str(row.get('canal', '') or '')),
-                'data_entrega': str(row.get('data_entrega', '') or ''),
-                'urf_destino': str(row.get('urf_destino', '') or '')  # CORREÇÃO: Adicionar campo URF
+                'numero_di': str(r.get('numero_di', '') or ''),
+                'ref_unique': str(r.get('ref_unique', '') or ''),
+                'ref_importador': str(r.get('ref_importador', '') or ''),
+                'data_embarque': str(r.get('data_embarque', '') or ''),
+                'data_chegada': str(r.get('data_chegada', '') or ''),
+                'data_registro': str(r.get('data_registro', '') or ''),
+                'canal': str(r.get('canal', '') or ''),
+                'canal_color': get_canal_color(str(r.get('canal', '') or '')),
+                'data_entrega': str(r.get('data_entrega', '') or ''),
+                'urf_destino': str(r.get('urf_destino', '') or '')
             })
-        
-        # Obter cotações
+
         exchange_rates = get_exchange_rates()
-        
-        # Preparar resposta
+
         response_data = {
             'success': True,
             'header': {
@@ -355,7 +306,8 @@ def get_dashboard_data():
                 'count_terrestre': count_terrestre,
                 'current_time': datetime.now().strftime('%H:%M'),
                 'current_date': datetime.now().strftime('%d %B').upper(),
-                'exchange_rates': exchange_rates
+                'exchange_rates': exchange_rates,
+                'client': client_branding
             },
             'data': table_data,
             'pagination': {
@@ -365,10 +317,10 @@ def get_dashboard_data():
                 'per_page': per_page
             }
         }
-        
+
         print(f"[DEBUG] Retornando {len(table_data)} registros para página {page}")
         return jsonify(response_data)
-    
+
     except Exception as e:
         print(f"[ERROR] Erro ao obter dados do dashboard: {e}")
         import traceback

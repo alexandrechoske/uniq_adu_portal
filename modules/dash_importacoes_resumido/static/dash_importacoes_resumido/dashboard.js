@@ -591,6 +591,18 @@ class DashboardImportacoesResumido {
             document.getElementById('euro-rate-top').textContent = 
                 euroRate ? euroRate.toFixed(4) : '-.----';
         }
+
+        // Atualizar logo e nome do cliente, se disponível
+        if (headerData.client) {
+            const logoEl = document.getElementById('client-logo');
+            const nameEl = document.getElementById('client-name');
+            if (logoEl && headerData.client.logo_url) {
+                logoEl.src = headerData.client.logo_url;
+            }
+            if (nameEl && headerData.client.name) {
+                nameEl.textContent = headerData.client.name;
+            }
+        }
     }
     
     updateTable(tableData) {

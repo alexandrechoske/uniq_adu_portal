@@ -247,10 +247,12 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+
 }
 
 .logo-img {
-    width: 80px;
+    width: 170px;
+    border-radius: 25px;
     height: auto;
 }
 
@@ -1159,7 +1161,8 @@
 }
 
 .tv-fullscreen-mode .logo-img {
-    width: 120px !important;
+    width: 220px !important;
+    border-radius: 25px;    
     height: auto !important;
     filter: brightness(1.2) !important;
 }
