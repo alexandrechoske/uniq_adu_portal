@@ -261,6 +261,10 @@ def apply_filters(data):
         
         filtered_data = data
         
+        # Pré-normalizar campos usados para contain checks em lower() para evitar recomputo por item
+        def norm(s):
+            return str(s).lower() if s is not None else ''
+        
         # Filtrar por data
         if data_inicio and data_fim:
             filtered_data = [item for item in filtered_data 
@@ -268,35 +272,31 @@ def apply_filters(data):
         
         # Filtrar por material (múltiplas seleções)
         if material:
-            materiais_lista = [m.strip() for m in material.split(',') if m.strip()]
+            materiais_lista = [m.strip().lower() for m in material.split(',') if m.strip()]
             if materiais_lista:
                 filtered_data = [item for item in filtered_data 
-                               if any(mat.lower() in item.get('mercadoria', '').lower() 
-                                     for mat in materiais_lista)]
+                               if any(mat in norm(item.get('mercadoria')) for mat in materiais_lista)]
         
         # Filtrar por cliente (múltiplas seleções)
         if cliente:
-            clientes_lista = [c.strip() for c in cliente.split(',') if c.strip()]
+            clientes_lista = [c.strip().lower() for c in cliente.split(',') if c.strip()]
             if clientes_lista:
                 filtered_data = [item for item in filtered_data 
-                               if any(cli.lower() in item.get('importador', '').lower() 
-                                     for cli in clientes_lista)]
+                               if any(cli in norm(item.get('importador')) for cli in clientes_lista)]
         
         # Filtrar por modal (múltiplas seleções)
         if modal:
-            modais_lista = [m.strip() for m in modal.split(',') if m.strip()]
+            modais_lista = [m.strip().lower() for m in modal.split(',') if m.strip()]
             if modais_lista:
                 filtered_data = [item for item in filtered_data 
-                               if any(mod.lower() in item.get('modal', '').lower() 
-                                     for mod in modais_lista)]
+                               if any(mod in norm(item.get('modal')) for mod in modais_lista)]
         
         # Filtrar por canal (múltiplas seleções)
         if canal:
-            canais_lista = [c.strip() for c in canal.split(',') if c.strip()]
+            canais_lista = [c.strip().lower() for c in canal.split(',') if c.strip()]
             if canais_lista:
                 filtered_data = [item for item in filtered_data 
-                               if any(can.lower() in item.get('canal', '').lower() 
-                                     for can in canais_lista)]
+                               if any(can in norm(item.get('canal')) for can in canais_lista)]
         
         # Filtrar por status do processo (aberto/fechado) - REGRA CORRIGIDA usando status_macro_sistema
         if status_processo:
@@ -967,14 +967,14 @@ def recent_operations():
         relevant_columns = [
             # Colunas para a tabela
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
-            'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'data_chegada',
+            'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'custo_total_view', 'data_chegada',
             
             # Colunas adicionais para o modal
             'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque', 'data_fechamento',
             'peso_bruto', 'urf_despacho', 'urf_despacho_normalizado', 'container',
             'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
             'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',
-            'canal', 'data_desembaraco', 'despesas_processo'  # NOVO CAMPO ADICIONADO
+            'canal', 'data_desembaraco', 'despesas_processo'
         ]
         
         # Colunas normalizadas disponíveis
@@ -986,7 +986,7 @@ def recent_operations():
         print(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
         
         operations_data = df_sorted[available_columns].to_dict('records')
-
+        
         # Corrigir o campo custo_total para priorizar custo_total_view/custo_total (igual ao modal)
         for op in operations_data:
             custo_view = op.get('custo_total_view')
@@ -995,8 +995,7 @@ def recent_operations():
                 op['custo_total'] = custo_view
             elif custo_total is not None and custo_total > 0:
                 op['custo_total'] = custo_total
-            # Se não houver valor, mantém o original
-
+        
         # Log específico para o processo 6555 nos dados enviados para o frontend
         for op in operations_data:
             ref_unique = str(op.get('ref_unique', ''))
@@ -1007,7 +1006,7 @@ def recent_operations():
                 print(f"[RECENT_OPERATIONS] custo_total_view: {op.get('custo_total_view', 'N/A')}")
                 print(f"[RECENT_OPERATIONS] custo_total_original: {op.get('custo_total_original', 'N/A')}")
                 break
-
+        
         return jsonify({
             'success': True,
             'operations': clean_data_for_json(operations_data)

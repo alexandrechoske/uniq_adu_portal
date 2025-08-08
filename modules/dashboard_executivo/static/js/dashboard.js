@@ -19,6 +19,12 @@ let isLoading = false;
 let loadAttempts = 0;
 const maxLoadAttempts = 3;
 
+// Paleta consistente para tipos de dado
+const DASH_COLORS = {
+    processos: '#007bff', // azul
+    custo: '#f59e0b'      // laranja
+};
+
 // CACHE INTELIGENTE: Sistema de cache para evitar recarregamentos desnecessários
 let dashboardCache = {
     kpis: null,
@@ -69,16 +75,6 @@ let dashboardState = {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
     
-    // Aguardar sistema unificado de loading estar pronto
-    const waitForUnifiedSystem = () => {
-        if (window.unifiedLoadingManager) {
-            console.log('[DASHBOARD_EXECUTIVO] Sistema unificado detectado');
-            initializeDashboard();
-        } else {
-            setTimeout(waitForUnifiedSystem, 100);
-        }
-    };
-    
     // Detectar se o usuário está voltando para a página (cache do navegador)
     window.addEventListener('pageshow', function(event) {
         if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
@@ -106,12 +102,413 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('[DASHBOARD_EXECUTIVO] Erro ao registrar plugin:', error);
                 }
             }
-            waitForUnifiedSystem();
+            // Inicializa direto, sem depender do sistema unificado (desativado nesta página)
+            initializeDashboard();
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Chart.js não foi carregado');
         }
     }, 1000);
 });
+
+// ===== Stubs leves para evitar ReferenceError sem mudar comportamento =====
+// Algumas funções podem não existir dependendo da ordem de scripts; criamos stubs no-ops
+if (typeof window.createDashboardChartsWithValidation !== 'function') {
+    window.createDashboardChartsWithValidation = function(charts) {
+        // fallback para createDashboardCharts se existir
+        if (typeof window.createDashboardCharts === 'function') {
+            return window.createDashboardCharts(charts);
+        }
+        console.warn('[DASHBOARD_EXECUTIVO] Stub: createDashboardChartsWithValidation ausente');
+    };
+}
+if (typeof window.updateDashboardKPIs !== 'function') {
+    window.updateDashboardKPIs = function(kpis) {
+        console.warn('[DASHBOARD_EXECUTIVO] Stub: updateDashboardKPIs ausente');
+        // No-op: manter sem UI change; loaders por componente já serão ocultados via wrappers
+    };
+}
+if (typeof window.setMonthlyChartPeriod !== 'function') {
+    window.setMonthlyChartPeriod = function(period) {
+        // Ajusta variável local e dispara loadMonthlyChart
+        try {
+            monthlyChartPeriod = period || monthlyChartPeriod || 'mensal';
+            loadMonthlyChart(monthlyChartPeriod);
+        } catch (e) {
+            console.warn('[DASHBOARD_EXECUTIVO] Stub: setMonthlyChartPeriod ausente');
+        }
+    };
+}
+if (typeof window.createMonthlyChartWithValidation !== 'function') {
+    window.createMonthlyChartWithValidation = function() { /* no-op */ };
+}
+if (typeof window.createStatusChartWithValidation !== 'function') {
+    window.createStatusChartWithValidation = function() { /* no-op */ };
+}
+if (typeof window.createGroupedModalChartWithValidation !== 'function') {
+    window.createGroupedModalChartWithValidation = function() { /* no-op */ };
+}
+if (typeof window.createUrfChartWithValidation !== 'function') {
+    window.createUrfChartWithValidation = function() { /* no-op */ };
+}
+if (typeof window.createMaterialChartWithValidation !== 'function') {
+    window.createMaterialChartWithValidation = function() { /* no-op */ };
+}
+
+// ===== Implementações reais de KPIs e gráficos (com validação) =====
+// Helpers de Chart.js
+function getCanvasContext(id) {
+    const el = document.getElementById(id);
+    if (!el) {
+        console.error(`[DASHBOARD_EXECUTIVO] Canvas #${id} não encontrado`);
+        return null;
+    }
+    return el.getContext ? el.getContext('2d') : el;
+}
+
+function destroyChartIfExists(id) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const existing = Chart.getChart(canvas);
+    if (existing) {
+        try { existing.destroy(); } catch (_) {}
+    }
+}
+
+// Atualização de KPIs
+window.updateDashboardKPIs = function(kpis) {
+    try {
+        if (!kpis || typeof kpis !== 'object') return;
+        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setText('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
+        setText('kpi-chegando-mes', formatNumber(kpis.chegando_mes || 0));
+    setText('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
+        setText('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
+    setText('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo || 0));
+        setText('kpi-Agd-embarque', formatNumber(kpis.aguardando_embarque || 0));
+        setText('kpi-Agd-chegada', formatNumber(kpis.aguardando_chegada || 0));
+        setText('kpi-Agd-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
+        setText('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
+        setText('kpi-Agd-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
+    setText('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas || 0));
+    } finally {
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('kpi-loading'); } catch (_) {}
+    }
+};
+
+// Orquestrador principal dos gráficos (usa funções com validação)
+window.createDashboardChartsWithValidation = function(charts) {
+    try {
+        if (!charts || typeof charts !== 'object') return;
+        if (charts.monthly) window.createMonthlyChartWithValidation(charts.monthly);
+        if (charts.status) window.createStatusChartWithValidation(charts.status);
+        if (charts.grouped_modal) window.createGroupedModalChartWithValidation(charts.grouped_modal);
+        if (charts.urf) window.createUrfChartWithValidation(charts.urf);
+        if (charts.principais_materiais) window.createPrincipaisMateriaisTableWithValidation(charts.principais_materiais);
+        // material (barras) opcional – mantemos somente a tabela principais_materiais
+    } catch (e) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráficos:', e);
+    }
+};
+
+// Evolução Mensal (mixed chart)
+window.createMonthlyChart = function(data) {
+    try {
+        if (!data || !data.labels || !data.datasets) {
+            console.warn('[DASHBOARD_EXECUTIVO] Dados inválidos para gráfico mensal');
+            return;
+        }
+        destroyChartIfExists('monthly-chart');
+        const ctx = getCanvasContext('monthly-chart');
+        if (!ctx) return;
+    const labelsCount = Array.isArray(data.labels) ? data.labels.length : 0;
+    const dense = (typeof monthlyChartPeriod !== 'undefined' && monthlyChartPeriod === 'diario') || labelsCount > 45;
+        dashboardCharts.monthly = new Chart(ctx, {
+            data: {
+                labels: data.labels,
+                datasets: data.datasets.map(ds => {
+                    const isCusto = /custo/i.test(ds.label || '');
+                    const color = isCusto ? DASH_COLORS.custo : DASH_COLORS.processos;
+                    const bg = isCusto ? 'rgba(245, 158, 11, 0.08)' : 'rgba(0, 123, 255, 0.08)';
+                    return {
+                        ...ds,
+                        type: 'line',
+                        fill: 'origin',
+                        borderColor: color,
+                        backgroundColor: bg,
+                        borderWidth: 2,
+                        pointRadius: dense ? 0 : 2,
+                        pointHoverRadius: dense ? 0 : 4,
+                        tension: ds.tension ?? 0.35
+                    };
+                })
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const yId = ctx.dataset.yAxisID;
+                                const v = ctx.parsed.y;
+                return yId === 'y' ? ` ${formatCurrencyCompact(v)}` : ` ${formatNumber(v)}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: !dense,
+                        anchor: 'end',
+                        align: (ctx) => (/custo/i.test(ctx.dataset.label || '') ? 'top' : 'bottom'),
+                        offset: 3,
+                        clamp: true,
+                        formatter: (value, ctx) => {
+                            const isCusto = /custo/i.test(ctx.dataset.label || '');
+                            return isCusto ? formatCurrencyCompact(value) : formatNumber(value);
+                        },
+                        color: (ctx) => (/custo/i.test(ctx.dataset.label || '') ? DASH_COLORS.custo : DASH_COLORS.processos),
+                        font: { weight: '600', size: 11 }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        ticks: { display: false },
+                        grid: { display: false },
+                        border: { display: false }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        ticks: { display: false },
+                        grid: { display: false },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    } finally {
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('monthly-loading'); } catch (_) {}
+    }
+};
+
+window.createMonthlyChartWithValidation = function(payload) {
+    try {
+        // Aceita payload em dois formatos: já pronto (labels/datasets) ou {labels, data/processes/values}
+        if (!payload) return;
+        if (payload.labels && payload.datasets) {
+            return window.createMonthlyChart(payload);
+        }
+        if (payload.periods) {
+            return window.createMonthlyChart({
+                labels: payload.periods,
+                datasets: [
+                    {
+                        label: 'Quantidade de Processos',
+                        data: payload.processes || [],
+                        type: 'line',
+                        borderColor: DASH_COLORS.processos,
+                        backgroundColor: 'rgba(0, 123, 255, 0.08)',
+                        yAxisID: 'y1',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Custo Total (R$)',
+                        data: payload.values || [],
+                        type: 'line',
+                        borderColor: DASH_COLORS.custo,
+                        backgroundColor: 'rgba(40, 167, 69, 0.08)',
+                        yAxisID: 'y',
+                        tension: 0.4
+                    }
+                ]
+            });
+        }
+    } finally {
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('monthly-loading'); } catch (_) {}
+    }
+};
+
+// Status (doughnut)
+window.createStatusChart = function(data) {
+    try {
+        if (!data || !data.labels || !data.data) return;
+        destroyChartIfExists('status-chart');
+        const ctx = getCanvasContext('status-chart');
+        if (!ctx) return;
+        dashboardCharts.status = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.data,
+                    backgroundColor: [
+                        '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
+                        '#06b6d4', '#84cc16', '#f97316', '#e11d48', '#64748b'
+                    ],
+                    borderColor: '#ffffff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    datalabels: {
+                        color: (ctx) => {
+                            try {
+                                const bg = ctx.dataset.backgroundColor[ctx.dataIndex];
+                                return getContrastTextColor(bg);
+                            } catch (_) { return '#111'; }
+                        },
+                        formatter: (value) => `${formatNumber(value)}`,
+                        font: { weight: '600' }
+                    }
+                }
+            }
+        });
+    } finally {
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('status-loading'); } catch (_) {}
+    }
+};
+
+window.createStatusChartWithValidation = function(payload) {
+    try { if (payload) return window.createStatusChart(payload); }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('status-loading'); } catch (_) {} }
+};
+
+// Modal (barras + Barras)
+window.createGroupedModalChart = function(data) {
+    try {
+        if (!data || !data.labels || !data.datasets) return;
+        destroyChartIfExists('grouped-modal-chart');
+        const ctx = getCanvasContext('grouped-modal-chart');
+        if (!ctx) return;
+        dashboardCharts.groupedModal = new Chart(ctx, {
+            data: {
+                labels: data.labels,
+        datasets: data.datasets.map(ds => {
+                    const isCusto = /custo/i.test((ds.label || ''));
+                    return {
+                        ...ds,
+                        type: 'bar',
+            backgroundColor: isCusto ? 'rgba(245, 158, 11, 0.6)' : 'rgba(0, 123, 255, 0.6)',
+                        borderColor: isCusto ? DASH_COLORS.custo : DASH_COLORS.processos
+                    };
+                })
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top' },
+                    datalabels: {
+            anchor: 'end', align: 'end', clip: false, offset: 6,
+                        formatter: (value, ctx) => {
+                            const label = ctx.dataset.label || '';
+                            return /custo/i.test(label) ? formatCurrencyCompact(value) : formatNumber(value);
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const label = ctx.dataset.label || '';
+                                const v = ctx.parsed.y;
+                                return /custo/i.test(label) ? ` ${formatCurrencyCompact(v)}` : ` ${formatNumber(v)}`;
+                            }
+                        }
+                    }
+                },
+                layout: { padding: { top: 0 } },
+                scales: {
+                    y: {
+                        type: 'linear', position: 'left',
+                        ticks: { display: false },
+                        grid: { display: false },
+                        border: { display: false }
+                    },
+                    y1: {
+                        type: 'linear', position: 'right', beginAtZero: true,
+                        ticks: { display: false },
+                        grid: { display: false },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    } finally {
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('modal-loading'); } catch (_) {}
+    }
+};
+
+window.createGroupedModalChartWithValidation = function(payload) {
+    try { if (payload) return window.createGroupedModalChart(payload); }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('modal-loading'); } catch (_) {} }
+};
+
+// URF (horizontal bar)
+window.createUrfChart = function(data) {
+    try {
+        if (!data || !data.labels || !data.data) return;
+        destroyChartIfExists('urf-chart');
+        const ctx = getCanvasContext('urf-chart');
+        if (!ctx) return;
+        dashboardCharts.urf = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Processos',
+                    data: data.data,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, grid: { display: false }, border: { display: false } },
+                    y: { grid: { display: false }, border: { display: false } }
+                }
+            }
+        });
+    } finally {
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('urf-loading'); } catch (_) {}
+    }
+};
+
+window.createUrfChartWithValidation = function(payload) {
+    try { if (payload) return window.createUrfChart(payload); }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('urf-loading'); } catch (_) {} }
+};
+
+// Principais Materiais (tabela)
+window.createPrincipaisMateriaisTableWithValidation = function(payload) {
+    try { if (payload) return createPrincipaisMateriaisTable(payload); }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('material-loading'); } catch (_) {} }
+};
+
+// Ajuste de período do gráfico mensal
+window.setMonthlyChartPeriod = function(period) {
+    try {
+        monthlyChartPeriod = period || 'mensal';
+        // Atualizar botões ativos
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.period === monthlyChartPeriod);
+        });
+        loadMonthlyChart(monthlyChartPeriod);
+    } catch (e) {
+        console.warn('[DASHBOARD_EXECUTIVO] Erro ao definir período do gráfico mensal:', e);
+    }
+};
 
 /**
  * Validate and recreate charts if they are missing
@@ -631,11 +1028,9 @@ function hasFiltersChanged() {
 async function loadDashboardKPIs() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs...');
-        
         const queryString = buildFilterQueryString();
-        const response = await fetch(`/dashboard-executivo/api/kpis?${queryString}`);
+        const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
-        
         if (result.success) {
             updateDashboardKPIs(result.kpis);
         } else {
@@ -652,11 +1047,9 @@ async function loadDashboardKPIs() {
 async function loadDashboardKPIsWithCache() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs com cache...');
-        
         const queryString = buildFilterQueryString();
-        const response = await fetch(`/dashboard-executivo/api/kpis?${queryString}`);
+        const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
-        
         if (result.success) {
             dashboardCache.set('kpis', result.kpis);
             updateDashboardKPIs(result.kpis);
@@ -675,11 +1068,9 @@ async function loadDashboardKPIsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando KPIs (tentativa ${attempt}/${maxRetries})...`);
-            
             const queryString = buildFilterQueryString();
-            const response = await fetch(`/dashboard-executivo/api/kpis?${queryString}`);
+            const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
             const result = await response.json();
-            
             if (result.success && result.kpis) {
                 console.log('[DASHBOARD_EXECUTIVO] KPIs carregados com sucesso');
                 dashboardCache.set('kpis', result.kpis);
@@ -688,12 +1079,9 @@ async function loadDashboardKPIsWithRetry(maxRetries = 2) {
             } else {
                 throw new Error(result.error || 'KPIs não encontrados');
             }
-            
         } catch (error) {
             console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de KPIs falhou:`, error.message);
-            
             if (attempt === maxRetries) {
-                // Tentar usar cache como fallback
                 const cachedKpis = dashboardCache.get('kpis');
                 if (cachedKpis) {
                     console.log('[DASHBOARD_EXECUTIVO] Usando KPIs do cache como fallback');
@@ -702,7 +1090,6 @@ async function loadDashboardKPIsWithRetry(maxRetries = 2) {
                 }
                 throw error;
             }
-            
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
     }
@@ -714,11 +1101,9 @@ async function loadDashboardKPIsWithRetry(maxRetries = 2) {
 async function loadDashboardCharts() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando gráficos...');
-        
         const queryString = buildFilterQueryString();
-        const response = await fetch(`/dashboard-executivo/api/charts?${queryString}`);
+        const response = await fetchWithAbort('charts', `/dashboard-executivo/api/charts?${queryString}`);
         const result = await response.json();
-        
         if (result.success) {
             createDashboardCharts(result.charts);
         } else {
@@ -735,11 +1120,9 @@ async function loadDashboardCharts() {
 async function loadDashboardChartsWithCache() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando gráficos com cache...');
-        
         const queryString = buildFilterQueryString();
-        const response = await fetch(`/dashboard-executivo/api/charts?${queryString}`);
+        const response = await fetchWithAbort('charts', `/dashboard-executivo/api/charts?${queryString}`);
         const result = await response.json();
-        
         if (result.success) {
             dashboardCache.set('charts', result.charts);
             createDashboardChartsWithValidation(result.charts);
@@ -758,11 +1141,9 @@ async function loadDashboardChartsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando gráficos (tentativa ${attempt}/${maxRetries})...`);
-            
             const queryString = buildFilterQueryString();
-            const response = await fetch(`/dashboard-executivo/api/charts?${queryString}`);
+            const response = await fetchWithAbort('charts', `/dashboard-executivo/api/charts?${queryString}`);
             const result = await response.json();
-            
             if (result.success && result.charts) {
                 console.log('[DASHBOARD_EXECUTIVO] Gráficos carregados com sucesso');
                 dashboardCache.set('charts', result.charts);
@@ -771,24 +1152,18 @@ async function loadDashboardChartsWithRetry(maxRetries = 2) {
             } else {
                 throw new Error(result.error || 'Gráficos não encontrados');
             }
-            
         } catch (error) {
             console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de gráficos falhou:`, error.message);
-            
             if (attempt === maxRetries) {
-                // Tentar usar cache como fallback
                 const cachedCharts = dashboardCache.get('charts');
                 if (cachedCharts) {
                     console.log('[DASHBOARD_EXECUTIVO] Usando gráficos do cache como fallback');
                     createDashboardChartsWithValidation(cachedCharts);
                     return;
                 }
-                
-                // Se não há cache, criar gráficos vazios para evitar telas em branco
                 createEmptyCharts();
                 throw error;
             }
-            
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
     }
@@ -800,11 +1175,9 @@ async function loadDashboardChartsWithRetry(maxRetries = 2) {
 async function loadRecentOperations() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando operações recentes...');
-        
         const queryString = buildFilterQueryString();
-        const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
+        const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
-        
         if (result.success) {
             updateRecentOperationsTable(result.operations);
         } else {
@@ -821,11 +1194,9 @@ async function loadRecentOperations() {
 async function loadRecentOperationsWithCache() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando operações recentes com cache...');
-        
         const queryString = buildFilterQueryString();
-        const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
+        const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
-        
         if (result.success) {
             dashboardCache.set('operations', result.operations);
             updateRecentOperationsTable(result.operations);
@@ -844,11 +1215,9 @@ async function loadRecentOperationsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando operações (tentativa ${attempt}/${maxRetries})...`);
-            
             const queryString = buildFilterQueryString();
-            const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
+            const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
             const result = await response.json();
-            
             if (result.success && result.operations) {
                 console.log(`[DASHBOARD_EXECUTIVO] Operações carregadas: ${result.operations.length} registros`);
                 dashboardCache.set('operations', result.operations);
@@ -857,24 +1226,18 @@ async function loadRecentOperationsWithRetry(maxRetries = 2) {
             } else {
                 throw new Error(result.error || 'Operações não encontradas');
             }
-            
         } catch (error) {
             console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de operações falhou:`, error.message);
-            
             if (attempt === maxRetries) {
-                // Tentar usar cache como fallback
                 const cachedOperations = dashboardCache.get('operations');
                 if (cachedOperations) {
                     console.log('[DASHBOARD_EXECUTIVO] Usando operações do cache como fallback');
                     updateRecentOperationsTable(cachedOperations);
                     return;
                 }
-                
-                // Se não há cache, mostrar tabela vazia
                 updateRecentOperationsTable([]);
                 throw error;
             }
-            
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
     }
@@ -887,10 +1250,8 @@ async function loadFilterOptionsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando filtros (tentativa ${attempt}/${maxRetries})...`);
-            
-            const response = await fetch('/dashboard-executivo/api/filter-options');
+            const response = await fetchWithAbort('filter-options', '/dashboard-executivo/api/filter-options');
             const result = await response.json();
-            
             if (result.success && result.options) {
                 console.log('[DASHBOARD_EXECUTIVO] Opções de filtros carregadas:', {
                     materiais: result.options.materiais?.length || 0,
@@ -898,27 +1259,21 @@ async function loadFilterOptionsWithRetry(maxRetries = 2) {
                     modais: result.options.modais?.length || 0,
                     canais: result.options.canais?.length || 0
                 });
-                
                 dashboardCache.set('filterOptions', result.options);
                 populateFilterOptions(result.options);
                 return;
             } else {
                 throw new Error(result.error || 'Opções de filtros não encontradas');
             }
-            
         } catch (error) {
             console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} de filtros falhou:`, error.message);
-            
             if (attempt === maxRetries) {
-                // Tentar usar cache como fallback
                 const cachedOptions = dashboardCache.get('filterOptions');
                 if (cachedOptions) {
                     console.log('[DASHBOARD_EXECUTIVO] Usando filtros do cache como fallback');
                     populateFilterOptions(cachedOptions);
                     return;
                 }
-                
-                // Se não há cache, criar filtros vazios
                 populateFilterOptions({
                     materiais: [],
                     clientes: [],
@@ -927,849 +1282,37 @@ async function loadFilterOptionsWithRetry(maxRetries = 2) {
                 });
                 throw error;
             }
-            
             await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
     }
 }
 
-/**
- * Update dashboard KPIs
- */
-function updateDashboardKPIs(kpis) {
-    console.log('[DASHBOARD_EXECUTIVO] Atualizando KPIs...', kpis);
-    
-    // Update KPI values com nova estrutura - apenas KPIs existentes
-    updateKPIValue('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
-    updateKPIValue('kpi-chegando-mes', formatNumber(kpis.chegando_mes));
-    updateKPIValue('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo));
-    updateKPIValue('kpi-chegando-semana', formatNumber(kpis.chegando_semana));
-    updateKPIValue('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo));
-    updateKPIValue('kpi-Agd-embarque', formatNumber(kpis.aguardando_embarque || 0));
-    updateKPIValue('kpi-Agd-chegada', formatNumber(kpis.aguardando_chegada || 0));
-    updateKPIValue('kpi-Agd-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
-    updateKPIValue('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
-    updateKPIValue('kpi-Agd-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
-    updateKPIValue('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas));
-    // Removidos: kpi-total-processos, kpi-processos-fechados, kpi-ticket-medio
-}
-
-/**
- * Update KPI value safely
- */
-function updateKPIValue(elementId, value) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-/**
- * Create dashboard charts
- */
-function createDashboardCharts(charts) {
-    console.log('[DASHBOARD_EXECUTIVO] Criando gráficos (versão simplificada)...', charts);
-    
-    // Create monthly chart
-    if (charts.monthly) {
-        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico mensal...');
-        createMonthlyChart(charts.monthly);
-    }
-    
-    // Create status chart
-    if (charts.status) {
-        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico de status...');
-        createStatusChart(charts.status);
-    }
-    
-    // Create grouped modal chart
-    if (charts.grouped_modal) {
-        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico modal...');
-        createGroupedModalChart(charts.grouped_modal);
-    }
-    
-    // Create URF chart
-    if (charts.urf) {
-        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico URF...');
-        createUrfChart(charts.urf);
-    }
-    
-    // NOVO: Create principais materiais table (substitui o gráfico material)
-    if (charts.principais_materiais) {
-        console.log('[DASHBOARD_EXECUTIVO] Criando tabela de principais materiais...');
-        createPrincipaisMateriaisTable(charts.principais_materiais);
-    }
-    
-    // Keep material chart for transit time (pode ser removido depois se não for usado)
-    if (charts.material) {
-        console.log('[DASHBOARD_EXECUTIVO] Criando gráfico material...');
-        createMaterialChart(charts.material);
-    }
-}
-
-/**
- * Create dashboard charts with validation and error handling
- */
-function createDashboardChartsWithValidation(charts) {
-    if (!charts) {
-        console.error('[DASHBOARD_EXECUTIVO] Dados de gráficos não fornecidos');
-        return;
-    }
-    
-    console.log('[DASHBOARD_EXECUTIVO] Criando gráficos com validação...', charts);
-    
+// ===== Request deduplication: abort previous in-flight requests per endpoint =====
+const requestControllers = {};
+function fetchWithAbort(key, url, options = {}) {
     try {
-        // Verificar se Chart.js está disponível
-        if (typeof Chart === 'undefined') {
-            console.error('[DASHBOARD_EXECUTIVO] Chart.js não está disponível');
-            return;
+        if (requestControllers[key]) {
+            requestControllers[key].abort();
         }
-        
-        // Create monthly chart with validation
-        if (charts.monthly && charts.monthly.labels && charts.monthly.datasets) {
-            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico mensal...');
-            createMonthlyChartWithValidation(charts.monthly);
-        } else {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal inválidos ou ausentes');
-        }
-        
-        // Create status chart with validation
-        if (charts.status && charts.status.labels && charts.status.data) {
-            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico de status...');
-            createStatusChartWithValidation(charts.status);
-        } else {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de status inválidos ou ausentes');
-        }
-        
-        // Create grouped modal chart with validation
-        if (charts.grouped_modal && charts.grouped_modal.labels && charts.grouped_modal.datasets) {
-            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico modal...');
-            createGroupedModalChartWithValidation(charts.grouped_modal);
-        } else {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico modal inválidos ou ausentes');
-        }
-        
-        // Create URF chart with validation
-        if (charts.urf && charts.urf.labels && charts.urf.data) {
-            console.log('[DASHBOARD_EXECUTIVO] Criando gráfico URF...');
-            createUrfChartWithValidation(charts.urf);
-        } else {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico URF inválidos ou ausentes');
-        }
-        
-        // Create principais materiais table with validation
-        if (charts.principais_materiais && charts.principais_materiais.data) {
-            console.log('[DASHBOARD_EXECUTIVO] Criando tabela de principais materiais...');
-            createPrincipaisMateriaisTableWithValidation(charts.principais_materiais);
-        } else {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais inválidos ou ausentes');
-        }
-        
-        // CORREÇÃO: Material só tem TABELA, não gráfico
-        // Removido createMaterialChartWithValidation pois canvas material-chart não existe no HTML
-        
-        console.log('[DASHBOARD_EXECUTIVO] Todos os gráficos foram criados com sucesso');
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráficos:', error);
-        showError('Erro ao criar gráficos. Tente recarregar a página.');
+        const controller = new AbortController();
+        requestControllers[key] = controller;
+        const opts = { ...(options || {}), signal: controller.signal };
+        return fetch(url, opts);
+    } catch (e) {
+        return fetch(url, options);
     }
 }
 
-/**
- * Create monthly evolution chart
- */
-function createMonthlyChart(data) {
-    const ctx = document.getElementById('monthly-chart');
-    if (!ctx) {
-        console.error('[DASHBOARD_EXECUTIVO] Canvas monthly-chart não encontrado');
-        return;
-    }
+// ...existing code...
 
-    if (typeof Chart === 'undefined') {
-        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
-        return;
-    }
-
-    // Destroy existing chart
-    if (dashboardCharts.monthly) {
-        dashboardCharts.monthly.destroy();
-    }
-
-    try {
-        // Adiciona área ao dataset de custo (área sob a linha)
-        const datasets = (data.datasets || []).map((ds, idx) => {
-            // O dataset de custo é o segundo (idx === 1)
-            if (idx === 1) {
-                return {
-                    ...ds,
-                    type: 'line', // Força o tipo como linha
-                    fill: {
-                        target: 'origin',
-                        above: 'rgba(40, 167, 69, 0.08)', // verde claro
-                    },
-                    pointBackgroundColor: ds.borderColor,
-                };
-            }
-            // O dataset de processos é o primeiro (idx === 0)
-            return {
-                ...ds,
-                type: 'line', // Força o tipo como linha
-                fill: false,
-                pointBackgroundColor: ds.borderColor,
-            };
-        });
-
-        // Lógica inteligente para exibir rótulos de dados:
-        // - Até 15 pontos: mostra todos
-        // - 16-30 pontos: mostra a cada 2
-        // - 31-60 pontos: mostra a cada 4
-        // - 61-120 pontos: mostra a cada 8
-        // - >120 pontos: mostra só o primeiro, último e a cada 15
-        const totalPoints = (data.labels || []).length;
-        let showLabelAtIndex = () => true;
-        if (totalPoints > 120) {
-            showLabelAtIndex = (i) => i === 0 || i === totalPoints - 1 || i % 15 === 0;
-        } else if (totalPoints > 60) {
-            showLabelAtIndex = (i) => i % 8 === 0 || i === totalPoints - 1;
-        } else if (totalPoints > 30) {
-            showLabelAtIndex = (i) => i % 4 === 0 || i === totalPoints - 1;
-        } else if (totalPoints > 15) {
-            showLabelAtIndex = (i) => i % 2 === 0 || i === totalPoints - 1;
-        }
-
-        dashboardCharts.monthly = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.labels || [],
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                    },
-                    legend: {
-                        position: 'top'
-                    },
-                    datalabels: {
-                        display: function(context) {
-                            // Só mostra rótulo se for um índice permitido
-                            return showLabelAtIndex(context.dataIndex);
-                        },
-                        align: function(context) {
-                            // Primeiro dataset (processos): label em cima
-                            // Segundo dataset (custo): label embaixo
-                            return context.datasetIndex === 0 ? 'top' : 'bottom';
-                        },
-                        anchor: function(context) {
-                            return context.datasetIndex === 0 ? 'end' : 'start';
-                        },
-                        backgroundColor: function(context) {
-                            // Fundo igual à cor da linha/barra
-                            return context.dataset.borderColor || 'rgba(0,0,0,0.1)';
-                        },
-                        borderRadius: 4,
-                        color: '#fff',
-                        font: {
-                            weight: 'bold',
-                            size: 11
-                        },
-                        padding: {top: 2, bottom: 2, left: 6, right: 6},
-                        formatter: function(value, context) {
-                            // Formatação diferente para cada dataset
-                            if (context.datasetIndex === 0) {
-                                // Processos
-                                return value;
-                            } else {
-                                // Custo
-                                if (typeof value === 'number') {
-                                    if (value >= 1e6) {
-                                        return 'R$ ' + (value / 1e6).toFixed(1).replace('.0', '') + 'M';
-                                    } else if (value >= 1e3) {
-                                        return 'R$ ' + (value / 1e3).toFixed(0) + 'k';
-                                    }
-                                    return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0});
-                                }
-                                return value;
-                            }
-                        },
-                        z: 10
-                    }
-                },
-                scales: {
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Custo Total (R$)'
-                        },
-                        ticks: {
-                            display: false // Remove valores do eixo Y
-                        },
-                        grid: {
-                            drawOnChartArea: false, // Remove grades do fundo
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Quantidade de Processos'
-                        },
-                        ticks: {
-                            display: false // Remove valores do eixo Y1
-                        },
-                        grid: {
-                            drawOnChartArea: false, // Remove grades do fundo
-                        },
-                    }
-                },
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                }
-            },
-            plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
-        });
-        console.log('[DASHBOARD_EXECUTIVO] Gráfico mensal criado com sucesso');
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico mensal:', error);
-    }
-}
-
-/**
- * Create monthly evolution chart with validation
- */
-function createMonthlyChartWithValidation(data) {
-    try {
-        // Validação robusta dos dados
-        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal inválidos - labels ausentes ou vazios');
-            return;
-        }
-        
-        if (!data.datasets || !Array.isArray(data.datasets) || data.datasets.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal inválidos - datasets ausentes ou vazios');
-            return;
-        }
-        
-        // Verificar se cada dataset tem dados válidos
-        for (let i = 0; i < data.datasets.length; i++) {
-            const dataset = data.datasets[i];
-            if (!dataset.data || !Array.isArray(dataset.data) || dataset.data.length === 0) {
-                console.warn(`[DASHBOARD_EXECUTIVO] Dataset ${i} do gráfico mensal tem dados inválidos`);
-                return;
-            }
-        }
-        
-        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico mensal validados - criando gráfico...');
-        createMonthlyChart(data);
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico mensal:', error);
-    }
-}
-
-/**
- * Create status chart with validation
- */
-function createStatusChartWithValidation(data) {
-    try {
-        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de status inválidos - labels ausentes ou vazios');
-            return;
-        }
-        
-        if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de status inválidos - data ausente ou vazio');
-            return;
-        }
-        
-        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico de status validados - criando gráfico...');
-        createStatusChart(data);
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico de status:', error);
-    }
-}
-
-/**
- * Create grouped modal chart with validation
- */
-function createGroupedModalChartWithValidation(data) {
-    try {
-        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico modal inválidos - labels ausentes ou vazios');
-            return;
-        }
-        
-        if (!data.datasets || !Array.isArray(data.datasets) || data.datasets.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico modal inválidos - datasets ausentes ou vazios');
-            return;
-        }
-        
-        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico modal validados - criando gráfico...');
-        createGroupedModalChart(data);
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico modal:', error);
-    }
-}
-
-/**
- * Create URF chart with validation
- */
-function createUrfChartWithValidation(data) {
-    try {
-        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico URF inválidos - labels ausentes ou vazios');
-            return;
-        }
-        
-        if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico URF inválidos - data ausente ou vazio');
-            return;
-        }
-        
-        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico URF validados - criando gráfico...');
-        createUrfChart(data);
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico URF:', error);
-    }
-}
-
-/**
- * Create material chart with validation
- */
-function createMaterialChartWithValidation(data) {
-    try {
-        if (!data || !data.labels || !Array.isArray(data.labels) || data.labels.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de material inválidos - labels ausentes ou vazios');
-            return;
-        }
-        
-        if (!data.data || !Array.isArray(data.data) || data.data.length === 0) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados do gráfico de material inválidos - data ausente ou vazio');
-            return;
-        }
-        
-        console.log('[DASHBOARD_EXECUTIVO] Dados do gráfico de material validados - criando gráfico...');
-        createMaterialChart(data);
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro na validação do gráfico de material:', error);
-    }
-}
-
-/**
- * Create principais materiais table with validation
- */
-function createPrincipaisMateriaisTableWithValidation(data) {
-    try {
-        if (!data || !data.data || !Array.isArray(data.data)) {
-            console.warn('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais inválidos - data ausente ou não é array');
-            
-            // Criar tabela vazia com mensagem
-            const tableBody = document.querySelector('#principais-materiais-table tbody');
-            if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum material encontrado</td></tr>';
-            }
-            return;
-        }
-        
-        console.log('[DASHBOARD_EXECUTIVO] Dados da tabela de materiais validados - criando tabela...');
-        createPrincipaisMateriaisTable(data);
-        
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro na validação da tabela de materiais:', error);
-    }
-}
-
-/**
- * Create status distribution chart
- */
-function createStatusChart(data) {
-    const ctx = document.getElementById('status-chart');
-    if (!ctx) return;
-
-    // Destroy existing chart
-    if (dashboardCharts.status) {
-        dashboardCharts.status.destroy();
-    }
-
-    // Função para quebrar o label em múltiplas linhas (máx 14 chars por linha)
-    const breakLabel = label => {
-        if (!label) return '';
-        const words = label.split(' ');
-        let lines = [];
-        let current = '';
-        words.forEach(word => {
-            if ((current + ' ' + word).trim().length > 14) {
-                if (current) lines.push(current.trim());
-                current = word;
-            } else {
-                current += ' ' + word;
-            }
-        });
-        if (current) lines.push(current.trim());
-        return lines;
-    };
-
-    dashboardCharts.status = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: (data.labels || []).map(breakLabel),
-            datasets: [{
-                data: data.data || [],
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                    '#4BC0C0', '#FF6384'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        // Permite múltiplas linhas na legenda
-                        usePointStyle: true,
-                        textAlign: 'left',
-                        font: {
-                            size: 13
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-/**
- * Create grouped modal chart
- */
-function createGroupedModalChart(data) {
-    const ctx = document.getElementById('grouped-modal-chart');
-    if (!ctx) {
-        console.error('[DASHBOARD_EXECUTIVO] Canvas grouped-modal-chart não encontrado');
-        return;
-    }
-
-    if (typeof Chart === 'undefined') {
-        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
-        return;
-    }
-
-    // Destroy existing chart
-    if (dashboardCharts.groupedModal) {
-        dashboardCharts.groupedModal.destroy();
-    }
-
-    try {
-        // Ajustar datasets para garantir ambos como barras, cada um em seu eixo
-        let datasets = data.datasets || [];
-        if (datasets.length === 2) {
-            // Dataset 0: Processos, Dataset 1: Custo Total
-            datasets = [
-                {
-                    ...datasets[0],
-                    type: 'bar',
-                    yAxisID: 'y',
-                    backgroundColor: '#007bff', // azul
-                    borderColor: '#007bff',
-                    datalabels: { display: true }
-                },
-                {
-                    ...datasets[1],
-                    type: 'bar',
-                    yAxisID: 'y1',
-                    backgroundColor: '#ff9800', // laranja
-                    borderColor: '#ff9800',
-                    datalabels: { display: true }
-                }
-            ];
-        }
-        dashboardCharts.groupedModal = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Processos e Custos por Modal de Transporte'
-                    },
-                    datalabels: {
-                        display: true,
-                        backgroundColor: function(context) {
-                            return context.dataset.backgroundColor || 'rgba(0,0,0,0.1)';
-                        },
-                        borderRadius: 4,
-                        color: '#fff',
-                        font: {
-                            weight: 'bold',
-                            size: 11
-                        },
-                        padding: {top: 2, bottom: 2, left: 6, right: 6},
-                        formatter: function(value, context) {
-                            // Se o dataset for de custo, formata como moeda compacta
-                            if (context.dataset.label && context.dataset.label.toLowerCase().includes('custo')) {
-                                if (typeof value === 'number') {
-                                    if (value >= 1e6) {
-                                        return 'R$ ' + (value / 1e6).toFixed(1).replace('.0', '') + 'M';
-                                    } else if (value >= 1e3) {
-                                        return 'R$ ' + (value / 1e3).toFixed(0) + 'k';
-                                    }
-                                    return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0});
-                                }
-                                return value;
-                            }
-                            // Caso contrário, mostra número formatado
-                            return Number(value).toLocaleString('pt-BR');
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Quantidade de Processos'
-                        },
-                        ticks: {
-                            display: false // Remove valores do eixo Y
-                        },
-                        grid: {
-                            drawOnChartArea: false // Remove grades do fundo
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Custo Total (R$)'
-                        },
-                        ticks: {
-                            display: false // Remove valores do eixo Y1
-                        },
-                        grid: {
-                            drawOnChartArea: false // Remove grades do fundo
-                        }
-                    }
-                }
-            },
-            plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
-        });
-        console.log('[DASHBOARD_EXECUTIVO] Gráfico modal criado com sucesso');
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico modal:', error);
-    }
-}
-
-/**
- * Create URF chart
- */
-function createUrfChart(data) {
-    const ctx = document.getElementById('urf-chart');
-    if (!ctx) {
-        console.error('[DASHBOARD_EXECUTIVO] Canvas urf-chart não encontrado');
-        return;
-    }
-
-    if (typeof Chart === 'undefined') {
-        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
-        return;
-    }
-
-    // Destroy existing chart
-    if (dashboardCharts.urf) {
-        dashboardCharts.urf.destroy();
-    }
-
-    try {
-        // Quebra de linha nos labels longos (máx 12 chars por linha)
-        const breakLabel = label => {
-            if (!label) return '';
-            // Quebra em espaços, tenta não cortar palavras
-            const words = label.split(' ');
-            let lines = [];
-            let current = '';
-            words.forEach(word => {
-                if ((current + ' ' + word).trim().length > 14) {
-                    if (current) lines.push(current.trim());
-                    current = word;
-                } else {
-                    current += ' ' + word;
-                }
-            });
-            if (current) lines.push(current.trim());
-            return lines;
-        };
-
-        dashboardCharts.urf = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: (data.labels || []).map(breakLabel),
-                datasets: [{
-                    label: 'Quantidade de Processos',
-                    data: data.data || [],
-                    backgroundColor: '#36A2EB',
-                    borderColor: '#36A2EB'
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    datalabels: {
-                        display: true,
-                        color: '#fff', // Branco para contraste
-                        font: {
-                            weight: 'bold',
-                            size: 11
-                        },
-                        backgroundColor: '#36A2EB',
-                        borderRadius: 4,
-                        padding: {top: 2, bottom: 2, left: 6, right: 6},
-                        formatter: function(value) {
-                            return Number(value).toLocaleString('pt-BR');
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            drawOnChartArea: false // Remove grades do fundo
-                        }
-                    },
-                    y: {
-                        grid: {
-                            drawOnChartArea: false // Remove grades do fundo
-                        }
-                    }
-                }
-            },
-            plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : []
-        });
-        console.log('[DASHBOARD_EXECUTIVO] Gráfico URF criado com sucesso');
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico URF:', error);
-    }
-}
-
-/**
- * Create material chart
- */
-function createMaterialChart(data) {
-    const ctx = document.getElementById('material-chart');
-    if (!ctx) {
-        console.error('[DASHBOARD_EXECUTIVO] Canvas material-chart não encontrado');
-        return;
-    }
-
-    if (typeof Chart === 'undefined') {
-        console.error('[DASHBOARD_EXECUTIVO] Chart.js não disponível');
-        return;
-    }
-
-    // Destroy existing chart
-    if (dashboardCharts.material) {
-        dashboardCharts.material.destroy();
-    }
-
-    try {
-        dashboardCharts.material = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: 'Quantidade de Processos',
-                    data: data.data || [],
-                    backgroundColor: '#4BC0C0',
-                    borderColor: '#4BC0C0'
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        grid: {
-                            drawOnChartArea: false // Remove grades do fundo
-                        }
-                    },
-                    y: {
-                        grid: {
-                            drawOnChartArea: false // Remove grades do fundo
-                        }
-                    }
-                }
-            }
-        });
-        console.log('[DASHBOARD_EXECUTIVO] Gráfico material criado com sucesso');
-    } catch (error) {
-        console.error('[DASHBOARD_EXECUTIVO] Erro ao criar gráfico material:', error);
-    }
-}
-
-/**
- * Set monthly chart period
- */
-function setMonthlyChartPeriod(period) {
-    monthlyChartPeriod = period;
-    
-    // Update active button
-    document.querySelectorAll('.period-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.period === period) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // Reload monthly chart with new granularity
-    loadMonthlyChart(period);
-}
-
-/**
- * Load monthly chart with specific granularity
- */
 async function loadMonthlyChart(granularidade) {
     try {
-        // CORREÇÃO: Incluir filtros na URL do gráfico mensal
         const filterQueryString = buildFilterQueryString();
         const separator = filterQueryString ? '&' : '';
         const url = `/dashboard-executivo/api/monthly-chart?granularidade=${granularidade}${separator}${filterQueryString}`;
-        
         console.log(`[DASHBOARD_EXECUTIVO] Carregando gráfico ${granularidade} com filtros:`, url);
-        
-        const response = await fetch(url);
+        const response = await fetchWithAbort('monthly', url);
         const result = await response.json();
-        
         if (result.success) {
             createMonthlyChart({
                 labels: result.data.periods,
@@ -1778,19 +1321,19 @@ async function loadMonthlyChart(granularidade) {
                         label: 'Quantidade de Processos',
                         data: result.data.processes,
                         type: 'line',
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderColor: DASH_COLORS.processos,
+                        backgroundColor: 'rgba(0, 123, 255, 0.08)',
                         yAxisID: 'y1',
-                        tension: 0.4 // Smooth curves
+                        tension: 0.4
                     },
                     {
                         label: 'Custo Total (R$)',
                         data: result.data.values,
-                        type: 'line', // Changed from 'bar' to 'line'
-                        borderColor: '#28a745',
-                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        type: 'line',
+                        borderColor: DASH_COLORS.custo,
+                        backgroundColor: 'rgba(40, 167, 69, 0.08)',
                         yAxisID: 'y',
-                        tension: 0.4 // Smooth curves
+                        tension: 0.4
                     }
                 ]
             });
@@ -2231,12 +1774,33 @@ function formatCurrencyCompact(value) {
     if (!value || value === 0) return 'R$ 0,00';
     const abs = Math.abs(value);
     if (abs >= 1e6) {
-        return 'R$ ' + (value / 1e6).toFixed(1).replace('.0', '') + 'M';
+        return 'R$ ' + Math.round(value / 1e6) + ' m';
     } else if (abs >= 1e3) {
-        return 'R$ ' + (value / 1e3).toFixed(0) + 'k';
+        return 'R$ ' + Math.round(value / 1e3) + ' k';
     } else {
         return formatCurrency(value);
     }
+}
+
+// Helper: choose readable text color based on background color
+function getContrastTextColor(bgColor) {
+    try {
+        let r, g, b;
+        if (typeof bgColor === 'string' && bgColor.startsWith('#')) {
+            const hex = bgColor.replace('#', '');
+            const full = hex.length === 3 ? hex.split('').map(h => h + h).join('') : hex;
+            const bigint = parseInt(full, 16);
+            r = (bigint >> 16) & 255; g = (bigint >> 8) & 255; b = bigint & 255;
+        } else if (typeof bgColor === 'string' && bgColor.startsWith('rgb')) {
+            const parts = bgColor.replace(/rgba?\(|\)|\s/g, '').split(',');
+            r = parseInt(parts[0]); g = parseInt(parts[1]); b = parseInt(parts[2]);
+        } else {
+            return '#111';
+        }
+        const lum = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+        const L = 0.2126 * lum(r) + 0.7152 * lum(g) + 0.0722 * lum(b);
+        return L > 0.5 ? '#111' : '#fff';
+    } catch (_) { return '#111'; }
 }
 
 /**
@@ -2776,6 +2340,7 @@ function calculateOtherExpenses(operation) {
  */
 function updateDocumentsList(operation) {
     const documentsList = document.getElementById('documents-list');
+
     if (!documentsList) return;
     
     // Verificar se temos o ref_unique da operação
@@ -2895,9 +2460,17 @@ function getModalBadge(modal) {
         return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-ferry"></i></span>`;
     } else if (modalUpper.includes('AÉREA') || modalUpper.includes('AEREA')) {
         return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-airplane"></i></span>`;
-    } else {
+    } else if (modalUpper.includes('RODOVIÁRIA') || modalUpper.includes('RODOVIARIA')) {
         return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-truck"></i></span>`;
+    } else if (modalUpper.includes('FERROVIÁRIA') || modalUpper.includes('FERROVIARIA')) {
+        return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-train"></i></span>`;
+    } else if (modalUpper.includes('POSTAL') || modalUpper.includes('CORREIO')) {
+        return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-email"></i></span>`;
+    } else if (modalUpper.includes('COURIER') || modalUpper.includes('EXPRESS')) {
+        return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-package-variant"></i></span>`;
     }
+    
+    return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-help"></i></span>`;
 }
 
 function formatDataChegada(dateString) {
@@ -2934,10 +2507,8 @@ function formatDataChegada(dateString) {
 async function loadFilterOptions() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando opções de filtros...');
-        
-        const response = await fetch('/dashboard-executivo/api/filter-options');
+        const response = await fetchWithAbort('filter-options', '/dashboard-executivo/api/filter-options');
         const result = await response.json();
-        
         if (result.success) {
             console.log('[DASHBOARD_EXECUTIVO] Opções de filtros recebidas:', {
                 materiais: result.options.materiais?.length || 0,
@@ -2945,10 +2516,7 @@ async function loadFilterOptions() {
                 modais: result.options.modais?.length || 0,
                 canais: result.options.canais?.length || 0
             });
-            
             populateFilterOptions(result.options);
-            
-            // Armazenar no cache
             dashboardCache.set('filterOptions', result.options);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar opções de filtros:', result.error);
@@ -2956,14 +2524,11 @@ async function loadFilterOptions() {
         }
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar opções de filtros:', error);
-        
-        // Tentar usar cache como fallback
         const cachedOptions = dashboardCache.get('filterOptions');
         if (cachedOptions) {
             console.log('[DASHBOARD_EXECUTIVO] Usando opções de filtros do cache como fallback');
             populateFilterOptions(cachedOptions);
         } else {
-            // Se não há cache, criar opções vazias para evitar erro
             console.warn('[DASHBOARD_EXECUTIVO] Criando opções de filtros vazias');
             populateFilterOptions({
                 materiais: [],
@@ -3061,7 +2626,7 @@ function initializeMultiSelects() {
         if (header && dropdown) {
             console.log(`[DASHBOARD_EXECUTIVO] Configurando event listeners para ${type}`);
             
-            // Remover event listeners existentes para evitar duplicação
+            // Remover event listeners existentes clonando o elemento
             const newHeader = header.cloneNode(true);
             header.parentNode.replaceChild(newHeader, header);
             
@@ -3471,7 +3036,7 @@ function createPrincipaisMateriaisTable(data) {
     tableBody.innerHTML = '';
     
     if (!data.data || data.data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum material encontrado</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum material encontrado</td></tr>';
         return;
     }
     
@@ -3492,7 +3057,6 @@ function createPrincipaisMateriaisTable(data) {
                     formatDate(material.data_chegada)
                 }
             </td>
-            <td class="text-center">${material.transit_time ? formatNumber(material.transit_time, 1) + ' dias' : '-'}</td>
         `;
         tableBody.appendChild(row);
     });
@@ -3514,10 +3078,10 @@ function getModalIcon(modal) {
     } else if (modalLower.includes('aer') || modalLower.includes('aére')) {
         iconClass = 'mdi-airplane';
         cssClass = 'aerea';
-    } else if (modalLower.includes('rodovi') || modalLower.includes('rodoviári')) {
+    } else if (modalLower.includes('rodoviá') || modalLower.includes('rodoviaria')) {
         iconClass = 'mdi-truck';
         cssClass = 'rodoviaria';
-    } else if (modalLower.includes('ferr') || modalLower.includes('ferrovi')) {
+    } else if (modalLower.includes('ferroviá') || modalLower.includes('ferroviaria')) {
         iconClass = 'mdi-train';
         cssClass = 'ferroviaria';
     } else if (modalLower.includes('postal') || modalLower.includes('correio')) {
