@@ -48,6 +48,13 @@
                             <h4 class="module-title">Agente IA</h4>
                             <p class="module-desc">Assistente inteligente para consultas especializadas.</p>
                         </a>
+                        {% if role in ['admin','interno_unique'] %}
+                        <a href="{{ url_for('conferencia.index') }}" class="module-card" data-module="conferencia">
+                            <div class="module-icon"><i class="mdi mdi-file-document-multiple"></i></div>
+                            <h4 class="module-title">Conferência IA</h4>
+                            <p class="module-desc">Análise automatizada de Invoices e documentos.</p>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
                 <!-- Administração -->

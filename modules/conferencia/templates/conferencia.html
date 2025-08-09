@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Conferência Documental Simples</title>
+  <link rel="stylesheet" href="{{ url_for('conferencia.static', filename='css/conferencia.css') }}" />
+</head>
+<body>
+  <div class="container">
+    <h1>Conferência Documental (Lexoid + LLM)</h1>
+    <form id="uploadForm">
+      <input type="file" name="file" id="fileInput" accept="application/pdf" required />
+      <button type="submit">Analisar</button>
+    </form>
+    <div id="status" class="panel"></div>
+    <div id="preview" class="panel"></div>
+
+    <div id="resultadoEstruturado" class="panel" style="display:none;">
+      <h2 style="margin-top:0;font-size:1rem;">Resumo & Campos</h2>
+      <div id="resumo"></div>
+      <h3 style="margin-bottom:4px;">Campos Extraídos</h3>
+      <div id="campos"></div>
+      <h3 style="margin:12px 0 4px;">Itens da Fatura</h3>
+      <div id="itens"></div>
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;">Ver JSON bruto</summary>
+        <pre id="jsonResult" class="raw-json"></pre>
+      </details>
+    </div>
+  </div>
+  <script src="{{ url_for('conferencia.static', filename='js/conferencia.js') }}"></script>
+</body>
+</html>

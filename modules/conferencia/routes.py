@@ -1,547 +1,469 @@
-from flask import Blueprint, render_template, request, jsonify, session, url_for, current_app
-from extensions import supabase
-from routes.auth import login_required, role_required
-import uuid
-import json
+import os, uuid, json, re, io, base64, threading
 from datetime import datetime
-import os
-import time
-import tempfile
-import random
-import base64
-import threading
-import signal
-import functools
-import logging
+from flask import Blueprint, render_template, request, jsonify, current_app, session
+from routes.auth import login_required
 from werkzeug.utils import secure_filename
-import asyncio
-import aiohttp
-from concurrent.futures import ThreadPoolExecutor
-import re
 
-# Imports for PDF processing
+# Dependências opcionais
 try:
-    import PyPDF2
-    from pdf2image import convert_from_path
-    import google.generativeai as genai
-    PDF_PROCESSING_AVAILABLE = True
-except ImportError:
-    PDF_PROCESSING_AVAILABLE = False
+	from lexoid.api import parse as lexoid_parse
+	LEXOID_AVAILABLE = True
+except Exception:
+	LEXOID_AVAILABLE = False
 
-# Criar blueprint com configuração modular
-conferencia_bp = Blueprint(
-    'conferencia', 
-    __name__,
-    template_folder='templates',
-    static_folder='static',
-    static_url_path='/conferencia/static',
-    url_prefix='/conferencia'
-)
+try:
+	import google.generativeai as genai
+	GEMINI_AVAILABLE = True
+except Exception:
+	GEMINI_AVAILABLE = False
 
-# Configurações para armazenamento temporário de arquivos
 UPLOAD_FOLDER = 'static/uploads/conferencia'
 ALLOWED_EXTENSIONS = {'pdf'}
 
-# Dicionário para armazenar o status dos jobs em memória
-jobs = {}
+conferencia_bp = Blueprint(
+	'conferencia', __name__,
+	template_folder='templates',
+	static_folder='static',
+	# Ajuste static_url_path para evitar duplicação /conferencia/conferencia/static
+	static_url_path='/conferencia_static',
+	url_prefix='/conferencia'
+)
 
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+SIMPLE_PROMPT = r"""Você é um extrator de INVOICE (comercial ou proforma). Analise o documento completo (todas as páginas) e retorne APENAS UM JSON ÚNICO e VÁLIDO seguindo exatamente a estrutura abaixo. Seja robusto a layouts variados, idiomas (PT/EN/DE/IT), tabelas em grade e UOMs não padronizadas (pce, pcs, kgs, mt, m, set).
 
-def ensure_upload_folders():
-    if not os.path.exists(UPLOAD_FOLDER):
-        os.makedirs(UPLOAD_FOLDER)
+REGRAS GERAIS
+- Sempre retorne: valor_extraido (texto exato), *_norm (valor normalizado), confidence (0.50–0.99), page (int|null), source_snippet (texto curto que justifique).
+- Normalizações:
+	• Datas em *_norm = YYYY-MM-DD.
+	• Números: remover milhar, trocar vírgula decimal por ponto (ex.: "1.198,50" -> 1198.50).
+	• Moeda: currency_norm em ISO (USD, EUR, BRL...).
+	• UOM: mapear para um conjunto canônico: PCS, KG, M, SET, BOX, N/A.
+- Se o campo não existir, use null e registre em sumario.alertas (com breve motivo).
+- Checagens cruzadas:
+	• total_items_sum_norm = soma de itens com amount_norm != null (itens amount=0 permanecem, mas marcados).
+	• Se houver TOTAL declarado, extraia invoice_total_declared_norm.
+	• difference_norm = invoice_total_declared_norm - total_items_sum_norm quando ambos existirem.
+	• Se |difference_norm| > 1% do total declarado, status = "alerta".
+- Inferências:
+	• country_of_acquisition: se ausente, inferir a partir do endereço do exportador (marcar inferido=true e why).
+	• country_of_origin: aceitar múltiplos (por item), e no campo global consolidar como lista única (sem duplicatas); se vier “Germany, Austria”, registrar como array ["Germany","Austria"] em *_norm_arr.
+- Itens especiais:
+	• Se o item aparenta ser “documento/certificado/serviço” (ex.: "certificate 3.1", "inspection", "documentation"), classificar item_type="DOCUMENT" e permitir unit_price_norm/amount_norm=0 sem penalizar soma.
+	• Se a descrição contiver quantidade alternativa (ex.: “36 Meter”) E a linha de qty usar outra UOM (ex.: “9,00 kgs”), preencher quantidade_alt com {valor_extraido, qty_alt_norm, uom_alt_norm}.
+	• Campos regulatórios obrigatórios (marque alerta se faltarem): invoice_number, issue_date, incoterm, seller_exporter, buyer_consignee, gross_weight, net_weight, payment_terms, exporter_reference.
 
-# Templates de prompts para cada tipo de conferência
-PROMPTS = {
-    'inconsistencias': """
-    Você é um sistema avançado de extração de dados, especializado em análise de documentos aduaneiros para identificar inconsistências gerais. Sua tarefa é analisar o documento fornecido e identificar possíveis problemas ou inconsistências.
-
-    **Instruções para Análise Geral:**
-
-    1. Analise a estrutura geral do documento
-    2. Identifique campos obrigatórios ausentes
-    3. Verifique a consistência de datas
-    4. Analise valores e cálculos
-    5. Identifique informações conflitantes
-
-    **Formato da Saída (JSON):**
-    {
-        "sumario": {
-            "status": "ok|alerta|erro",
-            "total_erros_criticos": X,
-            "total_observacoes": Y,
-            "total_alertas": Z,
-            "conclusao": "Breve resumo da análise geral do documento."
-        },
-        "itens": [
-            {
-                "campo": "Nome do Campo Analisado",
-                "status": "ok|alerta|erro",
-                "tipo": "ok|erro_critico|observacao|alerta",
-                "valor_extraido": "Valor encontrado no documento",
-                "descricao": "Descrição da análise ou problema identificado."
-            }
-        ]
-    }
-    """,
-    'invoice': """
-    Você é um sistema avançado de extração de dados, especializado em análise de documentos aduaneiros. Sua tarefa é analisar a Invoice Comercial fornecida e extrair informações cruciais com base no Art. 557 do regulamento aduaneiro brasileiro.
-
-    **Instruções Detalhadas para Extração:**
-
-    1.  **Número do documento (Invoice Number):**
-        * Procure por rótulos como "Invoice No.", "Fattura nr.", "Rechnung", "Belegnummer", "INVOICE #", "Number", "Invoice No.:", "Fattura n.", "Número", "INVOICE", "INVOICE#", "SHIPMENT NUMBER".
-        * Seja flexível com prefixos e sufixos (ex: 'PI', 'INV-', 'S', 'FE/', 'IT00125VEN', '1610743'). Extraia o identificador principal.
-
-    2.  **Data de emissão (Issue Date):**
-        * Procure por "Date", "Data", "Datum", "DATE".
-
-    3.  **Exportador (Exporter/Shipper):**
-        * Procure por "Exporter", "Shipper", "From", "The Seller/Exporter", "HEADQUARTER", "MANUFACTURER", ou o nome da empresa no cabeçalho do documento. Extraia o nome e o endereço completos.
-
-    4.  **Importador (Importer/Consignee):**
-        * Procure por "Importer", "Consignee", "Bill to", "Ship to", "To", "MESSRS:", "Destinatario", "Buyer", "SOLD TO". Extraia o nome e o endereço completos.
-
-    5.  **Itens da Fatura (Line Items):**
-        * **Lógica de Agrupamento de Itens:** Documentos com tabelas ou grades complexas podem ter informações de um único item espalhadas por várias linhas. Agrupe de forma inteligente as linhas que pertencem ao mesmo item antes de extrair os dados.
-        * **Para cada item na fatura, extraia os seguintes campos:**
-            * **descricao_completa:** Combine a descrição principal do produto, part number, códigos e outras especificações. Procure por colunas como "DESCRIPTION", "Descrizione", "Bezeichnung", "Description of goods", "Product".
-            * **quantidade_unidade:** Extraia a quantidade total de peças. Procure por "Q'TY", "QTY", "Quantity", "PCS", "NR", "Menge", "SHIPPED", "QTY PACKED". A unidade (ex: "PCS", "NR", "KG", "LBS", "m", "pce", "pc", "pcs", "unit", "unt", "kgs", "ltr", "l", "mtr", "gr", "box") deve ser incluída se disponível.
-            * **preco_unitario:** Encontre o preço por unidade ou por milheiro (M). Procure por "UNIT PRICE", "Prezzo", "Preis", "USD/M", "Gross price", "UNIT". Pode ser indicado por um '@'.
-            * **valor_total_item:** O valor total para a linha do item. Procure por "AMOUNT", "Total", "Importo", "Summe", "Total tax excluded", "EXTENDED".
-
-    6.  **Incoterm:**
-        * Procure por termos como "INCOTERM", "PRICE TERM", "Delivery Terms", "FREIGHT TERMS". Extraia o termo e o local (ex: "FOB KAOHSIUNG TAIWAN", "EXWORKS").
-
-    7.  **País de Origem (Country of Origin):**
-        * Procure por "Country of Origin", "Made in", "Origin". Se não estiver explícito, infira a partir do endereço do exportador.
-
-    8.  **País de Aquisição (Country of Acquisition):**
-        * Procure por "Country of Acquisition", "COUNTRY OF ACQUISITION AND PROCEED". Se ausente, assuma que é o mesmo que o País de Origem.
-
-    **Formato da Saída (JSON):**
-    A saída DEVE ser um único objeto JSON válido, sem nenhum texto adicional antes ou depois. Para cada campo extraído, inclua um campo "valor_extraido" que mostra o texto exato do documento.
-
-    {
-        "sumario": {
-            "status": "ok|alerta|erro",
-            "total_erros_criticos": X,
-            "total_observacoes": Y,
-            "total_alertas": Z,
-            "conclusao": "Breve resumo do status geral da análise da fatura."
-        },
-        "itens_analisados": [
-            {
-                "campo": "Nome do Campo Verificado",
-                "status": "ok|alerta|erro",
-                "tipo": "ok|erro_critico|observacao|alerta",
-                "valor_extraido": "O texto exato encontrado no documento.",
-                "descricao": "Detalhamento do problema encontrado ou confirmação de conformidade."
-            }
-        ],
-        "itens_da_fatura": [
-            {
-                "descricao_completa": {
-                    "valor_extraido": "Descrição completa do item, incluindo códigos e part numbers."
-                },
-                "quantidade_unidade": {
-                    "valor_extraido": "Ex: 72,000 PCS"
-                },
-                "preco_unitario": {
-                    "valor_extraido": "Ex: 1.91 USD/M"
-                },
-                "valor_total_item": {
-                    "valor_extraido": "Ex: 137.48"
-                }
-            }
-        ]
-    }
-    """
+CAMPOS A EXTRAIR
+{
+	"sumario": {
+		"status": "ok|alerta|erro",
+		"total_erros_criticos": int,
+		"total_observacoes": int,
+		"total_alertas": int,
+		"checks": {
+			"total_items_sum_norm": number|null,
+			"invoice_total_declared_norm": number|null,
+			"difference_norm": number|null
+		},
+		"alertas": [string],
+		"observacoes": [string],
+		"conclusao": string
+	},
+	"campos": {
+		"invoice_number": { "valor_extraido": string|null, "invoice_number_norm": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"issue_date": { "valor_extraido": string|null, "issue_date_norm": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"seller_exporter": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"buyer_consignee": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"exporter_reference": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"payment_terms": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"gross_weight": { "valor_extraido": string|null, "gross_weight_norm": number|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"net_weight": { "valor_extraido": string|null, "net_weight_norm": number|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"incoterm": { "valor_extraido": string|null, "incoterm_code_norm": string|null, "incoterm_place_norm": string|null, "confidence": number, "page": int|null, "source_snippet": string },
+		"currency": { "valor_extraido": string|null, "currency_norm": string|null, "confidence": number },
+		"country_of_origin": { "valor_extraido": string|null, "country_of_origin_norm_arr": [string]|null, "inferido": boolean, "why": string|null, "confidence": number },
+		"country_of_acquisition": { "valor_extraido": string|null, "country_of_acquisition_norm": string|null, "inferido": boolean, "why": string|null, "confidence": number },
+		"totais_detalhados": { "subtotal_norm": number|null, "freight_norm": number|null, "insurance_norm": number|null, "discount_norm": number|null, "taxes_norm": number|null, "grand_total_norm": number|null }
+	},
+	"itens_da_fatura": [ {
+			"item_type": "PRODUCT|DOCUMENT|SERVICE",
+			"descricao_completa": { "valor_extraido": string, "confidence": number, "page": int|null, "source_snippet": string },
+			"hs_code": { "valor_extraido": string|null, "hs_code_norm": string|null, "confidence": number },
+			"manufacturer": { "valor_extraido": string|null, "confidence": number },
+			"country_of_origin_item": { "valor_extraido": string|null, "country_origin_item_norm": string|null, "confidence": number },
+			"quantidade_unidade": { "valor_extraido": string|null, "qty_norm": number|null, "uom_norm": "PCS|KG|M|SET|BOX|N/A"|null, "confidence": number },
+			"quantidade_alt": { "valor_extraido": string|null, "qty_alt_norm": number|null, "uom_alt_norm": "PCS|KG|M|SET|BOX|N/A"|null },
+			"preco_unitario": { "valor_extraido": string|null, "unit_price_norm": number|null, "per": "UNIT|M|KG|SET|BOX|N/A"|null, "confidence": number },
+			"valor_total_item": { "valor_extraido": string|null, "amount_norm": number|null, "confidence": number }
+	} ]
 }
+
+INSTRUÇÕES DE BUSCA (resumido)
+- invoice_number: padrões "Invoice", "Rechnung", "Fattura", etc. Remover prefixos e normalizar.
+- incoterm: separar code/place (FCA Bremen).
+- pesos (gross_weight/net_weight): normalizar para número (kg). Se outra unidade (lbs) converter se possível ou retornar valor bruto.
+- payment_terms: extrair texto curto (ex.: "30 days", "ADVANCE 50% / 50% before shipment").
+- exporter_reference: localizar referências do exportador (ex.: "Ref:" / "Our Ref.").
+- country lists: separar por vírgulas ou conjunções.
+- Totais detalhados: mapear linhas que contenham Subtotal/Freight/Insurance/Discount/Tax/VAT/Grand Total.
+
+Retorne APENAS o JSON final, sem comentários ou texto adicional.
+"""
+
+def ensure_upload_folder():
+	os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename: str) -> bool:
+	return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
+
+def ensure_google_key():
+	"""Garante que GOOGLE_API_KEY esteja definido para libs que esperam esse nome.
+	Se já existir, não altera. Caso contrário tenta usar GEMINI_API_KEY.
+	"""
+	if not os.getenv('GOOGLE_API_KEY'):
+		gem = os.getenv('GEMINI_API_KEY')
+		if gem:
+			os.environ['GOOGLE_API_KEY'] = gem
+			try:
+				current_app.logger.info('[SIMPLE] GOOGLE_API_KEY mapeado a partir de GEMINI_API_KEY')
+			except Exception:
+				pass
+
+def safe_parse_json(raw: str):
+	if not raw:
+		return None
+	if '```' in raw:
+		m = re.search(r'```json\s*(.*?)```', raw, re.DOTALL|re.IGNORECASE)
+		if m:
+			raw = m.group(1)
+	start = raw.find('{')
+	end = raw.rfind('}')
+	if start != -1 and end != -1 and end > start:
+		snippet = raw[start:end+1]
+		try:
+			return json.loads(snippet)
+		except Exception:
+			pass
+	try:
+		return json.loads(raw)
+	except Exception:
+		return None
 
 @conferencia_bp.route('/')
 @login_required
 def index():
-    """Página principal do módulo de conferência"""
-    return render_template('index.html')
+	return render_template('conferencia.html')
 
-@conferencia_bp.route('/upload', methods=['POST'])
+@conferencia_bp.route('/simple')
 @login_required
-def upload():
-    """Endpoint para upload de arquivos PDF"""
-    if not PDF_PROCESSING_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'message': 'Processamento de PDF não disponível. Instale as dependências necessárias.'
-        }), 500
-    
-    ensure_upload_folders()
-    
-    if 'files[]' not in request.files:
-        return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
-    
-    files = request.files.getlist('files[]')
-    if not files or files[0].filename == '':
-        return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'}), 400
-    
-    # Obter tipo de conferência do formulário
-    tipo_conferencia = request.form.get('tipo_conferencia', 'inconsistencias')
-    current_app.logger.info(f"Tipo de conferência selecionado: {tipo_conferencia}")
-    
-    uploaded_files = []
-    errors = []
-    
-    for file in files:
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            unique_filename = f"{timestamp}_{filename}"
-            filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
-            
-            try:
-                file.save(filepath)
-                uploaded_files.append({
-                    'original_name': filename,
-                    'saved_name': unique_filename,
-                    'path': filepath,
-                    'size': os.path.getsize(filepath)
-                })
-                current_app.logger.info(f"Arquivo salvo: {filepath}")
-            except Exception as e:
-                errors.append(f"Erro ao salvar {filename}: {str(e)}")
-        else:
-            errors.append(f"Arquivo inválido: {file.filename}")
-    
-    if uploaded_files:
-        # Iniciar processamento em background
-        job_id = str(uuid.uuid4())
-        jobs[job_id] = {
-            'status': 'processing',
-            'progress': 0,
-            'files': uploaded_files,
-            'results': [],
-            'started_at': datetime.now(),
-            'user_id': session['user']['id'],
-            'tipo_conferencia': tipo_conferencia
-        }
-        
-        current_app.logger.info(f"Iniciando job {job_id} para {len(uploaded_files)} arquivos")
-        
-        # Processar em background
-        threading.Thread(target=background_process, args=(job_id, uploaded_files)).start()
-        
-        return jsonify({
-            'success': True,
-            'job_id': job_id,
-            'files_count': len(uploaded_files),
-            'tipo_conferencia': tipo_conferencia,
-            'errors': errors
-        })
-    
-    return jsonify({
-        'success': False,
-        'message': 'Nenhum arquivo válido foi processado',
-        'errors': errors
-    }), 400
+def simple_page():
+	return render_template('conferencia.html')
 
-def background_process(job_id, files):
-    """Processa arquivos em background com análise real via Gemini"""
-    try:
-        total_files = len(files)
-        
-        # Obter tipo de conferência da sessão ou padrão
-        tipo_conferencia = jobs[job_id].get('tipo_conferencia', 'inconsistencias')
-        
-        for i, file_info in enumerate(files):
-            if job_id not in jobs:
-                break
-                
-            # Atualizar progresso
-            progress = int((i / total_files) * 100)
-            jobs[job_id]['progress'] = progress
-            jobs[job_id]['current_file'] = file_info['original_name']
-            
-            current_app.logger.info(f"Processando arquivo {file_info['original_name']} - Progresso: {progress}%")
-            
-            try:
-                # 1. Extrair texto do PDF
-                current_app.logger.info(f"Extraindo texto do PDF: {file_info['path']}")
-                pdf_text = extract_text_from_pdf(file_info['path'])
-                
-                if not pdf_text or pdf_text.strip() == "":
-                    # Se não conseguiu extrair texto, tentar conversão para imagem
-                    current_app.logger.warning(f"Texto vazio do PDF {file_info['original_name']}, tentando OCR...")
-                    analysis_result = process_pdf_as_image(file_info['path'], tipo_conferencia)
-                else:
-                    # 2. Processar com IA usando o texto extraído
-                    current_app.logger.info(f"Analisando texto com Gemini - Tipo: {tipo_conferencia}")
-                    analysis_result = process_with_ai(pdf_text, tipo_conferencia)
-                
-                # 3. Criar resultado estruturado
-                result = {
-                    'file': file_info['original_name'],
-                    'status': 'completed',
-                    'tipo_conferencia': tipo_conferencia,
-                    'analysis': analysis_result,
-                    'processado_em': datetime.now().isoformat(),
-                    'arquivo_info': {
-                        'tamanho': file_info['size'],
-                        'nome_salvo': file_info['saved_name']
-                    }
-                }
-                
-                current_app.logger.info(f"Análise concluída para {file_info['original_name']}")
-                
-            except Exception as e:
-                current_app.logger.error(f"Erro ao processar {file_info['original_name']}: {str(e)}")
-                result = {
-                    'file': file_info['original_name'],
-                    'status': 'error',
-                    'error': str(e),
-                    'processado_em': datetime.now().isoformat()
-                }
-            
-            jobs[job_id]['results'].append(result)
-        
-        # Finalizar job
-        if job_id in jobs:
-            jobs[job_id]['status'] = 'completed'
-            jobs[job_id]['progress'] = 100
-            jobs[job_id]['completed_at'] = datetime.now()
-            current_app.logger.info(f"Job {job_id} finalizado com sucesso")
-            
-    except Exception as e:
-        current_app.logger.error(f"Erro geral no processamento do job {job_id}: {str(e)}")
-        if job_id in jobs:
-            jobs[job_id]['status'] = 'error'
-            jobs[job_id]['error'] = str(e)
-
-@conferencia_bp.route('/status/<job_id>')
+@conferencia_bp.route('/simple/analyze', methods=['POST'])
 @login_required
-def get_status(job_id):
-    """Retorna o status de um job de processamento"""
-    if job_id not in jobs:
-        return jsonify({'error': 'Job não encontrado'}), 404
-    
-    job = jobs[job_id]
-    
-    # Verificar se o usuário tem permissão para ver este job
-    if job['user_id'] != session['user']['id']:
-        return jsonify({'error': 'Não autorizado'}), 403
-    
-    return jsonify(job)
+def simple_analyze():
+	if not LEXOID_AVAILABLE:
+		return jsonify({'success': False, 'error': 'Lexoid não instalado'}), 500
+	if 'file' not in request.files:
+		return jsonify({'success': False, 'error': 'Arquivo não enviado'}), 400
+	f = request.files['file']
+	if f.filename == '' or not allowed_file(f.filename):
+		return jsonify({'success': False, 'error': 'Envie um PDF .pdf'}), 400
+	ensure_upload_folder()
+	filename = secure_filename(f.filename)
+	saved_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}_{filename}"
+	path = os.path.join(UPLOAD_FOLDER, saved_name)
+	f.save(path)
+	start = datetime.now()
+	current_app.logger.info(f"[SIMPLE] Arquivo salvo {path}")
+	# Garante chave esperada pelo Lexoid
+	ensure_google_key()
+	md = None
+	parse_mode = None
+	try:
+		try:
+			md = lexoid_parse(path, parser_type='LLM_PARSE').get('raw')
+			parse_mode = 'LLM_PARSE'
+		except Exception:
+			md = lexoid_parse(path, parser_type='STATIC_PARSE').get('raw')
+			parse_mode = 'STATIC_PARSE'
+	except Exception as e:
+		return jsonify({'success': False, 'error': f'Falha Lexoid: {e}'}), 500
+	if not md:
+		return jsonify({'success': False, 'error': 'Retorno vazio do Lexoid'}), 500
 
-@conferencia_bp.route('/results/<job_id>')
+	md_trunc = md[:45000]
+	palavras = len(re.findall(r'\w+', md_trunc))
+	paginas = md_trunc.count('\n\n')//40 + 1  # heurística simples
+
+	llm_json = None
+	llm_error = None
+	api_key = os.getenv('GEMINI_API_KEY')
+	if api_key and GEMINI_AVAILABLE:
+		try:
+			genai.configure(api_key=api_key)
+			model = genai.GenerativeModel(os.getenv('GEMINI_MODEL','gemini-1.5-flash'))
+			prompt = SIMPLE_PROMPT + "\n\nMARKDOWN_INICIO\n" + md_trunc + "\nMARKDOWN_FIM"
+			resp = model.generate_content([{ 'text': prompt }])
+			llm_json = safe_parse_json(resp.text)
+			if not isinstance(llm_json, dict):
+				llm_error = 'Falha ao parsear JSON'
+		except Exception as e:
+			llm_error = str(e)
+	else:
+		llm_error = 'GEMINI_API_KEY ausente ou lib indisponível'
+
+	elapsed_ms = int((datetime.now() - start).total_seconds()*1000)
+	return jsonify({
+		'success': True,
+		'file': filename,
+		'saved_name': saved_name,
+		'elapsed_ms': elapsed_ms,
+		'lexoid_mode': parse_mode,
+		'markdown_preview': md_trunc[:1200],
+		'palavras': palavras,
+		'paginas_estimado': paginas,
+		'json': enrich_full_invoice_json(md_trunc, llm_json),
+		'llm_error': llm_error
+	})
+
+# (Opcional) endpoint de saúde
+@conferencia_bp.route('/simple/health')
+def simple_health():
+	return jsonify({
+		'lexoid': LEXOID_AVAILABLE,
+		'gemini': GEMINI_AVAILABLE,
+		'has_key': bool(os.getenv('GEMINI_API_KEY'))
+	})
+
+@conferencia_bp.route('/static-test')
 @login_required
-def get_results(job_id):
-    """Retorna os resultados detalhados de um job"""
-    if job_id not in jobs:
-        return jsonify({'error': 'Job não encontrado'}), 404
-    
-    job = jobs[job_id]
-    
-    if job['user_id'] != session['user']['id']:
-        return jsonify({'error': 'Não autorizado'}), 403
-    
-    if job['status'] != 'completed':
-        return jsonify({'error': 'Job ainda não foi completado'}), 400
-    
-    return jsonify({
-        'job_id': job_id,
-        'results': job['results'],
-        'summary': {
-            'total_files': len(job['files']),
-            'processed_files': len(job['results']),
-            'started_at': job['started_at'].isoformat(),
-            'completed_at': job.get('completed_at', '').isoformat() if job.get('completed_at') else None
-        }
-    })
+def static_test():
+	css_rel = 'css/simple.css'
+	js_rel = 'js/simple.js'
+	css_path = os.path.join(conferencia_bp.static_folder, css_rel)
+	js_path = os.path.join(conferencia_bp.static_folder, js_rel)
+	return jsonify({
+		'static_folder': conferencia_bp.static_folder,
+		'css_exists': os.path.exists(css_path),
+		'js_exists': os.path.exists(js_path),
+		'css_path': css_path,
+		'js_path': js_path
+	})
 
-@conferencia_bp.route('/cleanup/<job_id>', methods=['DELETE'])
-@login_required
-def cleanup_job(job_id):
-    """Remove um job e seus arquivos temporários"""
-    if job_id not in jobs:
-        return jsonify({'error': 'Job não encontrado'}), 404
-    
-    job = jobs[job_id]
-    
-    if job['user_id'] != session['user']['id']:
-        return jsonify({'error': 'Não autorizado'}), 403
-    
-    # Remover arquivos temporários
-    try:
-        for file_info in job['files']:
-            if os.path.exists(file_info['path']):
-                os.remove(file_info['path'])
-    except Exception as e:
-        current_app.logger.error(f"Erro ao remover arquivos do job {job_id}: {str(e)}")
-    
-    # Remover job da memória
-    del jobs[job_id]
-    
-    return jsonify({'success': True, 'message': 'Job removido com sucesso'})
+# ================= ENRIQUECIMENTO PÓS-PROCESSO ==================
 
-# Funções auxiliares para processamento de PDF
-def extract_text_from_pdf(pdf_path):
-    """Extrai texto de um arquivo PDF"""
-    if not PDF_PROCESSING_AVAILABLE:
-        return "Processamento de PDF não disponível"
-    
-    try:
-        with open(pdf_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text()
-            return text
-    except Exception as e:
-        current_app.logger.error(f"Erro ao extrair texto do PDF {pdf_path}: {str(e)}")
-        return f"Erro ao extrair texto: {str(e)}"
+def enrich_full_invoice_json(markdown_text: str, data: dict | None) -> dict | None:
+	"""Garante estrutura completa conforme especificação, preenchendo defaults e calculando verificações."""
+	if data is None:
+		return None
+	# Se já parece completo (tem 'campos' e 'itens_da_fatura') apenas pós-processa
+	if 'campos' not in data or 'itens_da_fatura' not in data:
+		# Converter de formato simples (campos_chave / possiveis_itens)
+		data = convert_simple_to_full(markdown_text, data)
+	return post_process_full(markdown_text, data)
 
-def process_pdf_as_image(pdf_path, tipo_conferencia):
-    """Processa PDF convertendo para imagem quando texto não é extraível"""
-    try:
-        from pdf2image import convert_from_path
-        import base64
-        import io
-        
-        current_app.logger.info(f"Convertendo PDF para imagem: {pdf_path}")
-        
-        # Converter primeira página do PDF para imagem
-        images = convert_from_path(pdf_path, first_page=1, last_page=1, dpi=200)
-        
-        if not images:
-            return {"error": "Não foi possível converter PDF para imagem"}
-        
-        # Converter imagem para base64
-        img_buffer = io.BytesIO()
-        images[0].save(img_buffer, format='PNG')
-        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
-        
-        # Processar com Gemini Vision
-        return process_with_ai_vision(img_base64, tipo_conferencia)
-        
-    except Exception as e:
-        current_app.logger.error(f"Erro ao processar PDF como imagem {pdf_path}: {str(e)}")
-        return {"error": f"Erro no processamento de imagem: {str(e)}"}
+def convert_simple_to_full(markdown_text: str, data: dict) -> dict:
+	campos_chave = data.get('campos_chave', {})
+	itens = data.get('possiveis_itens', []) or []
+	def wrap_field(valor, norm_key=None):
+		base = {
+			'valor_extraido': valor,
+			'confidence': 0.75 if valor else 0.0,
+			'page': 1 if valor else None,
+			'source_snippet': find_snippet(markdown_text, valor) if valor else ''
+		}
+		if norm_key:
+			base[norm_key] = normalize_generic(norm_key, valor)
+		return base
+	campos = {
+		'invoice_number': wrap_field(campos_chave.get('invoice_number'), 'invoice_number_norm'),
+		'issue_date': wrap_field(campos_chave.get('issue_date'), 'issue_date_norm'),
+		'seller_exporter': wrap_field(None),
+		'buyer_consignee': wrap_field(None),
+		'incoterm': wrap_field(campos_chave.get('incoterm')),
+		'currency': { 'valor_extraido': campos_chave.get('currency'), 'currency_norm': normalize_currency(campos_chave.get('currency')), 'confidence': 0.7 if campos_chave.get('currency') else 0.0 },
+		'country_of_origin': { 'valor_extraido': None, 'inferido': False, 'confidence': 0.0 },
+		'country_of_acquisition': { 'valor_extraido': None, 'inferido': False, 'confidence': 0.0 }
+	}
+	itens_norm = []
+	for it in itens:
+		desc = it.get('descricao')
+		qtd = it.get('quantidade')
+		preco = it.get('preco_unitario')
+		total = it.get('valor_total')
+		itens_norm.append({
+			'descricao_completa': {
+				'valor_extraido': desc,
+				'confidence': 0.75 if desc else 0.0,
+				'page': 1,
+				'source_snippet': find_snippet(markdown_text, desc) if desc else ''
+			},
+			'quantidade_unidade': {
+				'valor_extraido': qtd,
+				'qty_norm': parse_number(qtd),
+				'unit_norm': infer_unit(qtd),
+				'confidence': 0.7 if qtd else 0.0
+			},
+			'preco_unitario': {
+				'valor_extraido': preco,
+				'unit_price_norm': parse_number(preco),
+				'per': None,
+				'confidence': 0.7 if preco else 0.0
+			},
+			'valor_total_item': {
+				'valor_extraido': total,
+				'amount_norm': parse_number(total),
+				'confidence': 0.7 if total else 0.0
+			}
+		})
+	sumario = data.get('sumario', {})
+	if 'status' not in sumario:
+		sumario = {'status': 'ok', 'total_erros_criticos': 0, 'total_observacoes': 0, 'total_alertas': 0, 'checks': {}, 'conclusao': ''}
+	return { 'sumario': sumario, 'campos': campos, 'itens_da_fatura': itens_norm }
 
-def process_with_ai(text, tipo_conferencia):
-    """Processa texto com IA usando Gemini"""
-    try:
-        import google.generativeai as genai
-        import os
-        
-        # Configurar Gemini
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            current_app.logger.error("GEMINI_API_KEY não configurada")
-            return {"error": "API Key do Gemini não configurada"}
-        
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Obter prompt baseado no tipo de conferência
-        prompt_template = PROMPTS.get(tipo_conferencia, PROMPTS['inconsistencias'])
-        
-        # Construir prompt completo
-        full_prompt = f"{prompt_template}\n\n**DOCUMENTO A SER ANALISADO:**\n{text}"
-        
-        current_app.logger.info(f"Enviando texto para Gemini - Tamanho: {len(text)} caracteres")
-        
-        # Fazer request para o Gemini
-        response = model.generate_content(full_prompt)
-        
-        if not response.text:
-            return {"error": "Resposta vazia do Gemini"}
-        
-        current_app.logger.info("Resposta recebida do Gemini com sucesso")
-        
-        # Tentar parsear JSON da resposta
-        try:
-            import json
-            # Limpar resposta (remover markdown se houver)
-            clean_response = response.text.strip()
-            if clean_response.startswith('```json'):
-                clean_response = clean_response[7:]
-            if clean_response.endswith('```'):
-                clean_response = clean_response[:-3]
-            
-            parsed_result = json.loads(clean_response.strip())
-            return parsed_result
-            
-        except json.JSONDecodeError as e:
-            current_app.logger.error(f"Erro ao parsear JSON do Gemini: {str(e)}")
-            current_app.logger.error(f"Resposta original: {response.text}")
-            return {
-                "error": "Erro ao parsear resposta da IA",
-                "raw_response": response.text
-            }
-        
-    except Exception as e:
-        current_app.logger.error(f"Erro ao processar com Gemini: {str(e)}")
-        return {"error": f"Erro no processamento: {str(e)}"}
+def post_process_full(markdown_text: str, data: dict) -> dict:
+	campos = data.setdefault('campos', {})
+	itens = data.setdefault('itens_da_fatura', [])
+	sumario = data.setdefault('sumario', {})
+	# Normalizações adicionais
+	inv_field = campos.get('invoice_number', {})
+	if inv_field.get('valor_extraido') and 'invoice_number_norm' not in inv_field:
+		inv_field['invoice_number_norm'] = normalize_invoice_number(inv_field.get('valor_extraido'))
+	date_field = campos.get('issue_date', {})
+	if date_field.get('valor_extraido') and 'issue_date_norm' not in date_field:
+		date_field['issue_date_norm'] = normalize_date(date_field.get('valor_extraido'))
+	currency_field = campos.get('currency', {})
+	if currency_field.get('valor_extraido') and 'currency_norm' not in currency_field:
+		currency_field['currency_norm'] = normalize_currency(currency_field.get('valor_extraido'))
 
-def process_with_ai_vision(image_base64, tipo_conferencia):
-    """Processa imagem com Gemini Vision"""
-    try:
-        import google.generativeai as genai
-        import os
-        
-        # Configurar Gemini
-        api_key = os.getenv('GEMINI_API_KEY')
-        if not api_key:
-            return {"error": "API Key do Gemini não configurada"}
-        
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Obter prompt baseado no tipo de conferência
-        prompt_template = PROMPTS.get(tipo_conferencia, PROMPTS['inconsistencias'])
-        
-        # Construir prompt para visão
-        vision_prompt = f"{prompt_template}\n\n**Analise a imagem do documento fornecida e extraia as informações conforme solicitado.**"
-        
-        current_app.logger.info("Enviando imagem para Gemini Vision")
-        
-        # Criar objeto de imagem
-        import PIL.Image
-        import io
-        import base64
-        
-        image_data = base64.b64decode(image_base64)
-        image = PIL.Image.open(io.BytesIO(image_data))
-        
-        # Fazer request para o Gemini Vision
-        response = model.generate_content([vision_prompt, image])
-        
-        if not response.text:
-            return {"error": "Resposta vazia do Gemini Vision"}
-        
-        current_app.logger.info("Resposta recebida do Gemini Vision com sucesso")
-        
-        # Tentar parsear JSON da resposta
-        try:
-            import json
-            # Limpar resposta
-            clean_response = response.text.strip()
-            if clean_response.startswith('```json'):
-                clean_response = clean_response[7:]
-            if clean_response.endswith('```'):
-                clean_response = clean_response[:-3]
-            
-            parsed_result = json.loads(clean_response.strip())
-            return parsed_result
-            
-        except json.JSONDecodeError as e:
-            current_app.logger.error(f"Erro ao parsear JSON do Gemini Vision: {str(e)}")
-            return {
-                "error": "Erro ao parsear resposta da IA Vision",
-                "raw_response": response.text
-            }
-        
-    except Exception as e:
-        current_app.logger.error(f"Erro ao processar com Gemini Vision: {str(e)}")
-        return {"error": f"Erro no processamento Vision: {str(e)}"}
+	# Totais
+	total_items = 0.0
+	for it in itens:
+		amt = it.get('valor_total_item', {}).get('amount_norm')
+		if amt is None:
+			# tentar parse
+			raw = it.get('valor_total_item', {}).get('valor_extraido')
+			parsed = parse_number(raw)
+			it['valor_total_item']['amount_norm'] = parsed
+			amt = parsed
+		if isinstance(amt, (int, float)):
+			total_items += amt
+	# Procurar total declarado
+	declared = find_declared_total(markdown_text)
+	checks = {
+		'total_items_sum_norm': round(total_items, 2) if total_items else None,
+		'invoice_total_declared_norm': declared,
+		'difference_norm': round(declared - total_items, 2) if (declared is not None and total_items) else None
+	}
+	sumario['checks'] = checks
+	# Erros críticos
+	inc = campos.get('incoterm', {})
+	if not inc.get('valor_extraido'):
+		sumario['status'] = 'alerta'
+		sumario['total_erros_criticos'] = sumario.get('total_erros_criticos', 0) + 1
+		sumario['conclusao'] = (sumario.get('conclusao','') + ' | Incoterm ausente').strip(' |')
+	# Alertas contagem
+	sumario['total_alertas'] = sumario.get('total_alertas') or sumario.get('total_erros_criticos', 0)
+	# Observações
+	sumario.setdefault('total_observacoes', 0)
+	return data
+
+# ================= FUNÇÕES AUXILIARES ==================
+
+def normalize_generic(kind: str, value: str | None):
+	if value is None:
+		return None
+	if kind == 'issue_date_norm':
+		return normalize_date(value)
+	if kind == 'invoice_number_norm':
+		return normalize_invoice_number(value)
+	return value
+
+def normalize_invoice_number(raw: str | None):
+	if not raw:
+		return None
+	r = raw.upper()
+	r = re.sub(r'INVOICE\s*NO\.?\s*[:#]?','', r)
+	r = re.sub(r'\b(PI|INV|FE|NO|Nº|#)\s*','', r)
+	r = re.sub(r'[^A-Z0-9./-]','', r)
+	# Se múltiplos (separados por vírgula) manter primeiro
+	if ',' in r:
+		r = r.split(',')[0]
+	return r.strip()[:40] or None
+
+def normalize_date(raw: str | None):
+	if not raw:
+		return None
+	raw = raw.strip()
+	# Formatos comuns
+	try:
+		from datetime import datetime as _dt
+		for fmt in ('%Y-%m-%d','%d-%b-%Y','%d-%b-%y','%d/%m/%Y','%d-%m-%Y','%d/%m/%y'):
+			try:
+				dt = _dt.strptime(raw, fmt)
+				return dt.strftime('%Y-%m-%d')
+			except Exception:
+				continue
+	except Exception:
+		pass
+	# Heurística: extrair yyyy-mm-dd pattern
+	m = re.search(r'(20\d{2})[-/](\d{2})[-/](\d{2})', raw)
+	if m:
+		return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+	return None
+
+def normalize_currency(raw: str | None):
+	if not raw:
+		return None
+	r = raw.upper().replace('US$','USD').replace('$','USD')
+	if r in ('USD','EUR','BRL','GBP','CNY','JPY'): return r
+	if 'EU' in r: return 'EUR'
+	if 'R$' in r or 'BR' in r: return 'BRL'
+	return r[:3]
+
+def parse_number(raw: str | None):
+	if not raw:
+		return None
+	txt = raw.replace(' ','')
+	# Remove currency symbols
+	txt = re.sub(r'[A-Z$€£R$]','', txt)
+	# Troca separadores
+	if re.match(r'^\d{1,3}(,\d{3})+\.\d{2}$', txt):
+		txt = txt.replace(',','')
+	elif re.match(r'^\d{1,3}(\.\d{3})+,\d{2}$', txt):
+		txt = txt.replace('.','').replace(',', '.')
+	elif txt.count(',')==1 and txt.count('.')==0:
+		txt = txt.replace(',', '.')
+	txt = re.sub(r'[^0-9.\-]','', txt)
+	try:
+		return float(txt)
+	except Exception:
+		return None
+
+def infer_unit(raw: str | None):
+	if not raw: return None
+	m = re.search(r'\b(PCS|KG|KGS|MT|TON|UN|SETS|M|LTR|LTS)\b', raw.upper())
+	return (m.group(1) if m else None)
+
+def find_snippet(markdown_text: str, value: str | None):
+	if not value:
+		return ''
+	val = value.strip()
+	idx = markdown_text.find(val[:30])
+	if idx == -1:
+		return ''
+	start = max(0, idx-40)
+	end = min(len(markdown_text), idx+80)
+	return markdown_text[start:end].replace('\n',' ')[:140]
+
+def find_declared_total(markdown_text: str):
+	# Busca linha com TOTAL / AMOUNT e número
+	pattern = re.compile(r'(?i)(TOTAL\s*(AMOUNT)?)[^0-9]{0,15}([0-9.,]+)')
+	candidates = []
+	for m in pattern.finditer(markdown_text):
+		val = parse_number(m.group(3))
+		if val:
+			candidates.append(val)
+	if candidates:
+		# maior valor costuma ser total
+		return round(max(candidates),2)
+	return None

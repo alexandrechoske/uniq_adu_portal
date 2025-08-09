@@ -676,13 +676,14 @@
             </a>           
 
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
-            <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
+            {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
             <a href="{{ url_for('conferencia.index') }}" 
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
-                <i class="mdi mdi-file-check text-xl"></i>
-                <span class="sidebar-text">Conferência Documental</span>
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
+               title="Conferência Documental IA">
+                <i class="mdi mdi-file-document-multiple text-xl"></i>
+                <span class="sidebar-text">Conferência IA</span>
             </a>
-            {% endif %} -->
+            {% endif %}
 
             {% if session.get('user', {}).get('role') in ['cliente_unique'] %}
             <a href="{{ url_for('agente.index') }}" 

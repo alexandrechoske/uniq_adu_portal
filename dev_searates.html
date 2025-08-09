@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa - Rota de Container</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f7f7f7;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        #map {
+            flex: 2;
+            height: 100vh;
+            min-width: 350px;
+            z-index: 1;
+        }
+        .sidebar {
+            flex: 1;
+            min-width: 330px;
+            background: #fff;
+            box-shadow: 2px 0 12px rgba(0,0,0,.08);
+            padding: 32px 32px 24px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 2;
+        }
+
+        .sidebar h2 {
+            margin: 0 0 6px 0;
+        }
+        .info-group {
+            margin-bottom: 8px;
+        }
+        .latlon-form {
+            margin-bottom: 20px;
+        }
+        .latlon-form input {
+            width: 110px;
+            padding: 8px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0377c6;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 14px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #025b99;
+        }
+        ul {
+            margin: 4px 0 0 0;
+            padding-left: 22px;
+        }
+        .event-list li {
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .info-title {
+            background: #EFF7FF;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 5px;
+        }
+    </style>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>Resumo</h2>
+            <div class="info-group">
+                <span class="info-title">Container:</span> <b id="containerNumber"></b>
+            </div>
+            <div class="info-group">
+                <span class="info-title">Armador:</span> <span id="sealine"></span>
+            </div>
+            <div class="info-group">
+                <span class="info-title">Status:</span>
+                <span id="containerStatus"></span>
+            </div>
+            <div class="info-group">
+                <span class="info-title">Portos:</span>
+                <ul>
+                    <li>
+                        <b id="fromPort"></b>
+                    </li>
+                    <li>
+                        <b id="toPort"></b>
+                    </li>
+                </ul>
+            </div>
+            <div class="info-group">
+                <span class="info-title">Navio:</span>
+                <span id="vessel"></span>
+            </div>
+            <div>
+                <span class="info-title">Eventos:</span>
+                <ul class="event-list" id="eventList"></ul>
+            </div>
+            <hr />
+            <div>
+                <form class="latlon-form" id="latlonForm">
+                    <label>
+                        Latitude:
+                        <input type="number" step="any" id="inputLat" required>
+                    </label>
+                    <label>
+                        Longitude:
+                        <input type="number" step="any" id="inputLng" required>
+                    </label>
+                    <button type="submit">Centralizar & Marcar</button>
+                </form>
+            </div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <script>
+        // --- JSON Fix: dado igual ao fornecido, só removi comentários ---
+        const API_DATA = {
+            "status": "success",
+            "message": "OK",
+            "data": {
+                "metadata": {
+                    "type": "CT",
+                    "number": "EXFU6630373",
+                    "sealine": "HLCU",
+                    "sealine_name": "Hapag-Lloyd",
+                    "status": "DELIVERED",
+                    "is_status_from_sealine": false,
+                    "from_cache": false,
+                    "updated_at": "2025-08-09 22:02:26",
+                    "cache_expires": "2025-08-10 22:02:26",
+                    "api_calls": {
+                        "total": 1,
+                        "used": 1,
+                        "remaining": 0
+                    },
+                    "unique_shipments": {
+                        "total": 1,
+                        "used": 1,
+                        "remaining": 0
+                    },
+                    "daily": {
+                        "unique_shipments": {
+                            "used": 1,
+                            "total": 1,
+                            "remaining": 0
+                        }
+                    },
+                    "is_free": true
+                },
+                "locations": [
+                    {
+                        "id": 1,
+                        "name": "Valencia",
+                        "state": "Comunitat Valenciana",
+                        "country": "Spain",
+                        "country_code": "ES",
+                        "locode": "ESVLC",
+                        "lat": 39.46975,
+                        "lng": -0.37739,
+                        "timezone": "Europe/Madrid"
+                    },
+                    {
+                        "id": 2,
+                        "name": "Itapoa",
+                        "state": "Santa Catarina",
+                        "country": "Brazil",
+                        "country_code": "BR",
+                        "locode": "BRIOA",
+                        "lat": -26.11694,
+                        "lng": -48.61611,
+                        "timezone": "America/Sao_Paulo"
+                    }
+                ],
+                "facilities": [],
+                "route": {
+                    "prepol": {
+                        "location": 1,
+                        "date": "2025-07-07 08:23:00",
+                        "actual": true
+                    },
+                    "pol": {
+                        "location": 1,
+                        "date": "2025-07-14 06:42:00",
+                        "actual": true
+                    },
+                    "pod": {
+                        "location": 2,
+                        "date": "2025-08-02 00:42:00",
+                        "actual": true,
+                        "predictive_eta": null
+                    },
+                    "postpod": {
+                        "location": 2,
+                        "date": "2025-08-08 19:30:00",
+                        "actual": true
+                    }
+                },
+                "vessels": [
+                    {
+                        "id": 1,
+                        "name": "MSC AMALFI",
+                        "imo": 9605279,
+                        "call_sign": "9HA3462",
+                        "mmsi": 229626000,
+                        "flag": "MT"
+                    }
+                ],
+                "containers": [
+                    {
+                        "number": "TGHU6048478",
+                        "iso_code": "45G1",
+                        "size_type": "40' High Cube Dry",
+                        "status": "DELIVERED",
+                        "is_status_from_sealine": false,
+                        "charges": {
+                            "storage": { "free_days": null, "days_in_charge": null },
+                            "demurrage": { "free_days": null, "days_in_charge": null },
+                            "detention": { "free_days": null, "days_in_charge": null }
+                        },
+                        "events": [
+                            {
+                                "order_id": 1,
+                                "location": 1,
+                                "facility": null,
+                                "description": "Gate out empty",
+                                "event_type": "EQUIPMENT",
+                                "event_code": "GTOT",
+                                "status": "CEP",
+                                "date": "2025-07-07 08:23:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "land",
+                                "transport_type": "TRUCK",
+                                "vessel": null,
+                                "voyage": null
+                            },
+                            {
+                                "order_id": 2,
+                                "location": 1,
+                                "facility": null,
+                                "description": "Arrival in",
+                                "event_type": "TRANSPORT",
+                                "event_code": "ARRI",
+                                "status": "CGI",
+                                "date": "2025-07-07 11:10:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "land",
+                                "transport_type": "TRUCK",
+                                "vessel": null,
+                                "voyage": null
+                            },
+                            {
+                                "order_id": 3,
+                                "location": 1,
+                                "facility": null,
+                                "description": "Loaded",
+                                "event_type": "EQUIPMENT",
+                                "event_code": "LOAD",
+                                "status": "CLL",
+                                "date": "2025-07-13 21:50:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "sea",
+                                "transport_type": "VESSEL",
+                                "vessel": 1,
+                                "voyage": "MM527A"
+                            },
+                            {
+                                "order_id": 4,
+                                "location": 1,
+                                "facility": null,
+                                "description": "Vessel departed",
+                                "event_type": "TRANSPORT",
+                                "event_code": "DEPA",
+                                "status": "VDL",
+                                "date": "2025-07-14 06:42:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "sea",
+                                "transport_type": "VESSEL",
+                                "vessel": 1,
+                                "voyage": "MM527A"
+                            },
+                            {
+                                "order_id": 5,
+                                "location": 2,
+                                "facility": null,
+                                "description": "Vessel arrived",
+                                "event_type": "TRANSPORT",
+                                "event_code": "ARRI",
+                                "status": "VAD",
+                                "date": "2025-08-02 00:42:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "sea",
+                                "transport_type": "VESSEL",
+                                "vessel": 1,
+                                "voyage": "MM527A"
+                            },
+                            {
+                                "order_id": 6,
+                                "location": 2,
+                                "facility": null,
+                                "description": "Discharged",
+                                "event_type": "EQUIPMENT",
+                                "event_code": "DISC",
+                                "status": "CDD",
+                                "date": "2025-08-02 21:09:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "sea",
+                                "transport_type": "VESSEL",
+                                "vessel": 1,
+                                "voyage": "MM527A"
+                            },
+                            {
+                                "order_id": 7,
+                                "location": 2,
+                                "facility": null,
+                                "description": "Departure from",
+                                "event_type": "EQUIPMENT",
+                                "event_code": "GTOT",
+                                "status": "CGO",
+                                "date": "2025-08-07 20:48:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "land",
+                                "transport_type": "TRUCK",
+                                "vessel": null,
+                                "voyage": null
+                            },
+                            {
+                                "order_id": 8,
+                                "location": 2,
+                                "facility": null,
+                                "description": "Gate in empty",
+                                "event_type": "EQUIPMENT",
+                                "event_code": "GTIN",
+                                "status": "CER",
+                                "date": "2025-08-08 19:30:00",
+                                "actual": true,
+                                "is_date_from_sealine": true,
+                                "is_additional_event": false,
+                                "type": "land",
+                                "transport_type": "TRUCK",
+                                "vessel": null,
+                                "voyage": null
+                            }
+                        ]
+                    }
+                ],
+                "route_data": {
+                    "route": [
+                        {
+                            "path": [
+                                [39.4697,-0.3774],[39.4607,0.026],[39.4576,0.0401],[39.449,0.0485],[39.4349,0.0512],[39.28,0.0477],[39.2638,0.0494],[39.2493,0.0552],[39.2365,0.0651],[38.8591,0.4491],[38.8426,0.4614],[38.824,0.4666],[38.8036,0.4646],[38.5982,0.4095],[38.5835,0.4044],[38.5699,0.3972],[38.5575,0.3879],[37.44,-0.5893],[37.429,-0.5999],[37.4191,-0.6115],[37.4104,-0.6242],[36.6486,-1.8593],[36.6409,-1.8726],[36.6338,-1.8863],[36.6274,-1.9004],[36.5293,-2.1329],[36.5223,-2.1515],[36.5167,-2.1704],[36.5126,-2.1898],[35.8704,-5.9319],[35.8661,-5.9512],[35.8598,-5.9698],[35.8516,-5.9878],[35.8097,-6.0676],[35.8005,-6.0834],[35.7901,-6.0983],[35.7783,-6.1123],[33.4076,-8.6901],[33.3951,-8.7035],[33.3823,-8.7167],[33.3693,-8.7296],[32.578,-9.5007],[32.5628,-9.5151],[32.5473,-9.529],[32.5313,-9.5425],[26.2968,-14.6538],[26.2857,-14.6625],[26.2742,-14.6706],[26.2623,-14.6782],[23.9563,-16.0688],[23.9441,-16.076],[23.932,-16.0831],[23.9197,-16.0901],[22.2934,-17.0008],[22.2806,-17.0079],[22.2677,-17.015],[22.2548,-17.0219],[-17.8901,-38.4831],[-17.903,-38.49],[-17.9159,-38.4971],[-17.9288,-38.5042],[-22.1267,-40.844],[-22.1402,-40.8524],[-22.1527,-40.8621],[-22.1641,-40.8731],[-23.1893,-41.9727],[-23.1996,-41.9849],[-23.2085,-41.9979],[-23.2161,-42.0119],[-26.2208,-48.2601],[-26.2253,-48.2734],[-26.2262,-48.2869],[-26.2234,-48.3007],[-26.11694,-48.61611],[-26.1169,-48.6161]
+                            ],
+                            "type": "SEA",
+                            "transport_type": "VESSEL",
+                            "from": {
+                                "name": "Valencia",
+                                "state": "Comunitat Valenciana",
+                                "country": "Spain",
+                                "country_code": "ES",
+                                "locode": "ESVLC",
+                                "lat": 39.46975,
+                                "lng": -0.37739,
+                                "timezone": "Europe/Madrid"
+                            },
+                            "to": {
+                                "name": "Itapoa",
+                                "state": "Santa Catarina",
+                                "country": "Brazil",
+                                "country_code": "BR",
+                                "locode": "BRIOA",
+                                "lat": -26.11694,
+                                "lng": -48.61611,
+                                "timezone": "America/Sao_Paulo"
+                            },
+                            "vessel": {
+                                "name": "MSC AMALFI",
+                                "imo": 9605279,
+                                "call_sign": "9HA3462",
+                                "mmsi": 229626000,
+                                "flag": "MT"
+                            }
+                        }
+                    ],
+                    "pin": [-26.11694,-48.61611]
+                }
+            }
+        };
+
+        // --- Map Inicial: centraliza na rota ---
+        const routeCoords = API_DATA.data.route_data.route[0].path
+            .map(arr => [arr[0], arr[1]]);
+        const from = API_DATA.data.route_data.route[0].from;
+        const to = API_DATA.data.route_data.route[0].to;
+
+        // Inicial center (meio do caminho)
+        const midIdx = Math.floor(routeCoords.length/2);
+        const startPoint = [from.lat, from.lng];
+
+        // --- Inicializa MAPA ---
+        const map = L.map('map').setView(routeCoords[midIdx], 3);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // --- Rota no mapa como polilinha ---
+        const routeLine = L.polyline(routeCoords, {color: '#0377c6', weight: 4}).addTo(map);
+
+        // --- Marque os principais portos (from e to) ---
+        const markerFrom = L.marker([from.lat, from.lng]).addTo(map);
+        markerFrom.bindPopup(`<b>${from.name} (${from.country_code})</b>`);
+
+        const markerTo = L.marker([to.lat, to.lng]).addTo(map);
+        markerTo.bindPopup(`<b>${to.name} (${to.country_code})</b>`);
+
+        // --- Ícone SVG de navio para o marcador atual ---
+        const shipIcon = L.divIcon({
+            html: `
+            <svg width="34" height="34" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="27" cy="27" r="27" fill="#fff" fill-opacity="0.9"/>
+                <path d="M27 6L38 32H16L27 6Z" fill="#0377c6" />
+                <rect x="23" y="32" width="8" height="8" rx="2" fill="#0377c6"/>
+                <rect x="20" y="37" width="14" height="5" rx="2.5" fill="#0377c6"/>
+                <circle cx="27" cy="39" r="2" fill="#fff"/>
+            </svg>
+            `,
+            className: "",
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [1, -15]
+        });
+
+        // Plota o navio (posição atual, campo "pin")
+        const shipPin = API_DATA.data.route_data.pin;
+        const shipMarker = L.marker([shipPin[0], shipPin[1]], {icon: shipIcon}).addTo(map);
+        shipMarker.bindPopup(`<b>Navio (posição atual)</b><br>Latitude: ${shipPin[0]}<br>Longitude: ${shipPin[1]}`);
+
+
+
+        // --- Fit bounds of the route for view ---
+        map.fitBounds(routeLine.getBounds(), {padding: [40,40]});
+
+        // --- Marcador manual do usuário ---
+        let userMarker = null;
+
+        // --- Form de latitude/longitude ---
+        document.getElementById('latlonForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            const lat = parseFloat(document.getElementById('inputLat').value);
+            const lng = parseFloat(document.getElementById('inputLng').value);
+            if(Number.isFinite(lat) && Number.isFinite(lng)) {
+                // Remove marcador antigo
+                if(userMarker) map.removeLayer(userMarker);
+                userMarker = L.marker([lat,lng], {title: "Marcador customizado"}).addTo(map);
+                userMarker.bindPopup(`<b>Marcador customizado</b><br>(${lat.toFixed(5)}, ${lng.toFixed(5)})`).openPopup();
+                map.setView([lat,lng], 7);
+            }
+        });
+
+        // --- Painel: Infos Resumidas ---
+        document.getElementById('containerNumber').textContent = API_DATA.data.metadata.number;
+        document.getElementById('sealine').textContent = API_DATA.data.metadata.sealine_name;
+        document.getElementById('containerStatus').textContent = API_DATA.data.metadata.status;
+        document.getElementById('fromPort').textContent = `${from.name}, ${from.country}`;
+        document.getElementById('toPort').textContent = `${to.name}, ${to.country}`;
+
+        document.getElementById('vessel').textContent = `${API_DATA.data.vessels[0].name} (IMO: ${API_DATA.data.vessels[0].imo})`;
+
+        // --- Lista de Eventos ---
+        const eventList = document.getElementById('eventList');
+        API_DATA.data.containers[0].events.forEach(ev => {
+            // Converte YYYY-MM-DD HH:mm:ss para algo local, simplificado
+            const d = new Date(ev.date.replace(' ','T'));
+            const dateStr = d.toLocaleString('pt-BR', {year:'2-digit',month:'2-digit',day:'2-digit', hour:'2-digit',minute:'2-digit'});
+            const locObj = API_DATA.data.locations.find(l => l.id === ev.location);
+            const locName = locObj ? locObj.name : "";
+            const desc = `${dateStr} - ${ev.description} (${locName})`;
+            const li = document.createElement('li');
+            li.textContent = desc;
+            eventList.appendChild(li);
+        });
+
+    </script>
+</body>
+</html>
