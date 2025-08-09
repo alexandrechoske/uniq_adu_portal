@@ -60,6 +60,50 @@ def api_cnpj_options():
             'error': str(e)
         }), 500
 
+@config_bp.route('/api/cnpj-importadores')
+@login_required
+@role_required(['admin'])
+def api_cnpj_importadores():
+    """API para autocomplete de CNPJs ou Razão Social usando view vw_aux_cnpj_importador.
+
+    Query params:
+        q (str): termo parcial para busca (mínimo 2 chars). Pode ser parte do CNPJ (apenas números) ou parte da razão social.
+        limit (int): limite de registros (default 15)
+    """
+    try:
+        term = (request.args.get('q') or '').strip()
+        limit = int(request.args.get('limit', 15))
+
+        # Base query
+        query = supabase_admin.table('vw_aux_cnpj_importador').select('cnpj, razao_social')
+
+        if term and len(term) >= 2:
+            digits = re.sub(r'[^0-9]', '', term)
+            # Se for numérico (busca CNPJ parcial)
+            if digits and len(digits) >= 2 and digits.isdigit() and not re.search(r'[A-Za-z]', term):
+                print(f"[CONFIG][CNPJ-AUTOCOMPLETE] term='{term}' modo=CNPJ digits='{digits}' limit={limit}")
+                query = query.ilike('cnpj', f'%{digits}%')
+            else:
+                # Busca por razão social
+                print(f"[CONFIG][CNPJ-AUTOCOMPLETE] term='{term}' modo=RAZAO limit={limit}")
+                query = query.ilike('razao_social', f'%{term}%')
+        else:
+            # Sem termo suficiente retorna vazio para evitar carga desnecessária
+            print(f"[CONFIG][CNPJ-AUTOCOMPLETE] term insuficiente='{term}' -> []")
+            return jsonify({'success': True, 'data': []})
+
+        query = query.order('razao_social')
+        response = query.execute()
+        data = response.data or []
+        total = len(data)
+        if limit and len(data) > limit:
+            data = data[:limit]
+        print(f"[CONFIG][CNPJ-AUTOCOMPLETE] resultados_total={total} enviados={len(data)}")
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        print(f"[CONFIG][CNPJ-AUTOCOMPLETE] Erro: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @config_bp.route('/api/logos-clientes')
 @login_required
 @role_required(['admin'])

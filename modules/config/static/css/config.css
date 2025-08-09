@@ -279,6 +279,52 @@ select.form-input option {
     display: none !important;
 }
 
+/* Autocomplete sugestões CNPJ/Razão Social */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 1010;
+    padding: 4px 0;
+    scrollbar-width: thin;
+}
+.autocomplete-suggestions::-webkit-scrollbar { width: 8px; }
+.autocomplete-suggestions::-webkit-scrollbar-track { background: transparent; }
+.autocomplete-suggestions::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+.autocomplete-suggestions::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+.autocomplete-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.75rem;
+    border-left: 3px solid transparent;
+    transition: background .12s, border-color .12s;
+}
+.autocomplete-suggestion:hover,
+.autocomplete-suggestion.active {
+    background: #F1F5F9;
+    border-left-color: #2563EB;
+}
+.autocomplete-primary { font-weight: 600; color: #1F2937; font-size: 0.75rem; }
+.autocomplete-secondary { font-size: 0.6875rem; color: #475569; letter-spacing: .5px; }
+.autocomplete-highlight { background: #FEF3C7; padding: 0 2px; border-radius: 3px; }
+.autocomplete-empty { padding: 10px 12px; font-size: 0.7rem; color: #64748B; text-align: center; }
+.autocomplete-loading { padding: 10px 12px; font-size: 0.7rem; color: #64748B; font-style: italic; }
+.autocomplete-actions { display:flex; gap:.5rem; padding:8px 12px 6px; border-top:1px solid #E2E8F0; background:#F8FAFC; position:sticky; bottom:0; }
+.autocomplete-actions .btn-small { font-size:0.65rem; padding:6px 10px; line-height:1; }
+.autocomplete-suggestion.already-added { opacity:.55; cursor:not-allowed; }
+.autocomplete-suggestion.already-added:hover { background:#FFFFFF; border-left-color:transparent; }
+
 /* Responsividade básica */
 @media (max-width: 768px) {
     .config-container {
@@ -313,6 +359,15 @@ select.form-input option {
     gap: 8px;
     align-items: center;
 }
+
+/* ===== Modal Pesquisa Empresas ===== */
+#resultado-pesquisa-empresas table { width:100%; border-collapse:collapse; }
+#resultado-pesquisa-empresas table th { background:#F9FAFB; font-size:.65rem; letter-spacing:.05em; text-transform:uppercase; color:#64748B; padding:6px 8px; text-align:left; position:sticky; top:0; z-index:2; }
+#resultado-pesquisa-empresas table td { font-size:.7rem; padding:6px 8px; border-top:1px solid #E2E8F0; vertical-align:middle; }
+#resultado-pesquisa-empresas tbody tr:hover td { background:#F1F5F9; }
+.linha-ja-adicionada td { background:#F3F4F6; color:#6B7280; }
+.linha-ja-adicionada td:first-child { background:#E5E7EB; }
+.linha-ja-adicionada td:nth-child(2)::after { content:' (já adicionado)'; color:#059669; font-weight:600; }
 
 .action-buttons .btn-edit,
 .action-buttons .btn-danger {

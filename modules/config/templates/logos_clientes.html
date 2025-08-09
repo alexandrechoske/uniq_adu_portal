@@ -19,17 +19,17 @@
                 {'name': 'Logos de Clientes', 'icon': 'mdi mdi-domain'}
             ]) }}
         </div>
-        <div class="actions-right">
-            <button id="btn-refresh" class="btn btn-secondary">
-                <i class="mdi mdi-refresh"></i>
-                Atualizar
+                <button type="button" id="add-cnpj" class="btn btn-outline">
+                    <i class="mdi mdi-plus"></i>
+                    Adicionar manual
+                </button>
             </button>
             <button id="btn-adicionar" class="btn btn-primary">
                 <i class="mdi mdi-plus"></i>
                 Novo Cliente
             </button>
         </div>
-    </div>
+        <p class="form-help">Busque por parte da razão social ou CNPJ. Marque múltiplos na lista e clique em "Adicionar selecionados" ou adicione manualmente um CNPJ formatado.</p>
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
@@ -190,9 +190,17 @@
                                     type="text" 
                                     id="cnpj-input" 
                                     class="form-input" 
-                                    placeholder="Digite o CNPJ (apenas números ou com formatação)" 
-                                    maxlength="18"
+                                    placeholder="Digite parte do nome (razão social) ou CNPJ" 
+                                    maxlength="60"
+                                    autocomplete="off"
+                                    name="cnpj-input"
                                 >
+                                <!-- Dropdown de sugestões -->
+                                <div id="cnpj-suggestions" class="autocomplete-suggestions hidden"></div>
+                                <button type="button" id="btn-pesquisar-empresas" class="btn btn-secondary">
+                                    <i class="mdi mdi-magnify"></i>
+                                    Pesquisar empresas
+                                </button>
                                 <button type="button" id="add-cnpj" class="btn btn-outline">
                                     <i class="mdi mdi-plus"></i>
                                     Adicionar
@@ -203,7 +211,10 @@
                                 <!-- CNPJs selecionados aparecerão aqui -->
                             </div>
                         </div>
-                        <p class="form-help">Digite um CNPJ válido e clique em "Adicionar" para incluir na lista</p>
+                        <p class="form-help">
+                            Fluxo: Digite parte do nome e clique em <strong>Pesquisar empresas</strong> para listar e selecionar múltiplas. <br>
+                            Ou informe diretamente um CNPJ (14 dígitos) e clique em <strong>Adicionar</strong> para inclusão manual.
+                        </p>
                     </div>
                     
                     <div class="logo-upload-section">
@@ -261,6 +272,40 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Modal de Pesquisa de Empresas -->
+<div id="modal-pesquisa-empresas" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width:760px;">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="mdi mdi-domain-search"></i>
+                Selecionar Empresas
+            </h3>
+            <button type="button" class="modal-close" onclick="fecharModalPesquisaEmpresas()">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding-top:0.5rem;">
+                <div class="search-empresas-bar" style="display:flex; gap:.5rem; align-items:center; margin-bottom:1rem;">
+                        <input type="text" id="input-termo-pesquisa-empresas" class="form-input" placeholder="Refine a busca" maxlength="60" autocomplete="off" />
+                        <button type="button" class="btn btn-secondary" id="btn-refazer-pesquisa">
+                                <i class="mdi mdi-refresh"></i>
+                                Pesquisar
+                        </button>
+                </div>
+                <div id="resultado-pesquisa-empresas" class="empresas-result-list" style="max-height:380px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px; background:#fff;">
+                        <div class="placeholder" style="padding:1rem; color:#6b7280; font-size:.9rem;">Digite um termo e clique em Pesquisar empresas.</div>
+                </div>
+                <div class="modal-footer" style="margin-top:1rem; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:.85rem; color:#6b7280;" id="status-pesquisa-empresas"></div>
+                        <div style="display:flex; gap:.5rem;">
+                                <button type="button" class="btn btn-outline" onclick="fecharModalPesquisaEmpresas()">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="btn-adicionar-empresas-selecionadas" disabled>Adicionar selecionados (0)</button>
+                        </div>
+                </div>
+        </div>
     </div>
 </div>
 

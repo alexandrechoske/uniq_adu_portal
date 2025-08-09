@@ -3,11 +3,15 @@ let clientes = [];
 let editingClienteId = null;
 let cnpjOptions = [];
 let selectedCnpjs = []; // CNPJs selecionados no modal
+let cnpjImportadorCache = {}; // cache simples por termo
+let cnpjSuggestionIndex = -1; // índice navegação teclado
+let latestCnpjSuggestions = []; // guarda último payload
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[CLIENTES SISTEMA] Iniciando carregamento...');
     loadClientes();
     setupEventListeners();
+    setupPesquisaEmpresasFlow();
 });
 
 // Função para atualizar KPIs
@@ -117,15 +121,49 @@ function setupEventListeners() {
         cnpjInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                addCnpjFromInput();
+                // Se houver sugestão selecionada, usa ela
+                const suggestions = document.querySelectorAll('#cnpj-suggestions .autocomplete-suggestion');
+                if (suggestions.length && cnpjSuggestionIndex >= 0 && suggestions[cnpjSuggestionIndex]) {
+                    suggestions[cnpjSuggestionIndex].click();
+                } else {
+                    addCnpjFromInput();
+                }
             }
         });
         
-        // Formatação automática de CNPJ
+        // Formatação automática de CNPJ somente quando conteúdo for apenas dígitos (permitir texto para busca por razão social)
         cnpjInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            if (value.length <= 14) {
-                e.target.value = formatCnpjInput(value);
+            const raw = e.target.value;
+            const hasLetters = /[A-Za-z]/.test(raw);
+            // Se não há letras e somente dígitos (ignorando pontuação de CNPJ) formatar
+            const digits = raw.replace(/\D/g, '');
+            if (!hasLetters && digits.length && digits.length <= 14 && raw.replace(/[\.\-/]/g,'') === digits) {
+                e.target.value = formatCnpjInput(digits);
+            } else {
+                // Manter texto livre para busca por nome
+                // Opcional: limitar tamanho geral
+                if (raw.length > 60) {
+                    e.target.value = raw.slice(0,60);
+                }
+            }
+            // Autocomplete desativado (economia de recursos)
+        });
+
+        cnpjInput.addEventListener('keydown', function(e) {
+            const container = document.getElementById('cnpj-suggestions');
+            if (!container || container.classList.contains('hidden')) return;
+            const items = container.querySelectorAll('.autocomplete-suggestion');
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                cnpjSuggestionIndex = (cnpjSuggestionIndex + 1) % items.length;
+                updateSuggestionActive(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                cnpjSuggestionIndex = (cnpjSuggestionIndex - 1 + items.length) % items.length;
+                updateSuggestionActive(items);
+            } else if (e.key === 'Escape') {
+                hideCnpjSuggestions();
             }
         });
     }
@@ -182,6 +220,175 @@ function setupEventListeners() {
     console.log('[CLIENTES SISTEMA] Event listeners configurados');
 }
 
+// ================= Novo Fluxo: Pesquisa de Empresas (reduz chamadas) =================
+let ultimaBuscaEmpresas = '';
+let cacheBuscaEmpresas = {}; // { termoLower: [ {cnpj, razao_social}, ... ] }
+
+function setupPesquisaEmpresasFlow() {
+    const btnPesquisar = document.getElementById('btn-pesquisar-empresas');
+    if (btnPesquisar) {
+        btnPesquisar.addEventListener('click', () => {
+            const termo = (document.getElementById('cnpj-input')?.value || '').trim();
+            if (termo.length < 2) {
+                showError('Digite ao menos 2 caracteres para pesquisar');
+                return;
+            }
+            abrirModalPesquisaEmpresas(termo);
+        });
+    }
+    const refazer = document.getElementById('btn-refazer-pesquisa');
+    if (refazer) {
+        refazer.addEventListener('click', () => {
+            const termo = (document.getElementById('input-termo-pesquisa-empresas')?.value || '').trim();
+            if (termo.length < 2) {
+                showError('Digite ao menos 2 caracteres');
+                return;
+            }
+            executarPesquisaEmpresas(termo, true);
+        });
+    }
+    const termoRefine = document.getElementById('input-termo-pesquisa-empresas');
+    if (termoRefine) {
+        termoRefine.addEventListener('keypress', (e)=>{
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-refazer-pesquisa').click(); }
+        });
+        termoRefine.addEventListener('input', ()=>{
+            // Filtro local se já tem resultados
+            const termoAtual = termoRefine.value.trim().toLowerCase();
+            const lista = cacheBuscaEmpresas[ultimaBuscaEmpresas.toLowerCase()] || [];
+            if (lista.length) {
+                const filtrados = lista.filter(item => item.razao_social.toLowerCase().includes(termoAtual) || item.cnpj.includes(termoAtual.replace(/\D/g,'')));
+                renderResultadosEmpresas(filtrados, termoAtual);
+            }
+        });
+    }
+    const btnAddSel = document.getElementById('btn-adicionar-empresas-selecionadas');
+    if (btnAddSel) {
+        btnAddSel.addEventListener('click', adicionarEmpresasSelecionadas);
+    }
+}
+
+function abrirModalPesquisaEmpresas(termoInicial) {
+    ultimaBuscaEmpresas = termoInicial;
+    const modal = document.getElementById('modal-pesquisa-empresas');
+    const inputRefine = document.getElementById('input-termo-pesquisa-empresas');
+    if (inputRefine) inputRefine.value = termoInicial;
+    if (modal) modal.style.display = 'flex';
+    executarPesquisaEmpresas(termoInicial, false);
+}
+function fecharModalPesquisaEmpresas() {
+    const modal = document.getElementById('modal-pesquisa-empresas');
+    if (modal) modal.style.display = 'none';
+    document.getElementById('resultado-pesquisa-empresas').innerHTML = '<div class="placeholder" style="padding:1rem; color:#6b7280; font-size:.9rem;">Digite um termo e clique em Pesquisar empresas.</div>';
+    document.getElementById('status-pesquisa-empresas').textContent = '';
+    const btnAdd = document.getElementById('btn-adicionar-empresas-selecionadas');
+    if (btnAdd) { btnAdd.disabled = true; btnAdd.textContent = 'Adicionar selecionados (0)'; }
+}
+function executarPesquisaEmpresas(termo, forcar) {
+    const status = document.getElementById('status-pesquisa-empresas');
+    const listaDiv = document.getElementById('resultado-pesquisa-empresas');
+    const lower = termo.toLowerCase();
+    status.textContent = 'Pesquisando...';
+    listaDiv.innerHTML = '<div style="padding:1rem; font-size:.85rem; color:#374151;">Carregando resultados...</div>';
+    if (!forcar && cacheBuscaEmpresas[lower]) {
+        renderResultadosEmpresas(cacheBuscaEmpresas[lower], lower);
+        status.textContent = `${cacheBuscaEmpresas[lower].length} resultado(s) em cache.`;
+        return;
+    }
+    fetch(`/config/api/cnpj-importadores?q=${encodeURIComponent(termo)}&limit=120`)
+        .then(r=>r.json())
+        .then(json => {
+            if (!json.success) throw new Error(json.error || 'Falha');
+            cacheBuscaEmpresas[lower] = json.data || [];
+            renderResultadosEmpresas(cacheBuscaEmpresas[lower], lower);
+            status.textContent = `${cacheBuscaEmpresas[lower].length} resultado(s).`;
+        })
+        .catch(err => {
+            console.error('[PESQUISA EMPRESAS] Erro', err);
+            listaDiv.innerHTML = '<div style="padding:1rem; color:#b91c1c;">Erro ao buscar empresas.</div>';
+            status.textContent = 'Erro na pesquisa.';
+        });
+}
+function renderResultadosEmpresas(lista, termo) {
+    const listaDiv = document.getElementById('resultado-pesquisa-empresas');
+    const btnAdd = document.getElementById('btn-adicionar-empresas-selecionadas');
+    if (!listaDiv) return;
+    if (!lista || !lista.length) {
+        listaDiv.innerHTML = '<div style="padding:1rem; font-size:.85rem; color:#6b7280;">Sem resultados.</div>';
+        if (btnAdd) { btnAdd.disabled = true; btnAdd.textContent = 'Adicionar selecionados (0)'; }
+        return;
+    }
+    const highlight = (texto) => {
+        if (!termo) return texto;
+        const safe = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return texto.replace(new RegExp(`(${safe})`, 'ig'), '<mark style="background:#FEF3C7;">$1</mark>');
+    };
+    listaDiv.innerHTML = `
+        <table class="table" style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="width:50px; text-align:center;"><input type="checkbox" id="chk-select-all-empresas" /></th>
+                    <th>Razão Social</th>
+                    <th style="width:180px;">CNPJ</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${lista.map(item => {
+                    const ja = selectedCnpjs.some(i => i.cnpj === item.cnpj);
+                    return `<tr class="linha-empresa${ja ? ' linha-ja-adicionada' : ''}">
+                        <td style="text-align:center;">
+                            <input type="checkbox" class="chk-empresa" value="${item.cnpj}" ${ja ? 'disabled' : ''} />
+                        </td>
+                        <td>${highlight(item.razao_social)}</td>
+                        <td>${formatCnpj(item.cnpj)}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    // Eventos
+    const chkAll = document.getElementById('chk-select-all-empresas');
+    if (chkAll) {
+        chkAll.addEventListener('change', () => {
+            document.querySelectorAll('#resultado-pesquisa-empresas .chk-empresa:not(:disabled)').forEach(cb => { cb.checked = chkAll.checked; });
+            atualizarBtnAddEmpresas();
+        });
+    }
+    listaDiv.querySelectorAll('.chk-empresa').forEach(cb => {
+        cb.addEventListener('change', atualizarBtnAddEmpresas);
+    });
+    atualizarBtnAddEmpresas();
+}
+function atualizarBtnAddEmpresas() {
+    const btnAdd = document.getElementById('btn-adicionar-empresas-selecionadas');
+    if (!btnAdd) return;
+    const selecionados = [...document.querySelectorAll('#resultado-pesquisa-empresas .chk-empresa:checked')];
+    btnAdd.disabled = selecionados.length === 0;
+    btnAdd.textContent = `Adicionar selecionados (${selecionados.length})`;
+}
+function adicionarEmpresasSelecionadas() {
+    const selecionados = [...document.querySelectorAll('#resultado-pesquisa-empresas .chk-empresa:checked')];
+    if (!selecionados.length) return;
+    let novos = 0;
+    selecionados.forEach(cb => {
+        const cnpj = cb.value;
+        if (!selectedCnpjs.some(i => i.cnpj === cnpj)) {
+            // Recuperar razão social do cache original (ultimaBuscaEmpresas)
+            const lista = cacheBuscaEmpresas[ultimaBuscaEmpresas.toLowerCase()] || [];
+            const found = lista.find(i => i.cnpj === cnpj);
+            selectedCnpjs.push({ cnpj, razao_social: found ? found.razao_social : '' });
+            novos++;
+        }
+    });
+    if (novos) {
+        renderSelectedCnpjs();
+        showSuccess(`${novos} CNPJ(s) adicionados`);
+    } else {
+        showError('Nenhum novo CNPJ adicionado');
+    }
+    fecharModalPesquisaEmpresas();
+}
+
 function addCnpjFromInput() {
     const cnpjInput = document.getElementById('cnpj-input');
     if (!cnpjInput || !cnpjInput.value.trim()) {
@@ -215,6 +422,7 @@ function addCnpjFromInput() {
     
     console.log('[CLIENTES SISTEMA] CNPJ adicionado:', cnpjValue);
 }
+// (Autocomplete helpers removidos para reduzir chamadas)
 function removeSelectedCnpj(cnpj) {
     selectedCnpjs = selectedCnpjs.filter(item => item.cnpj !== cnpj);
     renderSelectedCnpjs();
