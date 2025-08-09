@@ -2089,21 +2089,36 @@ function updateContainerField(containerValue) {
         return;
     }
     
-    // Verificar se há múltiplos containers (separados por vírgula)
-    const containers = containerValue.split(',').map(c => c.trim()).filter(c => c);
-    
-    if (containers.length === 1) {
-        // Um único container
-        containerElement.innerHTML = `<span class="container-tag" title="${containers[0]}">${containers[0]}</span>`;
-    } else {
-        // Múltiplos containers
-        const containerTags = containers.map(container => 
-            `<span class="container-tag" title="${container}">${container}</span>`
-        ).join('');
-        
-        containerElement.innerHTML = containerTags;
-        console.log(`[MODAL_DEBUG] ${containers.length} containers processados:`, containers);
+    // Suportar múltiplos separadores: vírgula, ponto e vírgula, quebra de linha
+    const rawParts = containerValue
+        .split(/[,;\n]/)
+        .map(c => c.trim())
+        .filter(c => c.length > 0);
+
+    // Sanitizar (remover pontos, traços, espaços) e upper + deduplicar preservando ordem
+    const seen = new Set();
+    const containers = [];
+    rawParts.forEach(raw => {
+        const sanitized = raw.replace(/[.\-\s]/g, '').toUpperCase();
+        if (sanitized && !seen.has(sanitized)) {
+            seen.add(sanitized);
+            containers.push(sanitized);
+        }
+    });
+
+    if (containers.length === 0) {
+        containerElement.innerHTML = '-';
+        return;
     }
+
+    // Montar links externos direto para SeaRates (abrir em nova aba)
+    const linksHtml = containers.map(ctn => {
+        const url = `https://www.searates.com/container/tracking/?number=${encodeURIComponent(ctn)}&sealine=AUTO`;
+        return `<a class="container-tag" href="${url}" target="_blank" rel="noopener" title="Abrir rastreamento em nova aba: ${ctn}">${ctn}</a>`;
+    }).join('');
+
+    containerElement.innerHTML = linksHtml;
+    console.log(`[MODAL_DEBUG] Containers renderizados como links externos:`, containers);
 }
 
 /**

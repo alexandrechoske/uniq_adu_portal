@@ -920,7 +920,8 @@
 
 .container-tag:hover {
     background: #bbdefb;
-    cursor: help;
+    cursor: pointer;
+    text-decoration: none;
 }
 
 /* Timeline Status Styles */
