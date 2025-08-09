@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, current_app, session
 from routes.auth import login_required
 from werkzeug.utils import secure_filename
+from extensions import supabase_admin
 
 # Dependências opcionais
 try:
@@ -29,84 +30,53 @@ conferencia_bp = Blueprint(
 	url_prefix='/conferencia'
 )
 
-SIMPLE_PROMPT = r"""Você é um extrator de INVOICE (comercial ou proforma). Analise o documento completo (todas as páginas) e retorne APENAS UM JSON ÚNICO e VÁLIDO seguindo exatamente a estrutura abaixo. Seja robusto a layouts variados, idiomas (PT/EN/DE/IT), tabelas em grade e UOMs não padronizadas (pce, pcs, kgs, mt, m, set).
+# =====================================
+# PROMPT (v3.2 anti-mismatch rígido)
+# =====================================
+SIMPLE_PROMPT = r"""
+Você é um extrator de INVOICE. Retorne APENAS UM JSON VÁLIDO no formato já definido. 
+Reforce as regras abaixo para evitar confusão entre dinheiro e peso.
 
-REGRAS GERAIS
-- Sempre retorne: valor_extraido (texto exato), *_norm (valor normalizado), confidence (0.50–0.99), page (int|null), source_snippet (texto curto que justifique).
-- Normalizações:
-	• Datas em *_norm = YYYY-MM-DD.
-	• Números: remover milhar, trocar vírgula decimal por ponto (ex.: "1.198,50" -> 1198.50).
-	• Moeda: currency_norm em ISO (USD, EUR, BRL...).
-	• UOM: mapear para um conjunto canônico: PCS, KG, M, SET, BOX, N/A.
-- Se o campo não existir, use null e registre em sumario.alertas (com breve motivo).
-- Checagens cruzadas:
-	• total_items_sum_norm = soma de itens com amount_norm != null (itens amount=0 permanecem, mas marcados).
-	• Se houver TOTAL declarado, extraia invoice_total_declared_norm.
-	• difference_norm = invoice_total_declared_norm - total_items_sum_norm quando ambos existirem.
-	• Se |difference_norm| > 1% do total declarado, status = "alerta".
-- Inferências:
-	• country_of_acquisition: se ausente, inferir a partir do endereço do exportador (marcar inferido=true e why).
-	• country_of_origin: aceitar múltiplos (por item), e no campo global consolidar como lista única (sem duplicatas); se vier “Germany, Austria”, registrar como array ["Germany","Austria"] em *_norm_arr.
-- Itens especiais:
-	• Se o item aparenta ser “documento/certificado/serviço” (ex.: "certificate 3.1", "inspection", "documentation"), classificar item_type="DOCUMENT" e permitir unit_price_norm/amount_norm=0 sem penalizar soma.
-	• Se a descrição contiver quantidade alternativa (ex.: “36 Meter”) E a linha de qty usar outra UOM (ex.: “9,00 kgs”), preencher quantidade_alt com {valor_extraido, qty_alt_norm, uom_alt_norm}.
-	• Campos regulatórios obrigatórios (marque alerta se faltarem): invoice_number, issue_date, incoterm, seller_exporter, buyer_consignee, gross_weight, net_weight, payment_terms, exporter_reference.
+REGRAS CRÍTICAS (ANTI-MISMATCH, VERSÃO RÍGIDA)
+1) Classifique todo número com "dimension": "MONEY" | "WEIGHT" | "COUNT" | "OTHER".
+2) Um número só pode ser "MONEY" se houver INDÍCIO DE MOEDA no MESMO BLOCO/linha 
+   OU no cabeçalho imediato da coluna (ex.: "Amount", "Total Amount", "USD", "US$", "EUR", "R$").
+   Use critério de proximidade: o símbolo/sigla da moeda deve aparecer a no máximo 15 caracteres 
+   do número OU o bloco deve estar sob coluna intitulada "AMOUNT/AMT/Total USD/EUR/…".
+3) Se a mesma linha/bloco contiver termos de peso (NEGATIVOS para monetário): 
+   "KGS", "KG", "GROSS WEIGHT", "NET WEIGHT", "CTNS", "CARTONS", "BALES", "PACKAGES", 
+   classifique como "WEIGHT" (ou "COUNT") e NUNCA use como total monetário.
+4) "totais_detalhados.grand_total_norm":
+   - Preencha APENAS com número "MONEY". 
+   - Sempre preencher também "grand_total_dimension" e "grand_total_currency_norm".
+5) "invoice_total_declared_norm":
+   - Se "totais_detalhados.grand_total_dimension" == "MONEY", COPIE exatamente 
+     "totais_detalhados.grand_total_norm" para "invoice_total_declared_norm" 
+     e copie a mesma moeda.
+   - Caso não exista "grand_total" monetário, procure um candidato monetário com as regras acima; 
+     se nenhum candidato "MONEY" válido existir, deixe "invoice_total_declared_norm" = null 
+     e adicione alerta: "Total declarado não monetário (ex.: peso). Comparação suprimida."
+6) "sumario.checks.difference_norm" só existe quando "invoice_total_declared_norm" é "MONEY".
+7) Sempre retorne "page" e "source_snippet" que justifiquem a classificação do(s) total(is) 
+   (mostre a linha com "USD…", nunca a de "TOTAL GROSS WEIGHT").
 
-CAMPOS A EXTRAIR
-{
-	"sumario": {
-		"status": "ok|alerta|erro",
-		"total_erros_criticos": int,
-		"total_observacoes": int,
-		"total_alertas": int,
-		"checks": {
-			"total_items_sum_norm": number|null,
-			"invoice_total_declared_norm": number|null,
-			"difference_norm": number|null
-		},
-		"alertas": [string],
-		"observacoes": [string],
-		"conclusao": string
-	},
-	"campos": {
-		"invoice_number": { "valor_extraido": string|null, "invoice_number_norm": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"issue_date": { "valor_extraido": string|null, "issue_date_norm": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"seller_exporter": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"buyer_consignee": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"exporter_reference": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"payment_terms": { "valor_extraido": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"gross_weight": { "valor_extraido": string|null, "gross_weight_norm": number|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"net_weight": { "valor_extraido": string|null, "net_weight_norm": number|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"incoterm": { "valor_extraido": string|null, "incoterm_code_norm": string|null, "incoterm_place_norm": string|null, "confidence": number, "page": int|null, "source_snippet": string },
-		"currency": { "valor_extraido": string|null, "currency_norm": string|null, "confidence": number },
-		"country_of_origin": { "valor_extraido": string|null, "country_of_origin_norm_arr": [string]|null, "inferido": boolean, "why": string|null, "confidence": number },
-		"country_of_acquisition": { "valor_extraido": string|null, "country_of_acquisition_norm": string|null, "inferido": boolean, "why": string|null, "confidence": number },
-		"totais_detalhados": { "subtotal_norm": number|null, "freight_norm": number|null, "insurance_norm": number|null, "discount_norm": number|null, "taxes_norm": number|null, "grand_total_norm": number|null }
-	},
-	"itens_da_fatura": [ {
-			"item_type": "PRODUCT|DOCUMENT|SERVICE",
-			"descricao_completa": { "valor_extraido": string, "confidence": number, "page": int|null, "source_snippet": string },
-			"hs_code": { "valor_extraido": string|null, "hs_code_norm": string|null, "confidence": number },
-			"manufacturer": { "valor_extraido": string|null, "confidence": number },
-			"country_of_origin_item": { "valor_extraido": string|null, "country_origin_item_norm": string|null, "confidence": number },
-			"quantidade_unidade": { "valor_extraido": string|null, "qty_norm": number|null, "uom_norm": "PCS|KG|M|SET|BOX|N/A"|null, "confidence": number },
-			"quantidade_alt": { "valor_extraido": string|null, "qty_alt_norm": number|null, "uom_alt_norm": "PCS|KG|M|SET|BOX|N/A"|null },
-			"preco_unitario": { "valor_extraido": string|null, "unit_price_norm": number|null, "per": "UNIT|M|KG|SET|BOX|N/A"|null, "confidence": number },
-			"valor_total_item": { "valor_extraido": string|null, "amount_norm": number|null, "confidence": number }
-	} ]
-}
+CHECAGENS
+- "total_items_sum_norm" = soma de "amount_norm" dos itens (dimension="MONEY").
+- "difference_norm" = invoice_total_declared_norm - total_items_sum_norm (apenas quando ambos MONEY).
+- Se |difference_norm| > 1% do total declarado => status="alerta".
 
-INSTRUÇÕES DE BUSCA (resumido)
-- invoice_number: padrões "Invoice", "Rechnung", "Fattura", etc. Remover prefixos e normalizar.
-- incoterm: separar code/place (FCA Bremen).
-- pesos (gross_weight/net_weight): normalizar para número (kg). Se outra unidade (lbs) converter se possível ou retornar valor bruto.
-- payment_terms: extrair texto curto (ex.: "30 days", "ADVANCE 50% / 50% before shipment").
-- exporter_reference: localizar referências do exportador (ex.: "Ref:" / "Our Ref.").
-- country lists: separar por vírgulas ou conjunções.
-- Totais detalhados: mapear linhas que contenham Subtotal/Freight/Insurance/Discount/Tax/VAT/Grand Total.
+INSTRUÇÕES DE DESAMBIGUAÇÃO DE TOTAIS
+- Se houver mais de um "TOTAL" no documento, classifique cada um com "dimension".
+- Escolha para "grand_total_norm" o candidato de "MONEY" mais forte:
+  (a) contém moeda na mesma linha/bloco; (b) está em rodapé de valores; (c) é o maior entre os "MONEY".
+- Qualquer "TOTAL … KGS" é "WEIGHT" e deve ser ignorado para totais monetários.
 
-Retorne APENAS o JSON final, sem comentários ou texto adicional.
+(Formato do JSON permanece o mesmo do v3.1; apenas siga fielmente as regras acima.)
 """
+
+# =========================
+# Utilidades básicas
+# =========================
 
 def ensure_upload_folder():
 	os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -146,6 +116,10 @@ def safe_parse_json(raw: str):
 		return json.loads(raw)
 	except Exception:
 		return None
+
+# =========================
+# Rotas
+# =========================
 
 @conferencia_bp.route('/')
 @login_required
@@ -212,6 +186,47 @@ def simple_analyze():
 		llm_error = 'GEMINI_API_KEY ausente ou lib indisponível'
 
 	elapsed_ms = int((datetime.now() - start).total_seconds()*1000)
+	processed = enrich_full_invoice_json(md_trunc, llm_json)
+	# Log em tabela conferencia_jobs (analytics)
+	try:
+		if supabase_admin and processed:
+			campos = processed.get('campos', {})
+			sumario = processed.get('sumario', {})
+			invoice_number = campos.get('invoice_number',{}).get('invoice_number_norm') or campos.get('invoice_number',{}).get('valor_extraido')
+			incoterm = campos.get('incoterm',{}).get('valor_extraido')
+			status = sumario.get('status')
+			checks = sumario.get('checks',{})
+			insert_payload = {
+				'id': str(uuid.uuid4()),
+				'created_at': datetime.utcnow().isoformat(),
+				'file_name': filename,
+				'duration_ms': elapsed_ms,
+				'lexoid_mode': parse_mode,
+				'invoice_number': invoice_number,
+				'incoterm': incoterm,
+				'status': status,
+				'total_items_sum_norm': checks.get('total_items_sum_norm'),
+				'invoice_total_declared_norm': checks.get('invoice_total_declared_norm'),
+				'difference_norm': checks.get('difference_norm'),
+				'total_erros_criticos': sumario.get('total_erros_criticos'),
+				'total_alertas': sumario.get('total_alertas'),
+				'llm_error': llm_error,
+				'raw_json': json.dumps(processed)[:15000]  # limitar tamanho
+			}
+			# Tentativa de inserção (ignorar falhas)
+			try:
+				supabase_admin.table('conferencia_jobs').insert(insert_payload).execute()
+			except Exception as e:
+				current_app.logger.warning(f"[CONF_LOG] Falha ao inserir log conferencia_jobs: {e}")
+	except Exception as e:
+		current_app.logger.warning(f"[CONF_LOG] Erro inesperado logging: {e}")
+
+	# Opcional: deletar arquivo após processamento (não armazenar permanentemente)
+	try:
+		os.remove(path)
+	except Exception:
+		pass
+
 	return jsonify({
 		'success': True,
 		'file': filename,
@@ -221,7 +236,7 @@ def simple_analyze():
 		'markdown_preview': md_trunc[:1200],
 		'palavras': palavras,
 		'paginas_estimado': paginas,
-		'json': enrich_full_invoice_json(md_trunc, llm_json),
+		'json': processed,
 		'llm_error': llm_error
 	})
 
@@ -252,7 +267,9 @@ def static_test():
 # ================= ENRIQUECIMENTO PÓS-PROCESSO ==================
 
 def enrich_full_invoice_json(markdown_text: str, data: dict | None) -> dict | None:
-	"""Garante estrutura completa conforme especificação, preenchendo defaults e calculando verificações."""
+	"""Garante estrutura completa conforme especificação, preenchendo defaults e calculando verificações.
+	Inclui TRAVAS anti-mismatch (peso x dinheiro) no pós-processamento.
+	"""
 	if data is None:
 		return None
 	# Se já parece completo (tem 'campos' e 'itens_da_fatura') apenas pós-processa
@@ -324,6 +341,7 @@ def post_process_full(markdown_text: str, data: dict) -> dict:
 	campos = data.setdefault('campos', {})
 	itens = data.setdefault('itens_da_fatura', [])
 	sumario = data.setdefault('sumario', {})
+	alertas = sumario.setdefault('alertas', [])
 	# Normalizações adicionais
 	inv_field = campos.get('invoice_number', {})
 	if inv_field.get('valor_extraido') and 'invoice_number_norm' not in inv_field:
@@ -335,7 +353,7 @@ def post_process_full(markdown_text: str, data: dict) -> dict:
 	if currency_field.get('valor_extraido') and 'currency_norm' not in currency_field:
 		currency_field['currency_norm'] = normalize_currency(currency_field.get('valor_extraido'))
 
-	# Totais
+	# Totais (soma de itens monetários)
 	total_items = 0.0
 	for it in itens:
 		amt = it.get('valor_total_item', {}).get('amount_norm')
@@ -343,27 +361,49 @@ def post_process_full(markdown_text: str, data: dict) -> dict:
 			# tentar parse
 			raw = it.get('valor_total_item', {}).get('valor_extraido')
 			parsed = parse_number(raw)
-			it['valor_total_item']['amount_norm'] = parsed
+			it.setdefault('valor_total_item', {})['amount_norm'] = parsed
 			amt = parsed
 		if isinstance(amt, (int, float)):
 			total_items += amt
-	# Procurar total declarado
-	declared = find_declared_total(markdown_text)
+
+	# -------------- ANTI-MISMATCH BACKEND GUARD 1 --------------
+	# Se o LLM já trouxe grand_total monetário, use-o como declarado.
+	declared = None
+	gtd = campos.get('totais_detalhados') or {}
+	grand_dim = gtd.get('grand_total_dimension')
+	grand_total = gtd.get('grand_total_norm')
+	if grand_dim == 'MONEY' and isinstance(grand_total, (int, float)):
+		declared = float(grand_total)
+	else:
+		# Fallback: busca segura no markdown apenas com contexto de moeda e sem palavras de peso
+		declared = find_declared_total_money_only(markdown_text)
+		if declared is None and grand_total is not None:
+			# Caso o LLM tenha setado grand_total mas sem dimension, valide pela linha
+			declared = None  # segurança
+
 	checks = {
 		'total_items_sum_norm': round(total_items, 2) if total_items else None,
 		'invoice_total_declared_norm': declared,
 		'difference_norm': round(declared - total_items, 2) if (declared is not None and total_items) else None
 	}
 	sumario['checks'] = checks
-	# Erros críticos
+
+	# -------------- ANTI-MISMATCH BACKEND GUARD 2 --------------
+	# Se o declarado for None por ser peso/contagem, registre alerta e não calcule diferença
+	if declared is None:
+		if 'Total declarado não monetário' not in ' '.join(alertas):
+			alertas.append('Total declarado não monetário detectado (peso/contagem). Comparação suprimida.')
+		checks['difference_norm'] = None
+
+	# Erros críticos: incoterm ausente
 	inc = campos.get('incoterm', {})
 	if not inc.get('valor_extraido'):
 		sumario['status'] = 'alerta'
 		sumario['total_erros_criticos'] = sumario.get('total_erros_criticos', 0) + 1
 		sumario['conclusao'] = (sumario.get('conclusao','') + ' | Incoterm ausente').strip(' |')
-	# Alertas contagem
+
+	# Alertas/observações
 	sumario['total_alertas'] = sumario.get('total_alertas') or sumario.get('total_erros_criticos', 0)
-	# Observações
 	sumario.setdefault('total_observacoes', 0)
 	return data
 
@@ -397,7 +437,7 @@ def normalize_date(raw: str | None):
 	# Formatos comuns
 	try:
 		from datetime import datetime as _dt
-		for fmt in ('%Y-%m-%d','%d-%b-%Y','%d-%b-%y','%d/%m/%Y','%d-%m-%Y','%d/%m/%y'):
+		for fmt in ('%Y-%m-%d','%d-%b-%Y','%d-%b-%y','%d/%m/%Y','%d-%m-%Y','%d/%m/%y','%b.%d,%Y','%b %d, %Y'):
 			try:
 				dt = _dt.strptime(raw, fmt)
 				return dt.strftime('%Y-%m-%d')
@@ -424,8 +464,8 @@ def parse_number(raw: str | None):
 	if not raw:
 		return None
 	txt = raw.replace(' ','')
-	# Remove currency symbols
-	txt = re.sub(r'[A-Z$€£R$]','', txt)
+	# Remove currency symbols/siglas comuns
+	txt = re.sub(r'(?i)(USD|US\$|EUR|R\$|BRL|JPY|CNY|GBP)','', txt)
 	# Troca separadores
 	if re.match(r'^\d{1,3}(,\d{3})+\.\d{2}$', txt):
 		txt = txt.replace(',','')
@@ -455,15 +495,43 @@ def find_snippet(markdown_text: str, value: str | None):
 	end = min(len(markdown_text), idx+80)
 	return markdown_text[start:end].replace('\n',' ')[:140]
 
-def find_declared_total(markdown_text: str):
-	# Busca linha com TOTAL / AMOUNT e número
-	pattern = re.compile(r'(?i)(TOTAL\s*(AMOUNT)?)[^0-9]{0,15}([0-9.,]+)')
+# ----------------------
+# Busca segura do total
+# ----------------------
+WEIGHT_TOKENS = re.compile(r"(?i)KGS?|GROSS\s+WEIGHT|NET\s+WEIGHT|CARTONS?|CTNS|BALES?|PACKAGES?")
+MONEY_TOKENS = re.compile(r"(?i)USD|US\$|EUR|R\$|BRL|JPY|CNY|GBP|AMOUNT|TOTAL\s+AMOUNT|GRAND\s+TOTAL|INVOICE\s+TOTAL|")
+
+CURRENCY_NUMBER = re.compile(r"(?i)(USD|US\$|EUR|R\$|BRL|JPY|CNY|GBP)\s*([0-9][0-9.,]*)|([0-9][0-9.,]*)\s*(USD|US\$|EUR|R\$|BRL|JPY|CNY|GBP)")
+NUMBER_ONLY = re.compile(r"([0-9][0-9.,]*)")
+
+
+def find_declared_total_money_only(markdown_text: str):
+	"""Encontra um total declarado apenas quando houver forte contexto monetário
+	e AUSÊNCIA de tokens de peso na mesma linha/bloco. Escolhe o maior candidato monetário.
+	"""
 	candidates = []
-	for m in pattern.finditer(markdown_text):
-		val = parse_number(m.group(3))
-		if val:
-			candidates.append(val)
+	lines = [l.strip() for l in markdown_text.splitlines() if l.strip()]
+	for line in lines:
+		# ignorar linhas com tokens de peso
+		if WEIGHT_TOKENS.search(line):
+			continue
+		# requer presença de tokens monetários OU coluna de AMOUNT
+		if not MONEY_TOKENS.search(line) and not CURRENCY_NUMBER.search(line):
+			continue
+		# primeiro, valores com moeda explícita
+		for m in CURRENCY_NUMBER.finditer(line):
+			val = m.group(2) or m.group(3)
+			if val:
+				num = parse_number(val)
+				if num is not None:
+					candidates.append(num)
+		# fallback: linhas "TOTAL" com número, desde que tenham token monetário
+		if 'TOTAL' in line.upper() and MONEY_TOKENS.search(line):
+			m2 = NUMBER_ONLY.search(line)
+			if m2:
+				num = parse_number(m2.group(1))
+				if num is not None:
+					candidates.append(num)
 	if candidates:
-		# maior valor costuma ser total
-		return round(max(candidates),2)
+		return round(max(candidates), 2)
 	return None

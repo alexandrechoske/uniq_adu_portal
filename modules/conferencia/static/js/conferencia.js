@@ -6,6 +6,10 @@ const painelEstruturado = document.getElementById('resultadoEstruturado');
 const resumoDiv = document.getElementById('resumo');
 const camposDiv = document.getElementById('campos');
 const itensDiv = document.getElementById('itens');
+const resumoWrapper = document.getElementById('resumoWrapper');
+const toggleDetailsBtn = document.getElementById('toggleDetails');
+const modal = document.getElementById('modalDetalhado');
+const closeModalBtn = document.getElementById('closeModal');
 let lastCamposData = null;
 let lastItensData = null;
 let currentFilterMode = 'all';
@@ -151,12 +155,29 @@ function renderResumo(sumario){
   `;
 }
 
+toggleDetailsBtn?.addEventListener('click', ()=>{
+  modal.style.display = 'block';
+  // Scroll to top of modal content
+  modal.querySelector('div').scrollTop = 0;
+  // Ensure structured is visible inside modal
+  painelEstruturado.style.display = 'block';
+});
+
+closeModalBtn?.addEventListener('click', ()=>{
+  modal.style.display = 'none';
+});
+
+modal?.addEventListener('click', (e)=>{
+  if(e.target === modal){ modal.style.display = 'none'; }
+});
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   statusDiv.textContent = 'Enviando...';
   previewDiv.textContent = '';
   jsonDiv.textContent = '';
   painelEstruturado.style.display = 'none';
+  resumoWrapper.style.display = 'none';
   const btn = form.querySelector('button');
   btn.disabled = true;
   try {
@@ -166,15 +187,19 @@ form.addEventListener('submit', async (e) => {
     if(!data.success){
       statusDiv.innerHTML = `<span class='status-err'>Erro: ${data.error||'desconhecido'}</span>`;
     } else {
-      statusDiv.innerHTML = `<span class='status-ok'>Processado em ${data.elapsed_ms} ms (Lexoid: ${data.lexoid_mode})</span>`;
-      previewDiv.textContent = 'Markdown preview (1.2k chars)\n\n' + (data.markdown_preview || '');
+  statusDiv.innerHTML = `<span class='status-ok'>Processado em ${data.elapsed_ms} ms (Lexoid: ${data.lexoid_mode})</span>`;
+  previewDiv.textContent = 'Markdown preview (1.2k chars)\n\n' + (data.markdown_preview || '');
       const jsonData = data.json || { aviso: 'Sem JSON retornado', llm_error: data.llm_error };
       jsonDiv.textContent = JSON.stringify(jsonData, null, 2);
       // Render estruturado
       renderResumo(jsonData.sumario);
-      renderCampos(jsonData.campos || {});
-      renderItens(jsonData.itens_da_fatura || []);
-      painelEstruturado.style.display = 'block';
+  // Summary only first
+  resumoWrapper.style.display = 'block';
+  toggleDetailsBtn.style.display = 'inline-block';
+  // Pre-render detailed in hidden modal container
+  renderCampos(jsonData.campos || {});
+  renderItens(jsonData.itens_da_fatura || []);
+  painelEstruturado.style.display = 'none';
     }
   } catch(err){
     statusDiv.innerHTML = `<span class='status-err'>Falha inesperada: ${err}</span>`;
