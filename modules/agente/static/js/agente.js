@@ -1127,3 +1127,17 @@ function toggleAddNumberForm(userId) {
 function showBulkActions() {
     toast.info('Em breve', 'Funcionalidade de ações em massa será implementada em breve.');
 }
+
+    function openTermsModal(){
+        const m = document.getElementById('terms-modal');
+        if(!m) return; 
+        m.style.display='block';
+        setTimeout(()=>m.classList.add('show'),10);
+    }
+    function closeTermsModal(){
+        const m = document.getElementById('terms-modal');
+        if(!m) return; 
+        m.classList.remove('show');
+        setTimeout(()=>m.style.display='none',250);
+    }
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeTermsModal(); }});
