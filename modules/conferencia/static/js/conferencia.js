@@ -31,6 +31,12 @@ function esc(v){
   return String(v).replace(/[&<>]/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[s]));
 }
 
+function formatValor(v){
+  const safe = esc(v);
+  // Preserva quebras de linha de endereços (seller_exporter / buyer_consignee etc.)
+  return safe.replace(/\n+/g,'<br>');
+}
+
 function buildCounts(campos){
   let ok=0, alerta=0, erro=0, regsFaltando=[];
   Object.entries(campos).forEach(([k,c])=>{
@@ -44,6 +50,39 @@ function buildCounts(campos){
 
 function renderCampos(campos){
   lastCamposData = campos;
+  // Aliases para campos que podem vir como *_total do backend
+  try {
+    if (campos && typeof campos === 'object') {
+      // Mapeamento abrangente de aliases -> chave canônica
+      const aliasMap = {
+        invoice_number: ['invoice_no','inv_number','invoice_num','number','invoice'],
+        issue_date: ['invoice_date','date','issue_dt','date_of_issue'],
+        seller_exporter: ['exporter','exporter_name','exporter_and_manufacturer','exporter_manufacturer','manufacturer_exporter','exporter_and_manufacturer_name','exporter_seller'],
+        buyer_consignee: ['consignee','buyer','buyer_consignee_name','consignee_buyer','buyer_name','consignee_name'],
+        exporter_reference: ['exporter_reference_number','exporter_ref','ref_exporter','reference','exporter_po','po_number','purchase_order','order_number'],
+        payment_terms: ['payment_term','terms_of_payment','terms_payment'],
+        incoterm: ['inco_term','incoterms','incoterm_code'],
+        gross_weight: ['gross_weight_total','total_gross_weight'],
+        net_weight: ['net_weight_total','total_net_weight','net_weight_total_bruto'],
+        currency: ['invoice_currency','moeda','currency_code'],
+        country_of_origin: ['origin_country','country_origin'],
+        country_of_acquisition: ['acquisition_country','country_acquisition']
+      };
+      Object.entries(aliasMap).forEach(([canon, aliases])=>{
+        if(!campos[canon]){
+          for(const a of aliases){
+            if(campos[a]){ campos[canon] = campos[a]; break; }
+          }
+        }
+      });
+      if (!campos.gross_weight && campos.gross_weight_total) {
+        campos.gross_weight = campos.gross_weight_total;
+      }
+      if (!campos.net_weight && (campos.net_weight_total || campos.net_weight_total_bruto)) {
+        campos.net_weight = campos.net_weight_total || campos.net_weight_total_bruto;
+      }
+    }
+  } catch(_) { /* silencioso */ }
   camposDiv.innerHTML = '';
   const ordem = [
     'invoice_number','issue_date','seller_exporter','buyer_consignee','exporter_reference','payment_terms','incoterm','gross_weight','net_weight','currency','country_of_origin','country_of_acquisition'
@@ -89,7 +128,7 @@ function renderCampos(campos){
       <div class="campo-row" id="${anchorId}">
         <div class="campo-nome"><span class="pill ${status}"></span>${esc(k)} ${badgeReg}</div>
         <div class="campo-valor">
-          <strong>${esc(ve)||'<i>não encontrado</i>'}</strong>
+          <strong>${ve?formatValor(ve):'<i>não encontrado</i>'}</strong>
           ${conf!==null?`<span class="score">(${(conf*100).toFixed(0)}%)</span>`:''}
           ${normLine?`<div class="tiny">${normLine}</div>`:''}
           ${snippet}
