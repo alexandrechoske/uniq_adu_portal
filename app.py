@@ -96,6 +96,9 @@ from modules.shared.routes import shared_bp
 # Import documents blueprint
 from routes.documents import documents_bp
 
+# Import export_relatorios blueprint
+from modules.export_relatorios.routes import export_relatorios_bp
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -148,6 +151,9 @@ app.register_blueprint(analytics_bp)  # Analytics modular
 
 # Register modular dash_importacoes_resumido blueprint
 app.register_blueprint(dash_importacoes_resumido_bp)  # Dashboard Importações Resumido modular
+
+# Register export_relatorios blueprint (nova tela de exportação de relatórios)
+app.register_blueprint(export_relatorios_bp)
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)
