@@ -261,6 +261,11 @@
                         <i class="mdi mdi-check-circle"></i>
                         {{ user_data.numeros|length }} número(s) ativo(s)
                     </span>
+                    <div style="margin-top:4px;">
+                        <button type="button" class="btn btn-info btn-sm" style="background: var(--color-info); font-size:0.65rem; padding:4px 8px;" onclick="openTermsModal()">
+                            <i class="mdi mdi-file-document-outline"></i> Termos e Serviços
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -317,6 +322,9 @@
                         <i class="mdi mdi-plus-circle" style="font-size: 2rem; color: var(--color-primary); margin-bottom: var(--spacing-sm);"></i>
                         <p style="margin: 0; color: var(--color-text-secondary); font-weight: 500;">Adicionar Novo Número</p>
                         <p style="margin: 0; font-size: 0.875rem; color: var(--color-text-muted);">Clique para adicionar outro número WhatsApp</p>
+                        <p style="margin:6px 0 0 0; font-size:0.65rem; line-height:1.15; color: var(--color-text-muted); max-width:320px;">
+                            Ao adicionar um número você confirma ciência e concordância com os <a href="javascript:void(0)" onclick="openTermsModal()" style="color: var(--color-primary); text-decoration:none;">Termos e Serviços</a> do Agente Unique. O aceite é automático.
+                        </p>
                     </div>
                     <div id="add-number-form" class="add-number-form" style="display: none;" onclick="event.stopPropagation()">
                         <div style="width: 100%; max-width: 400px;">
@@ -484,6 +492,13 @@
                     <i class="mdi mdi-check"></i>
                     Ativar Agente Unique
                 </button>
+                <button type="button" class="btn btn-info" style="background: var(--color-info); margin-left:8px;" onclick="openTermsModal()">
+                    <i class="mdi mdi-file-document-outline"></i>
+                    Termos e Serviços
+                </button>
+                <div style="margin-top:8px; font-size:0.65rem; line-height:1.2; color: var(--color-text-muted); max-width:520px;">
+                    Ao ativar ou posteriormente adicionar números você concorda automaticamente com os Termos e Serviços do Agente Unique. O uso contínuo implica ciência integral. <a href="javascript:void(0)" onclick="openTermsModal()" style="color: var(--color-primary); text-decoration:none;">Ler agora</a>.
+                </div>
             </form>
         </div>
         {% endif %}
@@ -571,10 +586,70 @@
             </div>
         </div>
     </div>
+    <!-- Modal Termos e Serviços -->
+    <div id="terms-modal" class="user-details-modal" style="display:none;">
+        <div class="modal-content" style="max-width:820px;">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="mdi mdi-file-document-outline"></i>
+                    Termos e Serviços do Agente Unique
+                </h3>
+                <button class="modal-close" onclick="closeTermsModal()">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height:60vh; overflow:auto; font-size:0.8rem; line-height:1.4;">
+                <p style="margin-top:0; font-size:0.7rem; color:var(--color-text-muted);">Versão 1.0 • Última atualização: 10/08/2025</p>
+                <h4 style="margin:0 0 6px 0; font-size:0.9rem; color:var(--color-primary);">1. Objetivo</h4>
+                <p>O Agente Unique permite gestão de números WhatsApp autorizados para envio de notificações e rotinas automatizadas sobre suas operações aduaneiras.</p>
+                <h4 style="margin:12px 0 6px 0; font-size:0.9rem; color:var(--color-primary);">2. Uso Autorizado</h4>
+                <ul style="padding-left:18px; margin:0 0 8px 0;">
+                    <li>Cadastrar apenas números de sua titularidade ou com consentimento explícito.</li>
+                    <li>Vedado uso para SPAM, conteúdo ilícito, ofensivo ou alheio ao negócio.</li>
+                    <li>A remoção de um número encerra imediatamente novos envios a ele.</li>
+                </ul>
+                <h4 style="margin:12px 0 6px 0; font-size:0.9rem; color:var(--color-primary);">3. Dados e Privacidade</h4>
+                <p>Armazenamos somente dados mínimos (números, identificadores, logs essenciais). Não comercializamos dados. Logs são usados para auditoria e segurança.</p>
+                <h4 style="margin:12px 0 6px 0; font-size:0.9rem; color:var(--color-primary);">4. Responsabilidades</h4>
+                <ul style="padding-left:18px; margin:0 0 8px 0;">
+                    <li>Usuário: garantir legitimidade dos números e atualização.</li>
+                    <li>Plataforma: empregar esforços razoáveis de disponibilidade e segurança.</li>
+                    <li>Limitação: entrega de mensagens depende de serviços de terceiros.</li>
+                </ul>
+                <h4 style="margin:12px 0 6px 0; font-size:0.9rem; color:var(--color-primary);">5. Suspensão / Cancelamento</h4>
+                <p>Podemos suspender acesso em caso de abuso, fraude, ordem legal ou risco operacional.</p>
+                <h4 style="margin:12px 0 6px 0; font-size:0.9rem; color:var(--color-primary);">6. Aceite</h4>
+                <p>O aceite ocorre automaticamente ao ativar o serviço ou adicionar qualquer número. O uso continuado confirma concordância integral.</p>
+                <div style="margin-top:14px; padding:10px 12px; background:var(--color-info-light); border-left:3px solid var(--color-info); border-radius: var(--radius-md); font-size:0.7rem;">
+                    Dúvidas ou solicitações de exclusão definitiva: contate o suporte Unique.
+                </div>
+            </div>
+            <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid var(--color-border-light);">
+                <button type="button" class="btn btn-primary" onclick="closeTermsModal()" style="background: var(--color-primary);">
+                    <i class="mdi mdi-check"></i> Fechar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('agente.static', filename='js/agente.js') }}"></script>
+<script>
+    function openTermsModal(){
+        const m = document.getElementById('terms-modal');
+        if(!m) return; 
+        m.style.display='block';
+        setTimeout(()=>m.classList.add('show'),10);
+    }
+    function closeTermsModal(){
+        const m = document.getElementById('terms-modal');
+        if(!m) return; 
+        m.classList.remove('show');
+        setTimeout(()=>m.style.display='none',250);
+    }
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeTermsModal(); }});
+</script>
 {% endblock %}
 
