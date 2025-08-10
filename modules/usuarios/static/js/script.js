@@ -1617,28 +1617,22 @@ async function saveUserEmpresas(userId) {
 async function saveUserWhatsapp(userId) {
     try {
         console.log('[USUARIOS] Salvando WhatsApp do usuário:', userId);
-        
-        if (appState.originalWhatsapp.length === 0) {
-            console.log('[USUARIOS] Nenhum WhatsApp para salvar');
-            return Promise.resolve();
-        }
-        
+        // Sempre enviar a lista (mesmo vazia) para permitir remoção completa no backend
         const whatsappData = appState.originalWhatsapp.map(w => ({
             nome: w.nome,
             numero: w.numero,
             tipo: w.tipo,
             principal: w.principal
         }));
-        
-        const response = await apiRequest(`/api/user/${userId}/whatsapp`, 'POST', {
-            whatsapp: whatsappData
-        });
+
+    const response = await apiRequest(`/api/user/${userId}/whatsapp`, 'POST', { whatsapp: whatsappData });
+    // Backend deve interpretar lista vazia como "remover todos". Verificar rota /api/user/<id>/whatsapp.
         
         if (!response.success) {
             throw new Error(response.error || 'Erro ao salvar WhatsApp');
         }
         
-        console.log('[USUARIOS] WhatsApp salvos com sucesso');
+        console.log('[USUARIOS] WhatsApp salvos com sucesso (qtd:', whatsappData.length, ')');
         return Promise.resolve();
         
     } catch (error) {

@@ -1,0 +1,61 @@
+Resumo Aprimorado do Projeto de Conferência Documental com IA
+Objetivo Principal:
+
+O projeto tem como objetivo desenvolver uma solução de Inteligência Artificial (IA) que automatize a conferência documental, especificadamente para documentos utilizados em operações aduaneiras, como invoices, packlists e conhecimentos de embarque (BL e AWB). O sistema deverá garantir a conformidade com as regulamentações fiscais e aduaneiras, focando inicialmente nas invoices e expandindo para outros documentos.
+
+Principais Componentes do Projeto:
+
+Foco Inicial em Invoices:
+Priorizar o desenvolvimento da IA para conferência de invoices, incluindo tanto a comercial quanto a proforma. Posteriormente ampliar para outros documentos, como packlists.
+Coleta de Dados:
+Engajar os analistas da Unique para fornecerem modelos variados de documentos a serem analisados pela IA, como as diferentes formas de invoices e packlists.
+Definição e Validação de Regras:
+Criar um escopo claro que contenha todas as regras fundamentais para a conferência documental.
+As regras devem incluir obrigatoriamente verificar a presença de incoterms, pesos (bruto e líquido), referência do exportador e condições de pagamento, entre outros detalhes específicos.
+Validar o escopo completo com todos os analistas e a Elizete, garantindo que a IA não apenas cumpra com o regulamento aduaneiro (artigo 557 do regulamento 6759 de 2009), como também as práticas aceitas no dia a dia.
+Sistema de Feedback:
+A IA deverá fornecer um feedback claro e detalhado sobre os documentos conferidos, apontando quais itens obrigatórios estão presentes ou ausentes.
+Este processo permitirá um "double check" dos analistas, facilitando a verificação e correção de potenciais problemas.
+Automatização e Integração:
+Criar um sistema onde o analista possa facilmente anexar documentos e receber instantaneamente uma análise detalhada da IA sobre a conformidade.
+Garantir que o sistema seja suficientemente intuitivo para facilitar a adoção por toda a equipe.
+Considerações Regulatórias e Práticas:
+Além da literalidade do regulamento, incorporar exceções práticas como "pequenos enganos" para refletir a flexibilidade normativa presente na operação real.
+Colaboração e Alinhamento:
+O projeto requer uma colaboração contínua com todas as partes interessadas, incluindo sessões regulares de alinhamento e revisão, como meu foco em melhores práticas e tecnologias disponíveis como APIs do ChatGPT ou soluções como GeminiAI, para otimizar a qualidade e eficiência do sistema.
+Cronograma Acelerado:
+Visar uma implementação rápida do escopo inicial, de preferência começando da próxima semana, garantindo que as soluções sejam entregues de forma rápida e eficiente.
+Este projeto visa não apenas a eficiência e precisão na verificação documental, mas também o aumento significativo na conformidade legal e operacional da Unique, alavancando a tecnologia de IA para aprimorar processos críticos de negócios.
+
+
+Resumo do Projeto de Conferência Documental com IA
+Objetivo do Projeto:
+
+O principal objetivo do projeto é desenvolver uma solução de Inteligência Artificial que seja capaz de realizar a conferência documental de maneira automática, verificando documentos relacionados a operações aduaneiras. A solução deverá analisar documentos como invoices, packlists, e conhecimento de embarque, garantindo que estejam em conformidade com as legislações aplicáveis, especificamente o artigo 557 do regulamento aduaneiro e outras normas adicionais fornecidas pela Unique.
+
+Funcionalidades Principais:
+
+Leitura e Avaliação Automática:
+Desenvolver uma IA que possa ler diferentes tipos de documentos (em formatos como PDF) e verificar se eles estão de acordo com as regras estabelecidas.
+A IA deverá ser treinada para reconhecer termos chave e identificar informações críticas, como incoterms e classificações fiscais.
+Checklist de Documentos:
+Conferir a presença de informações essenciais em documentos como invoices (comercial e proforma), packlists e conhecimento de embarque, retornando um feedback sobre a conformidade.
+A IA deve listar o que está correto (dando um "ok") e o que está faltando nos documentos.
+Verificação de Erros:
+Identificar "pequenos enganos" como mencionado por Edgar, e diferenciar entre o que pode ser aceito versus o que precisa de correção.
+Módulo de Interface Intuitiva:
+Criar um módulo de sistema que permita aos usuários anexar documentos facilmente e receber respostas sobre a conformidade instantaneamente.
+Idealmente, a interface deve ser parte de um sistema maior que a empresa pretende estabelecer, tornando a função de conferência documental um dos módulos primários.
+Componente SAAS:
+O sistema deve ser ágil e rápido, implementado usando tecnologia de ponta e de preferência como um serviço em SaaS (Software as a Service), permitindo escalabilidade e atualização contínua.
+Integração com APIs:
+Considerar o uso de APIs já existentes, como as do ChatGPT ou especialmente o GeminiAI, visando dinamizar o processo e melhorar a resposta do sistema.
+Planejamento Incremental:
+Começar com aspectos mais críticos relacionados a multas e penalidades e expandir para cobrir mais regras e detalhes.
+A prioridade inicial deverá focar na conferência de invoices e packlists.
+Reuniões de Planejamento e Alinhamento de Escopo:
+Programar reuniões via Google Meet com os envolvidos para discutir o andamento e atualizar o protótipo.
+Esses encontros são importantes para chegar a uma definição detalhada do escopo e das funcionalidades.
+Resposta Ágil a Demandas:
+O projeto deve ser concluído com foco em prazos e em entregas bem definidas, evitando dispersão de esforços em múltiplas frentes de forma inconclusiva.
+Este projeto, quando concretizado, terá uma poderosa ferramenta de IA para garantir eficiência e precisão na gestão documental, reduzindo a carga de trabalho manual e aumentando a conformidade legal da Unique em suas operações.
