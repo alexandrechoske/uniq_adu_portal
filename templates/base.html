@@ -675,6 +675,13 @@
                 <span class="sidebar-text">Dashboard Importações</span>
             </a>           
 
+            <!-- Exportação de Relatórios -->
+            <a href="{{ url_for('export_relatorios.index') }}" 
+               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
+                <i class="mdi mdi-file-export text-xl"></i>
+                <span class="sidebar-text">Exportação</span>
+            </a>
+
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
             <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
             <a href="{{ url_for('conferencia.index') }}" 
