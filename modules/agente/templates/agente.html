@@ -274,16 +274,26 @@
                 {% if user_data.numeros %}
                 <div class="numbers-grid">
                     {% for numero in user_data.numeros %}
+                    {% set raw = (numero.numero or numero.numero_whatsapp) %}
+                    {% if raw and raw.startswith('+55') and raw|length >= 14 %}
+                        {% set phone = raw[3:] %}
+                        {% set ddd = phone[:2] %}
+                        {% set main = phone[2:] %}
+                        {% set main_fmt = main[:5] ~ '-' ~ main[5:] %}
+                        {% set display_num = '(' ~ ddd ~ ') ' ~ main_fmt %}
+                    {% else %}
+                        {% set display_num = raw %}
+                    {% endif %}
                     <div class="number-item" data-numero-id="{{ numero.id }}">
-                        <div style="flex: 1;">
+                        <div style="flex:1;">
                             <div class="number-text">
-                                {{ numero.numero_whatsapp }}
+                                {{ display_num }}
                                 {% if numero.principal %}
                                     <span style="color: var(--color-primary); font-size: 0.75rem; margin-left: 0.5rem;">★ Principal</span>
                                 {% endif %}
                             </div>
-                            <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 2px;">
-                                {{ numero.nome_contato }} • {{ numero.tipo_numero|title }}
+                            <div style="font-size:0.75rem;color:var(--color-text-muted);margin-top:2px;">
+                                {{ numero.nome or numero.nome_contato }} • {{ (numero.tipo or numero.tipo_numero)|title }}
                             </div>
                         </div>
                         <div class="number-actions">
@@ -292,10 +302,7 @@
                                 <i class="mdi mdi-star"></i>
                             </button>
                             {% endif %}
-                            <button class="btn-icon btn btn-warning" onclick="editNumber('{{ numero.id }}', '{{ numero.nome_contato }}', '{{ numero.tipo_numero }}')" title="Editar">
-                                <i class="mdi mdi-pencil"></i>
-                            </button>
-                            <button class="btn-icon btn btn-danger" onclick="removeNumber('{{ numero.id }}')" title="Remover">
+                            <button class="btn-icon btn btn-danger" onclick="removeNumber('{{ numero.id }}', '{{ display_num }}')" title="Remover">
                                 <i class="mdi mdi-delete"></i>
                             </button>
                         </div>

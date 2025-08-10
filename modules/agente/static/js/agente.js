@@ -161,8 +161,8 @@ function addNumber() {
     const tipoSelect = document.getElementById('tipo-numero');
     const button = document.getElementById('btn-add-numero');
     const numero = input.value.trim();
-    const nomeContato = nomeInput ? nomeInput.value.trim() : '';
-    const tipoNumero = tipoSelect ? tipoSelect.value : 'pessoal';
+    const nome = nomeInput ? nomeInput.value.trim() : '';
+    const tipo = tipoSelect ? tipoSelect.value : 'pessoal';
     
     if (!numero) {
         toast.warning('Campo obrigatório', 'Por favor, informe um número de WhatsApp');
@@ -170,7 +170,7 @@ function addNumber() {
         return;
     }
     
-    if (!nomeContato) {
+    if (!nome) {
         toast.warning('Campo obrigatório', 'Por favor, informe um nome para identificar este número');
         nomeInput.focus();
         return;
@@ -190,8 +190,8 @@ function addNumber() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             numero: validation.formatted,
-            nome_contato: nomeContato,
-            tipo_numero: tipoNumero
+            nome: nome,
+            tipo: tipo
         })
     })
     .then(response => response.json())
@@ -216,6 +216,12 @@ function addNumber() {
 }
 
 function removeNumber(numeroId, numeroDisplay) {
+    if (!numeroDisplay) {
+        const el = document.querySelector(`.number-item[data-numero-id="${numeroId}"] .number-text`);
+        if (el) {
+            numeroDisplay = el.textContent.replace('★ Principal','').trim();
+        }
+    }
     if (!confirm(`Tem certeza que deseja remover o número ${numeroDisplay}?`)) {
         return;
     }
@@ -247,6 +253,10 @@ function removeNumber(numeroId, numeroDisplay) {
 }
 
 function setPrincipal(numeroId, numeroDisplay) {
+    if (!numeroDisplay) {
+        const el = document.querySelector(`.number-item[data-numero-id="${numeroId}"] .number-text`);
+        if (el) numeroDisplay = el.textContent.replace('★ Principal','').trim();
+    }
     if (!confirm(`Definir ${numeroDisplay} como número principal?`)) {
         return;
     }
@@ -277,14 +287,7 @@ function setPrincipal(numeroId, numeroDisplay) {
     });
 }
 
-function editNumber(numeroId) {
-    const numeroCard = document.querySelector(`[data-numero-id="${numeroId}"]`).closest('.numero-card');
-    if (!numeroCard) return;
-    
-    // Aqui você pode implementar um modal de edição ou edição inline
-    // Por enquanto, vou mostrar um toast informativo
-    toast.info('Função de edição', 'Edição de números será implementada em breve');
-}
+// editNumber removido (função descontinuada; para alterar dados remova e adicione novamente)
 
 function showAddNumberForm() {
     const placeholder = document.getElementById('add-number-placeholder');
@@ -714,12 +717,12 @@ async function adminToggleUser(userId, activate) {
 async function adminAddNumber(userId) {
     try {
         const input = document.getElementById(`new-number-${userId}`);
-        const nomeInput = document.getElementById(`new-nome-${userId}`);
-        const tipoSelect = document.getElementById(`new-tipo-${userId}`);
+    const nomeInput = document.getElementById(`new-nome-${userId}`);
+    const tipoSelect = document.getElementById(`new-tipo-${userId}`);
         
         const numero = input.value.trim();
-        const nomeContato = nomeInput ? nomeInput.value.trim() : '';
-        const tipoNumero = tipoSelect ? tipoSelect.value : 'pessoal';
+    const nome = nomeInput ? nomeInput.value.trim() : '';
+    const tipo = tipoSelect ? tipoSelect.value : 'pessoal';
         
         if (!numero) {
             toast.warning('Campo obrigatório', 'Digite um número válido');
@@ -727,7 +730,7 @@ async function adminAddNumber(userId) {
             return;
         }
         
-        if (!nomeContato) {
+    if (!nome) {
             toast.warning('Campo obrigatório', 'Digite um nome para identificar o número');
             nomeInput.focus();
             return;
@@ -741,7 +744,7 @@ async function adminAddNumber(userId) {
             return;
         }
         
-        console.log('[ADMIN] Adicionando número:', { userId, numero: validation.formatted, nomeContato, tipoNumero });
+    console.log('[ADMIN] Adicionando número:', { userId, numero: validation.formatted, nome, tipo });
         
         const response = await fetch('/agente/admin/add-numero', {
             method: 'POST',
@@ -749,8 +752,8 @@ async function adminAddNumber(userId) {
             body: JSON.stringify({ 
                 user_id: userId, 
                 numero: validation.formatted,
-                nome_contato: nomeContato,
-                tipo_numero: tipoNumero
+                nome: nome,
+                tipo: tipo
             })
         });
         

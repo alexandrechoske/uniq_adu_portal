@@ -1757,10 +1757,10 @@ def adicionar_whatsapp(user_id):
     try:
         data = request.get_json()
         
-        numero_whatsapp = data.get('numero_whatsapp', '').strip()
-        nome_contato = data.get('nome_contato', '').strip()
-        tipo_numero = data.get('tipo_numero', 'pessoal')
-        cliente_sistema_id = data.get('cliente_sistema_id')
+        numero_whatsapp = data.get('numero', '').strip()
+        nome_contato = data.get('nome', '').strip()
+        tipo_numero = data.get('tipo', 'pessoal')
+        cliente_sistema_id = data.get('user_Id')
         principal = data.get('principal', False)
         observacoes = data.get('observacoes', '')
         

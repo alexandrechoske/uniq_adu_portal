@@ -228,7 +228,7 @@ def render_admin_panel():
         whatsapp_query = supabase_admin.table('user_whatsapp').select('''
             id,
             user_id,
-            numero_whatsapp,
+            numero,
             nome_contato,
             tipo_numero,
             ativo,
@@ -293,7 +293,7 @@ def render_admin_panel():
                 # Adicionar número
                 usuarios[user_id]['numeros'].append({
                     'id': whatsapp['id'],
-                    'numero': whatsapp['numero_whatsapp'],
+                    'numero': whatsapp.get('numero') or whatsapp.get('numero_whatsapp'),  # fallback compat
                     'nome': whatsapp['nome_contato'],
                     'tipo': whatsapp['tipo_numero'],
                     'principal': whatsapp['principal'],
@@ -346,16 +346,16 @@ def index():
     if request.method == 'POST':
         print(f"[AGENTE DEBUG] POST recebido. Form data: {dict(request.form)}")
         numero = request.form.get('numero_whatsapp', '').strip()
-        nome_contato = request.form.get('nome_contato', '').strip()
-        tipo_numero = request.form.get('tipo_numero', 'pessoal')
+        nome = request.form.get('nome_contato', '').strip()
+        tipo = request.form.get('tipo_numero', 'pessoal')
         
-        print(f"[AGENTE DEBUG] Número: {numero}, Nome: {nome_contato}, Tipo: {tipo_numero}")
+        print(f"[AGENTE DEBUG] Número: {numero}, Nome: {nome}, Tipo: {tipo}")
         
         if not numero:
             flash('Por favor, informe o número de WhatsApp.', 'error')
             return redirect(url_for('agente.index'))
         
-        if not nome_contato:
+        if not nome:
             flash('Por favor, informe um nome para identificar este número.', 'error')
             return redirect(url_for('agente.index'))
         
@@ -369,7 +369,7 @@ def index():
         
         try:
             # Verificar se o número já existe
-            existing = supabase.table('user_whatsapp').select('id, user_id').eq('numero_whatsapp', formatted_numero).eq('ativo', True).execute()
+            existing = supabase.table('user_whatsapp').select('id, user_id').eq('numero', formatted_numero).eq('ativo', True).execute()
             
             if existing.data:
                 existing_user = existing.data[0]['user_id']
@@ -387,9 +387,9 @@ def index():
             # Inserir novo número
             data = {
                 'user_id': user_id,
-                'numero_whatsapp': formatted_numero,
-                'nome_contato': nome_contato,
-                'tipo_numero': tipo_numero,
+                'numero': formatted_numero,
+                'nome': nome,
+                'tipo': tipo,
                 'principal': is_first_number,
                 'ativo': True
             }
@@ -446,14 +446,14 @@ def ajax_add_numero():
     try:
         data = request.get_json()
         numero = data.get('numero', '').strip()
-        nome_contato = data.get('nome_contato', '').strip()
-        tipo_numero = data.get('tipo_numero', 'pessoal')
+        nome = data.get('nome') or data.get('nome_contato', '').strip()
+        tipo = data.get('tipo') or data.get('tipo_numero', 'pessoal')
         user_id = session['user']['id']
         
         if not numero:
             return jsonify({'success': False, 'message': 'Número é obrigatório'})
         
-        if not nome_contato:
+        if not nome:
             return jsonify({'success': False, 'message': 'Nome de contato é obrigatório'})
         
         # Validar e formatar número
@@ -461,15 +461,34 @@ def ajax_add_numero():
         if not is_valid:
             return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
-        # Verificar se o número já existe
-        existing = supabase.table('user_whatsapp').select('id, user_id').eq('numero_whatsapp', formatted_numero).eq('ativo', True).execute()
-        
-        if existing.data:
-            existing_user = existing.data[0]['user_id']
-            if existing_user != user_id:
-                return jsonify({'success': False, 'message': 'Este número já está cadastrado por outro usuário'})
-            else:
-                return jsonify({'success': False, 'message': 'Este número já está cadastrado para você'})
+        # Verificar se o número já existe (ativo ou inativo)
+        existing_all = supabase.table('user_whatsapp').select('id, user_id, ativo, principal, created_at').eq('numero', formatted_numero).execute()
+
+        if existing_all.data:
+            # Separar por usuário
+            for row in existing_all.data:
+                if row['user_id'] != user_id:
+                    return jsonify({'success': False, 'message': 'Este número já está cadastrado por outro usuário'})
+                if row.get('ativo'):
+                    return jsonify({'success': False, 'message': 'Este número já está cadastrado para você'})
+            # Se chegou aqui, só existem registros inativos do próprio usuário → reativar o mais antigo
+            row = sorted(existing_all.data, key=lambda r: r.get('created_at') or '')[0]
+            numero_id = row['id']
+            # Verificar se usuário possui outros números ativos (antes de reativar)
+            active_others = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
+            has_active = bool(active_others.data)
+            supabase.table('user_whatsapp').update({
+                'ativo': True,
+                'nome': nome,
+                'tipo': tipo,
+                # Se não há outro ativo, torná-lo principal; caso contrário mantém principal anterior
+                'principal': False if has_active else True
+            }).eq('id', numero_id).execute()
+            if not has_active:
+                # Garantir unicidade de principal (remover principal de outros, por segurança)
+                supabase.table('user_whatsapp').update({'principal': False}).eq('user_id', user_id).neq('id', numero_id).execute()
+                supabase.table('user_whatsapp').update({'principal': True}).eq('id', numero_id).execute()
+            return jsonify({'success': True, 'message': 'Número reativado com sucesso!'})
         
         # Verificar se é o primeiro número (será principal)
         user_numbers = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
@@ -478,9 +497,9 @@ def ajax_add_numero():
         # Inserir novo número
         data_insert = {
             'user_id': user_id,
-            'numero_whatsapp': formatted_numero,
-            'nome_contato': nome_contato,
-            'tipo_numero': tipo_numero,
+            'numero': formatted_numero,
+            'nome': nome,
+            'tipo': tipo,
             'principal': is_first_number,
             'ativo': True
         }
@@ -516,31 +535,25 @@ def ajax_remove_numero():
             return jsonify({'success': False, 'message': 'ID do número é obrigatório'})
         
         # Verificar se o número pertence ao usuário
-        numero_record = supabase.table('user_whatsapp').select('id, numero_whatsapp, principal').eq('id', numero_id).eq('user_id', user_id).eq('ativo', True).execute()
+        numero_record = supabase.table('user_whatsapp').select('id, numero, principal').eq('id', numero_id).eq('user_id', user_id).eq('ativo', True).execute()
         
         if not numero_record.data:
             return jsonify({'success': False, 'message': 'Número não encontrado ou não pertence a você'})
         
         numero_info = numero_record.data[0]
-        numero_whatsapp = numero_info['numero_whatsapp']
+        numero_whatsapp = numero_info.get('numero') or numero_info.get('numero_whatsapp')
         is_principal = numero_info['principal']
         
-        # Desativar o número
-        supabase.table('user_whatsapp').update({
-            'ativo': False
-        }).eq('id', numero_id).execute()
-        
-        # Se era o número principal, definir outro como principal
+        # HARD DELETE: remover definitivamente
+        supabase.table('user_whatsapp').delete().eq('id', numero_id).eq('user_id', user_id).execute()
+
+        # Se era principal, escolher um novo principal (o mais antigo ativo)
         if is_principal:
-            outros_numeros = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).neq('id', numero_id).limit(1).execute()
-            
-            if outros_numeros.data:
-                # Definir outro número como principal
-                supabase.table('user_whatsapp').update({
-                    'principal': True
-                }).eq('id', outros_numeros.data[0]['id']).execute()
-        
-        return jsonify({'success': True, 'message': f'Número {numero_whatsapp} removido com sucesso!'})
+            candidato = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).order('created_at').limit(1).execute()
+            if candidato.data:
+                supabase.table('user_whatsapp').update({'principal': True}).eq('id', candidato.data[0]['id']).execute()
+
+        return jsonify({'success': True, 'message': f'Número {numero_whatsapp} deletado com sucesso!'})
             
     except Exception as e:
         print(f"[ERROR] Erro ao remover número: {str(e)}")
@@ -686,7 +699,7 @@ def admin_data():
         whatsapp_response = supabase_admin.table('user_whatsapp').select('''
             id,
             user_id,
-            numero_whatsapp,
+            numero,
             nome_contato,
             tipo_numero,
             ativo,
@@ -749,7 +762,7 @@ def admin_data():
                 # Adicionar número
                 numero_data = {
                     'id': whatsapp['id'],
-                    'numero': whatsapp['numero_whatsapp'],
+                    'numero': whatsapp.get('numero') or whatsapp.get('numero_whatsapp'),
                     'nome': whatsapp['nome_contato'],
                     'tipo': whatsapp['tipo_numero'],
                     'principal': whatsapp['principal'],
@@ -763,7 +776,7 @@ def admin_data():
                 # Para compatibilidade com front-end
                 numbers.append({
                     'user_id': user_id,
-                    'phone': whatsapp['numero_whatsapp']
+                    'phone': whatsapp.get('numero') or whatsapp.get('numero_whatsapp')
                 })
         
         # Criar lista de empresas para compatibilidade
@@ -855,7 +868,7 @@ def admin_add_numero():
             return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
         # Verificar se o número já existe
-        existing = supabase_admin.table('user_whatsapp').select('id, user_id').eq('numero_whatsapp', formatted_numero).eq('ativo', True).execute()
+        existing = supabase_admin.table('user_whatsapp').select('id, user_id').eq('numero', formatted_numero).eq('ativo', True).execute()
         
         if existing.data:
             return jsonify({'success': False, 'message': 'Este número já está cadastrado'})
@@ -867,7 +880,7 @@ def admin_add_numero():
         # Inserir novo número
         data_insert = {
             'user_id': user_id,
-            'numero_whatsapp': formatted_numero,
+            'numero': formatted_numero,
             'nome_contato': nome_contato,
             'tipo_numero': tipo_numero,
             'principal': is_first_number,
@@ -897,13 +910,13 @@ def admin_remove_numero():
             return jsonify({'success': False, 'message': 'ID do número é obrigatório'})
         
         # Verificar se o número existe
-        numero_record = supabase_admin.table('user_whatsapp').select('id, numero_whatsapp, user_id, principal').eq('id', numero_id).eq('ativo', True).execute()
+        numero_record = supabase_admin.table('user_whatsapp').select('id, numero, user_id, principal').eq('id', numero_id).eq('ativo', True).execute()
         
         if not numero_record.data:
             return jsonify({'success': False, 'message': 'Número não encontrado'})
         
         numero_info = numero_record.data[0]
-        numero_whatsapp = numero_info['numero_whatsapp']
+        numero_whatsapp = numero_info.get('numero') or numero_info.get('numero_whatsapp')
         user_id = numero_info['user_id']
         is_principal = numero_info['principal']
         
