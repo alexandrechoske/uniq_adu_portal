@@ -18,6 +18,33 @@ document.addEventListener('DOMContentLoaded',()=>{
   let totalPages = 1;
   let pageSize = 500; // default
 
+  // Campos que suportam busca múltipla
+  const multiSearchFields = ['ref_importador', 'ref_unique', 'numero_di'];
+  
+  // Adicionar feedback visual para campos de busca múltipla
+  multiSearchFields.forEach(fieldName => {
+    const input = document.querySelector(`input[name="${fieldName}"]`);
+    if (input) {
+      input.addEventListener('input', (e) => {
+        const value = e.target.value;
+        const values = value.split(',').map(v => v.trim()).filter(v => v);
+        
+        // Remover classes anteriores
+        input.classList.remove('border-blue-500', 'border-green-500');
+        
+        if (values.length > 1) {
+          // Múltiplos valores - destacar em verde
+          input.classList.add('border-green-500');
+          input.title = `${values.length} valores para busca: ${values.join(', ')}`;
+        } else if (values.length === 1) {
+          // Um valor - destacar em azul
+          input.classList.add('border-blue-500');
+          input.title = '';
+        }
+      });
+    }
+  });
+
   function collectFilters(extra={}){
     const fd = new FormData(form);
     const obj = {};

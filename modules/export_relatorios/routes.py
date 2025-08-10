@@ -118,8 +118,12 @@ def build_base_query(user):
 
 def apply_query_filters(q, filters: dict, user: dict):
     """Aplica filtros adicionais, mas mantém a segurança de CNPJs do usuário."""
+    import re
     user_role = user.get('role', '')
     user_companies = user.get('user_companies') or []
+    
+    # Campos que suportam busca múltipla (separados por vírgula)
+    multi_search_fields = ['ref_importador', 'ref_unique', 'numero_di']
     
     # Campos que faremos server-side (igualdade ou like simples)
     for col, val in filters.items():
@@ -133,6 +137,19 @@ def apply_query_filters(q, filters: dict, user: dict):
         if col == 'cnpj_importador':
             print(f"[EXPORT_REL][SECURITY] Ignorando filtro cnpj_importador do usuário {user.get('id')} - segurança já aplicada")
             continue
+        
+        # Tratamento para campos de busca múltipla
+        if col in multi_search_fields and isinstance(val, str):
+            # Separar por vírgula e limpar espaços
+            values = [v.strip() for v in val.split(',') if v.strip()]
+            if len(values) > 1:
+                # Múltiplos valores: usar filtro OR com in_()
+                print(f"[EXPORT_REL][MULTI_SEARCH] Campo {col} com {len(values)} valores: {values}")
+                q = q.in_(col, values)
+                continue
+            elif len(values) == 1:
+                # Um único valor após limpeza
+                val = values[0]
             
         # Tratamento numérico
         if col in ['transit_time_real','peso_bruto','valor_fob_real','valor_cif_real','firebird_di_codigo']:

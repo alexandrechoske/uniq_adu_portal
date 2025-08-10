@@ -16,6 +16,33 @@
     }
 }
 
+/* Estilos para campos de busca múltipla */
+.multi-search-field {
+    position: relative;
+}
+
+.multi-search-field input.border-green-500 {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    background-color: #f0fdf4;
+}
+
+.multi-search-field input.border-blue-500 {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.multi-search-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    opacity: 0.8;
+}
+
+.multi-search-field:hover .multi-search-hint {
+    opacity: 1;
+}
+
 /* Estilização avançada da tabela de resultados */
 #tabela-wrapper {
     border: 1px solid #e5e7eb;
