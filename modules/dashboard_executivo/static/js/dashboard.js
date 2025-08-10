@@ -68,8 +68,75 @@ let dashboardCache = {
 // Estado do dashboard para evitar múltiplos carregamentos simultâneos
 let dashboardState = {
     isLoading: false,
-    isInitialized: false
+    isInitialized: false,
+    bootstrapTried: false,
+    bootstrapSucceeded: false
 };
+
+// ===== Novo: Carregamento inicial via endpoint /api/bootstrap =====
+async function attemptBootstrapInitialLoad() {
+    if (dashboardState.bootstrapTried) {
+        return dashboardState.bootstrapSucceeded;
+    }
+    dashboardState.bootstrapTried = true;
+    const qs = buildFilterQueryString();
+    const url = `/dashboard-executivo/api/bootstrap${qs ? '?' + qs : ''}`;
+    console.log('[DASHBOARD_EXECUTIVO] Tentando carregamento único via bootstrap:', url);
+    const startedAt = performance.now();
+    try {
+        const resp = await fetch(url, { headers: { 'Cache-Control': 'no-cache' } });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const payload = await resp.json();
+        if (!payload || payload.success === false) {
+            throw new Error(payload && payload.error ? payload.error : 'Resposta inválida do bootstrap');
+        }
+        // Estrutura esperada: { data: [...], total_records, kpis, charts, operations, filter_options }
+        const { data, kpis, charts, operations, filter_options, total_records } = payload;
+        if (Array.isArray(data) && data.length) {
+            dashboardData = data;
+            console.log(`[DASHBOARD_EXECUTIVO] Bootstrap: ${data.length} registros base (${total_records || data.length} total)`);
+        } else {
+            console.warn('[DASHBOARD_EXECUTIVO] Bootstrap sem array data válido – prosseguindo mesmo assim');
+        }
+        if (kpis) {
+            dashboardCache.set('kpis', kpis);
+            updateDashboardKPIs(kpis);
+        }
+        if (charts) {
+            dashboardCache.set('charts', charts);
+            createDashboardChartsWithValidation(charts);
+            // Marcar que já temos gráfico mensal inicial para evitar refetch imediato
+            if (charts.monthly && charts.monthly.labels && charts.monthly.labels.length) {
+                dashboardState.monthlyChartPrimed = true;
+            }
+        }
+        if (operations) {
+            dashboardCache.set('operations', operations);
+            updateRecentOperationsTable(operations);
+        }
+        if (filter_options) {
+            dashboardCache.set('filterOptions', filter_options);
+            populateFilterOptions(filter_options);
+        }
+        dashboardState.bootstrapSucceeded = true;
+        const elapsed = (performance.now() - startedAt).toFixed(0);
+        console.log(`[DASHBOARD_EXECUTIVO] ✅ Bootstrap concluído em ${elapsed}ms`);
+        // Garantir período inicial do gráfico mensal
+        // Evitar refetch imediato se bootstrap já trouxe o gráfico mensal
+        if (!dashboardState.monthlyChartPrimed) {
+            try { setMonthlyChartPeriod(monthlyChartPeriod || 'mensal'); } catch(_) {}
+        }
+        // Ocultar loaders de qualquer componente que não tenha sido coberto
+        ['kpi-loading','monthly-loading','status-loading','modal-loading','urf-loading','material-loading','recent-ops-loading']
+            .forEach(id => { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER(id); } catch(_) {} });
+        return true;
+    } catch (err) {
+        const elapsed = (performance.now() - startedAt).toFixed(0);
+        console.warn(`[DASHBOARD_EXECUTIVO] Bootstrap falhou após ${elapsed}ms:`, err.message);
+        dashboardState.bootstrapSucceeded = false;
+        return false;
+    }
+}
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -504,6 +571,11 @@ window.setMonthlyChartPeriod = function(period) {
         document.querySelectorAll('.period-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.period === monthlyChartPeriod);
         });
+        // Se já temos gráfico mensal vindo do bootstrap e período solicitado é 'mensal', evitar refetch
+        if (dashboardState.monthlyChartPrimed && monthlyChartPeriod === 'mensal') {
+            console.log('[DASHBOARD_EXECUTIVO] Monthly chart já carregado via bootstrap – pulando fetch.');
+            return;
+        }
         loadMonthlyChart(monthlyChartPeriod);
     } catch (e) {
         console.warn('[DASHBOARD_EXECUTIVO] Erro ao definir período do gráfico mensal:', e);
@@ -569,11 +641,23 @@ async function initializeDashboard() {
         
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento do dashboard...');
         
-        // Initialize enhanced table FIRST, before loading data
+        // Initialize enhanced table FIRST (estrutura da tabela antes de dados)
         initializeEnhancedTable();
-        
-        // Then load initial data with cache check
-        await loadInitialDataWithCache();
+
+        // Tentar carregamento único via bootstrap
+        let usedBootstrap = false;
+        try {
+            const success = await attemptBootstrapInitialLoad();
+            usedBootstrap = success;
+        } catch (e) {
+            console.warn('[DASHBOARD_EXECUTIVO] Erro inesperado no bootstrap:', e);
+        }
+
+        // Fallback para fluxo legado se bootstrap não conseguir
+        if (!usedBootstrap) {
+            console.log('[DASHBOARD_EXECUTIVO] Fallback: usando fluxo legado de múltiplos endpoints');
+            await loadInitialDataWithCache();
+        }
         
         // Setup event listeners and filters
         setupEventListeners();

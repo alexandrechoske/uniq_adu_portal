@@ -11,9 +11,59 @@ import re
 import json
 from services.data_cache import DataCacheService
 from services.retry_utils import run_with_retries
+from threading import Lock
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
+_dashboard_load_locks = {}
+
+def _get_user_lock(user_id):
+    if user_id not in _dashboard_load_locks:
+        _dashboard_load_locks[user_id] = Lock()
+    return _dashboard_load_locks[user_id]
+
+def fetch_and_cache_dashboard_data(user_data, force=False):
+    """Garantir que os dados base do dashboard estejam no cache.
+    - Se já existir no cache e não for force: retorna direto.
+    - Caso contrário, executa a query, enriquece e armazena.
+    Essa função elimina dependência da ordem de chamadas (race entre /load-data e /kpis,/charts,...)
+    """
+    user_id = user_data.get('id')
+    role = user_data.get('role')
+    if not user_id:
+        return []
+    existing = data_cache.get_cache(user_id, 'dashboard_v2_data')
+    if existing and not force:
+        return existing
+    lock = _get_user_lock(user_id)
+    with lock:
+        # Re-checar dentro do lock
+        existing_inside = data_cache.get_cache(user_id, 'dashboard_v2_data')
+        if existing_inside and not force:
+            return existing_inside
+        print(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
+        query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
+        if role in ['cliente_unique', 'interno_unique']:
+            user_cnpjs = get_user_companies(user_data)
+            if user_cnpjs:
+                query = query.in_('cnpj_importador', user_cnpjs)
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário sem CNPJs vinculados -> dados vazios")
+                data_cache.set_cache(user_id, 'dashboard_v2_data', [])
+                return []
+        def _run_main_query():
+            return query.execute()
+        result = run_with_retries('dashboard_executivo.helper_load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
+                                  should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower())
+        raw = result.data or []
+        if not raw:
+            print('[DASHBOARD_EXECUTIVO] (Helper) Nenhum dado retornado da view')
+            data_cache.set_cache(user_id, 'dashboard_v2_data', [])
+            return []
+        enriched = enrich_data_with_despesas_view(raw)
+        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched)
+        session['dashboard_v2_loaded'] = True
+        return enriched
 
 def calculate_custo_from_despesas_processo(despesas_processo):
     """
@@ -336,79 +386,18 @@ def load_data():
         user_role = user_data.get('role')
         user_id = user_data.get('id')
         
-        # Verificar se já existe cache
-        cached_data = data_cache.get_cache(user_id, 'dashboard_v2_data')
-        
-        if cached_data:
-            print(f"[DASHBOARD_EXECUTIVO] Cache encontrado: {len(cached_data)} registros")
-            session['dashboard_v2_loaded'] = True
-            return jsonify({
-                'success': True,
-                'data': cached_data,
-                'total_records': len(cached_data)
-            })
-        
-        # Query base da view com dados de despesas (já filtrada)
-        query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
-        
-        # NOVA REGRA: Filtrar por CNPJs das empresas vinculadas se for cliente_unique ou interno_unique
-        if user_role in ['cliente_unique', 'interno_unique']:
-            user_cnpjs = get_user_companies(user_data)
-            print(f"[DASHBOARD_EXECUTIVO] Role: {user_role}, CNPJs encontrados: {user_cnpjs}")
-            if user_cnpjs:
-                query = query.in_('cnpj_importador', user_cnpjs)
-                print(f"[DASHBOARD_EXECUTIVO] Query filtrada por CNPJs das empresas vinculadas: {user_cnpjs}")
-            else:
-                print(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} sem CNPJs vinculados - retornando vazio")
-                return jsonify({
-                    'success': False,
-                    'error': 'Usuário sem empresas vinculadas',
-                    'data': []
-                })
-        else:
-            print(f"[DASHBOARD_EXECUTIVO] Role admin - sem filtro de CNPJs")
-        
-        # Executar query com retries contra falhas transitórias
-        def _run_main_query():
-            return query.execute()
-        result = run_with_retries('dashboard_executivo.load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
-                                  should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower())
-        
-        if not result.data:
-            print("[DASHBOARD_EXECUTIVO] Nenhum dado encontrado")
-            return jsonify({
-                'success': False,
-                'error': 'Nenhum dado encontrado',
-                'data': []
-            })
-        
-        print(f"[DASHBOARD_EXECUTIVO] Dados carregados: {len(result.data)} registros")
-        
-        # NOVA IMPLEMENTAÇÃO: Enriquecer dados com custos da view vw_despesas_6_meses
-        print("[DASHBOARD_EXECUTIVO] Enriquecendo dados com custos da vw_despesas_6_meses...")
-        enriched_data = enrich_data_with_despesas_view(result.data)
-        
-        # Log para verificar estrutura do campo despesas_processo
-        records_with_expenses = 0
-        for record in enriched_data:
-            if 'despesas_processo' in record and record['despesas_processo']:
-                records_with_expenses += 1
-                if records_with_expenses == 1:  # Log apenas do primeiro registro
-                    print(f"[DASHBOARD_EXECUTIVO] Exemplo despesas_processo: {record['despesas_processo'][:2] if len(record['despesas_processo']) > 2 else record['despesas_processo']}")
-        
-        print(f"[DASHBOARD_EXECUTIVO] Registros com despesas_processo: {records_with_expenses}/{len(enriched_data)}")
-        
-        # Armazenar dados ENRIQUECIDOS no cache do servidor
-        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_data)
-        print(f"[DASHBOARD_EXECUTIVO] Cache armazenado para user_id: {user_id} com {len(enriched_data)} registros (dados enriquecidos)")
-        
-        session['dashboard_v2_loaded'] = True
-        
-        return jsonify({
-            'success': True,
-            'data': enriched_data,
-            'total_records': len(result.data)
-        })
+        # Usar helper resiliente (elimina race conditions)
+        enriched_data = fetch_and_cache_dashboard_data(user_data)
+        if not enriched_data:
+            return jsonify({'success': False, 'error': 'Nenhum dado encontrado', 'data': []})
+
+        # Log simples de estrutura
+        first_with_expenses = next((r for r in enriched_data if r.get('despesas_processo')), None)
+        if first_with_expenses:
+            print(f"[DASHBOARD_EXECUTIVO] Exemplo despesas_processo (primeiro com dados): {str(first_with_expenses.get('despesas_processo'))[:120]} ...")
+        print(f"[DASHBOARD_EXECUTIVO] Total registros enriquecidos: {len(enriched_data)}")
+
+        return jsonify({'success': True, 'data': enriched_data, 'total_records': len(enriched_data)})
         
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro ao carregar dados: {str(e)}")
@@ -430,13 +419,12 @@ def load_data():
 def dashboard_kpis():
     """Calcular KPIs para o dashboard executivo"""
     try:
-        # Obter dados do cache
+        # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        # Tentar ler do cache; se vazio, responder amigavelmente
-        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
+        data = fetch_and_cache_dashboard_data(user_data)
         if not data:
-            return jsonify({'success': False, 'error': 'Dados não encontrados. Recarregue a página.', 'kpis': {}})
+            return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'kpis': {}})
         
         # Aplicar filtros se existirem
         filtered_data = apply_filters(data)
@@ -649,12 +637,12 @@ def dashboard_kpis():
 def dashboard_charts():
     """Gerar dados para os gráficos do dashboard executivo"""
     try:
-        # Obter dados do cache
+        # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
+        data = fetch_and_cache_dashboard_data(user_data)
         if not data:
-            return jsonify({'success': False, 'error': 'Dados não encontrados. Recarregue a página.', 'charts': {}})
+            return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'charts': {}})
         
         # Aplicar filtros se existirem
         filtered_data = apply_filters(data)
@@ -850,10 +838,9 @@ def monthly_chart():
         granularidade = request.args.get('granularidade', 'mensal')
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
-        
+        data = fetch_and_cache_dashboard_data(user_data)
         if not data:
-            return jsonify({'success': False, 'error': 'Dados não encontrados.', 'data': {}})
+            return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'data': {}})
         
         # APLICAR FILTROS ANTES DE PROCESSAR O GRÁFICO
         filtered_data = apply_filters(data)
@@ -924,18 +911,12 @@ def monthly_chart():
 def recent_operations():
     """Obter operações recentes para a tabela"""
     try:
-        # Obter dados do cache
+        # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        
-        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
-        
+        data = fetch_and_cache_dashboard_data(user_data)
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'Dados não encontrados. Recarregue a página.',
-                'operations': []
-            })
+            return jsonify({'success': False,'error': 'Dados não encontrados após tentativa de carregamento.','operations': []})
         
         # Aplicar filtros se existirem
         filtered_data = apply_filters(data)
@@ -1018,12 +999,12 @@ def recent_operations():
 def filter_options():
     """Obter opções para filtros"""
     try:
-        # Obter dados do cache
+        # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
-        data = data_cache.get_cache(user_id, 'dashboard_v2_data')
+        data = fetch_and_cache_dashboard_data(user_data)
         if not data:
-            return jsonify({'success': False, 'error': 'Dados não encontrados. Recarregue a página.', 'options': {}})
+            return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'options': {}})
         
         df = pd.DataFrame(data)
         
@@ -1179,3 +1160,245 @@ def force_refresh_dashboard():
             'error': str(e),
             'message': 'Erro ao atualizar cache'
         }), 500
+
+@bp.route('/api/bootstrap')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def bootstrap_dashboard():
+    """Endpoint único para carregar em lote: dados base + KPIs + charts + operações + filtros.
+    Reduz latência e elimina problemas de race em ambientes cloud.
+    Filtros (query params) são aplicados onde pertinente.
+    """
+    try:
+        user_data = session.get('user', {})
+        base_data = fetch_and_cache_dashboard_data(user_data)
+        if not base_data:
+            return jsonify({'success': False, 'error': 'Sem dados base.'}), 200
+
+        # Reaproveitar lógica existente via DataFrame uma única vez
+        filtered = apply_filters(base_data)
+        df = pd.DataFrame(filtered)
+        # Pequenos safeguards
+        for col in ['custo_total_view','custo_total','custo_total_original']:
+            if col not in df.columns:
+                df[col] = 0.0
+        df['custo_calculado'] = df['custo_total_view']
+        mask_view_zero = df['custo_calculado'] <= 0
+        df.loc[mask_view_zero,'custo_calculado'] = df.loc[mask_view_zero,'custo_total']
+        mask_total_zero = df['custo_calculado'] <= 0
+        df.loc[mask_total_zero,'custo_calculado'] = df.loc[mask_total_zero,'custo_total_original']
+
+        # Tipagem segura para custos (evita FutureWarning de atribuição em col int)
+        for colc in ['custo_total_view','custo_total','custo_total_original']:
+            if colc in df.columns:
+                df[colc] = pd.to_numeric(df[colc], errors='coerce').fillna(0).astype(float)
+
+        # Recalcular custo_calculado com fallback adicional despesas_processo
+        if 'despesas_processo' in df.columns:
+            for idx in df.index[df['custo_calculado'] <= 0]:
+                try:
+                    valor = calculate_custo_from_despesas_processo(df.at[idx,'despesas_processo'])
+                    if valor > 0:
+                        df.at[idx,'custo_calculado'] = float(valor)
+                except Exception:
+                    pass
+
+        # --- KPI COMPLETO (replicando lógica detalhada do endpoint /api/kpis) ---
+        total_processos = len(df)
+        if 'status_macro_sistema' in df.columns:
+            processos_fechados = len(df[df['status_macro_sistema'] == 'PROCESSO CONCLUIDO'])
+            processos_abertos = len(df[(df['status_macro_sistema'] != 'PROCESSO CONCLUIDO') | (df['status_macro_sistema'].isna())])
+        else:
+            processos_fechados = 0
+            processos_abertos = total_processos
+
+        total_despesas = float(df['custo_calculado'].sum()) if not df.empty else 0.0
+        ticket_medio = float(total_despesas/total_processos) if total_processos else 0.0
+
+        # Normalização de status
+        import unicodedata, re
+        def normalize_status(status):
+            if pd.isna(status) or not status:
+                return ""
+            s = unicodedata.normalize('NFKD', str(status)).encode('ASCII','ignore').decode('ASCII')
+            s = re.sub(r'[^A-Za-z0-9 ]','', s).upper().strip()
+            return s
+        if 'status_macro_sistema' in df.columns:
+            df['status_normalizado'] = df['status_macro_sistema'].apply(normalize_status)
+        else:
+            df['status_normalizado'] = ''
+
+        aguardando_embarque = (df['status_normalizado'] == 'AG EMBARQUE').sum()
+        aguardando_chegada = (df['status_normalizado'] == 'AG CHEGADA').sum()
+        aguardando_liberacao = df['status_normalizado'].isin(['DI REGISTRADA','AG REGISTRO','AG MAPA']).sum()
+        agd_entrega = df['status_normalizado'].isin(['AG CARREGAMENTO','AG. CARREGAMENTO','CARREGAMENTO AGENDADO']).sum()
+        aguardando_fechamento = (df['status_normalizado'] == 'AG FECHAMENTO').sum()
+
+        # Corrigir datas de chegada truncadas (ex: 07/08/025 -> 07/08/2025)
+        if 'data_chegada' in df.columns:
+            def fix_date(d):
+                if isinstance(d,str) and len(d)==10 and d[2]=='/' and d[5]=='/' and len(d.split('/')[-1])==3:
+                    # Inserir '2' após último '/0' se ano com 3 chars
+                    parts = d.split('/')
+                    year = parts[2]
+                    if year.startswith('0'):
+                        return f"{parts[0]}/{parts[1]}/20{year[1:]}"  # assume século 2000
+                return d
+            df['data_chegada'] = df['data_chegada'].apply(fix_date)
+
+        hoje = pd.Timestamp.now().normalize()
+        primeiro_dia_mes = hoje.replace(day=1)
+        ultimo_dia_mes = (primeiro_dia_mes + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
+        dias_desde_domingo = (hoje.dayofweek + 1) % 7
+        inicio_semana = hoje - pd.Timedelta(days=dias_desde_domingo)
+        fim_semana = inicio_semana + pd.Timedelta(days=6)
+        chegando_mes = chegando_mes_custo = 0.0
+        chegando_semana = chegando_semana_custo = 0.0
+        if 'data_chegada' in df.columns:
+            chegada_dt = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
+            custos = df['custo_calculado']
+            mask_mes = (chegada_dt >= primeiro_dia_mes) & (chegada_dt <= ultimo_dia_mes)
+            mask_semana = (chegada_dt >= inicio_semana) & (chegada_dt <= fim_semana)
+            chegando_mes = int(mask_mes.sum())
+            chegando_semana = int(mask_semana.sum())
+            chegando_mes_custo = float(custos[mask_mes].sum())
+            chegando_semana_custo = float(custos[mask_semana].sum())
+
+        kpis = {
+            'total_processos': total_processos,
+            'processos_abertos': processos_abertos,
+            'processos_fechados': processos_fechados,
+            'total_despesas': total_despesas,
+            'ticket_medio': ticket_medio,
+            'aguardando_embarque': int(aguardando_embarque),
+            'aguardando_chegada': int(aguardando_chegada),
+            'aguardando_liberacao': int(aguardando_liberacao),
+            'agd_entrega': int(agd_entrega),
+            'aguardando_fechamento': int(aguardando_fechamento),
+            'chegando_mes': int(chegando_mes),
+            'chegando_mes_custo': float(chegando_mes_custo),
+            'chegando_semana': int(chegando_semana),
+            'chegando_semana_custo': float(chegando_semana_custo)
+        }
+
+        # Charts completos (mensal, status, modal, urf, material, principais_materiais)
+        charts = {}
+        if 'data_abertura' in df.columns:
+            df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+            dfm = df.dropna(subset=['data_abertura_dt']).copy()
+            dfm['mes_ano'] = dfm['data_abertura_dt'].dt.strftime('%m/%Y')
+            g = dfm.groupby('mes_ano').agg({'ref_unique':'count','custo_calculado':'sum'}).reset_index().sort_values('mes_ano')
+            charts['monthly'] = {
+                'labels': g['mes_ano'].tolist(),
+                'datasets': [
+                    {'label':'Quantidade de Processos','data':g['ref_unique'].tolist(),'type':'line','borderColor':'#007bff','backgroundColor':'rgba(0,123,255,0.1)','yAxisID':'y1','tension':0.4},
+                    {'label':'Custo Total (R$)','data':g['custo_calculado'].tolist(),'type':'line','borderColor':'#28a745','backgroundColor':'rgba(40,167,69,0.1)','yAxisID':'y','tension':0.4}
+                ]
+            }
+        if 'status_processo' in df.columns:
+            status_counts = df['status_processo'].value_counts().head(10)
+            charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+        if 'modal' in df.columns:
+            gm = df.groupby('modal').agg({'ref_unique':'count','custo_calculado':'sum'}).reset_index()
+            charts['grouped_modal'] = {
+                'labels': gm['modal'].tolist(),
+                'datasets': [
+                    {'label':'Quantidade de Processos','data':gm['ref_unique'].tolist(),'type':'bar','backgroundColor':'rgba(54,162,235,0.6)','borderColor':'rgba(54,162,235,1)','yAxisID':'y1'},
+                    {'label':'Custo Total (R$)','data':gm['custo_calculado'].tolist(),'type':'line','backgroundColor':'rgba(255,99,132,0.2)','borderColor':'rgba(255,99,132,1)','yAxisID':'y'}
+                ]
+            }
+        if 'urf_despacho_normalizado' in df.columns:
+            urf_counts = df['urf_despacho_normalizado'].value_counts().head(10)
+            charts['urf'] = {'labels': urf_counts.index.tolist(),'data': urf_counts.values.tolist()}
+        elif 'urf_despacho' in df.columns:
+            urf_counts = df['urf_despacho'].value_counts().head(10)
+            charts['urf'] = {'labels': urf_counts.index.tolist(),'data': urf_counts.values.tolist()}
+        if 'mercadoria' in df.columns:
+            material_counts = df['mercadoria'].value_counts().head(10)
+            charts['material'] = {'labels': material_counts.index.tolist(),'data': material_counts.values.tolist()}
+        if 'mercadoria' in df.columns and 'data_chegada' in df.columns:
+            try:
+                material_groups = df.groupby('mercadoria').agg({'ref_unique':'count','custo_calculado':'sum','data_chegada':'first','transit_time_real':'mean'}).reset_index()
+                material_groups['data_chegada_dt'] = pd.to_datetime(material_groups['data_chegada'], format='%d/%m/%Y', errors='coerce')
+                hoje = pd.Timestamp.now()
+                material_groups['is_future'] = material_groups['data_chegada_dt'] >= hoje
+                material_groups = material_groups.sort_values(['is_future','data_chegada_dt'], ascending=[False,True])
+                table_data = []
+                for _, row in material_groups.head(15).iterrows():
+                    is_urgente = False
+                    dias_para_chegada = 0
+                    if pd.notnull(row['data_chegada_dt']):
+                        diff_days = (row['data_chegada_dt'] - hoje).days
+                        is_urgente = 0 < diff_days <= 5
+                        dias_para_chegada = diff_days if diff_days > 0 else 0
+                    table_data.append({
+                        'material': row['mercadoria'],
+                        'total_processos': int(row['ref_unique']),
+                        'custo_total': float(row['custo_calculado']) if pd.notnull(row['custo_calculado']) else 0,
+                        'data_chegada': row['data_chegada'],
+                        'transit_time': float(row['transit_time_real']) if pd.notnull(row['transit_time_real']) else 0,
+                        'is_urgente': is_urgente,
+                        'dias_para_chegada': dias_para_chegada
+                    })
+                charts['principais_materiais'] = {'data': table_data}
+            except Exception as e:
+                print(f"[DASHBOARD_EXECUTIVO] Erro ao processar principais materiais (bootstrap): {str(e)}")
+
+        # Operações recentes (limit 25 para bootstrap rápido)
+        operations = []
+        if not df.empty:
+            if 'data_abertura' in df.columns:
+                df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
+                dfo = df.sort_values('data_abertura_dt', ascending=False).head(100)
+            else:
+                dfo = df.head(100)
+            core_cols = [c for c in ['ref_unique','importador','data_abertura','modal','status_processo','status_macro_sistema','custo_total_view','custo_total','data_chegada','mercadoria'] if c in dfo.columns]
+            dfo = dfo.copy()
+            operations = dfo[core_cols].to_dict('records')
+            for op in operations:
+                cv = op.get('custo_total_view')
+                ct = op.get('custo_total')
+                if cv and cv > 0:
+                    op['custo_total'] = cv
+                elif ct and ct > 0:
+                    op['custo_total'] = ct
+
+        # Opções de filtro rápidas
+        filter_options_payload = {}
+        if 'mercadoria' in df.columns:
+            filter_options_payload['materiais'] = sorted(list({m for m in df['mercadoria'].dropna().head(50)}))
+        if 'importador' in df.columns:
+            filter_options_payload['clientes'] = sorted(list({m for m in df['importador'].dropna().head(50)}))
+        if 'canal' in df.columns:
+            filter_options_payload['canais'] = sorted(list({m for m in df['canal'].dropna()}))
+        if 'modal' in df.columns:
+            filter_options_payload['modais'] = sorted(list({m for m in df['modal'].dropna()}))
+
+        # Preparar payload final. Frontend espera campos top-level (data, kpis, charts, operations, filter_options)
+        # Mantemos também a chave 'bootstrap' para eventual compatibilidade retroativa.
+        applied_filters = {k: v for k, v in request.args.items()}
+        payload = {
+            'success': True,
+            'data': filtered,                 # dados já filtrados (para tabela/gráficos imediatos)
+            'total_records': len(base_data),  # total bruto antes de filtro
+            'total_filtered': len(filtered),
+            'kpis': kpis,
+            'charts': charts,
+            'operations': operations,
+            'filter_options': filter_options_payload,
+            'applied_filters': applied_filters,
+            'bootstrap': {  # wrapper opcional legado
+                'kpis': kpis,
+                'charts': charts,
+                'operations': operations,
+                'filter_options': filter_options_payload,
+                'total_records': len(base_data),
+                'total_filtered': len(filtered),
+                'applied_filters': applied_filters
+            }
+        }
+
+        return jsonify(clean_data_for_json(payload))
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro no bootstrap: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
