@@ -31,33 +31,34 @@ conferencia_bp = Blueprint(
 )
 
 # =====================================
-# PROMPT (v3.2 anti-mismatch rígido)
+# PROMPT (v3.2 anti-mismatch rígido) + Carregamento dinâmico via banco
 # =====================================
-SIMPLE_PROMPT = r"""
-Você é um extrator de INVOICE. Retorne APENAS UM JSON VÁLIDO no formato já definido. 
+# Mantemos uma cópia local para fallback caso o banco não responda.
+SIMPLE_PROMPT_FALLBACK = r"""
+Você é um extrator de INVOICE. Retorne APENAS UM JSON VÁLIDO no formato já definido.
 Reforce as regras abaixo para evitar confusão entre dinheiro e peso.
 
 REGRAS CRÍTICAS (ANTI-MISMATCH, VERSÃO RÍGIDA)
 1) Classifique todo número com "dimension": "MONEY" | "WEIGHT" | "COUNT" | "OTHER".
-2) Um número só pode ser "MONEY" se houver INDÍCIO DE MOEDA no MESMO BLOCO/linha 
+2) Um número só pode ser "MONEY" se houver INDÍCIO DE MOEDA no MESMO BLOCO/linha
    OU no cabeçalho imediato da coluna (ex.: "Amount", "Total Amount", "USD", "US$", "EUR", "R$").
-   Use critério de proximidade: o símbolo/sigla da moeda deve aparecer a no máximo 15 caracteres 
+   Use critério de proximidade: o símbolo/sigla da moeda deve aparecer a no máximo 15 caracteres
    do número OU o bloco deve estar sob coluna intitulada "AMOUNT/AMT/Total USD/EUR/…".
-3) Se a mesma linha/bloco contiver termos de peso (NEGATIVOS para monetário): 
-   "KGS", "KG", "GROSS WEIGHT", "NET WEIGHT", "CTNS", "CARTONS", "BALES", "PACKAGES", 
+3) Se a mesma linha/bloco contiver termos de peso (NEGATIVOS para monetário):
+   "KGS", "KG", "GROSS WEIGHT", "NET WEIGHT", "CTNS", "CARTONS", "BALES", "PACKAGES",
    classifique como "WEIGHT" (ou "COUNT") e NUNCA use como total monetário.
 4) "totais_detalhados.grand_total_norm":
-   - Preencha APENAS com número "MONEY". 
+   - Preencha APENAS com número "MONEY".
    - Sempre preencher também "grand_total_dimension" e "grand_total_currency_norm".
 5) "invoice_total_declared_norm":
-   - Se "totais_detalhados.grand_total_dimension" == "MONEY", COPIE exatamente 
-     "totais_detalhados.grand_total_norm" para "invoice_total_declared_norm" 
-     e copie a mesma moeda.
-   - Caso não exista "grand_total" monetário, procure um candidato monetário com as regras acima; 
-     se nenhum candidato "MONEY" válido existir, deixe "invoice_total_declared_norm" = null 
-     e adicione alerta: "Total declarado não monetário (ex.: peso). Comparação suprimida."
+   - Se "totais_detalhados.grand_total_dimension" == "MONEY", COPIE exatamente
+	 "totais_detalhados.grand_total_norm" para "invoice_total_declared_norm"
+	 e copie a mesma moeda.
+   - Caso não exista "grand_total" monetário, procure um candidato monetário com as regras acima;
+	 se nenhum candidato "MONEY" válido existir, deixe "invoice_total_declared_norm" = null
+	 e adicione alerta: "Total declarado não monetário (ex.: peso). Comparação suprimida."
 6) "sumario.checks.difference_norm" só existe quando "invoice_total_declared_norm" é "MONEY".
-7) Sempre retorne "page" e "source_snippet" que justifiquem a classificação do(s) total(is) 
+7) Sempre retorne "page" e "source_snippet" que justifiquem a classificação do(s) total(is)
    (mostre a linha com "USD…", nunca a de "TOTAL GROSS WEIGHT").
 
 CHECAGENS
@@ -73,6 +74,52 @@ INSTRUÇÕES DE DESAMBIGUAÇÃO DE TOTAIS
 
 (Formato do JSON permanece o mesmo do v3.1; apenas siga fielmente as regras acima.)
 """
+
+# Cache simples em memória para evitar query constante.
+_PROMPT_CACHE = {
+	'invoice': {
+		'value': SIMPLE_PROMPT_FALLBACK,
+		'fetched_at': None
+	}
+}
+_PROMPT_TTL_SECONDS = 300  # 5 minutos
+
+def get_prompt_from_db(tipo: str = 'invoice') -> str:
+	"""Recupera o prompt mais recente do banco para o tipo indicado.
+	Usa cache em memória com TTL; fallback para constante local em caso de erro.
+	"""
+	import time
+	now = time.time()
+	# Verifica cache válido
+	cached = _PROMPT_CACHE.get(tipo)
+	if cached and cached.get('fetched_at') and (now - cached['fetched_at'] < _PROMPT_TTL_SECONDS):
+		return cached['value'] or SIMPLE_PROMPT_FALLBACK
+	# Busca no banco
+	prompt_txt = None
+	if supabase_admin:
+		try:
+			resp = (
+				supabase_admin
+				.table('conferencia_prompt')
+				.select('prompt')
+				.eq('tipo', tipo)
+				.order('id', desc=True)
+				.limit(1)
+				.execute()
+			)
+			data_rows = getattr(resp, 'data', None) or []
+			if data_rows:
+				prompt_txt = data_rows[0].get('prompt')
+		except Exception as e:
+			try:
+				current_app.logger.warning(f"[PROMPT] Falha ao buscar prompt '{tipo}' no banco: {e}")
+			except Exception:
+				pass
+	if not prompt_txt:
+		prompt_txt = SIMPLE_PROMPT_FALLBACK
+	# Atualiza cache
+	_PROMPT_CACHE[tipo] = { 'value': prompt_txt, 'fetched_at': now }
+	return prompt_txt
 
 # =========================
 # Utilidades básicas
@@ -175,7 +222,8 @@ def simple_analyze():
 		try:
 			genai.configure(api_key=api_key)
 			model = genai.GenerativeModel(os.getenv('GEMINI_MODEL','gemini-1.5-flash'))
-			prompt = SIMPLE_PROMPT + "\n\nMARKDOWN_INICIO\n" + md_trunc + "\nMARKDOWN_FIM"
+			base_prompt = get_prompt_from_db('invoice')
+			prompt = base_prompt + "\n\nMARKDOWN_INICIO\n" + md_trunc + "\nMARKDOWN_FIM"
 			resp = model.generate_content([{ 'text': prompt }])
 			llm_json = safe_parse_json(resp.text)
 			if not isinstance(llm_json, dict):
@@ -196,9 +244,17 @@ def simple_analyze():
 			incoterm = campos.get('incoterm',{}).get('valor_extraido')
 			status = sumario.get('status')
 			checks = sumario.get('checks',{})
+			user_id = None
+			try:
+				user_id = session.get('user', {}).get('id')
+			except Exception:
+				user_id = None
+			created_iso = datetime.utcnow().isoformat()
+			year_month = created_iso[:7]  # YYYY-MM
 			insert_payload = {
 				'id': str(uuid.uuid4()),
-				'created_at': datetime.utcnow().isoformat(),
+				'created_at': created_iso,
+				'user_Id': user_id,  # OBS: coluna criada como "user_Id" (case sensitive) no schema
 				'file_name': filename,
 				'duration_ms': elapsed_ms,
 				'lexoid_mode': parse_mode,
@@ -211,7 +267,8 @@ def simple_analyze():
 				'total_erros_criticos': sumario.get('total_erros_criticos'),
 				'total_alertas': sumario.get('total_alertas'),
 				'llm_error': llm_error,
-				'raw_json': json.dumps(processed)[:15000]  # limitar tamanho
+				'raw_json': json.dumps(processed)[:15000],  # limitar tamanho
+				'year_month': year_month
 			}
 			# Tentativa de inserção (ignorar falhas)
 			try:
@@ -248,6 +305,13 @@ def simple_health():
 		'gemini': GEMINI_AVAILABLE,
 		'has_key': bool(os.getenv('GEMINI_API_KEY'))
 	})
+
+@conferencia_bp.route('/simple/prompt')
+@login_required
+def simple_prompt_view():
+	"""Retorna o prompt ativo (dinâmico) para inspeção/debug (sem markdown do documento)."""
+	prompt_txt = get_prompt_from_db('invoice')
+	return jsonify({ 'tipo': 'invoice', 'prompt_length': len(prompt_txt or ''), 'prompt': prompt_txt })
 
 @conferencia_bp.route('/static-test')
 @login_required
