@@ -331,6 +331,9 @@
                             <div class="form-group">
                                 <label class="form-label">Número WhatsApp</label>
                                 <input type="tel" id="novo-numero" class="form-input" placeholder="(11) 99999-9999" maxlength="20">
+                                <div class="form-help" style="margin-top:4px; color: black; font-weight:500;">
+                                    Aviso: ao adicionar este número ele será imediatamente notificado pelo Agente Unique com uma mensagem inicial.
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Nome para identificação</label>
@@ -438,6 +441,9 @@
                                required 
                                maxlength="20">
                         <div class="form-help">Digite o número com DDD, sem espaços ou símbolos</div>
+                        <div class="form-help" style="margin-top:4px; color: var(--color-warning); font-weight:500;">
+                            Aviso: ao cadastrar este número ele receberá imediatamente uma mensagem de confirmação enviada pelo Agente Unique.
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -492,7 +498,7 @@
                     <i class="mdi mdi-check"></i>
                     Ativar Agente Unique
                 </button>
-                <button type="button" class="btn btn-info" style="background: var(--color-info); margin-left:8px;" onclick="openTermsModal()">
+                <button type="button" class="btn btn-info" style="background: var(--color_info); margin-left:8px;" onclick="openTermsModal()">
                     <i class="mdi mdi-file-document-outline"></i>
                     Termos e Serviços
                 </button>

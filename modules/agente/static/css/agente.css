@@ -196,7 +196,7 @@
 
 .form-help {
     font-size: 0.75rem;
-    color: var(--color-text-muted);
+    color: black;
     margin-top: var(--spacing-xs);
 }
 

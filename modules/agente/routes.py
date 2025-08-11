@@ -6,6 +6,7 @@ import json
 import requests
 import traceback
 from datetime import datetime
+import re
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('agente', __name__, 
@@ -36,18 +37,28 @@ def format_date_br(date_str):
 def notificar_cadastro_n8n(numero_zap):
     """Envia notificação para o webhook do N8N para acionar o fluxo de mensagem no WhatsApp"""
     try:
-        url = 'https://n8n.kelvin.home.nom.br/webhook-test/portal-cadastro'
+        url = 'https://n8n.portalunique.com.br/webhook/trigger_new'
+        # Remove o prefixo +55 se existir
+        numero = str(numero_zap)
+        if numero.startswith('+55'):
+            numero = numero[3:]
+        # Remove todos os caracteres não numéricos
+        numero = re.sub(r'\D', '', numero)
+        # Remove o primeiro '9' após o DDD (para formato EVO)
+        # Exemplo: 41996650141 -> 41 + 996650141 -> 41 + 96650141
+        if len(numero) == 11 and numero[2] == '9':
+            numero_zap_evo = numero[:2] + numero[3:]
+        else:
+            numero_zap_evo = numero
         payload = {
-            'numero_zap': numero_zap
+            'numero_zap_evo': numero_zap_evo
         }
         headers = {
             'Content-Type': 'application/json'
         }
-        
         response = requests.post(url, data=json.dumps(payload), headers=headers)
-        
         if response.status_code == 200:
-            print(f"[INFO] Webhook N8N acionado com sucesso para o número {numero_zap}")
+            print(f"[INFO] Webhook N8N acionado com sucesso para o número {numero_zap} (EVO: {numero_zap_evo})")
             return True
         else:
             print(f"[ERROR] Falha ao acionar webhook N8N. Status code: {response.status_code}")
@@ -1282,6 +1293,7 @@ def debug_empresas():
     except Exception as e:
         print(f"[DEBUG ERROR] {str(e)}")
         import traceback
+
         traceback.print_exc()
         return jsonify({"error": str(e)})
 
