@@ -275,6 +275,9 @@ def get_dashboard_data():
             print(f"[DEBUG] Valores originais únicos de modal: {sorted({str(m) for m in df['modal'].dropna().unique()})}")
             # Criar coluna normalizada para evitar inconsistências (ex: '4.0', 'AÉREO', etc.)
             df['modal_normalizado'] = df['modal'].apply(normalize_modal)
+            # Substituir coluna principal para simplificar downstream
+            df['modal'] = df['modal_normalizado']
+            print(f"[DEBUG] Valores normalizados únicos de modal: {sorted({str(m) for m in df['modal'].dropna().unique()})}")
         else:
             df['modal_normalizado'] = ''
 
@@ -326,7 +329,7 @@ def get_dashboard_data():
         # Dados da tabela
         table_data = []
         for _, r in df_page.iterrows():
-            modal_val = r.get('modal_normalizado', '')
+            modal_val = r.get('modal', '')  # já substituído pelo normalizado
             table_data.append({
                 'modal': modal_val,
                 'numero': start_idx + len(table_data) + 1,
