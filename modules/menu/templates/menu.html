@@ -16,7 +16,8 @@
         </div>
     </div>
     <div class="main-content">
-        {% set role = session.user.role if session.user else 'guest' %}
+        {# Acesso seguro à role evitando AttributeError em produção #}
+        {% set role = (session.get('user') or {}).get('role', 'guest') %}
         <div class="menu-layout" data-user-role="{{ role }}">
             <section class="menu-main">
                 <!-- Dashboards -->

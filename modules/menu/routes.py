@@ -12,11 +12,22 @@ bp = Blueprint('menu', __name__,
 @bp.route('/')
 @login_required
 def menu_home():
-    # Buscar informações das empresas do usuário para exibir no menu
-    user = session.get('user', {})
-    user_companies_info = user.get('user_companies_info', [])
-    
-    return render_template('menu.html', user_companies_info=user_companies_info)
+    """Página principal do menu.
+
+    Inclui logs defensivos para investigar erro 500 observado em produção.
+    """
+    try:
+        user = session.get('user', {})
+        if not isinstance(user, dict):
+            app.logger.error('[MENU] session["user"] em formato inesperado: %r', user)
+            user = {}
+        user_companies_info = user.get('user_companies_info', []) or []
+        app.logger.debug('[MENU] Render /menu user_id=%s role=%s empresas=%s',
+                         user.get('id'), user.get('role'), len(user_companies_info))
+        return render_template('menu.html', user_companies_info=user_companies_info)
+    except Exception as e:
+        app.logger.exception('[MENU] Erro ao renderizar menu_home: %s', e)
+        return render_template('errors/500.html'), 500
 
 @bp.route('/dashboards')
 @login_required
