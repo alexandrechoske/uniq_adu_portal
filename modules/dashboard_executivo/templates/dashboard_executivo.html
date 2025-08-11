@@ -43,7 +43,7 @@
             <div class="spinner"></div>
         </div>
         <!-- Linha 1: Processos Abertos - Chegando Este Mês - Chegando Esta Semana -->
-        <div class="kpi-card kpi-info">
+        <div class="kpi-card kpi-info" data-kpi-status="processos_abertos">
             <div class="kpi-icon">
                 <i class="mdi mdi-folder-open"></i>
             </div>
@@ -51,32 +51,35 @@
                 <p class="kpi-label">Processos Abertos</p>
                 <p class="kpi-value" id="kpi-processos-abertos">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos abertos" data-mini="processos_abertos">≡</button>
         </div>
         
-        <div class="kpi-card kpi-emerald">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calendar-month"></i>
+            <div class="kpi-card kpi-emerald" data-kpi-status="chegando_mes">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-calendar-month"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Chegando Este Mês</p>
+                    <p class="kpi-value" id="kpi-chegando-mes">-</p>
+                    <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
+                </div>
+                <button class="kpi-mini-btn" title="Ver processos com chegada neste mês" data-mini="chegando_mes">≡</button>
             </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Chegando Este Mês</p>
-                <p class="kpi-value" id="kpi-chegando-mes">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
-            </div>
-        </div>
         
-        <div class="kpi-card kpi-teal">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calendar-week"></i>
+            <div class="kpi-card kpi-teal" data-kpi-status="chegando_semana">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-calendar-week"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Chegando Esta Semana</p>
+                    <p class="kpi-value" id="kpi-chegando-semana">-</p>
+                    <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
+                </div>
+                <button class="kpi-mini-btn" title="Ver processos com chegada nesta semana" data-mini="chegando_semana">≡</button>
             </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Chegando Esta Semana</p>
-                <p class="kpi-value" id="kpi-chegando-semana">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
-            </div>
-        </div>
         
         <!-- Linha 2: Agd Embarque - Agd Chegada - Agd Liberação - Agd Entrega - Agd Fechamento -->
-        <div class="kpi-card kpi-orange">
+        <div class="kpi-card kpi-orange" data-kpi-status="AG EMBARQUE">
             <div class="kpi-icon">
                 <i class="mdi mdi-ship-wheel"></i>
             </div>
@@ -84,9 +87,10 @@
                 <p class="kpi-label">Agd Embarque</p>
                 <p class="kpi-value" id="kpi-Agd-embarque">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos aguardando embarque" data-mini="AG EMBARQUE">≡</button>
         </div>
         
-        <div class="kpi-card kpi-purple">
+        <div class="kpi-card kpi-purple" data-kpi-status="AG CHEGADA">
             <div class="kpi-icon">
                 <i class="mdi mdi-map-marker-check"></i>
             </div>
@@ -94,9 +98,10 @@
                 <p class="kpi-label">Agd Chegada</p>
                 <p class="kpi-value" id="kpi-Agd-chegada">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos aguardando chegada" data-mini="AG CHEGADA">≡</button>
         </div>
         
-        <div class="kpi-card kpi-info">
+        <div class="kpi-card kpi-info" data-kpi-status="LIBERACAO">
             <div class="kpi-icon">
                 <i class="mdi mdi-shield-check"></i>
             </div>
@@ -104,9 +109,10 @@
                 <p class="kpi-label">Agd Liberação</p>
                 <p class="kpi-value" id="kpi-Agd-liberacao">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos aguardando liberação" data-mini="AG LIBERACAO">≡</button>
         </div>
         
-        <div class="kpi-card kpi-success">
+        <div class="kpi-card kpi-success" data-kpi-status="AGD_ENTREGA">
             <div class="kpi-icon">
                 <i class="mdi mdi-truck-delivery"></i>
             </div>
@@ -114,9 +120,10 @@
                 <p class="kpi-label">Agd Entrega</p>
                 <p class="kpi-value" id="kpi-agd-entrega">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos aguardando entrega" data-mini="AGD_ENTREGA">≡</button>
         </div>
         
-        <div class="kpi-card kpi-warning">
+        <div class="kpi-card kpi-warning" data-kpi-status="AG FECHAMENTO">
             <div class="kpi-icon">
                 <i class="mdi mdi-file-check"></i>
             </div>
@@ -124,6 +131,7 @@
                 <p class="kpi-label">Agd Fechamento</p>
                 <p class="kpi-value" id="kpi-Agd-fechamento">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos aguardando fechamento" data-mini="AG FECHAMENTO">≡</button>
         </div>
         
         <!-- Linha 3: Total Despesas -->
@@ -662,6 +670,7 @@
 <script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/kpi-mini-popup.js') }}"></script>
 
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager

@@ -499,14 +499,15 @@ def dashboard_kpis():
             status = re.sub(r'\s+', ' ', status)
             status = status.strip()
             # Normalizações finais para garantir agrupamento correto
-            if status in ['AG EMBARQUE', 'AG EMBARQUE']: return 'AG EMBARQUE'
-            if status in ['AG CHEGADA', 'AG CHEGADA']: return 'AG CHEGADA'
+            if status in ['AG EMBARQUE', 'AG. EMBARQUE']: return 'AG EMBARQUE'
+            if status in ['ABERTURA']: return 'AG EMBARQUE'
+            if status in ['AG CHEGADA', 'AG. CHEGADA']: return 'AG CHEGADA'
             if status in ['AG CARREGAMENTO', 'AG CARREGAMENTO']: return 'AG CARREGAMENTO'
             if status in ['AG FECHAMENTO', 'AG FECHAMENTO']: return 'AG FECHAMENTO'
             if status in ['AG REGISTRO', 'AG REGISTRO']: return 'AG REGISTRO'
             if status in ['AG MAPA', 'AG MAPA']: return 'AG MAPA'
             if status in ['DI REGISTRADA', 'DI REGISTRADA']: return 'DI REGISTRADA'
-            if status in ['DI DESEMBARACADA', 'DI DESEMBARACADA']: return 'DI DESEMBARACADA'
+            if status in ['DI DESEMBARACADA', 'DI DESEMBARACADA']: return 'AG ENTREGA'
             if status in ['NUMERARIO ENVIADO', 'NUMERARIO ENVIADO']: return 'NUMERARIO ENVIADO'
             return status
 

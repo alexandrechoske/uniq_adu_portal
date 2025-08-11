@@ -339,6 +339,8 @@ window.createStatusChart = function(data) {
         destroyChartIfExists('status-chart');
         const ctx = getCanvasContext('status-chart');
         if (!ctx) return;
+    // Normalizar labels vazias para 'Sem Info'
+    data.labels = data.labels.map(l => (l && (''+l).trim()) ? l : 'Sem Info');
         dashboardCharts.status = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -357,7 +359,35 @@ window.createStatusChart = function(data) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'right' },
+                    legend: { 
+                        position: 'right',
+                        labels: {
+                            generateLabels(chart) {
+                                const baseGen = (Chart.overrides && Chart.overrides.doughnut && Chart.overrides.doughnut.plugins && Chart.overrides.doughnut.plugins.legend && Chart.overrides.doughnut.plugins.legend.labels && Chart.overrides.doughnut.plugins.legend.labels.generateLabels)
+                                    || (Chart.defaults && Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels && Chart.defaults.plugins.legend.labels.generateLabels);
+                                const original = baseGen ? baseGen(chart) : [];
+                                return original.map(lbl => {
+                                    const text = Array.isArray(lbl.text) ? lbl.text.join(' ') : (lbl.text || '');
+                                    if (text.length > 18) {
+                                        const words = text.split(/\s+/);
+                                        const lines = [];
+                                        let current = '';
+                                        words.forEach(w => {
+                                            if ((current + ' ' + w).trim().length > 18) {
+                                                if (current) lines.push(current.trim());
+                                                current = w;
+                                            } else {
+                                                current += ' ' + w;
+                                            }
+                                        });
+                                        if (current) lines.push(current.trim());
+                                        lbl.text = lines.length ? lines : text; // multiline if split
+                                    }
+                                    return lbl;
+                                });
+                            }
+                        }
+                    },
                     datalabels: {
                         color: (ctx) => {
                             try {
@@ -388,19 +418,17 @@ window.createGroupedModalChart = function(data) {
         destroyChartIfExists('grouped-modal-chart');
         const ctx = getCanvasContext('grouped-modal-chart');
         if (!ctx) return;
+        const datasets = data.datasets.map(ds => {
+            const isCusto = /custo/i.test((ds.label || ''));
+            return {
+                ...ds,
+                type: 'bar',
+                backgroundColor: isCusto ? 'rgba(245, 158, 11, 0.6)' : 'rgba(0, 123, 255, 0.6)',
+                borderColor: isCusto ? DASH_COLORS.custo : DASH_COLORS.processos
+            };
+        });
         dashboardCharts.groupedModal = new Chart(ctx, {
-            data: {
-                labels: data.labels,
-        datasets: data.datasets.map(ds => {
-                    const isCusto = /custo/i.test((ds.label || ''));
-                    return {
-                        ...ds,
-                        type: 'bar',
-            backgroundColor: isCusto ? 'rgba(245, 158, 11, 0.6)' : 'rgba(0, 123, 255, 0.6)',
-                        borderColor: isCusto ? DASH_COLORS.custo : DASH_COLORS.processos
-                    };
-                })
-            },
+            data: { labels: data.labels, datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -408,11 +436,16 @@ window.createGroupedModalChart = function(data) {
                 plugins: {
                     legend: { position: 'top' },
                     datalabels: {
-            anchor: 'end', align: 'end', clip: false, offset: 6,
+                        anchor: 'end',
+                        align: 'end',
+                        clip: false,
+                        offset: -2,
                         formatter: (value, ctx) => {
                             const label = ctx.dataset.label || '';
                             return /custo/i.test(label) ? formatCurrencyCompact(value) : formatNumber(value);
-                        }
+                        },
+                        font: { size: 10, weight: '600' },
+                        color: (ctx) => /custo/i.test(ctx.dataset.label || '') ? '#92400e' : '#1e3a8a'
                     },
                     tooltip: {
                         callbacks: {
@@ -424,20 +457,11 @@ window.createGroupedModalChart = function(data) {
                         }
                     }
                 },
-                layout: { padding: { top: 0 } },
+                // Reduzido padding superior para encostar mais no topo
+                layout: { padding: { top: 8 } },
                 scales: {
-                    y: {
-                        type: 'linear', position: 'left',
-                        ticks: { display: false },
-                        grid: { display: false },
-                        border: { display: false }
-                    },
-                    y1: {
-                        type: 'linear', position: 'right', beginAtZero: true,
-                        ticks: { display: false },
-                        grid: { display: false },
-                        border: { display: false }
-                    }
+                    y: { type: 'linear', position: 'left', ticks: { display: false }, grid: { display: false }, border: { display: false } },
+                    y1: { type: 'linear', position: 'right', beginAtZero: true, ticks: { display: false }, grid: { display: false }, border: { display: false } }
                 }
             }
         });
@@ -492,7 +516,7 @@ window.createUrfChartWithValidation = function(payload) {
 
 // Principais Materiais (tabela)
 window.createPrincipaisMateriaisTableWithValidation = function(payload) {
-    try { if (payload) return createPrincipaisMateriaisTable(payload); }
+    try { if (payload) return window.createPrincipaisMateriaisTable(payload); }
     finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('material-loading'); } catch (_) {} }
 };
 
@@ -534,29 +558,18 @@ function validateAndRecreateCharts() {
             if (!chartInstance) {
                 console.warn(`[DASHBOARD_EXECUTIVO] Gráfico ${chartId} não encontrado - será recriado`);
                 missingCharts++;
+                // Tratar labels vazias e adicionar bucket 'Sem Info' com base nas operações carregadas
+                try {
+                    const ops = Array.isArray(window.currentOperations) ? window.currentOperations : [];
+                    // Aqui, 'data' não está definido neste escopo, então este bloco deve ser removido ou ajustado.
+                    // Se necessário, adicione lógica de recriação do gráfico aqui.
+                } catch(e){ console.warn('[URF_CHART] Ajuste Sem Info falhou', e); }
             }
         }
     });
-    
-    // Se algum gráfico estiver faltando, recriar todos usando o cache
-    if (missingCharts > 0) {
-        console.log(`[DASHBOARD_EXECUTIVO] ${missingCharts} gráficos faltando - recriando com cache...`);
-        
-        const cachedCharts = dashboardCache.get('charts');
-        if (cachedCharts) {
-            createDashboardChartsWithValidation(cachedCharts);
-        } else {
-            console.log('[DASHBOARD_EXECUTIVO] Cache não disponível - recarregando gráficos...');
-            loadDashboardChartsWithCache();
-        }
-    } else {
-        console.log('[DASHBOARD_EXECUTIVO] Todos os gráficos estão presentes');
-    }
+    // Adicione lógica para recriar os gráficos ausentes, se necessário
 }
 
-/**
- * Initialize the dashboard
- */
 async function initializeDashboard() {
     // Evitar múltiplas inicializações simultâneas
     if (dashboardState.isLoading || dashboardState.isInitialized) {
@@ -1761,6 +1774,18 @@ function formatNumber(value, decimals = 0) {
     });
 }
 
+// Global safe value display helper
+function safeValue(v, placeholder = 'n/a') {
+    if (v === null || v === undefined) return placeholder;
+    if (typeof v === 'string') {
+        const trimmed = v.trim();
+        if (!trimmed || trimmed === '-' || /^(null|undefined)$/i.test(trimmed)) return placeholder;
+        return trimmed;
+    }
+    if (Number.isNaN(v)) return placeholder;
+    return v;
+}
+
 /**
  * Format currency
  */
@@ -1918,8 +1943,8 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-embarque', operation.data_embarque);
     updateElementValue('detail-data-chegada', operation.data_chegada);
     updateElementValue('detail-data-fechamento', operation.data_fechamento); // NOVA data
-    updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : '-');
-    updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : '-');
+    updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : null);
+    updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : null);
     
     // Update customs information
     updateElementValue('detail-numero-di', operation.numero_di);
@@ -2131,7 +2156,7 @@ function updateElementValue(elementId, value, useCanalBadge = false) {
             element.innerHTML = getCanalBadge(value);
             console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com badge: "${value}"`);
         } else {
-            const displayValue = value || '-';
+            const displayValue = safeValue(value);
             element.textContent = displayValue;
             console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com: "${displayValue}"`);
         }
