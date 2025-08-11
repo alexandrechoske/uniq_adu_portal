@@ -50,6 +50,35 @@ def get_canal_color(canal):
     }
     return canal_colors.get(canal, '#9E9E9E')
 
+def normalize_modal(value):
+    """Normaliza diferentes representações de modal para códigos '1','4','7'.
+    Aceita valores numéricos, strings com acentuação e sinônimos.
+    Retorna string vazia se não reconhecido (frontend tratará fallback).
+    """
+    if value is None:
+        return ''
+    v = str(value).strip().upper()
+    # Remover sufixos .0 de conversões de float
+    if v.endswith('.0'):
+        v = v[:-2]
+    # Tentar mapear diretamente números
+    if v in {'1','4','7'}:
+        return v
+    # Sinônimos marítimo
+    if v in {'MARITIMO','MARÍTIMO','MARÍTIMA','MARITIMA','SHIP','NAVIO','SEA','OCEAN'}:
+        return '1'
+    # Sinônimos aéreo
+    if v in {'AEREO','AÉREO','AÉREA','AEREA','AIR','AIRPLANE','PLANE','AVIAO','AVIÃO'}:
+        return '4'
+    # Sinônimos terrestre
+    if v in {'TERRESTRE','RODOVIARIO','RODOVIÁRIO','TRUCK','ROAD'}:
+        return '7'
+    # Se contiver dígitos tentamos pegar primeiro
+    digits = ''.join(ch for ch in v if ch.isdigit())
+    if digits in {'1','4','7'}:
+        return digits
+    return ''
+
 def get_exchange_rates():
     """Obter cotações do dólar e euro do Banco Central."""
     try:
@@ -242,17 +271,25 @@ def get_dashboard_data():
             print(f"[DEBUG] Filtrado por data embarque: {len(df)} registros")
 
         # Métricas
+        if 'modal' in df.columns:
+            print(f"[DEBUG] Valores originais únicos de modal: {sorted({str(m) for m in df['modal'].dropna().unique()})}")
+            # Criar coluna normalizada para evitar inconsistências (ex: '4.0', 'AÉREO', etc.)
+            df['modal_normalizado'] = df['modal'].apply(normalize_modal)
+        else:
+            df['modal_normalizado'] = ''
+
         total_processos = len(df)
-        modal_counts = df['modal'].value_counts() if 'modal' in df.columns else pd.Series(dtype=int)
+        modal_counts = df['modal_normalizado'].value_counts() if 'modal_normalizado' in df.columns else pd.Series(dtype=int)
         count_maritimo = count_aereo = count_terrestre = 0
         for modal, count in modal_counts.items():
-            m = str(modal).upper()
-            if m in ['1', 'MARÍTIMO', 'MARÍTIMA', 'MARITIMO', 'SHIP']:
+            if modal == '1':
                 count_maritimo += int(count)
-            elif m in ['4', 'AÉREO', 'AÉREA', 'AEREO', 'AIRPLANE', 'PLANE']:
+            elif modal == '4':
                 count_aereo += int(count)
-            elif m in ['7', 'TERRESTRE', 'RODOVIÁRIO', 'RODOVIARIO', 'TRUCK']:
+            elif modal == '7':
                 count_terrestre += int(count)
+
+        print(f"[DEBUG] Contagem normalizada -> Marítimo: {count_maritimo}, Aéreo: {count_aereo}, Terrestre: {count_terrestre}")
 
         # Padronização de colunas
         column_mapping = {
@@ -289,8 +326,9 @@ def get_dashboard_data():
         # Dados da tabela
         table_data = []
         for _, r in df_page.iterrows():
+            modal_val = r.get('modal_normalizado', '')
             table_data.append({
-                'modal': str(r.get('modal', '') or ''),
+                'modal': modal_val,
                 'numero': start_idx + len(table_data) + 1,
                 'numero_di': str(r.get('numero_di', '') or ''),
                 'ref_unique': str(r.get('ref_unique', '') or ''),

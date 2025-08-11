@@ -640,6 +640,7 @@ class DashboardImportacoesResumido {
                 
                 // Obter imagem do modal
                 const modalImage = this.getModalImage(row.modal);
+                console.log(`[DEBUG] Row ${row.numero}: modal='${row.modal}' -> image='${modalImage}'`);
                 
                 tr.innerHTML = `
                     <td>
@@ -737,13 +738,35 @@ class DashboardImportacoesResumido {
     }
     
     getModalImage(modal) {
-        const modalImages = {
-            '1': '/static/medias/ship_color.png',      // Marítimo
-            '4': '/static/medias/plane_color.png',     // Aéreo
-            '7': '/static/medias/truck_color.png'      // Terrestre
-        };
+        console.log(`[DEBUG getModalImage] Input: '${modal}' (type: ${typeof modal})`);
         
-        return modalImages[modal] || '/static/medias/ship_color.png';
+        if (modal === null || modal === undefined) return '/static/medias/ship_color.png';
+        const v = String(modal).trim().toUpperCase();
+        // Normalizar sufixo .0
+        const base = v.endsWith('.0') ? v.slice(0, -2) : v;
+        console.log(`[DEBUG getModalImage] Normalized base: '${base}'`);
+        
+        // Mapear sinônimos
+        const map = {
+            '1': 'ship', 'MARITIMO': 'ship', 'MARÍTIMO': 'ship', 'MARITIMA': 'ship', 'MARÍTIMA': 'ship', 'NAVIO': 'ship', 'SHIP': 'ship', 'SEA': 'ship', 'OCEAN': 'ship',
+            '4': 'plane', 'AEREO': 'plane', 'AÉREO': 'plane', 'AEREA': 'plane', 'AÉREA': 'plane', 'PLANE': 'plane', 'AIRPLANE': 'plane', 'AIR': 'plane', 'AVIAO': 'plane', 'AVIÃO': 'plane',
+            '7': 'truck', 'TERRESTRE': 'truck', 'RODOVIARIO': 'truck', 'RODOVIÁRIO': 'truck', 'TRUCK': 'truck', 'ROAD': 'truck'
+        };
+        const key = map[base] || map[base.replace(/\W/g,'')] || map[base.replace('.','')] || 'ship';
+        console.log(`[DEBUG getModalImage] Mapped key: '${key}'`);
+        
+        switch (key) {
+            case 'plane': 
+                console.log(`[DEBUG getModalImage] Returning plane image`);
+                return '/static/medias/plane_color.png';
+            case 'truck': 
+                console.log(`[DEBUG getModalImage] Returning truck image`);
+                return '/static/medias/truck_color.png';
+            case 'ship':
+            default: 
+                console.log(`[DEBUG getModalImage] Returning ship image (default)`);
+                return '/static/medias/ship_color.png';
+        }
     }
     
     updatePagination(paginationData) {
