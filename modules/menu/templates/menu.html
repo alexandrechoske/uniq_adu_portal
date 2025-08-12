@@ -18,86 +18,68 @@
     <div class="main-content">
         {# Acesso seguro à role evitando AttributeError em produção #}
         {% set role = (session.get('user') or {}).get('role', 'guest') %}
-        <div class="menu-layout" data-user-role="{{ role }}">
-            <section class="menu-main">
-                <!-- Dashboards -->
-                <div class="section-block">
-                    <div class="section-block-header">
-                        <h3><i class="mdi mdi-chart-line"></i> Dashboards</h3>
-                    </div>
-                    <div class="module-grid">
-                        <a href="{{ url_for('dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
-                            <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
-                            <h4 class="module-title">Dashboard Executivo</h4>
-                            <p class="module-desc">Visão estratégica consolidada de importações.</p>
-                        </a>
-                        <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
-                            <div class="module-icon"><i class="mdi mdi-ferry text-xl"></i></div>
-                            <h4 class="module-title">Dashboard Importações</h4>
-                            <p class="module-desc">Monitoramento resumido dos processos ativos.</p>
-                        </a>
-                    </div>
+        <div class="menu-columns" data-user-role="{{ role }}">
+            <!-- Coluna: Dashboards -->
+            <div class="menu-column">
+                <h3 class="column-title"><i class="mdi mdi-chart-line"></i> Dashboards</h3>
+                <div class="column-grid">
+                    <a href="{{ url_for('dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
+                        <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
+                        <h4 class="module-title">Dashboard Executivo</h4>
+                        <p class="module-desc">Visão estratégica consolidada de importações.</p>
+                    </a>
+                    <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
+                        <div class="module-icon"><i class="mdi mdi-ferry text-xl"></i></div>
+                        <h4 class="module-title">Dashboard Importações</h4>
+                        <p class="module-desc">Monitoramento resumido dos processos ativos.</p>
+                    </a>
                 </div>
-                <!-- Ferramentas -->
-                <div class="section-block">
-                    <div class="section-block-header">
-                        <h3><i class="mdi mdi-tools"></i> Ferramentas</h3>
-                    </div>
-                    <div class="module-grid">
-                        <a href="{{ url_for('agente.index') }}" class="module-card" data-module="agente">
-                            <div class="module-icon"><i class="mdi mdi-robot"></i></div>
-                            <h4 class="module-title">Agente IA</h4>
-                            <p class="module-desc">Assistente inteligente para consultas especializadas.</p>
-                        </a>
-                        <a href="{{ url_for('export_relatorios.index') }}" class="module-card" data-module="export_relatorios">
-                            <div class="module-icon"><i class="mdi mdi-file-export"></i></div>
-                            <h4 class="module-title">Exportação Relatórios</h4>
-                            <p class="module-desc">Extrair processos antigos (&gt; 6 meses).</p>
-                        </a>
-                    </div>
+            </div>
+            <!-- Coluna: Ferramentas (inclui Administração quando admin) -->
+            <div class="menu-column">
+                <h3 class="column-title"><i class="mdi mdi-tools"></i> Ferramentas</h3>
+                <div class="column-grid">
+                    <a href="{{ url_for('agente.index') }}" class="module-card" data-module="agente">
+                        <div class="module-icon"><i class="mdi mdi-robot"></i></div>
+                        <h4 class="module-title">Agente IA</h4>
+                        <p class="module-desc">Assistente inteligente para consultas especializadas.</p>
+                    </a>
+                    <a href="{{ url_for('export_relatorios.index') }}" class="module-card" data-module="export_relatorios">
+                        <div class="module-icon"><i class="mdi mdi-file-export"></i></div>
+                        <h4 class="module-title">Exportação Relatórios</h4>
+                        <p class="module-desc">Extrair processos antigos (&gt; 6 meses).</p>
+                    </a>
+                    {% if role in ['admin'] %}
+                    <a href="{{ url_for('usuarios.index') }}" class="module-card" data-module="usuarios">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
+                        <h4 class="module-title">Gerenciar Usuários</h4>
+                        <p class="module-desc">Controle de acessos, criação e manutenção de contas.</p>
+                    </a>
+                    <a href="{{ url_for('config.logos_clientes') }}" class="module-card" data-module="logos_clientes">
+                        <div class="module-icon"><i class="mdi mdi-domain"></i></div>
+                        <h4 class="module-title">Logos de Clientes</h4>
+                        <p class="module-desc">Gerencie a identidade visual das empresas vinculadas.</p>
+                    </a>
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}" class="module-card" data-module="analytics">
+                        <div class="module-icon"><i class="mdi mdi-chart-line"></i></div>
+                        <h4 class="module-title">Analytics</h4>
+                        <p class="module-desc">Indicadores de acesso e uso do sistema.</p>
+                    </a>
+                    {% endif %}
                 </div>
-                <!-- Administração -->
-                {% if role in ['admin'] %}
-                <div class="section-block">
-                    <div class="section-block-header">
-                        <h3><i class="mdi mdi-cog"></i> Administração</h3>
-                    </div>
-                    <div class="module-grid">
-                        <a href="{{ url_for('usuarios.index') }}" class="module-card" data-module="usuarios">
-                            <span class="role-badge admin">ADMIN</span>
-                            <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
-                            <h4 class="module-title">Gerenciar Usuários</h4>
-                            <p class="module-desc">Controle de acessos, criação e manutenção de contas.</p>
-                        </a>
-                        <a href="{{ url_for('config.logos_clientes') }}" class="module-card" data-module="logos_clientes">
-                            <div class="module-icon"><i class="mdi mdi-domain"></i></div>
-                            <h4 class="module-title">Logos de Clientes</h4>
-                            <p class="module-desc">Gerencie a identidade visual das empresas vinculadas.</p>
-                        </a>
-                        {% if role == 'admin' %}
-                        <a href="{{ url_for('analytics.analytics_dashboard') }}" class="module-card" data-module="analytics">
-                            <div class="module-icon"><i class="mdi mdi-chart-line"></i></div>
-                            <h4 class="module-title">Analytics</h4>
-                            <p class="module-desc">Indicadores de acesso e uso do sistema.</p>
-                        </a>
-                        {% endif %}
-                    </div>
+            </div>
+            <!-- Coluna: Ações Rápidas -->
+            <div class="menu-column">
+                <h3 class="column-title"><i class="mdi mdi-lightning-bolt"></i> Ações Rápidas</h3>
+                <div class="column-grid quick-actions-column">
+                    <a href="/logout" class="module-card" data-module="logout">
+                        <div class="module-icon"><i class="mdi mdi-logout"></i></div>
+                        <h4 class="module-title">Sair</h4>
+                        <p class="module-desc">Encerrar sua sessão com segurança.</p>
+                    </a>
                 </div>
-                {% endif %}
-                <!-- Ações Rápidas -->
-                <div class="section-block">
-                    <div class="section-block-header">
-                        <h3><i class="mdi mdi-lightning-bolt"></i> Ações Rápidas</h3>
-                    </div>
-                    <div class="module-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));">
-                        <a href="/logout" class="module-card" data-module="logout">
-                            <div class="module-icon"><i class="mdi mdi-logout"></i></div>
-                            <h4 class="module-title">Sair</h4>
-                            <p class="module-desc">Encerrar sua sessão com segurança.</p>
-                        </a>
-                    </div>
-                </div>
-            </section>
+            </div>
         </div>
     <!-- Sidebar de empresas removida conforme solicitação -->
     </div>

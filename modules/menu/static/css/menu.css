@@ -8,6 +8,53 @@
 }
 /* Sidebar de empresas e estilos relacionados removidos */
 
+/* === NOVO LAYOUT EM 3 COLUNAS === */
+.menu-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.menu-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.column-title {
+    margin: 0 0 .25rem 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding-bottom: .4rem;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.column-title i { color: var(--color-secondary); font-size: 1.2rem; }
+
+.column-grid {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+}
+
+.column-grid .module-card { min-height: 132px; }
+
+/* Coluna de ações rápidas pode ter cards menores */
+.quick-actions-column .module-card { min-height: 110px; }
+
+@media (max-width: 1200px) {
+    .menu-columns { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+    .menu-columns { grid-template-columns: 1fr; }
+}
+
 .section-block-header {
     display: flex;
     align-items: center;
