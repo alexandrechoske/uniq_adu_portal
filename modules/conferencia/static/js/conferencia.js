@@ -1,581 +1,248 @@
-// === CONFERÊNCIA DOCUMENTAL IA - JAVASCRIPT ===
+const form = document.getElementById('uploadForm');
+const statusDiv = document.getElementById('status');
+const previewDiv = document.getElementById('preview');
+const jsonDiv = document.getElementById('jsonResult');
+const painelEstruturado = document.getElementById('resultadoEstruturado');
+const resumoDiv = document.getElementById('resumo');
+const camposDiv = document.getElementById('campos');
+const itensDiv = document.getElementById('itens');
+const resumoWrapper = document.getElementById('resumoWrapper');
+const toggleDetailsBtn = document.getElementById('toggleDetails');
+const modal = document.getElementById('modalDetalhado');
+const closeModalBtn = document.getElementById('closeModal');
+let lastCamposData = null;
+let lastItensData = null;
+let currentFilterMode = 'all';
 
-class ConferenciaDocumental {
-    constructor() {
-        this.uploadedFiles = [];
-        this.currentJobId = null;
-        this.progressInterval = null;
-        this.tipoConferencia = 'inconsistencias';
-        
-        this.init();
-    }
-    
-    init() {
-        console.log('Iniciando configuração dos event listeners...');
-        try {
-            // Garantir que loading está oculto na inicialização
-            this.hideLoading();
-            
-            this.setupEventListeners();
-            this.setupDropzone();
-            this.setupRadioOptions();
-            console.log('Configuração concluída com sucesso!');
-        } catch (error) {
-            console.error('Erro durante a inicialização:', error);
-        }
-    }
-    
-    setupEventListeners() {
-        // Botão de upload
-        const uploadBtn = document.getElementById('upload-btn');
-        if (uploadBtn) {
-            uploadBtn.addEventListener('click', () => this.processFiles());
-        }
-        
-        // Input de arquivo
-        const fileInput = document.getElementById('file-input');
-        if (fileInput) {
-            fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
-        }
-        
-        // Botão de fechar modal
-        const closeModal = document.getElementById('close-details');
-        if (closeModal) {
-            closeModal.addEventListener('click', () => this.closeDetailsModal());
-        }
-        
-        // Fechar modal clicando fora
-        const detailsContainer = document.getElementById('details-container');
-        if (detailsContainer) {
-            detailsContainer.addEventListener('click', (e) => {
-                if (e.target === detailsContainer) {
-                    this.closeDetailsModal();
-                }
-            });
-        }
-    }
-    
-    setupDropzone() {
-        const dropzone = document.getElementById('dropzone');
-        if (!dropzone) return;
-        
-        // Prevenir comportamento padrão do browser
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, this.preventDefaults, false);
-            document.body.addEventListener(eventName, this.preventDefaults, false);
-        });
-        
-        // Highlight na zona de drop
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, () => this.highlight(dropzone), false);
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, () => this.unhighlight(dropzone), false);
-        });
-        
-        // Processar arquivos soltos
-        dropzone.addEventListener('drop', (e) => this.handleDrop(e), false);
-        
-        // Click para abrir seletor de arquivo
-        dropzone.addEventListener('click', () => {
-            document.getElementById('file-input').click();
-        });
-    }
-    
-    setupRadioOptions() {
-        const radioOptions = document.querySelectorAll('.radio-option');
-        radioOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                // Remover seleção anterior
-                radioOptions.forEach(opt => opt.classList.remove('selected'));
-                
-                // Adicionar seleção atual
-                option.classList.add('selected');
-                
-                // Marcar o radio button
-                const radio = option.querySelector('input[type="radio"]');
-                if (radio) {
-                    radio.checked = true;
-                    this.tipoConferencia = radio.value;
-                }
-            });
-        });
-    }
-    
-    preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    highlight(element) {
-        element.classList.add('dragover');
-    }
-    
-    unhighlight(element) {
-        element.classList.remove('dragover');
-    }
-    
-    handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        this.handleFiles(files);
-    }
-    
-    handleFileSelect(e) {
-        const files = e.target.files;
-        this.handleFiles(files);
-    }
-    
-    handleFiles(files) {
-        ([...files]).forEach(file => {
-            if (this.validateFile(file)) {
-                this.addFileToList(file);
-            }
-        });
-        this.updateUploadButton();
-    }
-    
-    validateFile(file) {
-        const allowedTypes = ['application/pdf'];
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        
-        if (!allowedTypes.includes(file.type)) {
-            this.showNotification('Apenas arquivos PDF são permitidos.', 'error');
-            return false;
-        }
-        
-        if (file.size > maxSize) {
-            this.showNotification('Arquivo muito grande. Tamanho máximo: 10MB.', 'error');
-            return false;
-        }
-        
-        return true;
-    }
-    
-    addFileToList(file) {
-        // Verificar se arquivo já foi adicionado
-        if (this.uploadedFiles.find(f => f.name === file.name && f.size === file.size)) {
-            this.showNotification('Arquivo já foi adicionado.', 'warning');
-            return;
-        }
-        
-        this.uploadedFiles.push(file);
-        this.renderFileList();
-    }
-    
-    renderFileList() {
-        const fileList = document.getElementById('file-list');
-        if (!fileList) return;
-        
-        if (this.uploadedFiles.length === 0) {
-            fileList.innerHTML = '';
-            return;
-        }
-        
-        const filesHtml = this.uploadedFiles.map((file, index) => `
-            <div class="file-item" data-index="${index}">
-                <i class="file-icon mdi mdi-file-pdf-box"></i>
-                <div class="file-info">
-                    <div class="file-name" title="${file.name}">${file.name}</div>
-                    <div class="file-size">${this.formatFileSize(file.size)}</div>
-                </div>
-                <div class="file-actions">
-                    <button class="file-action" onclick="conferencia.removeFile(${index})" title="Remover arquivo">
-                        <i class="mdi mdi-close"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-        
-        fileList.innerHTML = filesHtml;
-    }
-    
-    removeFile(index) {
-        this.uploadedFiles.splice(index, 1);
-        this.renderFileList();
-        this.updateUploadButton();
-    }
-    
-    updateUploadButton() {
-        const uploadBtn = document.getElementById('upload-btn');
-        if (!uploadBtn) return;
-        
-        if (this.uploadedFiles.length > 0) {
-            uploadBtn.disabled = false;
-            uploadBtn.innerHTML = `
-                <i class="mdi mdi-upload"></i>
-                Processar ${this.uploadedFiles.length} arquivo${this.uploadedFiles.length > 1 ? 's' : ''}
-            `;
-        } else {
-            uploadBtn.disabled = true;
-            uploadBtn.innerHTML = `
-                <i class="mdi mdi-upload"></i>
-                Selecione arquivos para processar
-            `;
-        }
-    }
-    
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    async processFiles() {
-        if (this.uploadedFiles.length === 0) {
-            this.showNotification('Selecione pelo menos um arquivo.', 'warning');
-            return;
-        }
-        
-        console.log('Iniciando processamento...', {
-            arquivos: this.uploadedFiles.length,
-            tipo: this.tipoConferencia
-        });
-        
-        // Preparar FormData
-        const formData = new FormData();
-        this.uploadedFiles.forEach(file => {
-            formData.append('files[]', file);
-        });
-        formData.append('tipo_conferencia', this.tipoConferencia);
-        
-        try {
-            this.showLoading('Enviando arquivos...');
-            
-            // Enviar arquivos
-            const response = await fetch('/conferencia/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                this.currentJobId = result.job_id;
-                this.hideLoading();
-                this.showProcessingTimeline();
-                this.startProgressMonitoring();
-                this.clearFileList();
-                
-                console.log('Upload realizado com sucesso:', {
-                    job_id: result.job_id,
-                    tipo_conferencia: result.tipo_conferencia || 'não informado',
-                    files_count: result.files_count
-                });
-            } else {
-                this.hideLoading();
-                this.showNotification(result.message || 'Erro ao processar arquivos.', 'error');
-                console.error('Erro no upload:', result);
-            }
-            
-        } catch (error) {
-            this.hideLoading();
-            this.showNotification('Erro de conexão. Tente novamente.', 'error');
-            console.error('Erro:', error);
-        }
-    }
-    
-    showProcessingTimeline() {
-        const timeline = document.getElementById('processing-timeline');
-        if (timeline) {
-            timeline.style.display = 'block';
-            
-            // Resetar steps
-            const steps = timeline.querySelectorAll('.timeline-step');
-            steps.forEach(step => {
-                step.className = 'timeline-step pending';
-            });
-            
-            // Ativar primeiro step
-            if (steps[0]) {
-                steps[0].className = 'timeline-step active';
-            }
-        }
-    }
-    
-    startProgressMonitoring() {
-        if (this.progressInterval) {
-            clearInterval(this.progressInterval);
-        }
-        
-        this.progressInterval = setInterval(() => {
-            this.checkProgress();
-        }, 1000);
-    }
-    
-    async checkProgress() {
-        if (!this.currentJobId) return;
-        
-        try {
-            const response = await fetch(`/conferencia/status/${this.currentJobId}`);
-            const status = await response.json();
-            
-            if (response.ok) {
-                this.updateProgress(status);
-                
-                if (status.status === 'completed') {
-                    clearInterval(this.progressInterval);
-                    this.showResults();
-                } else if (status.status === 'error') {
-                    clearInterval(this.progressInterval);
-                    this.showNotification('Erro durante o processamento.', 'error');
-                    this.hideProcessingElements();
-                }
-            }
-            
-        } catch (error) {
-            console.error('Erro ao verificar progresso:', error);
-        }
-    }
-    
-    updateProgress(status) {
-        // Atualizar barra de progresso
-        const progressBar = document.getElementById('progress-bar');
-        const progressInfo = document.getElementById('progress-info');
-        const progressContainer = document.getElementById('progress-container');
-        
-        if (progressContainer && status.progress !== undefined) {
-            progressContainer.style.display = 'block';
-            
-            if (progressBar) {
-                progressBar.style.width = status.progress + '%';
-            }
-            
-            if (progressInfo) {
-                progressInfo.textContent = `${status.progress}% concluído`;
-                if (status.current_file) {
-                    progressInfo.textContent += ` - Processando: ${status.current_file}`;
-                }
-            }
-        }
-        
-        // Atualizar timeline
-        this.updateTimeline(status);
-    }
-    
-    updateTimeline(status) {
-        const timeline = document.getElementById('processing-timeline');
-        if (!timeline) return;
-        
-        const steps = timeline.querySelectorAll('.timeline-step');
-        
-        // Lógica simples de progresso dos steps
-        if (status.progress >= 25 && steps[1]) {
-            steps[1].className = 'timeline-step active';
-        }
-        if (status.progress >= 50 && steps[2]) {
-            steps[2].className = 'timeline-step active';
-        }
-        if (status.progress >= 75 && steps[3]) {
-            steps[3].className = 'timeline-step active';
-        }
-        if (status.progress === 100) {
-            steps.forEach(step => {
-                step.className = 'timeline-step completed';
-            });
-        }
-    }
-    
-    async showResults() {
-        if (!this.currentJobId) return;
-        
-        try {
-            const response = await fetch(`/conferencia/results/${this.currentJobId}`);
-            const data = await response.json();
-            
-            if (response.ok) {
-                this.renderResults(data.results);
-                this.hideProcessingElements();
-                this.showResultsContainer();
-            }
-            
-        } catch (error) {
-            console.error('Erro ao carregar resultados:', error);
-            this.showNotification('Erro ao carregar resultados.', 'error');
-        }
-    }
-    
-    renderResults(results) {
-        const resultsCards = document.getElementById('results-cards');
-        if (!resultsCards) return;
-        
-        const cardsHtml = results.map((result, index) => {
-            const statusClass = this.getStatusClass(result.status);
-            const statusIcon = this.getStatusIcon(result.status);
-            
-            return `
-                <div class="result-card">
-                    <div class="result-card-header">
-                        <i class="result-card-icon mdi ${statusIcon} ${statusClass}"></i>
-                        <div class="result-card-info">
-                            <div class="result-card-filename">${result.file}</div>
-                            <div class="result-card-summary">${result.status}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="result-card-stats">
-                        <div class="result-card-stat stat-error">
-                            <i class="result-card-stat-icon mdi mdi-alert-circle"></i>
-                            ${result.inconsistencias ? result.inconsistencias.length : 0} inconsistências
-                        </div>
-                    </div>
-                    
-                    <div class="result-card-actions">
-                        <button class="btn btn-outline" onclick="conferencia.showDetails(${index})">
-                            <i class="mdi mdi-eye"></i>
-                            Ver Detalhes
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        resultsCards.innerHTML = cardsHtml;
-        
-        // Salvar resultados para visualização de detalhes
-        this.currentResults = results;
-    }
-    
-    getStatusClass(status) {
-        switch (status) {
-            case 'completed': return 'result-status-success';
-            case 'error': return 'result-status-erro';
-            case 'warning': return 'result-status-alerta';
-            default: return 'result-status-ok';
-        }
-    }
-    
-    getStatusIcon(status) {
-        switch (status) {
-            case 'completed': return 'mdi-check-circle';
-            case 'error': return 'mdi-alert-circle';
-            case 'warning': return 'mdi-alert';
-            default: return 'mdi-file-check';
-        }
-    }
-    
-    showDetails(index) {
-        if (!this.currentResults || !this.currentResults[index]) return;
-        
-        const result = this.currentResults[index];
-        const detailsContainer = document.getElementById('details-container');
-        const detailsContent = document.getElementById('details-content');
-        
-        if (!detailsContainer || !detailsContent) return;
-        
-        // Gerar conteúdo dos detalhes
-        let contentHtml = `
-            <h3>Arquivo: ${result.file}</h3>
-            <p><strong>Status:</strong> ${result.status}</p>
-        `;
-        
-        if (result.inconsistencias && result.inconsistencias.length > 0) {
-            contentHtml += `
-                <h4>Inconsistências Encontradas:</h4>
-                <ul>
-                    ${result.inconsistencias.map(inc => `<li>${inc}</li>`).join('')}
-                </ul>
-            `;
-        }
-        
-        if (result.dados_extraidos) {
-            contentHtml += `
-                <h4>Dados Extraídos:</h4>
-                <pre>${JSON.stringify(result.dados_extraidos, null, 2)}</pre>
-            `;
-        }
-        
-        detailsContent.innerHTML = contentHtml;
-        detailsContainer.style.display = 'flex';
-    }
-    
-    closeDetailsModal() {
-        const detailsContainer = document.getElementById('details-container');
-        if (detailsContainer) {
-            detailsContainer.style.display = 'none';
-        }
-    }
-    
-    showResultsContainer() {
-        const resultsContainer = document.getElementById('results-container');
-        if (resultsContainer) {
-            resultsContainer.style.display = 'block';
-        }
-    }
-    
-    hideProcessingElements() {
-        const progressContainer = document.getElementById('progress-container');
-        const timeline = document.getElementById('processing-timeline');
-        
-        if (progressContainer) {
-            progressContainer.style.display = 'none';
-        }
-        
-        if (timeline) {
-            timeline.style.display = 'none';
-        }
-    }
-    
-    clearFileList() {
-        this.uploadedFiles = [];
-        this.renderFileList();
-        this.updateUploadButton();
-    }
-    
-    showLoading(message = 'Processando...') {
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loadingMessage = document.getElementById('loading-message');
-        
-        if (loadingMessage) {
-            loadingMessage.textContent = message;
-        }
-        
-        if (loadingOverlay) {
-            loadingOverlay.style.display = 'flex';
-        }
-        
-        console.log(`Loading mostrado: ${message}`);
-    }
-    
-    hideLoading() {
-        const loadingOverlay = document.getElementById('loading-overlay');
-        if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-        }
-        
-        console.log('Loading ocultado');
-    }
-    
-    showNotification(message, type = 'info') {
-        // Criar elemento de notificação
-        const notification = document.createElement('div');
-        notification.className = `flash-message flash-${type}`;
-        notification.textContent = message;
-        
-        // Adicionar ao topo da página
-        const header = document.querySelector('.page-header');
-        if (header) {
-            header.parentNode.insertBefore(notification, header.nextSibling);
-        } else {
-            document.body.insertBefore(notification, document.body.firstChild);
-        }
-        
-        // Remover após 5 segundos
-        setTimeout(() => {
-            notification.remove();
-        }, 5000);
-    }
+const REGULATORIOS = new Set(['invoice_number','issue_date','incoterm','seller_exporter','buyer_consignee','gross_weight','net_weight','payment_terms','exporter_reference']);
+
+const TOOLTIP_STATUS = 'Status das cores: Verde=OK (campo presente e confiança >=65%), Amarelo=atenção (campo presente mas baixa confiança <65%), Vermelho=ausente (não encontrado). Campos regulatórios são obrigatórios conforme escopo inicial.';
+
+function pillStatus(valorExtraido, confidence){
+  if(!valorExtraido){
+    return 'erro';
+  }
+  if(confidence === undefined || confidence === null) return 'ok';
+  return confidence < 0.65 ? 'alerta' : 'ok';
 }
 
-// Inicializar quando a página carregar
-let conferencia;
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando Conferencia Documental...');
-    conferencia = new ConferenciaDocumental();
-    // Expor globalmente para uso em onclick
-    window.conferencia = conferencia;
-    console.log('Conferencia Documental inicializada com sucesso!');
+function esc(v){
+  if(v===null || v===undefined) return '';
+  return String(v).replace(/[&<>]/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[s]));
+}
+
+function formatValor(v){
+  const safe = esc(v);
+  // Preserva quebras de linha de endereços (seller_exporter / buyer_consignee etc.)
+  return safe.replace(/\n+/g,'<br>');
+}
+
+function buildCounts(campos){
+  let ok=0, alerta=0, erro=0, regsFaltando=[];
+  Object.entries(campos).forEach(([k,c])=>{
+    const ve = c?.valor_extraido ?? null;
+    const st = pillStatus(ve, c?.confidence);
+    if(st==='ok') ok++; else if(st==='alerta') alerta++; else erro++;
+    if(REGULATORIOS.has(k) && !ve) regsFaltando.push(k);
+  });
+  return {ok, alerta, erro, regsFaltando};
+}
+
+function renderCampos(campos){
+  lastCamposData = campos;
+  // Aliases para campos que podem vir como *_total do backend
+  try {
+    if (campos && typeof campos === 'object') {
+      // Mapeamento abrangente de aliases -> chave canônica
+      const aliasMap = {
+        invoice_number: ['invoice_no','inv_number','invoice_num','number','invoice'],
+        issue_date: ['invoice_date','date','issue_dt','date_of_issue'],
+        seller_exporter: ['exporter','exporter_name','exporter_and_manufacturer','exporter_manufacturer','manufacturer_exporter','exporter_and_manufacturer_name','exporter_seller'],
+        buyer_consignee: ['consignee','buyer','buyer_consignee_name','consignee_buyer','buyer_name','consignee_name'],
+        exporter_reference: ['exporter_reference_number','exporter_ref','ref_exporter','reference','exporter_po','po_number','purchase_order','order_number'],
+        payment_terms: ['payment_term','terms_of_payment','terms_payment'],
+        incoterm: ['inco_term','incoterms','incoterm_code'],
+        gross_weight: ['gross_weight_total','total_gross_weight'],
+        net_weight: ['net_weight_total','total_net_weight','net_weight_total_bruto'],
+        currency: ['invoice_currency','moeda','currency_code'],
+        country_of_origin: ['origin_country','country_origin'],
+        country_of_acquisition: ['acquisition_country','country_acquisition']
+      };
+      Object.entries(aliasMap).forEach(([canon, aliases])=>{
+        if(!campos[canon]){
+          for(const a of aliases){
+            if(campos[a]){ campos[canon] = campos[a]; break; }
+          }
+        }
+      });
+      if (!campos.gross_weight && campos.gross_weight_total) {
+        campos.gross_weight = campos.gross_weight_total;
+      }
+      if (!campos.net_weight && (campos.net_weight_total || campos.net_weight_total_bruto)) {
+        campos.net_weight = campos.net_weight_total || campos.net_weight_total_bruto;
+      }
+    }
+  } catch(_) { /* silencioso */ }
+  camposDiv.innerHTML = '';
+  const ordem = [
+    'invoice_number','issue_date','seller_exporter','buyer_consignee','exporter_reference','payment_terms','incoterm','gross_weight','net_weight','currency','country_of_origin','country_of_acquisition'
+  ];
+  const counts = buildCounts(campos);
+  const countsBar = document.createElement('div');
+  countsBar.className = 'counts';
+  countsBar.innerHTML = `
+    <span class='c-ok'>OK: ${counts.ok}</span>
+    <span class='c-alerta'>Atenção: ${counts.alerta}</span>
+    <span class='c-erro'>Ausente: ${counts.erro}</span>
+    <span>Regulatórios faltando: ${counts.regsFaltando.length}</span>
+    <span class='tooltip'>?<span class='tip'>${esc(TOOLTIP_STATUS)}</span></span>
+  `;
+  camposDiv.appendChild(countsBar);
+  const filterBar = document.createElement('div');
+  filterBar.className = 'filter-bar';
+  filterBar.innerHTML = `Mostrar: <button data-f="all" class='${currentFilterMode==='all'?'active':''}'>Todos</button><button data-f="issues" class='${currentFilterMode==='issues'?'active':''}'>Somente Problemas</button><button data-f="reg" class='${currentFilterMode==='reg'?'active':''}'>Regulatórios</button>`;
+  camposDiv.appendChild(filterBar);
+  filterBar.addEventListener('click', (e)=>{
+    if(e.target.tagName==='BUTTON'){
+      currentFilterMode = e.target.getAttribute('data-f');
+      renderCampos(lastCamposData); // re-render
+    }
+  });
+  ordem.forEach(k=>{
+    const c = campos[k] || {};
+    const ve = c.valor_extraido ?? c.valor ?? null;
+    const conf = c.confidence ?? null;
+    const status = pillStatus(ve, conf);
+    // filter logic
+    if(currentFilterMode==='issues' && status==='ok') return;
+    if(currentFilterMode==='reg' && !REGULATORIOS.has(k)) return;
+    const normKeys = Object.keys(c).filter(x=>x.endsWith('_norm'));
+    let normLine = '';
+    if(normKeys.length){
+      normLine = normKeys.map(nk=>`${nk}: ${esc(c[nk])}`).join(' | ');
+    }
+    const snippet = c.source_snippet ? `<span class=\"snippet\">${esc(c.source_snippet)}</span>` : '';
+    const badgeReg = REGULATORIOS.has(k) ? '<span class="badge reg" title="Campo regulatório">REG</span>' : '';
+    const anchorId = 'campo_'+k;
+    camposDiv.insertAdjacentHTML('beforeend', `
+      <div class="campo-row" id="${anchorId}">
+        <div class="campo-nome"><span class="pill ${status}"></span>${esc(k)} ${badgeReg}</div>
+        <div class="campo-valor">
+          <strong>${ve?formatValor(ve):'<i>não encontrado</i>'}</strong>
+          ${conf!==null?`<span class="score">(${(conf*100).toFixed(0)}%)</span>`:''}
+          ${normLine?`<div class="tiny">${normLine}</div>`:''}
+          ${snippet}
+        </div>
+      </div>`);
+  });
+  // Provide quick anchor link in resumo if first issue
+  const firstIssue = Array.from(camposDiv.querySelectorAll('.campo-row')).find(r=>!r.querySelector('.pill.ok'));
+  if(firstIssue){
+    const link = document.createElement('span');
+    link.className = 'anchor-link';
+    link.textContent = 'Ir para primeiro problema';
+    link.onclick = ()=> firstIssue.scrollIntoView({behavior:'smooth', block:'center'});
+    camposDiv.insertBefore(link, camposDiv.children[1]);
+  }
+}
+
+function renderItens(itens){
+  if(!Array.isArray(itens) || !itens.length){
+    itensDiv.innerHTML = '<em>Nenhum item identificado.</em>';
+    return;
+  }
+  let html = '<table class="itens-table"><thead><tr><th>#</th><th>Descrição</th><th>Qtd</th><th>Preço Unit.</th><th>Total Item</th><th>Conf.</th></tr></thead><tbody>';
+  itens.forEach((it, idx)=>{
+    const desc = it.descricao_completa || it.descricao || {};
+    const qtd = it.quantidade_unidade || {};
+    const pu = it.preco_unitario || {};
+    const tot = it.valor_total_item || {};
+    const st = pillStatus(desc.valor_extraido || desc.valor, desc.confidence);
+    html += `<tr>
+      <td><span class="pill ${st}"></span>${idx+1}</td>
+      <td>${esc(desc.valor_extraido||desc.valor||'')}</td>
+      <td>${esc(qtd.valor_extraido||'')}<div class="tiny">${qtd.qty_norm||''} ${qtd.unit_norm||''}</div></td>
+      <td>${esc(pu.valor_extraido||'')}<div class="tiny">${pu.unit_price_norm||''}</div></td>
+      <td>${esc(tot.valor_extraido||'')}<div class="tiny">${tot.amount_norm||''}</div></td>
+      <td class="tiny">${desc.confidence? (desc.confidence*100).toFixed(0)+'%':''}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  itensDiv.innerHTML = html;
+}
+
+function renderResumo(sumario){
+  if(!sumario){ resumoDiv.innerHTML = '<em>Sem sumário.</em>'; return; }
+  const checks = sumario.checks || {};
+  const diff = checks.difference_norm;
+  let diffClass = 'diff-ok';
+  if(diff === null || diff === undefined) diffClass = 'diff-ok';
+  else if(Math.abs(diff) <= (checks.invoice_total_declared_norm? checks.invoice_total_declared_norm*0.01 : 0)) diffClass='diff-ok';
+  else if(Math.abs(diff) <= (checks.invoice_total_declared_norm? checks.invoice_total_declared_norm*0.05 : 0)) diffClass='diff-warn';
+  else diffClass='diff-bad';
+  resumoDiv.innerHTML = `
+    <div><strong>Status:</strong> ${esc(sumario.status||'')} <span class='tooltip'>ℹ<span class='tip'>${esc(TOOLTIP_STATUS)}</span></span></div>
+    <div class="checks">
+      <span>Itens Somados: ${checks.total_items_sum_norm ?? '-'}</span>
+      <span>Total Declarado: ${checks.invoice_total_declared_norm ?? '-'}</span>
+      <span>Diferença: ${checks.difference_norm ?? '-'}</span>
+    </div>
+    <div class="diff-box ${diffClass}">Diferença Avaliação: ${diff===null||diff===undefined?'-':diff}</div>
+    <div style="margin-top:4px; font-size:.7rem;">Erros críticos: ${sumario.total_erros_criticos ?? 0} | Alertas: ${sumario.total_alertas ?? 0} | Observações: ${sumario.total_observacoes ?? 0}</div>
+    <div style="margin-top:4px; font-size:.7rem;">${esc(sumario.conclusao || '')}</div>
+    ${(sumario.alertas&&sumario.alertas.length)?`<div style='margin-top:6px; font-size:.6rem; color:#b45309;'><strong>Alertas:</strong> ${sumario.alertas.map(esc).join(' | ')}</div>`:''}
+  `;
+}
+
+toggleDetailsBtn?.addEventListener('click', ()=>{
+  modal.style.display = 'block';
+  // Scroll to top of modal content
+  modal.querySelector('div').scrollTop = 0;
+  // Ensure structured is visible inside modal
+  painelEstruturado.style.display = 'block';
+});
+
+closeModalBtn?.addEventListener('click', ()=>{
+  modal.style.display = 'none';
+});
+
+modal?.addEventListener('click', (e)=>{
+  if(e.target === modal){ modal.style.display = 'none'; }
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  statusDiv.textContent = 'Enviando...';
+  previewDiv.textContent = '';
+  jsonDiv.textContent = '';
+  painelEstruturado.style.display = 'none';
+  resumoWrapper.style.display = 'none';
+  const btn = form.querySelector('button');
+  btn.disabled = true;
+  try {
+    const fd = new FormData(form);
+    const resp = await fetch('/conferencia/simple/analyze', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if(!data.success){
+      statusDiv.innerHTML = `<span class='status-err'>Erro: ${data.error||'desconhecido'}</span>`;
+    } else {
+  statusDiv.innerHTML = `<span class='status-ok'>Processado em ${data.elapsed_ms} ms (Lexoid: ${data.lexoid_mode})</span>`;
+  previewDiv.textContent = 'Markdown preview (1.2k chars)\n\n' + (data.markdown_preview || '');
+      const jsonData = data.json || { aviso: 'Sem JSON retornado', llm_error: data.llm_error };
+      jsonDiv.textContent = JSON.stringify(jsonData, null, 2);
+      // Render estruturado
+      renderResumo(jsonData.sumario);
+  // Summary only first
+  resumoWrapper.style.display = 'block';
+  toggleDetailsBtn.style.display = 'inline-block';
+  // Pre-render detailed in hidden modal container
+  renderCampos(jsonData.campos || {});
+  renderItens(jsonData.itens_da_fatura || []);
+  painelEstruturado.style.display = 'none';
+    }
+  } catch(err){
+    statusDiv.innerHTML = `<span class='status-err'>Falha inesperada: ${err}</span>`;
+  } finally {
+    btn.disabled = false;
+  }
 });

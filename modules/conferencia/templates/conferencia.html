@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Conferência Documental{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('conferencia.static', filename='css/conferencia.css') }}" />
+<div class="p-4">
+  <div class="bg-white rounded-md shadow-sm p-4 mb-4">
+    <h1 class="text-lg font-semibold mb-3">Conferência Documental (Invoice) ( TELA EM BETA/DESENVOLVIMENTO )</h1>
+    <form id="uploadForm" class="flex flex-col gap-3 md:flex-row md:items-center">
+      <input type="file" name="file" id="fileInput" accept="application/pdf" required class="text-sm" />
+      <button type="submit" class="text-sm">Analisar</button>
+      <button type="button" id="toggleDetails" style="display:none;" class="text-sm bg-gray-600">Ver Detalhado</button>
+    </form>
+    <div id="status" class="panel" style="margin-top:10px;"></div>
+    <div id="preview" class="panel" style="display:none;"></div>
+    <div id="resumoWrapper" class="panel" style="display:none;">
+      <h2 style="margin-top:0;font-size:1rem;">Resumo Geral</h2>
+      <div id="resumo"></div>
+    </div>
+  </div>
+
+  <!-- Modal Detalhado -->
+  <div id="modalDetalhado" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:3000;">
+    <div style="background:#fff; width:96%; max-width:1250px; margin:30px auto; padding:16px 18px 26px; border-radius:8px; max-height:calc(100vh - 60px); overflow:auto; position:relative;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+        <h3 style="margin:0;font-size:1rem;">Detalhes da Conferência</h3>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="closeModal" style="background:#dc2626;" class="text-sm">Fechar</button>
+        </div>
+      </div>
+      <div id="resultadoEstruturado" style="display:none; margin-top:8px;">
+        <div id="campos" class="panel" style="margin-top:0;"></div>
+        <div id="itens" class="panel"></div>
+        <details style="margin-top:10px;" open>
+          <summary style="cursor:pointer;">Ver JSON bruto</summary>
+          <pre id="jsonResult" class="raw-json"></pre>
+        </details>
+        <div class="panel" id="preview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('conferencia.static', filename='js/conferencia.js') }}"></script>
+{% endblock %}
