@@ -327,32 +327,50 @@
                         </p>
                     </div>
                     <div id="add-number-form" class="add-number-form" style="display: none;" onclick="event.stopPropagation()">
-                        <div style="width: 100%; max-width: 400px;">
-                            <div class="form-group">
-                                <label class="form-label">Número WhatsApp</label>
-                                <input type="tel" id="novo-numero" class="form-input" placeholder="(11) 99999-9999" maxlength="20">
-                                <div class="form-help" style="margin-top:4px; color: black; font-weight:500;">
-                                    Aviso: ao adicionar este número ele será imediatamente notificado pelo Agente Unique com uma mensagem inicial.
+                        <div class="add-number-form-grid">
+                            <!-- Primeira linha: Número e Nome lado a lado -->
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Número WhatsApp</label>
+                                    <input type="tel" id="novo-numero" class="form-input" placeholder="11999999999" maxlength="20">
+                                    <div class="form-help" style="font-size:0.65rem; line-height:1.1; color:var(--color-text-muted);">
+                                        Digite apenas números (DDD + número). Será salvo como +55DDXXXXXXXXX.
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nome para identificação</label>
+                                    <input type="text" id="nome-contato" class="form-input" placeholder="Ex: João - Comercial" maxlength="50">
+                                    <div class="form-help" style="font-size:0.65rem; line-height:1.1; color:var(--color-text-muted);">
+                                        Nome que aparecerá para identificar este número
+                                    </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Nome para identificação</label>
-                                <input type="text" id="nome-contato" class="form-input" placeholder="Ex: João - Comercial" maxlength="50">
+                            
+                            <!-- Segunda linha: Tipo e Aviso -->
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Tipo de número</label>
+                                    <select id="tipo-numero" class="form-input">
+                                        <option value="pessoal">Pessoal</option>
+                                        <option value="comercial">Comercial</option>
+                                        <option value="suporte">Suporte</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <div class="warning-notice">
+                                        <i class="mdi mdi-alert-circle"></i>
+                                        <span>Este número receberá uma mensagem de confirmação imediatamente após o cadastro.</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Tipo de número</label>
-                                <select id="tipo-numero" class="form-input">
-                                    <option value="pessoal">Pessoal</option>
-                                    <option value="comercial">Comercial</option>
-                                    <option value="suporte">Suporte</option>
-                                </select>
-                            </div>
-                            <div style="display: flex; gap: var(--spacing-sm); justify-content: center;">
+                            
+                            <!-- Terceira linha: Botões centralizados -->
+                            <div class="form-actions">
                                 <button type="button" class="btn btn-success" id="btn-add-numero" onclick="addNumber()">
-                                    <i class="mdi mdi-plus"></i> Adicionar
+                                    <i class="mdi mdi-plus"></i> Adicionar Número
                                 </button>
                                 <button type="button" class="btn btn-secondary" onclick="hideAddNumberForm()">
-                                    Cancelar
+                                    <i class="mdi mdi-close"></i> Cancelar
                                 </button>
                             </div>
                         </div>
@@ -440,7 +458,9 @@
                                placeholder="(11) 99999-9999" 
                                required 
                                maxlength="20">
-                        <div class="form-help">Digite o número com DDD, sem espaços ou símbolos</div>
+                            <div class="form-help" style="font-weight:600; color:var(--color-text-secondary);">
+                                Digite SOMENTE números (DDD + número). Não use espaços, parênteses, hífens ou outros símbolos. O sistema salvará como +55DDXXXXXXXXX.
+                            </div>
                         <div class="form-help" style="margin-top:4px; color: var(--color-warning); font-weight:500;">
                             Aviso: ao cadastrar este número ele receberá imediatamente uma mensagem de confirmação enviada pelo Agente Unique.
                         </div>

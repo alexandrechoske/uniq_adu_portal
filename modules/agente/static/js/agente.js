@@ -160,6 +160,8 @@ function addNumber() {
     const nomeInput = document.getElementById('nome-contato');
     const tipoSelect = document.getElementById('tipo-numero');
     const button = document.getElementById('btn-add-numero');
+    // Remove qualquer caractere não numérico para garantir padronização
+    input.value = input.value.replace(/\D/g, '');
     const numero = input.value.trim();
     const nome = nomeInput ? nomeInput.value.trim() : '';
     const tipo = tipoSelect ? tipoSelect.value : 'pessoal';
@@ -182,6 +184,7 @@ function addNumber() {
         input.focus();
         return;
     }
+    console.log('[AGENTE FRONT] Número normalizado para envio:', validation.formatted);
     
     setButtonLoading(button, true);
     
@@ -373,11 +376,15 @@ function setupFormValidation() {
     
     if (numberInput) {
         numberInput.addEventListener('input', function() {
+            // Sanitiza removendo tudo que não seja número
+            const original = this.value;
+            const digits = original.replace(/\D/g, '');
+            if (original !== digits) {
+                this.value = digits;
+            }
             const validation = validatePhoneNumber(this.value);
             const feedback = this.parentElement.querySelector('.form-feedback');
-            
             if (feedback) feedback.remove();
-            
             if (this.value.trim() && !validation.valid) {
                 const feedbackDiv = document.createElement('div');
                 feedbackDiv.className = 'form-feedback error';
@@ -406,6 +413,9 @@ function setupFormValidation() {
                         numberInput.focus();
                         return false;
                     }
+                    // Substitui campo pelo número formatado padronizado +55 antes do submit
+                    numberInput.value = validation.formatted.replace(/\D/g,''); // backend deve reformatar para +55
+                    console.log('[AGENTE FRONT] Enviando número normalizado (apenas dígitos):', numberInput.value);
                 }
                 
                 setButtonLoading(submitButton, true);
@@ -719,8 +729,9 @@ async function adminAddNumber(userId) {
         const input = document.getElementById(`new-number-${userId}`);
     const nomeInput = document.getElementById(`new-nome-${userId}`);
     const tipoSelect = document.getElementById(`new-tipo-${userId}`);
-        
-        const numero = input.value.trim();
+    // Sanitiza
+    input.value = input.value.replace(/\D/g, '');
+    const numero = input.value.trim();
     const nome = nomeInput ? nomeInput.value.trim() : '';
     const tipo = tipoSelect ? tipoSelect.value : 'pessoal';
         
@@ -1026,6 +1037,7 @@ function closeUserDetailsModal() {
 
 async function adminAddNumberModal(userId) {
     const input = document.getElementById('new-number-modal');
+    input.value = input.value.replace(/\D/g, '');
     const numero = input.value.trim();
     
     if (!numero) {
@@ -1034,13 +1046,18 @@ async function adminAddNumberModal(userId) {
     }
     
     try {
+        const validation = validatePhoneNumber(numero);
+        if(!validation.valid){
+            toast.error('Número inválido', validation.message);
+            return;
+        }
         const response = await fetch('/agente/admin/add-numero', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-API-Key': 'uniq_api_2025_dev_bypass_key'
             },
-            body: JSON.stringify({ user_id: userId, numero: numero })
+            body: JSON.stringify({ user_id: userId, numero: validation.formatted })
         });
         
         const data = await response.json();

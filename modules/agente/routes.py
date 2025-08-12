@@ -15,6 +15,38 @@ bp = Blueprint('agente', __name__,
                static_folder='static',
                static_url_path='/agente/static')
 
+def normalize_phone(raw: str) -> str:
+    """Normaliza entrada de telefone removendo tudo que não seja dígito e garantindo prefixo +55.
+    Retorna somente dígitos (com DDI e DDD) no formato +55DDXXXXXXXXX se possível.
+    Levanta ValueError se impossível normalizar.
+    """
+    if not raw:
+        raise ValueError("Número vazio")
+    digits = re.sub(r'\D', '', raw)
+    # Remover zeros iniciais redundantes
+    # Se já começa com 55 e tem 13 ou 14 ou 15 dígitos manter
+    if digits.startswith('55'):
+        # Pegar últimos 13 se maior que 13
+        if len(digits) > 13:
+            digits = digits[:13]
+        if len(digits) < 13:
+            # Completar se veio truncado
+            digits = digits.ljust(13, '0')
+        return '+' + digits
+    # Se tem 11 dígitos (DDD+9+8) ou 10 (fixo sem 9) tratar como nacional
+    if len(digits) in (10,11):
+        # Se 10 dígitos e terceiro potencial digito de celular, adiciona 9
+        if len(digits) == 10 and digits[2] in ['6','7','8','9']:
+            digits = digits[:2] + '9' + digits[2:]
+        if len(digits) != 11:
+            raise ValueError('Número nacional inválido após ajuste')
+        return '+55' + digits
+    # Se mais longo, pegar últimos 11 dígitos como parte nacional
+    if len(digits) > 11:
+        last11 = digits[-11:]
+        return '+55' + last11
+    raise ValueError('Quantidade insuficiente de dígitos')
+
 def format_date_br(date_str):
     """Converte data ISO para formato brasileiro DD/MM/AAAA"""
     if not date_str:
@@ -370,13 +402,19 @@ def index():
             flash('Por favor, informe um nome para identificar este número.', 'error')
             return redirect(url_for('agente.index'))
         
-        # Validar e formatar número
-        is_valid, formatted_numero = validate_phone_number(numero)
+        # Normalizar entrada crua -> +55DDXXXXXXXXX antes de validar
+        try:
+            numero_normalizado = normalize_phone(numero)
+        except Exception as e:
+            flash(f'Número inválido: {e}', 'error')
+            return redirect(url_for('agente.index'))
+        # Validar e formatar número (usa pipeline existente)
+        is_valid, formatted_numero = validate_phone_number(numero_normalizado)
         if not is_valid:
             flash(f'Número inválido: {formatted_numero}', 'error')
             return redirect(url_for('agente.index'))
         
-        print(f"[AGENTE DEBUG] Número formatado: {numero} → {formatted_numero}")
+        print(f"[AGENTE DEBUG] Número formatado: {numero} → {numero_normalizado} → {formatted_numero}")
         
         try:
             # Verificar se o número já existe
@@ -467,8 +505,13 @@ def ajax_add_numero():
         if not nome:
             return jsonify({'success': False, 'message': 'Nome de contato é obrigatório'})
         
+        # Normalizar primeiro
+        try:
+            numero_normalizado = normalize_phone(numero)
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Número inválido: {e}'})
         # Validar e formatar número
-        is_valid, formatted_numero = validate_phone_number(numero)
+        is_valid, formatted_numero = validate_phone_number(numero_normalizado)
         if not is_valid:
             return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
@@ -873,8 +916,12 @@ def admin_add_numero():
         if not nome_contato:
             nome_contato = f"Número {numero[-4:]}"  # Nome padrão baseado nos últimos 4 dígitos
         
-        # Validar e formatar número
-        is_valid, formatted_numero = validate_phone_number(numero)
+        # Normalizar e validar
+        try:
+            numero_normalizado = normalize_phone(numero)
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Número inválido: {e}'})
+        is_valid, formatted_numero = validate_phone_number(numero_normalizado)
         if not is_valid:
             return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
