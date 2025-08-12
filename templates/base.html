@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UniSystem - {% block title %}{% endblock %}</title>
+    <title>Portal Unique</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -560,8 +560,10 @@
                 
                 <!-- Logo and app name -->
                 <div class="navbar-logo">
-                    <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
-                    <h1 class="navbar-title">UniSystem - Portal Aduaneiro</h1>
+                    {# Logo dinâmica do cliente (fallback para Unique) #}
+                    {% set _logo = (client_branding.logo_url if client_branding and client_branding.logo_url else url_for('static', filename='medias/Logo_Unique.png')) %}
+                    <img src="{{ _logo }}" alt="Logo Cliente" style="height:2rem;width:2rem;object-fit:cover;border-radius:50%;background:#fff;padding:2px;" title="{{ client_branding.name if client_branding else 'Cliente' }}">
+                    <h1 class="navbar-title">Portal Unique</h1>
                 </div>
             </div>
               <div class="navbar-right">

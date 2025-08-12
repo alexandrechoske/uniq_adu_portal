@@ -1,8 +1,8 @@
-from flask import Flask, render_template, redirect, url_for, session, jsonify
+from flask import Flask, render_template, redirect, url_for, session, jsonify, request
 from config import Config
 import os
 import signal
-from extensions import init_supabase
+from extensions import init_supabase, supabase_admin
 from session_handler import init_session_handler
 from services.logging_middleware import logging_middleware
 
@@ -157,6 +157,60 @@ app.register_blueprint(export_relatorios_bp)
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)
+
+# -------------------------------------------------------------
+# Global Client Branding Context
+# -------------------------------------------------------------
+from services.client_branding import get_client_branding, DEFAULT_BRANDING
+
+def _resolve_client_branding():
+    """Resolve and cache client branding in session (lazy)."""
+    # If already cached, return it
+    branding = session.get('client_branding')
+    user = session.get('user') or {}
+    
+    if branding and isinstance(branding, dict):
+        return branding
+        
+    if not user:
+        return DEFAULT_BRANDING
+        
+    user_email = user.get('email')
+    if not user_email:
+        return DEFAULT_BRANDING
+    
+    # Use the shared branding utility
+    branding = get_client_branding(user_email)
+    
+    # Cache in session
+    session['client_branding'] = branding
+    session.modified = True
+    
+    return branding
+
+@app.context_processor
+def inject_client_branding():
+    return {'client_branding': _resolve_client_branding()}
+
+# -------------------------------------------------------------
+# Debug route for client branding (para testes rápidos)
+# Pode ser acessada via bypass de API ou sessão autenticada.
+# -------------------------------------------------------------
+from services.client_branding import get_client_branding
+
+@app.route('/debug/client-branding')
+def debug_client_branding():
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    if not ('user' in session or (api_bypass_key and request_api_key == api_bypass_key)):
+        return jsonify({'error': 'Não autenticado'}), 401
+    
+    # Get branding for current user or test with bypass
+    user = session.get('user', {})
+    user_email = user.get('email') if user else None
+    
+    branding = get_client_branding(user_email)
+    return jsonify({'success': True, 'branding': branding, 'user_email': user_email})
 
 # Debug das rotas registradas
 print("\n[DEBUG] ===== Rotas Registradas =====")

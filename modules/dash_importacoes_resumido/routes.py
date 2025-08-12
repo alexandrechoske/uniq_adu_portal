@@ -10,6 +10,7 @@ import json
 import requests
 from services.data_cache import DataCacheService
 from services.retry_utils import run_with_retries
+from services.client_branding import get_client_branding
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
@@ -146,23 +147,8 @@ def get_dashboard_data():
 
         print(f"[DEBUG] Parâmetros: page={page}, per_page={per_page}, filtro_embarque={filtro_embarque}")
 
-        # Buscar branding (logo e nome da empresa do usuário) na view vw_user_client_logos
-        client_branding = {'name': 'Unique', 'logo_url': '/static/medias/Logo_Unique.png'}
-        try:
-            if user_email:
-                branding_q = supabase_admin.table('vw_user_client_logos') \
-                    .select('empresa, logo_url') \
-                    .eq('user_email', user_email) \
-                    .limit(1).execute()
-                if branding_q.data:
-                    row = branding_q.data[0]
-                    if row.get('empresa'):
-                        client_branding['name'] = row.get('empresa')
-                    if row.get('logo_url'):
-                        client_branding['logo_url'] = row.get('logo_url')
-            print(f"[DEBUG] Branding selecionado: {client_branding}")
-        except Exception as be:
-            print(f"[DEBUG] Erro ao obter branding do cliente: {be}")
+        # Buscar branding (logo e nome da empresa do usuário) usando função compartilhada
+        client_branding = get_client_branding(user_email)
 
         # Verificar cache primeiro
         cached_data = session.get('cached_data')
