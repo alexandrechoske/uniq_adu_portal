@@ -98,31 +98,8 @@
                     </div>
                 </div>
             </section>
-            {# Sidebar de empresas não é exibida para administradores (acesso full) #}
-            {% if role != 'admin' %}
-            <aside class="menu-sidebar" style="order:2;">
-                <h4><i class="mdi mdi-office-building"></i>Empresas Vinculadas</h4>
-                {% if user_companies_info %}
-                <div class="company-list">
-                    {% for empresa in user_companies_info %}
-                    <div class="company-item" data-company-id="{{ empresa.id }}">
-                        <div class="company-name">{{ empresa.nome_cliente or empresa.nome or ('Empresa ' ~ empresa.id) }}</div>
-                        <div class="company-cnpjs">
-                            {% for cnpj in empresa.cnpjs %}
-                            <span class="cnpj-badge">{{ cnpj }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="empty-companies">Nenhuma empresa vinculada.</div>
-                {% endif %}
-                <div class="layout-note">Contexto de empresa</div>
-            </aside>
-            {% endif %}
         </div>
-        <p class="responsive-helper" style="font-size:.6rem;color:var(--color-text-light);margin-top:1rem;">Sidebar move para o topo em telas menores.</p>
+    <!-- Sidebar de empresas removida conforme solicitação -->
     </div>
 </div>
 <script src="{{ url_for('menu.static', filename='js/menu.js') }}"></script>
