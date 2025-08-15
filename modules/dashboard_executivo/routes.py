@@ -706,12 +706,26 @@ def dashboard_charts():
 
         # Gráfico de Status do Processo
         status_chart = {'labels': [], 'data': []}
-        if 'status_processo' in df.columns:
-            status_counts = df['status_processo'].value_counts().head(10)
-            status_chart = {
-                'labels': status_counts.index.tolist(),
-                'data': status_counts.values.tolist()
-            }
+        # Alinhar com a coluna usada na tabela: status_macro_sistema (fallback para status_processo)
+        try:
+            if 'status_macro_sistema' in df.columns:
+                print('[DEBUG_CHARTS] Usando coluna para Status Chart: status_macro_sistema')
+                status_counts = df['status_macro_sistema'].fillna('Sem Info').value_counts().head(10)
+                status_chart = {
+                    'labels': status_counts.index.tolist(),
+                    'data': status_counts.values.tolist()
+                }
+            elif 'status_processo' in df.columns:
+                print('[DEBUG_CHARTS] Usando coluna para Status Chart: status_processo (fallback)')
+                status_counts = df['status_processo'].fillna('Sem Info').value_counts().head(10)
+                status_chart = {
+                    'labels': status_counts.index.tolist(),
+                    'data': status_counts.values.tolist()
+                }
+            else:
+                print('[DEBUG_CHARTS] Nenhuma coluna de status encontrada para o Status Chart')
+        except Exception as e:
+            print(f"[DEBUG_CHARTS] Erro ao montar Status Chart: {e}")
 
         # Gráfico de Modal
         grouped_modal_chart = {'labels': [], 'datasets': []}
@@ -1296,9 +1310,20 @@ def bootstrap_dashboard():
                     {'label':'Custo Total (R$)','data':g['custo_calculado'].tolist(),'type':'line','borderColor':'#28a745','backgroundColor':'rgba(40,167,69,0.1)','yAxisID':'y','tension':0.4}
                 ]
             }
-        if 'status_processo' in df.columns:
-            status_counts = df['status_processo'].value_counts().head(10)
-            charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+        # Alinhar com a coluna usada na tabela: status_macro_sistema (fallback para status_processo)
+        try:
+            if 'status_macro_sistema' in df.columns:
+                print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: status_macro_sistema')
+                status_counts = df['status_macro_sistema'].fillna('Sem Info').value_counts().head(10)
+                charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+            elif 'status_processo' in df.columns:
+                print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: status_processo (fallback)')
+                status_counts = df['status_processo'].fillna('Sem Info').value_counts().head(10)
+                charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+            else:
+                print('[DEBUG_BOOTSTRAP] Nenhuma coluna de status encontrada para o Status Chart')
+        except Exception as e:
+            print(f"[DEBUG_BOOTSTRAP] Erro ao montar Status Chart: {e}")
         if 'modal' in df.columns:
             gm = df.groupby('modal').agg({'ref_unique':'count','custo_calculado':'sum'}).reset_index()
             charts['grouped_modal'] = {
