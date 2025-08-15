@@ -257,15 +257,6 @@ def test_empresa_search():
     except FileNotFoundError:
         return "Arquivo de teste não encontrado", 404
 
-if __name__ == '__main__':
-    # Registrar rotas de teste apenas em desenvolvimento
-    if app.config['DEBUG']:
-        try:
-            from test_usuarios_api import register_test_routes
-            register_test_routes(app)
-            print("[DEBUG] Rotas de teste registradas")
-        except Exception as e:
-            print(f"[DEBUG] Erro ao registrar rotas de teste: {str(e)}")
-    
+if __name__ == '__main__':   
     # app.run(debug=True, host='192.168.0.75', port=5000)  # Forçando debug para true
     app.run(debug=True)  # Forçando debug para true
