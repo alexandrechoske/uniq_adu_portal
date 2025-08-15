@@ -7,6 +7,7 @@ import requests
 import traceback
 from datetime import datetime
 import re
+import os
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('agente', __name__, 
@@ -18,33 +19,55 @@ bp = Blueprint('agente', __name__,
 def normalize_phone(raw: str) -> str:
     """Normaliza entrada de telefone removendo tudo que não seja dígito e garantindo prefixo +55.
     Retorna somente dígitos (com DDI e DDD) no formato +55DDXXXXXXXXX se possível.
+    Aceita números Unique com 3 no terceiro dígito (10 dígitos) ou celulares comuns (11 dígitos).
     Levanta ValueError se impossível normalizar.
     """
     if not raw:
         raise ValueError("Número vazio")
     digits = re.sub(r'\D', '', raw)
-    # Remover zeros iniciais redundantes
-    # Se já começa com 55 e tem 13 ou 14 ou 15 dígitos manter
+    
+    # Se já começa com 55 e tem 12 ou 13 dígitos, manter
     if digits.startswith('55'):
-        # Pegar últimos 13 se maior que 13
+        # Pegar últimos 12 ou 13 se maior que 13
         if len(digits) > 13:
             digits = digits[:13]
-        if len(digits) < 13:
-            # Completar se veio truncado
-            digits = digits.ljust(13, '0')
+        if len(digits) < 12:
+            # Completar se veio truncado (mínimo 12 para números Unique)
+            digits = digits.ljust(12, '0')
         return '+' + digits
-    # Se tem 11 dígitos (DDD+9+8) ou 10 (fixo sem 9) tratar como nacional
-    if len(digits) in (10,11):
-        # Se 10 dígitos e terceiro potencial digito de celular, adiciona 9
-        if len(digits) == 10 and digits[2] in ['6','7','8','9']:
-            digits = digits[:2] + '9' + digits[2:]
-        if len(digits) != 11:
+    
+    # Se tem 10 ou 11 dígitos, tratar como nacional
+    if len(digits) in (10, 11):
+        # Se 10 dígitos, verificar terceiro dígito
+        if len(digits) == 10:
+            third_digit = digits[2]
+            # Números Unique com 3 no terceiro dígito - mantém 10 dígitos
+            if third_digit == '3':
+                return '+55' + digits
+            # Celular comum sem o 9, adiciona o 9
+            elif third_digit in ['6', '7', '8', '9']:
+                digits = digits[:2] + '9' + digits[2:]
+            # Telefones fixos com 2, 4, 5 - mantém como está
+            elif third_digit in ['2', '4', '5']:
+                return '+55' + digits
+        
+        # Se chegou aqui e tem 11 dígitos ou foi ajustado para 11
+        if len(digits) == 11:
+            return '+55' + digits
+        else:
             raise ValueError('Número nacional inválido após ajuste')
-        return '+55' + digits
-    # Se mais longo, pegar últimos 11 dígitos como parte nacional
+    
+    # Se mais longo, pegar últimos 10 ou 11 dígitos como parte nacional
     if len(digits) > 11:
-        last11 = digits[-11:]
-        return '+55' + last11
+        # Verificar se os últimos 10 dígitos são um número Unique
+        last10 = digits[-10:]
+        if last10[2] == '3':  # Terceiro dígito é 3
+            return '+55' + last10
+        else:
+            # Pegar últimos 11 como celular comum
+            last11 = digits[-11:]
+            return '+55' + last11
+    
     raise ValueError('Quantidade insuficiente de dígitos')
 
 def format_date_br(date_str):
@@ -67,28 +90,42 @@ def format_date_br(date_str):
         return date_str
 
 def notificar_cadastro_n8n(numero_zap):
-    """Envia notificação para o webhook do N8N para acionar o fluxo de mensagem no WhatsApp"""
+    """Envia notificação para o webhook do N8N para acionar o fluxo de mensagem no WhatsApp.
+    Usa por padrão a URL de produção definida em N8N_WEBHOOK_TRIGGER_NEW_PRD no .env.
+    Se estiver em ambiente de desenvolvimento (FLASK_ENV=development) e N8N_WEBHOOK_TRIGGER_NEW_DEV estiver definido,
+    utiliza a URL de DEV.
+    """
     try:
-        url = 'https://n8n.portalunique.com.br/webhook/trigger_new'
-        # Remove o prefixo +55 se existir
-        numero = str(numero_zap)
+        # Preferência: PRD por padrão
+        prd_url = os.getenv('N8N_WEBHOOK_TRIGGER_NEW_PRD') or 'https://n8n.portalunique.com.br/webhook/trigger_new'
+        dev_url = os.getenv('N8N_WEBHOOK_TRIGGER_NEW_DEV')
+        flask_env = os.getenv('FLASK_ENV', '').lower()
+
+        # Se estiver em desenvolvimento e houver URL de DEV, usá-la; caso contrário usar PRD
+        if flask_env == 'development' and dev_url:
+            url = dev_url
+        else:
+            url = prd_url
+
+        print(f"[INFO] Notificando N8N - usando URL: {url}")
+
+        # Normalizar número: remover +55 e caracteres não numéricos
+        numero = str(numero_zap or '')
         if numero.startswith('+55'):
             numero = numero[3:]
-        # Remove todos os caracteres não numéricos
         numero = re.sub(r'\D', '', numero)
-        # Remove o primeiro '9' após o DDD (para formato EVO)
-        # Exemplo: 41996650141 -> 41 + 996650141 -> 41 + 96650141
+
+        # Ajuste EVO: remover '9' após DDD quando aplicável (ex.: 41996650141 -> 4196650141)
         if len(numero) == 11 and numero[2] == '9':
             numero_zap_evo = numero[:2] + numero[3:]
         else:
             numero_zap_evo = numero
-        payload = {
-            'numero_zap_evo': numero_zap_evo
-        }
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        response = requests.post(url, data=json.dumps(payload), headers=headers)
+
+        payload = {'numero_zap_evo': numero_zap_evo}
+        headers = {'Content-Type': 'application/json'}
+
+        # Usar json= para serialização automática e definir timeout
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code == 200:
             print(f"[INFO] Webhook N8N acionado com sucesso para o número {numero_zap} (EVO: {numero_zap_evo})")
             return True
@@ -103,7 +140,7 @@ def notificar_cadastro_n8n(numero_zap):
 def format_phone_number(numero):
     """
     Formata número de telefone para o padrão esperado pela constraint.
-    A constraint parece esperar formato: +5511999999999 (14 dígitos com +55)
+    Aceita números Unique com 3 no terceiro dígito (10 dígitos) ou celulares comuns (11 dígitos).
     """
     import re
     
@@ -119,26 +156,29 @@ def format_phone_number(numero):
     if len(cleaned) == 13 and cleaned.startswith('55'):
         formatted = f"+{cleaned}"
     
-    # Se tem 12 dígitos e começa com 55 (caso específico: 554196650141)
+    # Se já tem 12 dígitos e começa com 55 - números Unique de 10 dígitos
     elif len(cleaned) == 12 and cleaned.startswith('55'):
-        # 554196650141 → 55 + 41 + 96650141 (8 dígitos no telefone)
-        # Precisa adicionar o 9: +5541966650141 (14 caracteres)
-        area_code = cleaned[2:4]  # 41
-        phone_part = cleaned[4:]  # 96650141 (8 dígitos)
-        if len(phone_part) == 8:
-            # Adicionar o 9 para celular: 96650141 → 996650141
-            formatted = f"+55{area_code}9{phone_part}"
-        else:
-            # Se já tem 9 dígitos ou mais, usar direto
-            formatted = f"+55{cleaned[2:]}"
+        formatted = f"+{cleaned}"
     
     # Se tem 11 dígitos (formato brasileiro sem código de país)
     elif len(cleaned) == 11:
         formatted = f"+55{cleaned}"
     
-    # Se tem 10 dígitos (sem o 9 no celular), adiciona o 9
-    elif len(cleaned) == 10 and cleaned[2] in ['6', '7', '8', '9']:
-        formatted = f"+55{cleaned[:2]}9{cleaned[2:]}"
+    # Se tem 10 dígitos, verificar se é número Unique (3 no terceiro dígito) ou celular comum
+    elif len(cleaned) == 10:
+        third_digit = cleaned[2]
+        
+        # Números Unique com 3 no terceiro dígito (ex: 4733059070) - mantém 10 dígitos
+        if third_digit == '3':
+            formatted = f"+55{cleaned}"
+        # Celular comum sem o 9, adiciona o 9
+        elif third_digit in ['6', '7', '8', '9']:
+            formatted = f"+55{cleaned[:2]}9{cleaned[2:]}"
+        # Telefones fixos com 2, 4, 5 - mantém como está
+        elif third_digit in ['2', '4', '5']:
+            formatted = f"+55{cleaned}"
+        else:
+            raise ValueError(f"Terceiro dígito inválido: {third_digit}")
     
     # Se tem 14 dígitos e começa com 55, remove um dígito extra
     elif len(cleaned) == 14 and cleaned.startswith('55'):
@@ -155,8 +195,8 @@ def format_phone_number(numero):
             phone_part = cleaned[-11:]
             formatted = f"+55{phone_part}"
         else:
-            # Muito poucos dígitos, adiciona zeros se necessário
-            phone_part = cleaned.zfill(11)
+            # Para números de 10 dígitos, usar direto
+            phone_part = cleaned
             formatted = f"+55{phone_part}"
     
     else:
@@ -167,35 +207,39 @@ def format_phone_number(numero):
     return formatted
 
 def validate_phone_number(numero):
-    """Valida se o número formatado está no padrão correto"""
+    """Valida se o número formatado está no padrão correto - aceita números Unique com 10 dígitos"""
     try:
         formatted = format_phone_number(numero)
         
         if not formatted:
             return False, "Número não pode estar vazio"
         
-        # Deve ter exatamente 14 caracteres (+5511999999999)
-        if len(formatted) != 14:
-            return False, f"Número deve ter 14 caracteres, encontrado: {len(formatted)}"
+        # Deve ter 13 caracteres (números Unique com 10 dígitos) ou 14 caracteres (celulares com 11 dígitos)
+        if len(formatted) not in [13, 14]:
+            return False, f"Número deve ter 13 ou 14 caracteres, encontrado: {len(formatted)}"
         
         # Deve começar com +55
         if not formatted.startswith('+55'):
             return False, "Número deve começar com +55"
         
-        # Parte do telefone deve ter 11 dígitos
+        # Parte do telefone (sem +55)
         phone_part = formatted[3:]  # Remove +55
-        if len(phone_part) != 11:
-            return False, f"Parte do telefone deve ter 11 dígitos, encontrado: {len(phone_part)}"
+        
+        # Validar número de dígitos baseado no terceiro dígito
+        third_digit = phone_part[2]
+        expected_length = 10 if third_digit == '3' else 11
+        
+        if len(phone_part) != expected_length:
+            return False, f"Parte do telefone deve ter {expected_length} dígitos para números iniciados com {third_digit}, encontrado: {len(phone_part)}"
         
         # Primeiro dígito deve ser 1, 2, 3, 4, 5, 6, 7, 8 ou 9 (código de área)
         area_code = phone_part[:2]
         if not area_code.isdigit() or int(area_code) < 11 or int(area_code) > 99:
             return False, f"Código de área inválido: {area_code}"
         
-        # Terceiro dígito deve ser 9 (celular) ou 2,3,4,5 (fixo)
-        first_digit = phone_part[2]
-        if first_digit not in ['2', '3', '4', '5', '9']:
-            return False, f"Primeiro dígito do telefone inválido: {first_digit}"
+        # Terceiro dígito deve ser 2, 3, 4, 5 ou 9
+        if third_digit not in ['2', '3', '4', '5', '9']:
+            return False, f"Primeiro dígito do telefone inválido: {third_digit}"
         
         return True, formatted
         

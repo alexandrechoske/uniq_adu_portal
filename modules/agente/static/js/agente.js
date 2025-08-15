@@ -92,9 +92,25 @@ function validatePhoneNumber(number) {
     else if (cleaned.length === 11) {
         formatted = `+55${cleaned}`;
     }
-    // Se tem 10 dígitos (sem o 9 no celular), adiciona o 9
-    else if (cleaned.length === 10 && ['6', '7', '8', '9'].includes(cleaned[2])) {
-        formatted = `+55${cleaned.slice(0, 2)}9${cleaned.slice(2)}`;
+    // Se tem 10 dígitos, verificar se é número Unique (3 no terceiro dígito) ou celular comum
+    else if (cleaned.length === 10) {
+        const thirdDigit = cleaned[2];
+        
+        // Números Unique com 3 no terceiro dígito (ex: 4733059070) - mantém 10 dígitos
+        if (thirdDigit === '3') {
+            formatted = `+55${cleaned}`;
+        }
+        // Celular comum sem o 9, adiciona o 9
+        else if (['6', '7', '8', '9'].includes(thirdDigit)) {
+            formatted = `+55${cleaned.slice(0, 2)}9${cleaned.slice(2)}`;
+        }
+        // Telefones fixos com 2, 4, 5 - mantém como está
+        else if (['2', '4', '5'].includes(thirdDigit)) {
+            formatted = `+55${cleaned}`;
+        }
+        else {
+            return { valid: false, message: `Terceiro dígito inválido: ${thirdDigit}. Deve ser 2, 3, 4, 5, 6, 7, 8 ou 9` };
+        }
     }
     // Se tem 12 dígitos mas não começa com 55, assume que é 55 + número
     else if (cleaned.length === 12) {
@@ -117,9 +133,9 @@ function validatePhoneNumber(number) {
         return { valid: false, message: 'Formato de número inválido' };
     }
     
-    // Validação final do formato
-    if (formatted.length !== 14) {
-        return { valid: false, message: `Formato inválido. Esperado: +5511999999999 (14 caracteres), recebido: ${formatted.length}` };
+    // Validação final do formato - aceita 13 ou 14 caracteres para números Unique
+    if (formatted.length !== 13 && formatted.length !== 14) {
+        return { valid: false, message: `Formato inválido. Esperado: +5511999999999 (14 chars) ou +551133333333 (13 chars), recebido: ${formatted.length}` };
     }
     
     if (!formatted.startsWith('+55')) {
@@ -127,8 +143,13 @@ function validatePhoneNumber(number) {
     }
     
     const phonePart = formatted.slice(3); // Remove +55
-    if (phonePart.length !== 11) {
-        return { valid: false, message: 'Parte do telefone deve ter 11 dígitos' };
+    
+    // Validar número de dígitos baseado no terceiro dígito
+    const thirdDigit = phonePart[2];
+    const expectedLength = thirdDigit === '3' ? 10 : 11;
+    
+    if (phonePart.length !== expectedLength) {
+        return { valid: false, message: `Parte do telefone deve ter ${expectedLength} dígitos para números iniciados com ${thirdDigit}, encontrado: ${phonePart.length}` };
     }
     
     const areaCode = phonePart.slice(0, 2);
@@ -136,9 +157,8 @@ function validatePhoneNumber(number) {
         return { valid: false, message: `Código de área inválido: ${areaCode}` };
     }
     
-    const firstDigit = phonePart[2];
-    if (!['2', '3', '4', '5', '9'].includes(firstDigit)) {
-        return { valid: false, message: `Primeiro dígito do telefone inválido: ${firstDigit}` };
+    if (!['2', '3', '4', '5', '9'].includes(thirdDigit)) {
+        return { valid: false, message: `Primeiro dígito do telefone inválido: ${thirdDigit}` };
     }
     
     return { valid: true, formatted: formatted };
