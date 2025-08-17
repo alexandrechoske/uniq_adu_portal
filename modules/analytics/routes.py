@@ -902,6 +902,122 @@ def get_agente_top_companies():
         logger.error(f"Erro ao obter top empresas do agente: {e}")
         return jsonify([])
 
+@bp.route('/api/agente/top-users')
+@role_required(['admin'])
+def get_agente_top_users():
+    """
+    API para usuários que mais usam o agente
+    """
+    try:
+        # Obter parâmetros de filtro
+        date_range = request.args.get('dateRange', '30d')
+        
+        # Calcular datas
+        end_date = datetime.now()
+        if date_range == '1d':
+            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        # Query base usando campo created_at correto
+        query = supabase_admin.table('agent_interaction_logs').select('*')
+        query = query.gte('created_at', start_date.isoformat())
+        query = query.lte('created_at', end_date.isoformat())
+        
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_agente_top_users',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
+        logs = response.data if response.data else []
+        
+        # Agrupar por usuário
+        user_stats = {}
+        for log in logs:
+            user_name = log.get('user_name', 'N/A')
+            whatsapp_number = log.get('whatsapp_number', 'N/A')
+            empresa_nome = log.get('empresa_nome', 'N/A')
+            
+            # Usar whatsapp como chave única (pode haver nomes duplicados)
+            user_key = f"{whatsapp_number}|{user_name}"
+            
+            if user_key not in user_stats:
+                user_stats[user_key] = {
+                    'user_name': user_name,
+                    'whatsapp_number': whatsapp_number,
+                    'empresa_nome': empresa_nome,
+                    'total_interactions': 0,
+                    'normal_requests': 0,
+                    'arquivo_requests': 0,
+                    'success_rate': 0,
+                    'avg_processos_encontrados': 0,
+                    'total_processos': 0,
+                    'last_interaction': None,
+                    'avg_response_time': 0,
+                    'total_response_time': 0
+                }
+            
+            # Incrementar contadores
+            user_stats[user_key]['total_interactions'] += 1
+            
+            response_type = log.get('response_type', 'normal')
+            if response_type == 'arquivo':
+                user_stats[user_key]['arquivo_requests'] += 1
+            else:
+                user_stats[user_key]['normal_requests'] += 1
+            
+            # Calcular estatísticas
+            processos = log.get('total_processos_encontrados', 0)
+            user_stats[user_key]['total_processos'] += processos
+            
+            # Tempo de resposta
+            response_time = calculate_response_time_from_log(log)
+            user_stats[user_key]['total_response_time'] += response_time
+            
+            # Última interação com correção de timezone
+            timestamp = log.get('created_at')
+            if timestamp:
+                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                dt_local = dt - timedelta(hours=3)
+                timestamp_local = dt_local.strftime('%d/%m/%Y %H:%M:%S')
+                
+                if not user_stats[user_key]['last_interaction'] or timestamp > user_stats[user_key]['last_interaction']:
+                    user_stats[user_key]['last_interaction'] = timestamp_local
+        
+        # Calcular médias e taxa de sucesso
+        for user in user_stats.values():
+            total = user['total_interactions']
+            user['avg_processos_encontrados'] = round(
+                user['total_processos'] / total, 1
+            ) if total > 0 else 0
+            
+            user['avg_response_time'] = round(
+                user['total_response_time'] / total, 0
+            ) if total > 0 else 0
+            
+            # Taxa de sucesso baseada em processos encontrados
+            user['success_rate'] = round(
+                (user['total_processos'] / total) * 100, 1
+            ) if total > 0 else 0
+        
+        # Converter para lista e ordenar
+        top_users = list(user_stats.values())
+        top_users.sort(key=lambda x: x['total_interactions'], reverse=True)
+        
+        return jsonify(top_users[:10])  # Top 10 usuários
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter top usuários do agente: {e}")
+        return jsonify([])
+
 @bp.route('/api/agente/recent-interactions')
 @role_required(['admin'])
 def get_agente_recent_interactions():

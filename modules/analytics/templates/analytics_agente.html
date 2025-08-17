@@ -112,32 +112,44 @@
         </div>
     </div>
 
-    <!-- Charts and Companies Grid -->
-    <div class="charts-grid">
-        <!-- Container for Chart and Companies side by side -->
-        <div style="display: flex; gap: 20px; align-items: flex-start;">
-            <!-- Gráfico de Interações - 70% width -->
-            <div class="chart-section" style="flex: 0 0 70%;">
-                <div class="chart-header">
-                    <h2 class="chart-title">Interações ao Longo do Tempo</h2>
-                </div>
-                <div class="chart-container">
-                    <div id="interactions-chart-loading" class="component-loading"><div class="spinner"></div></div>
-                    <canvas id="interactions-chart" class="chart-canvas"></canvas>
-                </div>
+    <!-- Gráfico de Interações - Largura Completa -->
+    <div class="chart-section">
+        <div class="chart-header">
+            <h2 class="chart-title">
+                <i class="mdi mdi-chart-line"></i>
+                Interações ao Longo do Tempo
+            </h2>
+        </div>
+        <div class="chart-content">
+            <div id="interactions-chart-loading" class="component-loading"><div class="spinner"></div></div>
+            <canvas id="interactions-chart" class="chart-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Container para as duas tabelas lado a lado -->
+    <div class="tables-side-by-side-container">
+        <!-- Top Empresas - 50% width -->
+        <div class="enhanced-table-section table-half-width">
+            <div class="enhanced-table-header">
+                <h2 class="enhanced-table-title">
+                    <i class="mdi mdi-trophy"></i>
+                    Empresas que Mais Usam
+                </h2>
             </div>
-            
-            <!-- Top Empresas - 30% width -->
-            <div class="enhanced-table-section" style="flex: 0 0 30%;">
-                <div class="enhanced-table-header">
-                    <h2 class="enhanced-table-title">
-                        <i class="mdi mdi-trophy"></i>
-                        Empresas que Mais Usam
-                    </h2>
-                </div>
-                <div id="top-companies-loading" class="component-loading"><div class="spinner"></div></div>
-                <div id="top-companies-table" class="enhanced-table-container"></div>
+            <div id="top-companies-loading" class="component-loading"><div class="spinner"></div></div>
+            <div id="top-companies-table" class="enhanced-table-container"></div>
+        </div>
+        
+        <!-- Top Usuários - 50% width -->
+        <div class="enhanced-table-section table-half-width">
+            <div class="enhanced-table-header">
+                <h2 class="enhanced-table-title">
+                    <i class="mdi mdi-account-star"></i>
+                    Usuários que Mais Usam
+                </h2>
             </div>
+            <div id="top-users-loading" class="component-loading"><div class="spinner"></div></div>
+            <div id="top-users-table" class="enhanced-table-container"></div>
         </div>
     </div>
 
@@ -156,57 +168,92 @@
 
 <!-- Modal para detalhes da interação -->
 <div class="modal fade" id="interactionModal" tabindex="-1" aria-labelledby="interactionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="interactionModalLabel">Detalhes da Interação</h5>
+                <h5 class="modal-title" id="interactionModalLabel">
+                    <i class="mdi mdi-message-text-outline"></i>
+                    Detalhes da Interação
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
+                    <!-- Informações do Usuário -->
                     <div class="col-md-6">
-                        <strong>Usuário:</strong>
-                        <p id="modal-user-name" class="text-muted">-</p>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>WhatsApp:</strong>
-                        <p id="modal-whatsapp" class="text-muted">-</p>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Empresa:</strong>
-                        <p id="modal-empresa" class="text-muted">-</p>
+                        <div class="detail-group">
+                            <div class="detail-label">Usuário</div>
+                            <div id="modal-user-name" class="detail-value">-</div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <strong>Data/Hora:</strong>
-                        <p id="modal-timestamp" class="text-muted">-</p>
+                        <div class="detail-group">
+                            <div class="detail-label">WhatsApp</div>
+                            <div id="modal-whatsapp" class="detail-value">-</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Informações da Empresa -->
+                    <div class="col-md-6">
+                        <div class="detail-group">
+                            <div class="detail-label">Empresa</div>
+                            <div id="modal-empresa" class="detail-value">-</div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <strong>Tipo de Mensagem:</strong>
-                        <span id="modal-message-type" class="badge bg-secondary">-</span>
+                        <div class="detail-group">
+                            <div class="detail-label">Data/Hora</div>
+                            <div id="modal-timestamp" class="detail-value">-</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tipos e Métricas -->
+                    <div class="col-md-6">
+                        <div class="detail-group">
+                            <div class="detail-label">Tipo de Mensagem</div>
+                            <div id="modal-message-type" class="detail-value">-</div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <strong>Tipo de Resposta:</strong>
-                        <span id="modal-response-type" class="badge bg-info">-</span>
+                        <div class="detail-group">
+                            <div class="detail-label">Tipo de Resposta</div>
+                            <div id="modal-response-type" class="detail-value">-</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="detail-group">
+                            <div class="detail-label">Processos Encontrados</div>
+                            <div id="modal-processos" class="detail-value">-</div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <strong>Processos Encontrados:</strong>
-                        <span id="modal-processos" class="badge bg-success">-</span>
+                        <div class="detail-group">
+                            <div class="detail-label">Tempo de Resposta</div>
+                            <div id="modal-response-time" class="detail-value">-</div>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <strong>Tempo de Resposta:</strong>
-                        <span id="modal-response-time" class="badge bg-warning">-</span>
+                    
+                    <!-- Mensagens -->
+                    <div class="col-md-12">
+                        <div class="detail-group">
+                            <div class="detail-label">Mensagem do Usuário</div>
+                            <div id="modal-user-message" class="detail-value" style="max-height: 150px; overflow-y: auto; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">-</div>
+                        </div>
                     </div>
-                    <div class="col-md-12 mt-3">
-                        <strong>Mensagem do Usuário:</strong>
-                        <div id="modal-user-message" class="bg-light p-3 rounded mt-2" style="max-height: 150px; overflow-y: auto;">-</div>
+                    
+                    <div class="col-md-12">
+                        <div class="detail-group">
+                            <div class="detail-label">Resposta do Agente</div>
+                            <div id="modal-agent-response" class="detail-value" style="max-height: 200px; overflow-y: auto; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">-</div>
+                        </div>
                     </div>
-                    <div class="col-md-12 mt-3">
-                        <strong>Resposta do Agente:</strong>
-                        <div id="modal-agent-response" class="bg-light p-3 rounded mt-2" style="max-height: 200px; overflow-y: auto;">-</div>
-                    </div>
-                    <div class="col-md-12 mt-3">
-                        <div id="modal-success-status" class="alert" role="alert">
-                            Status da interação será exibido aqui
+                    
+                    <!-- Status -->
+                    <div class="col-md-12">
+                        <div id="modal-success-status" class="detail-group">
+                            <div class="detail-label">Status da Interação</div>
+                            <div id="modal-status-text" class="detail-value">-</div>
                         </div>
                     </div>
                 </div>

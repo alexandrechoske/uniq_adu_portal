@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loadStats(),
             loadInteractionsChart(),
             loadTopCompanies(),
+            loadTopUsers(),
             loadRecentInteractions()
         ]).then(() => {
             hideLoadingState();
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('kpi-loading').style.display = 'flex';
         document.getElementById('interactions-chart-loading').style.display = 'flex';
         document.getElementById('top-companies-loading').style.display = 'flex';
+        document.getElementById('top-users-loading').style.display = 'flex';
         document.getElementById('recent-interactions-loading').style.display = 'flex';
     }
 
@@ -61,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('kpi-loading').style.display = 'none';
         document.getElementById('interactions-chart-loading').style.display = 'none';
         document.getElementById('top-companies-loading').style.display = 'none';
+        document.getElementById('top-users-loading').style.display = 'none';
         document.getElementById('recent-interactions-loading').style.display = 'none';
     }
 
@@ -292,6 +295,76 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = html;
     }
 
+    function loadTopUsers() {
+        const params = new URLSearchParams(currentFilters);
+        
+        return fetch(`/usuarios/analytics/api/agente/top-users?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                renderTopUsersTable(data);
+            })
+            .catch(error => {
+                console.error('Erro ao carregar top usuários:', error);
+                throw error;
+            });
+    }
+
+    function renderTopUsersTable(data) {
+        const container = document.getElementById('top-users-table');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<div class="no-data">Nenhum usuário encontrado para o período selecionado</div>';
+            return;
+        }
+
+        let html = `
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>WhatsApp</th>
+                        <th>Empresa</th>
+                        <th>Total Interações</th>
+                        <th>Tempo Médio</th>
+                        <th>Última Interação</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.forEach(user => {
+            const lastInteraction = user.last_interaction ? 
+                formatDate(user.last_interaction) : 'N/A';
+            
+            // Formatar tempo de resposta
+            const avgResponseTime = user.avg_response_time || 0;
+            let responseTimeText = 'N/A';
+            if (avgResponseTime >= 1000) {
+                responseTimeText = `${(avgResponseTime / 1000).toFixed(1)}s`;
+            } else if (avgResponseTime > 0) {
+                responseTimeText = `${avgResponseTime}ms`;
+            }
+            
+            html += `
+                <tr>
+                    <td><strong>${user.user_name}</strong></td>
+                    <td><code>${user.whatsapp_number}</code></td>
+                    <td>${user.empresa_nome}</td>
+                    <td>${user.total_interactions}</td>
+                    <td>${responseTimeText}</td>
+                    <td>${lastInteraction}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </tbody>
+            </table>
+        `;
+
+        container.innerHTML = html;
+    }
+
     function loadRecentInteractions() {
         const params = new URLSearchParams(currentFilters);
         params.append('page', currentPage);
@@ -504,19 +577,68 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function formatDate(dateString) {
         try {
-            const date = new Date(dateString);
+            if (!dateString || dateString === '') {
+                return 'N/A';
+            }
+            
+            let date;
+            // Se já tem Z ou timezone, usar diretamente
+            if (dateString.includes('Z') || dateString.includes('+')) {
+                date = new Date(dateString);
+            } else {
+                // Se não tem timezone, assumir UTC e adicionar Z
+                date = new Date(dateString + (dateString.includes('T') ? 'Z' : ' UTC'));
+            }
+            
+            // Verificar se é uma data válida
+            if (isNaN(date.getTime())) {
+                return 'Data inválida';
+            }
+            
+            // Aplicar correção de timezone brasileiro (-3h)
+            date.setHours(date.getHours() - 3);
+            
             return date.toLocaleDateString('pt-BR');
         } catch (error) {
-            return 'N/A';
+            console.error('Erro ao formatar data:', error, 'Input:', dateString);
+            return 'Erro na data';
         }
     }
 
     function formatDateTime(dateString) {
         try {
-            const date = new Date(dateString);
-            return date.toLocaleString('pt-BR');
+            if (!dateString || dateString === '') {
+                return 'N/A';
+            }
+            
+            let date;
+            // Se já tem Z ou timezone, usar diretamente
+            if (dateString.includes('Z') || dateString.includes('+')) {
+                date = new Date(dateString);
+            } else {
+                // Se não tem timezone, assumir UTC e adicionar Z
+                date = new Date(dateString + (dateString.includes('T') ? 'Z' : ' UTC'));
+            }
+            
+            // Verificar se é uma data válida
+            if (isNaN(date.getTime())) {
+                return 'Data inválida';
+            }
+            
+            // Aplicar correção de timezone brasileiro (-3h)
+            date.setHours(date.getHours() - 3);
+            
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
         } catch (error) {
-            return 'N/A';
+            console.error('Erro ao formatar data:', error, 'Input:', dateString);
+            return 'Erro na data';
         }
     }
 
@@ -615,13 +737,35 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function showInteractionModal(interaction) {
         // Populate modal with interaction data
-        document.getElementById('modal-user-name').textContent = interaction.user_name;
-        document.getElementById('modal-whatsapp').textContent = interaction.whatsapp_number;
-        document.getElementById('modal-empresa').textContent = interaction.empresa_nome;
-        document.getElementById('modal-timestamp').textContent = new Date(interaction.timestamp_utc + 'Z').toLocaleString('pt-BR');
-        document.getElementById('modal-user-message').textContent = interaction.user_message;
-        document.getElementById('modal-response-type').textContent = interaction.response_type;
-        document.getElementById('modal-processos').textContent = interaction.total_processos_encontrados || 'N/A';
+        document.getElementById('modal-user-name').textContent = interaction.user_name || 'N/A';
+        document.getElementById('modal-whatsapp').textContent = interaction.whatsapp_number || 'N/A';
+        document.getElementById('modal-empresa').textContent = interaction.empresa_nome || 'N/A';
+        
+        // Format timestamp properly using the corrected function
+        let timestampText = 'N/A';
+        if (interaction.timestamp_local) {
+            timestampText = interaction.timestamp_local;
+        } else if (interaction.timestamp_utc) {
+            timestampText = formatDateTime(interaction.timestamp_utc);
+        } else if (interaction.timestamp) {
+            timestampText = formatDateTime(interaction.timestamp);
+        }
+        document.getElementById('modal-timestamp').textContent = timestampText;
+        
+        // Message type
+        document.getElementById('modal-message-type').textContent = interaction.message_type || 'normal';
+        
+        // Response type with proper styling
+        const responseType = interaction.response_type || 'normal';
+        const responseTypeElement = document.getElementById('modal-response-type');
+        responseTypeElement.textContent = responseType;
+        responseTypeElement.className = `detail-value ${responseType === 'arquivo' ? 'warning' : 'success'}`;
+        
+        // Processos encontrados
+        document.getElementById('modal-processos').textContent = interaction.total_processos_encontrados || '0';
+        
+        // User message
+        document.getElementById('modal-user-message').textContent = interaction.user_message || 'N/A';
         
         // Response data - handle different formats
         let responseText = 'N/A';
@@ -634,20 +778,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         document.getElementById('modal-agent-response').textContent = responseText;
         
-        // Response time
+        // Response time formatted
         document.getElementById('modal-response-time').textContent = interaction.response_time_formatted || 'N/A';
         
-        // Status
-        const statusElement = document.getElementById('modal-success-status');
-        if (interaction.success) {
-            statusElement.className = 'alert alert-success';
-            statusElement.textContent = 'Interação bem-sucedida';
+        // Status with proper styling
+        const statusElement = document.getElementById('modal-status-text');
+        if (interaction.is_successful || interaction.success) {
+            statusElement.textContent = 'Interação processada com sucesso';
+            statusElement.className = 'detail-value success';
         } else {
-            statusElement.className = 'alert alert-danger';
-            statusElement.textContent = 'Interação com falha';
+            statusElement.textContent = 'Interação com falha no processamento';
+            statusElement.className = 'detail-value error';
         }
         
-        // Show the modal
-        $('#interactionModal').modal('show');
+        // Show the modal using Bootstrap
+        const modal = new bootstrap.Modal(document.getElementById('interactionModal'));
+        modal.show();
     }
 });
