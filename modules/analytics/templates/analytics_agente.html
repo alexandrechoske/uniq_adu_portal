@@ -21,24 +21,8 @@
                 </h1>
                 <p class="analytics-subtitle">Estatísticas de uso e interações com o Agente Unique</p>
             </div>
-            <!-- Resumo de Filtros -->
-            <div id="filter-summary" class="filter-summary">
-                <span id="filter-summary-text">Vendo dados dos últimos 30 dias</span>
-            </div>
         </div>
         <div class="actions-right">
-            <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-secondary">
-                <i class="mdi mdi-chart-bar"></i>
-                Analytics Portal
-            </a>
-            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
-                <i class="mdi mdi-filter-off"></i>
-                Remover Filtros
-            </button>
-            <button id="open-filters" class="btn btn-primary">
-                <i class="mdi mdi-filter"></i>
-                Filtros
-            </button>
             <button id="refresh-data" class="btn btn-secondary">
                 <i class="mdi mdi-refresh"></i>
                 Atualizar
@@ -55,8 +39,9 @@
                 <i class="mdi mdi-message-text"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="total-interactions">0</div>
-                <div class="kpi-label">Total de Interações</div>
+                <p class="kpi-label">Total de Interações</p>
+                <p class="kpi-value" id="total-interactions">--</p>
+                <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
 
@@ -65,8 +50,9 @@
                 <i class="mdi mdi-account-group"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="unique-users">0</div>
-                <div class="kpi-label">Usuários Únicos</div>
+                <p class="kpi-label">Usuários Únicos</p>
+                <p class="kpi-value" id="unique-users">--</p>
+                <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
 
@@ -75,8 +61,9 @@
                 <i class="mdi mdi-domain"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="unique-companies">0</div>
-                <div class="kpi-label">Empresas Atendidas</div>
+                <p class="kpi-label">Empresas Atendidas</p>
+                <p class="kpi-value" id="unique-companies">--</p>
+                <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
 
@@ -85,8 +72,9 @@
                 <i class="mdi mdi-check-circle"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="success-rate">0%</div>
-                <div class="kpi-label">Taxa de Sucesso</div>
+                <p class="kpi-label">Taxa de Sucesso</p>
+                <p class="kpi-value" id="success-rate">--</p>
+                <p class="kpi-sub-value">Respostas processadas</p>
             </div>
         </div>
 
@@ -95,8 +83,9 @@
                 <i class="mdi mdi-timer"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="avg-response-time">0ms</div>
-                <div class="kpi-label">Tempo Médio de Resposta</div>
+                <p class="kpi-label">Tempo Médio de Resposta</p>
+                <p class="kpi-value" id="avg-response-time">--</p>
+                <p class="kpi-sub-value">Últimas interações</p>
             </div>
         </div>
 
@@ -105,8 +94,9 @@
                 <i class="mdi mdi-chat"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="normal-responses">0</div>
-                <div class="kpi-label">Respostas Normais</div>
+                <p class="kpi-label">Respostas Normais</p>
+                <p class="kpi-value" id="normal-responses">--</p>
+                <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
 
@@ -115,97 +105,119 @@
                 <i class="mdi mdi-file-document"></i>
             </div>
             <div class="kpi-content">
-                <div class="kpi-value" id="arquivo-responses">0</div>
-                <div class="kpi-label">Solicitações de Arquivo</div>
+                <p class="kpi-label">Solicitações de Arquivo</p>
+                <p class="kpi-value" id="arquivo-responses">--</p>
+                <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
     </div>
 
-    <!-- Charts Section -->
+    <!-- Charts and Companies Grid -->
     <div class="charts-grid">
-        <!-- Gráfico de Interações ao Longo do Tempo -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-line"></i>
-                    Interações ao Longo do Tempo
-                </h3>
+        <!-- Container for Chart and Companies side by side -->
+        <div style="display: flex; gap: 20px; align-items: flex-start;">
+            <!-- Gráfico de Interações - 70% width -->
+            <div class="chart-section" style="flex: 0 0 70%;">
+                <div class="chart-header">
+                    <h2 class="chart-title">Interações ao Longo do Tempo</h2>
+                </div>
+                <div class="chart-container">
+                    <div id="interactions-chart-loading" class="component-loading"><div class="spinner"></div></div>
+                    <canvas id="interactions-chart" class="chart-canvas"></canvas>
+                </div>
             </div>
-            <div id="interactions-chart-loading" class="component-loading"><div class="spinner"></div></div>
-            <div class="chart-content">
-                <canvas id="interactions-chart"></canvas>
+            
+            <!-- Top Empresas - 30% width -->
+            <div class="enhanced-table-section" style="flex: 0 0 30%;">
+                <div class="enhanced-table-header">
+                    <h2 class="enhanced-table-title">
+                        <i class="mdi mdi-trophy"></i>
+                        Empresas que Mais Usam
+                    </h2>
+                </div>
+                <div id="top-companies-loading" class="component-loading"><div class="spinner"></div></div>
+                <div id="top-companies-table" class="enhanced-table-container"></div>
             </div>
-        </div>
-
-        <!-- Top Empresas -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-trophy"></i>
-                    Empresas que Mais Usam o Agente
-                </h3>
-            </div>
-            <div id="top-companies-loading" class="component-loading"><div class="spinner"></div></div>
-            <div id="top-companies-table" class="table-container"></div>
         </div>
     </div>
 
     <!-- Recent Interactions Table -->
-    <div class="table-section">
-        <div class="table-header">
-            <h3 class="table-title">
+    <div class="enhanced-table-section">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
                 <i class="mdi mdi-clock-outline"></i>
                 Interações Recentes
-            </h3>
+            </h2>
         </div>
         <div id="recent-interactions-loading" class="component-loading"><div class="spinner"></div></div>
-        <div id="recent-interactions-table" class="table-container"></div>
+        <div id="recent-interactions-table" class="enhanced-table-container"></div>
     </div>
 </div>
 
-<!-- Modal de Filtros -->
-<div id="filters-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Filtros de Analytics do Agente</h2>
-            <button class="modal-close" id="close-filters">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="filters-form">
-                <div class="filter-group">
-                    <label for="dateRange">Período:</label>
-                    <select id="dateRange" name="dateRange">
-                        <option value="1d">Último dia</option>
-                        <option value="7d">Últimos 7 dias</option>
-                        <option value="30d" selected>Últimos 30 dias</option>
-                    </select>
+<!-- Modal para detalhes da interação -->
+<div class="modal fade" id="interactionModal" tabindex="-1" aria-labelledby="interactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="interactionModalLabel">Detalhes da Interação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Usuário:</strong>
+                        <p id="modal-user-name" class="text-muted">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>WhatsApp:</strong>
+                        <p id="modal-whatsapp" class="text-muted">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Empresa:</strong>
+                        <p id="modal-empresa" class="text-muted">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Data/Hora:</strong>
+                        <p id="modal-timestamp" class="text-muted">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Tipo de Mensagem:</strong>
+                        <span id="modal-message-type" class="badge bg-secondary">-</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Tipo de Resposta:</strong>
+                        <span id="modal-response-type" class="badge bg-info">-</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Processos Encontrados:</strong>
+                        <span id="modal-processos" class="badge bg-success">-</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Tempo de Resposta:</strong>
+                        <span id="modal-response-time" class="badge bg-warning">-</span>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <strong>Mensagem do Usuário:</strong>
+                        <div id="modal-user-message" class="bg-light p-3 rounded mt-2" style="max-height: 150px; overflow-y: auto;">-</div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <strong>Resposta do Agente:</strong>
+                        <div id="modal-agent-response" class="bg-light p-3 rounded mt-2" style="max-height: 200px; overflow-y: auto;">-</div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <div id="modal-success-status" class="alert" role="alert">
+                            Status da interação será exibido aqui
+                        </div>
+                    </div>
                 </div>
-
-                <div class="filter-group">
-                    <label for="empresa">Empresa:</label>
-                    <select id="empresa" name="empresa">
-                        <option value="all">Todas as empresas</option>
-                        <!-- Opções serão carregadas dinamicamente -->
-                    </select>
-                </div>
-
-                <div class="filter-group">
-                    <label for="messageType">Tipo de Mensagem:</label>
-                    <select id="messageType" name="messageType">
-                        <option value="all">Todos os tipos</option>
-                        <option value="conversation">Conversa</option>
-                        <option value="query">Consulta</option>
-                        <option value="file_request">Solicitação de Arquivo</option>
-                    </select>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button id="apply-filters" class="btn btn-primary">Aplicar Filtros</button>
-            <button id="clear-filters" class="btn btn-secondary">Limpar Filtros</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}

@@ -370,3 +370,42 @@
         justify-content: center;
     }
 }
+
+/* Layout Side-by-Side para Chart e Companies */
+.analytics-agente .charts-companies-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+}
+
+.analytics-agente .chart-section-side {
+    flex: 0 0 70%;
+}
+
+.analytics-agente .companies-section-side {
+    flex: 0 0 30%;
+}
+
+/* Modal adjustments */
+.analytics-agente .interaction-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.analytics-agente .interaction-row:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+/* Responsive adjustments for side-by-side layout */
+@media (max-width: 1200px) {
+    .analytics-agente .charts-companies-container {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .analytics-agente .chart-section-side,
+    .analytics-agente .companies-section-side {
+        flex: 1 1 100%;
+    }
+}

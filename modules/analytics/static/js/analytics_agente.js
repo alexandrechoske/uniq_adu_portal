@@ -28,34 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupEventListeners() {
         // Botão de refresh
         document.getElementById('refresh-data').addEventListener('click', loadData);
-        
-        // Modal de filtros
-        const openFiltersBtn = document.getElementById('open-filters');
-        const closeFiltersBtn = document.getElementById('close-filters');
-        const filtersModal = document.getElementById('filters-modal');
-        const applyFiltersBtn = document.getElementById('apply-filters');
-        const clearFiltersBtn = document.getElementById('clear-filters');
-        const resetFiltersBtn = document.getElementById('reset-filters');
-
-        openFiltersBtn.addEventListener('click', () => {
-            filtersModal.style.display = 'block';
-            loadFilterOptions();
-        });
-
-        closeFiltersBtn.addEventListener('click', () => {
-            filtersModal.style.display = 'none';
-        });
-
-        applyFiltersBtn.addEventListener('click', applyFilters);
-        clearFiltersBtn.addEventListener('click', clearFilters);
-        resetFiltersBtn.addEventListener('click', resetFilters);
-
-        // Fechar modal ao clicar fora
-        window.addEventListener('click', (event) => {
-            if (event.target === filtersModal) {
-                filtersModal.style.display = 'none';
-            }
-        });
     }
 
     function loadData() {
@@ -377,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 interaction.user_message;
 
             html += `
-                <tr>
+                <tr class="interaction-row" data-interaction='${JSON.stringify(interaction)}' style="cursor: pointer;">
                     <td>${timestamp}</td>
                     <td>
                         <div><strong>${interaction.user_name}</strong></div>
@@ -410,6 +382,14 @@ document.addEventListener('DOMContentLoaded', function() {
         html += renderPaginationControls(pagination);
 
         container.innerHTML = html;
+        
+        // Add click event listeners to table rows
+        document.querySelectorAll('.interaction-row').forEach(row => {
+            row.addEventListener('click', function() {
+                const interactionData = JSON.parse(this.dataset.interaction);
+                showInteractionModal(interactionData);
+            });
+        });
         
         // Adicionar event listeners para paginação
         setupPaginationEvents();
@@ -631,5 +611,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         });
+    }
+    
+    function showInteractionModal(interaction) {
+        // Populate modal with interaction data
+        document.getElementById('modal-user-name').textContent = interaction.user_name;
+        document.getElementById('modal-whatsapp').textContent = interaction.whatsapp_number;
+        document.getElementById('modal-empresa').textContent = interaction.empresa_nome;
+        document.getElementById('modal-timestamp').textContent = new Date(interaction.timestamp_utc + 'Z').toLocaleString('pt-BR');
+        document.getElementById('modal-user-message').textContent = interaction.user_message;
+        document.getElementById('modal-response-type').textContent = interaction.response_type;
+        document.getElementById('modal-processos').textContent = interaction.total_processos_encontrados || 'N/A';
+        
+        // Response data - handle different formats
+        let responseText = 'N/A';
+        if (interaction.response_data) {
+            if (typeof interaction.response_data === 'string') {
+                responseText = interaction.response_data;
+            } else if (typeof interaction.response_data === 'object') {
+                responseText = JSON.stringify(interaction.response_data, null, 2);
+            }
+        }
+        document.getElementById('modal-agent-response').textContent = responseText;
+        
+        // Response time
+        document.getElementById('modal-response-time').textContent = interaction.response_time_formatted || 'N/A';
+        
+        // Status
+        const statusElement = document.getElementById('modal-success-status');
+        if (interaction.success) {
+            statusElement.className = 'alert alert-success';
+            statusElement.textContent = 'Interação bem-sucedida';
+        } else {
+            statusElement.className = 'alert alert-danger';
+            statusElement.textContent = 'Interação com falha';
+        }
+        
+        // Show the modal
+        $('#interactionModal').modal('show');
     }
 });
