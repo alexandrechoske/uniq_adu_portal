@@ -725,6 +725,11 @@ function createInteractionRow(interaction) {
     const messagePreview = truncateText(interaction.user_message || '', 50);
     
     row.innerHTML = `
+        <td>
+            <button class="action-btn details" onclick="openInteractionModal('${interaction.id}')" title="Ver detalhes">
+                <i class="mdi mdi-eye"></i>
+            </button>
+        </td>
         <td>${formatDateTime(interaction.message_timestamp) || 'N/A'}</td>
         <td>${interaction.user_name || 'N/A'}</td>
         <td>${interaction.empresa_nome || 'N/A'}</td>
@@ -732,12 +737,6 @@ function createInteractionRow(interaction) {
         <td><span class="badge ${interaction.response_type || 'normal'}">${interaction.response_type || 'Normal'}</span></td>
         <td>${interaction.total_processos_encontrados || 0}</td>
         <td><span class="status-indicator ${statusClass}">${statusText}</span></td>
-        <td>
-            <button class="action-btn details" onclick="openInteractionModal('${interaction.id}')">
-                <i class="mdi mdi-eye"></i>
-                Detalhes
-            </button>
-        </td>
     `;
     
     return row;
@@ -770,6 +769,48 @@ async function openInteractionModal(interactionId) {
 }
 
 /**
+ * Format agent response for better display
+ */
+function formatAgentResponse(responseText) {
+    if (!responseText) return 'N/A';
+    
+    try {
+        // Check if it's JSON format (starts with { or [)
+        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+            const jsonData = JSON.parse(responseText);
+            
+            // Format structured response
+            let formattedHtml = '<div class="agent-response-formatted">';
+            
+            if (jsonData.resposta) {
+                formattedHtml += `
+                    <div class="response-content">
+                        ${jsonData.resposta.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+            }
+            
+            if (jsonData.justificativa) {
+                formattedHtml += `
+                    <div class="response-justification">
+                        <span class="label">Justificativa:</span>
+                        <div class="content">${jsonData.justificativa}</div>
+                    </div>
+                `;
+            }
+            
+            formattedHtml += '</div>';
+            return formattedHtml;
+        }
+    } catch (e) {
+        // If not valid JSON, treat as plain text
+    }
+    
+    // For plain text responses, just format line breaks
+    return responseText.replace(/\n/g, '<br>');
+}
+
+/**
  * Populate interaction modal with data
  */
 function populateInteractionModal(interaction) {
@@ -791,17 +832,13 @@ function populateInteractionModal(interaction) {
     document.getElementById('modal-companies-found').textContent = interaction.empresas_encontradas || 0;
     document.getElementById('modal-response-time').textContent = formatResponseTime(interaction.response_time_ms);
     
-    // Agent response
+    // Agent response - formatted for better readability
+    const agentResponseEl = document.getElementById('modal-agent-response');
     let agentResponse = 'N/A';
     if (interaction.agent_response) {
-        try {
-            const parsed = JSON.parse(interaction.agent_response);
-            agentResponse = parsed.resposta || interaction.agent_response;
-        } catch {
-            agentResponse = interaction.agent_response;
-        }
+        agentResponse = formatAgentResponse(interaction.agent_response);
     }
-    document.getElementById('modal-agent-response').textContent = agentResponse;
+    agentResponseEl.innerHTML = agentResponse;
     
     // Technical info
     const statusEl = document.getElementById('modal-status');
