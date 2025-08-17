@@ -310,6 +310,9 @@
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     margin-bottom: 30px;
+    /* Garantir alinhamento completo dentro do container */
+    width: 100%;
+    position: relative;
 }
 
 .analytics-agente .section-header {
@@ -1144,8 +1147,11 @@ body > div.table-section {
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     margin-bottom: 30px;
-    max-width: 1330px;
-    margin-left: 115px;    
+    /* Alinhamento seguindo o padrão do dashboard-container */
+    max-width: 1400px;
+    margin: 0 auto 30px auto;
+    padding: 0;
+    position: relative;
 }
 
 body > div.table-section .section-header {
@@ -1242,6 +1248,12 @@ body > div.table-section .no-data {
 }
 
 @media (max-width: 768px) {
+    body > div.table-section {
+        /* Responsividade melhorada em mobile */
+        margin: 0 20px 30px 20px;
+        max-width: calc(100% - 40px);
+    }
+    
     body > div.table-section .enhanced-table {
         font-size: 0.8rem;
         min-width: 760px;
@@ -1255,11 +1267,5 @@ body > div.table-section .no-data {
         gap: 1rem;
         align-items: stretch;
         padding: 1.25rem 1.5rem;
-    }
-    /* Provide safe page gutters on small screens */
-    body > div.table-section {
-        margin-left: 1rem;
-        margin-right: 1rem;
-        width: calc(100% - 2rem);
     }
 }

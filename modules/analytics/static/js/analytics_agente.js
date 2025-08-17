@@ -772,25 +772,52 @@ async function openInteractionModal(interactionId) {
  * Format agent response for better display
  */
 function formatAgentResponse(responseText) {
-    if (!responseText) return 'N/A';
+    console.log('🔍 formatAgentResponse - Input:', responseText);
+    console.log('🔍 formatAgentResponse - Input Type:', typeof responseText);
+    
+    if (!responseText) {
+        console.log('🔍 formatAgentResponse - Empty input, returning N/A');
+        return 'N/A';
+    }
+    
+    // Clean the response text - remove markdown json formatting if present
+    let cleanedText = responseText.trim();
+    
+    // Remove markdown code blocks (```json and ```)
+    if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        console.log('🔍 formatAgentResponse - Removed markdown formatting');
+    } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        console.log('🔍 formatAgentResponse - Removed generic markdown formatting');
+    }
+    
+    cleanedText = cleanedText.trim();
+    console.log('🔍 formatAgentResponse - Cleaned text:', cleanedText);
     
     try {
         // Check if it's JSON format (starts with { or [)
-        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
-            const jsonData = JSON.parse(responseText);
+        if (cleanedText.startsWith('{') || cleanedText.startsWith('[')) {
+            console.log('🔍 formatAgentResponse - Detected JSON format');
+            const jsonData = JSON.parse(cleanedText);
+            console.log('🔍 formatAgentResponse - Parsed JSON:', jsonData);
             
             // Format structured response
             let formattedHtml = '<div class="agent-response-formatted">';
             
             if (jsonData.resposta) {
+                console.log('🔍 formatAgentResponse - Found resposta field:', jsonData.resposta);
                 formattedHtml += `
                     <div class="response-content">
                         ${jsonData.resposta.replace(/\n/g, '<br>')}
                     </div>
                 `;
+            } else {
+                console.log('🔍 formatAgentResponse - No resposta field found in JSON');
             }
             
             if (jsonData.justificativa) {
+                console.log('🔍 formatAgentResponse - Found justificativa field:', jsonData.justificativa);
                 formattedHtml += `
                     <div class="response-justification">
                         <span class="label">Justificativa:</span>
@@ -800,14 +827,19 @@ function formatAgentResponse(responseText) {
             }
             
             formattedHtml += '</div>';
+            console.log('🔍 formatAgentResponse - Final HTML:', formattedHtml);
             return formattedHtml;
+        } else {
+            console.log('🔍 formatAgentResponse - Not JSON format, treating as plain text');
         }
     } catch (e) {
+        console.log('🔍 formatAgentResponse - JSON parse error:', e.message);
         // If not valid JSON, treat as plain text
     }
     
     // For plain text responses, just format line breaks
-    return responseText.replace(/\n/g, '<br>');
+    console.log('🔍 formatAgentResponse - Treating as plain text, final result:', cleanedText.replace(/\n/g, '<br>'));
+    return cleanedText.replace(/\n/g, '<br>');
 }
 
 /**
