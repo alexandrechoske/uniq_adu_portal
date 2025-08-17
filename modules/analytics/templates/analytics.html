@@ -5,12 +5,12 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
-<link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics.css') }}">
+<link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics_portal.css') }}">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="dashboard-container analytics-portal">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">
         <div class="actions-left">

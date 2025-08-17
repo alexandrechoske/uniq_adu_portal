@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics do Agente - UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics_agente.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container analytics-agente">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            <div class="analytics-header">
+                <h1 class="analytics-title">
+                    <i class="mdi mdi-robot"></i>
+                    Analytics do Agente
+                </h1>
+                <p class="analytics-subtitle">Estatísticas de uso e interações com o Agente Unique</p>
+            </div>
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados dos últimos 30 dias</span>
+            </div>
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('analytics.analytics_dashboard') }}" class="btn btn-secondary">
+                <i class="mdi mdi-chart-bar"></i>
+                Analytics Portal
+            </a>
+            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-primary">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
+            <button id="refresh-data" class="btn btn-secondary">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div id="kpi-loading" class="component-loading"><div class="spinner"></div></div>
+        
+        <div class="kpi-card kpi-primary" id="interactions-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-message-text"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="total-interactions">0</div>
+                <div class="kpi-label">Total de Interações</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-secondary" id="users-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-group"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="unique-users">0</div>
+                <div class="kpi-label">Usuários Únicos</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-info" id="companies-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-domain"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="unique-companies">0</div>
+                <div class="kpi-label">Empresas Atendidas</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-success" id="success-rate-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="success-rate">0%</div>
+                <div class="kpi-label">Taxa de Sucesso</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-warning" id="response-time-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-timer"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="avg-response-time">0ms</div>
+                <div class="kpi-label">Tempo Médio de Resposta</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-primary" id="normal-responses-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-chat"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="normal-responses">0</div>
+                <div class="kpi-label">Respostas Normais</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-secondary" id="arquivo-responses-card">
+            <div class="kpi-icon">
+                <i class="mdi mdi-file-document"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-value" id="arquivo-responses">0</div>
+                <div class="kpi-label">Solicitações de Arquivo</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-grid">
+        <!-- Gráfico de Interações ao Longo do Tempo -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Interações ao Longo do Tempo
+                </h3>
+            </div>
+            <div id="interactions-chart-loading" class="component-loading"><div class="spinner"></div></div>
+            <div class="chart-content">
+                <canvas id="interactions-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Empresas -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-trophy"></i>
+                    Empresas que Mais Usam o Agente
+                </h3>
+            </div>
+            <div id="top-companies-loading" class="component-loading"><div class="spinner"></div></div>
+            <div id="top-companies-table" class="table-container"></div>
+        </div>
+    </div>
+
+    <!-- Recent Interactions Table -->
+    <div class="table-section">
+        <div class="table-header">
+            <h3 class="table-title">
+                <i class="mdi mdi-clock-outline"></i>
+                Interações Recentes
+            </h3>
+        </div>
+        <div id="recent-interactions-loading" class="component-loading"><div class="spinner"></div></div>
+        <div id="recent-interactions-table" class="table-container"></div>
+    </div>
+</div>
+
+<!-- Modal de Filtros -->
+<div id="filters-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Filtros de Analytics do Agente</h2>
+            <button class="modal-close" id="close-filters">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="filters-form">
+                <div class="filter-group">
+                    <label for="dateRange">Período:</label>
+                    <select id="dateRange" name="dateRange">
+                        <option value="1d">Último dia</option>
+                        <option value="7d">Últimos 7 dias</option>
+                        <option value="30d" selected>Últimos 30 dias</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="empresa">Empresa:</label>
+                    <select id="empresa" name="empresa">
+                        <option value="all">Todas as empresas</option>
+                        <!-- Opções serão carregadas dinamicamente -->
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="messageType">Tipo de Mensagem:</label>
+                    <select id="messageType" name="messageType">
+                        <option value="all">Todos os tipos</option>
+                        <option value="conversation">Conversa</option>
+                        <option value="query">Consulta</option>
+                        <option value="file_request">Solicitação de Arquivo</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button id="apply-filters" class="btn btn-primary">Aplicar Filtros</button>
+            <button id="clear-filters" class="btn btn-secondary">Limpar Filtros</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('analytics.static', filename='js/analytics_agente.js') }}"></script>
+{% endblock %}

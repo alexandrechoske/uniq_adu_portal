@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}DEBUG - Analytics do Agente{% endblock %}
+
+{% block content %}
+<div style="background: yellow; color: black; padding: 20px; margin: 20px; border: 3px solid red;">
+    <h1>🔧 DEBUG MODE: Analytics Agente Template está funcionando!</h1>
+    <p><strong>Se você vê esta mensagem, o template analytics_agente.html está sendo renderizado corretamente.</strong></p>
+    <p>Tipo de analytics: <code>{{ analytics_type }}</code></p>
+    <p>Timestamp: {{ moment().format('YYYY-MM-DD HH:mm:ss') }}</p>
+</div>
+
+<div class="dashboard-container analytics-agente">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <div class="breadcrumb-item">
+                    <a href="{{ url_for('dashboard.index') }}">
+                        <i class="mdi mdi-home"></i>
+                        Início
+                    </a>
+                </div>
+                <div class="breadcrumb-separator">
+                    <i class="mdi mdi-chevron-right"></i>
+                </div>
+                <div class="breadcrumb-item">
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}">Analytics</a>
+                </div>
+                <div class="breadcrumb-separator">
+                    <i class="mdi mdi-chevron-right"></i>
+                </div>
+                <div class="breadcrumb-item">
+                    Agente
+                </div>
+            </div>
+            
+            <div class="analytics-header">
+                <h1 class="analytics-title">
+                    <i class="mdi mdi-robot"></i>
+                    Analytics do Agente
+                </h1>
+                <p class="analytics-subtitle">Estatísticas de uso e interações com o Agente Unique</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

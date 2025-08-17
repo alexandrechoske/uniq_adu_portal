@@ -1,0 +1,372 @@
+/* Analytics Agente CSS - Específico para Agente */
+
+/* Header ajustado para actions-bar */
+.analytics-agente .analytics-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.analytics-agente .analytics-title {
+    color: var(--color-primary, #3498DB);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.analytics-agente .analytics-title i {
+    color: var(--color-primary);
+    font-size: 1.75rem;
+}
+
+.analytics-agente .analytics-subtitle {
+    color: var(--color-text-secondary, #6b7280);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Actions Bar Alignment Fix */
+.analytics-agente .actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+}
+
+.analytics-agente .actions-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.analytics-agente .actions-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* KPI Cards com hover effects */
+.analytics-agente .kpi-card {
+    transition: all 0.3s ease;
+}
+
+.analytics-agente .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Charts Section */
+.analytics-agente .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.analytics-agente .chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    min-height: 400px;
+}
+
+.analytics-agente .chart-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.analytics-agente .chart-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.analytics-agente .chart-title i {
+    color: var(--color-primary);
+}
+
+.analytics-agente .chart-content {
+    height: 300px;
+    position: relative;
+}
+
+/* Table Section */
+.analytics-agente .table-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    margin-top: 2rem;
+}
+
+.analytics-agente .table-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.analytics-agente .table-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.analytics-agente .table-title i {
+    color: var(--color-primary);
+}
+
+.analytics-agente .table-container {
+    overflow-x: auto;
+}
+
+/* Enhanced Table for Agente */
+.analytics-agente .enhanced-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.analytics-agente .enhanced-table th {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.analytics-agente .enhanced-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #6b7280;
+    vertical-align: top;
+}
+
+.analytics-agente .enhanced-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Badges para tipos de resposta */
+.analytics-agente .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.analytics-agente .badge-normal {
+    background: #E8F5E8;
+    color: #2E7D32;
+}
+
+.analytics-agente .badge-arquivo {
+    background: #FFF3E0;
+    color: #EF6C00;
+}
+
+.analytics-agente .badge-conversation {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+/* Status indicators */
+.analytics-agente .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.analytics-agente .status.success {
+    color: #2E7D32;
+}
+
+.analytics-agente .status.error {
+    color: #D32F2F;
+}
+
+.analytics-agente .status i {
+    font-size: 1rem;
+}
+
+/* Text utilities */
+.analytics-agente .text-muted {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+/* No data state */
+.analytics-agente .no-data {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* Loading states específicos */
+.analytics-agente .component-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.analytics-agente .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Pagination */
+.analytics-agente .pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.analytics-agente .pagination-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.analytics-agente .pagination-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.analytics-agente .pagination-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.analytics-agente .pagination-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.analytics-agente .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.analytics-agente .pagination-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+/* Filter Summary específico para agente */
+.analytics-agente .filter-summary {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--color-primary-light);
+    border: 1px solid var(--color-primary);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.analytics-agente .filter-summary-text {
+    font-weight: 500;
+}
+
+/* Responsividade para mobile - Analytics do Agente */
+@media (max-width: 1024px) {
+    .analytics-agente .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .analytics-agente .analytics-title {
+        font-size: 1.25rem;
+    }
+    
+    .analytics-agente .analytics-title i {
+        font-size: 1.5rem;
+    }
+    
+    .analytics-agente .charts-grid {
+        gap: 1rem;
+    }
+    
+    .analytics-agente .chart-container,
+    .analytics-agente .table-section {
+        padding: 1rem;
+    }
+    
+    .analytics-agente .chart-content {
+        height: 250px;
+    }
+    
+    .analytics-agente .enhanced-table {
+        min-width: 600px;
+    }
+    
+    .analytics-agente .pagination-container {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .analytics-agente .pagination-controls {
+        justify-content: center;
+    }
+}

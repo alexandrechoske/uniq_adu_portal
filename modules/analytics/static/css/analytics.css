@@ -446,3 +446,195 @@ code {
         min-width: 600px;
     }
 }
+
+/* ===========================================
+   ESTILOS ESPECÍFICOS PARA ANALYTICS DO AGENTE
+   =========================================== */
+
+/* Estilos específicos para Analytics do Agente */
+.analytics-agente .kpi-card {
+    transition: all 0.3s ease;
+}
+
+.analytics-agente .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.analytics-agente .chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.analytics-agente .chart-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.analytics-agente .chart-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.analytics-agente .chart-title i {
+    color: var(--color-primary);
+}
+
+.analytics-agente .table-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    margin-top: 2rem;
+}
+
+.analytics-agente .table-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.analytics-agente .table-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.analytics-agente .table-title i {
+    color: var(--color-primary);
+}
+
+/* Badges para tipos de resposta */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.badge-normal {
+    background: #E8F5E8;
+    color: #2E7D32;
+}
+
+.badge-arquivo {
+    background: #FFF3E0;
+    color: #EF6C00;
+}
+
+.badge-conversation {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+/* Status indicators */
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status.success {
+    color: #2E7D32;
+}
+
+.status.error {
+    color: #D32F2F;
+}
+
+.status i {
+    font-size: 1rem;
+}
+
+/* Text utilities */
+.text-muted {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+/* No data state */
+.no-data {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* Charts grid responsivo específico para agente */
+body.analytics-agente .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+    body.analytics-agente .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Loading states específicos */
+.component-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsividade para mobile - Analytics do Agente */
+@media (max-width: 768px) {
+    .analytics-agente .analytics-title {
+        font-size: 1.5rem;
+    }
+    
+    .analytics-agente .analytics-title i {
+        font-size: 1.5rem;
+    }
+    
+    body.analytics-agente .charts-grid {
+        gap: 1rem;
+    }
+    
+    .analytics-agente .chart-container,
+    .analytics-agente .table-section {
+        padding: 1rem;
+    }
+}

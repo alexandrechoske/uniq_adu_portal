@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Unique</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">
+    <link rel="icon" type="image/png" href="/static/medias/Logo_Unique.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -624,333 +624,28 @@
             }
         }
     </style>
-    {% block extra_css %}{% endblock %}
+    
+<link rel="stylesheet" href="/dashboard-executivo/dashboard-executivo/static/css/dashboard.css">
+<link rel="stylesheet" href="/static/css/kpi-cards.css">
+<link rel="stylesheet" href="/usuarios/analytics/static/css/analytics_agente.css">
+<link rel="stylesheet" href="/shared/static/css/enhanced-table.css">
+
 </head>
 
-{# Macro para breadcrumb #}
-{% macro breadcrumb(items) %}
-<nav class="breadcrumb">
-    {% for item in items %}
-        <div class="breadcrumb-item">
-            {% if item.icon %}
-                <i class="{{ item.icon }} breadcrumb-icon"></i>
-            {% endif %}
-            {% if item.url and not loop.last %}
-                <a href="{{ item.url }}">{{ item.name }}</a>
-            {% else %}
-                <span>{{ item.name }}</span>
-            {% endif %}
-        </div>
-        {% if not loop.last %}
-            <span class="breadcrumb-separator">
-                <i class="mdi mdi-chevron-right"></i>
-            </span>
-        {% endif %}
-    {% endfor %}
-</nav>
-{% endmacro %}
 
-<body{% if session.get('user') and session['user'].get('id') %} class="logged-in" data-user-id="{{ session['user']['id'] }}"{% endif %}>
-    {% if session.get('user') %}
-    <!-- Top Navigation Bar -->
-    <header class="top-navbar">
-        <div class="navbar-content">
-            <div class="navbar-left">
-                <!-- Hamburger menu for sidebar toggle -->
-                <button id="sidebar-toggle" class="navbar-hamburger" type="button">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                
-                <!-- Logo and app name -->
-                <div class="navbar-logo">
-                    {# Logo dinâmica do cliente (fallback para Unique) #}
-                    {% set _logo = (client_branding.logo_url if client_branding and client_branding.logo_url else url_for('static', filename='medias/Logo_Unique.png')) %}
-                    <img src="{{ _logo }}" alt="Logo Cliente" style="height:2rem;width:2rem;object-fit:cover;border-radius:50%;background:#fff;padding:2px;" title="{{ client_branding.name if client_branding else 'Cliente' }}">
-                    <h1 class="navbar-title">Portal Unique</h1>
-                </div>
-            </div>
-              <div class="navbar-right">
-                <!-- Global refresh status (desktop) -->
-                <div class="global-refresh-status hidden lg:flex items-center gap-4 mr-4">
-                    <!-- Timestamp -->
-                    <div class="flex items-center gap-2 text-xs text-blue-100">
-                        <i class="mdi mdi-clock-outline"></i>
-                        <span data-global-timestamp>Carregando...</span>
-                    </div>
-                    
-                    <!-- Countdown and refresh button -->
-                    <div class="flex items-center gap-2">
-                        <div class="flex items-center gap-1 text-xs text-blue-200">
-                            <i class="mdi mdi-timer-outline"></i>
-                            <span>Próxima atualização: </span>
-                            <span data-global-countdown class="font-mono font-medium">60</span>s
-                        </div>
-                        <button id="global-refresh-button" 
-                                title="Atualizar dados manualmente"
-                                class="flex items-center justify-center w-6 h-6 text-blue-200 hover:text-white hover:bg-blue-700 rounded transition-colors duration-200">
-                            <i class="mdi mdi-refresh text-sm"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- User info in top bar (desktop) -->
-                <div class="navbar-user-info hidden md:flex">
-                    <div class="flex items-center gap-3">
-                        <!-- User avatar and info -->
-                        <div class="flex items-center gap-2">
 
-                            <div class="flex flex-col text-left">
-                                <span class="text-sm font-medium">{{ session['user'].get('email', 'Usuário') }}</span>
-                                <span class="text-xs text-blue-200 capitalize">
-                                    {% if session['user'].get('role') == 'cliente_unique' %}
-                                        Cliente
-                                    {% elif session['user'].get('role') == 'admin' %}
-                                        Administrador
-                                    {% else %}
-                                        {{ session['user'].get('role', 'Usuário') }}
-                                    {% endif %}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <!-- Logout button -->
-                        <a href="{{ url_for('auth.logout') }}" 
-                           title="Sair do sistema"
-                           class="flex items-center gap-1 px-3 py-1.5 text-sm text-white bg-blue-800 hover:bg-blue-900 rounded-md transition-colors duration-200 border border-blue-700">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                            <span>Sair</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Mobile user info and controls -->
-                <div class="flex items-center gap-2 md:hidden">
-                    <!-- User avatar (mobile) -->
-                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7 7z"></path>
-                        </svg>
-                    </div>
-                    
-                    <!-- Mobile logout button -->
-                    <a href="{{ url_for('auth.logout') }}" 
-                       title="Sair do sistema"
-                       class="flex items-center justify-center w-8 h-8 text-white bg-blue-800 hover:bg-blue-900 rounded-md transition-colors duration-200">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </header>
+
+<body>
     
-    <div class="flex">
-        <!-- Mobile overlay -->
-        <div id="mobile-overlay" class="mobile-overlay"></div>
-        
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar hidden lg:block">
-            <!-- Navigation menu -->
-            <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
-            <!-- Home/Menu -->
-            <a href="{{ url_for('menu.menu_home') }}" 
-               class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}">
-                <i class="mdi mdi-home text-xl"></i>
-                <span class="sidebar-text">Menu Principal</span>
-            </a>
-            
-            <!-- Dashboard -->
-            <a href="{{ url_for('dashboard_executivo.index') }}" 
-               class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
-                <i class="mdi mdi-view-dashboard text-xl"></i>
-                <span class="sidebar-text">Dashboard Executivo</span>
-            </a>
-            
-            <!-- Dashboard Importações -->
-            <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" 
-               class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
-                <i class="mdi mdi-ferry text-xl"></i>
-                <span class="sidebar-text">Dashboard Importações</span>
-            </a>           
-
-            <!-- Exportação de Relatórios -->
-            <a href="{{ url_for('export_relatorios.index') }}" 
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
-                <i class="mdi mdi-file-export text-xl"></i>
-                <span class="sidebar-text">Exportação</span>
-            </a>
-
-            <!-- Conferência Documental (apenas para admin e interno_unique) -->
-            <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
-            <a href="{{ url_for('conferencia.index') }}" 
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
-                <i class="mdi mdi-file-check text-xl"></i>
-                <span class="sidebar-text">Conferência Documental</span>
-            </a>
-            {% endif %} -->
-
-            {% if session.get('user', {}).get('role') in ['cliente_unique'] %}
-            <a href="{{ url_for('agente.index') }}" 
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
-                <i class="mdi mdi-chat text-xl"></i>
-                <span class="sidebar-text">Agente Unique</span>
-            </a>
-            {% endif %}
-
-            <!-- Usuários (apenas para admins) -->
-            {% if session.get('user', {}).get('role') == 'admin' %}
-            
-            <!-- Seção Configurações -->
-            <div class="sidebar-section" style="margin-top: 20px;">
-                <div class="sidebar-section-title" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
-                    Configurações
-                </div>
-                
-                <!-- Usuários -->
-                <a href="{{ url_for('usuarios.index') }}" 
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}"
-                   title="Gerenciar Usuários">
-                    <i class="mdi mdi-account-group text-xl"></i>
-                    <span class="sidebar-text">Usuários</span>
-                </a>
-                
-                <!-- Logos Clientes -->
-                <a href="{{ url_for('config.logos_clientes') }}" 
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
-                   title="Gerenciar Logos de Clientes">
-                    <i class="mdi mdi-domain text-xl"></i>
-                    <span class="sidebar-text">Logos Clientes</span>
-                </a>
-                
-                <!-- Ícones Materiais
-                <a href="{{ url_for('config.icones_materiais') }}" 
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.icones') %}active{% endif %}"
-                   title="Gerenciar Ícones de Materiais">
-                    <i class="mdi mdi-image-multiple text-xl"></i>
-                    <span class="sidebar-text">Ícones Materiais</span>
-                </a> -->
-                
-                <!-- Analytics Dashboard -->
-                <div class="sidebar-item-wrapper">
-                    <a href="{{ url_for('analytics.analytics_dashboard') }}" 
-                       class="sidebar-item {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
-                       title="Analytics Dashboard">
-                        <i class="mdi mdi-chart-line text-xl"></i>
-                        <span class="sidebar-text">Analytics</span>
-                    </a>
-                    
-                    <!-- Submenu dropdown -->
-                    <div class="analytics-submenu">
-                        <a href="{{ url_for('analytics.analytics_dashboard') }}" 
-                           class="submenu-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}">
-                            <i class="mdi mdi-chart-bar"></i>
-                            <span>Portal</span>
-                        </a>
-                        <a href="{{ url_for('analytics.analytics_agente') }}" 
-                           class="submenu-item {% if request.endpoint == 'analytics.analytics_agente' %}active{% endif %}">
-                            <i class="mdi mdi-robot"></i>
-                            <span>Agente</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            </nav>
-        </aside>
-        <!-- Main content area -->
-        <main id="main-content" class="main-content flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
-    {% else %}
-    {% block auth_content %}{% endblock %}
-    {% endif %}
     
-    {% block extra_js %}{% endblock %}
+    
+    
+    
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/usuarios/analytics/static/js/analytics_agente.js"></script>
+
     
     <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
-    {% if session.get('user') %}
-    <script>
-        document.body.classList.add('logged-in');
-    </script>
-      <!-- Script para gerenciamento de sessão -->
-    <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>
     
-    <!-- Script para refresh global de dados -->
-    <script src="{{ url_for('static', filename='js/global-refresh.js') }}"></script>
-    
-    <!-- Script para gerenciamento da sidebar (sem sistema de cache) -->
-    <script src="{{ url_for('static', filename='js/sidebar-manager.js') }}"></script>
-    
-    <!-- Script para posicionamento dinâmico do submenu Analytics -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const analyticsWrapper = document.querySelector('.sidebar-item-wrapper');
-            const analyticsSubmenu = document.querySelector('.analytics-submenu');
-            let hoverTimeout;
-            
-            if (analyticsWrapper && analyticsSubmenu) {
-                
-                // Função para mostrar submenu
-                function showSubmenu() {
-                    clearTimeout(hoverTimeout);
-                    const rect = analyticsWrapper.getBoundingClientRect();
-                    const sidebar = document.getElementById('sidebar');
-                    const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
-                    
-                    if (isCollapsed) {
-                        // Sidebar colapsada: posicionar como tooltip
-                        analyticsSubmenu.style.left = '4rem';
-                        analyticsSubmenu.style.top = rect.top + 'px';
-                    } else {
-                        // Sidebar expandida: posicionar ao lado
-                        analyticsSubmenu.style.left = '16rem';
-                        analyticsSubmenu.style.top = rect.top + 'px';
-                    }
-                    
-                    analyticsSubmenu.style.opacity = '1';
-                    analyticsSubmenu.style.visibility = 'visible';
-                    analyticsSubmenu.style.pointerEvents = 'auto';
-                    analyticsSubmenu.style.transform = 'translateX(0)';
-                }
-                
-                // Função para esconder submenu com delay
-                function hideSubmenu() {
-                    hoverTimeout = setTimeout(() => {
-                        analyticsSubmenu.style.opacity = '0';
-                        analyticsSubmenu.style.visibility = 'hidden';
-                        analyticsSubmenu.style.pointerEvents = 'none';
-                        analyticsSubmenu.style.transform = 'translateX(-10px)';
-                    }, 150); // Delay de 150ms para dar tempo de mover o mouse
-                }
-                
-                // Event listeners para o wrapper do Analytics
-                analyticsWrapper.addEventListener('mouseenter', showSubmenu);
-                analyticsWrapper.addEventListener('mouseleave', hideSubmenu);
-                
-                // Event listeners para o submenu (cancelar ocultação)
-                analyticsSubmenu.addEventListener('mouseenter', function() {
-                    clearTimeout(hoverTimeout);
-                    showSubmenu();
-                });
-                
-                analyticsSubmenu.addEventListener('mouseleave', hideSubmenu);
-            }
-        });
-    </script>
-    
-    <!-- Sistema Unificado de Loading UX -->
-    <script>
-        // Desabilitar tela de pre-loading global por padrão; manter loaders por componente
-        window.ENABLE_UNIFIED_LOADING = false;
-    </script>
-    <script src="{{ url_for('static', filename='js/unified-loading.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/page-validator.js') }}"></script>
-    {% endif %}
 </body>
 </html>
