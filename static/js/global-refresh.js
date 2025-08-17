@@ -423,6 +423,12 @@
             return;
         }
         
+        // Permitir que páginas desativem explicitamente o refresh global
+        if (window.DISABLE_GLOBAL_REFRESH === true || window.location.pathname.includes('/usuarios/analytics/agente')) {
+            console.log('[GlobalRefresh] Desativado nesta página (flag ou rota de agente).');
+            return;
+        }
+
         console.log('[GlobalRefresh] Inicializando GlobalRefresh...');
         
         // Inicializar sistema

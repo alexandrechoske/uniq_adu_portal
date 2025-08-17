@@ -242,8 +242,8 @@ code {
     color: #374151;
 }
 
-/* Modal de Filtros */
-.modal {
+/* Modal de Filtros - ESPECÍFICO PARA ANALYTICS PORTAL APENAS */
+.analytics-portal .modal {
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -256,7 +256,7 @@ code {
     align-items: center;
 }
 
-.modal-content {
+.analytics-portal .modal-content {
     background-color: #fff;
     border-radius: 0.75rem;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
@@ -266,7 +266,7 @@ code {
     overflow-y: auto;
 }
 
-.modal-header {
+.analytics-portal .modal-header {
     padding: 1.5rem 1.5rem 1rem;
     border-bottom: 1px solid #f1f5f9;
     display: flex;
@@ -274,14 +274,14 @@ code {
     align-items: center;
 }
 
-.modal-header h3 {
+.analytics-portal .modal-header h3 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
     color: #0f172a;
 }
 
-.close {
+.analytics-portal .close {
     color: #6b7280;
     font-size: 1.5rem;
     font-weight: bold;
@@ -289,19 +289,19 @@ code {
     line-height: 1;
 }
 
-.close:hover {
+.analytics-portal .close:hover {
     color: #374151;
 }
 
-.modal-body {
+.analytics-portal .modal-body {
     padding: 1.5rem;
 }
 
-.filter-group {
+.analytics-portal .filter-group {
     margin-bottom: 1.5rem;
 }
 
-.filter-group label {
+.analytics-portal .filter-group label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
@@ -309,8 +309,8 @@ code {
     font-size: 0.875rem;
 }
 
-.filter-group select,
-.filter-group input {
+.analytics-portal .filter-group select,
+.analytics-portal .filter-group input {
     width: 100%;
     padding: 0.625rem 0.75rem;
     border: 1px solid #d1d5db;
@@ -320,14 +320,14 @@ code {
     font-size: 0.875rem;
 }
 
-.filter-group select:focus,
-.filter-group input:focus {
+.analytics-portal .filter-group select:focus,
+.analytics-portal .filter-group input:focus {
     outline: none;
     border-color: var(--color-primary, #3498DB);
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
-.modal-footer {
+.analytics-portal .modal-footer {
     padding: 1rem 1.5rem 1.5rem;
     border-top: 1px solid #f1f5f9;
     display: flex;

@@ -244,6 +244,11 @@ class PageValidator {
 let pageValidator = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Permitir que páginas específicas desativem o PageValidator
+    if (window.DISABLE_PAGE_VALIDATOR === true) {
+        console.log('[PAGE_VALIDATOR] Desativado por DISABLE_PAGE_VALIDATOR');
+        return;
+    }
     // Aguardar um pouco para garantir que outros scripts carregaram
     setTimeout(() => {
         pageValidator = new PageValidator();

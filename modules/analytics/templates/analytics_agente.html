@@ -7,6 +7,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics_agente.css') }}">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<!-- Chart.js with proper IIFE version -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<!-- Disable global auto-refresh -->
+<meta name="disable-global-refresh" content="true">
 {% endblock %}
 
 {% block content %}
@@ -19,10 +24,22 @@
                     <i class="mdi mdi-robot"></i>
                     Analytics do Agente
                 </h1>
-                <p class="analytics-subtitle">Estatísticas de uso e interações com o Agente Unique</p>
+                <p class="analytics-subtitle">Estatísticas de usabilidade e interações do agente</p>
+            </div>
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados dos últimos 30 dias</span>
             </div>
         </div>
         <div class="actions-right">
+            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-primary">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
             <button id="refresh-data" class="btn btn-secondary">
                 <i class="mdi mdi-refresh"></i>
                 Atualizar
@@ -36,7 +53,7 @@
         
         <div class="kpi-card kpi-primary" id="interactions-card">
             <div class="kpi-icon">
-                <i class="mdi mdi-message-text"></i>
+                <i class="mdi mdi-chat-outline"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Total de Interações</p>
@@ -44,8 +61,8 @@
                 <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
-
-        <div class="kpi-card kpi-secondary" id="users-card">
+        
+        <div class="kpi-card kpi-success" id="unique-users-card">
             <div class="kpi-icon">
                 <i class="mdi mdi-account-group"></i>
             </div>
@@ -55,19 +72,19 @@
                 <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
-
-        <div class="kpi-card kpi-info" id="companies-card">
+        
+        <div class="kpi-card kpi-warning" id="companies-card">
             <div class="kpi-icon">
-                <i class="mdi mdi-domain"></i>
+                <i class="mdi mdi-office-building"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Empresas Atendidas</p>
-                <p class="kpi-value" id="unique-companies">--</p>
+                <p class="kpi-value" id="companies-served">--</p>
                 <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
-
-        <div class="kpi-card kpi-success" id="success-rate-card">
+        
+        <div class="kpi-card kpi-info" id="success-rate-card">
             <div class="kpi-icon">
                 <i class="mdi mdi-check-circle"></i>
             </div>
@@ -77,10 +94,10 @@
                 <p class="kpi-sub-value">Respostas processadas</p>
             </div>
         </div>
-
-        <div class="kpi-card kpi-warning" id="response-time-card">
+        
+        <div class="kpi-card kpi-purple" id="avg-response-time-card">
             <div class="kpi-icon">
-                <i class="mdi mdi-timer"></i>
+                <i class="mdi mdi-clock-outline"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Tempo Médio de Resposta</p>
@@ -88,10 +105,10 @@
                 <p class="kpi-sub-value">Últimas interações</p>
             </div>
         </div>
-
-        <div class="kpi-card kpi-primary" id="normal-responses-card">
+        
+        <div class="kpi-card kpi-emerald" id="normal-responses-card">
             <div class="kpi-icon">
-                <i class="mdi mdi-chat"></i>
+                <i class="mdi mdi-message-text"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Respostas Normais</p>
@@ -99,175 +116,307 @@
                 <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
-
-        <div class="kpi-card kpi-secondary" id="arquivo-responses-card">
+        
+        <div class="kpi-card kpi-orange" id="file-requests-card">
             <div class="kpi-icon">
-                <i class="mdi mdi-file-document"></i>
+                <i class="mdi mdi-file-document-outline"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Solicitações de Arquivo</p>
-                <p class="kpi-value" id="arquivo-responses">--</p>
+                <p class="kpi-value" id="file-requests">--</p>
                 <p class="kpi-sub-value">Últimos 30 dias</p>
             </div>
         </div>
     </div>
 
-    <!-- Gráfico de Interações - Largura Completa -->
-    <div class="chart-section">
-        <div class="chart-header">
-            <h2 class="chart-title">
-                <i class="mdi mdi-chart-line"></i>
-                Interações ao Longo do Tempo
-            </h2>
-        </div>
-        <div class="chart-content">
-            <div id="interactions-chart-loading" class="component-loading"><div class="spinner"></div></div>
-            <canvas id="interactions-chart" class="chart-canvas"></canvas>
-        </div>
-    </div>
-
-    <!-- Container para as duas tabelas lado a lado -->
-    <div class="tables-side-by-side-container">
-        <!-- Top Empresas - 50% width -->
-        <div class="enhanced-table-section table-half-width">
-            <div class="enhanced-table-header">
-                <h2 class="enhanced-table-title">
-                    <i class="mdi mdi-trophy"></i>
-                    Empresas que Mais Usam
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <!-- Interactions Chart -->
+        <div class="chart-section chart-full">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Interações ao Longo do Tempo
                 </h2>
+                <div class="chart-legend">
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #007bff;"></span>
+                        Total de Interações
+                    </span>
+                </div>
             </div>
-            <div id="top-companies-loading" class="component-loading"><div class="spinner"></div></div>
-            <div id="top-companies-table" class="enhanced-table-container"></div>
+            <div class="chart-container">
+                <div id="interactions-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="interactions-chart" class="chart-canvas"></canvas>
+            </div>
         </div>
         
-        <!-- Top Usuários - 50% width -->
-        <div class="enhanced-table-section table-half-width">
-            <div class="enhanced-table-header">
-                <h2 class="enhanced-table-title">
-                    <i class="mdi mdi-account-star"></i>
+        <!-- Users Chart -->
+        <div class="chart-section chart-half">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="mdi mdi-account-group"></i>
                     Usuários que Mais Usam
                 </h2>
             </div>
-            <div id="top-users-loading" class="component-loading"><div class="spinner"></div></div>
-            <div id="top-users-table" class="enhanced-table-container"></div>
+            <div class="chart-container">
+                <div id="users-loading" class="component-loading"><div class="spinner"></div></div>
+                <div class="table-container">
+                    <table class="enhanced-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>WhatsApp</th>
+                                <th>Empresa</th>
+                                <th>Total Interações</th>
+                                <th>Tempo Médio</th>
+                                <th>Última Interação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Companies Chart -->
+        <div class="chart-section chart-half">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    <i class="mdi mdi-office-building"></i>
+                    Empresas que Mais Usam
+                </h2>
+            </div>
+            <div class="chart-container">
+                <div id="companies-loading" class="component-loading"><div class="spinner"></div></div>
+                <div class="table-container">
+                    <table class="enhanced-table" id="companies-table">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Total Interações</th>
+                                <th>Usuários Únicos</th>
+                                <th>Média Processos</th>
+                                <th>Última Interação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Data will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+                            <!-- Data will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Recent Interactions Table -->
-    <div class="enhanced-table-section">
-        <div class="enhanced-table-header">
-            <h2 class="enhanced-table-title">
-                <i class="mdi mdi-clock-outline"></i>
+    <div class="table-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="mdi mdi-history"></i>
                 Interações Recentes
             </h2>
+            <div class="section-actions">
+                <button id="load-more-interactions" class="btn btn-secondary">
+                    <i class="mdi mdi-refresh"></i>
+                    Carregar Mais
+                </button>
+            </div>
         </div>
-        <div id="recent-interactions-loading" class="component-loading"><div class="spinner"></div></div>
-        <div id="recent-interactions-table" class="enhanced-table-container"></div>
+        <div class="table-container">
+            <div id="interactions-table-loading" class="component-loading"><div class="spinner"></div></div>
+            <table class="enhanced-table" id="interactions-table">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Empresa</th>
+                        <th>Mensagem</th>
+                        <th>Tipo</th>
+                        <th>Processos</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<!-- Modal para detalhes da interação -->
-<div class="modal fade" id="interactionModal" tabindex="-1" aria-labelledby="interactionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="interactionModalLabel">
-                    <i class="mdi mdi-message-text-outline"></i>
-                    Detalhes da Interação
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <!-- Informações do Usuário -->
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Usuário</div>
-                            <div id="modal-user-name" class="detail-value">-</div>
+<!-- Interaction Details Modal -->
+<div id="interaction-modal" class="modal" style="display: none;">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="mdi mdi-chat-outline"></i>
+                Detalhes da Interação
+            </h3>
+            <button class="modal-close" id="close-interaction-modal">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="interaction-details">
+                <!-- User Info -->
+                <div class="detail-section">
+                    <h4 class="detail-title">Informações do Usuário</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Nome:</label>
+                            <span id="modal-user-name">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>WhatsApp:</label>
+                            <span id="modal-whatsapp">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Empresa:</label>
+                            <span id="modal-empresa">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Data/Hora:</label>
+                            <span id="modal-timestamp">--</span>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">WhatsApp</div>
-                            <div id="modal-whatsapp" class="detail-value">-</div>
+                </div>
+                
+                <!-- Message Info -->
+                <div class="detail-section">
+                    <h4 class="detail-title">Mensagem do Usuário</h4>
+                    <div class="message-box">
+                        <p id="modal-user-message">--</p>
+                    </div>
+                </div>
+                
+                <!-- Response Info -->
+                <div class="detail-section">
+                    <h4 class="detail-title">Resposta do Agente</h4>
+                    <div class="response-meta">
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <label>Tipo de Resposta:</label>
+                                <span id="modal-response-type" class="badge">--</span>
+                            </div>
+                            <div class="meta-item">
+                                <label>Processos Encontrados:</label>
+                                <span id="modal-processes-found">--</span>
+                            </div>
+                            <div class="meta-item">
+                                <label>Empresas Encontradas:</label>
+                                <span id="modal-companies-found">--</span>
+                            </div>
+                            <div class="meta-item">
+                                <label>Tempo de Resposta:</label>
+                                <span id="modal-response-time">--</span>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Informações da Empresa -->
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Empresa</div>
-                            <div id="modal-empresa" class="detail-value">-</div>
-                        </div>
+                    <div class="response-box">
+                        <pre id="modal-agent-response">--</pre>
                     </div>
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Data/Hora</div>
-                            <div id="modal-timestamp" class="detail-value">-</div>
+                </div>
+                
+                <!-- Technical Info -->
+                <div class="detail-section">
+                    <h4 class="detail-title">Informações Técnicas</h4>
+                    <div class="technical-grid">
+                        <div class="tech-item">
+                            <label>Status:</label>
+                            <span id="modal-status" class="badge">--</span>
                         </div>
-                    </div>
-                    
-                    <!-- Tipos e Métricas -->
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Tipo de Mensagem</div>
-                            <div id="modal-message-type" class="detail-value">-</div>
+                        <div class="tech-item">
+                            <label>Session ID:</label>
+                            <span id="modal-session-id">--</span>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Tipo de Resposta</div>
-                            <div id="modal-response-type" class="detail-value">-</div>
+                        <div class="tech-item">
+                            <label>Instance:</label>
+                            <span id="modal-instance">--</span>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Processos Encontrados</div>
-                            <div id="modal-processos" class="detail-value">-</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-group">
-                            <div class="detail-label">Tempo de Resposta</div>
-                            <div id="modal-response-time" class="detail-value">-</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Mensagens -->
-                    <div class="col-md-12">
-                        <div class="detail-group">
-                            <div class="detail-label">Mensagem do Usuário</div>
-                            <div id="modal-user-message" class="detail-value" style="max-height: 150px; overflow-y: auto; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">-</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-12">
-                        <div class="detail-group">
-                            <div class="detail-label">Resposta do Agente</div>
-                            <div id="modal-agent-response" class="detail-value" style="max-height: 200px; overflow-y: auto; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">-</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Status -->
-                    <div class="col-md-12">
-                        <div id="modal-success-status" class="detail-group">
-                            <div class="detail-label">Status da Interação</div>
-                            <div id="modal-status-text" class="detail-value">-</div>
+                        <div class="tech-item">
+                            <label>CNPJs Consultados:</label>
+                            <span id="modal-cnpjs">--</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
         </div>
     </div>
 </div>
 
+<!-- Filters Modal -->
+<div id="filters-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </h3>
+            <button class="modal-close" id="close-filters-modal">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="filter-date-range">Período:</label>
+                    <select id="filter-date-range" class="form-control">
+                        <option value="1d">Último dia</option>
+                        <option value="7d">Últimos 7 dias</option>
+                        <option value="30d" selected>Últimos 30 dias</option>
+                        <option value="90d">Últimos 90 dias</option>
+                        <option value="all">Todo período</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-response-type">Tipo de Resposta:</label>
+                    <select id="filter-response-type" class="form-control">
+                        <option value="all" selected>Todos</option>
+                        <option value="text">Texto</option>
+                        <option value="file">Arquivo</option>
+                        <option value="error">Erro</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-empresa">Empresa:</label>
+                    <select id="filter-empresa" class="form-control">
+                        <option value="all" selected>Todas</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-user">Usuário:</label>
+                    <select id="filter-user" class="form-control">
+                        <option value="all">Todos</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="apply-filters" class="btn btn-primary">
+                <i class="mdi mdi-check"></i>
+                Aplicar Filtros
+            </button>
+            <button id="clear-filters" class="btn btn-secondary">
+                <i class="mdi mdi-filter-off"></i>
+                Limpar Filtros
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('analytics.static', filename='js/analytics_agente.js') }}"></script>
 {% endblock %}
