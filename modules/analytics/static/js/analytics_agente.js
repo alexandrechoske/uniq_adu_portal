@@ -356,7 +356,11 @@ function createInteractionsChart(chartData) {
             datasets: [
                 {
                     label: 'Total de Interações',
-                    data: chartData.total_interactions || chartData.data || [],
+                    data: chartData.total_interactions || 
+                          // Se não tem total_interactions, somar normal_responses + file_requests
+                          (chartData.normal_responses && chartData.file_requests ? 
+                              chartData.normal_responses.map((val, i) => val + (chartData.file_requests[i] || 0)) :
+                              chartData.data || []),
                     borderColor: '#007bff',
                     backgroundColor: 'rgba(0, 123, 255, 0.1)',
                     borderWidth: 2,
@@ -679,10 +683,14 @@ function updateInteractionsTable(interactions) {
     const tbody = document.querySelector('#interactions-table tbody');
     if (!tbody) return;
     
+    // Hide loading
+    const loadingEl = document.getElementById('interactions-table-loading');
+    if (loadingEl) loadingEl.classList.add('hidden');
+    
     tbody.innerHTML = '';
     
     if (interactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Nenhuma interação encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">Nenhuma interação encontrada</td></tr>';
         return;
     }
     
