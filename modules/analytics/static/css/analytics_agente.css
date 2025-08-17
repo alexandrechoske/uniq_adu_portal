@@ -76,16 +76,11 @@
 }
 
 @media (min-width: 1200px) {
-    .kpi-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
+    .kpi-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
-@media (min-width: 1600px) {
-    .kpi-grid {
-        grid-template-columns: repeat(7, 1fr);
-    }
-}
+/* Keep at most 4 columns even on ultra-wide to avoid squeezing; will wrap to 2 rows */
+@media (min-width: 1600px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
 
 /* Charts Grid */
 .charts-grid {
@@ -195,36 +190,107 @@
     margin: 0;
 }
 
-/* Table Section */
-.table-section {
+/* Table Section Específica para Interações Recentes */
+.analytics-agente .table-section {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     position: relative;
+    border: 1px solid #e2e8f0;
+    /* Prevent border from exceeding container width */
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.section-header {
+.analytics-agente .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 1.5rem 1rem;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 2px solid #e2e8f0;
 }
 
-.section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
+.analytics-agente .section-title {
+    font-size: 1.375rem;
+    font-weight: 700;
     color: #1e293b;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
-.section-actions {
+.analytics-agente .section-title i {
+    color: #6366f1;
+    font-size: 1.5rem;
+}
+
+.analytics-agente .section-actions {
     display: flex;
     gap: 0.75rem;
+}
+
+.analytics-agente .section-actions .btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.analytics-agente .section-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Container para Interações Recentes */
+.analytics-agente .table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    margin: 0;
+    background: white;
+}
+
+/* Melhorar texto truncado */
+.analytics-agente .truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+    position: relative;
+    cursor: help;
+}
+
+.analytics-agente .truncate:hover {
+    color: #6366f1;
+    font-weight: 500;
+}
+
+/* Loading state para tabela de interações */
+.analytics-agente #interactions-table-loading {
+    background: rgba(248, 250, 252, 0.95);
+    backdrop-filter: blur(4px);
+}
+
+/* Empty state para tabela */
+.analytics-agente .no-data {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #64748b;
+    font-style: italic;
+    background: #f8fafc;
+}
+
+.analytics-agente .no-data i {
+    font-size: 3rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+    display: block;
 }
 
 /* Interaction Details Modal */
@@ -668,33 +734,43 @@
     border-collapse: collapse;
     background: white;
     font-size: 0.875rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .analytics-agente .enhanced-table thead th {
-    background: #f8fafc;
-    color: #374151;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #1e293b;
     font-weight: 600;
-    padding: 0.875rem 1rem;
+    padding: 1rem 1.25rem;
     text-align: left;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid #e2e8f0;
     font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.05em;
     position: sticky;
     top: 0;
     z-index: 10;
+    white-space: nowrap;
 }
 
 .analytics-agente .enhanced-table tbody td {
-    padding: 0.875rem 1rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid #f1f5f9;
-    color: #4b5563;
+    color: #374151;
     vertical-align: middle;
+    line-height: 1.5;
+}
+
+.analytics-agente .enhanced-table tbody tr {
+    transition: all 0.2s ease;
 }
 
 .analytics-agente .enhanced-table tbody tr:hover {
-    background: #f8fafc;
-    transition: background-color 0.15s ease;
+    background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .analytics-agente .enhanced-table tbody tr:last-child td {
@@ -702,80 +778,111 @@
 }
 
 /* Status indicators específicos */
-.status-indicator {
+.analytics-agente .status-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-}
-
-.status-indicator.success {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.status-indicator.error {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-/* Action buttons */
-.action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
+    gap: 0.375rem;
     padding: 0.375rem 0.75rem;
-    border: none;
-    border-radius: 0.375rem;
+    border-radius: 0.5rem;
     font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-decoration: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 80px;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.action-btn.details {
-    background: #eff6ff;
-    color: #1d4ed8;
+.analytics-agente .status-indicator.success {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #15803d;
+    border: 1px solid #86efac;
 }
 
-.action-btn.details:hover {
-    background: #dbeafe;
-    color: #1e40af;
+.analytics-agente .status-indicator.success::before {
+    content: '●';
+    color: #22c55e;
+    font-size: 0.6rem;
 }
 
-/* Badge improvements */
-.badge {
+.analytics-agente .status-indicator.error {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+}
+
+.analytics-agente .status-indicator.error::before {
+    content: '●';
+    color: #ef4444;
+    font-size: 0.6rem;
+}
+
+/* Action buttons aprimorados */
+.analytics-agente .action-btn {
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    min-width: 90px;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.analytics-agente .action-btn.details {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+}
+
+.analytics-agente .action-btn.details:hover {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Badge improvements aprimorados */
+.analytics-agente .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: capitalize;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.05em;
+    min-width: 80px;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.badge.normal,
-.badge.text {
-    background: #dcfce7;
-    color: #166534;
+.analytics-agente .badge.normal,
+.analytics-agente .badge.text {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    color: #15803d;
+    border: 1px solid #86efac;
 }
 
-.badge.arquivo,
-.badge.file {
-    background: #fef3c7;
+.analytics-agente .badge.arquivo,
+.analytics-agente .badge.file {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
     color: #d97706;
+    border: 1px solid #fcd34d;
 }
 
-.badge.error {
-    background: #fee2e2;
+.analytics-agente .badge.error {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     color: #dc2626;
+    border: 1px solid #fca5a5;
 }
 
 /* Loading improvements */
@@ -815,7 +922,7 @@
     font-style: italic;
 }
 
-/* Responsive improvements */
+/* Responsive improvements para Analytics do Agente */
 @media (max-width: 768px) {
     .analytics-agente .enhanced-table {
         font-size: 0.8rem;
@@ -823,7 +930,27 @@
     
     .analytics-agente .enhanced-table th,
     .analytics-agente .enhanced-table td {
-        padding: 0.5rem 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .analytics-agente .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .analytics-agente .section-title {
+        font-size: 1.25rem;
+        justify-content: center;
+    }
+    
+    .analytics-agente .section-actions {
+        justify-content: center;
+    }
+    
+    .analytics-agente .truncate {
+        max-width: 150px;
     }
     
     .chart-container {
@@ -831,8 +958,191 @@
         min-height: 250px;
     }
     
-    .action-btn {
+    .analytics-agente .action-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.7rem;
+        min-width: 75px;
+    }
+    
+    .analytics-agente .badge,
+    .analytics-agente .status-indicator {
         padding: 0.25rem 0.5rem;
         font-size: 0.7rem;
+        min-width: 65px;
+    }
+}
+
+@media (max-width: 480px) {
+    .analytics-agente .enhanced-table {
+        font-size: 0.75rem;
+    }
+    
+    .analytics-agente .enhanced-table th,
+    .analytics-agente .enhanced-table td {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .analytics-agente .section-header {
+        padding: 1rem;
+    }
+    
+    .analytics-agente .section-title {
+        font-size: 1.125rem;
+    }
+    
+    .analytics-agente .truncate {
+        max-width: 120px;
+    }
+    
+    .analytics-agente .action-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.65rem;
+        min-width: 60px;
+    }
+    
+    .analytics-agente .badge,
+    .analytics-agente .status-indicator {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.65rem;
+        min-width: 55px;
+    }
+}
+
+/* ===== Fallback styling when table-section is at root (body > div.table-section) ===== */
+body > div.table-section {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #e2e8f0;
+    margin-top: 1.5rem;
+    /* Constrain to page container inner width (1400px content area) and center */
+    max-width: 1400px;
+    width: calc(100% - 40px); /* keep same 20px gutters as the page container */
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box; /* ensure borders count inside width */
+}
+
+body > div.table-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 2px solid #e2e8f0;
+}
+
+body > div.table-section .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+body > div.table-section .section-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+body > div.table-section .table-container {
+    max-height: 500px;
+    overflow: auto;
+    margin: 0;
+    background: #ffffff;
+    position: relative;
+}
+
+/* Loader overlay dentro da table-section raiz */
+body > div.table-section #interactions-table-loading {
+    background: rgba(248, 250, 252, 0.95);
+    backdrop-filter: blur(4px);
+}
+
+/* Enhanced table look-and-feel (fallback) */
+body > div.table-section .enhanced-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    font-size: 0.875rem;
+}
+
+body > div.table-section .enhanced-table thead th {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #1e293b;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    white-space: nowrap;
+}
+
+body > div.table-section .enhanced-table tbody td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #374151;
+    vertical-align: middle;
+    line-height: 1.5;
+}
+
+body > div.table-section .enhanced-table tbody tr {
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body > div.table-section .enhanced-table tbody tr:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+body > div.table-section .enhanced-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Utilitários e estados dentro do fallback */
+body > div.table-section .truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+body > div.table-section .no-data {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    body > div.table-section .enhanced-table {
+        font-size: 0.8rem;
+        min-width: 760px;
+    }
+    body > div.table-section .enhanced-table th,
+    body > div.table-section .enhanced-table td {
+        padding: 0.75rem 1rem;
+    }
+    body > div.table-section .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+        padding: 1.25rem 1.5rem;
+    }
+    /* Provide safe page gutters on small screens */
+    body > div.table-section {
+        margin-left: 1rem;
+        margin-right: 1rem;
+        width: calc(100% - 2rem);
     }
 }
