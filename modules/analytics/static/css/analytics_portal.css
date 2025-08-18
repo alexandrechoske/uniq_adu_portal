@@ -26,9 +26,86 @@
 /* Charts Grid seguindo padrão do dashboard executivo */
 .analytics-portal .charts-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     margin-bottom: 2.5rem;
+}
+
+/* Grid de 2 colunas (padrão) */
+.analytics-portal .charts-grid.two-columns {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Grid de 3 colunas */
+.analytics-portal .charts-grid.three-columns {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Grid com proporção 2/3 + 1/3 */
+.analytics-portal .charts-grid.two-thirds-split {
+    grid-template-columns: 2fr 1fr;
+}
+
+/* Especificações para tabelas pequenas em grid de 3 colunas */
+.analytics-portal .charts-grid.three-columns .enhanced-table-section {
+    min-height: 350px;
+}
+
+.analytics-portal .charts-grid.three-columns .enhanced-table {
+    font-size: 0.8rem;
+}
+
+.analytics-portal .charts-grid.three-columns .enhanced-table th,
+.analytics-portal .charts-grid.three-columns .enhanced-table td {
+    padding: 0.5rem 0.75rem;
+}
+
+.analytics-portal .charts-grid.three-columns .enhanced-table th {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Ajustes específicos para tabela Top Users em grid de 3 colunas */
+.analytics-portal .charts-grid.three-columns #top-users-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(1),
+.analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(1) {
+    width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 0.5rem;
+}
+
+.analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(2),
+.analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(2) {
+    width: 25%;
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+}
+
+.analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(3),
+.analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(3) {
+    width: 35%;
+    text-align: center;
+    font-size: 0.7rem;
+    padding: 0.5rem 0.25rem;
+}
+
+/* Eliminar overflow horizontal da tabela em 3 colunas */
+.analytics-portal .charts-grid.three-columns .enhanced-table-container {
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+/* Ajustar padding geral da tabela em 3 colunas */
+.analytics-portal .charts-grid.three-columns .enhanced-table th,
+.analytics-portal .charts-grid.three-columns .enhanced-table td {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
 }
 
 /* Layout específico para Analytics Portal */
@@ -40,8 +117,24 @@
     grid-column: span 1; /* Cada meio ocupa 1 coluna em um grid de 2 */
 }
 
+.analytics-portal .chart-two-thirds {
+    grid-column: span 2; /* Ocupa 2/3 da largura */
+}
+
+.analytics-portal .chart-one-third {
+    grid-column: span 1; /* Ocupa 1/3 da largura */
+}
+
 .analytics-portal .chart-third-width {
     grid-column: span 1; /* Ocupa 1/3 da largura */
+}
+
+.analytics-portal .table-section {
+    grid-column: span 1; /* Para tabelas em seções */
+}
+
+.analytics-portal .summary-section {
+    grid-column: span 1; /* Para resumos em seções */
 }
 
 .analytics-portal .chart-section {
@@ -82,10 +175,30 @@
     position: relative;
 }
 
+/* Ajuste para summary container quando em grid de 2 colunas */
+.analytics-portal .charts-grid.two-columns .summary-container {
+    padding: 1.5rem;
+    min-height: 250px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
 .analytics-portal .summary-content {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
+}
+
+/* Ajuste para summary content quando em 2 colunas - uma coluna apenas */
+.analytics-portal .charts-grid.two-columns .summary-content {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+/* Limite de altura para cards de empresa */
+.analytics-portal .charts-grid.two-columns .summary-card {
+    max-height: 120px;
+    overflow: hidden;
 }
 
 .analytics-portal .summary-card {

@@ -97,10 +97,10 @@
         </div>
     </div>
 
-    <!-- Charts Grid - Reorganizada para melhor distribuição -->
-    <div class="charts-grid">
-        <!-- Daily Interactions Chart - Full Width -->
-        <div class="chart-section chart-full-width">
+    <!-- Charts Grid - Nova distribuição otimizada -->
+    <!-- Primeira Linha: Interações Diárias (1/2) + Empresas Ativas (1/2) -->
+    <div class="charts-grid two-columns">
+        <div class="chart-section chart-half-width">
             <div class="chart-header">
                 <h2 class="chart-title">Interações Diárias do Agente</h2>
                 <div class="period-controls">
@@ -115,12 +115,31 @@
             </div>
         </div>
 
-        <!-- Second Row: Improved layout for better insights -->
-        <!-- Interaction Types Chart (Donut) - Larger -->
-        <div class="chart-section chart-half-width">
+        <div class="summary-section chart-half-width">
             <div class="chart-header">
-                <h2 class="chart-title">Distribuição de Tipos de Interação</h2>
-                <p class="chart-subtitle">Interações normais vs Solicitações de documento</p>
+                <h2 class="chart-title">
+                    <i class="mdi mdi-office-building"></i>
+                    Empresas Ativas
+                </h2>
+                <div class="chart-controls">
+                    <span class="chart-count" id="company-summary-count">Carregando...</span>
+                </div>
+            </div>
+            <div class="summary-container">
+                <div id="company-summary-loading" class="component-loading"><div class="spinner"></div></div>
+                <div id="company-summary-content" class="summary-content">
+                    <!-- Dados carregados dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segunda Linha: Distribuição de Tipos (1/3) + Top Usuários (1/3) + Usuários Ativos (1/3) -->
+    <div class="charts-grid three-columns">
+        <div class="chart-section chart-one-third">
+            <div class="chart-header">
+                <h2 class="chart-title">Distribuição de Tipos</h2>
+                <p class="chart-subtitle">Normais vs Documentos</p>
             </div>
             <div class="chart-container">
                 <div id="interaction-types-loading" class="component-loading"><div class="spinner"></div></div>
@@ -128,79 +147,53 @@
             </div>
         </div>
 
-        <!-- Combined Users and Companies Chart -->
-        <div class="chart-section chart-half-width">
+        <div class="chart-section chart-one-third">
             <div class="chart-header">
-                <h2 class="chart-title">Top Usuários do Agente</h2>
-                <p class="chart-subtitle">Usuários mais ativos por número de interações</p>
+                <h2 class="chart-title">Top Usuários</h2>
+                <p class="chart-subtitle">Mais ativos</p>
             </div>
             <div class="chart-container">
                 <div id="top-users-chart-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="top-users-chart" class="chart-canvas"></canvas>
             </div>
         </div>
-    </div>
 
-    <!-- Top Users Table -->
-    <div class="enhanced-table-section" id="top-users-container">
-        <div class="enhanced-table-header">
-            <h2 class="enhanced-table-title">
-                <i class="mdi mdi-account-star"></i>
-                Usuários que mais utilizam o agente
-            </h2>
-            <div class="enhanced-table-controls">
-                <div class="enhanced-table-info">
-                    <span class="enhanced-table-count" id="users-count">Carregando...</span>
+        <div class="enhanced-table-section chart-one-third">
+            <div class="enhanced-table-header">
+                <h2 class="enhanced-table-title">
+                    <i class="mdi mdi-account-star"></i>
+                    Usuários Ativos
+                </h2>
+                <div class="enhanced-table-controls">
+                    <div class="enhanced-table-info">
+                        <span class="enhanced-table-count" id="users-count">Carregando...</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="enhanced-table-container">
-            <div id="top-users-loading" class="component-loading"><div class="spinner"></div></div>
-            <table id="top-users-table" class="enhanced-table">
-                <thead>
-                    <tr>
-                        <th>Usuário</th>
-                        <th>WhatsApp</th>
-                        <th>Empresa</th>
-                        <th>Total Interações</th>
-                        <th>Tempo Médio</th>
-                        <th>Última Interação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Dados carregados dinamicamente -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Company Summary Card -->
-    <div class="enhanced-table-section" id="company-summary-container">
-        <div class="enhanced-table-header">
-            <h2 class="enhanced-table-title">
-                <i class="mdi mdi-office-building"></i>
-                Resumo por Empresa
-            </h2>
-            <div class="enhanced-table-controls">
-                <div class="enhanced-table-info">
-                    <span class="enhanced-table-count" id="company-summary-count">Carregando...</span>
-                </div>
-            </div>
-        </div>
-        <div class="company-summary-grid">
-            <div id="company-summary-loading" class="component-loading"><div class="spinner"></div></div>
-            <div id="company-summary-content" class="summary-content">
-                <!-- Dados carregados dinamicamente -->
+            <div class="enhanced-table-container">
+                <div id="top-users-loading" class="component-loading"><div class="spinner"></div></div>
+                <table id="top-users-table" class="enhanced-table">
+                    <thead>
+                        <tr>
+                            <th>Usuário</th>
+                            <th>Interações</th>
+                            <th>Última Atividade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dados carregados dinamicamente -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Interaction Details Table -->
+    <!-- Detalhes das Interações - Largura Total -->
     <div class="enhanced-table-section" id="interaction-details-container">
         <div class="enhanced-table-header">
             <h2 class="enhanced-table-title">
                 <i class="mdi mdi-chat-processing"></i>
-                Detalhes da Interação
+                Detalhes das Interações
             </h2>
             <div class="enhanced-table-controls">
                 <div class="enhanced-table-info">
