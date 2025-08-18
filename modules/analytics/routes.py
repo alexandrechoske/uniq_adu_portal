@@ -33,7 +33,7 @@ def check_api_auth():
     return False
 
 bp = Blueprint('analytics', __name__, 
-               url_prefix='/usuarios/analytics',
+               url_prefix='/analytics',
                static_folder='static',
                template_folder='templates')
 
@@ -55,6 +55,15 @@ def analytics_agente():
     Página principal do Analytics do Agente
     """
     try:
+        # Debug: verificar qual template está sendo carregado
+        import os
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        template_path = os.path.join(current_dir, 'templates', 'analytics_agente.html')
+        print(f"[DEBUG] Carregando template: {template_path}")
+        print(f"[DEBUG] Template exists: {os.path.exists(template_path)}")
+        if os.path.exists(template_path):
+            print(f"[DEBUG] Template size: {os.path.getsize(template_path)} bytes")
+        
         # Hack temporário para desenvolvimento: se não há usuário na sessão, criar um mock
         if 'user' not in session or not session.get('user'):
             # Criar usuário mock para desenvolvimento
@@ -958,11 +967,18 @@ def get_agente_top_companies():
         top_companies = list(company_stats.values())
         top_companies.sort(key=lambda x: x['total_interactions'], reverse=True)
         
-        return jsonify(top_companies[:10])  # Top 10 empresas
+        return jsonify({
+            'success': True,
+            'data': top_companies[:10]  # Top 10 empresas
+        })
         
     except Exception as e:
         logger.error(f"Erro ao obter top empresas do agente: {e}")
-        return jsonify([])
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': []
+        })
 
 @bp.route('/api/agente/top-users')
 @role_required(['admin'])
@@ -1074,11 +1090,18 @@ def get_agente_top_users():
         top_users = list(user_stats.values())
         top_users.sort(key=lambda x: x['total_interactions'], reverse=True)
         
-        return jsonify(top_users[:10])  # Top 10 usuários
+        return jsonify({
+            'success': True,
+            'data': top_users[:10]  # Top 10 usuários
+        })
         
     except Exception as e:
         logger.error(f"Erro ao obter top usuários do agente: {e}")
-        return jsonify([])
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': []
+        })
 
 @bp.route('/api/agente/recent-interactions')
 @role_required(['admin'])
@@ -1906,4 +1929,94 @@ def get_agente_interaction_details(interaction_id):
         return jsonify({
             'success': False,
             'error': str(e)
+        })
+
+@bp.route('/api/agente/interaction-types')
+def get_agente_interaction_types():
+    """
+    API para tipos de interação (normal vs arquivo) - Para gráfico de rosca
+    """
+    # Verificar autenticação
+    if not check_api_auth():
+        return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+    try:
+        # Obter parâmetros de filtro
+        date_range = request.args.get('dateRange', '30d')
+        empresa_filter = request.args.get('empresa', 'all')
+        
+        # Calcular data de início
+        end_date = datetime.now()
+        if date_range == '1d':
+            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        elif date_range == '90d':
+            start_date = end_date - timedelta(days=90)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        # Query base
+        query = supabase_admin.table('agent_interaction_logs').select('*')
+        query = query.gte('created_at', start_date.isoformat())
+        query = query.lte('created_at', end_date.isoformat())
+        
+        # Aplicar filtro de empresa
+        if empresa_filter != 'all':
+            query = query.eq('empresa_nome', empresa_filter)
+        
+        def _exec():
+            return query.execute()
+        
+        response = run_with_retries(
+            'analytics.get_agente_interaction_types',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
+        logs = response.data if response.data else []
+        
+        # Contar tipos de interação
+        normal_count = len([log for log in logs if log.get('response_type') == 'normal'])
+        arquivo_count = len([log for log in logs if log.get('response_type') == 'arquivo'])
+        outros_count = len([log for log in logs if log.get('response_type') not in ['normal', 'arquivo']])
+        
+        # Calcular percentuais
+        total = normal_count + arquivo_count + outros_count
+        
+        data = {
+            'labels': ['Interações Normais', 'Solicitações de Documento'],
+            'values': [normal_count, arquivo_count],
+            'percentages': [
+                round((normal_count / total * 100), 1) if total > 0 else 0,
+                round((arquivo_count / total * 100), 1) if total > 0 else 0
+            ],
+            'total': total
+        }
+        
+        # Se houver outros tipos, adicionar
+        if outros_count > 0:
+            data['labels'].append('Outros')
+            data['values'].append(outros_count)
+            data['percentages'].append(round((outros_count / total * 100), 1) if total > 0 else 0)
+        
+        return jsonify({
+            'success': True,
+            'data': data
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter tipos de interação do agente: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {
+                'labels': ['Interações Normais', 'Solicitações de Documento'],
+                'values': [0, 0],
+                'percentages': [0, 0],
+                'total': 0
+            }
         })

@@ -85,10 +85,10 @@ async function loadAnalyticsStats() {
         
         // Fazer requisições em paralelo
         const [statsResponse, chartsResponse, usersResponse, activityResponse] = await Promise.all([
-            fetch('/usuarios/analytics/api/stats?' + new URLSearchParams(currentFilters)),
-            fetch('/usuarios/analytics/api/charts?' + new URLSearchParams(currentFilters)),
-            fetch('/usuarios/analytics/api/top-users?' + new URLSearchParams(currentFilters)),
-            fetch('/usuarios/analytics/api/recent-activity?' + new URLSearchParams(currentFilters))
+            fetch('/analytics/api/stats?' + new URLSearchParams(currentFilters)),
+            fetch('/analytics/api/charts?' + new URLSearchParams(currentFilters)),
+            fetch('/analytics/api/top-users?' + new URLSearchParams(currentFilters)),
+            fetch('/analytics/api/recent-activity?' + new URLSearchParams(currentFilters))
         ]);
         
         if (!statsResponse.ok || !chartsResponse.ok || !usersResponse.ok || !activityResponse.ok) {

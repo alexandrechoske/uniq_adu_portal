@@ -102,12 +102,7 @@ function initializeAgenteAnalytics() {
     // Load initial data
     loadAnalyticsData();
     
-    // Set up controlled auto-refresh (60 seconds)
-    setInterval(() => {
-        console.log('[AGENTE_ANALYTICS] Auto-refreshing data...');
-        agenteCache.invalidate();
-        loadAnalyticsData();
-    }, 60000); // 60 seconds
+    // Note: Auto-refresh removido - apenas refresh manual via botão
 }
 
 /**
@@ -198,8 +193,17 @@ async function loadAnalyticsData() {
         // Load chart data
         await loadInteractionsChart();
         
-        // Load companies data
-        await loadCompaniesData();
+        // Load interaction types chart (rosca)
+        await loadInteractionTypesChart();
+        
+        // Load top users chart
+        await loadTopUsersChart();
+        
+        // Load users data (for table)
+        await loadUsersData();
+        
+        // Load company summary
+        await loadCompanySummary();
         
         // Load users data
         await loadUsersData();
@@ -230,7 +234,7 @@ async function loadKPIs() {
             return;
         }
         
-        const response = await fetch('/usuarios/analytics/api/agente/kpis?' + getFilterParams());
+        const response = await fetch('/analytics/api/agente/kpis?' + getFilterParams());
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -268,15 +272,14 @@ function updateKPIs(kpis) {
         'unique-users': kpis.unique_users || 0,
         'companies-served': kpis.companies_served || 0,
         'success-rate': `${kpis.success_rate || 0}%`,
-        'avg-response-time': kpis.avg_response_time || '0s',
-        'normal-responses': kpis.normal_responses || 0,
-        'file-requests': kpis.file_requests || 0
+        'avg-response-time': kpis.avg_response_time || '0s'
     };
     
     Object.entries(elements).forEach(([id, value]) => {
         const element = document.getElementById(id);
         if (element) {
             element.textContent = value;
+            console.log(`[AGENTE_ANALYTICS] Updated KPI ${id}:`, value);
         }
     });
 }
@@ -293,7 +296,7 @@ async function loadInteractionsChart() {
             return;
         }
         
-        const response = await fetch('/usuarios/analytics/api/agente/chart?' + getFilterParams());
+        const response = await fetch('/analytics/api/agente/chart?' + getFilterParams());
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -322,7 +325,7 @@ async function loadInteractionsChart() {
  * Create interactions chart
  */
 function createInteractionsChart(chartData) {
-    const ctx = document.getElementById('interactions-chart');
+    const ctx = document.getElementById('daily-interactions-chart');
     if (!ctx) {
         console.error('[AGENTE_ANALYTICS] Chart canvas not found');
         return;
@@ -468,6 +471,206 @@ function showChartError(container, message) {
 }
 
 /**
+ * Create response types chart
+ */
+function createResponseTypesChart(data) {
+    const ctx = document.getElementById('response-types-chart');
+    if (!ctx) return;
+    
+    const ChartConstructor = typeof Chart !== 'undefined' ? Chart : window.Chart;
+    
+    if (agenteCharts.responseTypes) {
+        agenteCharts.responseTypes.destroy();
+        delete agenteCharts.responseTypes;
+    }
+    
+    try {
+        agenteCharts.responseTypes = new ChartConstructor(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Normal', 'Arquivo', 'Erro'],
+                datasets: [{
+                    data: [
+                        data.normal || 0,
+                        data.arquivo || 0,
+                        data.error || 0
+                    ],
+                    backgroundColor: [
+                        '#10b981',
+                        '#f59e0b',
+                        '#ef4444'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error creating response types chart:', error);
+    }
+}
+
+/**
+ * Create hourly activity chart
+ */
+function createHourlyActivityChart(data) {
+    const ctx = document.getElementById('hourly-activity-chart');
+    if (!ctx) return;
+    
+    const ChartConstructor = typeof Chart !== 'undefined' ? Chart : window.Chart;
+    
+    if (agenteCharts.hourlyActivity) {
+        agenteCharts.hourlyActivity.destroy();
+        delete agenteCharts.hourlyActivity;
+    }
+    
+    try {
+        const labels = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+        const chartData = labels.map((_, hour) => {
+            const hourData = data.find(item => item.hour === hour);
+            return hourData ? hourData.count : 0;
+        });
+        
+        agenteCharts.hourlyActivity = new ChartConstructor(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Interações',
+                    data: chartData,
+                    backgroundColor: '#3498DB',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error creating hourly activity chart:', error);
+    }
+}
+
+/**
+ * Create companies activity chart
+ */
+function createCompaniesActivityChart(data) {
+    const ctx = document.getElementById('companies-activity-chart');
+    if (!ctx) return;
+    
+    const ChartConstructor = typeof Chart !== 'undefined' ? Chart : window.Chart;
+    
+    if (agenteCharts.companiesActivity) {
+        agenteCharts.companiesActivity.destroy();
+        delete agenteCharts.companiesActivity;
+    }
+    
+    try {
+        const labels = data.map(item => item.empresa || 'N/A').slice(0, 5);
+        const chartData = data.map(item => item.total_interacoes || 0).slice(0, 5);
+        
+        agenteCharts.companiesActivity = new ChartConstructor(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Interações',
+                    data: chartData,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error creating companies activity chart:', error);
+    }
+}
+
+/**
+ * Update users table (renomeado de updateCompaniesTable)
+ */
+function updateUsersTable(users) {
+    const table = document.querySelector('#top-users-table');
+    const tbody = table.querySelector('tbody');
+    
+    if (!tbody) return;
+    
+    // Hide loading
+    const loadingEl = document.getElementById('top-users-loading');
+    if (loadingEl) loadingEl.style.display = 'none';
+    
+    // Update users count
+    const countEl = document.getElementById('users-count');
+    if (countEl) {
+        countEl.textContent = `${users.length} usuários encontrados`;
+    }
+    
+    tbody.innerHTML = '';
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum usuário encontrado</td></tr>';
+        if (countEl) countEl.textContent = 'Nenhum usuário encontrado';
+        return;
+    }
+    
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <div class="user-info">
+                    <strong>${user.nome_usuario || 'N/A'}</strong>
+                    <br><small>${user.email || 'N/A'}</small>
+                </div>
+            </td>
+            <td>${user.whatsapp || 'N/A'}</td>
+            <td>${user.empresa || 'N/A'}</td>
+            <td class="text-center">${user.total_interacoes || 0}</td>
+            <td class="text-center">${user.tempo_medio || '0s'}</td>
+            <td class="text-center">${user.ultima_interacao || 'N/A'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/**
  * Load companies data
  */
 async function loadCompaniesData() {
@@ -475,11 +678,11 @@ async function loadCompaniesData() {
         // Check cache first
         let cachedCompanies = agenteCache.get('companies');
         if (cachedCompanies) {
-            updateCompaniesTable(cachedCompanies);
+            createTopCompaniesChart(cachedCompanies);
             return;
         }
         
-        const response = await fetch('/usuarios/analytics/api/agente/companies?' + getFilterParams());
+        const response = await fetch('/analytics/api/agente/top-companies?' + getFilterParams());
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -489,14 +692,14 @@ async function loadCompaniesData() {
         
         if (data.success) {
             agenteCache.set('companies', data.data);
-            updateCompaniesTable(data.data);
+            createTopCompaniesChart(data.data);
         } else {
             throw new Error(data.error || 'Erro ao carregar empresas');
         }
         
     } catch (error) {
         console.error('[AGENTE_ANALYTICS] Error loading companies:', error);
-        updateCompaniesTable([]);
+        createTopCompaniesChart([]);
     }
 }
 
@@ -504,7 +707,16 @@ async function loadCompaniesData() {
  * Update companies table
  */
 function updateCompaniesTable(companies) {
+    // Para analytics agente, usamos gráfico em vez de tabela
+    // Se quiser tabela, precisa adicionar no template
+    console.log('[AGENTE_ANALYTICS] Companies data received:', companies);
+    return;
+    
     const table = document.querySelector('#companies-table');
+    if (!table) {
+        console.log('[AGENTE_ANALYTICS] Companies table not found - using chart instead');
+        return;
+    }
     const thead = table.querySelector('thead');
     const tbody = table.querySelector('tbody');
     
@@ -559,7 +771,7 @@ async function loadUsersData() {
             return;
         }
         
-        const response = await fetch('/usuarios/analytics/api/agente/users?' + getFilterParams());
+        const response = await fetch('/analytics/api/agente/users?' + getFilterParams());
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -567,16 +779,141 @@ async function loadUsersData() {
         
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && Array.isArray(data)) {
+            agenteCache.set('users', data);
+            updateTopUsersTable(data);
+        } else if (data.success && data.data && Array.isArray(data.data)) {
             agenteCache.set('users', data.data);
-            updateUsersTable(data.data);
+            updateTopUsersTable(data.data);
+        } else if (Array.isArray(data)) {
+            // Compatibilidade: se retornar array diretamente
+            agenteCache.set('users', data);
+            updateTopUsersTable(data);
         } else {
             throw new Error(data.error || 'Erro ao carregar usuários');
         }
         
     } catch (error) {
         console.error('[AGENTE_ANALYTICS] Error loading users:', error);
-        updateUsersTable([]);
+        updateTopUsersTable([]);
+    }
+}
+
+/**
+ * Update top users table (Analytics Agente specific)
+ */
+function updateTopUsersTable(users) {
+    const table = document.querySelector('#top-users-table');
+    if (!table) {
+        console.log('[AGENTE_ANALYTICS] Top users table not found');
+        return;
+    }
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    // Hide loading
+    const loadingEl = document.getElementById('top-users-loading');
+    if (loadingEl) loadingEl.classList.add('hidden');
+    
+    // Update count
+    const countEl = document.getElementById('users-count');
+    if (countEl) {
+        countEl.textContent = `${users.length} usuário${users.length !== 1 ? 's' : ''} encontrado${users.length !== 1 ? 's' : ''}`;
+    }
+    
+    // Clear existing rows
+    tbody.innerHTML = '';
+    
+    // Add data rows
+    if (users && users.length > 0) {
+        users.slice(0, 10).forEach((user, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <div class="user-info">
+                        <div class="user-name">${user.user_name || 'N/A'}</div>
+                    </div>
+                </td>
+                <td><span class="contact-text">${user.whatsapp_number || 'N/A'}</span></td>
+                <td><span class="company-text">${user.empresa_nome || 'N/A'}</span></td>
+                <td><span class="metric-value">${user.total_interactions || 0}</span></td>
+                <td><span class="time-text">${user.avg_response_time || 'N/A'}</span></td>
+                <td><span class="date-text">${user.last_interaction || 'N/A'}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">Nenhum usuário encontrado</td></tr>';
+    }
+}
+
+/**
+ * Update interactions table (Analytics Agente specific)
+ */
+function updateInteractionsTable(interactions) {
+    const table = document.querySelector('#interaction-details-table');
+    if (!table) {
+        console.log('[AGENTE_ANALYTICS] Interaction details table not found');
+        return;
+    }
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    // Hide loading
+    const loadingEl = document.getElementById('interaction-details-loading');
+    if (loadingEl) loadingEl.classList.add('hidden');
+    
+    // Update count
+    const countEl = document.getElementById('interaction-details-count');
+    if (countEl) {
+        countEl.textContent = `${interactions.length} interaç${interactions.length !== 1 ? 'ões' : 'ão'} carregada${interactions.length !== 1 ? 's' : ''}`;
+    }
+    
+    // Clear existing rows
+    tbody.innerHTML = '';
+    
+    // Add data rows
+    if (interactions && interactions.length > 0) {
+        interactions.forEach((interaction, index) => {
+            const row = document.createElement('tr');
+            
+            // Determinar tipo baseado no response_type
+            let typeText = 'Normal';
+            let typeClass = 'type-normal';
+            if (interaction.response_type === 'arquivo') {
+                typeText = 'Documento';
+                typeClass = 'type-document';
+            }
+            
+            // Status baseado no is_successful
+            const statusText = interaction.is_successful ? 'Sucesso' : 'Erro';
+            const statusClass = interaction.is_successful ? 'status-success' : 'status-error';
+            
+            row.innerHTML = `
+                <td><span class="date-text">${interaction.message_timestamp || 'N/A'}</span></td>
+                <td>
+                    <div class="user-info-simple">
+                        <span class="user-name-simple">${interaction.user_name || 'N/A'}</span>
+                    </div>
+                </td>
+                <td><span class="company-text">${interaction.empresa_nome || 'N/A'}</span></td>
+                <td><span class="message-text">${truncateText(interaction.user_message || 'N/A', 50)}</span></td>
+                <td><span class="response-text">${interaction.total_processos_encontrados || 0} processo${(interaction.total_processos_encontrados || 0) !== 1 ? 's' : ''} encontrado${(interaction.total_processos_encontrados || 0) !== 1 ? 's' : ''}</span></td>
+                <td><span class="type-badge ${typeClass}">${typeText}</span></td>
+                <td><span class="time-text">N/A</span></td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>
+                    <button class="btn-view-details" onclick="openInteractionModal('${interaction.id}')" title="Ver detalhes">
+                        <i class="mdi mdi-eye"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="9" class="no-data">Nenhuma interação encontrada</td></tr>';
     }
 }
 
@@ -585,6 +922,11 @@ async function loadUsersData() {
  */
 function updateUsersTable(users) {
     const table = document.querySelector('#users-table');
+    if (!table) {
+        console.log('[AGENTE_ANALYTICS] Users table not found - using top-users-table instead');
+        updateTopUsersTable(users);
+        return;
+    }
     const thead = table.querySelector('thead');
     const tbody = table.querySelector('tbody');
     
@@ -644,7 +986,7 @@ async function loadInteractionsTable(reset = true) {
             limit: pageSize
         });
         
-        const response = await fetch('/usuarios/analytics/api/agente/interactions?' + params.toString());
+        const response = await fetch('/analytics/api/agente/interactions?' + params.toString());
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -677,40 +1019,23 @@ async function loadInteractionsTable(reset = true) {
 }
 
 /**
- * Update interactions table
- */
-function updateInteractionsTable(interactions) {
-    const tbody = document.querySelector('#interactions-table tbody');
-    if (!tbody) return;
-    
-    // Hide loading
-    const loadingEl = document.getElementById('interactions-table-loading');
-    if (loadingEl) loadingEl.classList.add('hidden');
-    
-    tbody.innerHTML = '';
-    
-    if (interactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="no-data">Nenhuma interação encontrada</td></tr>';
-        return;
-    }
-    
-    interactions.forEach(interaction => {
-        const row = createInteractionRow(interaction);
-        tbody.appendChild(row);
-    });
-}
-
-/**
  * Append interactions to table
  */
 function appendInteractionsTable(interactions) {
-    const tbody = document.querySelector('#interactions-table tbody');
+    const tbody = document.querySelector('#interaction-details-table tbody');
     if (!tbody) return;
     
     interactions.forEach(interaction => {
         const row = createInteractionRow(interaction);
         tbody.appendChild(row);
     });
+    
+    // Update interactions count
+    const countEl = document.getElementById('interactions-count');
+    if (countEl) {
+        const currentRows = tbody.querySelectorAll('tr').length;
+        countEl.textContent = `${currentRows} interações encontradas`;
+    }
 }
 
 /**
@@ -747,7 +1072,7 @@ function createInteractionRow(interaction) {
  */
 async function openInteractionModal(interactionId) {
     try {
-        const response = await fetch(`/usuarios/analytics/api/agente/interaction/${interactionId}`);
+        const response = await fetch(`/analytics/api/agente/interaction/${interactionId}`);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1131,6 +1456,414 @@ function formatResponseTime(ms) {
 function truncateText(text, maxLength) {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+}
+
+/**
+ * Load interaction types chart data
+ */
+async function loadInteractionTypesChart() {
+    try {
+        const response = await fetch('/analytics/api/agente/interaction-types?' + getFilterParams());
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            createInteractionTypesChart(data.data);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar tipos de interação');
+        }
+        
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error loading interaction types:', error);
+        createInteractionTypesChart({
+            labels: ['Interações Normais', 'Solicitações de Documento'],
+            values: [0, 0],
+            percentages: [0, 0],
+            total: 0
+        });
+    }
+}
+
+/**
+ * Create interaction types chart (doughnut)
+ */
+function createInteractionTypesChart(data) {
+    const ctx = document.getElementById('interaction-types-chart');
+    if (!ctx) {
+        console.error('[AGENTE_ANALYTICS] Interaction types chart canvas not found');
+        return;
+    }
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined' && typeof window.Chart === 'undefined') {
+        console.error('[AGENTE_ANALYTICS] Chart.js not available');
+        return;
+    }
+    
+    const ChartConstructor = typeof Chart !== 'undefined' ? Chart : window.Chart;
+    
+    // Destroy existing chart
+    if (agenteCharts.interactionTypes) {
+        agenteCharts.interactionTypes.destroy();
+    }
+    
+    try {
+        // Hide loading
+        const loadingEl = document.getElementById('interaction-types-loading');
+        if (loadingEl) loadingEl.classList.add('hidden');
+        
+        agenteCharts.interactionTypes = new ChartConstructor(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels || ['Interações Normais', 'Solicitações de Documento'],
+                datasets: [{
+                    data: data.values || [0, 0],
+                    backgroundColor: [
+                        AGENTE_COLORS.normal,
+                        AGENTE_COLORS.arquivo,
+                        '#6b7280' // Para "outros" se existir
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const percentage = data.percentages ? data.percentages[context.dataIndex] : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('[AGENTE_ANALYTICS] Interaction types chart created successfully');
+        
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error creating interaction types chart:', error);
+    }
+}
+
+/**
+ * Load top users chart data
+ */
+async function loadTopUsersChart() {
+    try {
+        const response = await fetch('/analytics/api/agente/top-users?' + getFilterParams());
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            createTopUsersChart(data.data);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar top usuários');
+        }
+        
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error loading top users:', error);
+        createTopUsersChart([]);
+    }
+}
+
+/**
+ * Create top users chart (bar)
+ */
+function createTopUsersChart(data) {
+    const ctx = document.getElementById('top-users-chart');
+    if (!ctx) {
+        console.error('[AGENTE_ANALYTICS] Top users chart canvas not found');
+        return;
+    }
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined' && typeof window.Chart === 'undefined') {
+        console.error('[AGENTE_ANALYTICS] Chart.js not available');
+        return;
+    }
+    
+    const ChartConstructor = typeof Chart !== 'undefined' ? Chart : window.Chart;
+    
+    // Destroy existing chart
+    if (agenteCharts.topUsers) {
+        agenteCharts.topUsers.destroy();
+    }
+    
+    try {
+        // Hide loading
+        const loadingEl = document.getElementById('top-users-chart-loading');
+        if (loadingEl) loadingEl.classList.add('hidden');
+        
+        // Prepare data - take top 5 users
+        const topUsers = data.slice(0, 5);
+        const labels = topUsers.map(user => user.user_name || 'N/A');
+        const values = topUsers.map(user => user.total_interactions || 0);
+        
+        agenteCharts.topUsers = new ChartConstructor(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Interações',
+                    data: values,
+                    backgroundColor: AGENTE_COLORS.normal,
+                    borderColor: AGENTE_COLORS.normal,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Horizontal bar chart
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                const user = topUsers[index];
+                                return user ? user.user_name : 'N/A';
+                            },
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const user = topUsers[index];
+                                return `${context.parsed.x} interações - ${user.empresa_nome || 'N/A'}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('[AGENTE_ANALYTICS] Top users chart created successfully');
+        
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error creating top users chart:', error);
+    }
+}
+
+/**
+ * Update companies chart (instead of table for agente)
+ */
+function createTopCompaniesChart(data) {
+    const ctx = document.getElementById('top-companies-chart');
+    if (!ctx) {
+        console.error('[AGENTE_ANALYTICS] Top companies chart canvas not found');
+        return;
+    }
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined' && typeof window.Chart === 'undefined') {
+        console.error('[AGENTE_ANALYTICS] Chart.js not available');
+        return;
+    }
+    
+    const ChartConstructor = typeof Chart !== 'undefined' ? Chart : window.Chart;
+    
+    // Destroy existing chart
+    if (agenteCharts.topCompanies) {
+        agenteCharts.topCompanies.destroy();
+    }
+    
+    try {
+        // Hide loading
+        const loadingEl = document.getElementById('top-companies-chart-loading');
+        if (loadingEl) loadingEl.classList.add('hidden');
+        
+        // Prepare data - take top 5 companies
+        const topCompanies = data.slice(0, 5);
+        const labels = topCompanies.map(company => company.empresa_nome || 'N/A');
+        const values = topCompanies.map(company => company.total_interactions || 0);
+        
+        agenteCharts.topCompanies = new ChartConstructor(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Interações',
+                    data: values,
+                    backgroundColor: AGENTE_COLORS.arquivo,
+                    borderColor: AGENTE_COLORS.arquivo,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Horizontal bar chart
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                const index = context[0].dataIndex;
+                                const company = topCompanies[index];
+                                return company ? company.empresa_nome : 'N/A';
+                            },
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const company = topCompanies[index];
+                                return `${context.parsed.x} interações - ${company.unique_users || 0} usuários`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('[AGENTE_ANALYTICS] Top companies chart created successfully');
+        
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error creating top companies chart:', error);
+    }
+}
+
+/**
+ * Load company summary data
+ */
+async function loadCompanySummary() {
+    try {
+        const response = await fetch('/analytics/api/agente/top-companies?' + getFilterParams());
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            updateCompanySummary(data.data);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar resumo da empresa');
+        }
+        
+    } catch (error) {
+        console.error('[AGENTE_ANALYTICS] Error loading company summary:', error);
+        updateCompanySummary([]);
+    }
+}
+
+/**
+ * Update company summary display
+ */
+function updateCompanySummary(companies) {
+    const container = document.getElementById('company-summary-content');
+    if (!container) {
+        console.log('[AGENTE_ANALYTICS] Company summary container not found');
+        return;
+    }
+    
+    // Hide loading
+    const loadingEl = document.getElementById('company-summary-loading');
+    if (loadingEl) loadingEl.classList.add('hidden');
+    
+    // Update count
+    const countEl = document.getElementById('company-summary-count');
+    if (countEl) {
+        countEl.textContent = `${companies.length} empresa${companies.length !== 1 ? 's' : ''} ativa${companies.length !== 1 ? 's' : ''}`;
+    }
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    if (companies && companies.length > 0) {
+        companies.forEach(company => {
+            const card = document.createElement('div');
+            card.className = 'summary-card';
+            
+            card.innerHTML = `
+                <div class="summary-card-header">
+                    <h3 class="summary-card-title">${company.empresa_nome || 'N/A'}</h3>
+                    <i class="mdi mdi-office-building summary-card-icon"></i>
+                </div>
+                <div class="summary-card-content">
+                    <div class="summary-metric">
+                        <span class="summary-metric-label">Total de Interações:</span>
+                        <span class="summary-metric-value">${company.total_interactions || 0}</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="summary-metric-label">Usuários Únicos:</span>
+                        <span class="summary-metric-value">${company.unique_users || 0}</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="summary-metric-label">Solicitações Normais:</span>
+                        <span class="summary-metric-value">${company.normal_requests || 0}</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="summary-metric-label">Solicitações de Arquivo:</span>
+                        <span class="summary-metric-value">${company.arquivo_requests || 0}</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="summary-metric-label">Média de Processos:</span>
+                        <span class="summary-metric-value">${company.avg_processos_encontrados || 0}</span>
+                    </div>
+                    <div class="summary-metric">
+                        <span class="summary-metric-label">Última Interação:</span>
+                        <span class="summary-metric-value">${company.last_interaction || 'N/A'}</span>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(card);
+        });
+    } else {
+        container.innerHTML = '<div class="no-data">Nenhuma empresa encontrada</div>';
+    }
 }
 
 // Make functions available globally

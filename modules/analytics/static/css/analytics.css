@@ -103,15 +103,6 @@
     border-color: var(--color-primary, #3498DB);
 }
 
-/* Enhanced Tables seguindo padrão shared */
-.enhanced-table-section {
-    background: #ffffff;
-    border-radius: 0.75rem;
-    border: 1px solid #f1f5f9;
-    margin-bottom: 2rem;
-    overflow: hidden;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
 
 .enhanced-table-header {
     padding: 1.25rem 1.5rem;
@@ -489,14 +480,7 @@ code {
     color: var(--color-primary);
 }
 
-.analytics-agente .table-section {
-    background: white;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
-    margin-top: 2rem;
-}
+
 
 .analytics-agente .table-header {
     margin-bottom: 1rem;

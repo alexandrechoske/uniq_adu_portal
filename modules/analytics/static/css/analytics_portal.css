@@ -26,7 +26,7 @@
 /* Charts Grid seguindo padrão do dashboard executivo */
 .analytics-portal .charts-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     margin-bottom: 2.5rem;
 }
@@ -34,6 +34,10 @@
 /* Layout específico para Analytics Portal */
 .analytics-portal .chart-full-width {
     grid-column: 1 / -1; /* Ocupa toda a largura */
+}
+
+.analytics-portal .chart-half-width {
+    grid-column: span 1; /* Cada meio ocupa 1 coluna em um grid de 2 */
 }
 
 .analytics-portal .chart-third-width {
@@ -61,6 +65,80 @@
     font-weight: 600;
     color: #0f172a;
     margin: 0;
+}
+
+.analytics-portal .chart-subtitle {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--color-text-secondary, #6b7280);
+    margin: 0.25rem 0 0 0;
+    font-style: italic;
+}
+
+/* Company Summary Styles */
+.analytics-portal .company-summary-grid {
+    padding: 1.5rem;
+    min-height: 200px;
+    position: relative;
+}
+
+.analytics-portal .summary-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.analytics-portal .summary-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.analytics-portal .summary-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.analytics-portal .summary-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.analytics-portal .summary-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+.analytics-portal .summary-card-icon {
+    color: var(--color-primary, #3498DB);
+    font-size: 1.25rem;
+}
+
+.analytics-portal .summary-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.analytics-portal .summary-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.analytics-portal .summary-metric-label {
+    color: var(--color-text-secondary, #6b7280);
+}
+
+.analytics-portal .summary-metric-value {
+    font-weight: 600;
+    color: #1e293b;
 }
 
 .analytics-portal .chart-container {
