@@ -1104,7 +1104,9 @@ async function openInteractionModal(interactionId) {
         
         if (data.success) {
             populateInteractionModal(data.data);
-            document.getElementById('interaction-modal').style.display = 'block';
+            const modal = document.getElementById('interaction-modal');
+            modal.classList.add('show');
+            modal.style.display = 'flex';
         } else {
             throw new Error(data.error || 'Erro ao carregar detalhes da interação');
         }
@@ -1897,7 +1899,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('close-interaction-modal');
     if (closeBtn) {
         closeBtn.addEventListener('click', function() {
-            document.getElementById('interaction-modal').style.display = 'none';
+            const modal = document.getElementById('interaction-modal');
+            modal.classList.remove('show');
+            modal.style.display = 'none';
         });
     }
     
@@ -1906,6 +1910,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modal) {
         modal.addEventListener('click', function(event) {
             if (event.target === modal) {
+                modal.classList.remove('show');
                 modal.style.display = 'none';
             }
         });
@@ -1915,7 +1920,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
             const modal = document.getElementById('interaction-modal');
-            if (modal && modal.style.display === 'block') {
+            if (modal && modal.classList.contains('show')) {
+                modal.classList.remove('show');
                 modal.style.display = 'none';
             }
         }

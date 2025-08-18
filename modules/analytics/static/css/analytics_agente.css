@@ -641,18 +641,27 @@
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
     overflow-y: auto;
+    /* Adicionar flexbox para centralizar */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
 }
 
 .modal-content {
     background: white;
-    margin: 2rem auto;
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     max-width: 1200px;
-    width: 100%;
+    width: 95%;
     max-height: 90vh;
     overflow-y: auto;
     animation: modalFadeIn 0.3s ease;
+    /* Remover margin auto que estava causando problema */
+    position: relative;
 }
 
 @keyframes modalFadeIn {
