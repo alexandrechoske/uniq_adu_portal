@@ -214,7 +214,6 @@
                         <th>Usuário</th>
                         <th>Empresa</th>
                         <th>Pergunta/Solicitação</th>
-                        <th>Resposta Agente</th>
                         <th>Tipo Interação</th>
                         <th>Tempo Resposta</th>
                         <th>Status</th>
@@ -243,7 +242,84 @@
         </div>
         <div class="modal-body">
             <div class="interaction-details">
-                <!-- Conteúdo carregado dinamicamente -->
+                <div class="interaction-section">
+                    <h4><i class="mdi mdi-account"></i> Informações do Usuário</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Nome:</label>
+                            <span id="modal-user-name">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>WhatsApp:</label>
+                            <span id="modal-whatsapp">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Empresa:</label>
+                            <span id="modal-empresa">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Data/Hora:</label>
+                            <span id="modal-timestamp">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="interaction-section">
+                    <h4><i class="mdi mdi-message-text"></i> Pergunta do Usuário</h4>
+                    <div class="message-content">
+                        <div id="modal-user-message" class="user-message">-</div>
+                    </div>
+                </div>
+
+                <div class="interaction-section">
+                    <h4><i class="mdi mdi-robot"></i> Resposta do Agente</h4>
+                    <div class="response-info">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>Tipo:</label>
+                                <span id="modal-response-type" class="badge">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Processos Encontrados:</label>
+                                <span id="modal-processes-found">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Empresas:</label>
+                                <span id="modal-companies-found">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Tempo de Resposta:</label>
+                                <span id="modal-response-time">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="agent-response-content">
+                        <label>Resposta Completa:</label>
+                        <div id="modal-agent-response" class="agent-response">-</div>
+                    </div>
+                </div>
+
+                <div class="interaction-section">
+                    <h4><i class="mdi mdi-information"></i> Informações Técnicas</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Status:</label>
+                            <span id="modal-status" class="badge">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Session ID:</label>
+                            <span id="modal-session-id">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Instância:</label>
+                            <span id="modal-instance">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>CNPJs Consultados:</label>
+                            <span id="modal-cnpjs">-</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

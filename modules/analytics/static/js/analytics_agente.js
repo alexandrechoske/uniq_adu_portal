@@ -891,6 +891,29 @@ function updateInteractionsTable(interactions) {
             const statusText = interaction.is_successful ? 'Sucesso' : 'Erro';
             const statusClass = interaction.is_successful ? 'status-success' : 'status-error';
             
+            // Calcular tempo de resposta baseado nos timestamps
+            let responseTime = 'N/A';
+            if (interaction.message_timestamp && interaction.response_timestamp) {
+                try {
+                    const messageTime = new Date(interaction.message_timestamp);
+                    const responseTime_obj = new Date(interaction.response_timestamp);
+                    const diffMs = responseTime_obj - messageTime;
+                    
+                    if (diffMs > 0) {
+                        if (diffMs < 1000) {
+                            responseTime = `${diffMs}ms`;
+                        } else if (diffMs < 60000) {
+                            responseTime = `${Math.round(diffMs / 1000)}s`;
+                        } else {
+                            responseTime = `${Math.round(diffMs / 60000)}min`;
+                        }
+                    }
+                } catch (e) {
+                    console.log('[AGENTE_ANALYTICS] Error calculating response time:', e);
+                    responseTime = 'N/A';
+                }
+            }
+            
             row.innerHTML = `
                 <td><span class="date-text">${interaction.message_timestamp || 'N/A'}</span></td>
                 <td>
@@ -900,9 +923,8 @@ function updateInteractionsTable(interactions) {
                 </td>
                 <td><span class="company-text">${interaction.empresa_nome || 'N/A'}</span></td>
                 <td><span class="message-text">${truncateText(interaction.user_message || 'N/A', 50)}</span></td>
-                <td><span class="response-text">${interaction.total_processos_encontrados || 0} processo${(interaction.total_processos_encontrados || 0) !== 1 ? 's' : ''} encontrado${(interaction.total_processos_encontrados || 0) !== 1 ? 's' : ''}</span></td>
                 <td><span class="type-badge ${typeClass}">${typeText}</span></td>
-                <td><span class="time-text">N/A</span></td>
+                <td><span class="time-text">${responseTime}</span></td>
                 <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 <td>
                     <button class="btn-view-details" onclick="openInteractionModal('${interaction.id}')" title="Ver detalhes">
@@ -913,7 +935,7 @@ function updateInteractionsTable(interactions) {
             tbody.appendChild(row);
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="9" class="no-data">Nenhuma interação encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">Nenhuma interação encontrada</td></tr>';
     }
 }
 
@@ -1868,3 +1890,34 @@ function updateCompanySummary(companies) {
 
 // Make functions available globally
 window.openInteractionModal = openInteractionModal;
+
+// Modal event handlers
+document.addEventListener('DOMContentLoaded', function() {
+    // Close modal when clicking the close button
+    const closeBtn = document.getElementById('close-interaction-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            document.getElementById('interaction-modal').style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside of it
+    const modal = document.getElementById('interaction-modal');
+    if (modal) {
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('interaction-modal');
+            if (modal && modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+        }
+    });
+});
