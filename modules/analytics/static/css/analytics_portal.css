@@ -45,19 +45,6 @@
     grid-template-columns: 2fr 1fr;
 }
 
-/* Classes específicas para larguras */
-.analytics-portal .chart-two-thirds {
-    /* Ocupa 2/3 do espaço */
-}
-
-.analytics-portal .chart-one-third {
-    /* Ocupa 1/3 do espaço */
-}
-
-.analytics-portal .chart-half-width {
-    /* Ocupa 1/2 do espaço */
-}
-
 /* Especificações para tabelas pequenas em grid de 3 colunas */
 .analytics-portal .charts-grid.three-columns .enhanced-table-section {
     min-height: 350px;
@@ -77,7 +64,7 @@
     font-weight: 600;
 }
 
-/* Ajustes específicos para tabela Top Users em grid de 3 colunas */
+/* Ajustes específicos para tabela Top Usuários (5 colunas) em grid de 3 colunas */
 .analytics-portal .charts-grid.three-columns #top-users-table {
     width: 100%;
     table-layout: fixed;
@@ -85,7 +72,7 @@
 
 .analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(1),
 .analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(1) {
-    width: 40%;
+    width: 35%; /* Usuário */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -94,17 +81,31 @@
 
 .analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(2),
 .analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(2) {
-    width: 25%;
-    text-align: center;
-    padding: 0.5rem 0.25rem;
+    width: 20%; /* WhatsApp */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(3),
 .analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(3) {
-    width: 35%;
+    width: 25%; /* Empresa */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(4),
+.analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(4) {
+    width: 10%; /* Interações */
     text-align: center;
-    font-size: 0.7rem;
-    padding: 0.5rem 0.25rem;
+}
+
+.analytics-portal .charts-grid.three-columns #top-users-table th:nth-child(5),
+.analytics-portal .charts-grid.three-columns #top-users-table td:nth-child(5) {
+    width: 10%; /* Última */
+    text-align: center;
+    font-size: 0.75rem;
 }
 
 /* Eliminar overflow horizontal da tabela em 3 colunas */
@@ -449,13 +450,15 @@
 
 /* Responsividade seguindo padrão da aplicação */
 @media (max-width: 1200px) {
-    .analytics-portal .charts-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .analytics-portal .chart-third-width {
-        grid-column: span 1;
-    }
+    /* Mantém 3 colunas para grids marcados como three-columns em telas largas/desktop */
+    .analytics-portal .charts-grid.two-columns { grid-template-columns: 1fr 1fr; }
+    .analytics-portal .charts-grid.three-columns { grid-template-columns: 1fr 1fr 1fr; }
+    .analytics-portal .chart-third-width { grid-column: span 1; }
+}
+
+/* Em telas médias, reduzir de 3 para 2 colunas quando necessário */
+@media (max-width: 992px) {
+    .analytics-portal .charts-grid.three-columns { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -722,4 +725,65 @@
     .interaction-section {
         padding: 1rem;
     }
+}
+
+/* Ajustes específicos para altura uniforme dos componentes */
+.analytics-portal .charts-grid .chart-section,
+.analytics-portal .charts-grid .summary-section,
+.analytics-portal .charts-grid .enhanced-table-section {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    /* Garantir que cada item ocupa apenas 1 coluna no grid atual */
+    grid-column: auto;
+    grid-area: auto;
+}
+
+/* Chart containers devem expandir para preencher o espaço disponível */
+.analytics-portal .chart-container {
+    flex: 1;
+    min-height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Summary containers também devem expandir */
+.analytics-portal .summary-container {
+    flex: 1;
+    min-height: 250px;
+    padding: 1rem;
+}
+
+/* Enhanced table containers devem ter altura consistente */
+.analytics-portal .enhanced-table-container {
+    flex: 1;
+    min-height: 250px;
+}
+
+/* Ajuste para os canvas dos gráficos */
+.analytics-portal .chart-canvas {
+    max-height: 300px;
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* Summary content styling melhorado */
+.analytics-portal .summary-content {
+    display: grid;
+    gap: 1rem;
+    height: 100%;
+    align-content: start;
+}
+
+/* Cards das empresas com altura fixa */
+.analytics-portal .summary-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }

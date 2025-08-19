@@ -98,9 +98,9 @@
     </div>
 
     <!-- Charts Grid - Nova distribuição otimizada -->
-    <!-- Primeira Linha: Interações Diárias (2/3) + Empresas Ativas (1/3) -->
-    <div class="charts-grid two-thirds-split">
-        <div class="chart-section chart-two-thirds">
+    <!-- Primeira Linha: Interações Diárias (1/2) + Empresas Ativas (1/2) -->
+    <div class="charts-grid two-columns">
+        <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Interações Diárias do Agente</h2>
                 <div class="period-controls">
@@ -115,7 +115,7 @@
             </div>
         </div>
 
-        <div class="summary-section chart-one-third">
+        <div class="summary-section">
             <div class="chart-header">
                 <h2 class="chart-title">
                     <i class="mdi mdi-office-building"></i>
@@ -134,9 +134,10 @@
         </div>
     </div>
 
-    <!-- Segunda Linha: Distribuição de Tipos (1/3) + Top Usuários (1/3) + Usuários Ativos (1/3) -->
+    <!-- Segunda Linha: Distribuição de Tipos (1/3) + Usuários Ativos (1/3) + Top Usuários (1/3) -->
     <div class="charts-grid three-columns">
-        <div class="chart-section chart-one-third">
+        <!-- 1) Distribuição de Tipos -->
+        <div class="chart-section">
             <div class="chart-header">
                 <h2 class="chart-title">Distribuição de Tipos</h2>
                 <p class="chart-subtitle">Normais vs Documentos</p>
@@ -147,21 +148,11 @@
             </div>
         </div>
 
-        <div class="chart-section chart-one-third">
-            <div class="chart-header">
-                <h2 class="chart-title">Top Usuários</h2>
-                <p class="chart-subtitle">Mais ativos</p>
-            </div>
-            <div class="chart-container">
-                <div id="top-users-chart-loading" class="component-loading"><div class="spinner"></div></div>
-                <canvas id="top-users-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-
-        <div class="enhanced-table-section chart-one-third">
+        <!-- 2) Usuários Ativos (Tabela) -->
+        <div class="enhanced-table-section">
             <div class="enhanced-table-header">
                 <h2 class="enhanced-table-title">
-                    <i class="mdi mdi-account-star"></i>
+                    <i class="mdi mdi-account-group"></i>
                     Usuários Ativos
                 </h2>
                 <div class="enhanced-table-controls">
@@ -176,14 +167,28 @@
                     <thead>
                         <tr>
                             <th>Usuário</th>
+                            <th>WhatsApp</th>
+                            <th>Empresa</th>
                             <th>Interações</th>
-                            <th>Última Atividade</th>
+                            <th>Última</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Dados carregados dinamicamente -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- 3) Top Usuários (Gráfico) -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h2 class="chart-title">Top Usuários</h2>
+                <p class="chart-subtitle">Mais ativos</p>
+            </div>
+            <div class="chart-container">
+                <div id="top-users-chart-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="top-users-chart" class="chart-canvas"></canvas>
             </div>
         </div>
     </div>

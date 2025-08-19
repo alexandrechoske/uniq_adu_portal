@@ -1444,16 +1444,17 @@ def get_agente_chart():
         normal_responses = []
         file_requests = []
         
-        # Gerar todas as datas no período
+        # Gerar todas as datas no período (CORRIGIDO: incluindo o dia atual)
         current_date = start_date
-        for i in range(days_count):
-            date_to_check = current_date + timedelta(days=i)
-            date_key = date_to_check.strftime('%Y-%m-%d')
-            date_label = date_to_check.strftime('%d/%m')
+        while current_date <= end_date:
+            date_key = current_date.strftime('%Y-%m-%d')
+            date_label = current_date.strftime('%d/%m')
             
             labels.append(date_label)
             normal_responses.append(daily_data[date_key]['normal'])
             file_requests.append(daily_data[date_key]['arquivo'])
+            
+            current_date += timedelta(days=1)
         
         return jsonify({
             'success': True,
