@@ -895,8 +895,17 @@ function updateInteractionsTable(interactions) {
             let responseTime = 'N/A';
             if (interaction.message_timestamp && interaction.response_timestamp) {
                 try {
-                    const messageTime = new Date(interaction.message_timestamp);
-                    const responseTime_obj = new Date(interaction.response_timestamp);
+                    const parseMaybeBr = (s) => {
+                        if (typeof s === 'string' && s.includes('/')) {
+                            const [dpart, tpart] = s.split(' ');
+                            const [d, m, y] = dpart.split('/');
+                            const [hh, mm, ss] = (tpart || '00:00:00').split(':');
+                            return new Date(y, m - 1, d, hh, mm, ss || 0);
+                        }
+                        return new Date(s);
+                    };
+                    const messageTime = parseMaybeBr(interaction.message_timestamp);
+                    const responseTime_obj = parseMaybeBr(interaction.response_timestamp);
                     const diffMs = responseTime_obj - messageTime;
                     
                     if (diffMs > 0) {
@@ -915,7 +924,7 @@ function updateInteractionsTable(interactions) {
             }
             
             row.innerHTML = `
-                <td><span class="date-text">${interaction.message_timestamp || 'N/A'}</span></td>
+                <td><span class="date-text">${getDisplayDate(interaction)}</span></td>
                 <td>
                     <div class="user-info-simple">
                         <span class="user-name-simple">${interaction.user_name || 'N/A'}</span>
@@ -1076,8 +1085,8 @@ function createInteractionRow(interaction) {
             <button class="action-btn details" onclick="openInteractionModal('${interaction.id}')" title="Ver detalhes">
                 <i class="mdi mdi-eye"></i>
             </button>
-        </td>
-        <td>${formatDateTime(interaction.message_timestamp) || 'N/A'}</td>
+    </td>
+    <td>${getDisplayDate(interaction)}</td>
         <td>${interaction.user_name || 'N/A'}</td>
         <td>${interaction.empresa_nome || 'N/A'}</td>
         <td title="${interaction.user_message || ''}" class="truncate">${messagePreview}</td>
@@ -1199,7 +1208,7 @@ function populateInteractionModal(interaction) {
     document.getElementById('modal-user-name').textContent = interaction.user_name || 'N/A';
     document.getElementById('modal-whatsapp').textContent = interaction.whatsapp_number || 'N/A';
     document.getElementById('modal-empresa').textContent = interaction.empresa_nome || 'N/A';
-    document.getElementById('modal-timestamp').textContent = formatDateTime(interaction.message_timestamp) || 'N/A';
+    document.getElementById('modal-timestamp').textContent = getDisplayDate(interaction);
     
     // Message
     document.getElementById('modal-user-message').textContent = interaction.user_message || 'N/A';
@@ -1455,6 +1464,60 @@ function formatDateTime(dateString) {
         console.error('[AGENTE_ANALYTICS] Error formatting date:', dateString, error);
         return dateString;
     }
+}
+
+/**
+ * Normalize timestamps from API considering known field offsets.
+ * - Prefer correct fields: message_timestamp, created_at
+ * - Fields with known +3h offset in DB: processed_at, updated_at, agent_response_at
+ */
+function formatDateTimeWithAdjust(dateString, subtract3h = false) {
+    if (!dateString) return 'N/A';
+    try {
+        let date;
+        if (dateString.includes('/')) {
+            // DD/MM/YYYY HH:MM:SS
+            const [datePart, timePart] = dateString.split(' ');
+            const [day, month, year] = datePart.split('/');
+            const [hour, minute, second] = (timePart || '00:00:00').split(':');
+            date = new Date(year, month - 1, day, hour, minute, second || 0);
+        } else {
+            // ISO-like
+            date = new Date(dateString);
+        }
+        if (isNaN(date.getTime())) return dateString;
+        if (subtract3h) {
+            date = new Date(date.getTime() - 3 * 60 * 60 * 1000);
+        }
+        return date.toLocaleString('pt-BR', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+            timeZone: 'America/Sao_Paulo'
+        });
+    } catch (e) {
+        console.error('[AGENTE_ANALYTICS] Error formatting date (adjust):', dateString, e);
+        return dateString;
+    }
+}
+
+function getDisplayDate(interaction) {
+    if (!interaction || typeof interaction !== 'object') return 'N/A';
+    const candidates = [
+        { key: 'message_timestamp', adjust: false },
+        { key: 'created_at', adjust: false },
+        { key: 'processed_at', adjust: true },
+        { key: 'agent_response_at', adjust: true },
+        { key: 'updated_at', adjust: true }
+    ];
+    for (const c of candidates) {
+        const val = interaction[c.key];
+        if (val) {
+            const formatted = formatDateTimeWithAdjust(val, c.adjust);
+            try { console.debug('[AGENTE_ANALYTICS] Date display using', c.key, 'raw:', val, '=>', formatted); } catch(_) {}
+            return formatted;
+        }
+    }
+    return 'N/A';
 }
 
 /**

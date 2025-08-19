@@ -1,5 +1,9 @@
 from flask import Blueprint, render_template, jsonify, request, session
 from datetime import datetime, timedelta
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except Exception:
+    ZoneInfo = None
 from extensions import supabase_admin
 from routes.auth import role_required
 import logging
@@ -36,6 +40,44 @@ bp = Blueprint('analytics', __name__,
                url_prefix='/analytics',
                static_folder='static',
                template_folder='templates')
+
+def _format_ts_with_policy(ts_value, policy: str = 'none'):
+    """
+    policy:
+      - 'none': não ajustar, apenas normalizar formato
+      - 'minus3': subtrair 3 horas (campos adiantados na base)
+      - 'tz_to_br': converter tz-aware para America/Sao_Paulo
+    """
+    try:
+        if not ts_value:
+            return 'N/A'
+        s = str(ts_value)
+        # DD/MM/YYYY HH:MM[:SS]
+        if '/' in s and (' ' in s):
+            try:
+                date_part, time_part = s.split(' ', 1)
+                d, m, y = date_part.split('/')
+                hh, mm, *rest = time_part.split(':')
+                ss = (rest[0] if rest else '00')[:2]
+                dt = datetime(int(y), int(m), int(d), int(hh), int(mm), int(ss))
+            except Exception:
+                dt = None
+        else:
+            try:
+                dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+            except Exception:
+                dt = None
+        if dt is None:
+            return s
+        if policy == 'minus3':
+            dt_final = dt - timedelta(hours=3)
+        elif policy == 'tz_to_br' and (dt.tzinfo is not None and ZoneInfo is not None):
+            dt_final = dt.astimezone(ZoneInfo('America/Sao_Paulo'))
+        else:
+            dt_final = dt
+        return dt_final.strftime('%d/%m/%Y %H:%M:%S')
+    except Exception:
+        return str(ts_value)
 
 @bp.route('/')
 @role_required(['admin'])
@@ -1782,14 +1824,21 @@ def get_agente_interactions():
         formatted_logs = []
         for log in logs:
             try:
-                # Aplicar correção de timezone
-                timestamp = log.get('created_at')
-                if timestamp:
-                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                    dt_local = dt - timedelta(hours=3)
-                    timestamp_formatted = dt_local.strftime('%d/%m/%Y %H:%M:%S')
-                else:
-                    timestamp_formatted = 'N/A'
+                # Escolher melhor timestamp para exibição: message_timestamp > created_at > processed_at > agent_response_at > updated_at
+                # Seleciona e aplica política por campo
+                ordered = [
+                    ('message_timestamp', 'none'),
+                    ('created_at', 'none'),
+                    ('processed_at', 'minus3'),
+                    ('agent_response_at', 'minus3'),
+                    ('updated_at', 'minus3'),
+                ]
+                timestamp_formatted = 'N/A'
+                for key, policy in ordered:
+                    val = log.get(key)
+                    if val:
+                        timestamp_formatted = _format_ts_with_policy(val, policy)
+                        break
                 
                 # Truncar mensagem para preview
                 user_message = log.get('user_message', '')
@@ -1856,14 +1905,20 @@ def get_agente_interaction_details(interaction_id):
         
         log = response.data[0]
         
-        # Formatar timestamp
-        timestamp = log.get('created_at')
-        if timestamp:
-            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            dt_local = dt - timedelta(hours=3)
-            timestamp_formatted = dt_local.strftime('%d/%m/%Y %H:%M:%S')
-        else:
-            timestamp_formatted = 'N/A'
+        # Formatar timestamp (prioriza message_timestamp; converte tz apenas se necessário)
+        ordered = [
+            ('message_timestamp', 'none'),
+            ('created_at', 'none'),
+            ('processed_at', 'minus3'),
+            ('agent_response_at', 'minus3'),
+            ('updated_at', 'minus3'),
+        ]
+        timestamp_formatted = 'N/A'
+        for key, policy in ordered:
+            val = log.get(key)
+            if val:
+                timestamp_formatted = _format_ts_with_policy(val, policy)
+                break
         
         # Calcular tempo de resposta
         response_time_ms = calculate_response_time_from_log(log)
