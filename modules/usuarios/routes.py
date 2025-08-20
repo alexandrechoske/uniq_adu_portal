@@ -157,7 +157,7 @@ def carregar_usuarios():
         
         # 4. Buscar números de WhatsApp de todos os usuários
         def _buscar_whatsapp():
-            return supabase_admin.table('user_whatsapp').select('*').eq('ativo', True).execute()
+            return supabase_admin.table('user_whatsapp').select('*').execute()
         
         whatsapp_response = retry_supabase_operation(_buscar_whatsapp)
         
@@ -1717,27 +1717,17 @@ def listar_whatsapp(user_id):
         print(f"[DEBUG] Erro ao buscar WhatsApp (endpoint deprecated): {e}")
         current_app.logger.error(f"Erro ao buscar WhatsApp: {e}")
         
-        # Fallback para telefone do usuário
+        # Fallback para telefone do usuário - REMOVIDO (coluna não existe)
         try:
-            user_result = supabase_admin.from_('users').select('telefone').eq('id', user_id).execute()
+            user_result = supabase_admin.from_('users').select('id').eq('id', user_id).execute()
             
-            if user_result.data and user_result.data[0].get('telefone'):
-                telefone = user_result.data[0]['telefone']
-                fallback_data = [{
-                    'id': 'fallback_1',
-                    'numero': telefone,
-                    'nome': 'WhatsApp Principal',
-                    'tipo': 'pessoal',
-                    'principal': True,
-                    'ativo': True,
-                    'source': 'fallback'
-                }]
-                
+            if user_result.data:
+                print(f"[DEBUG] Usuário encontrado mas sem WhatsApp na tabela dedicada")
                 return jsonify({
                     'success': True,
-                    'data': fallback_data,
-                    'whatsapp': fallback_data,
-                    'fallback_used': True
+                    'data': [],
+                    'whatsapp': [],
+                    'note': 'Nenhum WhatsApp encontrado para este usuário'
                 })
         except:
             pass
@@ -1779,7 +1769,7 @@ def adicionar_whatsapp(user_id):
             }), 400
         
         # Verificar se número já existe para este usuário
-        existing = supabase_admin.from_('user_whatsapp').select('id').eq('user_id', user_id).eq('numero_whatsapp', numero_whatsapp).execute()
+        existing = supabase_admin.from_('user_whatsapp').select('id').eq('user_id', user_id).eq('numero', numero_whatsapp).execute()
         
         if existing.data:
             return jsonify({
@@ -1794,12 +1784,11 @@ def adicionar_whatsapp(user_id):
         # Inserir novo WhatsApp
         whatsapp_data = {
             'user_id': user_id,
-            'numero_whatsapp': numero_whatsapp,
-            'nome_contato': nome_contato,
-            'tipo_numero': tipo_numero,
+            'numero': numero_whatsapp,
+            'nome': nome_contato,
+            'tipo': tipo_numero,
             'principal': principal,
-            'ativo': True,
-            'observacoes': observacoes
+            'ativo': True
         }
         
         if cliente_sistema_id:
@@ -1975,7 +1964,7 @@ def api_get_user_whatsapp(user_id):
         # Tentar buscar na tabela user_whatsapp primeiro
         try:
             def buscar_whatsapp():
-                result = supabase_admin.from_('user_whatsapp').select('*').eq('user_id', user_id).eq('ativo', True).execute()
+                result = supabase_admin.from_('user_whatsapp').select('*').eq('user_id', user_id).execute()
                 return result
             
             result = retry_supabase_operation(buscar_whatsapp, max_retries=3, delay=1.0)
@@ -1988,37 +1977,8 @@ def api_get_user_whatsapp(user_id):
         except Exception as table_error:
             print(f"[DEBUG] Tabela user_whatsapp não disponível: {table_error}")
         
-        # Fallback: buscar no campo telefone do usuário
-        try:
-            print(f"[DEBUG] Usando fallback: buscando telefone do usuário")
-            user_result = supabase_admin.from_('users').select('telefone').eq('id', user_id).execute()
-            
-            if user_result.data and user_result.data[0].get('telefone'):
-                telefone = user_result.data[0]['telefone']
-                print(f"[DEBUG] Telefone encontrado: {telefone}")
-                
-                # Converter para formato de lista como esperado pelo frontend
-                whatsapp_fallback = [{
-                    'id': 'fallback_1',
-                    'numero': telefone,
-                    'nome': 'WhatsApp Principal',
-                    'tipo': 'pessoal',
-                    'principal': True,
-                    'ativo': True,
-                    'source': 'fallback'
-                }]
-                
-                return jsonify({
-                    'success': True, 
-                    'whatsapp': whatsapp_fallback,
-                    'fallback_used': True,
-                    'note': 'Dados vindos do campo telefone. Crie a tabela user_whatsapp para funcionalidade completa.'
-                })
-            else:
-                print(f"[DEBUG] Nenhum telefone encontrado para o usuário")
-                
-        except Exception as fallback_error:
-            print(f"[DEBUG] Erro no fallback: {fallback_error}")
+        # Fallback: buscar no campo telefone do usuário - REMOVIDO
+        # A coluna users.telefone não existe no schema atual
         
         # Se nada foi encontrado, retornar lista vazia
         print(f"[DEBUG] Nenhum WhatsApp encontrado para usuário {user_id}")
@@ -2139,61 +2099,76 @@ def api_update_user_whatsapp(user_id):
         import re
         
         def validar_whatsapp_backend(numero):
-            """Valida formato do WhatsApp no backend"""
+            """Valida e normaliza número BR. Aceita formatos nacionais (10/11) e E.164 (+55...)."""
             if not numero:
                 return False, "Número não fornecido"
-            
-            # Remover formatação
-            numero_limpo = re.sub(r'[\(\)\s\-]', '', numero)
-            
-            # Verificar se tem exatamente 11 dígitos
-            if not re.match(r'^\d{11}$', numero_limpo):
-                return False, "Número deve ter 11 dígitos no formato (dd)xxxxxxxxx"
-            
-            # Verificar DDD válido (11-99)
-            ddd = int(numero_limpo[:2])
+
+            # Remover tudo que não for dígito (inclui +, espaços, (), -)
+            raw_digits = re.sub(r'\D', '', numero)
+            if not raw_digits:
+                return False, "Número inválido"
+
+            # Tratar código do país (55) se presente
+            if raw_digits.startswith('55') and len(raw_digits) in (12, 13):
+                numero_br = raw_digits[2:]
+            else:
+                numero_br = raw_digits
+
+            # Agora esperamos 10 ou 11 dígitos (DD + 8/9)
+            if len(numero_br) not in (10, 11):
+                return False, "Número deve ter 10 ou 11 dígitos após o DDD"
+
+            # Validar DDD
+            try:
+                ddd = int(numero_br[:2])
+            except ValueError:
+                return False, "DDD inválido"
             if ddd < 11 or ddd > 99:
                 return False, f"DDD {ddd} inválido. Use DDDs entre 11 e 99"
-            
-            # Verificar se terceiro dígito é 9 (celular)
-            if numero_limpo[2] != '9':
-                return False, "Terceiro dígito deve ser 9 (número de celular)"
-            
-            return True, numero_limpo
+
+            # Sem obrigatoriedade do dígito 9
+            return True, numero_br
         
         data = request.get_json()
         whatsapp_list = data.get('whatsapp', [])
-        
+
         print(f"[DEBUG] Dados recebidos para WhatsApp: {data}")
         print(f"[DEBUG] Lista de WhatsApp extraída: {whatsapp_list}")
         print(f"[DEBUG] Atualizando WhatsApp para usuário {user_id}: {whatsapp_list}")
-        
-        # Validar todos os números antes de processar
+
+        # Validar todos os números antes de processar e normalizar para E.164 (+55...)
         numeros_validados = []
         for whatsapp in whatsapp_list:
             numero = whatsapp.get('numero')
-            if numero:
-                valido, resultado = validar_whatsapp_backend(numero)
-                if not valido:
-                    return jsonify({
-                        'success': False, 
-                        'message': f'WhatsApp inválido ({numero}): {resultado}'
-                    }), 400
-                
-                numeros_validados.append({
-                    'numero': resultado,  # número limpo
-                    'descricao': whatsapp.get('nome', ''),  # usar descricao em vez de nome
-                    'tipo': whatsapp.get('tipo', 'pessoal'),
-                    'principal': whatsapp.get('principal', False)
-                })
+            if not numero:
+                # Ignorar entradas vazias
+                continue
+            valido, resultado = validar_whatsapp_backend(numero)
+            if not valido:
+                return jsonify({
+                    'success': False,
+                    'message': f'WhatsApp inválido ({numero}): {resultado}'
+                }), 400
+            # resultado = número BR limpo (10/11). Normalizar para E.164
+            numero_e164 = f"+55{resultado}"
+            numero_formatado = f"({resultado[:2]}){resultado[2:]}"
+            current_app.logger.debug(f"[WHATSAPP VALID] {numero} -> {resultado} -> {numero_e164} (display: {numero_formatado})")
+
+            numeros_validados.append({
+                'numero': numero_e164,  # salvar SEMPRE em E.164
+                'descricao': whatsapp.get('nome', ''),  # usar descricao em vez de nome
+                'tipo': whatsapp.get('tipo', 'pessoal'),
+                'principal': whatsapp.get('principal', False)
+            })
         
-        # Primeiro, desativar todos os WhatsApp existentes (se a tabela existir)
+        # Primeiro, DELETAR todos os WhatsApp existentes (exclusão física)
         try:
-            deactivate_result = supabase_admin.table('user_whatsapp')\
-                .update({'ativo': False})\
+            delete_result = supabase_admin.table('user_whatsapp')\
+                .delete()\
                 .eq('user_id', user_id)\
                 .execute()
-            print(f"[DEBUG] WhatsApp existentes desativados: {deactivate_result.data}")
+            deleted_count = len(delete_result.data) if delete_result.data else 0
+            print(f"[DEBUG] {deleted_count} WhatsApp existentes deletados fisicamente para usuário {user_id}")
         except Exception as table_error:
             print(f"[DEBUG] Tabela user_whatsapp pode não existir: {table_error}")
             # Tentar criar a tabela automaticamente
@@ -2223,115 +2198,56 @@ def api_update_user_whatsapp(user_id):
         whatsapp_inseridos = 0
         for whatsapp_validado in numeros_validados:
             try:
-                # Tentar diferentes estruturas de tabela até encontrar a correta
-                possible_inserts = [
-                    # Estrutura 1: Completa com todos os campos
-                    {
-                        'user_id': user_id,
-                        'numero': whatsapp_validado['numero'],
-                        'nome': whatsapp_validado.get('descricao', ''),
-                        'tipo': whatsapp_validado.get('tipo', 'pessoal'),
-                        'principal': whatsapp_validado['principal'],
-                        'ativo': True
-                    },
-                    # Estrutura 2: Sem campo nome/descricao
-                    {
-                        'user_id': user_id,
-                        'numero': whatsapp_validado['numero'],
-                        'tipo': whatsapp_validado.get('tipo', 'pessoal'),
-                        'principal': whatsapp_validado['principal'],
-                        'ativo': True
-                    },
-                    # Estrutura 3: Mínima - apenas campos essenciais
-                    {
-                        'user_id': user_id,
-                        'numero': whatsapp_validado['numero'],
-                        'principal': whatsapp_validado['principal']
-                    },
-                    # Estrutura 4: Alternativos de nome de campo
-                    {
-                        'user_id': user_id,
-                        'telefone': whatsapp_validado['numero'],
-                        'principal': whatsapp_validado['principal']
-                    },
-                    # Estrutura 5: Campo whatsapp em vez de numero
-                    {
-                        'user_id': user_id,
-                        'whatsapp': whatsapp_validado['numero'],
-                        'principal': whatsapp_validado['principal']
-                    }
-                ]
-                
-                success = False
-                for i, insert_data in enumerate(possible_inserts, 1):
-                    try:
-                        print(f"[DEBUG] Tentativa {i} de inserir WhatsApp: {insert_data}")
-                        insert_result = supabase_admin.table('user_whatsapp')\
-                            .insert(insert_data)\
-                            .execute()
-                        print(f"[DEBUG] WhatsApp inserido com sucesso (estrutura {i}): {insert_result.data}")
-                        whatsapp_inseridos += 1
-                        success = True
-                        break
-                    except Exception as structure_error:
-                        error_msg = str(structure_error)
-                        print(f"[DEBUG] Tentativa {i} falhou: {error_msg}")
-                        
-                        # Se a tabela não existe, tentar na tabela de telefones do usuário
-                        if 'does not exist' in error_msg.lower() or 'user_whatsapp' in error_msg:
-                            print(f"[DEBUG] Tabela user_whatsapp não existe, tentando salvar em users.telefone")
-                            try:
-                                # Atualizar campo telefone do usuário
-                                user_update = supabase_admin.table('users')\
-                                    .update({'telefone': whatsapp_validado['numero']})\
-                                    .eq('id', user_id)\
-                                    .execute()
-                                print(f"[DEBUG] WhatsApp salvo no campo telefone do usuário: {user_update.data}")
-                                whatsapp_inseridos += 1
-                                success = True
-                                break
-                            except Exception as telefone_error:
-                                print(f"[DEBUG] Erro ao salvar em telefone: {telefone_error}")
-                        
-                        continue
-                
-                if not success:
-                    print(f"[DEBUG] Todas as tentativas falharam para WhatsApp: {whatsapp_validado}")
-                    
-            except Exception as insert_error:
-                print(f"[DEBUG] Erro geral ao inserir WhatsApp: {insert_error}")
-                continue
-        
-        # Se nenhum WhatsApp foi inserido por problemas de tabela, usar campo telefone como fallback
-        if whatsapp_inseridos == 0 and len(numeros_validados) > 0:
-            try:
-                # Como fallback, salvar o primeiro WhatsApp no campo telefone do usuário
-                primeiro_whatsapp = numeros_validados[0]['numero']
-                print(f"[DEBUG] Usando fallback: salvando WhatsApp no campo telefone do usuário")
-                
-                user_update = supabase_admin.table('users')\
-                    .update({'telefone': primeiro_whatsapp})\
-                    .eq('id', user_id)\
+                # Verificar se já existe esse número para o usuário (prevenção adicional)
+                existing_check = supabase_admin.table('user_whatsapp')\
+                    .select('id')\
+                    .eq('user_id', user_id)\
+                    .eq('numero', whatsapp_validado['numero'])\
                     .execute()
                 
-                print(f"[DEBUG] WhatsApp salvo como telefone do usuário: {user_update.data}")
+                if existing_check.data:
+                    print(f"[DEBUG] WhatsApp {whatsapp_validado['numero']} já existe para usuário {user_id}, pulando...")
+                    continue
                 
-                return jsonify({
-                    'success': True, 
-                    'message': f'WhatsApp validados e salvos (usando campo telefone temporariamente). Total: {len(numeros_validados)}',
-                    'validated_numbers': [w['numero'] for w in numeros_validados],
-                    'fallback_used': True,
-                    'note': 'Tabela user_whatsapp não existe. Execute o script SQL em sql/create_user_whatsapp_table.sql'
-                })
+                # Estrutura principal baseada no schema fornecido
+                insert_data = {
+                    'user_id': user_id,
+                    'numero': whatsapp_validado['numero'],
+                    'nome': whatsapp_validado.get('descricao', ''),
+                    'tipo': whatsapp_validado.get('tipo', 'pessoal'),
+                    'principal': whatsapp_validado['principal'],
+                    'ativo': True
+                }
                 
-            except Exception as fallback_error:
-                print(f"[DEBUG] Erro no fallback: {fallback_error}")
-                return jsonify({
-                    'success': True, 
-                    'message': f'WhatsApp validados com sucesso mas não puderam ser salvos (tabela não existe). Total validados: {len(numeros_validados)}',
-                    'validated_numbers': [w['numero'] for w in numeros_validados],
-                    'error': 'Tabela user_whatsapp não existe. Execute o script SQL em sql/create_user_whatsapp_table.sql'
-                })
+                print(f"[DEBUG] Inserindo WhatsApp: {insert_data}")
+                insert_result = supabase_admin.table('user_whatsapp')\
+                    .insert(insert_data)\
+                    .execute()
+                
+                if insert_result.data:
+                    print(f"[DEBUG] WhatsApp inserido com sucesso: {insert_result.data[0]}")
+                    whatsapp_inseridos += 1
+                else:
+                    print(f"[DEBUG] Falha ao inserir WhatsApp: {whatsapp_validado}")
+                    
+            except Exception as insert_error:
+                error_msg = str(insert_error)
+                print(f"[DEBUG] Erro ao inserir WhatsApp {whatsapp_validado['numero']}: {error_msg}")
+                
+                # Se a tabela não existe, informar erro específico
+                if 'does not exist' in error_msg.lower() or 'user_whatsapp' in error_msg:
+                    print(f"[DEBUG] Tabela user_whatsapp não existe")
+                    break
+                continue
+        
+        # Se nenhum WhatsApp foi inserido por problemas de tabela, retornar erro
+        if whatsapp_inseridos == 0 and len(numeros_validados) > 0:
+            return jsonify({
+                'success': False,
+                'message': f'WhatsApp validados mas não puderam ser salvos. Verifique se a tabela user_whatsapp existe.',
+                'validated_numbers': [w['numero'] for w in numeros_validados],
+                'error': 'Tabela user_whatsapp não encontrada ou erro de estrutura'
+            }), 500
         
         return jsonify({
             'success': True, 

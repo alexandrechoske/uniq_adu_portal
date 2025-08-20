@@ -1090,11 +1090,12 @@ function initializeWhatsappEventListeners() {
             }
         });
         
-        // Validação em tempo real
+    // Validação em tempo real
         whatsappNumeroInput.addEventListener('blur', function(e) {
             const value = e.target.value.trim();
             if (value) {
-                const validation = validateWhatsappNumber(value);
+        const validation = validateWhatsappNumber(value);
+        console.log('[USUARIOS][WHATSAPP] Blur validação:', { input: value, validation });
                 if (!validation.valid) {
                     e.target.style.borderColor = 'var(--danger-color)';
                     e.target.title = validation.message;
@@ -1315,46 +1316,40 @@ function updateEmpresasCount() {
 
 /**
  * Valida formato do número WhatsApp
- * Formato esperado: (dd)xxxxxxxxx ou ddxxxxxxxxx (11 dígitos)
+ * Agora aceita 10 OU 11 dígitos (com ou sem o 9)
+ * Exemplos válidos: (47)33059070, 4733059070, (11)987654321, 11987654321
  */
 function validateWhatsappNumber(numero) {
-    if (!numero) return false;
-    
+    if (!numero) return { valid: false, message: 'Informe um número', exemplo: 'Ex.: (47)33059070' };
+
     // Remover formatação (parênteses, espaços, traços)
     const numeroLimpo = numero.replace(/[\(\)\s\-]/g, '');
-    
-    // Verificar se tem exatamente 11 dígitos
-    if (!/^\d{11}$/.test(numeroLimpo)) {
+
+    // Deve ter 10 ou 11 dígitos
+    if (!/^\d{10,11}$/.test(numeroLimpo)) {
         return {
             valid: false,
-            message: 'Número deve ter 11 dígitos no formato: (dd)xxxxxxxxx',
-            exemplo: 'Exemplo: (11)987654321 ou 11987654321'
+            message: 'Número deve ter 10 ou 11 dígitos',
+            exemplo: 'Ex.: (47)33059070 ou (11)987654321'
         };
     }
-    
-    // Verificar se os dois primeiros dígitos são DDD válido (11-99)
-    const ddd = parseInt(numeroLimpo.substring(0, 2));
-    if (ddd < 11 || ddd > 99) {
+
+    // DDD válido (11-99)
+    const ddd = parseInt(numeroLimpo.substring(0, 2), 10);
+    if (isNaN(ddd) || ddd < 11 || ddd > 99) {
         return {
             valid: false,
-            message: 'DDD deve estar entre 11 e 99',
-            exemplo: 'Exemplo: (11)987654321 ou 11987654321'
+            message: 'DDD inválido (use 11 a 99)',
+            exemplo: 'Ex.: (47)33059070'
         };
     }
-    
-    // Verificar se o terceiro dígito é 9 (celular)
-    if (numeroLimpo[2] !== '9') {
-        return {
-            valid: false,
-            message: 'Número deve ser de celular (terceiro dígito deve ser 9)',
-            exemplo: 'Exemplo: (11)987654321 ou 11987654321'
-        };
-    }
-    
+
+    // Formatar como (DD)resto mantendo a quantidade de dígitos informada
+    const resto = numeroLimpo.substring(2);
     return {
         valid: true,
-        numeroLimpo: numeroLimpo,
-        numeroFormatado: `(${numeroLimpo.substring(0, 2)})${numeroLimpo.substring(2)}`
+        numeroLimpo,
+        numeroFormatado: `(${numeroLimpo.substring(0, 2)})${resto}`
     };
 }
 
@@ -1374,6 +1369,7 @@ function handleWhatsappAdd() {
     // Validar formato do número
     const validation = validateWhatsappNumber(numeroInput.value.trim());
     if (!validation.valid) {
+        console.warn('[USUARIOS][WHATSAPP] Validação falhou ao adicionar:', validation);
         showNotification(
             `Formato inválido: ${validation.message}. ${validation.exemplo}`, 
             NOTIFICATION_TYPES.ERROR
@@ -1381,6 +1377,7 @@ function handleWhatsappAdd() {
         numeroInput.focus();
         return;
     }
+    console.log('[USUARIOS][WHATSAPP] Número validado para adicionar:', validation);
     
     const whatsapp = {
         id: Date.now(), // ID temporário para novos registros
@@ -1617,19 +1614,14 @@ async function saveUserEmpresas(userId) {
 async function saveUserWhatsapp(userId) {
     try {
         console.log('[USUARIOS] Salvando WhatsApp do usuário:', userId);
-        
-        if (appState.originalWhatsapp.length === 0) {
-            console.log('[USUARIOS] Nenhum WhatsApp para salvar');
-            return Promise.resolve();
-        }
-        
-        const whatsappData = appState.originalWhatsapp.map(w => ({
+    // Sempre enviar para que remoções sejam persistidas (lista vazia também)
+    const whatsappData = appState.originalWhatsapp.map(w => ({
             nome: w.nome,
             numero: w.numero,
             tipo: w.tipo,
             principal: w.principal
         }));
-        
+    console.log('[USUARIOS] Payload WhatsApp a enviar:', whatsappData);
         const response = await apiRequest(`/api/user/${userId}/whatsapp`, 'POST', {
             whatsapp: whatsappData
         });
