@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Executivo Financeiro - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('fin_dashboard_executivo.static', filename='css/dashboard_executivo.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            
+<nav class="breadcrumb">
+    
+        <div class="breadcrumb-item">
+            
+                <i class="mdi mdi-view-dashboard breadcrumb-icon"></i>
+            
+            
+                <span>Menu Principal</span>
+            
+        </div>
+        
+    
+</nav>
+
+        </div>
+    </div>
+    
+    <!-- Conteúdo Principal -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="mdi mdi-chart-line"></i>
+                Dashboard Executivo Financeiro
+            </h1>
+            <p class="page-description">
+                Visão executiva completa dos indicadores financeiros da empresa
+            </p>
+        </div>
+        
+        <!-- Conteúdo será desenvolvido aqui -->
+        <div class="content-placeholder">
+            <div class="placeholder-card">
+                <i class="mdi mdi-chart-line placeholder-icon"></i>
+                <h3>Dashboard Executivo Financeiro</h3>
+                <p>Esta página será desenvolvida com gráficos e KPIs financeiros executivos.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.content-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 2rem;
+}
+
+.placeholder-card {
+    text-align: center;
+    background: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+}
+
+.placeholder-icon {
+    font-size: 4rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+}
+
+.placeholder-card h3 {
+    color: var(--color-text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.placeholder-card p {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.page-title i {
+    color: var(--color-primary);
+}
+
+.page-description {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+    margin: 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('fin_dashboard_executivo.static', filename='js/dashboard_executivo.js') }}"></script>
+{% endblock %}

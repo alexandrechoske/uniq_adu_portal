@@ -99,6 +99,9 @@ from routes.documents import documents_bp
 # Import export_relatorios blueprint
 from modules.export_relatorios.routes import export_relatorios_bp
 
+# Import financeiro blueprint and registration function
+from modules.financeiro.routes import register_financeiro_blueprints
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -154,6 +157,9 @@ app.register_blueprint(dash_importacoes_resumido_bp)  # Dashboard Importações 
 
 # Register export_relatorios blueprint (nova tela de exportação de relatórios)
 app.register_blueprint(export_relatorios_bp)
+
+# Register financeiro blueprints (módulo financeiro completo)
+register_financeiro_blueprints(app)
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)

@@ -279,6 +279,24 @@
             pointer-events: none;
         }
 
+        /* Submenu Financeiro - mesmo padrão do Analytics */
+        .financeiro-submenu {
+            position: fixed;
+            left: 16rem;
+            top: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            min-width: 180px;
+            z-index: 50000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-10px);
+            transition: all 0.2s ease;
+            pointer-events: none;
+        }
+
         /* Manter submenu aberto com delay para facilitar navegação */
         /* REMOVIDO: transition-delay: 0ms !important; */
         .sidebar-item-wrapper:hover .analytics-submenu,
@@ -288,6 +306,15 @@
             transform: translateX(0) !important;
             pointer-events: auto !important;
             /* Removida a linha transition-delay: 0ms !important; daqui */
+        }
+
+        /* Hover para submenu Financeiro */
+        .sidebar-item-wrapper:hover .financeiro-submenu,
+        .financeiro-submenu:hover {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateX(0) !important;
+            pointer-events: auto !important;
         }
 
         /* Criar uma "ponte" invisível entre o item e o submenu */
@@ -343,6 +370,18 @@
             pointer-events: auto;
         }
 
+        /* Financeiro submenu colapsado */
+        .sidebar.collapsed .financeiro-submenu {
+            left: 4rem;
+            top: auto;
+            transform: translateY(-50%) translateX(-15px);
+        }
+
+        .sidebar.collapsed .sidebar-item-wrapper:hover .financeiro-submenu {
+            transform: translateY(-50%) translateX(0);
+            pointer-events: auto;
+        }
+
         /* Estilos de navegação da Sidebar */
         #sidebar-nav {
             overflow: visible !important;
@@ -389,6 +428,13 @@
 
             /* Submenu em mobile */
             .analytics-submenu {
+                position: absolute !important;
+                left: calc(100% + 8px) !important;
+                top: 0 !important;
+                z-index: 50001 !important;
+            }
+
+            .financeiro-submenu {
                 position: absolute !important;
                 left: calc(100% + 8px) !important;
                 top: 0 !important;
@@ -786,6 +832,7 @@
                 <span class="sidebar-text">Exportação</span>
             </a>
 
+
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
             <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
             <a href="{{ url_for('conferencia.index') }}"
@@ -837,7 +884,7 @@
                 </a> -->
 
                 <!-- Analytics Dashboard -->
-                <div class="sidebar-item-wrapper">
+                <div class="sidebar-item-wrapper" id="analytics-wrapper">
                     <a href="{{ url_for('analytics.analytics_dashboard') }}"
                        class="sidebar-item {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
                        title="Analytics Dashboard">
@@ -891,15 +938,15 @@
     <!-- Script para posicionamento dinâmico do submenu Analytics -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const analyticsWrapper = document.querySelector('.sidebar-item-wrapper');
+            // Analytics submenu
+            const analyticsWrapper = document.getElementById('analytics-wrapper');
             const analyticsSubmenu = document.querySelector('.analytics-submenu');
-            let hoverTimeout;
+            let analyticsHoverTimeout;
 
             if (analyticsWrapper && analyticsSubmenu) {
-
-                // Função para mostrar submenu
-                function showSubmenu() {
-                    clearTimeout(hoverTimeout);
+                // Função para mostrar submenu Analytics
+                function showAnalyticsSubmenu() {
+                    clearTimeout(analyticsHoverTimeout);
                     const rect = analyticsWrapper.getBoundingClientRect();
                     const sidebar = document.getElementById('sidebar');
                     const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
@@ -920,9 +967,9 @@
                     analyticsSubmenu.style.transform = 'translateX(0)';
                 }
 
-                // Função para esconder submenu com delay
-                function hideSubmenu() {
-                    hoverTimeout = setTimeout(() => {
+                // Função para esconder submenu Analytics com delay
+                function hideAnalyticsSubmenu() {
+                    analyticsHoverTimeout = setTimeout(() => {
                         analyticsSubmenu.style.opacity = '0';
                         analyticsSubmenu.style.visibility = 'hidden';
                         analyticsSubmenu.style.pointerEvents = 'none';
@@ -931,16 +978,68 @@
                 }
 
                 // Event listeners para o wrapper do Analytics
-                analyticsWrapper.addEventListener('mouseenter', showSubmenu);
-                analyticsWrapper.addEventListener('mouseleave', hideSubmenu);
+                analyticsWrapper.addEventListener('mouseenter', showAnalyticsSubmenu);
+                analyticsWrapper.addEventListener('mouseleave', hideAnalyticsSubmenu);
 
                 // Event listeners para o submenu (cancelar ocultação)
                 analyticsSubmenu.addEventListener('mouseenter', function() {
-                    clearTimeout(hoverTimeout);
-                    showSubmenu();
+                    clearTimeout(analyticsHoverTimeout);
+                    showAnalyticsSubmenu();
                 });
 
-                analyticsSubmenu.addEventListener('mouseleave', hideSubmenu);
+                analyticsSubmenu.addEventListener('mouseleave', hideAnalyticsSubmenu);
+            }
+
+            // Financeiro submenu
+            const financeiroWrapper = document.getElementById('financeiro-wrapper');
+            const financeiroSubmenu = document.querySelector('.financeiro-submenu');
+            let financeiroHoverTimeout;
+
+            if (financeiroWrapper && financeiroSubmenu) {
+                // Função para mostrar submenu Financeiro
+                function showFinanceiroSubmenu() {
+                    clearTimeout(financeiroHoverTimeout);
+                    const rect = financeiroWrapper.getBoundingClientRect();
+                    const sidebar = document.getElementById('sidebar');
+                    const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+
+                    if (isCollapsed) {
+                        // Sidebar colapsada: posicionar como tooltip
+                        financeiroSubmenu.style.left = '4rem';
+                        financeiroSubmenu.style.top = rect.top + 'px';
+                    } else {
+                        // Sidebar expandida: posicionar ao lado
+                        financeiroSubmenu.style.left = '16rem';
+                        financeiroSubmenu.style.top = rect.top + 'px';
+                    }
+
+                    financeiroSubmenu.style.opacity = '1';
+                    financeiroSubmenu.style.visibility = 'visible';
+                    financeiroSubmenu.style.pointerEvents = 'auto';
+                    financeiroSubmenu.style.transform = 'translateX(0)';
+                }
+
+                // Função para esconder submenu Financeiro com delay
+                function hideFinanceiroSubmenu() {
+                    financeiroHoverTimeout = setTimeout(() => {
+                        financeiroSubmenu.style.opacity = '0';
+                        financeiroSubmenu.style.visibility = 'hidden';
+                        financeiroSubmenu.style.pointerEvents = 'none';
+                        financeiroSubmenu.style.transform = 'translateX(-10px)';
+                    }, 150); // Delay de 150ms para dar tempo de mover o mouse
+                }
+
+                // Event listeners para o wrapper do Financeiro
+                financeiroWrapper.addEventListener('mouseenter', showFinanceiroSubmenu);
+                financeiroWrapper.addEventListener('mouseleave', hideFinanceiroSubmenu);
+
+                // Event listeners para o submenu (cancelar ocultação)
+                financeiroSubmenu.addEventListener('mouseenter', function() {
+                    clearTimeout(financeiroHoverTimeout);
+                    showFinanceiroSubmenu();
+                });
+
+                financeiroSubmenu.addEventListener('mouseleave', hideFinanceiroSubmenu);
             }
         });
     </script>
