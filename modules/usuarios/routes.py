@@ -7,7 +7,86 @@ import uuid
 import datetime
 import json
 import traceback
+import os
 from services.retry_utils import run_with_retries
+from services.webhook_service import notify_new_whatsapp_number
+
+def verificar_numero_whatsapp_unico(numero, user_id_excluir=None):
+    """
+    Verifica se um número WhatsApp já está cadastrado no sistema para outro usuário
+    
+    Args:
+        numero: Número WhatsApp a verificar (qualquer formato)
+        user_id_excluir: ID do usuário a excluir da verificação (para edição)
+    
+    Returns:
+        tuple: (is_unique, conflicting_user_info)
+    """
+    try:
+        # Normalizar número para E.164
+        from services.webhook_service import webhook_service
+        phone_numbers = webhook_service._normalize_phone_number(numero)
+        numero_e164 = phone_numbers['e164']
+        
+        # Buscar número no sistema (todos os formatos possíveis)
+        query = supabase_admin.table('user_whatsapp').select(
+            'user_id, numero, users!inner(name, email)'
+        ).eq('numero', numero_e164)
+        
+        # Excluir usuário específico se fornecido (para edições)
+        if user_id_excluir:
+            query = query.neq('user_id', user_id_excluir)
+        
+        existing = query.execute()
+        
+        if existing.data:
+            # Número já existe para outro usuário
+            conflicting_user = existing.data[0]
+            user_info = {
+                'user_id': conflicting_user['user_id'],
+                'name': conflicting_user['users']['name'],
+                'email': conflicting_user['users']['email'],
+                'numero': conflicting_user['numero']
+            }
+            return False, user_info
+        
+        return True, None
+        
+    except Exception as e:
+        print(f"[ERRO] Falha ao verificar unicidade do número {numero}: {str(e)}")
+        # Em caso de erro, assumir que é único para não bloquear operação
+        return True, None
+
+def validar_whatsapp_backend(numero):
+    """Valida e normaliza número BR. Aceita formatos nacionais (10/11) e E.164 (+55...)."""
+    if not numero:
+        return False, "Número não fornecido"
+
+    # Remover tudo que não for dígito (inclui +, espaços, (), -)
+    raw_digits = re.sub(r'\D', '', numero)
+    if not raw_digits:
+        return False, "Número inválido"
+
+    # Tratar código do país (55) se presente
+    if raw_digits.startswith('55') and len(raw_digits) in (12, 13):
+        numero_br = raw_digits[2:]
+    else:
+        numero_br = raw_digits
+
+    # Agora esperamos 10 ou 11 dígitos (DD + 8/9)
+    if len(numero_br) not in (10, 11):
+        return False, "Número deve ter 10 ou 11 dígitos após o DDD"
+
+    # Validar DDD
+    try:
+        ddd = int(numero_br[:2])
+    except ValueError:
+        return False, "DDD inválido"
+    if ddd < 11 or ddd > 99:
+        return False, f"DDD {ddd} inválido. Use DDDs entre 11 e 99"
+
+    # Retornar formato E.164
+    return True, f"+55{numero_br}"
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('usuarios', __name__, 
@@ -1565,6 +1644,66 @@ def clear_cache():
             'error': str(e)
         }), 500
 
+@bp.route('/test-webhook', methods=['POST'])
+def test_webhook():
+    """
+    Endpoint de teste para validar as correções de WhatsApp
+    Testa: unicidade, formatos de número e webhook
+    """
+    try:
+        # Verificar se é uma requisição de teste (bypass)
+        api_bypass_key = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
+        provided_key = request.headers.get('X-API-Key')
+        
+        if provided_key != api_bypass_key:
+            # Se não tem bypass, exigir login normal
+            if not session.get('user'):
+                return jsonify({'success': False, 'message': 'Acesso negado - login requerido'}), 403
+            if session.get('user', {}).get('role') not in ['admin']:
+                return jsonify({'success': False, 'message': 'Acesso negado - admin requerido'}), 403
+        
+        data = request.get_json()
+        numero = data.get('numero', '')
+        
+        if not numero:
+            return jsonify({'success': False, 'message': 'Número obrigatório'}), 400
+        
+        # Testar validação e normalização
+        valido, resultado = validar_whatsapp_backend(numero)
+        
+        if not valido:
+            return jsonify({
+                'success': False, 
+                'message': f'Número inválido: {numero}',
+                'numero_original': numero,
+                'erro_validacao': resultado
+            }), 400
+        
+        numero_validado = resultado
+        
+        # Testar verificação de unicidade
+        is_unique, conflicting_user = verificar_numero_whatsapp_unico(numero_validado)
+        
+        # Testar webhook (sem salvar no banco)
+        webhook_result = notify_new_whatsapp_number(numero_validado, test_mode=True)
+        
+        return jsonify({
+            'success': True,
+            'numero_original': numero,
+            'numero_validado': numero_validado,
+            'is_unique': is_unique,
+            'conflicting_user': conflicting_user,
+            'webhook_test': webhook_result,
+            'message': 'Teste executado com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"[USUARIOS] Erro no teste de webhook: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'message': f'Erro no teste: {str(e)}'
+        }), 500
+
 # ====================================================
 # NOVAS ROTAS PARA RELACIONAMENTOS E WHATSAPP
 # ====================================================
@@ -1743,7 +1882,7 @@ def listar_whatsapp(user_id):
 @login_required
 @role_required(['admin'])
 def adicionar_whatsapp(user_id):
-    """Adiciona número WhatsApp a um usuário"""
+    """Adiciona número WhatsApp a um usuário com verificação de unicidade"""
     try:
         data = request.get_json()
         
@@ -1761,20 +1900,32 @@ def adicionar_whatsapp(user_id):
                 'error': 'Número e nome do contato são obrigatórios'
             }), 400
         
-        # Validar formato do número (internacional)
-        if not re.match(r'^\+[1-9]\d{1,14}$', numero_whatsapp):
+        # Validar e normalizar formato do número
+        valido, resultado = validar_whatsapp_backend(numero_whatsapp)
+        if not valido:
             return jsonify({
                 'success': False,
-                'error': 'Formato do número inválido. Use formato internacional (+5511999999999)'
+                'error': f'Formato do número inválido: {resultado}'
             }), 400
         
-        # Verificar se número já existe para este usuário
-        existing = supabase_admin.from_('user_whatsapp').select('id').eq('user_id', user_id).eq('numero', numero_whatsapp).execute()
+        numero_e164 = resultado  # já está em formato E.164
+        
+        # VERIFICAR UNICIDADE GLOBAL DO NÚMERO
+        is_unique, conflicting_user = verificar_numero_whatsapp_unico(numero_e164, user_id)
+        if not is_unique:
+            return jsonify({
+                'success': False,
+                'error': f'Este número já está cadastrado para o usuário {conflicting_user["name"]} ({conflicting_user["email"]}). Um número só pode pertencer a um usuário.',
+                'conflicting_user': conflicting_user
+            }), 409  # Conflict
+        
+        # Verificar se número já existe para este usuário específico
+        existing = supabase_admin.from_('user_whatsapp').select('id').eq('user_id', user_id).eq('numero', numero_e164).execute()
         
         if existing.data:
             return jsonify({
                 'success': False,
-                'error': 'Este número já está cadastrado para o usuário'
+                'error': 'Este número já está cadastrado para este usuário'
             }), 400
         
         # Se definir como principal, remover principal dos outros
@@ -1784,7 +1935,7 @@ def adicionar_whatsapp(user_id):
         # Inserir novo WhatsApp
         whatsapp_data = {
             'user_id': user_id,
-            'numero': numero_whatsapp,
+            'numero': numero_e164,
             'nome': nome_contato,
             'tipo': tipo_numero,
             'principal': principal,
@@ -1795,6 +1946,30 @@ def adicionar_whatsapp(user_id):
             whatsapp_data['cliente_sistema_id'] = cliente_sistema_id
         
         result = supabase_admin.from_('user_whatsapp').insert(whatsapp_data).execute()
+        
+        print(f"[USUARIOS] ✅ Novo WhatsApp adicionado para usuário {user_id}: {numero_e164}")
+        
+        # Enviar webhook para N8N notificando sobre novo número
+        try:
+            # Buscar dados do usuário para o webhook
+            user_data_response = supabase_admin.table('users').select('id, name, email, role').eq('id', user_id).single().execute()
+            user_data = user_data_response.data if user_data_response.data else None
+            
+            # Notificar N8N
+            webhook_success = notify_new_whatsapp_number(
+                numero=numero_e164,
+                user_data=user_data,
+                source="usuarios_module"
+            )
+            
+            if webhook_success:
+                print(f"[USUARIOS] ✅ Webhook N8N enviado com sucesso para número {numero_e164}")
+            else:
+                print(f"[USUARIOS] ⚠️ Falha ao enviar webhook N8N para número {numero_e164}")
+                
+        except Exception as webhook_error:
+            print(f"[USUARIOS] ❌ Erro ao enviar webhook: {str(webhook_error)}")
+            # Não falhar a operação por causa do webhook
         
         return jsonify({
             'success': True,
@@ -2094,153 +2269,114 @@ def api_update_user_empresas(user_id):
 @login_required
 @role_required(['admin'])
 def api_update_user_whatsapp(user_id):
-    """API para atualizar WhatsApp do usuário"""
+    """API para atualizar WhatsApp do usuário com verificação de unicidade"""
     try:
-        import re
-        
-        def validar_whatsapp_backend(numero):
-            """Valida e normaliza número BR. Aceita formatos nacionais (10/11) e E.164 (+55...)."""
-            if not numero:
-                return False, "Número não fornecido"
-
-            # Remover tudo que não for dígito (inclui +, espaços, (), -)
-            raw_digits = re.sub(r'\D', '', numero)
-            if not raw_digits:
-                return False, "Número inválido"
-
-            # Tratar código do país (55) se presente
-            if raw_digits.startswith('55') and len(raw_digits) in (12, 13):
-                numero_br = raw_digits[2:]
-            else:
-                numero_br = raw_digits
-
-            # Agora esperamos 10 ou 11 dígitos (DD + 8/9)
-            if len(numero_br) not in (10, 11):
-                return False, "Número deve ter 10 ou 11 dígitos após o DDD"
-
-            # Validar DDD
-            try:
-                ddd = int(numero_br[:2])
-            except ValueError:
-                return False, "DDD inválido"
-            if ddd < 11 or ddd > 99:
-                return False, f"DDD {ddd} inválido. Use DDDs entre 11 e 99"
-
-            # Sem obrigatoriedade do dígito 9
-            return True, numero_br
-        
         data = request.get_json()
         whatsapp_list = data.get('whatsapp', [])
 
-        print(f"[DEBUG] Dados recebidos para WhatsApp: {data}")
-        print(f"[DEBUG] Lista de WhatsApp extraída: {whatsapp_list}")
-        print(f"[DEBUG] Atualizando WhatsApp para usuário {user_id}: {whatsapp_list}")
+        print(f"[USUARIOS] Atualizando WhatsApp para usuário {user_id}: {len(whatsapp_list)} números")
 
-        # Validar todos os números antes de processar e normalizar para E.164 (+55...)
+        # Validar todos os números antes de processar
         numeros_validados = []
-        for whatsapp in whatsapp_list:
+        for i, whatsapp in enumerate(whatsapp_list):
             numero = whatsapp.get('numero')
             if not numero:
-                # Ignorar entradas vazias
-                continue
+                continue  # Ignorar entradas vazias
+                
+            # Validar formato
             valido, resultado = validar_whatsapp_backend(numero)
             if not valido:
                 return jsonify({
                     'success': False,
-                    'message': f'WhatsApp inválido ({numero}): {resultado}'
+                    'message': f'WhatsApp #{i+1} inválido ({numero}): {resultado}'
                 }), 400
-            # resultado = número BR limpo (10/11). Normalizar para E.164
-            numero_e164 = f"+55{resultado}"
-            numero_formatado = f"({resultado[:2]}){resultado[2:]}"
-            current_app.logger.debug(f"[WHATSAPP VALID] {numero} -> {resultado} -> {numero_e164} (display: {numero_formatado})")
+                
+            numero_e164 = resultado  # já está em E.164
+            
+            # VERIFICAR UNICIDADE GLOBAL (excluindo este usuário)
+            is_unique, conflicting_user = verificar_numero_whatsapp_unico(numero_e164, user_id)
+            if not is_unique:
+                return jsonify({
+                    'success': False,
+                    'message': f'O número {numero} já está cadastrado para {conflicting_user["name"]} ({conflicting_user["email"]}). Um número só pode pertencer a um usuário.',
+                    'conflicting_user': conflicting_user
+                }), 409
 
             numeros_validados.append({
-                'numero': numero_e164,  # salvar SEMPRE em E.164
-                'descricao': whatsapp.get('nome', ''),  # usar descricao em vez de nome
+                'numero': numero_e164,
+                'nome': whatsapp.get('nome', ''),
                 'tipo': whatsapp.get('tipo', 'pessoal'),
                 'principal': whatsapp.get('principal', False)
             })
         
-        # Primeiro, DELETAR todos os WhatsApp existentes (exclusão física)
+        # DELETAR todos os WhatsApp existentes (exclusão física)
         try:
             delete_result = supabase_admin.table('user_whatsapp')\
                 .delete()\
                 .eq('user_id', user_id)\
                 .execute()
             deleted_count = len(delete_result.data) if delete_result.data else 0
-            print(f"[DEBUG] {deleted_count} WhatsApp existentes deletados fisicamente para usuário {user_id}")
-        except Exception as table_error:
-            print(f"[DEBUG] Tabela user_whatsapp pode não existir: {table_error}")
-            # Tentar criar a tabela automaticamente
-            try:
-                print("[DEBUG] Tentando criar tabela user_whatsapp...")
-                # Script SQL para criar a tabela
-                create_table_sql = """
-                CREATE TABLE IF NOT EXISTS user_whatsapp (
-                    id SERIAL PRIMARY KEY,
-                    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    numero VARCHAR(15) NOT NULL,
-                    nome VARCHAR(100),
-                    tipo VARCHAR(20) DEFAULT 'pessoal',
-                    principal BOOLEAN DEFAULT FALSE,
-                    ativo BOOLEAN DEFAULT TRUE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                );
-                """
-                # Nota: Supabase não suporta execução de SQL direto via cliente Python
-                # A tabela deve ser criada manualmente no banco
-                print("[DEBUG] Tabela deve ser criada manualmente no banco de dados")
-            except Exception as create_error:
-                print(f"[DEBUG] Erro ao criar tabela: {create_error}")
+            print(f"[USUARIOS] {deleted_count} WhatsApp existentes removidos para usuário {user_id}")
+        except Exception as delete_error:
+            print(f"[USUARIOS] Erro ao deletar WhatsApp existentes: {delete_error}")
         
-        # Inserir novos WhatsApp validados
-        whatsapp_inseridos = 0
+        # Inserir novos WhatsApp validados (apenas os novos, evitando logs duplicados)
+        novos_numeros = []
         for whatsapp_validado in numeros_validados:
             try:
-                # Verificar se já existe esse número para o usuário (prevenção adicional)
-                existing_check = supabase_admin.table('user_whatsapp')\
-                    .select('id')\
-                    .eq('user_id', user_id)\
-                    .eq('numero', whatsapp_validado['numero'])\
-                    .execute()
-                
-                if existing_check.data:
-                    print(f"[DEBUG] WhatsApp {whatsapp_validado['numero']} já existe para usuário {user_id}, pulando...")
-                    continue
-                
-                # Estrutura principal baseada no schema fornecido
                 insert_data = {
                     'user_id': user_id,
                     'numero': whatsapp_validado['numero'],
-                    'nome': whatsapp_validado.get('descricao', ''),
-                    'tipo': whatsapp_validado.get('tipo', 'pessoal'),
+                    'nome': whatsapp_validado['nome'],
+                    'tipo': whatsapp_validado['tipo'],
                     'principal': whatsapp_validado['principal'],
                     'ativo': True
                 }
                 
-                print(f"[DEBUG] Inserindo WhatsApp: {insert_data}")
                 insert_result = supabase_admin.table('user_whatsapp')\
                     .insert(insert_data)\
                     .execute()
                 
                 if insert_result.data:
-                    print(f"[DEBUG] WhatsApp inserido com sucesso: {insert_result.data[0]}")
-                    whatsapp_inseridos += 1
-                else:
-                    print(f"[DEBUG] Falha ao inserir WhatsApp: {whatsapp_validado}")
+                    novo_numero = insert_result.data[0]
+                    novos_numeros.append(novo_numero)
+                    print(f"[USUARIOS] ✅ WhatsApp salvo: {whatsapp_validado['numero']}")
                     
-            except Exception as insert_error:
-                error_msg = str(insert_error)
-                print(f"[DEBUG] Erro ao inserir WhatsApp {whatsapp_validado['numero']}: {error_msg}")
+                    # Enviar webhook APENAS para números realmente novos
+                    try:
+                        user_data_response = supabase_admin.table('users').select('id, name, email, role').eq('id', user_id).single().execute()
+                        user_data = user_data_response.data if user_data_response.data else None
+                        
+                        webhook_success = notify_new_whatsapp_number(
+                            numero=whatsapp_validado['numero'],
+                            user_data=user_data,
+                            source="usuarios_module"
+                        )
+                        
+                        if webhook_success:
+                            print(f"[USUARIOS] ✅ Webhook enviado para {whatsapp_validado['numero']}")
+                        else:
+                            print(f"[USUARIOS] ⚠️ Falha no webhook para {whatsapp_validado['numero']}")
+                            
+                    except Exception as webhook_error:
+                        print(f"[USUARIOS] ❌ Erro no webhook para {whatsapp_validado['numero']}: {webhook_error}")
                 
-                # Se a tabela não existe, informar erro específico
-                if 'does not exist' in error_msg.lower() or 'user_whatsapp' in error_msg:
-                    print(f"[DEBUG] Tabela user_whatsapp não existe")
-                    break
+            except Exception as insert_error:
+                print(f"[USUARIOS] ❌ Erro ao inserir {whatsapp_validado['numero']}: {insert_error}")
                 continue
         
-        # Se nenhum WhatsApp foi inserido por problemas de tabela, retornar erro
+        return jsonify({
+            'success': True,
+            'message': f'{len(novos_numeros)} números WhatsApp salvos com sucesso',
+            'data': novos_numeros
+        })
+        
+    except Exception as e:
+        print(f"[USUARIOS] ❌ Erro ao atualizar WhatsApp: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro interno: {str(e)}'
+        }), 500
         if whatsapp_inseridos == 0 and len(numeros_validados) > 0:
             return jsonify({
                 'success': False,

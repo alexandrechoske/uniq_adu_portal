@@ -15,6 +15,9 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
+    # API Testing Configuration
+    API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
+    
     # Performance Configuration
     QUERY_TIMEOUT = int(os.getenv('QUERY_TIMEOUT', '15'))  # 15 segundos de timeout para queries normais
     GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '120'))  # 120 segundos para processamento IA

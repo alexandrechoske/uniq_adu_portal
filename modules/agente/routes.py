@@ -8,6 +8,45 @@ import traceback
 from datetime import datetime
 import re
 import os
+from services.webhook_service import notify_new_whatsapp_number
+
+def verificar_numero_whatsapp_unico_agente(numero, user_id_excluir=None):
+    """
+    Verifica se um número WhatsApp já está cadastrado no sistema para outro usuário
+    (Versão do módulo agente)
+    """
+    try:
+        # Normalizar número para E.164
+        from services.webhook_service import webhook_service
+        phone_numbers = webhook_service._normalize_phone_number(numero)
+        numero_e164 = phone_numbers['e164']
+        
+        # Buscar número no sistema
+        query = supabase_admin.table('user_whatsapp').select(
+            'user_id, numero, users!inner(name, email)'
+        ).eq('numero', numero_e164)
+        
+        # Excluir usuário específico se fornecido
+        if user_id_excluir:
+            query = query.neq('user_id', user_id_excluir)
+        
+        existing = query.execute()
+        
+        if existing.data:
+            conflicting_user = existing.data[0]
+            user_info = {
+                'user_id': conflicting_user['user_id'],
+                'name': conflicting_user['users']['name'],
+                'email': conflicting_user['users']['email'],
+                'numero': conflicting_user['numero']
+            }
+            return False, user_info
+        
+        return True, None
+        
+    except Exception as e:
+        print(f"[AGENTE] Erro ao verificar unicidade do número {numero}: {str(e)}")
+        return True, None
 
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('agente', __name__, 
@@ -461,17 +500,18 @@ def index():
         print(f"[AGENTE DEBUG] Número formatado: {numero} → {numero_normalizado} → {formatted_numero}")
         
         try:
-            # Verificar se o número já existe
-            existing = supabase.table('user_whatsapp').select('id, user_id').eq('numero', formatted_numero).eq('ativo', True).execute()
+            # VERIFICAR UNICIDADE GLOBAL DO NÚMERO
+            is_unique, conflicting_user = verificar_numero_whatsapp_unico_agente(formatted_numero, user_id)
+            if not is_unique:
+                flash(f'Este número já está cadastrado para {conflicting_user["name"]} ({conflicting_user["email"]}). Um número só pode pertencer a um usuário.', 'error')
+                return redirect(url_for('agente.index'))
+            
+            # Verificar se o número já existe para este usuário específico
+            existing = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('numero', formatted_numero).eq('ativo', True).execute()
             
             if existing.data:
-                existing_user = existing.data[0]['user_id']
-                if existing_user != user_id:
-                    flash('Este número já está cadastrado por outro usuário.', 'error')
-                    return redirect(url_for('agente.index'))
-                else:
-                    flash('Este número já está cadastrado para você.', 'error')
-                    return redirect(url_for('agente.index'))
+                flash('Este número já está cadastrado para você.', 'error')
+                return redirect(url_for('agente.index'))
             
             # Verificar se é o primeiro número (será principal)
             user_numbers = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
@@ -488,7 +528,25 @@ def index():
             }
             
             result = supabase.table('user_whatsapp').insert(data).execute()
-            print(f"[AGENTE DEBUG] Número inserido: {result.data}")
+            print(f"[AGENTE] ✅ Novo WhatsApp adicionado via formulário para usuário {user_id}: {formatted_numero}")
+            
+            # Enviar webhook para N8N
+            try:
+                user_data = session.get('user', {})
+                webhook_success = notify_new_whatsapp_number(
+                    numero=formatted_numero,
+                    user_data=user_data,
+                    source="agente_module"
+                )
+                
+                if webhook_success:
+                    print(f"[AGENTE] ✅ Webhook N8N enviado com sucesso para número {formatted_numero}")
+                else:
+                    print(f"[AGENTE] ⚠️ Falha ao enviar webhook N8N para número {formatted_numero}")
+                    
+            except Exception as webhook_error:
+                print(f"[AGENTE] ❌ Erro ao enviar webhook: {str(webhook_error)}")
+                # Não falhar a operação por causa do webhook
             
             flash('Número WhatsApp adicionado com sucesso!', 'success')
             return redirect(url_for('agente.index'))
@@ -554,38 +612,41 @@ def ajax_add_numero():
             numero_normalizado = normalize_phone(numero)
         except Exception as e:
             return jsonify({'success': False, 'message': f'Número inválido: {e}'})
+        
         # Validar e formatar número
         is_valid, formatted_numero = validate_phone_number(numero_normalizado)
         if not is_valid:
             return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
-        # Verificar se o número já existe (ativo ou inativo)
-        existing_all = supabase.table('user_whatsapp').select('id, user_id, ativo, principal, created_at').eq('numero', formatted_numero).execute()
+        # VERIFICAR UNICIDADE GLOBAL DO NÚMERO
+        is_unique, conflicting_user = verificar_numero_whatsapp_unico_agente(formatted_numero, user_id)
+        if not is_unique:
+            return jsonify({
+                'success': False, 
+                'message': f'Este número já está cadastrado para {conflicting_user["name"]} ({conflicting_user["email"]}). Um número só pode pertencer a um usuário.'
+            })
+        
+        # Verificar se o número já existe para este usuário específico
+        existing_user = supabase.table('user_whatsapp').select('id, ativo').eq('user_id', user_id).eq('numero', formatted_numero).execute()
 
-        if existing_all.data:
-            # Separar por usuário
-            for row in existing_all.data:
-                if row['user_id'] != user_id:
-                    return jsonify({'success': False, 'message': 'Este número já está cadastrado por outro usuário'})
-                if row.get('ativo'):
-                    return jsonify({'success': False, 'message': 'Este número já está cadastrado para você'})
-            # Se chegou aqui, só existem registros inativos do próprio usuário → reativar o mais antigo
-            row = sorted(existing_all.data, key=lambda r: r.get('created_at') or '')[0]
-            numero_id = row['id']
-            # Verificar se usuário possui outros números ativos (antes de reativar)
-            active_others = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
-            has_active = bool(active_others.data)
+        if existing_user.data:
+            existing_record = existing_user.data[0]
+            if existing_record.get('ativo'):
+                return jsonify({'success': False, 'message': 'Este número já está cadastrado para você'})
+            
+            # Se é inativo, reativar
+            numero_id = existing_record['id']
+            user_numbers = supabase.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
+            has_active = bool(user_numbers.data)
+            
             supabase.table('user_whatsapp').update({
                 'ativo': True,
                 'nome': nome,
                 'tipo': tipo,
-                # Se não há outro ativo, torná-lo principal; caso contrário mantém principal anterior
                 'principal': False if has_active else True
             }).eq('id', numero_id).execute()
-            if not has_active:
-                # Garantir unicidade de principal (remover principal de outros, por segurança)
-                supabase.table('user_whatsapp').update({'principal': False}).eq('user_id', user_id).neq('id', numero_id).execute()
-                supabase.table('user_whatsapp').update({'principal': True}).eq('id', numero_id).execute()
+            
+            print(f"[AGENTE] ✅ Número reativado para usuário {user_id}: {formatted_numero}")
             return jsonify({'success': True, 'message': 'Número reativado com sucesso!'})
         
         # Verificar se é o primeiro número (será principal)
@@ -604,11 +665,25 @@ def ajax_add_numero():
         
         result = supabase.table('user_whatsapp').insert(data_insert).execute()
         
-        # Enviar notificação para o N8N
+        print(f"[AGENTE] ✅ Novo WhatsApp adicionado via AJAX para usuário {user_id}: {formatted_numero}")
+        
+        # Enviar notificação para o N8N usando novo serviço
         try:
-            notificar_cadastro_n8n(formatted_numero)
-        except Exception as e:
-            print(f"[WARNING] Erro ao notificar N8N: {str(e)}")
+            user_data = session.get('user', {})
+            webhook_success = notify_new_whatsapp_number(
+                numero=formatted_numero,
+                user_data=user_data,
+                source="agente_module"
+            )
+            
+            if webhook_success:
+                print(f"[AGENTE] ✅ Webhook N8N enviado com sucesso para número {formatted_numero}")
+            else:
+                print(f"[AGENTE] ⚠️ Falha ao enviar webhook N8N para número {formatted_numero}")
+                
+        except Exception as webhook_error:
+            print(f"[AGENTE] ❌ Erro ao enviar webhook: {str(webhook_error)}")
+            # Não falhar a operação por causa do webhook
         
         return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
             
@@ -969,11 +1044,19 @@ def admin_add_numero():
         if not is_valid:
             return jsonify({'success': False, 'message': f'Número inválido: {formatted_numero}'})
         
-        # Verificar se o número já existe
-        existing = supabase_admin.table('user_whatsapp').select('id, user_id').eq('numero', formatted_numero).eq('ativo', True).execute()
+        # VERIFICAR UNICIDADE GLOBAL DO NÚMERO
+        is_unique, conflicting_user = verificar_numero_whatsapp_unico_agente(formatted_numero, user_id)
+        if not is_unique:
+            return jsonify({
+                'success': False, 
+                'message': f'Este número já está cadastrado para {conflicting_user["name"]} ({conflicting_user["email"]}). Um número só pode pertencer a um usuário.'
+            })
+        
+        # Verificar se o número já existe para este usuário específico
+        existing = supabase_admin.table('user_whatsapp').select('id').eq('user_id', user_id).eq('numero', formatted_numero).eq('ativo', True).execute()
         
         if existing.data:
-            return jsonify({'success': False, 'message': 'Este número já está cadastrado'})
+            return jsonify({'success': False, 'message': 'Este número já está cadastrado para este usuário'})
         
         # Verificar se é o primeiro número (será principal)
         user_numbers = supabase_admin.table('user_whatsapp').select('id').eq('user_id', user_id).eq('ativo', True).execute()
@@ -990,6 +1073,29 @@ def admin_add_numero():
         }
         
         result = supabase_admin.table('user_whatsapp').insert(data_insert).execute()
+        
+        print(f"[AGENTE ADMIN] ✅ Novo WhatsApp adicionado via admin para usuário {user_id}: {formatted_numero}")
+        
+        # Enviar webhook para N8N
+        try:
+            # Buscar dados do usuário para o webhook
+            user_data_response = supabase_admin.table('users').select('id, name, email, role').eq('id', user_id).single().execute()
+            user_data = user_data_response.data if user_data_response.data else None
+            
+            webhook_success = notify_new_whatsapp_number(
+                numero=formatted_numero,
+                user_data=user_data,
+                source="agente_module_admin"
+            )
+            
+            if webhook_success:
+                print(f"[AGENTE ADMIN] Webhook N8N enviado com sucesso para número {formatted_numero}")
+            else:
+                print(f"[AGENTE ADMIN] Falha ao enviar webhook N8N para número {formatted_numero}")
+                
+        except Exception as webhook_error:
+            print(f"[AGENTE ADMIN] Erro ao enviar webhook: {str(webhook_error)}")
+            # Não falhar a operação por causa do webhook
         
         return jsonify({'success': True, 'message': 'Número adicionado com sucesso!'})
             
