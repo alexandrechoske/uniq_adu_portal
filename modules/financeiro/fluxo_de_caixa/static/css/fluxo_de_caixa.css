@@ -82,7 +82,7 @@
 /* KPI Grid Principal */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -90,7 +90,7 @@
 /* KPI Grid Secundário */
 .kpi-grid-secondary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -149,7 +149,7 @@
 }
 
 .kpi-value {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
     color: #2c3e50;
     margin: 0;

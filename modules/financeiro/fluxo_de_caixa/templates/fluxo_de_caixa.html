@@ -3,126 +3,279 @@
 {% block title %}Fluxo de Caixa - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('fin_fluxo_de_caixa.static', filename='fluxo_de_caixa/fluxo_de_caixa.css') }}">
+<link rel="stylesheet" href="{{ url_for('fin_fluxo_de_caixa.static', filename='css/fluxo_de_caixa.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="fluxo-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">
         <div class="actions-left">
-            
-<nav class="breadcrumb">
-    
-        <div class="breadcrumb-item">
-            
-                <i class="mdi mdi-view-dashboard breadcrumb-icon"></i>
-            
-            
-                <span>Menu Principal</span>
-            
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
+                {'name': 'Fluxo de Caixa', 'icon': 'mdi mdi-chart-waterfall'}
+            ]) }}
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados do ano atual</span>
+            </div>
         </div>
-        
-    
-</nav>
-
+        <div class="actions-right">
+            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-primary">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
+            <button id="export-data" class="btn btn-success">
+                <i class="mdi mdi-download"></i>
+                Exportar
+            </button>
         </div>
     </div>
     
-    <!-- Conteúdo Principal -->
-    <div class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="mdi mdi-cash-flow"></i>
-                Fluxo de Caixa
-            </h1>
-            <p class="page-description">
-                Controle completo das entradas e saídas financeiras da empresa
-            </p>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Carregando dados financeiros...</p>
+        </div>
+    </div>
+    
+    <!-- KPI Cards Principais -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-info" id="kpi-resultado">
+            <div class="kpi-icon">
+                <i class="mdi mdi-chart-line"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Resultado Líquido</p>
+                <p class="kpi-value" id="valor-resultado">-</p>
+                <p class="kpi-variation" id="var-resultado">-</p>
+            </div>
         </div>
         
-        <!-- Conteúdo será desenvolvido aqui -->
-        <div class="content-placeholder">
-            <div class="placeholder-card">
-                <i class="mdi mdi-cash-flow placeholder-icon"></i>
-                <h3>Fluxo de Caixa</h3>
-                <p>Esta página será desenvolvida com gráficos de fluxo de caixa, entradas e saídas financeiras.</p>
+        <div class="kpi-card kpi-success" id="kpi-entradas">
+            <div class="kpi-icon">
+                <i class="mdi mdi-trending-up"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Entradas</p>
+                <p class="kpi-value" id="valor-entradas">-</p>
+                <p class="kpi-variation" id="var-entradas">-</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-warning" id="kpi-saidas">
+            <div class="kpi-icon">
+                <i class="mdi mdi-trending-down"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Saídas</p>
+                <p class="kpi-value" id="valor-saidas">-</p>
+                <p class="kpi-variation" id="var-saidas">-</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-purple" id="kpi-saldo">
+            <div class="kpi-icon">
+                <i class="mdi mdi-wallet"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Saldo Final do Período</p>
+                <p class="kpi-value" id="valor-saldo">-</p>
+                <p class="kpi-variation" id="var-saldo">-</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPI Cards Estratégicos -->
+    <div class="kpi-grid-secondary">
+        <div class="kpi-card kpi-danger" id="kpi-burn-rate">
+            <div class="kpi-icon">
+                <i class="mdi mdi-fire"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Burn Rate Mensal</p>
+                <p class="kpi-value" id="valor-burn-rate">-</p>
+                <p class="kpi-sub-value">Média de gastos líquidos</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-orange" id="kpi-runway">
+            <div class="kpi-icon">
+                <i class="mdi mdi-runway"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Runway</p>
+                <p class="kpi-value" id="valor-runway">-</p>
+                <p class="kpi-sub-value">Meses de sobrevivência</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráficos -->
+    <div class="charts-grid">
+        <!-- Gráfico de Despesas por Categoria -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-donut"></i>
+                    <span id="chart-despesas-title">Despesas por Categoria</span>
+                </h3>
+                <div class="chart-actions">
+                    <button id="btn-voltar-categorias" class="btn btn-sm btn-secondary" style="display: none;">
+                        <i class="mdi mdi-arrow-left"></i>
+                        Voltar
+                    </button>
+                </div>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-despesas-categoria"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Fluxo Mês a Mês -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-waterfall"></i>
+                    Fluxo de Caixa Mês a Mês
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-fluxo-mensal"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Análise Estrutural -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-bar-stacked"></i>
+                    Análise Estrutural (FCO, FCI, FCF)
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-fluxo-estrutural"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Projeção -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-timeline-variant"></i>
+                    Projeção de Fluxo de Caixa
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-projecao"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabela de Dados -->
+    <div class="table-container">
+        <div class="table-header">
+            <h3 class="table-title">
+                <i class="mdi mdi-table"></i>
+                Registros Financeiros
+            </h3>
+            <div class="table-actions">
+                <input type="text" id="search-table" class="form-control" placeholder="Buscar registros...">
+            </div>
+        </div>
+        <div class="table-content">
+            <table id="tabela-dados" class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Categoria</th>
+                        <th>Classe</th>
+                        <th>Código</th>
+                        <th>Descrição</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <div class="table-pagination">
+            <div class="pagination-info">
+                <span id="pagination-info">-</span>
+            </div>
+            <div class="pagination-controls">
+                <button id="btn-prev-page" class="btn btn-sm btn-secondary">
+                    <i class="mdi mdi-chevron-left"></i>
+                </button>
+                <span id="pagination-pages"></span>
+                <button id="btn-next-page" class="btn btn-sm btn-secondary">
+                    <i class="mdi mdi-chevron-right"></i>
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.content-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px;
-    padding: 2rem;
-}
-
-.placeholder-card {
-    text-align: center;
-    background: white;
-    border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-}
-
-.placeholder-icon {
-    font-size: 4rem;
-    color: var(--color-primary);
-    margin-bottom: 1rem;
-}
-
-.placeholder-card h3 {
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.placeholder-card p {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.page-header {
-    margin-bottom: 2rem;
-}
-
-.page-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.page-title i {
-    color: var(--color-primary);
-}
-
-.page-description {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    margin: 0;
-}
-</style>
+<!-- Modal de Filtros -->
+<div id="filtros-modal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="mdi mdi-filter"></i>
+                    Filtros de Período
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="periodo-select" class="form-label">Período Pré-definido</label>
+                        <select id="periodo-select" class="form-select">
+                            <option value="mes_atual">Mês Atual</option>
+                            <option value="ultimo_mes">Último Mês</option>
+                            <option value="trimestre_atual">Trimestre Atual</option>
+                            <option value="ano_atual" selected>Ano Atual</option>
+                            <option value="ultimo_ano">Último Ano</option>
+                            <option value="personalizado">Período Personalizado</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6" id="periodo-personalizado" style="display: none;">
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="data-inicio" class="form-label">Data Início</label>
+                                <input type="date" id="data-inicio" class="form-control">
+                            </div>
+                            <div class="col-6">
+                                <label for="data-fim" class="form-label">Data Fim</label>
+                                <input type="date" id="data-fim" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="aplicar-filtros" class="btn btn-primary">Aplicar Filtros</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// JavaScript específico do fluxo de caixa será desenvolvido aqui
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Página Fluxo de Caixa carregada');
-});
-</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('fin_fluxo_de_caixa.static', filename='js/fluxo_de_caixa.js') }}"></script>
 {% endblock %}

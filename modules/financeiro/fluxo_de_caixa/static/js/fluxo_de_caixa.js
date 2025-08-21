@@ -137,28 +137,28 @@ class FluxoCaixaController {
     
     updateKPIs(data) {
         // Resultado Líquido
-        $('#valor-resultado').text(formatCurrency(data.resultado_liquido.valor));
+        $('#valor-resultado').text(formatCurrencyShort(data.resultado_liquido.valor));
         this.updateVariation('#var-resultado', data.resultado_liquido.variacao);
         this.updateKPICardColor('#kpi-resultado', data.resultado_liquido.valor);
         
         // Entradas
-        $('#valor-entradas').text(formatCurrency(data.total_entradas.valor));
+        $('#valor-entradas').text(formatCurrencyShort(data.total_entradas.valor));
         this.updateVariation('#var-entradas', data.total_entradas.variacao);
         
         // Saídas
-        $('#valor-saidas').text(formatCurrency(data.total_saidas.valor));
+        $('#valor-saidas').text(formatCurrencyShort(data.total_saidas.valor));
         this.updateVariation('#var-saidas', data.total_saidas.variacao);
         
         // Saldo Final
-        $('#valor-saldo').text(formatCurrency(data.saldo_final.valor));
+        $('#valor-saldo').text(formatCurrencyShort(data.saldo_final.valor));
         this.updateVariation('#var-saldo', data.saldo_final.variacao);
         
         // Burn Rate
-        $('#valor-burn-rate').text(data.burn_rate > 0 ? formatCurrency(data.burn_rate) : 'N/A');
+        $('#valor-burn-rate').text(data.burn_rate > 0 ? formatCurrencyShort(data.burn_rate) : 'N/A');
         
         // Runway
-        if (data.runway === Infinity || data.runway <= 0) {
-            $('#valor-runway').text('∞ meses');
+        if (data.runway === Infinity || data.runway <= 0 || data.runway > 999) {
+            $('#valor-runway').text('N/A');
         } else {
             $('#valor-runway').text(`${Math.round(data.runway)} meses`);
         }
@@ -235,23 +235,26 @@ class FluxoCaixaController {
             $('#btn-voltar-categorias').hide();
         }
         
-        // Configurar cores
+        // Configurar cores para gráfico de barras
         const colors = this.generateColors(data.labels.length);
         
         this.charts.despesas = new Chart(ctx, {
-            type: 'doughnut',
+            type: 'bar',
             data: {
                 labels: data.labels,
                 datasets: [{
+                    label: 'Valor das Despesas',
                     data: data.valores,
                     backgroundColor: colors.background,
                     borderColor: colors.border,
                     borderWidth: 2,
-                    hoverBorderWidth: 3
+                    borderRadius: 6,
+                    borderSkipped: false
                 }]
             },
             options: {
                 ...this.chartDefaults,
+                indexAxis: 'y', // Barras horizontais para melhor visualização de categorias
                 onClick: (event, elements) => {
                     if (elements.length > 0 && !data.drill_categoria) {
                         const index = elements[0].index;
@@ -265,11 +268,28 @@ class FluxoCaixaController {
                         ...this.chartDefaults.plugins.tooltip,
                         callbacks: {
                             label: function(context) {
-                                const value = context.parsed;
+                                const value = context.parsed.x;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage = ((value / total) * 100).toFixed(1);
-                                return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
+                                return `${context.label}: ${formatCurrencyShort(value)} (${percentage}%)`;
                             }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyShort(value);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
                         }
                     }
                 }
@@ -622,7 +642,8 @@ class FluxoCaixaController {
     generateColors(count) {
         const baseColors = [
             '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8',
-            '#6f42c1', '#fd7e14', '#20c997', '#6610f2', '#e83e8c'
+            '#6f42c1', '#fd7e14', '#20c997', '#6610f2', '#e83e8c',
+            '#495057', '#f8f9fa', '#e9ecef', '#dee2e6', '#ced4da'
         ];
         
         const background = [];
@@ -630,7 +651,7 @@ class FluxoCaixaController {
         
         for (let i = 0; i < count; i++) {
             const color = baseColors[i % baseColors.length];
-            background.push(color + '80'); // 50% opacity
+            background.push(color + 'CC'); // 80% opacity para barras
             border.push(color);
         }
         
@@ -723,10 +744,13 @@ function formatCurrency(value) {
 }
 
 function formatCurrencyShort(value) {
-    if (Math.abs(value) >= 1000000) {
-        return (value / 1000000).toFixed(1) + 'M';
-    } else if (Math.abs(value) >= 1000) {
-        return (value / 1000).toFixed(1) + 'K';
+    const absValue = Math.abs(value);
+    const prefix = value < 0 ? '-' : '';
+    
+    if (absValue >= 1000000) {
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(1)}M`;
+    } else if (absValue >= 1000) {
+        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
     }
     return formatCurrency(value);
 }

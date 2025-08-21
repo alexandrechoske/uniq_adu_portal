@@ -15,7 +15,7 @@ fluxo_de_caixa_bp = Blueprint(
     url_prefix='/financeiro/fluxo-de-caixa',
     template_folder='templates',
     static_folder='static',
-    static_url_path='/financeiro/fluxo-de-caixa/static'
+    static_url_path='/financeiro/static'
 )
 
 @fluxo_de_caixa_bp.route('/')
@@ -29,7 +29,7 @@ def index():
     if user_role not in ['admin', 'interno_unique']:
         return render_template('errors/403.html'), 403
     
-    return render_template('fluxo_de_caixa/fluxo_de_caixa.html')
+    return render_template('fluxo_de_caixa.html')
 
 @fluxo_de_caixa_bp.route('/api/kpis')
 @login_required
@@ -571,35 +571,53 @@ def _calcular_variacao_percentual(valor_atual, valor_anterior):
     return ((valor_atual - valor_anterior) / abs(valor_anterior)) * 100
 
 def _calcular_burn_rate(dados):
-    """Calcula o burn rate (média dos resultados negativos)"""
-    resultados_negativos = []
+    """Calcula o burn rate (média dos resultados negativos ou despesas líquidas)"""
+    if not dados:
+        return 0
     
     # Agrupar por mês
     fluxo_mensal = defaultdict(lambda: {'entradas': 0, 'saidas': 0})
     
     for item in dados:
-        data_item = datetime.strptime(item['data'], '%Y-%m-%d')
-        mes_key = data_item.strftime('%Y-%m')
-        
-        if item['tipo'] == 'Receita':
-            fluxo_mensal[mes_key]['entradas'] += float(item['valor'])
-        else:
-            fluxo_mensal[mes_key]['saidas'] += float(item['valor'])
+        try:
+            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
+            mes_key = data_item.strftime('%Y-%m')
+            
+            valor = float(item.get('valor', 0))
+            
+            if item['tipo'] == 'Receita':
+                fluxo_mensal[mes_key]['entradas'] += valor
+            else:
+                fluxo_mensal[mes_key]['saidas'] += valor
+        except (ValueError, KeyError):
+            continue
     
-    # Identificar meses com resultado negativo
-    for mes_data in fluxo_mensal.values():
-        resultado = mes_data['entradas'] - mes_data['saidas']
-        if resultado < 0:
-            resultados_negativos.append(abs(resultado))
-    
-    if resultados_negativos:
-        return sum(resultados_negativos) / len(resultados_negativos)
-    else:
+    if not fluxo_mensal:
         return 0
+    
+    # Calcular resultado médio mensal (saídas - entradas para burn rate)
+    total_saidas = sum(mes_data['saidas'] for mes_data in fluxo_mensal.values())
+    total_entradas = sum(mes_data['entradas'] for mes_data in fluxo_mensal.values())
+    num_meses = len(fluxo_mensal)
+    
+    if num_meses == 0:
+        return 0
+    
+    # Burn rate = média de saídas líquidas por mês
+    burn_rate_mensal = (total_saidas - total_entradas) / num_meses
+    
+    # Retornar apenas se for positivo (queima de dinheiro)
+    return max(0, burn_rate_mensal)
 
 def _calcular_runway(saldo_atual, burn_rate):
     """Calcula o runway em meses"""
-    if burn_rate <= 0:
-        return float('inf')  # Runway infinito se não há burn rate
+    if burn_rate <= 0 or saldo_atual <= 0:
+        return 0  # Não há runway se não há burn rate ou saldo positivo
     
-    return saldo_atual / burn_rate
+    runway_meses = saldo_atual / burn_rate
+    
+    # Limitar a um valor máximo razoável (5 anos = 60 meses)
+    if runway_meses > 60:
+        return 60
+    
+    return runway_meses
