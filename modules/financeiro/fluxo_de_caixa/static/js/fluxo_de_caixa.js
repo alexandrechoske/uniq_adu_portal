@@ -9,6 +9,7 @@ class FluxoCaixaController {
         this.currentCategoriaDrill = null;
         this.currentPage = 1;
         this.pageLimit = 25;
+        this.excludeAdmin = false; // Controle para filtrar despesas administrativas
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -89,6 +90,9 @@ class FluxoCaixaController {
         
         // Drill-down categorias
         $('#btn-voltar-categorias').on('click', () => this.voltarCategorias());
+        
+        // Toggle despesas administrativas
+        $('#btn-toggle-admin').on('click', () => this.toggleDespesasAdmin());
         
         // Paginação da tabela
         $('#btn-prev-page').on('click', () => this.changePage(this.currentPage - 1));
@@ -207,8 +211,15 @@ class FluxoCaixaController {
     
     async loadDespesasCategoria() {
         try {
-            const url = `/financeiro/fluxo-de-caixa/api/despesas-categoria?periodo=${this.currentPeriodo}` +
-                       (this.currentCategoriaDrill ? `&categoria=${encodeURIComponent(this.currentCategoriaDrill)}` : '');
+            let url = `/financeiro/fluxo-de-caixa/api/despesas-categoria?periodo=${this.currentPeriodo}`;
+            
+            if (this.currentCategoriaDrill) {
+                url += `&categoria=${encodeURIComponent(this.currentCategoriaDrill)}`;
+            }
+            
+            if (this.excludeAdmin) {
+                url += `&exclude_admin=true`;
+            }
             
             const response = await fetch(url);
             const data = await response.json();
@@ -237,11 +248,24 @@ class FluxoCaixaController {
             'Despesas por Categoria';
         $('#chart-despesas-title').text(title);
         
-        // Mostrar/ocultar botão voltar
+        // Mostrar/ocultar botões
         if (data.drill_categoria) {
             $('#btn-voltar-categorias').show();
+            $('#btn-toggle-admin').hide(); // Esconder toggle no drill-down
         } else {
             $('#btn-voltar-categorias').hide();
+            $('#btn-toggle-admin').show(); // Mostrar toggle na visão principal
+            
+            // Atualizar estado do botão toggle
+            if (this.excludeAdmin) {
+                $('#btn-toggle-admin').removeClass('btn-warning').addClass('btn-success');
+                $('#btn-toggle-admin i').removeClass('mdi-eye-off').addClass('mdi-eye');
+                $('#btn-toggle-text').text('Mostrar Admin');
+            } else {
+                $('#btn-toggle-admin').removeClass('btn-success').addClass('btn-warning');
+                $('#btn-toggle-admin i').removeClass('mdi-eye').addClass('mdi-eye-off');
+                $('#btn-toggle-text').text('Ocultar Admin');
+            }
         }
         
         // Configurar cores para gráfico de barras
@@ -313,6 +337,11 @@ class FluxoCaixaController {
     
     async voltarCategorias() {
         this.currentCategoriaDrill = null;
+        await this.loadDespesasCategoria();
+    }
+    
+    async toggleDespesasAdmin() {
+        this.excludeAdmin = !this.excludeAdmin;
         await this.loadDespesasCategoria();
     }
     

@@ -127,6 +127,7 @@ def api_despesas_categoria():
     try:
         periodo = request.args.get('periodo', 'ano_atual')
         categoria_drill = request.args.get('categoria')  # Para drill-down
+        exclude_admin = request.args.get('exclude_admin', 'false').lower() == 'true'  # Novo parâmetro
         
         data_inicio, data_fim = _get_periodo_dates(periodo)
         table_name = _get_financial_table()
@@ -137,6 +138,10 @@ def api_despesas_categoria():
         
         response = query.execute()
         dados = response.data
+        
+        # Filtrar "Despesas Administrativas" se solicitado
+        if exclude_admin and not categoria_drill:
+            dados = [item for item in dados if item['categoria'] != 'Despesas Administrativas']
         
         if categoria_drill:
             # Drill-down: agrupar por classe dentro da categoria
@@ -150,14 +155,18 @@ def api_despesas_categoria():
             for item in dados:
                 agrupamento[item['categoria']] += float(item['valor'])
         
-        # Converter para formato do gráfico
-        labels = list(agrupamento.keys())
-        valores = list(agrupamento.values())
+        # Converter para listas e ordenar do maior para menor
+        items = list(agrupamento.items())
+        items.sort(key=lambda x: x[1], reverse=True)  # Ordenação do maior para menor
+        
+        labels = [item[0] for item in items]
+        valores = [item[1] for item in items]
         
         return jsonify({
             'labels': labels,
             'valores': valores,
-            'drill_categoria': categoria_drill
+            'drill_categoria': categoria_drill,
+            'exclude_admin': exclude_admin
         })
         
     except Exception as e:
