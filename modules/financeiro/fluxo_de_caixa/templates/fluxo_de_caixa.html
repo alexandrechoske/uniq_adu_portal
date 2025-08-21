@@ -32,10 +32,6 @@
                 <i class="mdi mdi-filter"></i>
                 Filtros
             </button>
-            <button id="export-data" class="btn btn-success">
-                <i class="mdi mdi-download"></i>
-                Exportar
-            </button>
         </div>
     </div>
     
@@ -227,48 +223,55 @@
 </div>
 
 <!-- Modal de Filtros -->
-<div id="filtros-modal" class="modal fade" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="mdi mdi-filter"></i>
-                    Filtros de Período
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <label for="periodo-select" class="form-label">Período Pré-definido</label>
-                        <select id="periodo-select" class="form-select">
-                            <option value="mes_atual">Mês Atual</option>
-                            <option value="ultimo_mes">Último Mês</option>
-                            <option value="trimestre_atual">Trimestre Atual</option>
-                            <option value="ultimos_12_meses" selected>Últimos 12 Meses</option>
-                            <option value="ano_atual">Ano Atual</option>
-                            <option value="ultimo_ano">Último Ano</option>
-                            <option value="personalizado">Período Personalizado</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6" id="periodo-personalizado" style="display: none;">
-                        <div class="row">
-                            <div class="col-6">
-                                <label for="data-inicio" class="form-label">Data Início</label>
-                                <input type="date" id="data-inicio" class="form-control">
-                            </div>
-                            <div class="col-6">
-                                <label for="data-fim" class="form-label">Data Fim</label>
-                                <input type="date" id="data-fim" class="form-control">
-                            </div>
+<div id="filter-modal" class="filter-modal">
+    <div class="filter-modal-content">
+        <div class="filter-modal-header">
+            <h2 class="filter-modal-title">
+                <i class="mdi mdi-filter"></i>
+                Filtros de Período
+            </h2>
+            <button class="filter-modal-close" id="close-modal">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="filter-modal-body">
+            <div class="filter-section">
+                <h3 class="filter-section-title">📅 Período</h3>
+                <div class="filter-input-group">
+                    <label for="periodo-select" class="form-label">Período Pré-definido</label>
+                    <select id="periodo-select" class="form-select">
+                        <option value="mes_atual">Mês Atual</option>
+                        <option value="ultimo_mes">Último Mês</option>
+                        <option value="trimestre_atual">Trimestre Atual</option>
+                        <option value="ultimos_12_meses" selected>Últimos 12 Meses</option>
+                        <option value="ano_atual">Ano Atual</option>
+                        <option value="ultimo_ano">Último Ano</option>
+                        <option value="personalizado">Período Personalizado</option>
+                    </select>
+                </div>
+                <div id="periodo-personalizado" class="filter-input-group" style="display: none;">
+                    <div class="filter-date-inputs">
+                        <div class="filter-input-group">
+                            <label for="data-inicio" class="form-label">Data Início</label>
+                            <input type="date" id="data-inicio" class="form-control">
+                        </div>
+                        <div class="filter-input-group">
+                            <label for="data-fim" class="form-label">Data Fim</label>
+                            <input type="date" id="data-fim" class="form-control">
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" id="aplicar-filtros" class="btn btn-primary">Aplicar Filtros</button>
-            </div>
+        </div>
+        <div class="filter-modal-footer">
+            <button type="button" class="btn btn-secondary" id="clear-filters">
+                <i class="mdi mdi-refresh"></i>
+                Limpar Filtros
+            </button>
+            <button type="button" id="apply-filters" class="btn btn-primary">
+                <i class="mdi mdi-check"></i>
+                Aplicar Filtros
+            </button>
         </div>
     </div>
 </div>

@@ -74,8 +74,9 @@ class FluxoCaixaController {
     setupEventListeners() {
         // Filtros
         $('#open-filters').on('click', () => this.openFiltersModal());
-        $('#aplicar-filtros').on('click', () => this.applyFilters());
-        $('#reset-filters').on('click', () => this.resetFilters());
+        $('#close-modal').on('click', () => this.closeFiltersModal());
+        $('#apply-filters').on('click', () => this.applyFilters());
+        $('#clear-filters').on('click', () => this.resetFilters());
         
         // Período personalizado
         $('#periodo-select').on('change', (e) => {
@@ -96,8 +97,12 @@ class FluxoCaixaController {
         // Busca na tabela
         $('#search-table').on('input', debounce(() => this.loadTableData(), 300));
         
-        // Export
-        $('#export-data').on('click', () => this.exportData());
+        // Fechar modal ao clicar fora
+        $('#filter-modal').on('click', (e) => {
+            if (e.target.id === 'filter-modal') {
+                this.closeFiltersModal();
+            }
+        });
     }
     
     async loadData() {
@@ -659,8 +664,17 @@ class FluxoCaixaController {
     }
     
     openFiltersModal() {
-        const modal = new bootstrap.Modal(document.getElementById('filtros-modal'));
-        modal.show();
+        const modal = document.getElementById('filter-modal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    }
+    
+    closeFiltersModal() {
+        const modal = document.getElementById('filter-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
     }
     
     applyFilters() {
@@ -693,8 +707,7 @@ class FluxoCaixaController {
         $('#reset-filters').show();
         
         // Fechar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('filtros-modal'));
-        modal.hide();
+        this.closeFiltersModal();
         
         // Recarregar dados
         this.loadData();
@@ -723,16 +736,6 @@ class FluxoCaixaController {
         // Implementar notificação de erro
         console.error(message);
         alert(message); // Temporário - substituir por toast/notification
-    }
-    
-    async exportData() {
-        try {
-            // Implementar exportação
-            alert('Funcionalidade de exportação será implementada em breve');
-        } catch (error) {
-            console.error('Erro ao exportar dados:', error);
-            this.showError('Erro ao exportar dados');
-        }
     }
 }
 
