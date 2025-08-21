@@ -5,10 +5,10 @@
 
 class FluxoCaixaController {
     constructor() {
-        this.currentPeriodo = 'ano_atual';
+        this.currentPeriodo = 'ultimos_12_meses';
         this.currentCategoriaDrill = null;
         this.currentPage = 1;
-        this.pageLimit = 50;
+        this.pageLimit = 25;
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -683,6 +683,7 @@ class FluxoCaixaController {
                 'mes_atual': 'Mês Atual',
                 'ultimo_mes': 'Último Mês',
                 'trimestre_atual': 'Trimestre Atual',
+                'ultimos_12_meses': 'Últimos 12 Meses',
                 'ano_atual': 'Ano Atual',
                 'ultimo_ano': 'Último Ano'
             };

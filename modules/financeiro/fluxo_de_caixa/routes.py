@@ -528,13 +528,16 @@ def _get_periodo_dates(periodo):
     elif periodo == 'ano_atual':
         inicio = hoje.replace(month=1, day=1)
         fim = hoje
+    elif periodo == 'ultimos_12_meses':
+        fim = hoje
+        inicio = hoje - timedelta(days=365)
     elif periodo == 'ultimo_ano':
         inicio = hoje.replace(year=hoje.year - 1, month=1, day=1)
         fim = hoje.replace(year=hoje.year - 1, month=12, day=31)
     else:
-        # Período personalizado ou ano atual como padrão
-        inicio = hoje.replace(month=1, day=1)
+        # Período personalizado ou últimos 12 meses como padrão
         fim = hoje
+        inicio = hoje - timedelta(days=365)
     
     return inicio.strftime('%Y-%m-%d'), fim.strftime('%Y-%m-%d')
 
@@ -556,6 +559,10 @@ def _get_periodo_anterior_dates(periodo):
     elif periodo == 'ano_atual':
         inicio = hoje.replace(year=hoje.year - 1, month=1, day=1)
         fim = hoje.replace(year=hoje.year - 1, month=12, day=31)
+    elif periodo == 'ultimos_12_meses':
+        # 12 meses anteriores aos últimos 12 meses
+        fim = hoje - timedelta(days=365)
+        inicio = hoje - timedelta(days=730)
     else:
         # Mesmo período do ano anterior
         inicio = hoje.replace(year=hoje.year - 1, month=1, day=1)

@@ -326,6 +326,22 @@
     background: #f8f9fa;
 }
 
+.enhanced-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.enhanced-table tbody tr:nth-child(odd) {
+    background: white;
+}
+
+.enhanced-table tbody tr:nth-child(even):hover {
+    background: #e9ecef;
+}
+
+.enhanced-table tbody tr:nth-child(odd):hover {
+    background: #f8f9fa;
+}
+
 .table-pagination {
     padding: 1rem 1.5rem;
     border-top: 1px solid #e9ecef;
@@ -371,6 +387,14 @@
 }
 
 /* Modal Styles */
+.modal {
+    z-index: 10000;
+}
+
+.modal-backdrop {
+    z-index: 9999;
+}
+
 .modal-content {
     border-radius: 12px;
     border: none;
