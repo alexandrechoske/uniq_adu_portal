@@ -162,8 +162,12 @@ class FluxoCaixaController {
         $('#valor-burn-rate').text(data.burn_rate > 0 ? formatCurrencyShort(data.burn_rate) : 'N/A');
         
         // Runway
-        if (data.runway === Infinity || data.runway <= 0 || data.runway > 999) {
-            $('#valor-runway').text('N/A');
+        if (data.runway === Infinity || data.runway === null || data.runway === undefined) {
+            $('#valor-runway').text('∞ anos');
+        } else if (data.runway <= 0) {
+            $('#valor-runway').text('0 meses');
+        } else if (data.runway > 60) {
+            $('#valor-runway').text('5+ anos');
         } else {
             $('#valor-runway').text(`${Math.round(data.runway)} meses`);
         }

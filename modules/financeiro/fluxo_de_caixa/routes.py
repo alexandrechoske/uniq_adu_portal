@@ -602,24 +602,25 @@ def _calcular_burn_rate(dados):
     if not fluxo_mensal:
         return 0
     
-    # Calcular resultado médio mensal (saídas - entradas para burn rate)
+    # Calcular burn rate como média de saídas mensais (não resultado líquido)
     total_saidas = sum(mes_data['saidas'] for mes_data in fluxo_mensal.values())
-    total_entradas = sum(mes_data['entradas'] for mes_data in fluxo_mensal.values())
     num_meses = len(fluxo_mensal)
     
     if num_meses == 0:
         return 0
     
-    # Burn rate = média de saídas líquidas por mês
-    burn_rate_mensal = (total_saidas - total_entradas) / num_meses
+    # Burn rate = média de saídas por mês (gastos mensais)
+    burn_rate_mensal = total_saidas / num_meses
     
-    # Retornar apenas se for positivo (queima de dinheiro)
-    return max(0, burn_rate_mensal)
+    return burn_rate_mensal
 
 def _calcular_runway(saldo_atual, burn_rate):
-    """Calcula o runway em meses"""
-    if burn_rate <= 0 or saldo_atual <= 0:
-        return 0  # Não há runway se não há burn rate ou saldo positivo
+    """Calcula o runway em meses baseado no saldo atual e gastos mensais"""
+    if burn_rate <= 0:
+        return float('inf')  # Se não há gastos, runway é infinito
+    
+    if saldo_atual <= 0:
+        return 0  # Sem saldo, runway é zero
     
     runway_meses = saldo_atual / burn_rate
     
