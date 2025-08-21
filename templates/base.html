@@ -832,40 +832,7 @@
                 <span class="sidebar-text">Exportação</span>
             </a>
 
-            <!-- Financeiro (apenas para admin e interno_unique) -->
-            {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
-            <div class="sidebar-item-wrapper" id="financeiro-wrapper">
-                <div class="sidebar-item {% if request.endpoint and (request.endpoint.startswith('fin_dashboard_executivo.') or request.endpoint.startswith('fin_fluxo_de_caixa.') or request.endpoint.startswith('fin_despesas.') or request.endpoint.startswith('fin_faturamento.')) %}active{% endif %}"
-                     title="Módulo Financeiro">
-                    <i class="mdi mdi-cash-multiple text-xl"></i>
-                    <span class="sidebar-text">Financeiro</span>
-                </div>
 
-                <!-- Submenu dropdown -->
-                <div class="financeiro-submenu">
-                    <a href="{{ url_for('fin_dashboard_executivo.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
-                        <i class="mdi mdi-chart-box"></i>
-                        <span>Dashboard Executivo</span>
-                    </a>
-                    <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
-                        <i class="mdi mdi-chart-timeline-variant"></i>
-                        <span>Fluxo de Caixa</span>
-                    </a>
-                    <a href="{{ url_for('fin_despesas.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
-                        <i class="mdi mdi-credit-card-minus"></i>
-                        <span>Despesas</span>
-                    </a>
-                    <a href="{{ url_for('fin_faturamento.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
-                        <i class="mdi mdi-receipt"></i>
-                        <span>Faturamento</span>
-                    </a>
-                </div>
-            </div>
-            {% endif %}
 
             <!-- Conferência Documental (apenas para admin e interno_unique) -->
             <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
