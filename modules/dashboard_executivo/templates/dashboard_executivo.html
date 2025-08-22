@@ -42,7 +42,8 @@
         <div id="kpi-loading" class="component-loading">
             <div class="spinner"></div>
         </div>
-        <!-- Linha 1: Processos Abertos - Chegando Este Mês - Chegando Esta Semana -->
+        
+        <!-- Linha 1: Processos Abertos - Agd Embarque - Agd Chegada -->
         <div class="kpi-card kpi-info" data-kpi-status="processos_abertos">
             <div class="kpi-icon">
                 <i class="mdi mdi-folder-open"></i>
@@ -54,31 +55,6 @@
             <button class="kpi-mini-btn" title="Ver processos abertos" data-mini="processos_abertos">≡</button>
         </div>
         
-            <div class="kpi-card kpi-emerald" data-kpi-status="chegando_mes">
-                <div class="kpi-icon">
-                    <i class="mdi mdi-calendar-month"></i>
-                </div>
-                <div class="kpi-content">
-                    <p class="kpi-label">Chegando Este Mês</p>
-                    <p class="kpi-value" id="kpi-chegando-mes">-</p>
-                    <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
-                </div>
-                <button class="kpi-mini-btn" title="Ver processos com chegada neste mês" data-mini="chegando_mes">≡</button>
-            </div>
-        
-            <div class="kpi-card kpi-teal" data-kpi-status="chegando_semana">
-                <div class="kpi-icon">
-                    <i class="mdi mdi-calendar-week"></i>
-                </div>
-                <div class="kpi-content">
-                    <p class="kpi-label">Chegando Esta Semana</p>
-                    <p class="kpi-value" id="kpi-chegando-semana">-</p>
-                    <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
-                </div>
-                <button class="kpi-mini-btn" title="Ver processos com chegada nesta semana" data-mini="chegando_semana">≡</button>
-            </div>
-        
-        <!-- Linha 2: Agd Embarque - Agd Chegada - Agd Liberação - Agd Entrega - Agd Fechamento -->
         <div class="kpi-card kpi-orange" data-kpi-status="AG EMBARQUE">
             <div class="kpi-icon">
                 <i class="mdi mdi-ship-wheel"></i>
@@ -101,6 +77,7 @@
             <button class="kpi-mini-btn" title="Ver processos aguardando chegada" data-mini="AG CHEGADA">≡</button>
         </div>
         
+        <!-- Linha 2: Agd Liberação - Agd Entrega - Agd Fechamento -->
         <div class="kpi-card kpi-info" data-kpi-status="LIBERACAO">
             <div class="kpi-icon">
                 <i class="mdi mdi-shield-check"></i>
@@ -134,7 +111,31 @@
             <button class="kpi-mini-btn" title="Ver processos aguardando fechamento" data-mini="AG FECHAMENTO">≡</button>
         </div>
         
-        <!-- Linha 3: Total Despesas -->
+        <!-- Linha 3: Chegando Este Mês - Chegando Esta Semana - Total Despesas -->
+        <div class="kpi-card kpi-emerald" data-kpi-status="chegando_mes">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-month"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Este Mês</p>
+                <p class="kpi-value" id="kpi-chegando-mes">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
+            </div>
+            <button class="kpi-mini-btn" title="Ver processos com chegada neste mês" data-mini="chegando_mes">≡</button>
+        </div>
+        
+        <div class="kpi-card kpi-teal" data-kpi-status="chegando_semana">
+            <div class="kpi-icon">
+                <i class="mdi mdi-calendar-week"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Chegando Esta Semana</p>
+                <p class="kpi-value" id="kpi-chegando-semana">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
+            </div>
+            <button class="kpi-mini-btn" title="Ver processos com chegada nesta semana" data-mini="chegando_semana">≡</button>
+        </div>
+        
         <div class="kpi-card kpi-indigo">
             <div class="kpi-icon">
                 <i class="mdi mdi-currency-usd"></i>
@@ -324,11 +325,17 @@
                     </div>
                     <div class="timeline-step" data-step="4">
                         <div class="timeline-icon">
+                            <i class="mdi mdi-file-document-edit"></i>
+                        </div>
+                        <div class="timeline-label">Registro</div>
+                    </div>
+                    <div class="timeline-step" data-step="5">
+                        <div class="timeline-icon">
                             <i class="mdi mdi-check-circle-outline"></i>
                         </div>
                         <div class="timeline-label">Desembaraço</div>
                     </div>
-                    <div class="timeline-step" data-step="5">
+                    <div class="timeline-step" data-step="6">
                         <div class="timeline-icon">
                             <i class="mdi mdi-flag-checkered"></i>
                         </div>
@@ -369,6 +376,13 @@
                             <div class="info-item">
                                 <label>Status Atual:</label>
                                 <span id="detail-status" class="status-badge">-</span>
+                            </div>
+                            <div class="info-item">
+                                <label>País de Procedência:</label>
+                                <span id="detail-pais-procedencia" class="country-info">
+                                    <img id="detail-country-flag" src="" alt="" class="country-flag" style="width: 20px; height: 15px; margin-right: 8px; display: none;">
+                                    <span id="detail-country-name">-</span>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -684,6 +698,8 @@
             </div>
         </div>
     </div>
+
+</div>
 
     <!-- Modal de Detalhes do Processo -->
     {% include 'shared/process_modal.html' %}

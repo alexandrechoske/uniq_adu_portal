@@ -574,30 +574,41 @@ def dashboard_kpis():
             if status in ['NUMERARIO ENVIADO', 'NUMERARIO ENVIADO']: return 'NUMERARIO ENVIADO'
             return status
 
+        # CORREÇÃO: Usar status_timeline em vez de status_macro_sistema para KPIs
+        def get_timeline_number(status_timeline):
+            """Extrair número do status_timeline (ex: '2. Embarque' -> 2)"""
+            if not status_timeline:
+                return 0
+            try:
+                return int(str(status_timeline).split('.')[0].strip())
+            except:
+                return 0
+
         # Aplicar normalização se a coluna existir
-        if 'status_macro_sistema' in df.columns:
-            df['status_normalizado'] = df['status_macro_sistema'].apply(normalize_status)
+        if 'status_timeline' in df.columns:
+            # Criar coluna numérica para facilitar comparações
+            df['timeline_number'] = df['status_timeline'].apply(get_timeline_number)
             
-            # Calcular métricas baseadas nos status normalizados
-            aguardando_embarque = len(df[df['status_normalizado'] == 'AG EMBARQUE'])
-            aguardando_chegada = len(df[df['status_normalizado'] == 'AG CHEGADA'])
-            aguardando_liberacao = len(df[df['status_normalizado'].isin(['DI REGISTRADA', 'AG REGISTRO', 'AG MAPA'])])
-            agd_entrega = len(df[df['status_normalizado'].isin([
-                'AG. CARREGAMENTO', 'AG CARREGAMENTO', 'CARREGAMENTO AGENDADO'
-            ])])
-            aguardando_fechamento = len(df[df['status_normalizado'] == 'AG FECHAMENTO'])
+            # Calcular métricas baseadas no status_timeline
+            # 1. Aberto, 2. Embarque, 3. Chegada, 4. Registro, 5. Desembaraço, 6. Finalizado
+            aguardando_embarque = len(df[df['timeline_number'] == 1])  # 1. Aberto (aguardando embarque)
+            aguardando_chegada = len(df[df['timeline_number'] == 2])   # 2. Embarque (aguardando chegada)
+            aguardando_liberacao = len(df[df['timeline_number'] == 3]) # 3. Chegada (aguardando liberação/registro)
+            agd_entrega = len(df[df['timeline_number'].isin([4, 5])])  # 4. Registro + 5. Desembaraço (aguardando entrega)
+            aguardando_fechamento = len(df[df['timeline_number'] == 5]) # 5. Desembaraço (aguardando fechamento)
             
-            print(f"[DEBUG_KPI] Status counts:")
-            print(f"[DEBUG_KPI] Aguardando Embarque: {aguardando_embarque}")
-            print(f"[DEBUG_KPI] Aguardando Chegada: {aguardando_chegada}")
-            print(f"[DEBUG_KPI] Aguardando Liberação: {aguardando_liberacao}")
-            print(f"[DEBUG_KPI] Agd Entrega: {agd_entrega}")
-            print(f"[DEBUG_KPI] Aguardando Fechamento: {aguardando_fechamento}")
+            print(f"[DEBUG_KPI] Status Timeline counts:")
+            print(f"[DEBUG_KPI] 1. Aberto (Aguardando Embarque): {aguardando_embarque}")
+            print(f"[DEBUG_KPI] 2. Embarque (Aguardando Chegada): {aguardando_chegada}")
+            print(f"[DEBUG_KPI] 3. Chegada (Aguardando Liberação): {aguardando_liberacao}")
+            print(f"[DEBUG_KPI] 4+5. Registro+Desembaraço (Agd Entrega): {agd_entrega}")
+            print(f"[DEBUG_KPI] 5. Desembaraço (Aguardando Fechamento): {aguardando_fechamento}")
         else:
             aguardando_embarque = 0
             aguardando_chegada = 0
             aguardando_liberacao = 0
             agd_entrega = 0
+            aguardando_fechamento = 0
             aguardando_fechamento = 0
 
         # Chegando Este Mês/Semana: considerar TODAS as datas de chegada dentro do mês/semana (igual dashboard materiais)
@@ -638,31 +649,29 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
             print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
-        # Calcular processos abertos e fechados baseado no status_macro_sistema
-        # REGRA CORRETA: 
-        # - Fechados: status_macro_sistema = "PROCESSO CONCLUIDO"
-        # - Abertos: status_macro_sistema ≠ "PROCESSO CONCLUIDO" (incluindo nulls)
+        # Calcular processos abertos e fechados baseado no status_timeline
+        # REGRA CORRIGIDA: 
+        # - Fechados: status_timeline = "6. Finalizado"
+        # - Abertos: status_timeline ≠ "6. Finalizado" (incluindo nulls)
         processos_abertos = 0
         processos_fechados = 0
         
-        if 'status_macro_sistema' in df.columns:
-            # Processos fechados: status_macro_sistema = "PROCESSO CONCLUIDO"
-            processos_fechados = len(df[
-                df['status_macro_sistema'] == 'PROCESSO CONCLUIDO'
-            ])
+        if 'status_timeline' in df.columns:
+            # Processos fechados: timeline_number = 6 (Finalizado)
+            processos_fechados = len(df[df['timeline_number'] == 6])
             
-            # Processos abertos: status_macro_sistema ≠ "PROCESSO CONCLUIDO" (incluindo nulls)
+            # Processos abertos: timeline_number ≠ 6 (incluindo nulls)
             processos_abertos = len(df[
-                (df['status_macro_sistema'] != 'PROCESSO CONCLUIDO') | 
-                (df['status_macro_sistema'].isna())
+                (df['timeline_number'] != 6) | 
+                (df['timeline_number'].isna())
             ])
         else:
-            # Se não tiver coluna status_macro_sistema, considerar todos como abertos
+            # Se não tiver coluna status_timeline, considerar todos como abertos
             processos_abertos = total_processos
             processos_fechados = 0
 
-        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Fechados (status_macro_sistema = 'PROCESSO CONCLUIDO'): {processos_fechados}")
-        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Abertos (status_macro_sistema ≠ 'PROCESSO CONCLUIDO'): {processos_abertos}")
+        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Fechados (timeline_number = 6): {processos_fechados}")
+        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Abertos (timeline_number ≠ 6): {processos_abertos}")
         print(f"[DEBUG_KPI] Total: {processos_abertos + processos_fechados} (deve ser igual a {total_processos})")
 
         kpis = {

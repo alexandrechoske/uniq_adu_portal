@@ -2,12 +2,30 @@
 // Usa dados já carregados no dashboard (dashboardData / window.currentOperations)
 (function(){
     const STATUS_GROUPS = {
-        'processos_abertos': (op, ctx) => (op.status_macro_sistema || op.status_processo || '').toUpperCase() !== 'PROCESSO CONCLUIDO',
-        'AG EMBARQUE': (op, ctx) => normalizeStatus(op) === 'AG EMBARQUE',
-        'AG CHEGADA': (op, ctx) => normalizeStatus(op) === 'AG CHEGADA',
-        'AG LIBERACAO': (op, ctx) => ['DI REGISTRADA','AG REGISTRO','AG MAPA'].includes(normalizeStatus(op)),
-        'AGD_ENTREGA': (op, ctx) => ['AG. CARREGAMENTO','AG CARREGAMENTO','CARREGAMENTO AGENDADO','AG ENTREGA'].includes(normalizeStatus(op)),
-        'AG FECHAMENTO': (op, ctx) => normalizeStatus(op) === 'AG FECHAMENTO',
+        'processos_abertos': (op, ctx) => {
+            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
+            return timelineNum !== 6; // ≠ 6. Finalizado
+        },
+        'AG EMBARQUE': (op, ctx) => {
+            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
+            return timelineNum === 1; // 1. Aberto
+        },
+        'AG CHEGADA': (op, ctx) => {
+            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
+            return timelineNum === 2; // 2. Embarque
+        },
+        'AG LIBERACAO': (op, ctx) => {
+            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
+            return timelineNum === 3; // 3. Chegada  
+        },
+        'AGD_ENTREGA': (op, ctx) => {
+            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
+            return [4, 5].includes(timelineNum); // 4. Registro + 5. Desembaraço
+        },
+        'AG FECHAMENTO': (op, ctx) => {
+            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
+            return timelineNum === 5; // 5. Desembaraço
+        },
         'chegando_mes': (op, ctx) => inPeriodoChegada(op, 'mes'),
         'chegando_semana': (op, ctx) => inPeriodoChegada(op, 'semana')
     };
@@ -23,15 +41,63 @@
         'chegando_semana':'Chegando Esta Semana'
     };
 
-    function normalizeStatus(op){
-        let status = op.status_macro_sistema || op.status_processo || op.status_macro || '';
-        if(!status) return '';
-        status = (''+status).trim().toUpperCase();
-        if(['AG. EMBARQUE','ABERTURA'].includes(status)) status='AG EMBARQUE';
-        if(['AG. CHEGADA'].includes(status)) status='AG CHEGADA';
-        if(['AG. CARREGAMENTO'].includes(status)) status='AG CARREGAMENTO';
-        if(['DI DESEMBARACADA'].includes(status)) status='AG ENTREGA';
-        return status;
+    function getTimelineNumber(status_timeline) {
+        // Extrair número do status_timeline (ex: '2. Embarque' -> 2)
+        // OU mapear status_processo para número do timeline se status_timeline não existir
+        if (!status_timeline) return 0;
+        
+        // Se status_timeline já é um número com ponto, extrair
+        try {
+            const match = String(status_timeline).match(/^(\d+)\./);
+            if (match) {
+                return parseInt(match[1]);
+            }
+        } catch {}
+        
+        // Mapear status_processo para timeline number
+        const statusProcessoMap = {
+            // Estágio 1: Aberto/Aguardando Embarque
+            'PROCESSO ABERTO': 1,
+            'AGUARDANDO EMBARQUE': 1,
+            'MERCADORIA EMBARCADA': 1,
+            
+            // Estágio 2: Embarque/Em Trânsito
+            'EM TRANSITO': 2,
+            'EMBARQUE CONFIRMADO': 2,
+            'MERCADORIA EM TRANSITO': 2,
+            
+            // Estágio 3: Chegada
+            'CHEGADA CONFIRMADA': 3,
+            'MERCADORIA CHEGOU': 3,
+            'AGUARDANDO CHEGADA': 3,
+            
+            // Estágio 4: Registro/DI
+            'DECLARACAO REGISTRADA': 4,
+            'NUMERARIO ENVIADO': 4,
+            'NUMERÁRIO ENVIADO': 4,
+            'DI AGUARDANDO PARAMETRIZACAO': 4,
+            'DI ALTERADA PELO USUÁRIO': 4,
+            'DI ALTERADA PELO USUARIO': 4,
+            'PREENCHIMENTO DA DECLARAÇÃO DE IMPORTAÇÃO ESTÁ OK.': 4,
+            'PREENCHIMENTO DA DECLARACAO DE IMPORTACAO ESTA OK.': 4,
+            'DECLARAÇÃO DE IMPORTAÇÃO NÃO FOI REGISTRADA': 4,
+            'DECLARACAO DE IMPORTACAO NAO FOI REGISTRADA': 4,
+            
+            // Estágio 5: Desembaraço
+            'DECLARACAO DESEMBARACADA': 5,
+            'DECLARAÇÃO DESEMBARAÇADA': 5,
+            'DESEMBARACO AUTORIZADO': 5,
+            'DESEMBARAÇO AUTORIZADO': 5,
+            
+            // Estágio 6: Finalizado
+            'PROCESSO FINALIZADO': 6,
+            'ENTREGUE': 6,
+            'CONCLUIDO': 6,
+            'CONCLUÍDO': 6
+        };
+        
+        const normalizedStatus = String(status_timeline).toUpperCase().trim();
+        return statusProcessoMap[normalizedStatus] || 0;
     }
 
     function parseDateBr(str){

@@ -1938,10 +1938,11 @@ function openProcessModal(operationIndex) {
     const statusMacroNumber = extractStatusMacroNumber(operation.status_macro);
     console.log('[MODAL_DEBUG] Status macro extraído:', statusMacroNumber);
     
-    // NOVO: Usar status_timeline ou fallback para status_macro
-    const statusTimeline = operation.status_timeline || operation.status_macro;
+    // NOVO: Usar status_timeline ou fallback para status_processo/status_macro_sistema
+    const statusTimeline = operation.status_timeline || operation.status_processo || operation.status_macro_sistema;
     console.log('[TIMELINE_DEBUG] Status timeline original:', operation.status_timeline);
-    console.log('[TIMELINE_DEBUG] Status macro fallback:', operation.status_macro);
+    console.log('[TIMELINE_DEBUG] Status processo fallback:', operation.status_processo);
+    console.log('[TIMELINE_DEBUG] Status macro fallback:', operation.status_macro_sistema);
     console.log('[TIMELINE_DEBUG] Status final usado:', statusTimeline);
     
     updateProcessTimelineFromStatusTimeline(statusTimeline);
@@ -1961,6 +1962,25 @@ function openProcessModal(operationIndex) {
     console.log('[MODAL_DEBUG] Status processado para exibição:', statusToDisplay);
     
     updateElementValue('detail-status', statusToDisplay);
+    
+    // Update country information with flag
+    const countryName = operation.pais_procedencia || operation.urf_entrada || operation.pais_origem || 'N/A';
+    updateElementValue('detail-country-name', countryName);
+    
+    // Update country flag
+    const flagImg = document.getElementById('detail-country-flag');
+    if (countryName && countryName !== 'N/A' && countryName !== '-') {
+        const countryCode = getCountryCode(countryName);
+        if (countryCode) {
+            flagImg.src = `https://flagsapi.com/${countryCode}/flat/32.png`;
+            flagImg.alt = `Bandeira de ${countryName}`;
+            flagImg.style.display = 'inline';
+        } else {
+            flagImg.style.display = 'none';
+        }
+    } else {
+        flagImg.style.display = 'none';
+    }
     
     // Update cargo and transport details
     updateElementValue('detail-modal', operation.modal);
@@ -2057,23 +2077,63 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
         return;
     }
     
-    // Mapear status_timeline para steps (remover número do início e pontos)
+    // ATUALIZADO: Mapear status_processo ou status_timeline para steps (6 etapas)
+    // 1. Abertura, 2. Embarque, 3. Chegada, 4. Registro, 5. Desembaraço, 6. Finalizado
     const timelineMap = {
-        'Aberto': 1,
-        'Abertura': 1,
-        'Processo Aberto': 1,
-        'Embarque': 2, 
-        'Embarcado': 2,
-        'Chegada': 3,
-        'Chegou': 3,
-        'Registro': 4,
-        'Registrado': 4,
-        'DI Registrada': 4,
-        'Desembaraço': 5,
-        'Desembaracado': 5,
-        'Processo Concluído': 5,
-        'Finalizado': 5,
-        'Liberado': 5
+        // Estágio 1: Aberto/Aguardando Embarque
+        'ABERTO': 1,
+        'ABERTURA': 1,
+        'PROCESSO ABERTO': 1,
+        'AGUARDANDO EMBARQUE': 1,
+        'MERCADORIA EMBARCADA': 1,
+        
+        // Estágio 2: Embarque/Em Trânsito
+        'EMBARQUE': 2, 
+        'EMBARCADO': 2,
+        'EM TRANSITO': 2,
+        'EMBARQUE CONFIRMADO': 2,
+        'MERCADORIA EM TRANSITO': 2,
+        
+        // Estágio 3: Chegada
+        'CHEGADA': 3,
+        'CHEGOU': 3,
+        'CHEGADA CONFIRMADA': 3,
+        'MERCADORIA CHEGOU': 3,
+        'AGUARDANDO CHEGADA': 3,
+        
+        // Estágio 4: Registro
+        'REGISTRO': 4,
+        'REGISTRADO': 4,
+        'DI REGISTRADA': 4,
+        'DECLARACAO REGISTRADA': 4,
+        'NUMERARIO ENVIADO': 4,
+        'NUMERÁRIO ENVIADO': 4,
+        'DI AGUARDANDO PARAMETRIZACAO': 4,
+        'DI AGUARDANDO PARAMETRIZAÇÃO': 4,
+        'DI ALTERADA PELO USUÁRIO': 4,
+        'DI ALTERADA PELO USUARIO': 4,
+        'PREENCHIMENTO DA DECLARAÇÃO DE IMPORTAÇÃO ESTÁ OK.': 4,
+        'PREENCHIMENTO DA DECLARACAO DE IMPORTACAO ESTA OK.': 4,
+        'DECLARAÇÃO DE IMPORTAÇÃO NÃO FOI REGISTRADA': 4,
+        'DECLARACAO DE IMPORTACAO NAO FOI REGISTRADA': 4,
+        
+        // Estágio 5: Desembaraço
+        'DESEMBARACO': 5,
+        'DESEMBARAÇO': 5,
+        'DESEMBARACADO': 5,
+        'LIBERADO': 5,
+        'DECLARACAO DESEMBARACADA': 5,
+        'DECLARAÇÃO DESEMBARAÇADA': 5,
+        'DESEMBARACO AUTORIZADO': 5,
+        'DESEMBARAÇO AUTORIZADO': 5,
+        
+        // Estágio 6: Finalizado
+        'FINALIZADO': 6,
+        'PROCESSO CONCLUIDO': 6,
+        'PROCESSO CONCLUÍDO': 6,
+        'CONCLUIDO': 6,
+        'CONCLUÍDO': 6,
+        'ENTREGUE': 6
     };
     
     // Extrair o nome do status (remover número, pontos e traços)
@@ -2096,9 +2156,9 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
         const numeroMatch = statusTimeline.match(/^(\d+)/);
         if (numeroMatch) {
             const numero = parseInt(numeroMatch[1]);
-            if (numero >= 1 && numero <= 10) {
-                // Mapear números para steps (1-5 são diretos, 6-10 são status 5)
-                currentStep = numero <= 5 ? numero : 5;
+            if (numero >= 1 && numero <= 6) {
+                // Mapear números para steps (1-6 são diretos)
+                currentStep = numero;
                 console.log(`[TIMELINE_DEBUG] Mapeamento por número: ${numero} -> Step ${currentStep}`);
             }
         }
@@ -3507,4 +3567,119 @@ function showPaisesError() {
             </tr>
         `;
     }
+}
+
+/**
+ * Get country code for flag API based on country name
+ */
+function getCountryCode(countryName) {
+    const COUNTRY_MAPPING = {
+        'CHINA': 'CN',
+        'ESTADOS UNIDOS': 'US',
+        'ALEMANHA': 'DE',
+        'JAPAO': 'JP',
+        'JAPÃO': 'JP',
+        'ITALIA': 'IT',
+        'ITÁLIA': 'IT',
+        'FRANCA': 'FR',
+        'FRANÇA': 'FR',
+        'COREIA DO SUL': 'KR',
+        'REINO UNIDO': 'GB',
+        'HOLANDA': 'NL',
+        'PAISES BAIXOS': 'NL',
+        'PAÍSES BAIXOS': 'NL',
+        'ESPANHA': 'ES',
+        'SINGAPURA': 'SG',
+        'INDIA': 'IN',
+        'ÍNDIA': 'IN',
+        'TAILANDIA': 'TH',
+        'TAILÂNDIA': 'TH',
+        'TAIWAN': 'TW',
+        'MALASIA': 'MY',
+        'MALÁSIA': 'MY',
+        'HONG KONG': 'HK',
+        'VIETNAM': 'VN',
+        'VIETNÃ': 'VN',
+        'TURQUIA': 'TR',
+        'CANADA': 'CA',
+        'CANADÁ': 'CA',
+        'MEXICO': 'MX',
+        'MÉXICO': 'MX',
+        'CHILE': 'CL',
+        'ARGENTINA': 'AR',
+        'COLOMBIA': 'CO',
+        'COLÔMBIA': 'CO',
+        'PERU': 'PE',
+        'PARAGUAI': 'PY',
+        'URUGUAI': 'UY',
+        'BOLIVIA': 'BO',
+        'BOLÍVIA': 'BO',
+        'EQUADOR': 'EC',
+        'VENEZUELA': 'VE',
+        'AUSTRALIA': 'AU',
+        'AUSTRÁLIA': 'AU',
+        'NOVA ZELANDIA': 'NZ',
+        'NOVA ZELÂNDIA': 'NZ',
+        'RUSSIA': 'RU',
+        'RÚSSIA': 'RU',
+        'UCRANIA': 'UA',
+        'UCRÂNIA': 'UA',
+        'POLONIA': 'PL',
+        'POLÔNIA': 'PL',
+        'REPUBLICA TCHECA': 'CZ',
+        'REPÚBLICA TCHECA': 'CZ',
+        'HUNGRIA': 'HU',
+        'ROMENIA': 'RO',
+        'ROMÊNIA': 'RO',
+        'BULGÁRIA': 'BG',
+        'BULGARIA': 'BG',
+        'GRECIA': 'GR',
+        'GRÉCIA': 'GR',
+        'PORTUGAL': 'PT',
+        'SUECIA': 'SE',
+        'SUÉCIA': 'SE',
+        'NORUEGA': 'NO',
+        'DINAMARCA': 'DK',
+        'FINLANDIA': 'FI',
+        'FINLÂNDIA': 'FI',
+        'AUSTRIA': 'AT',
+        'ÁUSTRIA': 'AT',
+        'SUICA': 'CH',
+        'SUÍÇA': 'CH',
+        'BELGICA': 'BE',
+        'BÉLGICA': 'BE',
+        'LUXEMBURGO': 'LU',
+        'ISRAEL': 'IL',
+        'EMIRADOS ARABES UNIDOS': 'AE',
+        'EMIRADOS ÁRABES UNIDOS': 'AE',
+        'ARABIA SAUDITA': 'SA',
+        'ARÁBIA SAUDITA': 'SA',
+        'EGITO': 'EG',
+        'AFRICA DO SUL': 'ZA',
+        'ÁFRICA DO SUL': 'ZA',
+        'MARROCOS': 'MA',
+        'TUNISIA': 'TN',
+        'TUNÍSIA': 'TN',
+        'INDONESIA': 'ID',
+        'INDONÉSIA': 'ID',
+        'FILIPINAS': 'PH',
+        'BANGLADESH': 'BD',
+        'PAQUISTAO': 'PK',
+        'PAQUISTÃO': 'PK',
+        'SRI LANKA': 'LK',
+        'MYANMAR': 'MM',
+        'CAMBOJA': 'KH',
+        'LAOS': 'LA',
+        'NEPAL': 'NP',
+        'BRUNEI': 'BN',
+        'CAZAQUISTAO': 'KZ',
+        'CAZAQUISTÃO': 'KZ',
+        'UZBEQUISTAO': 'UZ',
+        'UZBEQUISTÃO': 'UZ'
+    };
+    
+    if (!countryName) return null;
+    
+    const normalizedName = countryName.toString().toUpperCase().trim();
+    return COUNTRY_MAPPING[normalizedName] || null;
 }
