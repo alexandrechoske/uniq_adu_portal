@@ -10,119 +10,375 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="despesas-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">
         <div class="actions-left">
-            
-<nav class="breadcrumb">
-    
-        <div class="breadcrumb-item">
-            
-                <i class="mdi mdi-view-dashboard breadcrumb-icon"></i>
-            
-            
-                <span>Menu Principal</span>
-            
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
+                {'name': 'Controle de Despesas', 'icon': 'mdi mdi-cash-minus'}
+            ]) }}
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados do ano atual</span>
+            </div>
         </div>
-        
-    
-</nav>
-
+        <div class="actions-right">
+            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-primary">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
         </div>
     </div>
     
-    <!-- Conteúdo Principal -->
-    <div class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Carregando dados de despesas...</p>
+        </div>
+    </div>
+    
+    <!-- KPI Cards Principais -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-danger" id="kpi-total-despesas">
+            <div class="kpi-icon">
                 <i class="mdi mdi-cash-minus"></i>
-                Controle de Despesas
-            </h1>
-            <p class="page-description">
-                Gestão e análise detalhada de todas as despesas empresariais
-            </p>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Despesas Totais</p>
+                <p class="kpi-value" id="valor-total-despesas">-</p>
+                <p class="kpi-variation" id="var-total-despesas">-</p>
+            </div>
         </div>
         
-        <!-- Conteúdo será desenvolvido aqui -->
-        <div class="content-placeholder">
-            <div class="placeholder-card">
-                <i class="mdi mdi-cash-minus placeholder-icon"></i>
-                <h3>Controle de Despesas</h3>
-                <p>Esta página será desenvolvida com análise de despesas, categorização e controles financeiros.</p>
+        <div class="kpi-card kpi-warning" id="kpi-funcionarios">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-group"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Despesas com Funcionários</p>
+                <p class="kpi-value" id="valor-funcionarios">-</p>
+                <p class="kpi-variation" id="var-funcionarios">-</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info" id="kpi-folha-liquida">
+            <div class="kpi-icon">
+                <i class="mdi mdi-wallet"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Folha Líquida</p>
+                <p class="kpi-value" id="valor-folha-liquida">-</p>
+                <p class="kpi-variation" id="var-folha-liquida">-</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-purple" id="kpi-impostos">
+            <div class="kpi-icon">
+                <i class="mdi mdi-file-document"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Impostos</p>
+                <p class="kpi-value" id="valor-impostos">-</p>
+                <p class="kpi-variation" id="var-impostos">-</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPI Card Estratégico -->
+    <div class="kpi-grid-secondary">
+        <div class="kpi-card kpi-success" id="kpi-percentual-folha">
+            <div class="kpi-icon">
+                <i class="mdi mdi-percent"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">% Folha sobre Faturamento</p>
+                <p class="kpi-value" id="valor-percentual-folha">-</p>
+                <p class="kpi-variation" id="var-percentual-folha">Indicador de eficiência operacional</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Seção de Gráficos e Análises -->
+    <div class="charts-section">
+        <!-- Gráfico de Despesas por Categoria -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>
+                    <i class="mdi mdi-chart-bar"></i>
+                    Despesas por Categoria
+                </h3>
+                <div class="chart-actions">
+                    <small class="chart-hint">
+                        <i class="mdi mdi-information-outline"></i>
+                        Clique nas barras para ver detalhes
+                    </small>
+                </div>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-categorias" width="400" height="200"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico de Tendências Mensais -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>
+                    <i class="mdi mdi-chart-line"></i>
+                    Tendências Mensais - Top 5 Categorias
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-tendencias" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Seção de Tabelas -->
+    <div class="tables-section">
+        <!-- Tabela de Análise por Categoria (única, sem drill-down inline) -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>
+                    <i class="mdi mdi-table"></i>
+                    Análise por Categoria
+                </h3>
+            </div>
+            <div class="table-content">
+                <div class="enhanced-table-container">
+                    <table id="table-categorias" class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                                <th>% do Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ranking de Fornecedores -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3>
+                    <i class="mdi mdi-trophy"></i>
+                    Top 10 Maiores Despesas por Descrição
+                </h3>
+            </div>
+            <div class="table-content">
+                <div class="enhanced-table-container">
+                    <table id="table-fornecedores" class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Descrição</th>
+                                <th>Valor Total</th>
+                                <th>% do Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.content-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px;
-    padding: 2rem;
-}
+<!-- Modal de Detalhes da Categoria -->
+<div id="detalhes-modal" class="modal detalhes-modal" style="display: none;">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container detalhes-modal-container">
+        <div class="modal-header">
+            <h3>
+                <i class="mdi mdi-magnify"></i>
+                Detalhes: <span id="modal-categoria-selecionada">-</span>
+            </h3>
+            <button id="close-detalhes-modal" class="btn-close">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body detalhes-modal-body">
+            <!-- Estatísticas rápidas da categoria -->
+            <div class="detalhes-stats">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="mdi mdi-cash"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Total da Categoria</span>
+                        <span class="stat-value" id="modal-total-categoria">-</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="mdi mdi-file-document-multiple"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Nº de Transações</span>
+                        <span class="stat-value" id="modal-num-transacoes">-</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="mdi mdi-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Valor Médio</span>
+                        <span class="stat-value" id="modal-valor-medio">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filtros do modal -->
+            <div class="detalhes-filters">
+                <div class="filter-group">
+                    <input type="text" id="modal-search" class="form-control" placeholder="Buscar descrição...">
+                </div>
+                <div class="filter-group">
+                    <select id="modal-classe-filter" class="form-control">
+                        <option value="">Todas as Classes</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Tabela de detalhes -->
+            <div class="detalhes-table-container">
+                <table id="modal-table-detalhes" class="enhanced-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Classe</th>
+                            <th>Código</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dados carregados via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <!-- Paginação -->
+            <div class="pagination-container">
+                <button id="modal-btn-prev-page" class="btn btn-sm btn-secondary">
+                    <i class="mdi mdi-chevron-left"></i>
+                    Anterior
+                </button>
+                <span id="modal-pagination-info" class="pagination-info">-</span>
+                <button id="modal-btn-next-page" class="btn btn-sm btn-secondary">
+                    <i class="mdi mdi-chevron-right"></i>
+                    Próximo
+                </button>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="modal-export-btn" class="btn btn-primary">
+                    <i class="mdi mdi-download"></i>
+                    Exportar
+                </button>
+                <button id="modal-close-btn" class="btn btn-secondary">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-.placeholder-card {
-    text-align: center;
-    background: white;
-    border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-}
-
-.placeholder-icon {
-    font-size: 4rem;
-    color: var(--color-primary);
-    margin-bottom: 1rem;
-}
-
-.placeholder-card h3 {
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.placeholder-card p {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.page-header {
-    margin-bottom: 2rem;
-}
-
-.page-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.page-title i {
-    color: var(--color-primary);
-}
-
-.page-description {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    margin: 0;
-}
-</style>
+<!-- Modal de Filtros -->
+<div id="filters-modal" class="modal" style="display: none;">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>
+                <i class="mdi mdi-filter"></i>
+                Filtros de Período
+            </h3>
+            <button id="close-modal" class="btn-close">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="periodo-select">Período:</label>
+                <select id="periodo-select" class="form-control">
+                    <option value="mes_atual">Mês Atual</option>
+                    <option value="trimestre_atual">Trimestre Atual</option>
+                    <option value="ano_atual" selected>Ano Atual</option>
+                    <option value="ultimos_12_meses">Últimos 12 Meses</option>
+                    <option value="personalizado">Período Personalizado</option>
+                </select>
+            </div>
+            
+            <div id="periodo-personalizado" class="form-group" style="display: none;">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="data-inicio">Data Início:</label>
+                        <input type="date" id="data-inicio" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="data-fim">Data Fim:</label>
+                        <input type="date" id="data-fim" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button id="clear-filters" class="btn btn-secondary">
+                <i class="mdi mdi-filter-off"></i>
+                Limpar
+            </button>
+            <button id="apply-filters" class="btn btn-primary">
+                <i class="mdi mdi-check"></i>
+                Aplicar Filtros
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('fin_despesas.static', filename='js/despesas_anual.js') }}"></script>
 <script>
-// JavaScript específico do controle de despesas será desenvolvido aqui
+// Inicializar controlador das despesas após o carregamento completo
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Página Controle de Despesas carregada');
+    // Garantir que jQuery esteja carregado
+    if (typeof $ !== 'undefined') {
+        console.log('Inicializando DespesasController...');
+        window.despesasController = new DespesasController();
+    } else {
+        console.error('jQuery não carregado, tentando novamente...');
+        setTimeout(function() {
+            if (typeof $ !== 'undefined') {
+                window.despesasController = new DespesasController();
+            } else {
+                console.error('Falha ao carregar jQuery');
+            }
+        }, 500);
+    }
 });
 </script>
 {% endblock %}
