@@ -197,8 +197,8 @@
             </div>
         </div>
         
-        <!-- Material Chart/Table -->
-        <div class="chart-section">
+        <!-- Material Chart/Table - Apenas para usuários KINGSPAN/CISER -->
+        <div class="chart-section" id="material-chart-section" style="display: none;">
             <div class="chart-header">
                 <h2 class="chart-title">Principais Materiais</h2>
             </div>
@@ -566,8 +566,8 @@
                     </div>
                 </div>
 
-                <!-- Material -->
-                <div class="filter-section">
+                <!-- Material - Apenas para usuários KINGSPAN/CISER -->
+                <div class="filter-section" id="material-filter-section" style="display: none;">
                     <h3 class="filter-section-title">📦 Material</h3>
                     <div class="filter-input-group">
                         <div class="multi-select-container">
@@ -735,5 +735,24 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('[DASH_EXEC] Safety timeout reached. Forced hiding of loaders.');
     }, 20000);
 });
+
+// Função para controlar exibição de seções de material baseado na permissão
+function toggleMaterialSections(canViewMaterials) {
+    const materialChartSection = document.getElementById('material-chart-section');
+    const materialFilterSection = document.getElementById('material-filter-section');
+    
+    if (materialChartSection) {
+        materialChartSection.style.display = canViewMaterials ? 'block' : 'none';
+        console.log('[MATERIAL_PERMISSION] Seção de gráfico de materiais:', canViewMaterials ? 'mostrada' : 'oculta');
+    }
+    
+    if (materialFilterSection) {
+        materialFilterSection.style.display = canViewMaterials ? 'block' : 'none';
+        console.log('[MATERIAL_PERMISSION] Seção de filtro de materiais:', canViewMaterials ? 'mostrada' : 'oculta');
+    }
+}
+
+// Armazenar permissão globalmente para uso em outros módulos
+window.canViewMaterials = false;
 </script>
 {% endblock %}

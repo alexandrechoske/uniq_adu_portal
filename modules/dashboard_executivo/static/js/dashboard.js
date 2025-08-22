@@ -1123,6 +1123,14 @@ async function loadDashboardCharts() {
         const response = await fetchWithAbort('charts', `/dashboard-executivo/api/charts?${queryString}`);
         const result = await response.json();
         if (result.success) {
+            // Processar permissão de materiais
+            if (typeof result.can_view_materials !== 'undefined') {
+                window.canViewMaterials = result.can_view_materials;
+                console.log('[MATERIAL_PERMISSION] Permissão de materiais:', window.canViewMaterials);
+                if (typeof window.toggleMaterialSections === 'function') {
+                    window.toggleMaterialSections(window.canViewMaterials);
+                }
+            }
             createDashboardCharts(result.charts);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar gráficos:', result.error);
@@ -1142,6 +1150,14 @@ async function loadDashboardChartsWithCache() {
         const response = await fetchWithAbort('charts', `/dashboard-executivo/api/charts?${queryString}`);
         const result = await response.json();
         if (result.success) {
+            // Processar permissão de materiais
+            if (typeof result.can_view_materials !== 'undefined') {
+                window.canViewMaterials = result.can_view_materials;
+                console.log('[MATERIAL_PERMISSION] Permissão de materiais:', window.canViewMaterials);
+                if (typeof window.toggleMaterialSections === 'function') {
+                    window.toggleMaterialSections(window.canViewMaterials);
+                }
+            }
             dashboardCache.set('charts', result.charts);
             createDashboardChartsWithValidation(result.charts);
         } else {
@@ -1164,6 +1180,14 @@ async function loadDashboardChartsWithRetry(maxRetries = 2) {
             const result = await response.json();
             if (result.success && result.charts) {
                 console.log('[DASHBOARD_EXECUTIVO] Gráficos carregados com sucesso');
+                // Processar permissão de materiais
+                if (typeof result.can_view_materials !== 'undefined') {
+                    window.canViewMaterials = result.can_view_materials;
+                    console.log('[MATERIAL_PERMISSION] Permissão de materiais:', window.canViewMaterials);
+                    if (typeof window.toggleMaterialSections === 'function') {
+                        window.toggleMaterialSections(window.canViewMaterials);
+                    }
+                }
                 dashboardCache.set('charts', result.charts);
                 createDashboardChartsWithValidation(result.charts);
                 return;

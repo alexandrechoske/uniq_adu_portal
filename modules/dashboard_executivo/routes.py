@@ -366,6 +366,69 @@ def apply_filters(data):
         print(f"[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros: {str(e)}")
         return data
 
+def user_can_view_materials(user_data):
+    """
+    Verificar se o usuário pode visualizar dados de materiais.
+    Retorna True apenas para usuários vinculados às empresas KINGSPAN ou CISER.
+    """
+    try:
+        if not user_data:
+            return False
+            
+        user_role = user_data.get('role')
+        
+        # Admin e interno_unique sempre podem ver materiais
+        if user_role in ['admin', 'interno_unique']:
+            return True
+            
+        # Para cliente_unique, verificar empresas vinculadas
+        if user_role == 'cliente_unique':
+            user_companies = get_user_companies(user_data)
+            if not user_companies:
+                return False
+                
+            # Buscar nomes das empresas vinculadas ao usuário pelos CNPJs
+            try:
+                empresas_response = (
+                    supabase_admin
+                    .table('cad_clientes_sistema')
+                    .select('nome_cliente, cnpjs')
+                    .eq('ativo', True)
+                    .execute()
+                )
+                
+                user_company_names = []
+                for empresa in empresas_response.data:
+                    cnpjs_empresa = empresa.get('cnpjs', [])
+                    if isinstance(cnpjs_empresa, list):
+                        # Normalizar CNPJs da empresa
+                        cnpjs_normalizados = [re.sub(r'\D', '', str(cnpj)) for cnpj in cnpjs_empresa if cnpj]
+                        # Verificar se algum CNPJ do usuário está na empresa
+                        if any(cnpj in user_companies for cnpj in cnpjs_normalizados):
+                            user_company_names.append(empresa.get('nome_cliente', '').upper())
+                
+                print(f"[MATERIALS_PERMISSION] Usuário {user_data.get('id')} vinculado às empresas: {user_company_names}")
+                
+                # Verificar se o usuário pertence a KINGSPAN ou CISER
+                allowed_companies = ['KINGSPAN', 'CISER']
+                has_material_permission = any(
+                    any(allowed in company_name for allowed in allowed_companies)
+                    for company_name in user_company_names
+                )
+                
+                print(f"[MATERIALS_PERMISSION] Usuário pode ver materiais: {has_material_permission}")
+                return has_material_permission
+                
+            except Exception as e:
+                print(f"[MATERIALS_PERMISSION] Erro ao verificar empresas: {str(e)}")
+                return False
+        
+        return False
+        
+    except Exception as e:
+        print(f"[MATERIALS_PERMISSION] Erro na verificação de permissão: {str(e)}")
+        return False
+
 @bp.route('/')
 @login_required
 @role_required(['admin', 'interno_unique', 'cliente_unique'])
@@ -766,19 +829,23 @@ def dashboard_charts():
             urf_counts = df['urf_despacho'].value_counts().head(10)
             urf_chart = {'labels': urf_counts.index.tolist(), 'data': urf_counts.values.tolist()}
 
-        # Gráfico Materiais
+        # Gráfico Materiais - APENAS para usuários KINGSPAN/CISER
         material_chart = {'labels': [], 'data': []}
-        if 'mercadoria' in df.columns:
+        user_data = session.get('user', {})
+        can_view_materials = user_can_view_materials(user_data)
+        
+        if can_view_materials and 'mercadoria' in df.columns:
             material_counts = df['mercadoria'].value_counts().head(10)
             material_chart = {
                 'labels': material_counts.index.tolist(),
                 'data': material_counts.values.tolist()
             }
 
-        # NOVO: Tabela de Principais Materiais (migrada do dashboard materiais)
+        # NOVO: Tabela de Principais Materiais - APENAS para usuários KINGSPAN/CISER
         principais_materiais = {'data': []}
-        if 'mercadoria' in df.columns and 'data_chegada' in df.columns:
+        if can_view_materials and 'mercadoria' in df.columns and 'data_chegada' in df.columns:
             try:
+                print(f"[DASHBOARD_EXECUTIVO] Usuário autorizado para materiais, processando tabela...")
                 # Agrupar por material e calcular métricas
                 material_groups = df.groupby('mercadoria').agg({
                     'ref_unique': 'count',
@@ -821,10 +888,16 @@ def dashboard_charts():
                     })
                 
                 principais_materiais = {'data': table_data}
+                print(f"[DASHBOARD_EXECUTIVO] Tabela de materiais processada: {len(table_data)} itens")
                 
             except Exception as e:
                 print(f"[DASHBOARD_EXECUTIVO] Erro ao processar tabela de materiais: {str(e)}")
                 principais_materiais = {'data': []}
+        else:
+            if not can_view_materials:
+                print(f"[DASHBOARD_EXECUTIVO] Usuário não autorizado para ver materiais")
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] Colunas de material não encontradas nos dados")
 
         charts = {
             'monthly': monthly_chart,
@@ -837,7 +910,8 @@ def dashboard_charts():
         
         return jsonify({
             'success': True,
-            'charts': clean_data_for_json(charts)
+            'charts': clean_data_for_json(charts),
+            'can_view_materials': can_view_materials  # NOVO: Informar frontend sobre permissão
         })
         
     except Exception as e:
@@ -1427,4 +1501,26 @@ def bootstrap_dashboard():
         return jsonify(clean_data_for_json(payload))
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro no bootstrap: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/api/test-materials-permission')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique']) 
+def test_materials_permission():
+    """Endpoint de teste para verificar permissão de materiais"""
+    try:
+        user_data = session.get('user', {})
+        can_view = user_can_view_materials(user_data)
+        user_companies = get_user_companies(user_data)
+        
+        return jsonify({
+            'success': True,
+            'user_data': user_data,
+            'can_view_materials': can_view,
+            'user_companies': user_companies,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro no teste de permissão: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
