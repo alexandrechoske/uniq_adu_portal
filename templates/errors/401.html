@@ -3,17 +3,21 @@
 {% block title %}Acesso Não Autorizado - Portal UniSystem{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 text-center">
-        <h1 class="display-1 text-danger">401</h1>
-        <h2 class="mb-4">Acesso Não Autorizado</h2>
-        <p class="lead mb-4">
+<div class="flex justify-center items-center min-h-screen">
+    <div class="max-w-md text-center p-8">
+        <h1 class="text-8xl font-bold text-red-500 mb-4">401</h1>
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Acesso Não Autorizado</h2>
+        <p class="text-lg text-gray-600 mb-6">
             Você não tem permissão para acessar esta página.
             Por favor, faça login com uma conta que tenha as permissões necessárias.
         </p>
-        <div class="d-flex justify-content-center gap-3">
-            <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Fazer Login</a>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar ao Início</a>
+        <div class="flex justify-center gap-4">
+            <a href="{{ url_for('auth.login') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors">
+                Fazer Login
+            </a>
+            <a href="{{ url_for('index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md transition-colors">
+                Voltar ao Início
+            </a>
         </div>
     </div>
 </div>
