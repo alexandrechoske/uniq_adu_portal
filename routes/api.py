@@ -366,7 +366,7 @@ def force_refresh():
                 'id, ref_unique, status_processo, canal, data_chegada, '
                 'valor_fob_real, valor_cif_real, cnpj_importador, importador, '
                 'created_at, updated_at, modal, data_aberture, '
-                'mercadoria, data_embarque, urf_entrada, numero_di, data_registro, '
+                'mercadoria, data_embarque, pais_procedencia, numero_di, data_registro, '
                 'peso_bruto, transit_time_real, exportador_fornecedor, fabricante, '
                 'presenca_carga, data_desembaraco, custo_total, firebird_di_codigo, '
                 'firebird_fat_codigo, container, urf_despacho'

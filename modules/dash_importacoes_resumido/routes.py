@@ -291,7 +291,7 @@ def get_dashboard_data():
             'data_registro': 'data_registro',
             'canal': 'canal',
             'data_entrega': 'data_desembaraco',
-            'urf_destino': 'urf_despacho'
+            'urf_destino': 'pais_procedencia'
         }
 
         standardized_data = []

@@ -147,9 +147,10 @@
     </div>
     
     <!-- Charts Grid -->
-    <div class="charts-grid">
-        <!-- Monthly Evolution Chart (70% width) -->
-    <div class="chart-section">
+    <!-- LINHA 1: Evolução Mensal, Países de Procedência, Destinos por Processos -->
+    <div class="dashboard-line-1">
+        <!-- Monthly Evolution Chart -->
+        <div class="chart-section chart-linha-1">
             <div class="chart-header">
                 <h2 class="chart-title">Evolução Mensal</h2>
                 <div class="period-controls">
@@ -159,46 +160,73 @@
                 </div>
             </div>
             <div class="chart-container">
-        <div id="monthly-loading" class="component-loading"><div class="spinner"></div></div>
+                <div id="monthly-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="monthly-chart" class="chart-canvas"></canvas>
             </div>
         </div>
-        
+
+        <!-- Países de Procedência Table -->
+        <div class="chart-section chart-linha-1">
+            <div class="chart-header">
+                <h2 class="chart-title">
+                    Países de Procedência
+                </h2>
+            </div>
+            <div class="table-container">
+                <div id="paises-loading" class="component-loading"><div class="spinner"></div></div>
+                <table id="paises-procedencia-table" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>País</th>
+                            <th class="text-center">Total Processos</th>
+                            <th class="text-center">Total Custo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dados carregados dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Destinos por Processos (URF Chart) -->
+        <div class="chart-section chart-linha-1">
+            <div class="chart-header">
+                <h2 class="chart-title">Destinos por Processos</h2>
+            </div>
+            <div class="chart-container">
+                <div id="urf-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="urf-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- LINHA 2: Distribuição por Status, Processos e Custos por Modal, Principais Materiais -->
+    <div class="dashboard-line-2">
         <!-- Status Chart -->
-    <div class="chart-section">
+        <div class="chart-section chart-linha-2">
             <div class="chart-header">
                 <h2 class="chart-title">Distribuição por Status</h2>
             </div>
             <div class="chart-container">
-        <div id="status-loading" class="component-loading"><div class="spinner"></div></div>
+                <div id="status-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="status-chart" class="chart-canvas"></canvas>
             </div>
         </div>
-        
-        <!-- Modal Chart (30% width) -->
-    <div class="chart-section">
+
+        <!-- Modal Chart -->
+        <div class="chart-section chart-linha-2">
             <div class="chart-header">
                 <h2 class="chart-title">Processos e Custos por Modal</h2>
             </div>
             <div class="chart-container">
-        <div id="modal-loading" class="component-loading"><div class="spinner"></div></div>
+                <div id="modal-loading" class="component-loading"><div class="spinner"></div></div>
                 <canvas id="grouped-modal-chart" class="chart-canvas"></canvas>
             </div>
         </div>
-        
-        <!-- URF Chart -->
-    <div class="chart-section">
-            <div class="chart-header">
-                <h2 class="chart-title">Top 10 URFs</h2>
-            </div>
-            <div class="chart-container">
-        <div id="urf-loading" class="component-loading"><div class="spinner"></div></div>
-                <canvas id="urf-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-        
+
         <!-- Material Chart/Table - Apenas para usuários KINGSPAN/CISER -->
-        <div class="chart-section" id="material-chart-section" style="display: none;">
+        <div class="chart-section chart-linha-2" id="material-chart-section" style="display: none;">
             <div class="chart-header">
                 <h2 class="chart-title">Principais Materiais</h2>
             </div>

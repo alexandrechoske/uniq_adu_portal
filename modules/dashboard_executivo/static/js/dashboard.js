@@ -967,6 +967,7 @@ async function loadComponentsWithRetry() {
         { name: 'KPIs', loadFunction: () => loadDashboardKPIsWithRetry() },
         { name: 'Gráficos', loadFunction: () => loadDashboardChartsWithRetry() },
         { name: 'Operações', loadFunction: () => loadRecentOperationsWithRetry() },
+        { name: 'Países', loadFunction: () => loadPaisesProcedenciaWithRetry() },
         { name: 'Filtros', loadFunction: () => loadFilterOptionsWithRetry() }
     ];
     
@@ -1975,7 +1976,7 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-registro', operation.data_registro);
     updateElementValue('detail-canal', operation.canal, true);
     updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
-    updateElementValue('detail-urf-entrada', operation.urf_entrada_normalizado || operation.urf_entrada);
+    updateElementValue('detail-pais-procedencia', operation.pais_procedencia_normalizado || operation.pais_procedencia);
     // CORREÇÃO: Tratar "N/A" como valor inválido no fallback
     const urfDespacho = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A') 
                         ? operation.urf_despacho_normalizado 
@@ -3019,7 +3020,8 @@ async function applyFilters() {
         await Promise.all([
             loadDashboardKPIsWithCache(),
             loadDashboardChartsWithCache(),
-            loadRecentOperationsWithCache()
+            loadRecentOperationsWithCache(),
+            loadPaisesProcedenciaWithRetry()  // CORREÇÃO: Incluir tabela de países
         ]);
         
         showLoading(false);
@@ -3106,7 +3108,8 @@ async function resetAllFilters() {
         await Promise.all([
             loadDashboardKPIsWithCache(),
             loadDashboardChartsWithCache(),
-            loadRecentOperationsWithCache()
+            loadRecentOperationsWithCache(),
+            loadPaisesProcedenciaWithRetry()  // CORREÇÃO: Incluir tabela de países
         ]);
         
         showLoading(false);
@@ -3365,3 +3368,138 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+/**
+ * Load países de procedência data with retry mechanism
+ */
+async function loadPaisesProcedenciaWithRetry(maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt}/${maxRetries} - Carregando países de procedência...`);
+            
+            const response = await fetch('/dashboard-executivo/api/paises-procedencia');
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log(`[DASHBOARD_EXECUTIVO] Países de procedência carregados: ${result.data.length} países`);
+                await renderPaisesProcedenciaTable(result.data);
+                return;
+            } else {
+                throw new Error(result.error || 'Erro ao carregar países de procedência');
+            }
+            
+        } catch (error) {
+            console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} para países falhou:`, error.message);
+            
+            if (attempt === maxRetries) {
+                console.error('[DASHBOARD_EXECUTIVO] Falha final ao carregar países de procedência:', error);
+                showPaisesError();
+            } else {
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
+        }
+    }
+}
+
+/**
+ * Render países de procedência table
+ */
+async function renderPaisesProcedenciaTable(paisesData) {
+    const loadingElement = document.getElementById('paises-loading');
+    const tableBody = document.querySelector('#paises-procedencia-table tbody');
+    
+    try {
+        // Hide loading
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+        
+        // Clear existing data
+        if (tableBody) {
+            tableBody.innerHTML = '';
+        }
+        
+        // Check if data is empty
+        if (!paisesData || paisesData.length === 0) {
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center">
+                            <i class="mdi mdi-earth-off"></i>
+                            Nenhum país de procedência encontrado
+                        </td>
+                    </tr>
+                `;
+            }
+            return;
+        }
+        
+        // Render table rows
+        paisesData.forEach(pais => {
+            const row = document.createElement('tr');
+            
+            // Formatar valores
+            const totalCusto = formatCurrency(pais.total_custo || 0);
+            const totalProcessos = (pais.total_processos || 0).toLocaleString('pt-BR');
+            
+            // Extrair apenas o nome do país (remove código se existir)
+            let nomePais = pais.pais_procedencia || 'N/A';
+            // Remove códigos como "249 - US - " e mantém apenas "ESTADOS UNIDOS"
+            const match = nomePais.match(/\d+\s*-\s*[A-Z]{2}\s*-\s*(.+)/);
+            if (match) {
+                nomePais = match[1].trim();
+            }
+            
+            // HTML da linha
+            row.innerHTML = `
+                <td class="pais-cell">
+                    ${pais.url_bandeira ? 
+                        `<img src="${pais.url_bandeira}" alt="${nomePais}" class="bandeira-icon" onerror="this.style.display='none';">` 
+                        : '<i class="mdi mdi-earth"></i>'
+                    }
+                    <span class="pais-nome">${nomePais}</span>
+                </td>
+                <td class="text-center">
+                    <span class="badge badge-info">${totalProcessos}</span>
+                </td>
+                <td class="text-center">
+                    <span class="valor-custo">${totalCusto}</span>
+                </td>
+            `;
+            
+            if (tableBody) {
+                tableBody.appendChild(row);
+            }
+        });
+        
+        console.log(`[DASHBOARD_EXECUTIVO] Tabela de países renderizada com ${paisesData.length} países`);
+        
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro ao renderizar tabela de países:', error);
+        showPaisesError();
+    }
+}
+
+/**
+ * Show error message for países table
+ */
+function showPaisesError() {
+    const loadingElement = document.getElementById('paises-loading');
+    const tableBody = document.querySelector('#paises-procedencia-table tbody');
+    
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+    }
+    
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center error-message">
+                    <i class="mdi mdi-alert-circle"></i>
+                    Erro ao carregar dados de países
+                </td>
+            </tr>
+        `;
+    }
+}

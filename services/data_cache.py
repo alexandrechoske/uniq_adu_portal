@@ -150,7 +150,7 @@ class DataCacheService:
                 'id, status_processo, canal, data_chegada, '
                 'valor_cif_real, cnpj_importador, importador, '
                 'modal, data_abertura, mercadoria, data_embarque, '
-                'urf_entrada, ref_unique, transit_time_real, valor_fob_real'
+                'pais_procedencia, ref_unique, transit_time_real, valor_fob_real'
             ).neq('status_processo', 'Despacho Cancelado')
             
             # Não aplicar filtro de data por enquanto - buscar todos os dados

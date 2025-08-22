@@ -1524,3 +1524,79 @@ def test_materials_permission():
     except Exception as e:
         print(f"[DASHBOARD_EXECUTIVO] Erro no teste de permissão: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/api/paises-procedencia')
+@login_required
+@role_required(['admin', 'interno_unique', 'cliente_unique'])
+def get_paises_procedencia():
+    """API para obter dados de países de procedência com bandeiras"""
+    try:
+        user_data = session.get('user', {})
+        user_id = user_data.get('id')
+        
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Usuário não autenticado'}), 401
+        
+        print(f"[DASHBOARD_EXECUTIVO] Carregando dados de países de procedência para user {user_id}")
+        
+        # Obter dados do cache
+        cached_data = fetch_and_cache_dashboard_data(user_data)
+        
+        if not cached_data:
+            return jsonify({
+                'success': True,
+                'data': [],
+                'message': 'Nenhum dado encontrado'
+            })
+        
+        # CORREÇÃO: Aplicar filtros aos dados antes de processar
+        filtered_data = apply_filters(cached_data)
+        
+        # Converter para DataFrame
+        df = pd.DataFrame(filtered_data)
+        
+        # Filtrar apenas registros com país de procedência válido
+        df_paises = df[df['pais_procedencia'].notna() & (df['pais_procedencia'] != '')]
+        
+        if df_paises.empty:
+            return jsonify({
+                'success': True,
+                'data': [],
+                'message': 'Nenhum país de procedência encontrado'
+            })
+        
+        # Agrupar por país de procedência
+        paises_stats = df_paises.groupby('pais_procedencia').agg({
+            'id': 'count',  # Total de processos
+            'custo_total': lambda x: x.sum() if x.notna().any() else 0.0,  # Total de custos
+            'url_bandeira': 'first'  # Pegar a primeira URL da bandeira (todas devem ser iguais para o mesmo país)
+        }).reset_index()
+        
+        # Renomear colunas
+        paises_stats.columns = ['pais_procedencia', 'total_processos', 'total_custo', 'url_bandeira']
+        
+        # Ordenar por total de processos (decrescente)
+        paises_stats = paises_stats.sort_values('total_processos', ascending=False)
+        
+        # Converter para lista de dicionários
+        paises_data = []
+        for _, row in paises_stats.iterrows():
+            paises_data.append({
+                'pais_procedencia': str(row['pais_procedencia']),
+                'total_processos': int(row['total_processos']),
+                'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
+                'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
+            })
+        
+        print(f"[DASHBOARD_EXECUTIVO] Retornando dados de {len(paises_data)} países")
+        
+        return jsonify({
+            'success': True,
+            'data': clean_data_for_json(paises_data)
+        })
+        
+    except Exception as e:
+        print(f"[DASHBOARD_EXECUTIVO] Erro ao obter dados de países: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500

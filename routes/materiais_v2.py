@@ -721,7 +721,7 @@ def api_detalhamento_processos():
         # Selecionar colunas relevantes
         relevant_columns = [
             'ref_unique', 'importador', 'data_abertura', 'mercadoria', 'modal',
-            'valor_cif_real', 'custo_total', 'status_processo', 'urf_entrada'
+            'valor_cif_real', 'custo_total', 'status_processo', 'pais_procedencia'
         ]
         
         df = pd.DataFrame(filtered_data)

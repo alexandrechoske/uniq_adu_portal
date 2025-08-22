@@ -173,12 +173,12 @@ def dashboard_data_api(permissions=None):
                 else:
                     charts['canal'] = {'labels': [], 'values': []}
                 
-                # Top URF Despacho
-                if 'urf_entrada' in df.columns:
-                    urf_dist = df['urf_entrada'].value_counts().head(10)
+                # Top País Procedência
+                if 'pais_procedencia' in df.columns:
+                    pais_dist = df['pais_procedencia'].value_counts().head(10)
                     charts['urf'] = {
-                        'labels': [str(x) for x in urf_dist.index.tolist()],
-                        'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                        'labels': [str(x) for x in pais_dist.index.tolist()],
+                        'values': [int(x) if not pd.isna(x) else 0 for x in pais_dist.values.tolist()]
                     }
                 else:
                     charts['urf'] = {'labels': [], 'values': []}
@@ -214,7 +214,7 @@ def dashboard_data_api(permissions=None):
                         'cliente': str(row.get('importador', '') or ''),
                         'numero_pedido': str(row.get('ref_importador', '') or row.get('numero_processo', '') or row.get('processo', '') or ''),
                         'data_embarque': str(row.get('data_abertura', '') or row.get('data_registro', '') or ''),
-                        'local_embarque': str(row.get('urf_despacho', '') or row.get('urf_entrada', '') or row.get('urf_entrada_descricao', '') or ''),
+                        'local_embarque': str(row.get('urf_despacho', '') or row.get('pais_procedencia', '') or ''),
                         'modal': str(row.get('modal', '') or row.get('modal_descricao', '') or ''),
                         'status': str(row.get('canal', '') or row.get('canal_di', '') or row.get('canal_descricao', '') or 'N/D'),
                         'mercadoria': str(row.get('material', '') or row.get('mercadoria', '') or ''),
@@ -290,12 +290,12 @@ def dashboard_data_api(permissions=None):
                             else:
                                 charts['canal'] = {'labels': [], 'values': []}
                             
-                            # URF
-                            if 'urf_entrada' in df.columns:
-                                urf_dist = df['urf_entrada'].value_counts().head(10)
+                            # País Procedência
+                            if 'pais_procedencia' in df.columns:
+                                pais_dist = df['pais_procedencia'].value_counts().head(10)
                                 charts['urf'] = {
-                                    'labels': [str(x) for x in urf_dist.index.tolist()],
-                                    'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                                    'labels': [str(x) for x in pais_dist.index.tolist()],
+                                    'values': [int(x) if not pd.isna(x) else 0 for x in pais_dist.values.tolist()]
                                 }
                             else:
                                 charts['urf'] = {'labels': [], 'values': []}
@@ -331,7 +331,7 @@ def dashboard_data_api(permissions=None):
                                     'cliente': str(row.get('importador', '') or ''),
                                     'numero_pedido': str(row.get('ref_importador', '') or row.get('numero_processo', '') or row.get('processo', '') or ''),
                                     'data_embarque': str(row.get('data_abertura', '') or row.get('data_registro', '') or ''),
-                                    'local_embarque': str(row.get('urf_despacho', '') or row.get('urf_entrada', '') or row.get('urf_entrada_descricao', '') or ''),
+                                    'local_embarque': str(row.get('urf_despacho', '') or row.get('pais_procedencia', '') or ''),
                                     'modal': str(row.get('modal', '') or row.get('modal_descricao', '') or ''),
                                     'status': str(row.get('canal', '') or row.get('canal_di', '') or row.get('canal_descricao', '') or 'N/D'),
                                     'mercadoria': str(row.get('material', '') or row.get('mercadoria', '') or ''),
@@ -430,12 +430,12 @@ def dashboard_data_api(permissions=None):
                     else:
                         charts['canal'] = {'labels': [], 'values': []}
                     
-                    # URF
-                    if 'urf_entrada' in df.columns:
-                        urf_dist = df['urf_entrada'].value_counts().head(10)
+                    # País Procedência
+                    if 'pais_procedencia' in df.columns:
+                        pais_dist = df['pais_procedencia'].value_counts().head(10)
                         charts['urf'] = {
-                            'labels': [str(x) for x in urf_dist.index.tolist()],
-                            'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                            'labels': [str(x) for x in pais_dist.index.tolist()],
+                            'values': [int(x) if not pd.isna(x) else 0 for x in pais_dist.values.tolist()]
                         }
                     else:
                         charts['urf'] = {'labels': [], 'values': []}
@@ -470,7 +470,7 @@ def dashboard_data_api(permissions=None):
                             'cliente': str(row.get('importador', '') or ''),
                             'numero_pedido': str(row.get('ref_importador', '') or row.get('numero_processo', '') or row.get('processo', '') or ''),
                             'data_embarque': str(row.get('data_abertura', '') or row.get('data_registro', '') or ''),
-                            'local_embarque': str(row.get('urf_despacho', '') or row.get('urf_entrada', '') or row.get('urf_entrada_descricao', '') or ''),
+                            'local_embarque': str(row.get('urf_despacho', '') or row.get('pais_procedencia', '') or ''),
                             'modal': str(row.get('modal', '') or row.get('modal_descricao', '') or ''),
                             'status': str(row.get('canal', '') or row.get('canal_di', '') or row.get('canal_descricao', '') or 'N/D'),
                             'mercadoria': str(row.get('material', '') or row.get('mercadoria', '') or ''),
@@ -565,36 +565,36 @@ def dashboard_data_api(permissions=None):
             
             # Gráfico de URF a partir da tabela principal
             try:
-                print("[DASHBOARD] Buscando dados de URF...")
-                urf_query = supabase_admin.table('importacoes_processos_aberta').select('urf_entrada').neq('status_processo', 'Despacho Cancelado')
+                print("[DASHBOARD] Buscando dados de País Procedência...")
+                pais_query = supabase_admin.table('importacoes_processos_aberta').select('pais_procedencia').neq('status_processo', 'Despacho Cancelado')
                 
                 # Aplicar filtros baseados no role do usuário
                 if user_role == 'cliente_unique':
                     from routes.api import get_user_companies
                     user_companies = get_user_companies(user_data)
-                    print(f"[DASHBOARD] Empresas para URF: {user_companies}")
+                    print(f"[DASHBOARD] Empresas para País Procedência: {user_companies}")
                     
                     if user_companies:
-                        urf_query = urf_query.in_('cnpj_importador', user_companies)
+                        pais_query = pais_query.in_('cnpj_importador', user_companies)
                     else:
-                        urf_query = urf_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                        pais_query = pais_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
                 
-                urf_result = urf_query.execute()
-                urf_data = urf_result.data if urf_result.data else []
-                print(f"[DASHBOARD] Dados de URF obtidos: {len(urf_data)} registros")
+                pais_result = pais_query.execute()
+                pais_data = pais_result.data if pais_result.data else []
+                print(f"[DASHBOARD] Dados de País Procedência obtidos: {len(pais_data)} registros")
                 
-                if urf_data:
-                    df_urf = pd.DataFrame(urf_data)
-                    df_urf = df_urf[df_urf['urf_entrada'].notna()]
-                    urf_dist = df_urf['urf_entrada'].value_counts().head(10)
+                if pais_data:
+                    df_pais = pd.DataFrame(pais_data)
+                    df_pais = df_pais[df_pais['pais_procedencia'].notna()]
+                    pais_dist = df_pais['pais_procedencia'].value_counts().head(10)
                     charts['urf'] = {
-                        'labels': [str(x) for x in urf_dist.index.tolist()],
-                        'values': [int(x) if not pd.isna(x) else 0 for x in urf_dist.values.tolist()]
+                        'labels': [str(x) for x in pais_dist.index.tolist()],
+                        'values': [int(x) if not pd.isna(x) else 0 for x in pais_dist.values.tolist()]
                     }
                 else:
                     charts['urf'] = {'labels': [], 'values': []}
             except Exception as e:
-                print(f"[DASHBOARD] Erro ao buscar dados de URF: {e}")
+                print(f"[DASHBOARD] Erro ao buscar dados de País Procedência: {e}")
                 charts['urf'] = {'labels': [], 'values': []}
             
             # Gráfico de Materiais a partir da tabela principal

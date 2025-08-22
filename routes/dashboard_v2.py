@@ -327,12 +327,18 @@ def dashboard_charts():
             print(f"[DASHBOARD_V2] Grouped Modal Chart - Colunas não encontradas, retornando vazio")
             grouped_modal_chart = {'labels': [], 'processos': [], 'custos': []}
 
-        # Gráfico URF (usando coluna normalizada)
-        if 'urf_entrada_normalizado' in df.columns:
-            urf_data = df['urf_entrada_normalizado'].value_counts().head(10)
+        # Gráfico País Procedência (usando coluna normalizada)
+        if 'pais_procedencia_normalizado' in df.columns:
+            pais_data = df['pais_procedencia_normalizado'].value_counts().head(10)
             urf_chart = {
-                'labels': urf_data.index.tolist(),
-                'values': urf_data.values.tolist()
+                'labels': pais_data.index.tolist(),
+                'values': pais_data.values.tolist()
+            }
+        elif 'pais_procedencia' in df.columns:
+            pais_data = df['pais_procedencia'].value_counts().head(10)
+            urf_chart = {
+                'labels': pais_data.index.tolist(),
+                'values': pais_data.values.tolist()
             }
         else:
             urf_chart = {'labels': [], 'values': []}
@@ -409,10 +415,10 @@ def recent_operations():
         elif 'mercadoria' in df_sorted.columns:
             relevant_columns.append('mercadoria')
             
-        if 'urf_entrada_normalizado' in df_sorted.columns:
-            relevant_columns.append('urf_entrada_normalizado')
-        elif 'urf_entrada' in df_sorted.columns:
-            relevant_columns.append('urf_entrada')
+        if 'pais_procedencia_normalizado' in df_sorted.columns:
+            relevant_columns.append('pais_procedencia_normalizado')
+        elif 'pais_procedencia' in df_sorted.columns:
+            relevant_columns.append('pais_procedencia')
         
         available_columns = [col for col in relevant_columns if col in df_sorted.columns]
         operations_data = df_sorted[available_columns].to_dict('records')
@@ -421,8 +427,8 @@ def recent_operations():
         for record in operations_data:
             if 'mercadoria' in record:
                 record['mercadoria'] = record.pop('mercadoria')
-            if 'urf_entrada_normalizado' in record:
-                record['urf_entrada'] = record.pop('urf_entrada_normalizado')
+            if 'pais_procedencia_normalizado' in record:
+                record['pais_procedencia'] = record.pop('pais_procedencia_normalizado')
         
         return jsonify({
             'success': True,
