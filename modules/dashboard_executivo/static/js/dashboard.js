@@ -3377,7 +3377,12 @@ async function loadPaisesProcedenciaWithRetry(maxRetries = 3) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt}/${maxRetries} - Carregando países de procedência...`);
             
-            const response = await fetch('/dashboard-executivo/api/paises-procedencia');
+            // CORREÇÃO: Incluir filtros na requisição
+            const queryString = buildFilterQueryString();
+            const url = `/dashboard-executivo/api/paises-procedencia${queryString ? '?' + queryString : ''}`;
+            console.log(`[DASHBOARD_EXECUTIVO] URL com filtros: ${url}`);
+            
+            const response = await fetch(url);
             const result = await response.json();
             
             if (result.success) {
