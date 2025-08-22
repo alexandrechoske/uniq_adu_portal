@@ -154,6 +154,24 @@ function initializeElements() {
         // User Card Template
         userCardTemplate: document.getElementById('user-card-template')
     };
+    
+    // DEBUG: Verificar elementos críticos
+    console.log('[USUARIOS] DEBUG - Elementos encontrados:', {
+        modalDeleteConfirm: !!elements.modalDeleteConfirm,
+        modalUsuario: !!elements.modalUsuario,
+        userCardTemplate: !!elements.userCardTemplate,
+        gridAdmin: !!elements.gridAdmin,
+        gridInterno: !!elements.gridInterno,
+        gridClientes: !!elements.gridClientes
+    });
+    
+    // Verificar se algum elemento crítico está faltando
+    if (!elements.modalDeleteConfirm) {
+        console.error('[USUARIOS] ERRO: Modal de exclusão não encontrado!');
+    }
+    if (!elements.userCardTemplate) {
+        console.error('[USUARIOS] ERRO: Template de card não encontrado!');
+    }
 }
 
 /**
@@ -214,7 +232,7 @@ function initializeEventListeners() {
         roleSelect.addEventListener('change', handleRoleChange);
     }
     
-    // Modal de exclusão
+    // Modal de exclusão - CORRIGIDO
     const btnCancelDelete = document.getElementById('btn-cancel-delete');
     if (btnCancelDelete) {
         btnCancelDelete.addEventListener('click', hideDeleteModal);
@@ -224,10 +242,14 @@ function initializeEventListeners() {
     initializeEmpresasEventListeners();
     initializeWhatsappEventListeners();
     
-    // ESC para fechar modal
+    // ESC para fechar modal - MELHORADO
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && !elements.modalUsuario.classList.contains('hidden')) {
-            closeModal();
+        if (e.key === 'Escape') {
+            if (elements.modalDeleteConfirm && !elements.modalDeleteConfirm.classList.contains('hidden')) {
+                hideDeleteModal();
+            } else if (elements.modalUsuario && !elements.modalUsuario.classList.contains('hidden')) {
+                closeModal();
+            }
         }
     });
 }
@@ -421,29 +443,82 @@ function renderUsersInGrid(gridElement, users) {
 }
 
 /**
- * Cria card de usuário
+ * Cria card de usuário - VERSÃO CORRIGIDA COM EVENT LISTENERS
  */
 function createUserCard(user) {
-    const template = elements.userCardTemplate.content.cloneNode(true);
+    console.log('[USUARIOS] Criando card para usuário:', user.id, user.nome || user.name);
     
-    // Substituir placeholders
-    const cardHtml = template.querySelector('.user-card').outerHTML
-        .replace(/\{user_id\}/g, user.id)
-        .replace(/\{user_name\}/g, user.nome || 'Sem nome')
-        .replace(/\{user_email\}/g, user.email || 'Sem email')
-        .replace(/\{role\}/g, user.role)
-        .replace(/\{role_label\}/g, ROLE_CONFIG[user.role]?.label || user.role)
-        .replace(/\{status\}/g, (user.ativo === true || user.ativo === 'true') ? 'active' : 'inactive')
-        .replace(/\{status_class\}/g, (user.ativo === true || user.ativo === 'true') ? 'active' : 'inactive')
-        .replace(/\{user_cargo_html\}/g, '') // Campo cargo removido
-        .replace(/\{empresas_info\}/g, generateEmpresasInfo(user))
-        .replace(/\{whatsapp_info\}/g, generateWhatsappInfo(user));
+    // Criar elemento do card
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'user-card';
+    cardDiv.setAttribute('data-user-id', user.id);
+    cardDiv.setAttribute('data-role', user.role);
     
-    // Criar elemento DOM
-    const div = document.createElement('div');
-    div.innerHTML = cardHtml;
+    // Determinar status
+    const isActive = user.ativo === true || user.ativo === 'true' || user.is_active === true;
+    const statusClass = isActive ? 'active' : 'inactive';
+    cardDiv.setAttribute('data-status', statusClass);
     
-    return div.firstElementChild;
+    // Montar HTML do card
+    cardDiv.innerHTML = `
+        <div class="user-card-header">
+            <div class="user-status ${statusClass}"></div>
+            <div class="user-actions">
+                <button class="btn-action btn-edit" title="Editar usuário" data-action="edit" data-user-id="${user.id}">
+                    <i class="mdi mdi-pencil"></i>
+                </button>
+                <button class="btn-action btn-delete" title="Excluir usuário" data-action="delete" data-user-id="${user.id}">
+                    <i class="mdi mdi-delete"></i>
+                </button>
+            </div>
+        </div>
+        <div class="user-card-content">
+            <div class="user-info">
+                <h4 class="user-name">${user.nome || user.name || 'Sem nome'}</h4>
+                <p class="user-email">${user.email || 'Sem email'}</p>
+            </div>
+            <div class="user-meta">
+                ${generateEmpresasInfo(user)}
+                ${generateWhatsappInfo(user)}
+            </div>
+        </div>
+    `;
+    
+    // Adicionar event listeners aos botões - CORREÇÃO PRINCIPAL
+    const editBtn = cardDiv.querySelector('.btn-edit');
+    const deleteBtn = cardDiv.querySelector('.btn-delete');
+    
+    console.log('[USUARIOS] DEBUG - Botões encontrados:', {
+        editBtn: !!editBtn,
+        deleteBtn: !!deleteBtn,
+        userId: user.id
+    });
+    
+    if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[USUARIOS] ✓ Botão EDITAR clicado para usuário:', user.id);
+            openModalForEdit(user.id);
+        });
+        console.log('[USUARIOS] ✓ Event listener EDITAR adicionado para usuário:', user.id);
+    } else {
+        console.error('[USUARIOS] ✗ Botão EDITAR não encontrado para usuário:', user.id);
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[USUARIOS] ✓ Botão EXCLUIR clicado para usuário:', user.id, user.nome || user.name);
+            showDeleteConfirmation(user.id, user.nome || user.name || 'Usuário');
+        });
+        console.log('[USUARIOS] ✓ Event listener EXCLUIR adicionado para usuário:', user.id);
+    } else {
+        console.error('[USUARIOS] ✗ Botão EXCLUIR não encontrado para usuário:', user.id);
+    }
+    
+    return cardDiv;
 }
 
 /**
@@ -909,16 +984,18 @@ function hideSaveLoading() {
 // =================================
 
 /**
- * Abre modal de edição (chamada pelos cards)
+ * Abre modal de edição (chamada pelos cards) - FUNÇÃO GLOBAL FALLBACK
  */
 window.openEditModal = function(userId) {
+    console.log('[USUARIOS] 🌍 window.openEditModal chamada (fallback):', userId);
     openModalForEdit(userId);
 };
 
 /**
- * Deleta usuário (chamada pelos cards)
+ * Deleta usuário (chamada pelos cards) - FUNÇÃO GLOBAL FALLBACK
  */
 window.deleteUser = function(userId, userName) {
+    console.log('[USUARIOS] 🌍 window.deleteUser chamada (fallback):', { userId, userName });
     showDeleteConfirmation(userId, userName);
 };
 
@@ -985,24 +1062,25 @@ window.setWhatsappAsPrincipal = function(whatsappId) {
 };
 
 /**
- * Mostra modal de confirmação de exclusão
+ * Mostra modal de confirmação de exclusão - CORRIGIDO
  */
 function showDeleteConfirmation(userId, userName) {
-    const deleteModal = elements.modalDeleteConfirm;
-    const deleteUserName = document.getElementById('delete-user-name');
-    const btnConfirmDelete = document.getElementById('btn-confirm-delete');
+    console.log('[USUARIOS] 🗑️ showDeleteConfirmation chamada para:', { userId, userName });
     
-    if (deleteUserName) {
-        deleteUserName.textContent = userName;
+    // SOLUÇÃO SIMPLES: Usar popup nativo do navegador
+    const message = `Tem certeza que deseja excluir o usuário "${userName}"?\n\nEsta ação não pode ser desfeita.`;
+    
+    console.log('[USUARIOS] 📢 Exibindo popup nativo de confirmação');
+    const confirmed = confirm(message);
+    
+    if (confirmed) {
+        console.log('[USUARIOS] ✅ Usuário confirmou exclusão');
+        confirmDelete(userId);
+    } else {
+        console.log('[USUARIOS] ❌ Usuário cancelou exclusão');
     }
     
-    if (btnConfirmDelete) {
-        btnConfirmDelete.onclick = () => confirmDelete(userId);
-    }
-    
-    if (deleteModal) {
-        deleteModal.classList.remove('hidden');
-    }
+    console.log('[USUARIOS] ✅ showDeleteConfirmation finalizada');
 }
 
 /**
@@ -1030,8 +1108,23 @@ async function confirmDelete(userId) {
  * Oculta modal de confirmação
  */
 function hideDeleteModal() {
-    if (elements.modalDeleteConfirm) {
-        elements.modalDeleteConfirm.classList.add('hidden');
+    console.log('[USUARIOS] 🚫 Ocultando modal de exclusão');
+    
+    const modal = document.getElementById('modal-delete-confirm');
+    if (modal) {
+        console.log('[USUARIOS] Modal encontrado, removendo classes...');
+        
+        // Remove todas as classes de visibilidade
+        modal.classList.add('hidden');
+        modal.classList.remove('force-show');
+        
+        // Reset do estilo do body
+        document.body.style.overflow = '';
+        
+        console.log('[USUARIOS] ✅ Modal ocultado com sucesso');
+        console.log('[USUARIOS] Classes atuais do modal:', modal.className);
+    } else {
+        console.error('[USUARIOS] ❌ Modal não encontrado para ocultar');
     }
 }
 
