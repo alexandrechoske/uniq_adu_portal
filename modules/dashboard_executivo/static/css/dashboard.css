@@ -506,11 +506,37 @@
     border-radius: 12px;
     font-size: 0.875rem;
     font-weight: 500;
-    color: white;
+    /* Removido: color: white; para permitir cores específicas por tipo */
 }
 
 .badge-info {
     background-color: #17a2b8;
+    color: white;
+}
+
+.badge-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
 }
 
 .valor-custo {
