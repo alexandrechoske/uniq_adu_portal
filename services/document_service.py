@@ -20,7 +20,7 @@ class DocumentService:
     # Configurações
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
     ALLOWED_EXTENSIONS = {
-        'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp',
+        'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'xml',
         'xlsx', 'xls', 'docx', 'doc', 'txt', 'csv', 'zip'
     }
     ALLOWED_MIME_TYPES = {
@@ -31,7 +31,8 @@ class DocumentService:
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'text/plain', 'text/csv',
-        'application/zip'
+        'application/zip',
+        'application/xml', 'text/xml'
     }
     STORAGE_BUCKET = 'processos-documentos'
 
