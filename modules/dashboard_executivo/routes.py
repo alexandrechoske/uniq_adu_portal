@@ -1027,18 +1027,27 @@ def recent_operations():
                 'operations': []
             })
         
-        # Ordenar por data mais recente e limitar a 50 registros
+        # CORREÇÃO: Para mini popups funcionarem, precisamos de todos os dados
+        # Separar dados para tabela (limitados) vs dados para mini popups (completos)
+        
+        # Para a tabela: Ordenar por data mais recente e limitar a 50 registros
         if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
-            df_sorted = df.sort_values('data_abertura_dt', ascending=False).head(50)
+            df_table = df.sort_values('data_abertura_dt', ascending=False).head(50)
         else:
-            df_sorted = df.head(50)
+            df_table = df.head(50)
+        
+        # Para mini popups: manter todos os dados filtrados
+        df_all = df
         
         # Selecionar colunas relevantes para a tabela E modal
         relevant_columns = [
             # Colunas para a tabela
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
             'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'custo_total_view', 'data_chegada',
+            
+            # CORREÇÃO: Incluir status_timeline para mini popups funcionarem
+            'status_timeline',
             
             # Colunas adicionais para o modal
             'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque', 'data_fechamento',
@@ -1049,26 +1058,32 @@ def recent_operations():
         ]
         
         # Colunas normalizadas disponíveis
-        if 'mercadoria' in df_sorted.columns:
+        if 'mercadoria' in df_table.columns:
             relevant_columns.append('mercadoria')
         
-        available_columns = [col for col in relevant_columns if col in df_sorted.columns]
+        available_columns = [col for col in relevant_columns if col in df_table.columns]
         print(f"[DASHBOARD_EXECUTIVO] Colunas disponíveis: {available_columns}")
         print(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
         
-        operations_data = df_sorted[available_columns].to_dict('records')
+        # Dados para a tabela (limitados a 50)
+        operations_table_data = df_table[available_columns].to_dict('records')
+        
+        # Dados completos para mini popups (todos os dados filtrados)
+        available_columns_all = [col for col in relevant_columns if col in df_all.columns]
+        operations_all_data = df_all[available_columns_all].to_dict('records')
         
         # Corrigir o campo custo_total para priorizar custo_total_view/custo_total (igual ao modal)
-        for op in operations_data:
-            custo_view = op.get('custo_total_view')
-            custo_total = op.get('custo_total')
-            if custo_view is not None and custo_view > 0:
-                op['custo_total'] = custo_view
-            elif custo_total is not None and custo_total > 0:
-                op['custo_total'] = custo_total
+        for operations_data in [operations_table_data, operations_all_data]:
+            for op in operations_data:
+                custo_view = op.get('custo_total_view')
+                custo_total = op.get('custo_total')
+                if custo_view is not None and custo_view > 0:
+                    op['custo_total'] = custo_view
+                elif custo_total is not None and custo_total > 0:
+                    op['custo_total'] = custo_total
         
         # Log específico para o processo 6555 nos dados enviados para o frontend
-        for op in operations_data:
+        for op in operations_table_data:
             ref_unique = str(op.get('ref_unique', ''))
             if '6555' in ref_unique:
                 print(f"[RECENT_OPERATIONS] *** PROCESSO 6555 DADOS PARA FRONTEND (TABELA) ***")
@@ -1080,7 +1095,8 @@ def recent_operations():
         
         return jsonify({
             'success': True,
-            'operations': clean_data_for_json(operations_data)
+            'operations': clean_data_for_json(operations_table_data),
+            'operations_all': clean_data_for_json(operations_all_data)  # NOVO: dados completos para mini popups
         })
         
     except Exception as e:

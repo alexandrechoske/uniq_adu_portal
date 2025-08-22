@@ -182,13 +182,40 @@
     transform: translateY(-1px);
 }
 
-/* KPI Grid - Layout responsivo correto */
+/* KPI Grid - Layout 6+3 conforme solicitado */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(2, auto);
     gap: 1rem;
     margin-bottom: 2rem;
     position: relative;
+}
+
+/* Primeira linha: cards 1-6 ocupam 1 coluna cada */
+.kpi-grid .kpi-card:nth-child(1),
+.kpi-grid .kpi-card:nth-child(2),
+.kpi-grid .kpi-card:nth-child(3),
+.kpi-grid .kpi-card:nth-child(4),
+.kpi-grid .kpi-card:nth-child(5),
+.kpi-grid .kpi-card:nth-child(6) {
+    grid-column: span 1;
+}
+
+/* Segunda linha: cards 7-9 ocupam 2 colunas cada para centralizar */
+.kpi-grid .kpi-card:nth-child(7) {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+}
+
+.kpi-grid .kpi-card:nth-child(8) {
+    grid-column: 3 / span 2;
+    grid-row: 2;
+}
+
+.kpi-grid .kpi-card:nth-child(9) {
+    grid-column: 5 / span 2;
+    grid-row: 2;
 }
 
 /* Ajuste para fonte menor nos KPIs */
@@ -205,13 +232,39 @@
 
 @media (max-width: 1200px) {
     .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, auto);
+    }
+    
+    .kpi-grid .kpi-card:nth-child(7),
+    .kpi-grid .kpi-card:nth-child(8),
+    .kpi-grid .kpi-card:nth-child(9) {
+        grid-column: span 1;
+    }
+    
+    .kpi-grid .kpi-card:nth-child(7) {
+        grid-column: 1;
+    }
+    
+    .kpi-grid .kpi-card:nth-child(8) {
+        grid-column: 2;
+    }
+    
+    .kpi-grid .kpi-card:nth-child(9) {
+        grid-column: 3;
     }
 }
 
 @media (max-width: 600px) {
     .kpi-grid {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+    
+    .kpi-grid .kpi-card:nth-child(7),
+    .kpi-grid .kpi-card:nth-child(8),
+    .kpi-grid .kpi-card:nth-child(9) {
+        grid-column: span 1;
     }
 }
 

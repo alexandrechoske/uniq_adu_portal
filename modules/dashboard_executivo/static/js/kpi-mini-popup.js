@@ -206,10 +206,26 @@
     function escapeAttr(v){ return escapeHtml(v).replace(/"/g,'&quot;'); }
 
     function getOperations(){
-        if(window.currentOperations && Array.isArray(window.currentOperations) && window.currentOperations.length) return window.currentOperations;
-        if(window.dashboardModule && window.dashboardModule.data && Array.isArray(window.dashboardModule.data.operations)) return window.dashboardModule.data.operations;
-        // fallback: tentar dashboardData global
-        if(window.dashboardData && window.dashboardData.operations) return window.dashboardData.operations;
+        // CORREÇÃO: Usar sempre os mesmos dados dos KPIs principais
+        // 1. Tentar window.dashboardData.data (fonte principal)
+        if(window.dashboardData && window.dashboardData.data && Array.isArray(window.dashboardData.data)) {
+            console.log('[KPI_MINI] Usando window.dashboardData.data:', window.dashboardData.data.length);
+            return window.dashboardData.data;
+        }
+        
+        // 2. Fallback: window.currentOperations (dados filtrados)
+        if(window.currentOperations && Array.isArray(window.currentOperations) && window.currentOperations.length) {
+            console.log('[KPI_MINI] Usando window.currentOperations:', window.currentOperations.length);
+            return window.currentOperations;
+        }
+        
+        // 3. Último fallback: dashboard module data
+        if(window.dashboardModule && window.dashboardModule.data && Array.isArray(window.dashboardModule.data.operations)) {
+            console.log('[KPI_MINI] Usando dashboardModule.data.operations:', window.dashboardModule.data.operations.length);
+            return window.dashboardModule.data.operations;
+        }
+        
+        console.warn('[KPI_MINI] Nenhuma fonte de dados encontrada!');
         return [];
     }
 

@@ -1222,6 +1222,17 @@ async function loadRecentOperations() {
         const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
         if (result.success) {
+            // CORREÇÃO: Usar dados completos para mini popups
+            if (result.operations_all) {
+                // Armazenar dados completos para mini popups
+                if (!window.dashboardData) {
+                    window.dashboardData = {};
+                }
+                window.dashboardData.data = result.operations_all;
+                console.log('[DASHBOARD_EXECUTIVO] Dados completos para mini popups:', result.operations_all.length);
+            }
+            
+            // Usar dados limitados para a tabela
             updateRecentOperationsTable(result.operations);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', result.error);
@@ -1241,6 +1252,16 @@ async function loadRecentOperationsWithCache() {
         const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
         if (result.success) {
+            // CORREÇÃO: Usar dados completos para mini popups
+            if (result.operations_all) {
+                // Armazenar dados completos para mini popups
+                if (!window.dashboardData) {
+                    window.dashboardData = {};
+                }
+                window.dashboardData.data = result.operations_all;
+                console.log('[DASHBOARD_EXECUTIVO] Dados completos para mini popups (cache):', result.operations_all.length);
+            }
+            
             dashboardCache.set('operations', result.operations);
             updateRecentOperationsTable(result.operations);
         } else {
@@ -1446,7 +1467,15 @@ function updateRecentOperationsTable(operations) {
 
     // Store operations data globally for modal access FIRST
     window.currentOperations = sortedOperations;
+    
+    // CORREÇÃO: Armazenar também em window.dashboardData para consistência com mini popups
+    if (!window.dashboardData) {
+        window.dashboardData = {};
+    }
+    window.dashboardData.data = sortedOperations;
+    
     console.log('[DASHBOARD_EXECUTIVO] Operações armazenadas globalmente:', window.currentOperations.length);
+    console.log('[DASHBOARD_EXECUTIVO] Dados também em window.dashboardData.data para mini popups');
     
     // Debug: verificar campos disponíveis no primeiro item
     if (sortedOperations.length > 0) {
