@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import json
 import requests
+import traceback
 from services.data_cache import DataCacheService
 from services.retry_utils import run_with_retries
 from services.client_branding import get_client_branding
@@ -220,9 +221,9 @@ def get_dashboard_data():
                     'client': client_branding
                 },
                 'data': [
-                    { 'modal': '1', 'numero': 1, 'numero_di': '25/1641705-4', 'ref_unique': 'UN25/6495', 'ref_importador': '0337/25 - SHANGHAI SCHULZ', 'data_embarque': '16/07/2025', 'data_chegada': '25/07/2025', 'data_registro': '25/07/2025', 'canal': 'Verde', 'canal_color': '#4CAF50', 'data_entrega': '29/07/2025' },
-                    { 'modal': '4', 'numero': 2, 'numero_di': '25/1641706-2', 'ref_unique': 'UN25/6496', 'ref_importador': '0338/25 - AIRBUS PARTS', 'data_embarque': '18/07/2025', 'data_chegada': '19/07/2025', 'data_registro': '20/07/2025', 'canal': 'Amarelo', 'canal_color': '#FF9800', 'data_entrega': '22/07/2025' },
-                    { 'modal': '1', 'numero': 3, 'numero_di': '25/1641707-0', 'ref_unique': 'UN25/6497', 'ref_importador': '0339/25 - MARINE SUPPLY', 'data_embarque': '20/07/2025', 'data_chegada': '30/07/2025', 'data_registro': '01/08/2025', 'canal': 'Vermelho', 'canal_color': '#F44336', 'data_entrega': '' }
+                    { 'modal': '1', 'numero': 1, 'numero_di': '25/1641705-4', 'pais_procedencia': 'CHINA', 'pais_flag': 'https://flagcdn.com/w40/cn.png', 'ref_importador': '0337/25 - SHANGHAI SCHULZ', 'data_embarque': '16/07/2025', 'data_chegada': '25/07/2025', 'data_registro': '25/07/2025', 'canal': 'Verde', 'canal_color': '#4CAF50', 'data_entrega': '29/07/2025', 'urf_destino': 'SANTOS' },
+                    { 'modal': '4', 'numero': 2, 'numero_di': '25/1641706-2', 'pais_procedencia': 'ALEMANHA', 'pais_flag': 'https://flagcdn.com/w40/de.png', 'ref_importador': '0338/25 - AIRBUS PARTS', 'data_embarque': '18/07/2025', 'data_chegada': '19/07/2025', 'data_registro': '20/07/2025', 'canal': 'Amarelo', 'canal_color': '#FF9800', 'data_entrega': '22/07/2025', 'urf_destino': 'GUARULHOS' },
+                    { 'modal': '1', 'numero': 3, 'numero_di': '25/1641707-0', 'pais_procedencia': 'COREIA DO SUL', 'pais_flag': 'https://flagcdn.com/w40/kr.png', 'ref_importador': '0339/25 - MARINE SUPPLY', 'data_embarque': '20/07/2025', 'data_chegada': '30/07/2025', 'data_registro': '01/08/2025', 'canal': 'Vermelho', 'canal_color': '#F44336', 'data_entrega': '', 'urf_destino': 'ITAJAI' }
                 ],
                 'pagination': { 'total': 3, 'pages': 1, 'current_page': 1, 'per_page': per_page }
             })
@@ -284,14 +285,15 @@ def get_dashboard_data():
         column_mapping = {
             'modal': 'modal',
             'numero_di': 'numero_di',
-            'ref_unique': 'ref_unique',
+            'pais_procedencia': 'pais_procedencia',
+            'url_bandeira': 'url_bandeira',
             'ref_importador': 'ref_importador',
             'data_embarque': 'data_embarque',
             'data_chegada': 'data_chegada',
             'data_registro': 'data_registro',
             'canal': 'canal',
             'data_entrega': 'data_desembaraco',
-            'urf_destino': 'pais_procedencia'
+            'urf_destino': 'urf_despacho'
         }
 
         standardized_data = []
@@ -316,11 +318,20 @@ def get_dashboard_data():
         table_data = []
         for _, r in df_page.iterrows():
             modal_val = r.get('modal', '')  # já substituído pelo normalizado
+            pais_procedencia = str(r.get('pais_procedencia', '') or '')
+            url_bandeira = str(r.get('url_bandeira', '') or '')
+            
+            # Só incluir bandeira se realmente houver país
+            pais_flag = ''
+            if pais_procedencia and pais_procedencia.strip() and url_bandeira and url_bandeira.strip():
+                pais_flag = url_bandeira
+            
             table_data.append({
                 'modal': modal_val,
                 'numero': start_idx + len(table_data) + 1,
                 'numero_di': str(r.get('numero_di', '') or ''),
-                'ref_unique': str(r.get('ref_unique', '') or ''),
+                'pais_procedencia': pais_procedencia,
+                'pais_flag': pais_flag,
                 'ref_importador': str(r.get('ref_importador', '') or ''),
                 'data_embarque': str(r.get('data_embarque', '') or ''),
                 'data_chegada': str(r.get('data_chegada', '') or ''),

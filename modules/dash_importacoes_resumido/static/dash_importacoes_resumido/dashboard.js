@@ -642,13 +642,20 @@ class DashboardImportacoesResumido {
                 const modalImage = this.getModalImage(row.modal);
                 console.log(`[DEBUG] Row ${row.numero}: modal='${row.modal}' -> image='${modalImage}'`);
                 
+                // Verificar se há país para mostrar bandeira
+                const paisContent = (row.pais_procedencia && row.pais_procedencia.trim() !== '') 
+                    ? `<img src="${row.pais_flag || '/static/medias/flag_default.png'}" alt="${row.pais_procedencia}" class="flag-icon" title="${row.pais_procedencia}">` 
+                    : '';
+                
                 tr.innerHTML = `
                     <td>
                         <img src="${modalImage}" alt="Modal ${row.modal}" class="modal-icon">
                     </td>
                     <td>${row.numero || ''}</td>
                     <td>${row.numero_di || ''}</td>
-                    <td>${row.ref_unique || ''}</td>
+                    <td>
+                        ${paisContent}
+                    </td>
                     <td>${row.ref_importador || ''}</td>
                     <td>${dataEmbarqueFormatted}</td>
                     <td>${dataChegadaFormatted}</td>
