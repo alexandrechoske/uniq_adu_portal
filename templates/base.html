@@ -895,10 +895,18 @@
 
                 <!-- Usuários -->
                 <a href="{{ url_for('usuarios.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
                    title="Gerenciar Usuários">
                     <i class="mdi mdi-account-group text-xl"></i>
                     <span class="sidebar-text">Usuários</span>
+                </a>
+
+                <!-- Perfis de Acesso -->
+                <a href="{{ url_for('usuarios.perfis_home') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
+                   title="Gerenciar Perfis de Acesso">
+                    <i class="mdi mdi-shield-account text-xl"></i>
+                    <span class="sidebar-text">Perfis de Acesso</span>
                 </a>
 
                 <!-- Logos Clientes -->

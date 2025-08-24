@@ -2394,3 +2394,341 @@ def api_update_user_whatsapp(user_id):
         print(f"[DEBUG] Erro geral ao atualizar WhatsApp: {str(e)}")
         current_app.logger.error(f"Erro ao atualizar WhatsApp do usuário {user_id}: {str(e)}")
         return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+# =================================
+# ROTAS DE GERENCIAMENTO DE PERFIS
+# =================================
+
+@bp.route('/perfis')
+def perfis_home():
+    """Página principal de gerenciamento de perfis"""
+    try:
+        print("[PERFIS] ===== FUNÇÃO PERFIS_HOME CHAMADA =====")
+        print(f"[PERFIS] Headers: {dict(request.headers)}")
+        print(f"[PERFIS] Session: {session.get('user', 'Não logado')}")
+        
+        # Verificação simplificada para funcionar
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        request_api_key = request.headers.get('X-API-Key')
+        
+        # Se tem bypass, permite direto
+        if api_bypass_key and request_api_key == api_bypass_key:
+            print("[PERFIS] ✅ Bypass autorizado - continuando...")
+            return render_template('perfis.html')
+        
+        # Se não tem bypass, verifica se está logado
+        if 'user' not in session:
+            print("[PERFIS] ❌ Usuário não logado - redirecionando para login")
+            return redirect(url_for('auth.login'))
+        
+        user = session.get('user', {})
+        if user.get('role') != 'admin':
+            print(f"[PERFIS] ❌ Role insuficiente: {user.get('role')}")
+            flash('Acesso não autorizado.', 'error')
+            return redirect(url_for('usuarios.index'))
+        
+        print("[PERFIS] ✅ Acessando página principal de perfis...")
+        return render_template('perfis.html')
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao carregar página: {str(e)}")
+        current_app.logger.error(f"Erro ao carregar página de perfis: {str(e)}")
+        flash('Erro ao carregar página de perfis', 'error')
+        return redirect(url_for('usuarios.index'))
+
+@bp.route('/perfis/list', methods=['GET'])
+@login_required
+@role_required(['admin'])
+def perfis_list():
+    """Lista todos os perfis de acesso"""
+    try:
+        print("[PERFIS] Carregando lista de perfis...")
+        
+        # Buscar perfis na tabela users_perfis agrupados por perfil_nome
+        perfis_query = supabase_admin.table('users_perfis').select('*').execute()
+        
+        if not perfis_query.data:
+            print("[PERFIS] Nenhum perfil encontrado")
+            return jsonify({
+                'success': True,
+                'perfis': []
+            })
+        
+        # Agrupar por perfil_nome e organizar dados
+        perfis_dict = {}
+        for registro in perfis_query.data:
+            perfil_nome = registro['perfil_nome']
+            
+            if perfil_nome not in perfis_dict:
+                perfis_dict[perfil_nome] = {
+                    'id': registro['id'],
+                    'codigo': perfil_nome,
+                    'nome': perfil_nome.replace('_', ' ').title(),
+                    'descricao': f'Perfil de acesso {perfil_nome}',
+                    'ativo': registro.get('is_active', True),
+                    'modulos': [],
+                    'usuarios_count': 0
+                }
+            
+            # Adicionar módulo se ativo
+            if registro.get('is_active', True):
+                perfis_dict[perfil_nome]['modulos'].append({
+                    'codigo': registro['modulo_codigo'],
+                    'nome': registro['modulo_nome'],
+                    'ativo': True,
+                    'paginas': registro.get('paginas_modulo', [])
+                })
+        
+        # Contar usuários vinculados por perfil
+        try:
+            usuarios_query = supabase_admin.table('users_dev').select('perfil').execute()
+            usuarios_count = {}
+            
+            for usuario in usuarios_query.data:
+                perfil = usuario.get('perfil')
+                if perfil:
+                    usuarios_count[perfil] = usuarios_count.get(perfil, 0) + 1
+            
+            # Atualizar contagem nos perfis
+            for perfil_nome in perfis_dict:
+                perfis_dict[perfil_nome]['usuarios_count'] = usuarios_count.get(perfil_nome, 0)
+                
+        except Exception as e:
+            print(f"[PERFIS] Erro ao contar usuários: {e}")
+        
+        perfis_list = list(perfis_dict.values())
+        
+        print(f"[PERFIS] ✅ {len(perfis_list)} perfis carregados com sucesso")
+        
+        return jsonify({
+            'success': True,
+            'perfis': perfis_list
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao listar perfis: {str(e)}")
+        current_app.logger.error(f"Erro ao listar perfis: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao carregar perfis: {str(e)}'
+        }), 500
+
+@bp.route('/perfis/create', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def perfis_create():
+    """Cria um novo perfil de acesso"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Dados não fornecidos'
+            }), 400
+        
+        perfil_codigo = data.get('codigo', '').strip().lower()
+        perfil_nome = data.get('nome', '').strip()
+        perfil_descricao = data.get('descricao', '').strip()
+        perfil_ativo = data.get('ativo', True)
+        modulos = data.get('modulos', [])
+        
+        # Validações
+        if not perfil_codigo:
+            return jsonify({
+                'success': False,
+                'message': 'Código do perfil é obrigatório'
+            }), 400
+        
+        if not perfil_nome:
+            return jsonify({
+                'success': False,
+                'message': 'Nome do perfil é obrigatório'
+            }), 400
+        
+        # Verificar se perfil já existe
+        existing_query = supabase_admin.table('users_perfis').select('perfil_nome').eq('perfil_nome', perfil_codigo).execute()
+        
+        if existing_query.data:
+            return jsonify({
+                'success': False,
+                'message': 'Já existe um perfil com este código'
+            }), 400
+        
+        print(f"[PERFIS] Criando perfil: {perfil_codigo}")
+        
+        # Inserir módulos do perfil
+        registros_inserir = []
+        for modulo in modulos:
+            if modulo.get('ativo'):
+                registros_inserir.append({
+                    'perfil_nome': perfil_codigo,
+                    'modulo_codigo': modulo['codigo'],
+                    'modulo_nome': modulo['nome'],
+                    'paginas_modulo': modulo.get('paginas', []),
+                    'is_active': perfil_ativo
+                })
+        
+        # Se não há módulos, criar ao menos um registro base
+        if not registros_inserir:
+            registros_inserir.append({
+                'perfil_nome': perfil_codigo,
+                'modulo_codigo': 'sistema',
+                'modulo_nome': 'Sistema',
+                'paginas_modulo': [],
+                'is_active': perfil_ativo
+            })
+        
+        # Inserir registros
+        insert_result = supabase_admin.table('users_perfis').insert(registros_inserir).execute()
+        
+        if not insert_result.data:
+            raise Exception("Falha ao inserir perfil na base de dados")
+        
+        print(f"[PERFIS] ✅ Perfil {perfil_codigo} criado com sucesso")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Perfil criado com sucesso',
+            'perfil': {
+                'codigo': perfil_codigo,
+                'nome': perfil_nome,
+                'descricao': perfil_descricao,
+                'ativo': perfil_ativo
+            }
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao criar perfil: {str(e)}")
+        current_app.logger.error(f"Erro ao criar perfil: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao criar perfil: {str(e)}'
+        }), 500
+
+@bp.route('/perfis/update', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def perfis_update():
+    """Atualiza um perfil existente"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Dados não fornecidos'
+            }), 400
+        
+        perfil_codigo = data.get('codigo', '').strip().lower()
+        perfil_nome = data.get('nome', '').strip()
+        perfil_ativo = data.get('ativo', True)
+        modulos = data.get('modulos', [])
+        
+        if not perfil_codigo:
+            return jsonify({
+                'success': False,
+                'message': 'Código do perfil é obrigatório'
+            }), 400
+        
+        print(f"[PERFIS] Atualizando perfil: {perfil_codigo}")
+        
+        # Remover registros existentes do perfil
+        delete_result = supabase_admin.table('users_perfis').delete().eq('perfil_nome', perfil_codigo).execute()
+        
+        # Inserir novos módulos do perfil
+        registros_inserir = []
+        for modulo in modulos:
+            if modulo.get('ativo'):
+                registros_inserir.append({
+                    'perfil_nome': perfil_codigo,
+                    'modulo_codigo': modulo['codigo'],
+                    'modulo_nome': modulo['nome'],
+                    'paginas_modulo': modulo.get('paginas', []),
+                    'is_active': perfil_ativo
+                })
+        
+        # Se não há módulos, criar ao menos um registro base
+        if not registros_inserir:
+            registros_inserir.append({
+                'perfil_nome': perfil_codigo,
+                'modulo_codigo': 'sistema',
+                'modulo_nome': 'Sistema',
+                'paginas_modulo': [],
+                'is_active': perfil_ativo
+            })
+        
+        # Inserir novos registros
+        insert_result = supabase_admin.table('users_perfis').insert(registros_inserir).execute()
+        
+        if not insert_result.data:
+            raise Exception("Falha ao atualizar perfil na base de dados")
+        
+        print(f"[PERFIS] ✅ Perfil {perfil_codigo} atualizado com sucesso")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Perfil atualizado com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao atualizar perfil: {str(e)}")
+        current_app.logger.error(f"Erro ao atualizar perfil: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao atualizar perfil: {str(e)}'
+        }), 500
+
+@bp.route('/perfis/delete', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def perfis_delete():
+    """Exclui um perfil de acesso"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Dados não fornecidos'
+            }), 400
+        
+        perfil_codigo = data.get('perfil_codigo', '').strip()
+        
+        if not perfil_codigo:
+            return jsonify({
+                'success': False,
+                'message': 'Código do perfil é obrigatório'
+            }), 400
+        
+        print(f"[PERFIS] Excluindo perfil: {perfil_codigo}")
+        
+        # Verificar se há usuários usando este perfil
+        usuarios_query = supabase_admin.table('users_dev').select('id, name').eq('perfil', perfil_codigo).execute()
+        
+        if usuarios_query.data:
+            # Atualizar usuários para perfil básico
+            for usuario in usuarios_query.data:
+                supabase_admin.table('users_dev').update({
+                    'perfil': 'cliente_basico'
+                }).eq('id', usuario['id']).execute()
+            
+            print(f"[PERFIS] {len(usuarios_query.data)} usuários atualizados para perfil cliente_basico")
+        
+        # Excluir registros do perfil
+        delete_result = supabase_admin.table('users_perfis').delete().eq('perfil_nome', perfil_codigo).execute()
+        
+        print(f"[PERFIS] ✅ Perfil {perfil_codigo} excluído com sucesso")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Perfil excluído com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao excluir perfil: {str(e)}")
+        current_app.logger.error(f"Erro ao excluir perfil: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao excluir perfil: {str(e)}'
+        }), 500

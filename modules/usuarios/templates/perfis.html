@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciamento de Perfis - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('usuarios.static', filename='css/perfis.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="perfis-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar">
+        <div class="actions-left">
+            {{ breadcrumb([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
+                {'name': 'Usuários', 'icon': 'mdi mdi-account-multiple', 'url': url_for('usuarios.index')},
+                {'name': 'Perfis de Acesso', 'icon': 'mdi mdi-shield-account'}
+            ]) }}
+        </div>
+        <div class="actions-right">
+            <button id="btn-refresh" class="btn btn-secondary">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+            <button id="btn-novo-perfil" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Novo Perfil
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-shield-account"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Perfis</p>
+                <p class="kpi-value" id="kpi-total-perfis">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Perfis Ativos</p>
+                <p class="kpi-value" id="kpi-perfis-ativos">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-group"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Usuários Vinculados</p>
+                <p class="kpi-value" id="kpi-usuarios-vinculados">0</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-view-module"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Módulos Disponíveis</p>
+                <p class="kpi-value" id="kpi-modulos">4</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Section -->
+    <div class="controls-section">
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="mdi mdi-magnify search-icon"></i>
+                <input 
+                    type="text" 
+                    id="search-perfis" 
+                    class="search-input" 
+                    placeholder="Buscar por nome do perfil..."
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+
+        <div class="filters-container">
+            <select id="filter-status" class="filter-select">
+                <option value="">Todos os Status</option>
+                <option value="ativo">Ativos</option>
+                <option value="inativo">Inativos</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-perfis" class="loading-container" style="display: none;">
+        <div class="loading-spinner">
+            <i class="mdi mdi-loading spin"></i>
+            <p>Carregando perfis...</p>
+        </div>
+    </div>
+
+    <!-- Perfis Grid -->
+    <div id="perfis-grid" class="perfis-grid">
+        <!-- Cards de perfis serão inseridos aqui via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state" style="display: none;">
+        <div class="empty-state-content">
+            <i class="mdi mdi-shield-account empty-state-icon"></i>
+            <h3>Nenhum perfil encontrado</h3>
+            <p>Crie o primeiro perfil de acesso para organizar as permissões dos usuários.</p>
+            <button id="btn-create-first-perfil" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i>
+                Criar Primeiro Perfil
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Criação/Edição de Perfil -->
+<div class="modal fade" id="modalPerfil" tabindex="-1" role="dialog" aria-labelledby="modalPerfilLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPerfilLabel">
+                    <i class="mdi mdi-shield-account"></i>
+                    <span id="modal-title-text">Novo Perfil</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="form-perfil">
+                    <input type="hidden" id="perfil-id" name="perfil_id">
+                    
+                    <!-- Informações Básicas -->
+                    <div class="form-section">
+                        <h6 class="form-section-title">
+                            <i class="mdi mdi-information"></i>
+                            Informações Básicas
+                        </h6>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="perfil-codigo" class="form-label required">Código do Perfil</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="perfil-codigo" 
+                                    name="perfil_codigo" 
+                                    placeholder="ex: financeiro, comercial"
+                                    pattern="^[a-z_]+$"
+                                    title="Apenas letras minúsculas e underscores"
+                                    required
+                                >
+                                <div class="form-help">Use apenas letras minúsculas e underscores</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="perfil-nome" class="form-label required">Nome do Perfil</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="perfil-nome" 
+                                    name="perfil_nome" 
+                                    placeholder="ex: Financeiro, Comercial"
+                                    required
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="perfil-descricao" class="form-label">Descrição</label>
+                            <textarea 
+                                class="form-control" 
+                                id="perfil-descricao" 
+                                name="perfil_descricao" 
+                                rows="3"
+                                placeholder="Descreva as responsabilidades e acesso deste perfil"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Configuração de Módulos e Páginas -->
+                    <div class="form-section">
+                        <h6 class="form-section-title">
+                            <i class="mdi mdi-view-module"></i>
+                            Módulos e Páginas
+                        </h6>
+                        
+                        <div id="modulos-container">
+                            <!-- Módulos serão carregados via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="form-section">
+                        <h6 class="form-section-title">
+                            <i class="mdi mdi-toggle-switch"></i>
+                            Status
+                        </h6>
+                        
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="perfil-ativo" name="perfil_ativo" checked>
+                            <label class="form-check-label" for="perfil-ativo">
+                                Perfil ativo
+                            </label>
+                            <div class="form-help">Apenas perfis ativos podem ser atribuídos aos usuários</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="button" id="btn-save-perfil" class="btn btn-primary">
+                    <i class="mdi mdi-content-save"></i>
+                    <span id="btn-save-text">Salvar Perfil</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalDeletePerfil" tabindex="-1" role="dialog" aria-labelledby="modalDeletePerfilLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger" id="modalDeletePerfilLabel">
+                    <i class="mdi mdi-alert-circle"></i>
+                    Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="delete-confirmation">
+                    <div class="alert alert-warning">
+                        <i class="mdi mdi-alert-triangle"></i>
+                        <strong>Atenção!</strong> Esta ação não pode ser desfeita.
+                    </div>
+                    
+                    <p>Tem certeza que deseja excluir o perfil <strong id="delete-perfil-name"></strong>?</p>
+                    
+                    <div id="delete-warning-users" class="alert alert-danger" style="display: none;">
+                        <i class="mdi mdi-account-alert"></i>
+                        <strong>Usuários Vinculados:</strong> Este perfil possui usuários vinculados. 
+                        Eles perderão acesso às páginas deste perfil.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="button" id="btn-confirm-delete" class="btn btn-danger">
+                    <i class="mdi mdi-delete"></i>
+                    Excluir Perfil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Visualização de Perfil -->
+<div class="modal fade" id="modalViewPerfil" tabindex="-1" role="dialog" aria-labelledby="modalViewPerfilLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalViewPerfilLabel">
+                    <i class="mdi mdi-eye"></i>
+                    Detalhes do Perfil
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="perfil-details-content">
+                    <!-- Conteúdo será carregado via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
+                </button>
+                <button type="button" id="btn-edit-from-view" class="btn btn-primary">
+                    <i class="mdi mdi-pencil"></i>
+                    Editar Perfil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('usuarios.static', filename='js/perfis.js') }}"></script>
+{% endblock %}
