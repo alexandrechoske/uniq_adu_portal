@@ -103,6 +103,13 @@ let elements = {};
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[PERFIS] Inicializando módulo de perfis...');
     
+    // Check if Bootstrap is loaded
+    if (typeof bootstrap === 'undefined') {
+        console.error('[PERFIS] Bootstrap não está carregado! Os modais não funcionarão.');
+        showNotification('Erro: Bootstrap não carregado. Recarregue a página.', NOTIFICATION_TYPES.ERROR);
+        return;
+    }
+    
     initializeElements();
     initializeEventListeners();
     loadPerfisData();
@@ -181,9 +188,14 @@ function initializeEventListeners() {
     // Modal de exclusão
     elements.btnConfirmDelete?.addEventListener('click', handleConfirmDelete);
     
-    // Bootstrap modals
+    // Bootstrap modals - Bootstrap 5 syntax
     if (elements.modalPerfil) {
         elements.modalPerfil.addEventListener('hidden.bs.modal', handleModalHidden);
+        elements.modalPerfil.addEventListener('show.bs.modal', function() {
+            // Reset any previous errors when opening modal
+            const errorElements = elements.modalPerfil.querySelectorAll('.is-invalid');
+            errorElements.forEach(el => el.classList.remove('is-invalid'));
+        });
     }
 }
 
@@ -345,7 +357,11 @@ function openPerfilModal(mode, perfilCodigo = null) {
     
     renderModulosForm();
     
-    const modal = new bootstrap.Modal(elements.modalPerfil);
+    // Bootstrap 5 modal initialization
+    const modal = new bootstrap.Modal(elements.modalPerfil, {
+        backdrop: 'static',
+        keyboard: false
+    });
     modal.show();
 }
 
@@ -499,7 +515,11 @@ function viewPerfil(perfilCodigo) {
     
     renderPerfilDetails(perfil);
     
-    const modal = new bootstrap.Modal(elements.modalViewPerfil);
+    // Bootstrap 5 modal initialization
+    const modal = new bootstrap.Modal(elements.modalViewPerfil, {
+        backdrop: true,
+        keyboard: true
+    });
     modal.show();
 }
 
@@ -529,7 +549,11 @@ function deletePerfil(perfilCodigo) {
     // Armazenar código do perfil para exclusão
     elements.btnConfirmDelete.dataset.perfilCodigo = perfilCodigo;
     
-    const modal = new bootstrap.Modal(elements.modalDeletePerfil);
+    // Bootstrap 5 modal initialization
+    const modal = new bootstrap.Modal(elements.modalDeletePerfil, {
+        backdrop: 'static',
+        keyboard: false
+    });
     modal.show();
 }
 
@@ -570,7 +594,9 @@ async function handleSavePerfil() {
             );
             
             const modal = bootstrap.Modal.getInstance(elements.modalPerfil);
-            modal.hide();
+            if (modal) {
+                modal.hide();
+            }
             
             await loadPerfisData();
         } else {
@@ -610,7 +636,9 @@ async function handleConfirmDelete() {
             showNotification('Perfil excluído com sucesso!', NOTIFICATION_TYPES.SUCCESS);
             
             const modal = bootstrap.Modal.getInstance(elements.modalDeletePerfil);
-            modal.hide();
+            if (modal) {
+                modal.hide();
+            }
             
             await loadPerfisData();
         } else {
@@ -783,11 +811,19 @@ function renderPerfilDetails(perfil) {
     // Configurar botão de edição
     elements.btnEditFromView.onclick = () => {
         const viewModal = bootstrap.Modal.getInstance(elements.modalViewPerfil);
-        viewModal.hide();
-        
-        setTimeout(() => {
+        if (viewModal) {
+            viewModal.hide();
+            
+            // Wait for modal to close before opening edit modal
+            elements.modalViewPerfil.addEventListener('hidden.bs.modal', function openEditModal() {
+                editPerfil(perfil.codigo);
+                // Remove listener to avoid multiple calls
+                elements.modalViewPerfil.removeEventListener('hidden.bs.modal', openEditModal);
+            });
+        } else {
+            // Fallback if modal instance not found
             editPerfil(perfil.codigo);
-        }, 300);
+        }
     };
 }
 
@@ -907,13 +943,83 @@ function escapeHtml(text) {
  * Mostra notificação
  */
 function showNotification(message, type = NOTIFICATION_TYPES.INFO) {
-    // Implementar sistema de notificações
-    // Por enquanto, usar alert simples
-    if (type === NOTIFICATION_TYPES.ERROR) {
-        alert('Erro: ' + message);
-    } else {
-        alert(message);
+    // Create a simple toast notification
+    const toastContainer = getOrCreateToastContainer();
+    const toast = createToast(message, type);
+    toastContainer.appendChild(toast);
+    
+    // Show the toast using Bootstrap
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    // Remove toast after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+/**
+ * Get or create toast container
+ */
+function getOrCreateToastContainer() {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
     }
+    return container;
+}
+
+/**
+ * Create toast element
+ */
+function createToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    const typeConfig = {
+        [NOTIFICATION_TYPES.SUCCESS]: { 
+            bgClass: 'bg-success', 
+            icon: 'mdi-check-circle', 
+            title: 'Sucesso' 
+        },
+        [NOTIFICATION_TYPES.ERROR]: { 
+            bgClass: 'bg-danger', 
+            icon: 'mdi-alert-circle', 
+            title: 'Erro' 
+        },
+        [NOTIFICATION_TYPES.WARNING]: { 
+            bgClass: 'bg-warning', 
+            icon: 'mdi-alert-triangle', 
+            title: 'Atenção' 
+        },
+        [NOTIFICATION_TYPES.INFO]: { 
+            bgClass: 'bg-info', 
+            icon: 'mdi-information', 
+            title: 'Informação' 
+        }
+    };
+    
+    const config = typeConfig[type] || typeConfig[NOTIFICATION_TYPES.INFO];
+    
+    toast.innerHTML = `
+        <div class="toast-header ${config.bgClass} text-white">
+            <i class="mdi ${config.icon} me-2"></i>
+            <strong class="me-auto">${config.title}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            ${escapeHtml(message)}
+        </div>
+    `;
+    
+    return toast;
 }
 
 // =================================

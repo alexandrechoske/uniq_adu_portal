@@ -401,6 +401,7 @@
     background: none;
     border: none;
     font-size: 1.25rem;
+    filter: invert(1);
 }
 
 .modal-header .btn-close:hover {
