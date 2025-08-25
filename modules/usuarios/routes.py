@@ -3179,6 +3179,55 @@ def api_get_users_perfis(user_id):
             'message': f'Erro ao buscar perfis: {str(e)}'
         }), 500
 
+@bp.route('/api/validate-perfis', methods=['POST'])
+@login_required
+@role_required(['admin', 'interno_unique'])  # Allow Module Admins
+def api_validate_perfis():
+    """Valida se o usuário pode atribuir os perfis especificados"""
+    try:
+        data = request.get_json()
+        perfis_ids = data.get('perfis_ids', [])
+        
+        print(f"[PERFIS_VALIDATION] Validando perfis: {perfis_ids}")
+        
+        # Verificar se tem perfis para validar
+        if not perfis_ids:
+            return jsonify({
+                'success': True,
+                'message': 'Nenhum perfil para validar'
+            })
+        
+        # PERFIL ASSIGNMENT VALIDATION: Verificar se pode atribuir os perfis
+        editor_user = session.get('user', {})
+        
+        # Se não é Master Admin, validar cada perfil
+        if not (editor_user.get('role') == 'admin' and editor_user.get('perfil_principal') == 'admin_geral'):
+            invalid_perfis = []
+            for perfil_id in perfis_ids:
+                if not can_assign_perfil(editor_user, perfil_id):
+                    invalid_perfis.append(perfil_id)
+            
+            if invalid_perfis:
+                print(f"[PERFIS_VALIDATION] Perfis inválidos encontrados: {invalid_perfis}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Você não tem permissão para atribuir os seguintes perfis: {", ".join(invalid_perfis)}. Verifique se estes perfis pertencem aos seus módulos de administração.',
+                    'invalid_perfis': invalid_perfis
+                }), 403
+        
+        print(f"[PERFIS_VALIDATION] Todos os perfis são válidos")
+        return jsonify({
+            'success': True,
+            'message': 'Todos os perfis são válidos'
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS_VALIDATION] Erro na validação: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro na validação: {str(e)}'
+        }), 500
+
 @bp.route('/<user_id>/perfis', methods=['POST'])
 @login_required
 @role_required(['admin', 'interno_unique'])  # Allow Module Admins

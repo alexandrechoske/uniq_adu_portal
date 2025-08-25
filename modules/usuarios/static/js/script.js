@@ -875,7 +875,8 @@ function clearForm() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
-    if (!validateForm()) {
+    // Use await since validateForm is now async
+    if (!(await validateForm())) {
         return;
     }
     
@@ -900,11 +901,46 @@ async function handleFormSubmit(e) {
 }
 
 /**
+ * Valida se o usuário pode atribuir os perfis selecionados
+ */
+async function validatePerfisSelection() {
+    try {
+        if (appState.perfis.selected.length === 0) {
+            return { valid: true, message: 'Nenhum perfil selecionado' };
+        }
+        
+        console.log('[PERFIS_VALIDATION] Validando perfis:', appState.perfis.selected);
+        
+        const response = await apiRequest('/api/validate-perfis', 'POST', {
+            perfis_ids: appState.perfis.selected
+        });
+        
+        if (response.success) {
+            console.log('[PERFIS_VALIDATION] Perfis válidos');
+            return { valid: true, message: response.message };
+        } else {
+            console.error('[PERFIS_VALIDATION] Perfis inválidos:', response.message);
+            return { valid: false, message: response.message };
+        }
+    } catch (error) {
+        console.error('[PERFIS_VALIDATION] Erro na validação:', error);
+        return { valid: false, message: 'Erro ao validar perfis: ' + error.message };
+    }
+}
+
+/**
  * Cria novo usuário
  */
 async function createUser() {
     const userData = collectUserFormData();
     
+    // STEP 1: Validate perfis BEFORE creating user
+    const perfilValidation = await validatePerfisSelection();
+    if (!perfilValidation.valid) {
+        throw new Error(perfilValidation.message);
+    }
+    
+    // STEP 2: Create user only if perfis are valid
     const response = await apiRequest('/salvar', 'POST', userData);
     
     if (!response.success) {
@@ -913,18 +949,25 @@ async function createUser() {
     
     const userId = response.user_id;
     
-    // Salvar empresas e WhatsApp se necessário
-    // Empresas são permitidas para cliente_unique E interno_unique
-    if (userData.role === 'cliente_unique' || userData.role === 'interno_unique') {
-        await saveUserEmpresas(userId);
+    // STEP 3: Save related data (empresas, whatsapp, perfis)
+    try {
+        // Salvar empresas e WhatsApp se necessário
+        // Empresas são permitidas para cliente_unique E interno_unique
+        if (userData.role === 'cliente_unique' || userData.role === 'interno_unique') {
+            await saveUserEmpresas(userId);
+        }
+        
+        await saveUserWhatsapp(userId);
+        
+        // Salvar perfis
+        await saveUserPerfis(userId);
+        
+        showNotification('Usuário criado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
+    } catch (relatedDataError) {
+        // Se falhar ao salvar dados relacionados, avisar mas não falhar completamente
+        console.error('[USUARIOS] Erro ao salvar dados relacionados:', relatedDataError);
+        showNotification('Usuário criado, mas houve problemas ao salvar alguns dados: ' + relatedDataError.message, NOTIFICATION_TYPES.WARNING);
     }
-    
-    await saveUserWhatsapp(userId);
-    
-    // Salvar perfis
-    await saveUserPerfis(userId);
-    
-    showNotification('Usuário criado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
 
 /**
@@ -971,7 +1014,7 @@ function collectUserFormData() {
 /**
  * Valida formulário
  */
-function validateForm() {
+async function validateForm() {
     const nome = document.getElementById('nome').value.trim();
     const email = document.getElementById('email').value.trim();
     const role = document.getElementById('role').value;
@@ -1003,6 +1046,13 @@ function validateForm() {
         
         if (senha !== confirmarSenha) {
             showNotification('Senhas não coincidem', NOTIFICATION_TYPES.ERROR);
+            return false;
+        }
+        
+        // Validate perfis selection for CREATE mode
+        const perfilValidation = await validatePerfisSelection();
+        if (!perfilValidation.valid) {
+            showNotification(perfilValidation.message, NOTIFICATION_TYPES.ERROR);
             return false;
         }
     }
@@ -2080,17 +2130,20 @@ async function saveUserPerfis(userId) {
         
         if (response.success) {
             console.log('[PERFIS] Perfis do usuário salvos com sucesso');
-            showNotification('Perfis atualizados com sucesso!', NOTIFICATION_TYPES.SUCCESS);
             return true;
         } else {
             console.error('[PERFIS] Erro ao salvar perfis:', response.message);
-            showNotification(`Erro ao salvar perfis: ${response.message}`, NOTIFICATION_TYPES.ERROR);
-            return false;
+            
+            // Provide more specific error message for permission issues
+            if (response.message && response.message.includes('permissão')) {
+                throw new Error(`Erro de permissão: ${response.message}`);
+            } else {
+                throw new Error(`Erro ao salvar perfis: ${response.message}`);
+            }
         }
     } catch (error) {
         console.error('[PERFIS] Erro ao salvar perfis do usuário:', error);
-        showNotification('Erro ao salvar perfis', NOTIFICATION_TYPES.ERROR);
-        return false;
+        throw error; // Re-throw to be handled by caller
     }
 }
 
