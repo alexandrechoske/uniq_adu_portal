@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, jsonify, request
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+from decorators.perfil_decorators import perfil_required
 from permissions import check_permission
 from datetime import datetime, timedelta
 import pandas as pd
@@ -20,27 +21,16 @@ fluxo_de_caixa_bp = Blueprint(
 
 @fluxo_de_caixa_bp.route('/')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def index():
     """Fluxo de Caixa - Controle de entradas e saídas"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    # Verificar permissões - apenas admin e interno_unique
-    if user_role not in ['admin', 'interno_unique']:
-        return render_template('errors/403.html'), 403
-    
     return render_template('fluxo_de_caixa.html')
 
 @fluxo_de_caixa_bp.route('/api/kpis')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def api_kpis():
     """API para KPIs principais do fluxo de caixa"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     try:
         # Obter parâmetros de período
         periodo = request.args.get('periodo', 'ano_atual')
@@ -116,14 +106,9 @@ def api_kpis():
 
 @fluxo_de_caixa_bp.route('/api/despesas-categoria')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def api_despesas_categoria():
     """API para gráfico de despesas por categoria"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     try:
         periodo = request.args.get('periodo', 'ano_atual')
         categoria_drill = request.args.get('categoria')  # Para drill-down
@@ -174,14 +159,9 @@ def api_despesas_categoria():
 
 @fluxo_de_caixa_bp.route('/api/fluxo-mensal')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def api_fluxo_mensal():
     """API para gráfico de fluxo de caixa mês a mês (cascata)"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     try:
         periodo = request.args.get('periodo', 'ano_atual')
         data_inicio, data_fim = _get_periodo_dates(periodo)
@@ -229,14 +209,9 @@ def api_fluxo_mensal():
 
 @fluxo_de_caixa_bp.route('/api/fluxo-estrutural')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def api_fluxo_estrutural():
     """API para análise estrutural do caixa (FCO, FCI, FCF)"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     try:
         periodo = request.args.get('periodo', 'ano_atual')
         data_inicio, data_fim = _get_periodo_dates(periodo)
@@ -296,14 +271,9 @@ def api_fluxo_estrutural():
 
 @fluxo_de_caixa_bp.route('/api/projecao')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def api_projecao():
     """API para projeção de fluxo de caixa"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     try:
         # Buscar dados dos últimos 6 meses para base da projeção
         data_fim = datetime.now()
@@ -376,14 +346,9 @@ def api_projecao():
 
 @fluxo_de_caixa_bp.route('/api/tabela-dados')
 @login_required
+@perfil_required('financeiro', 'fluxo_caixa')
 def api_tabela_dados():
     """API para dados da tabela completa"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     try:
         periodo = request.args.get('periodo', 'ano_atual')
         page = int(request.args.get('page', 1))

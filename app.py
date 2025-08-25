@@ -292,5 +292,11 @@ def test_empresa_search():
         return "Arquivo de teste não encontrado", 404
 
 if __name__ == '__main__':   
+    # Registrar endpoints de teste de segurança em modo debug
+    if app.config['DEBUG']:
+        from test_security_endpoints import register_test_security_blueprint
+        register_test_security_blueprint(app)
+        print("🔧 Endpoints de teste de segurança registrados")
+    
     # app.run(debug=True, host='192.168.0.75', port=5000)  # Forçando debug para true
     app.run(debug=True)  # Forçando debug para true

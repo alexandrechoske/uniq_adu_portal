@@ -103,8 +103,16 @@ class PerfilAccessService:
                     
                     # Adicionar páginas específicas
                     for pagina in modulo_paginas:
-                        accessible_pages.add(pagina)
-                        print(f"[ACCESS_SERVICE] Adicionada página: {pagina} (perfil: {perfil_nome})")
+                        # Se pagina é um dict, extrair o código
+                        if isinstance(pagina, dict):
+                            pagina_codigo = pagina.get('codigo')
+                            if pagina_codigo:
+                                accessible_pages.add(pagina_codigo)
+                                print(f"[ACCESS_SERVICE] Adicionada página: {pagina_codigo} (perfil: {perfil_nome})")
+                        else:
+                            # Se é string, usar diretamente
+                            accessible_pages.add(pagina)
+                            print(f"[ACCESS_SERVICE] Adicionada página: {pagina} (perfil: {perfil_nome})")
         
         accessible_pages = list(accessible_pages)
         print(f"[ACCESS_SERVICE] Páginas acessíveis no módulo {modulo_codigo}: {accessible_pages}")
@@ -122,7 +130,24 @@ class PerfilAccessService:
             bool: True se tem acesso, False caso contrário
         """
         accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        
+        # Verificar tanto o código fornecido quanto possível mapeamento
         can_access = modulo_codigo in accessible_modules
+        
+        # Se não encontrou, verificar mapeamento reverso
+        if not can_access:
+            # Procurar se algum módulo acessível mapeia para o código solicitado
+            for module in accessible_modules:
+                # Verificar se module pode ser um mapeamento para modulo_codigo
+                mapped_code = PerfilAccessService.MODULE_MAPPING.get(modulo_codigo)
+                if mapped_code and mapped_code == module:
+                    can_access = True
+                    break
+                # Verificar mapeamento reverso (se modulo_codigo é o valor mapeado)
+                for key, value in PerfilAccessService.MODULE_MAPPING.items():
+                    if value == modulo_codigo and key in accessible_modules:
+                        can_access = True
+                        break
         
         print(f"[ACCESS_SERVICE] Usuário pode acessar módulo {modulo_codigo}: {can_access}")
         return can_access

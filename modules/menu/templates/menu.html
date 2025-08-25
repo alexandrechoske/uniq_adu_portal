@@ -23,7 +23,7 @@
         
         <div class="menu-columns" data-user-role="{{ role }}">
             <!-- Coluna: Dashboards -->
-            {% if 'dashboard' in accessible_modules or 'importacoes' in accessible_modules %}
+            {% if 'importacao' in accessible_modules %}
             <div class="menu-column">
                 <h3 class="column-title"><i class="mdi mdi-chart-line"></i> Dashboards</h3>
                 <div class="column-grid">
@@ -34,7 +34,7 @@
                         <p class="module-desc">Visão estratégica consolidada de importações.</p>
                     </a>
                     {% endif %}
-                    {% if 'importacoes' in accessible_modules %}
+                    {% if 'importacao' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
                         <div class="module-icon"><i class="mdi mdi-ferry text-xl"></i></div>
                         <h4 class="module-title">Dashboard Importações</h4>

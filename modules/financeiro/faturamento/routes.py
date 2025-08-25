@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, session, jsonify
 from modules.auth.routes import login_required
+from decorators.perfil_decorators import perfil_required
 
 # Blueprint para Faturamento
 faturamento_bp = Blueprint(
@@ -13,28 +14,16 @@ faturamento_bp = Blueprint(
 
 @faturamento_bp.route('/')
 @login_required
+@perfil_required('financeiro', 'faturamento')
 def index():
     """Faturamento Anual - Controle de receitas"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    # Verificar permissões - apenas admin e interno_unique
-    if user_role not in ['admin', 'interno_unique']:
-        return render_template('errors/403.html'), 403
-    
     return render_template('faturamento.html')
 
 @faturamento_bp.route('/api/dados-faturamento')
 @login_required
+@perfil_required('financeiro', 'faturamento')
 def api_dados_faturamento():
     """API para dados de faturamento"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    # Verificar permissões
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     # TODO: Implementar lógica de faturamento
     dados_mock = {
         'faturamento_servicos': 120000.00,

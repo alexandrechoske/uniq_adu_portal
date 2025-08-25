@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, jsonify, request
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+from decorators.perfil_decorators import perfil_required
 from permissions import check_permission
 from datetime import datetime, timedelta
 import pandas as pd
@@ -20,15 +21,9 @@ despesas_bp = Blueprint(
 
 @despesas_bp.route('/')
 @login_required
+@perfil_required('financeiro', 'despesas')
 def index():
     """Despesas Anuais - Controle de gastos"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    # Verificar permissões - apenas admin e interno_unique
-    if user_role not in ['admin', 'interno_unique']:
-        return render_template('errors/403.html'), 403
-    
     return render_template('despesas.html')
 
 @despesas_bp.route('/api/kpis')

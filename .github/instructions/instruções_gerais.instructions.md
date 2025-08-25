@@ -185,3 +185,247 @@ modules/[nome_do_modulo]/static/[nome_do_modulo]/[arquivos_estaticos].js
 ``` 
 
 A API_BYPASS_KEY É SEMPRE "$env:API_BYPASS_KEY = uniq_api_2025_dev_bypass_key", utilize ela nos testes.
+
+## Instruções para Criação de Nova Tela/Rota com Controle de Acesso por Perfil
+
+### 1. Estrutura do Módulo
+
+#### 1.1 Criar a estrutura de pastas seguindo o padrão:
+```
+modules/[nome_do_modulo]/
+├── __init__.py
+├── routes.py
+├── templates/
+│   └── [nome_do_modulo]/
+│       └── [nome_do_modulo].html
+└── static/
+    └── [nome_do_modulo]/
+        ├── [nome_do_modulo].css
+        └── [nome_do_modulo].js
+```
+
+#### 1.2 Configurar o blueprint no `__init__.py`:
+```python
+from flask import Blueprint
+
+bp = Blueprint('[nome_do_modulo]', __name__, url_prefix='/[nome_do_modulo]')
+
+from . import routes
+```
+
+#### 1.3 Implementar as rotas no `routes.py`:
+```python
+from flask import render_template, request, redirect, url_for, flash
+from modules.auth.routes import login_required, role_required
+from . import bp
+
+@bp.route('/')
+@login_required
+def index():
+    return render_template('[nome_do_modulo]/[nome_do_modulo].html')
+
+# Adicionar outras rotas conforme necessário
+```
+
+### 2. Registrar o Blueprint no App Principal
+
+#### 2.1 No arquivo `app.py`, adicionar:
+```python
+# Registrar novo módulo
+from modules.[nome_do_modulo] import bp as [nome_do_modulo]_bp
+app.register_blueprint([nome_do_modulo]_bp)
+```
+
+### 3. Atualizar o Sistema de Controle de Acesso
+
+#### 3.1 Atualizar o `PerfilAccessService` no arquivo `services/perfil_access_service.py`:
+
+##### a) Adicionar o módulo na estrutura `complete_menu`:
+```python
+'[codigo_modulo]': {
+    'nome': '[Nome do Módulo]',
+    'icone': 'fas fa-[icone]',
+    'url': '/[nome_do_modulo]',
+    'paginas': {
+        '[codigo_pagina]': {'nome': '[Nome da Página]', 'url': '/[nome_do_modulo]/[rota]'},
+        # Adicionar mais páginas conforme necessário
+    }
+}
+```
+
+##### b) Se necessário, adicionar mapeamento de compatibilidade em `MODULE_MAPPING`:
+```python
+MODULE_MAPPING = {
+    '[codigo_antigo]': '[codigo_novo]',
+    # outros mapeamentos...
+}
+```
+
+#### 3.2 Atualizar a lista de módulos admin (se aplicável):
+```python
+# Para usuários admin, adicionar o novo módulo na lista:
+accessible_modules = [
+    'dashboard', 'importacoes', 'financeiro', 'relatorios', 
+    'usuarios', 'agente', 'conferencia', 'materiais', 'config',
+    '[novo_modulo]'  # Adicionar aqui
+]
+```
+
+### 4. Atualizar os Templates
+
+#### 4.1 No arquivo `templates/base.html`, adicionar entrada na sidebar:
+```html
+<!-- Seção apropriada da sidebar -->
+{% if '[codigo_modulo]' in accessible_modules %}
+<a href="{{ url_for('[nome_do_modulo].index') }}"
+   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('[nome_do_modulo].') %}active{% endif %}"
+   title="[Descrição do Módulo]">
+    <i class="[classe_icone] text-xl"></i>
+    <span class="sidebar-text">[Nome do Módulo]</span>
+</a>
+{% endif %}
+```
+
+#### 4.2 No arquivo `modules/menu/templates/menu.html`, adicionar card do módulo:
+```html
+<!-- Verificar se o usuário tem acesso ao módulo -->
+{% if '[codigo_modulo]' in accessible_modules %}
+<div class="module-column">
+    <div class="module-section">
+        <div class="module-header">
+            <h3 class="module-title">[Nome do Módulo]</h3>
+        </div>
+        <div class="module-grid">
+            <!-- Verificar páginas específicas -->
+            {% set [modulo]_pages = user_accessible_pages.get('[codigo_modulo]', []) %}
+            
+            {% if '*' in [modulo]_pages or '[codigo_pagina]' in [modulo]_pages %}
+            <a href="{{ url_for('[nome_do_modulo].[rota]') }}" class="module-card" data-module="[codigo_pagina]">
+                <div class="module-icon"><i class="[classe_icone]"></i></div>
+                <h4 class="module-title">[Nome da Página]</h4>
+                <p class="module-desc">[Descrição da página].</p>
+            </a>
+            {% endif %}
+            
+            <!-- Adicionar mais páginas conforme necessário -->
+        </div>
+    </div>
+</div>
+{% endif %}
+```
+
+### 5. Atualizar o Banco de Dados
+
+#### 5.1 Inserir registro na tabela `users_perfis`:
+```sql
+INSERT INTO users_perfis (perfil_nome, modulo_codigo, modulo_nome, paginas_modulo, is_active)
+VALUES 
+('[nome_do_perfil]', '[codigo_modulo]', '[Nome do Módulo]', '["[codigo_pagina1]", "[codigo_pagina2]"]', true);
+```
+
+#### 5.2 Exemplo de inserção completa:
+```sql
+-- Exemplo: Módulo de Vendas
+INSERT INTO users_perfis (perfil_nome, modulo_codigo, modulo_nome, paginas_modulo, is_active)
+VALUES 
+('vendas_completo', 'vendas', 'Vendas', '["dashboard", "clientes", "propostas", "contratos"]', true),
+('vendas_basico', 'vendas', 'Vendas', '["clientes", "propostas"]', true);
+```
+
+### 6. Sistema de JavaScript para Perfis
+
+#### 6.1 Atualizar o arquivo `modules/usuarios/static/js/perfis.js` - constante `MODULOS_SISTEMA`:
+```javascript
+const MODULOS_SISTEMA = {
+    // ... módulos existentes ...
+    [codigo_modulo]: {
+        nome: '[Nome do Módulo]',
+        icon: '[classe_icone]',
+        pages: [
+            { code: '[codigo_pagina1]', name: '[Nome da Página 1]', icon: '[icone_pagina1]' },
+            { code: '[codigo_pagina2]', name: '[Nome da Página 2]', icon: '[icone_pagina2]' }
+        ]
+    }
+};
+```
+
+### 7. Testes de Implementação
+
+#### 7.1 Criar arquivo de teste `test_novo_modulo.py`:
+```python
+import os
+import requests
+import json
+
+API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
+BASE_URL = 'http://localhost:5000'
+headers = {'X-API-Key': API_BYPASS_KEY, 'Content-Type': 'application/json'}
+
+def test_novo_modulo():
+    """Testa se o novo módulo está acessível"""
+    print("🧪 [TESTE] Testando novo módulo...")
+    
+    try:
+        # Testar acesso à página principal
+        response = requests.get(f'{BASE_URL}/[nome_do_modulo]/', headers=headers)
+        print(f"📤 [TESTE] Status da página: {response.status_code}")
+        
+        # Testar se aparece no menu filtrado
+        response = requests.get(f'{BASE_URL}/menu/api/menu-filtrado', headers=headers)
+        if response.status_code == 200:
+            menu = response.json()
+            if '[codigo_modulo]' in menu:
+                print("✅ [TESTE] Módulo encontrado no menu filtrado")
+            else:
+                print("❌ [TESTE] Módulo NÃO encontrado no menu filtrado")
+        
+    except Exception as e:
+        print(f"❌ [TESTE] Erro: {e}")
+
+if __name__ == "__main__":
+    test_novo_modulo()
+```
+
+#### 7.2 Executar teste:
+```powershell
+$env:API_BYPASS_KEY = "uniq_api_2025_dev_bypass_key"
+python test_novo_modulo.py
+```
+
+### 8. Checklist Final
+
+- [ ] Estrutura de pastas criada seguindo o padrão
+- [ ] Blueprint registrado no `app.py`
+- [ ] Rotas implementadas com decoradores de autenticação
+- [ ] `PerfilAccessService` atualizado com novo módulo
+- [ ] Template HTML criado seguindo o padrão visual
+- [ ] Sidebar atualizada no `templates/base.html`
+- [ ] Menu principal atualizado no `modules/menu/templates/menu.html`
+- [ ] Registros inseridos na tabela `users_perfis`
+- [ ] JavaScript de perfis atualizado
+- [ ] Testes executados e aprovados
+- [ ] Arquivos de teste removidos após validação
+
+### 9. Observações Importantes
+
+#### 9.1 Códigos e Nomenclatura:
+- Use códigos curtos e descritivos para módulos (ex: 'vendas', 'rh', 'estoque')
+- Códigos de páginas devem ser únicos dentro do módulo
+- Mantenha consistência com os padrões existentes
+
+#### 9.2 Permissões:
+- Sempre usar decoradores `@login_required` e `@role_required` nas rotas
+- Considerar diferentes níveis de acesso dentro do módulo
+- Testar com diferentes perfis de usuário
+
+#### 9.3 Interface:
+- Seguir o padrão visual existente (cores, ícones, layout)
+- Usar ícones da biblioteca MDI (Material Design Icons)
+- Manter responsividade em todos os dispositivos
+
+#### 9.4 Banco de Dados:
+- Sempre criar perfis de teste além dos perfis de produção
+- Documentar as permissões de cada perfil
+- Considerar perfis hierárquicos (básico → intermediário → completo)
+
+**LEMBRE-SE**: Sempre criar e testar com perfis diferentes antes de disponibilizar em produção. Remove todos os arquivos de teste após a validação.
