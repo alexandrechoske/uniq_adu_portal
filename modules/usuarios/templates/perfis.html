@@ -141,7 +141,8 @@
             </div>
             <div class="modal-body">
                 <form id="form-perfil">
-                    <input type="hidden" id="perfil-id" name="perfil_id">
+                    <!-- Campo oculto para ID -->
+                    <input type="hidden" id="perfil-id" name="perfil_id" value="">
                     
                     <!-- Informações Básicas -->
                     <div class="form-section">
@@ -152,21 +153,6 @@
                         
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="perfil-codigo" class="form-label required">Código do Perfil</label>
-                                <input 
-                                    type="text" 
-                                    class="form-control" 
-                                    id="perfil-codigo" 
-                                    name="perfil_codigo" 
-                                    placeholder="ex: financeiro, comercial"
-                                    pattern="^[a-z_]+$"
-                                    title="Apenas letras minúsculas e underscores"
-                                    required
-                                >
-                                <div class="form-help">Use apenas letras minúsculas e underscores</div>
-                            </div>
-                            
-                            <div class="form-group">
                                 <label for="perfil-nome" class="form-label required">Nome do Perfil</label>
                                 <input 
                                     type="text" 
@@ -176,18 +162,19 @@
                                     placeholder="ex: Financeiro, Comercial"
                                     required
                                 >
+                                <div class="form-help">Nome descritivo do perfil de acesso</div>
                             </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="perfil-descricao" class="form-label">Descrição</label>
-                            <textarea 
-                                class="form-control" 
-                                id="perfil-descricao" 
-                                name="perfil_descricao" 
-                                rows="3"
-                                placeholder="Descreva as responsabilidades e acesso deste perfil"
-                            ></textarea>
+                            
+                            <div class="form-group">
+                                <label for="perfil-descricao" class="form-label">Descrição</label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="perfil-descricao" 
+                                    name="perfil_descricao" 
+                                    rows="3"
+                                    placeholder="Descreva as responsabilidades e acesso deste perfil"
+                                ></textarea>
+                            </div>
                         </div>
                     </div>
 

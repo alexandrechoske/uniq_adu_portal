@@ -376,6 +376,31 @@
    MODAL CUSTOMIZATIONS
    ================================= */
 
+.modal {
+    z-index: 1055 !important;
+}
+
+.modal-backdrop {
+    z-index: 1050 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+.modal-dialog {
+    z-index: 1056 !important;
+    pointer-events: auto !important;
+    position: relative;
+}
+
+.modal-content {
+    pointer-events: auto !important;
+    background-color: var(--bg-white) !important;
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    z-index: 1057 !important;
+}
+
 .modal-lg {
     max-width: 800px;
 }
@@ -385,6 +410,9 @@
     color: white;
     border-bottom: none;
     border-radius: var(--border-radius) var(--border-radius) 0 0;
+    padding: 1.5rem;
+    position: relative;
+    z-index: 1058 !important;
 }
 
 .modal-header .modal-title {
@@ -392,6 +420,7 @@
     align-items: center;
     gap: 0.5rem;
     font-weight: 600;
+    margin: 0;
 }
 
 .modal-header .btn-close {
@@ -402,20 +431,61 @@
     border: none;
     font-size: 1.25rem;
     filter: invert(1);
+    margin: 0;
+    z-index: 1060 !important;
+    position: relative;
 }
 
 .modal-header .btn-close:hover {
     opacity: 1;
+    transform: scale(1.1);
 }
 
 .modal-body {
     padding: 2rem;
+    max-height: 70vh;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1058 !important;
+    background: var(--bg-white);
+    pointer-events: auto !important;
 }
 
 .modal-footer {
     background: var(--bg-gray-50);
     border-top: 1px solid var(--border-color);
     padding: 1rem 2rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    position: relative;
+    z-index: 1058 !important;
+    pointer-events: auto !important;
+}
+
+.modal-footer .btn {
+    min-width: 120px;
+    z-index: 1060 !important;
+    position: relative;
+    pointer-events: auto !important;
+    border: none;
+    outline: none;
+}
+
+.modal-footer .btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Garantir que o formulário não interfira */
+#form-perfil {
+    pointer-events: auto;
+    position: relative;
+    z-index: 1059;
+}
+
+/* Garantir que todos os elementos do modal sejam clicáveis */
+.modal * {
+    pointer-events: auto;
 }
 
 /* =================================
@@ -466,6 +536,10 @@
     color: var(--danger-color);
 }
 
+/* =================================
+   FORM CONTROLS
+   ================================= */
+
 .form-control {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -474,6 +548,7 @@
     font-size: 0.875rem;
     transition: var(--transition);
     background: var(--bg-white);
+    box-sizing: border-box;
 }
 
 .form-control:focus {
@@ -486,26 +561,51 @@
     border-color: var(--danger-color);
 }
 
-.form-help {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: 0.25rem;
-}
-
 .form-check {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    margin-bottom: 1rem;
 }
 
 .form-check-input {
     margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.form-check-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .form-check-label {
     margin: 0;
     font-weight: 500;
     color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-switch .form-check-input {
+    width: 2.5rem;
+    height: 1.25rem;
+    border-radius: 1rem;
+    background-color: var(--bg-gray-200);
+    border: 2px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.form-switch .form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-help {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    display: block;
 }
 
 /* =================================
@@ -518,6 +618,12 @@
     border-radius: var(--border-radius-sm);
     padding: 1rem;
     margin-bottom: 1rem;
+    transition: var(--transition);
+}
+
+.modulo-section.disabled {
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .modulo-header {
@@ -525,6 +631,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1rem;
+    cursor: default;
 }
 
 .modulo-title {
@@ -540,10 +647,21 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    cursor: pointer;
+}
+
+.modulo-toggle label {
+    cursor: pointer;
+    margin: 0;
+    font-weight: 500;
+    color: var(--text-primary);
+    user-select: none;
 }
 
 .modulo-toggle input[type="checkbox"] {
     transform: scale(1.2);
+    cursor: pointer;
+    margin: 0;
 }
 
 .paginas-grid {
@@ -551,25 +669,43 @@
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 0.75rem;
     margin-top: 1rem;
+    opacity: 1;
+    transition: var(--transition);
+}
+
+.paginas-grid.disabled {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 .pagina-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.75rem;
     background: var(--bg-white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-sm);
     transition: var(--transition);
+    cursor: pointer;
+    user-select: none;
 }
 
 .pagina-item:hover {
     background: var(--bg-gray-100);
+    border-color: var(--primary-light);
+}
+
+.pagina-item.disabled {
+    background: var(--bg-gray-100);
+    pointer-events: none;
+    opacity: 0.6;
 }
 
 .pagina-item input[type="checkbox"] {
     margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .pagina-item label {
@@ -583,16 +719,7 @@
 .pagina-item i {
     color: var(--text-muted);
     font-size: 0.875rem;
-}
-
-/* Estado desabilitado quando módulo não está selecionado */
-.modulo-section.disabled {
-    opacity: 0.6;
-}
-
-.modulo-section.disabled .pagina-item {
-    background: var(--bg-gray-100);
-    pointer-events: none;
+    flex-shrink: 0;
 }
 
 /* =================================

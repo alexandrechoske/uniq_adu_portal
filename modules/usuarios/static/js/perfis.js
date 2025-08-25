@@ -149,7 +149,6 @@ function initializeElements() {
         
         // Campos do formulário
         perfilId: document.getElementById('perfil-id'),
-        perfilCodigo: document.getElementById('perfil-codigo'),
         perfilNome: document.getElementById('perfil-nome'),
         perfilDescricao: document.getElementById('perfil-descricao'),
         perfilAtivo: document.getElementById('perfil-ativo'),
@@ -195,6 +194,27 @@ function initializeEventListeners() {
             // Reset any previous errors when opening modal
             const errorElements = elements.modalPerfil.querySelectorAll('.is-invalid');
             errorElements.forEach(el => el.classList.remove('is-invalid'));
+        });
+    }
+    
+    // Event delegation for dynamic checkbox events
+    if (elements.modulosContainer) {
+        elements.modulosContainer.addEventListener('change', function(e) {
+            if (e.target.classList.contains('modulo-checkbox')) {
+                const moduloCodigo = e.target.dataset.modulo;
+                toggleModuloPages(moduloCodigo, e.target.checked);
+            }
+        });
+        
+        // Handle clicks on pagina items
+        elements.modulosContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('pagina-item') || e.target.closest('.pagina-item')) {
+                const paginaItem = e.target.classList.contains('pagina-item') ? e.target : e.target.closest('.pagina-item');
+                const checkbox = paginaItem.querySelector('input[type="checkbox"]');
+                if (checkbox && !checkbox.disabled) {
+                    checkbox.checked = !checkbox.checked;
+                }
+            }
         });
     }
 }
@@ -297,13 +317,13 @@ function createPerfilCard(perfil) {
                 <div class="perfil-codigo">${escapeHtml(perfil.codigo)}</div>
             </div>
             <div class="perfil-actions">
-                <button class="btn btn-sm btn-outline-primary" onclick="viewPerfil('${perfil.codigo}')" title="Visualizar">
+                <button class="btn btn-sm btn-outline-primary" onclick="viewPerfil(${perfil.id})" title="Visualizar">
                     <i class="mdi mdi-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="editPerfil('${perfil.codigo}')" title="Editar">
+                <button class="btn btn-sm btn-outline-secondary" onclick="editPerfil(${perfil.id})" title="Editar">
                     <i class="mdi mdi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deletePerfil('${perfil.codigo}')" title="Excluir">
+                <button class="btn btn-sm btn-outline-danger" onclick="deletePerfil(${perfil.id})" title="Excluir">
                     <i class="mdi mdi-delete"></i>
                 </button>
             </div>
@@ -339,15 +359,15 @@ function createPerfilCard(perfil) {
 /**
  * Abre modal de perfil
  */
-function openPerfilModal(mode, perfilCodigo = null) {
+function openPerfilModal(mode, perfilId = null) {
     appState.currentMode = mode;
     
     if (mode === MODAL_MODES.CREATE) {
         elements.modalTitle.textContent = 'Novo Perfil';
         elements.btnSaveText.textContent = 'Criar Perfil';
         resetForm();
-    } else if (mode === MODAL_MODES.EDIT && perfilCodigo) {
-        const perfil = appState.perfis.find(p => p.codigo === perfilCodigo);
+    } else if (mode === MODAL_MODES.EDIT && perfilId) {
+        const perfil = appState.perfis.find(p => p.id === perfilId);
         if (perfil) {
             elements.modalTitle.textContent = 'Editar Perfil';
             elements.btnSaveText.textContent = 'Salvar Alterações';
@@ -380,7 +400,6 @@ function resetForm() {
  */
 function populateForm(perfil) {
     elements.perfilId.value = perfil.id || '';
-    elements.perfilCodigo.value = perfil.codigo || '';
     elements.perfilNome.value = perfil.nome || '';
     elements.perfilDescricao.value = perfil.descricao || '';
     elements.perfilAtivo.checked = perfil.ativo !== false;
@@ -447,7 +466,7 @@ function createModuloSection(moduloCodigo, modulo) {
     toggle.className = 'modulo-toggle';
     toggle.innerHTML = `
         <label for="modulo-${moduloCodigo}">Habilitar módulo</label>
-        <input type="checkbox" id="modulo-${moduloCodigo}" onchange="toggleModuloPages('${moduloCodigo}', this.checked)">
+        <input type="checkbox" id="modulo-${moduloCodigo}" data-modulo="${moduloCodigo}" class="modulo-checkbox">
     `;
     
     header.appendChild(title);
@@ -509,8 +528,8 @@ function toggleModuloPages(moduloCodigo, enabled) {
 /**
  * Visualizar perfil
  */
-function viewPerfil(perfilCodigo) {
-    const perfil = appState.perfis.find(p => p.codigo === perfilCodigo);
+function viewPerfil(perfilId) {
+    const perfil = appState.perfis.find(p => p.id === perfilId);
     if (!perfil) return;
     
     renderPerfilDetails(perfil);
@@ -526,15 +545,15 @@ function viewPerfil(perfilCodigo) {
 /**
  * Editar perfil
  */
-function editPerfil(perfilCodigo) {
-    openPerfilModal(MODAL_MODES.EDIT, perfilCodigo);
+function editPerfil(perfilId) {
+    openPerfilModal(MODAL_MODES.EDIT, perfilId);
 }
 
 /**
  * Excluir perfil
  */
-function deletePerfil(perfilCodigo) {
-    const perfil = appState.perfis.find(p => p.codigo === perfilCodigo);
+function deletePerfil(perfilId) {
+    const perfil = appState.perfis.find(p => p.id === perfilId);
     if (!perfil) return;
     
     elements.deletePerfilName.textContent = perfil.nome;
@@ -546,8 +565,8 @@ function deletePerfil(perfilCodigo) {
         elements.deleteWarningUsers.style.display = 'none';
     }
     
-    // Armazenar código do perfil para exclusão
-    elements.btnConfirmDelete.dataset.perfilCodigo = perfilCodigo;
+    // Armazenar ID do perfil para exclusão
+    elements.btnConfirmDelete.dataset.perfilId = perfilId;
     
     // Bootstrap 5 modal initialization
     const modal = new bootstrap.Modal(elements.modalDeletePerfil, {
@@ -560,7 +579,13 @@ function deletePerfil(perfilCodigo) {
 /**
  * Salvar perfil
  */
-async function handleSavePerfil() {
+async function handleSavePerfil(event) {
+    // Prevenir comportamento padrão e propagação
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
     try {
         const formData = collectFormData();
         
@@ -617,7 +642,7 @@ async function handleSavePerfil() {
  */
 async function handleConfirmDelete() {
     try {
-        const perfilCodigo = elements.btnConfirmDelete.dataset.perfilCodigo;
+        const perfilId = elements.btnConfirmDelete.dataset.perfilId;
         
         elements.btnConfirmDelete.disabled = true;
         elements.btnConfirmDelete.innerHTML = '<i class="mdi mdi-loading spin"></i> Excluindo...';
@@ -627,7 +652,7 @@ async function handleConfirmDelete() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ perfil_codigo: perfilCodigo })
+            body: JSON.stringify({ perfil_id: perfilId })
         });
         
         const data = await response.json();
@@ -688,8 +713,7 @@ function collectFormData() {
     });
     
     return {
-        id: elements.perfilId.value || null,
-        codigo: elements.perfilCodigo.value.trim(),
+        id: elements.perfilId.value || null,  // ID do banco (null para novo perfil)
         nome: elements.perfilNome.value.trim(),
         descricao: elements.perfilDescricao.value.trim(),
         ativo: elements.perfilAtivo.checked,
@@ -702,34 +726,16 @@ function collectFormData() {
  */
 function validateFormData(data) {
     // Validar campos obrigatórios
-    if (!data.codigo) {
-        showNotification('O código do perfil é obrigatório', NOTIFICATION_TYPES.ERROR);
-        elements.perfilCodigo.focus();
-        return false;
-    }
-    
     if (!data.nome) {
         showNotification('O nome do perfil é obrigatório', NOTIFICATION_TYPES.ERROR);
         elements.perfilNome.focus();
         return false;
     }
     
-    // Validar formato do código
-    const codigoRegex = /^[a-z_]+$/;
-    if (!codigoRegex.test(data.codigo)) {
-        showNotification('O código deve conter apenas letras minúsculas e underscores', NOTIFICATION_TYPES.ERROR);
-        elements.perfilCodigo.focus();
+    // Validar que pelo menos um módulo está selecionado
+    if (!data.modulos || data.modulos.length === 0) {
+        showNotification('Selecione pelo menos um módulo para o perfil', NOTIFICATION_TYPES.WARNING);
         return false;
-    }
-    
-    // Validar duplicação de código (apenas para novos perfis)
-    if (appState.currentMode === MODAL_MODES.CREATE) {
-        const existente = appState.perfis.find(p => p.codigo === data.codigo);
-        if (existente) {
-            showNotification('Já existe um perfil com este código', NOTIFICATION_TYPES.ERROR);
-            elements.perfilCodigo.focus();
-            return false;
-        }
     }
     
     return true;
