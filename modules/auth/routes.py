@@ -181,12 +181,30 @@ def role_required(allowed_roles):
             if 'user' not in session:
                 return redirect(url_for('auth.login'))
             
-            user_role = session['user'].get('role')
-            if user_role not in allowed_roles:
-                flash('Acesso negado. Você não tem permissão para acessar esta página.', 'error')
-                return redirect(url_for('auth.acesso_negado'))
+            user = session['user']
+            user_role = user.get('role')
+            user_perfil_principal = user.get('perfil_principal', 'basico')
             
-            return f(*args, **kwargs)
+            # Verificar acesso tradicional por role
+            if user_role in allowed_roles:
+                return f(*args, **kwargs)
+            
+            # Verificar se é Module Admin tentando acessar gestão de usuários
+            if 'admin' in allowed_roles:
+                # Master Admins: admin + admin_geral
+                if user_role == 'admin' and user_perfil_principal == 'admin_geral':
+                    print(f"[AUTH] Master Admin (admin_geral) autorizado para {allowed_roles}")
+                    return f(*args, **kwargs)
+                
+                # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+                if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
+                    print(f"[AUTH] Module Admin ({user_perfil_principal}) autorizado para {allowed_roles}")
+                    return f(*args, **kwargs)
+            
+            print(f"[AUTH] Acesso negado - role {user_role} (perfil_principal {user_perfil_principal}) não autorizado para {allowed_roles}")
+            flash('Acesso negado. Você não tem permissão para acessar esta página.', 'error')
+            return redirect(url_for('menu.menu_home'))  # Redirect to menu instead of non-existent endpoint
+            
         return decorated_function
     return decorator
 
@@ -328,6 +346,7 @@ def login():
                     'email': user['email'],
                     'name': user['name'],
                     'role': user['role'],
+                    'perfil_principal': user.get('perfil_principal', 'basico'),  # Novo campo perfil_principal
                     'is_active': user.get('is_active', True),
                     'user_companies': user_companies,
                     'user_companies_info': user_companies_info,

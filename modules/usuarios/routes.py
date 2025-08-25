@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
+from functools import wraps
 from extensions import supabase, supabase_admin
-from routes.auth import login_required, role_required
+from modules.auth.routes import login_required, role_required
 import re
 import time
 import uuid
@@ -137,6 +138,107 @@ def invalidate_users_cache():
     global _users_cache
     _users_cache = {'data': None, 'timestamp': 0, 'ttl': 300}
     print("[DEBUG] Cache de usuários invalidado")
+
+def is_master_admin_required():
+    """Decorador para verificar se o usuário é Master Admin (admin + admin_geral)"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Verificar se usuário está logado
+            if 'user' not in session:
+                flash('Acesso não autorizado.', 'error')
+                return redirect(url_for('auth.login'))
+            
+            user = session.get('user', {})
+            user_role = user.get('role')
+            user_perfil_principal = user.get('perfil_principal', 'basico')
+            
+            # Verificar se é Master Admin
+            if not (user_role == 'admin' and user_perfil_principal == 'admin_geral'):
+                print(f"[ACCESS_DENIED] Usuário {user.get('email')} tentou acessar funcionalidade restrita a Master Admin")
+                print(f"[ACCESS_DENIED] Role atual: {user_role}, Perfil Principal: {user_perfil_principal}")
+                flash('Acesso negado. Esta funcionalidade é restrita a administradores mestres.', 'error')
+                return redirect(url_for('usuarios.index'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def can_edit_user(editor_user, target_user_data):
+    """Verifica se um usuário pode editar outro baseado na hierarquia"""
+    editor_role = editor_user.get('role')
+    editor_perfil_principal = editor_user.get('perfil_principal', 'basico')
+    
+    target_role = target_user_data.get('role')
+    target_perfil_principal = target_user_data.get('perfil_principal', 'basico')
+    
+    print(f"[HIERARCHY_CHECK] Editor: {editor_role} + {editor_perfil_principal}")
+    print(f"[HIERARCHY_CHECK] Target: {target_role} + {target_perfil_principal}")
+    
+    # Master Admins podem editar qualquer um
+    if editor_role == 'admin' and editor_perfil_principal == 'admin_geral':
+        print(f"[HIERARCHY_CHECK] Master Admin pode editar qualquer usuário")
+        return True
+    
+    # Module Admins têm restrições
+    if editor_role == 'interno_unique' and editor_perfil_principal.startswith('admin_'):
+        # Module Admins NÃO podem editar:
+        # 1. Master Admins (admin + admin_geral)
+        if target_role == 'admin' and target_perfil_principal == 'admin_geral':
+            print(f"[HIERARCHY_CHECK] Module Admin não pode editar Master Admin")
+            return False
+        
+        # 2. Outros Module Admins (interno_unique + admin_*)
+        if target_role == 'interno_unique' and target_perfil_principal.startswith('admin_'):
+            print(f"[HIERARCHY_CHECK] Module Admin não pode editar outro Module Admin")
+            return False
+        
+        # Module Admins PODEM editar:
+        # - Basic users (interno_unique + basico)
+        # - Clients (cliente_unique + basico)
+        print(f"[HIERARCHY_CHECK] Module Admin pode editar usuário básico")
+        return True
+    
+    # Basic users não podem editar ninguém (não devem ter acesso ao módulo de usuários)
+    print(f"[HIERARCHY_CHECK] Usuário sem permissões de edição")
+    return False
+
+def can_assign_perfil(editor_user, perfil_id):
+    """Verifica se um usuário pode atribuir um perfil baseado na hierarquia"""
+    editor_role = editor_user.get('role')
+    editor_perfil_principal = editor_user.get('perfil_principal', 'basico')
+    
+    print(f"[PERFIL_ASSIGNMENT_CHECK] Editor: {editor_role} + {editor_perfil_principal}")
+    print(f"[PERFIL_ASSIGNMENT_CHECK] Tentando atribuir perfil: {perfil_id}")
+    
+    # Master Admins podem atribuir qualquer perfil
+    if editor_role == 'admin' and editor_perfil_principal == 'admin_geral':
+        print(f"[PERFIL_ASSIGNMENT_CHECK] Master Admin pode atribuir qualquer perfil")
+        return True
+    
+    # Module Admins têm restrições
+    if editor_role == 'interno_unique' and editor_perfil_principal.startswith('admin_'):
+        # Lucas (admin_importacoes) pode atribuir apenas perfis relacionados a importação
+        if editor_perfil_principal == 'admin_importacoes':
+            allowed_perfils = ['cliente_basico', 'imp_basico', 'imp_avancado', 'importacao_basico', 'importacao_avancado']
+            can_assign = perfil_id in allowed_perfils or 'imp' in perfil_id or 'importa' in perfil_id.lower()
+            print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Importações pode atribuir {perfil_id}: {can_assign}")
+            return can_assign
+        
+        # Alexandre (admin_financeiro) pode atribuir apenas perfis relacionados a financeiro
+        elif editor_perfil_principal == 'admin_financeiro':
+            allowed_perfils = ['cliente_basico', 'fin_basico', 'fin_avancado', 'financeiro_basico', 'financeiro_avancado']
+            can_assign = perfil_id in allowed_perfils or 'fin' in perfil_id or 'financeiro' in perfil_id.lower()
+            print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Financeiro pode atribuir {perfil_id}: {can_assign}")
+            return can_assign
+        
+        # Outros Module Admins
+        print(f"[PERFIL_ASSIGNMENT_CHECK] Module Admin {editor_perfil_principal} restrito")
+        return False
+    
+    # Basic users não podem atribuir perfis
+    print(f"[PERFIL_ASSIGNMENT_CHECK] Usuário sem permissões de atribuição de perfis")
+    return False
 
 def retry_supabase_operation(operation, max_retries=2, delay=0.5):
     """Backwards-compatible wrapper that now delegates to centralized retry utility."""
@@ -362,6 +464,7 @@ def salvar_usuario():
         name = data.get('name', '').strip()
         email = data.get('email', '').strip()
         role = data.get('role', '').strip()
+        perfil_principal = data.get('perfil_principal', 'basico').strip()  # Novo campo
         is_active = data.get('is_active', True)
         password = data.get('password', '').strip() if not user_id else None
         confirm_password = data.get('confirm_password', '').strip() if not user_id else None
@@ -386,6 +489,15 @@ def salvar_usuario():
         # Validar role
         if role and role not in VALID_ROLES:
             errors.append('Perfil inválido')
+        
+        # Validar perfil_principal baseado na hierarquia
+        if perfil_principal:
+            if role == 'cliente_unique' and perfil_principal != 'basico':
+                errors.append('Clientes só podem ter perfil básico')
+            elif role == 'interno_unique' and perfil_principal not in ['basico', 'admin_importacoes', 'admin_financeiro']:
+                errors.append('Funcionários internos podem ter perfil básico ou admin de módulo')
+            elif role == 'admin' and perfil_principal != 'admin_geral':
+                errors.append('Administradores só podem ter perfil admin_geral')
 
         # Validações específicas para novo usuário
         if not user_id:
@@ -405,11 +517,23 @@ def salvar_usuario():
             'name': name,
             'email': email,
             'role': role,
+            'perfil_principal': perfil_principal,
             'is_active': bool(is_active),
             'updated_at': datetime.datetime.now().isoformat()
         }
 
         if user_id:
+            # HIERARCHY VALIDATION: Verificar se pode editar o usuário alvo
+            editor_user = session.get('user', {})
+            target_user_response = supabase_admin.table(get_users_table()).select('role, perfil_principal').eq('id', user_id).execute()
+            if not target_user_response.data:
+                return jsonify({'success': False, 'error': 'Usuário não encontrado'}), 404
+            
+            target_user_data = target_user_response.data[0]
+            if not can_edit_user(editor_user, target_user_data):
+                print(f"[HIERARCHY_CHECK] Hierarchy violation: {editor_user.get('email')} tentou editar usuário de nível superior")
+                return jsonify({'success': False, 'error': 'Você não tem permissão para editar este usuário.'}), 403
+                
             # Atualizar usuário existente
             print(f"[DEBUG] Atualizando usuário {user_id} com dados: {user_data}")
             response = supabase_admin.table(get_users_table()).update(user_data).eq('id', user_id).execute()
@@ -690,6 +814,7 @@ def api_usuarios():
                 'nome': user.get('nome') or user.get('name'),  # Tentar nome e name
                 'email': user.get('email'),
                 'role': user.get('role'),  # CAMPO CRÍTICO PARA KPIs
+                'perfil_principal': user.get('perfil_principal', 'basico'),  # Novo campo
                 'ativo': user.get('ativo', True),
                 'agent_info': user.get('agent_info', {'empresas': []}),
                 'whatsapp_numbers': user.get('whatsapp_numbers', [])
@@ -2221,9 +2346,21 @@ def api_update_user(user_id):
             # Verificar role
             user = session.get('user', {})
             print(f"[USUARIOS] Role do usuário: {user.get('role')}")
-            if user.get('role') != 'admin':
+            if user.get('role') != 'admin' and not (user.get('role') == 'interno_unique' and user.get('perfil_principal', '').startswith('admin_')):
                 print(f"[USUARIOS] ❌ Role insuficiente")
                 return jsonify({'success': False, 'message': 'Acesso não autorizado'}), 403
+            
+            # HIERARCHY VALIDATION: Verificar se pode editar o usuário alvo
+            target_user_response = supabase_admin.table(get_users_table()).select('role, perfil_principal').eq('id', user_id).execute()
+            if not target_user_response.data:
+                print(f"[USUARIOS] ❌ Usuário alvo não encontrado")
+                return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            
+            target_user_data = target_user_response.data[0]
+            if not can_edit_user(user, target_user_data):
+                print(f"[USUARIOS] ❌ Hierarchy violation: {user.get('email')} tentou editar usuário de nível superior")
+                return jsonify({'success': False, 'message': 'Você não tem permissão para editar este usuário.'}), 403
+                
         else:
             print(f"[USUARIOS] ✅ Bypass autorizado - continuando...")
         
@@ -2453,8 +2590,10 @@ def api_update_user_whatsapp(user_id):
 # =================================
 
 @bp.route('/perfis')
+@login_required
+@is_master_admin_required()
 def perfis_home():
-    """Página principal de gerenciamento de perfis"""
+    """Página principal de gerenciamento de perfis - Restrita a Master Admins"""
     try:
         print("[PERFIS] ===== FUNÇÃO PERFIS_HOME CHAMADA =====")
         print(f"[PERFIS] Headers: {dict(request.headers)}")
@@ -2469,18 +2608,7 @@ def perfis_home():
             print("[PERFIS] ✅ Bypass autorizado - continuando...")
             return render_template('perfis.html')
         
-        # Se não tem bypass, verifica se está logado
-        if 'user' not in session:
-            print("[PERFIS] ❌ Usuário não logado - redirecionando para login")
-            return redirect(url_for('auth.login'))
-        
-        user = session.get('user', {})
-        if user.get('role') != 'admin':
-            print(f"[PERFIS] ❌ Role insuficiente: {user.get('role')}")
-            flash('Acesso não autorizado.', 'error')
-            return redirect(url_for('usuarios.index'))
-        
-        print("[PERFIS] ✅ Acessando página principal de perfis...")
+        print("[PERFIS] ✅ Master Admin verificado - acessando página principal de perfis...")
         return render_template('perfis.html')
         
     except Exception as e:
@@ -2490,6 +2618,8 @@ def perfis_home():
         return redirect(url_for('usuarios.index'))
 
 @bp.route('/perfis/list', methods=['GET'])
+@login_required
+@is_master_admin_required()
 def perfis_list():
     """Lista todos os perfis de acesso"""
     try:
@@ -2569,6 +2699,8 @@ def perfis_list():
         }), 500
 
 @bp.route('/perfis/create', methods=['POST'])
+@login_required
+@is_master_admin_required()
 def perfis_create():
     """Cria um novo perfil de acesso"""
     try:
@@ -2671,6 +2803,8 @@ def perfis_create():
         }), 500
 
 @bp.route('/perfis/update', methods=['POST'])
+@login_required
+@is_master_admin_required()
 def perfis_update():
     """Atualiza um perfil existente"""
     try:
@@ -2820,6 +2954,8 @@ def perfis_update():
         }), 500
 
 @bp.route('/perfis/delete', methods=['POST'])
+@login_required
+@is_master_admin_required()
 def perfis_delete():
     """Exclui um perfil de acesso"""
     try:
@@ -3045,7 +3181,7 @@ def api_get_users_perfis(user_id):
 
 @bp.route('/<user_id>/perfis', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])  # Allow Module Admins
 def api_update_users_perfis(user_id):
     """Atualiza perfis associados ao usuário"""
     try:
@@ -3061,6 +3197,19 @@ def api_update_users_perfis(user_id):
                 'success': False,
                 'message': 'Usuário não encontrado'
             }), 404
+        
+        # PERFIL ASSIGNMENT VALIDATION: Verificar se pode atribuir os perfis
+        editor_user = session.get('user', {})
+        
+        # Se não é Master Admin, validar cada perfil
+        if not (editor_user.get('role') == 'admin' and editor_user.get('perfil_principal') == 'admin_geral'):
+            for perfil_id in perfis_ids:
+                if not can_assign_perfil(editor_user, perfil_id):
+                    print(f"[PERFIL_ASSIGNMENT_CHECK] Acesso negado: {editor_user.get('email')} tentou atribuir perfil {perfil_id}")
+                    return jsonify({
+                        'success': False,
+                        'message': f'Você não tem permissão para atribuir o perfil "{perfil_id}". Verifique se este perfil pertence aos seus módulos de administração.'
+                    }), 403
         
         # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela users_perfis existe
         try:

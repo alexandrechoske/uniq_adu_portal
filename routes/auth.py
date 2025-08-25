@@ -72,7 +72,7 @@ def role_required(roles):
                 if user_data.get('role'):
                     print(f"[AUTH] Acesso negado - role {user_data['role']} não autorizado para {roles}")
                     flash('Acesso não autorizado.', 'error')
-                    return redirect(url_for('dashboard_v2.index'))
+                    return redirect(url_for('menu.menu_home'))  # Redirect to menu instead of non-existent endpoint
             
             # Só usar bypass se não há sessão válida ou role válido
             api_bypass_key = os.getenv('API_BYPASS_KEY')

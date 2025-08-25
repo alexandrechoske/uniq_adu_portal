@@ -35,95 +35,126 @@ class PerfilAccessService:
     @staticmethod
     def get_user_accessible_modules():
         """
-        Retorna lista de módulos que o usuário tem acesso baseado em seus perfis
+        Retorna lista de módulos que o usuário tem acesso baseado em seu perfil_principal
         
         Returns:
             list: Lista de códigos de módulos acessíveis
         """
         user = session.get('user', {})
         user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        user_email = user.get('email')
         user_perfis_info = user.get('user_perfis_info', [])
         
-        print(f"[ACCESS_SERVICE] Verificando módulos acessíveis para {user.get('email')}")
+        print(f"[ACCESS_SERVICE] Verificando módulos acessíveis para {user_email}")
+        print(f"[ACCESS_SERVICE] Role: {user_role}, Perfil Principal: {user_perfil_principal}")
         
-        # Admin tem acesso a tudo
-        if user_role == 'admin':
+        # Master Admins: admin + admin_geral - acesso total
+        if user_role == 'admin' and user_perfil_principal == 'admin_geral':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
                 'usuarios', 'agente', 'conferencia', 'materiais', 'config',
-                'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios'
+                'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios',
+                'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
             ]
-            print(f"[ACCESS_SERVICE] Admin - módulos disponíveis: {accessible_modules}")
+            print(f"[ACCESS_SERVICE] Master Admin (admin_geral) - módulos disponíveis: {accessible_modules}")
             return accessible_modules
         
-        # Usuários com perfis específicos
-        accessible_modules = set()
-        accessible_pages_all = set()  # Para rastrear todas as páginas acessíveis
-        
-        for perfil_info in user_perfis_info:
-            perfil_nome = perfil_info.get('perfil_nome')
-            modulos = perfil_info.get('modulos', [])
+        # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+        if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
+            accessible_modules = set()
             
-            for modulo in modulos:
-                modulo_codigo = modulo.get('codigo')
-                if modulo_codigo:
-                    # Aplicar mapeamento de módulos se necessário
-                    modulo_mapeado = PerfilAccessService.MODULE_MAPPING.get(modulo_codigo, modulo_codigo)
-                    accessible_modules.add(modulo_mapeado)
-                    print(f"[ACCESS_SERVICE] Adicionado módulo: {modulo_codigo} → {modulo_mapeado} (perfil: {perfil_nome})")
-                    
-                    # Rastrear páginas para determinar acesso adicional a módulos
-                    modulo_paginas = modulo.get('paginas', [])
-                    for pagina in modulo_paginas:
-                        if isinstance(pagina, str):
-                            accessible_pages_all.add(pagina)
-                        elif isinstance(pagina, dict):
-                            accessible_pages_all.add(pagina.get('codigo', ''))
-        
-        # Adicionar módulos baseados em páginas específicas com contexto de módulo
-        for perfil_info in user_perfis_info:
-            modulos = perfil_info.get('modulos', [])
-            
-            for modulo in modulos:
-                modulo_codigo = modulo.get('codigo')
-                modulo_paginas = modulo.get('paginas', [])
+            if user_perfil_principal == 'admin_importacoes':
+                # Admin de Importações - APENAS módulos de importação + gestão de usuários
+                accessible_modules.update([
+                    'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 
+                    'export_relatorios', 'usuarios'
+                ])
+                print(f"[ACCESS_SERVICE] Module Admin (admin_importacoes) - módulos disponíveis: {list(accessible_modules)}")
                 
-                for pagina in modulo_paginas:
-                    pagina_codigo = pagina if isinstance(pagina, str) else pagina.get('codigo', '')
-                    
-                    if pagina_codigo in PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING:
-                        endpoint_module = PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING[pagina_codigo]
-                        accessible_modules.add(endpoint_module)
-                        print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
-                    
-                    # Adicionar módulos gerais para compatibilidade com sidebar/menu (com contexto)
-                    if pagina_codigo == 'dashboard_executivo':
-                        # Dashboard Executivo é específico por módulo - só adicionar se for do módulo de importação
-                        if modulo_codigo == 'imp':
-                            accessible_modules.add('dashboard_executivo')
-                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo (contexto: importação)")
-                        # Para financeiro, o dashboard executivo é interno ao submenu
-                    elif pagina_codigo == 'fin_dashboard_executivo':
-                        # Dashboard Executivo Financeiro - específico do módulo financeiro
-                        if modulo_codigo == 'fin':
-                            accessible_modules.add('fin_dashboard_executivo')
-                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: fin_dashboard_executivo (contexto: financeiro)")
-                    elif pagina_codigo == 'dashboard_resumido':
-                        accessible_modules.add('importacoes')
-                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: importacoes")
-                    elif pagina_codigo == 'documentos':
-                        accessible_modules.add('conferencia')
-                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: conferencia")
-                    elif pagina_codigo == 'relatorio':
-                        accessible_modules.add('relatorios')
-                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: relatorios")
-                    elif pagina_codigo == 'agente':
-                        accessible_modules.add('agente')
-                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: agente")
+            elif user_perfil_principal == 'admin_financeiro':
+                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários
+                accessible_modules.update([
+                    'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
+                    'despesas_anual', 'faturamento_anual', 'usuarios'
+                ])
+                print(f"[ACCESS_SERVICE] Module Admin (admin_financeiro) - módulos disponíveis: {list(accessible_modules)}")
+            
+            return list(accessible_modules)
         
-        accessible_modules = list(accessible_modules)
-        print(f"[ACCESS_SERVICE] Módulos acessíveis finais: {accessible_modules}")
-        return accessible_modules
+        # Basic Users: interno_unique/cliente_unique + basico - acesso baseado em perfis
+        if user_perfil_principal == 'basico':
+            accessible_modules = set()
+            accessible_pages_all = set()  # Para rastrear todas as páginas acessíveis
+            
+            for perfil_info in user_perfis_info:
+                perfil_nome = perfil_info.get('perfil_nome')
+                modulos = perfil_info.get('modulos', [])
+                
+                for modulo in modulos:
+                    modulo_codigo = modulo.get('codigo')
+                    if modulo_codigo:
+                        # Aplicar mapeamento de módulos se necessário
+                        modulo_mapeado = PerfilAccessService.MODULE_MAPPING.get(modulo_codigo, modulo_codigo)
+                        accessible_modules.add(modulo_mapeado)
+                        print(f"[ACCESS_SERVICE] Adicionado módulo: {modulo_codigo} → {modulo_mapeado} (perfil: {perfil_nome})")
+                        
+                        # Rastrear páginas para determinar acesso adicional a módulos
+                        modulo_paginas = modulo.get('paginas', [])
+                        for pagina in modulo_paginas:
+                            if isinstance(pagina, str):
+                                accessible_pages_all.add(pagina)
+                            elif isinstance(pagina, dict):
+                                accessible_pages_all.add(pagina.get('codigo', ''))
+            
+            # Adicionar módulos baseados em páginas específicas com contexto de módulo
+            for perfil_info in user_perfis_info:
+                modulos = perfil_info.get('modulos', [])
+                
+                for modulo in modulos:
+                    modulo_codigo = modulo.get('codigo')
+                    modulo_paginas = modulo.get('paginas', [])
+                    
+                    for pagina in modulo_paginas:
+                        pagina_codigo = pagina if isinstance(pagina, str) else pagina.get('codigo', '')
+                        
+                        if pagina_codigo in PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING:
+                            endpoint_module = PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING[pagina_codigo]
+                            accessible_modules.add(endpoint_module)
+                            print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
+                        
+                        # Adicionar módulos gerais para compatibilidade com sidebar/menu (com contexto)
+                        if pagina_codigo == 'dashboard_executivo':
+                            # Dashboard Executivo é específico por módulo - só adicionar se for do módulo de importação
+                            if modulo_codigo == 'imp':
+                                accessible_modules.add('dashboard_executivo')
+                                print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo (contexto: importação)")
+                            # Para financeiro, o dashboard executivo é interno ao submenu
+                        elif pagina_codigo == 'fin_dashboard_executivo':
+                            # Dashboard Executivo Financeiro - específico do módulo financeiro
+                            if modulo_codigo == 'fin':
+                                accessible_modules.add('fin_dashboard_executivo')
+                                print(f"[ACCESS_SERVICE] Adicionado módulo geral: fin_dashboard_executivo (contexto: financeiro)")
+                        elif pagina_codigo == 'dashboard_resumido':
+                            accessible_modules.add('importacoes')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: importacoes")
+                        elif pagina_codigo == 'documentos':
+                            accessible_modules.add('conferencia')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: conferencia")
+                        elif pagina_codigo == 'relatorio':
+                            accessible_modules.add('relatorios')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: relatorios")
+                        elif pagina_codigo == 'agente':
+                            accessible_modules.add('agente')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: agente")
+            
+            accessible_modules = list(accessible_modules)
+            print(f"[ACCESS_SERVICE] Basic Users ({user_perfil_principal}) - módulos acessíveis finais: {accessible_modules}")
+            return accessible_modules
+        
+        # Fallback - sem acesso
+        print(f"[ACCESS_SERVICE] Sem acesso definido para role={user_role}, perfil_principal={user_perfil_principal}")
+        return []
     
     @staticmethod
     def get_user_accessible_pages(modulo_codigo):
@@ -138,53 +169,144 @@ class PerfilAccessService:
         """
         user = session.get('user', {})
         user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
         user_perfis_info = user.get('user_perfis_info', [])
         
         print(f"[ACCESS_SERVICE] Verificando páginas acessíveis no módulo {modulo_codigo}")
+        print(f"[ACCESS_SERVICE] Role: {user_role}, Perfil Principal: {user_perfil_principal}")
         
-        # Admin tem acesso a tudo
-        if user_role == 'admin':
-            print(f"[ACCESS_SERVICE] Admin - todas as páginas disponíveis no módulo {modulo_codigo}")
+        # Master Admins: admin + admin_geral - acesso total
+        if user_role == 'admin' and user_perfil_principal == 'admin_geral':
+            print(f"[ACCESS_SERVICE] Master Admin (admin_geral) - todas as páginas disponíveis no módulo {modulo_codigo}")
             return ['*']
         
-        # Verificar nos perfis do usuário
-        accessible_pages = set()
-        
-        # Criar mapeamento reverso para buscar módulo original
-        reverse_mapping = {v: k for k, v in PerfilAccessService.MODULE_MAPPING.items()}
-        modulo_original = reverse_mapping.get(modulo_codigo, modulo_codigo)
-        
-        for perfil_info in user_perfis_info:
-            perfil_nome = perfil_info.get('perfil_nome')
-            modulos = perfil_info.get('modulos', [])
+        # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+        if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
+            # Verificar se o usuário administra este módulo
+            user_manages_module = False
             
-            for modulo in modulos:
-                # Verificar tanto o código original quanto o mapeado
-                modulo_db = modulo.get('codigo')
-                if modulo_db == modulo_codigo or modulo_db == modulo_original:
-                    modulo_paginas = modulo.get('paginas', [])
-                    
-                    # Se lista vazia ou contém '*', acesso a todas as páginas
-                    if not modulo_paginas or '*' in modulo_paginas:
-                        print(f"[ACCESS_SERVICE] Perfil {perfil_nome} permite todas as páginas do módulo {modulo_codigo}")
-                        return ['*']
-                    
-                    # Adicionar páginas específicas
-                    for pagina in modulo_paginas:
-                        # Se pagina é um dict, extrair o código
-                        if isinstance(pagina, dict):
-                            pagina_codigo = pagina.get('codigo')
-                            if pagina_codigo:
-                                accessible_pages.add(pagina_codigo)
-                                print(f"[ACCESS_SERVICE] Adicionada página: {pagina_codigo} (perfil: {perfil_nome})")
-                        else:
-                            # Se é string, usar diretamente
-                            accessible_pages.add(pagina)
-                            print(f"[ACCESS_SERVICE] Adicionada página: {pagina} (perfil: {perfil_nome})")
+            if user_perfil_principal == 'admin_importacoes':
+                # Mapear módulos de importação
+                importacao_modules = ['importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios']
+                user_manages_module = modulo_codigo in importacao_modules
+                
+            elif user_perfil_principal == 'admin_financeiro':
+                # Mapear módulos financeiros
+                financeiro_modules = ['financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual']
+                user_manages_module = modulo_codigo in financeiro_modules
+            
+            # Todos os Module Admins podem acessar gestão de usuários
+            if modulo_codigo == 'usuarios':
+                user_manages_module = True
+            
+            if user_manages_module:
+                print(f"[ACCESS_SERVICE] Module Admin ({user_perfil_principal}) - acesso total ao módulo {modulo_codigo}")
+                return ['*']
+            else:
+                print(f"[ACCESS_SERVICE] Module Admin ({user_perfil_principal}) - sem acesso ao módulo {modulo_codigo}")
+                return []
         
-        accessible_pages = list(accessible_pages)
-        print(f"[ACCESS_SERVICE] Páginas acessíveis no módulo {modulo_codigo}: {accessible_pages}")
-        return accessible_pages
+        # Basic Users: acesso baseado em perfis
+        if user_perfil_principal == 'basico':
+            accessible_pages = set()
+            
+            # Criar mapeamento reverso para buscar módulo original
+            reverse_mapping = {v: k for k, v in PerfilAccessService.MODULE_MAPPING.items()}
+            modulo_original = reverse_mapping.get(modulo_codigo, modulo_codigo)
+            
+            for perfil_info in user_perfis_info:
+                perfil_nome = perfil_info.get('perfil_nome')
+                modulos = perfil_info.get('modulos', [])
+                
+                for modulo in modulos:
+                    # Verificar tanto o código original quanto o mapeado
+                    modulo_db = modulo.get('codigo')
+                    if modulo_db == modulo_codigo or modulo_db == modulo_original:
+                        modulo_paginas = modulo.get('paginas', [])
+                        
+                        # Se lista vazia ou contém '*', acesso a todas as páginas
+                        if not modulo_paginas or '*' in modulo_paginas:
+                            print(f"[ACCESS_SERVICE] Perfil {perfil_nome} permite todas as páginas do módulo {modulo_codigo}")
+                            return ['*']
+                        
+                        # Adicionar páginas específicas
+                        for pagina in modulo_paginas:
+                            # Se pagina é um dict, extrair o código
+                            if isinstance(pagina, dict):
+                                pagina_codigo = pagina.get('codigo')
+                                if pagina_codigo:
+                                    accessible_pages.add(pagina_codigo)
+                                    print(f"[ACCESS_SERVICE] Adicionada página: {pagina_codigo} (perfil: {perfil_nome})")
+                            else:
+                                # Se é string, usar diretamente
+                                accessible_pages.add(pagina)
+                                print(f"[ACCESS_SERVICE] Adicionada página: {pagina} (perfil: {perfil_nome})")
+            
+            accessible_pages = list(accessible_pages)
+            print(f"[ACCESS_SERVICE] Basic Users - páginas acessíveis no módulo {modulo_codigo}: {accessible_pages}")
+            return accessible_pages
+        
+        # Fallback - sem acesso
+        print(f"[ACCESS_SERVICE] Sem acesso definido para role={user_role}, perfil_principal={user_perfil_principal}")
+        return []
+    
+    @staticmethod
+    def get_user_admin_capabilities():
+        """
+        Retorna as capacidades administrativas do usuário baseadas no perfil_principal
+        
+        Returns:
+            dict: Dicionário com capacidades administrativas
+        """
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        user_email = user.get('email')
+        
+        capabilities = {
+            'can_manage_users': False,
+            'can_manage_all_users': False,
+            'can_manage_profiles': False,
+            'can_manage_system_config': False,
+            'managed_modules': [],
+            'perfil_principal': user_perfil_principal,
+            'admin_scope': 'none'
+        }
+        
+        # Master Admins: admin + admin_geral
+        if user_role == 'admin' and user_perfil_principal == 'admin_geral':
+            capabilities.update({
+                'can_manage_users': True,
+                'can_manage_all_users': True,
+                'can_manage_profiles': True,
+                'can_manage_system_config': True,
+                'managed_modules': ['imp', 'fin', 'exp', 'con'],  # Todos os módulos
+                'admin_scope': 'system'
+            })
+            
+        # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+        elif user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
+            managed_modules = []
+            
+            if user_perfil_principal == 'admin_importacoes':
+                managed_modules = ['imp']
+            elif user_perfil_principal == 'admin_financeiro':
+                managed_modules = ['fin']
+            
+            capabilities.update({
+                'can_manage_users': True,
+                'can_manage_all_users': False,
+                'can_manage_profiles': True,  # Apenas perfis do seu módulo
+                'can_manage_system_config': False,
+                'managed_modules': managed_modules,
+                'admin_scope': 'module'
+            })
+        
+        # Basic Users: sem capacidades administrativas
+        # (capabilities já inicializadas com False)
+        
+        print(f"[ACCESS_SERVICE] Capacidades administrativas para {user_email}: {capabilities}")
+        return capabilities
     
     @staticmethod
     def user_can_access_module(modulo_codigo):

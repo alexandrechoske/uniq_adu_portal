@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, session, jsonify, request
+from flask import Flask, session, request, render_template, redirect, url_for, jsonify
 from config import Config
 import os
 import signal
@@ -215,7 +216,8 @@ def inject_perfil_access_functions():
         'get_user_accessible_modules': PerfilAccessService.get_user_accessible_modules,
         'get_user_accessible_pages': PerfilAccessService.get_user_accessible_pages,
         'user_can_access_module': PerfilAccessService.user_can_access_module,
-        'user_can_access_page': PerfilAccessService.user_can_access_page
+        'user_can_access_page': PerfilAccessService.user_can_access_page,
+        'get_user_admin_capabilities': PerfilAccessService.get_user_admin_capabilities
     }
 
 # -------------------------------------------------------------
@@ -223,6 +225,29 @@ def inject_perfil_access_functions():
 # Pode ser acessada via bypass de API ou sessão autenticada.
 # -------------------------------------------------------------
 from services.client_branding import get_client_branding
+
+@app.route('/debug/admin-level')
+def debug_admin_level():
+    """Debug route to check admin level implementation"""
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    if not ('user' in session or (api_bypass_key and request_api_key == api_bypass_key)):
+        return jsonify({'error': 'Não autenticado'}), 401
+    
+    user = session.get('user', {})
+    
+    from services.perfil_access_service import PerfilAccessService
+    admin_capabilities = PerfilAccessService.get_user_admin_capabilities()
+    accessible_modules = PerfilAccessService.get_user_accessible_modules()
+    
+    return jsonify({
+        'success': True,
+        'user_email': user.get('email'),
+        'user_role': user.get('role'),
+        'perfil_principal': user.get('perfil_principal'),
+        'admin_capabilities': admin_capabilities,
+        'accessible_modules': accessible_modules
+    })
 
 @app.route('/debug/client-branding')
 def debug_client_branding():
@@ -294,9 +319,14 @@ def test_empresa_search():
 if __name__ == '__main__':   
     # Registrar endpoints de teste de segurança em modo debug
     if app.config['DEBUG']:
-        from test_security_endpoints import register_test_security_blueprint
-        register_test_security_blueprint(app)
-        print("🔧 Endpoints de teste de segurança registrados")
+        try:
+            from test_security_endpoints import register_test_security_blueprint
+            register_test_security_blueprint(app)
+            print("🔧 Endpoints de teste de segurança registrados")
+        except ImportError:
+            print("⚠️ Módulo test_security_endpoints não encontrado - pulando registro de endpoints de teste")
+        except Exception as e:
+            print(f"⚠️ Erro ao registrar endpoints de teste de segurança: {e}")
 
     # Start server based on FLASK_ENV
     flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))

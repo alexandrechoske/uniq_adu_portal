@@ -39,19 +39,45 @@ const ROLE_CONFIG = {
         label: 'Administrador',
         icon: 'mdi-shield-crown',
         color: 'success',
-        description: 'Acesso total ao sistema'
+        description: 'Acesso total ao sistema',
+        perfil_principal_allowed: ['admin_geral']
     },
     interno_unique: {
         label: 'Equipe Interna',
         icon: 'mdi-account-tie',
         color: 'info',
-        description: 'Colaboradores da Unique'
+        description: 'Colaboradores da Unique',
+        perfil_principal_allowed: ['basico', 'admin_importacoes', 'admin_financeiro']
     },
     cliente_unique: {
         label: 'Cliente',
         icon: 'mdi-domain',
         color: 'warning',
-        description: 'Empresas clientes'
+        description: 'Empresas clientes',
+        perfil_principal_allowed: ['basico']
+    }
+};
+
+const PERFIL_PRINCIPAL_CONFIG = {
+    basico: {
+        label: 'Básico',
+        description: 'Acesso básico para consulta',
+        icon: 'mdi-account'
+    },
+    admin_geral: {
+        label: 'Admin Geral',
+        description: 'Administração completa do sistema',
+        icon: 'mdi-shield-crown'
+    },
+    admin_importacoes: {
+        label: 'Admin Importações',
+        description: 'Administra apenas o módulo de importações',
+        icon: 'mdi-ship'
+    },
+    admin_financeiro: {
+        label: 'Admin Financeiro',
+        description: 'Administra apenas o módulo financeiro',
+        icon: 'mdi-cash-multiple'
     }
 };
 
