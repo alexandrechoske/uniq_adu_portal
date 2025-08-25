@@ -15,16 +15,28 @@ bp = Blueprint('auth', __name__)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Verificar se é uma requisição com API key bypass
+        # Primeiro, verificar se existe usuário na sessão válida
+        if 'user' in session and session.get('user') and isinstance(session['user'], dict):
+            user_data = session['user']
+            required_fields = ['id', 'email', 'role']
+            missing_fields = [field for field in required_fields if not user_data.get(field)]
+            
+            # Se a sessão está válida e completa, usar ela (não fazer bypass)
+            if not missing_fields:
+                print(f"[AUTH] Sessão válida encontrada para: {user_data.get('email')} - usando sessão existente")
+                return f(*args, **kwargs)
+        
+        # Só usar bypass se NÃO existe sessão válida
         api_bypass_key = os.getenv('API_BYPASS_KEY')
         request_api_key = request.headers.get('X-API-Key')
         
+        print(f"[AUTH DEBUG] Sessão inválida/inexistente, verificando bypass")
         print(f"[AUTH DEBUG] API_BYPASS_KEY configurada: {bool(api_bypass_key)}")
         print(f"[AUTH DEBUG] X-API-Key recebida: {bool(request_api_key)}")
         print(f"[AUTH DEBUG] Chaves são iguais: {api_bypass_key == request_api_key}")
         
         if api_bypass_key and request_api_key == api_bypass_key:
-            print(f"[AUTH] Bypass de API detectado - permitindo acesso sem autenticação")
+            print(f"[AUTH] Bypass de API detectado - criando sessão temporária")
             # Criar uma sessão temporária para o bypass com UUID válido
             session['user'] = {
                 'id': '00000000-0000-0000-0000-000000000000',  # UUID válido para bypass
@@ -37,73 +49,41 @@ def login_required(f):
             session['last_activity'] = datetime.now().timestamp()
             return f(*args, **kwargs)
         
-        # Verificar se existe usuário na sessão e se tem os dados mínimos necessários
-        if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
-            print(f"[AUTH] Redirecionando para login - usuário não encontrado na sessão")
-            return redirect(url_for('auth.login'))
+        # Se não tem sessão válida nem bypass, redirecionar para login
+        print(f"[AUTH] Redirecionando para login - sem sessão válida nem bypass")
+        return redirect(url_for('auth.login'))
         
-        # Verificar se os dados essenciais estão presentes
-        user_data = session['user']
-        required_fields = ['id', 'email', 'role']
-        missing_fields = [field for field in required_fields if not user_data.get(field)]
-        
-        if missing_fields:
-            print(f"[AUTH] Sessão corrompida - campos faltantes: {missing_fields}")
-            session.clear()
-            return redirect(url_for('auth.login'))
-        
-        # Verificar integridade da sessão
-        if 'created_at' not in session:
-            print(f"[AUTH] Sessão sem timestamp de criação, recriando...")
-            session['created_at'] = datetime.now().timestamp()
-            session.permanent = True
-        
-        # Renovar timestamp de atividade
-        session['last_activity'] = datetime.now().timestamp()
-        session.permanent = True  # Garantir que a sessão permaneça permanente
-        
-        return f(*args, **kwargs)
     return decorated_function
 
 def role_required(roles):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Verificar se é uma requisição com API key bypass
+            # Primeiro verificar se há sessão válida
+            if 'user' in session and session.get('user') and isinstance(session['user'], dict):
+                user_data = session['user']
+                
+                # Se o role existe e tem permissão, usar sessão existente
+                if user_data.get('role') and user_data['role'] in roles:
+                    print(f"[AUTH] Acesso autorizado via sessão para role: {user_data['role']}")
+                    return f(*args, **kwargs)
+                
+                # Se tem sessão mas role insuficiente
+                if user_data.get('role'):
+                    print(f"[AUTH] Acesso negado - role {user_data['role']} não autorizado para {roles}")
+                    flash('Acesso não autorizado.', 'error')
+                    return redirect(url_for('dashboard_v2.index'))
+            
+            # Só usar bypass se não há sessão válida ou role válido
             api_bypass_key = os.getenv('API_BYPASS_KEY')
             if api_bypass_key and request.headers.get('X-API-Key') == api_bypass_key:
                 print(f"[AUTH] Bypass de API detectado - permitindo acesso de role sem verificação")
                 return f(*args, **kwargs)
             
-            # Verificar se existe usuário na sessão
-            if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
-                print(f"[AUTH] Redirecionando para login - usuário não encontrado na sessão")
-                return redirect(url_for('auth.login'))
+            # Se não tem sessão válida nem bypass, redirecionar para login
+            print(f"[AUTH] Redirecionando para login - sem sessão válida ou autorização")
+            return redirect(url_for('auth.login'))
             
-            user_data = session['user']
-            
-            # Verificar se o role existe
-            if not user_data.get('role'):
-                print(f"[AUTH] Role não encontrado na sessão")
-                session.clear()
-                return redirect(url_for('auth.login'))
-            
-            # Verificar se o role tem permissão
-            if user_data['role'] not in roles:
-                flash('Acesso não autorizado.', 'error')
-                return redirect(url_for('dashboard_v2.index'))
-            
-            # Verificar integridade da sessão
-            if 'created_at' not in session:
-                print(f"[AUTH] Sessão sem timestamp de criação, recriando...")
-                session['created_at'] = datetime.now().timestamp()
-                session.permanent = True
-            
-            # Renovar timestamp de atividade
-            session['last_activity'] = datetime.now().timestamp()
-            session.permanent = True  # Garantir que a sessão permaneça permanente
-            
-            return f(*args, **kwargs)
         return decorated_function
     return decorator
 

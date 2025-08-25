@@ -34,12 +34,39 @@ def test_connection():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Verificar se é uma requisição com API key bypass
+        # Primeiro, verificar se existe usuário na sessão válida
+        if 'user' in session and session.get('user') and isinstance(session['user'], dict):
+            user_data = session['user']
+            required_fields = ['id', 'email', 'role']
+            missing_fields = [field for field in required_fields if not user_data.get(field)]
+            
+            # Se a sessão está válida e completa, usar ela (não fazer bypass)
+            if not missing_fields:
+                print(f"[AUTH] Sessão válida encontrada para: {user_data.get('email')} - usando sessão existente")
+                
+                # Verificar expiração da sessão (12 horas)
+                session_created = session.get('created_at')
+                if session_created:
+                    session_age = datetime.now().timestamp() - session_created
+                    if session_age > 43200:  # 12 horas em segundos
+                        print(f"[AUTH] Sessão expirada após {session_age/3600:.1f} horas")
+                        session.clear()
+                        flash('Sessão expirada. Faça login novamente.', 'warning')
+                        return redirect(url_for('auth.login'))
+                
+                # Atualizar última atividade
+                session['last_activity'] = datetime.now().timestamp()
+                session.permanent = True
+                return f(*args, **kwargs)
+        
+        # Só usar bypass se NÃO existe sessão válida
         api_bypass_key = os.getenv('API_BYPASS_KEY')
         request_api_key = request.headers.get('X-API-Key')
         
+        print(f"[AUTH] Sessão inválida/inexistente, verificando bypass")
+        
         if api_bypass_key and request_api_key == api_bypass_key:
-            print(f"[AUTH] Bypass de API detectado - permitindo acesso sem autenticação")
+            print(f"[AUTH] Bypass de API detectado - criando sessão temporária")
             # Criar uma sessão temporária para o bypass
             session['user'] = {
                 'id': 'api_bypass',
@@ -52,35 +79,10 @@ def login_required(f):
             session['last_activity'] = datetime.now().timestamp()
             return f(*args, **kwargs)
         
-        # Verificar se existe usuário na sessão
-        if 'user' not in session or not session.get('user') or not isinstance(session['user'], dict):
-            return redirect(url_for('auth.login'))
+        # Se não tem sessão válida nem bypass, redirecionar para login
+        print(f"[AUTH] Redirecionando para login - sem sessão válida nem bypass")
+        return redirect(url_for('auth.login'))
         
-        # Verificar campos essenciais
-        user_data = session['user']
-        required_fields = ['id', 'email', 'role']
-        missing_fields = [field for field in required_fields if not user_data.get(field)]
-        
-        if missing_fields:
-            print(f"[AUTH] Sessão corrompida - campos faltantes: {missing_fields}")
-            session.clear()
-            flash('Sessão expirada. Faça login novamente.', 'warning')
-            return redirect(url_for('auth.login'))
-        
-        # Verificar expiração da sessão (12 horas)
-        session_created = session.get('created_at')
-        if session_created:
-            session_age = datetime.now().timestamp() - session_created
-            if session_age > 43200:  # 12 horas em segundos
-                print(f"[AUTH] Sessão expirada após {session_age/3600:.1f} horas")
-                session.clear()
-                flash('Sessão expirada. Faça login novamente.', 'warning')
-                return redirect(url_for('auth.login'))
-        
-        # Atualizar última atividade
-        session['last_activity'] = datetime.now().timestamp()
-        
-        return f(*args, **kwargs)
     return decorated_function
 
 def role_required(allowed_roles):
@@ -122,9 +124,11 @@ def login():
             print(f"[AUTH-DEBUG] Resposta da autenticação: {auth_response}")
             
             if auth_response.user:
-                # Buscar dados adicionais do usuário na tabela users
-                user_response = supabase_admin.table('users').select('*').eq('email', email).execute()
-                print(f"[AUTH-DEBUG] Dados adicionais do usuário: {user_response.data}")
+                # Buscar dados adicionais do usuário na tabela users (ambiente correto)
+                from modules.usuarios.routes import get_users_table
+                users_table = get_users_table()
+                user_response = supabase_admin.table(users_table).select('*').eq('email', email).execute()
+                print(f"[AUTH-DEBUG] Dados adicionais do usuário (tabela {users_table}): {user_response.data}")
                 
                 if user_response.data:
                     user = user_response.data[0]
