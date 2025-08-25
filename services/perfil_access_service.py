@@ -25,6 +25,7 @@ class PerfilAccessService:
         'agente': 'agente',  # Agente UniQ
         
         # Páginas do módulo Financeiro (fin)
+        'fin_dashboard_executivo': 'fin_dashboard_executivo',  # Dashboard Executivo Financeiro
         'fluxo_caixa': 'fluxo_de_caixa',  # Fluxo de Caixa
         'despesas': 'despesas_anual',  # Despesas
         'faturamento': 'faturamento_anual',  # Faturamento
@@ -79,29 +80,46 @@ class PerfilAccessService:
                         elif isinstance(pagina, dict):
                             accessible_pages_all.add(pagina.get('codigo', ''))
         
-        # Adicionar módulos baseados em páginas específicas
-        for pagina_codigo in accessible_pages_all:
-            if pagina_codigo in PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING:
-                endpoint_module = PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING[pagina_codigo]
-                accessible_modules.add(endpoint_module)
-                print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
+        # Adicionar módulos baseados em páginas específicas com contexto de módulo
+        for perfil_info in user_perfis_info:
+            modulos = perfil_info.get('modulos', [])
+            
+            for modulo in modulos:
+                modulo_codigo = modulo.get('codigo')
+                modulo_paginas = modulo.get('paginas', [])
                 
-                # Também adicionar módulos gerais para compatibilidade com sidebar/menu
-                if pagina_codigo == 'dashboard_executivo':
-                    accessible_modules.add('dashboard_executivo')
-                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo")
-                elif pagina_codigo == 'dashboard_resumido':
-                    accessible_modules.add('importacoes')
-                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: importacoes")
-                elif pagina_codigo == 'documentos':
-                    accessible_modules.add('conferencia')
-                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: conferencia")
-                elif pagina_codigo == 'relatorio':
-                    accessible_modules.add('relatorios')
-                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: relatorios")
-                elif pagina_codigo == 'agente':
-                    accessible_modules.add('agente')
-                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: agente")
+                for pagina in modulo_paginas:
+                    pagina_codigo = pagina if isinstance(pagina, str) else pagina.get('codigo', '')
+                    
+                    if pagina_codigo in PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING:
+                        endpoint_module = PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING[pagina_codigo]
+                        accessible_modules.add(endpoint_module)
+                        print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
+                    
+                    # Adicionar módulos gerais para compatibilidade com sidebar/menu (com contexto)
+                    if pagina_codigo == 'dashboard_executivo':
+                        # Dashboard Executivo é específico por módulo - só adicionar se for do módulo de importação
+                        if modulo_codigo == 'imp':
+                            accessible_modules.add('dashboard_executivo')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo (contexto: importação)")
+                        # Para financeiro, o dashboard executivo é interno ao submenu
+                    elif pagina_codigo == 'fin_dashboard_executivo':
+                        # Dashboard Executivo Financeiro - específico do módulo financeiro
+                        if modulo_codigo == 'fin':
+                            accessible_modules.add('fin_dashboard_executivo')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: fin_dashboard_executivo (contexto: financeiro)")
+                    elif pagina_codigo == 'dashboard_resumido':
+                        accessible_modules.add('importacoes')
+                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: importacoes")
+                    elif pagina_codigo == 'documentos':
+                        accessible_modules.add('conferencia')
+                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: conferencia")
+                    elif pagina_codigo == 'relatorio':
+                        accessible_modules.add('relatorios')
+                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: relatorios")
+                    elif pagina_codigo == 'agente':
+                        accessible_modules.add('agente')
+                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: agente")
         
         accessible_modules = list(accessible_modules)
         print(f"[ACCESS_SERVICE] Módulos acessíveis finais: {accessible_modules}")

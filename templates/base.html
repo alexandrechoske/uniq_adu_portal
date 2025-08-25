@@ -870,14 +870,14 @@
                         <span>Despesas</span>
                     </a>
                     {% endif %}
-                    {% if '*' in financeiro_pages or 'receitas' in financeiro_pages %}
+                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
                         <i class="mdi mdi-receipt"></i>
                         <span>Faturamento</span>
                     </a>
                     {% endif %}
-                    {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
+                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
                         <i class="mdi mdi-chart-box"></i>

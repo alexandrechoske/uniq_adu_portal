@@ -52,7 +52,7 @@ const MODULOS_SISTEMA = {
         icon: 'mdi-currency-usd',
         color: 'success',
         pages: [
-            { code: 'dashboard_executivo', name: 'Dashboard Executivo', icon: 'mdi-chart-pie' },
+            { code: 'fin_dashboard_executivo', name: 'Dashboard Executivo', icon: 'mdi-chart-pie' },
             { code: 'fluxo_caixa', name: 'Fluxo de Caixa', icon: 'mdi-cash-flow' },
             { code: 'despesas', name: 'Despesas', icon: 'mdi-receipt' },
             { code: 'faturamento', name: 'Faturamento', icon: 'mdi-file-invoice-dollar' }

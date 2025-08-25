@@ -72,15 +72,15 @@
                         <p class="module-desc">Gestão de despesas operacionais.</p>
                     </a>
                     {% endif %}
-                    {% if '*' in financeiro_pages or 'receitas' in financeiro_pages %}
+                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}" class="module-card" data-module="receitas">
                         <div class="module-icon"><i class="mdi mdi-receipt"></i></div>
                         <h4 class="module-title">Faturamento</h4>
                         <p class="module-desc">Controle de receitas e faturamento.</p>
                     </a>
                     {% endif %}
-                    {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
-                    <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
+                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="fin_dashboard_executivo">
                         <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
                         <h4 class="module-title">Dashboard Executivo</h4>
                         <p class="module-desc">Visão executiva do módulo financeiro.</p>

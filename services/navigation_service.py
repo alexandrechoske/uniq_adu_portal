@@ -12,7 +12,7 @@ def get_module_context(request_endpoint):
     
     # Módulo Financeiro - todos os blueprints financeiros
     if any(x in request_endpoint for x in [
-        'dashboard_executivo_financeiro', 'faturamento_anual', 'despesas_anual',
+        'dashboard_executivo_financeiro', 'fin_dashboard_executivo', 'faturamento_anual', 'despesas_anual',
         'resultado_anual', 'metas_financeiras', 'fluxo_de_caixa',
         'financeiro.'  # Para URLs que começam com financeiro.
     ]):
@@ -59,7 +59,7 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                 {
                     'title': 'Financeiro',
                     'icon': 'mdi-finance',
-                    'url': 'dashboard_executivo_financeiro.index',
+                    'url': 'fin_dashboard_executivo.index',
                     'description': 'Módulo Financeiro',
                     'roles': ['admin', 'interno_unique']
                 },
@@ -125,8 +125,8 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                 {
                     'title': 'Dashboard Executivo',
                     'icon': 'mdi-view-dashboard',
-                    'url': 'dashboard_executivo_financeiro.index',
-                    'active_endpoints': ['dashboard_executivo_financeiro.index']
+                    'url': 'fin_dashboard_executivo.index',
+                    'active_endpoints': ['fin_dashboard_executivo.index']
                 },
                 {
                     'title': 'Faturamento Anual',
