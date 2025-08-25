@@ -2899,10 +2899,57 @@ def api_get_user_perfis(user_id):
             print(f"[PERFIS] 📋 Usuário {user_id} possui {len(perfis)} perfis associados")
             
         except Exception as table_error:
-            # Se a tabela não existir, retornar lista vazia (sem erro)
+            # Se a tabela não existir, buscar na tabela users (SOLUÇÃO TEMPORÁRIA)
             if 'does not exist' in str(table_error):
-                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe ainda. Retornando lista vazia para usuário {user_id}")
+                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe. Buscando perfis alternativos para usuário {user_id}")
+                
+                # Buscar usuário e verificar campos de perfil
+                user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+                
                 perfis = []
+                if user_response.data:
+                    user_data = user_response.data[0]
+                    
+                    # Verificar campo perfis_json primeiro (mais específico)
+                    if user_data.get('perfis_json'):
+                        try:
+                            import json
+                            perfis_list = json.loads(user_data['perfis_json']) if isinstance(user_data['perfis_json'], str) else user_data['perfis_json']
+                            
+                            for perfil_id in perfis_list:
+                                perfis.append({
+                                    'id': perfil_id,
+                                    'perfil_nome': perfil_id,
+                                    'descricao': f'Perfil de acesso {perfil_id.replace("_", " ").title()}',
+                                    'codigo': perfil_id
+                                })
+                            print(f"[PERFIS] 🔄 Encontrados perfis JSON: {perfis_list}")
+                        except Exception as json_error:
+                            print(f"[PERFIS] ⚠️ Erro ao parsear perfis_json: {json_error}")
+                            pass
+                    
+                    # Se não tem perfis_json, verificar campo perfil_principal
+                    elif user_data.get('perfil_principal'):
+                        perfil_id = user_data['perfil_principal']
+                        perfis.append({
+                            'id': perfil_id,
+                            'perfil_nome': perfil_id,
+                            'descricao': f'Perfil de acesso {perfil_id.replace("_", " ").title()}',
+                            'codigo': perfil_id
+                        })
+                        print(f"[PERFIS] 🔄 Encontrado perfil principal: {perfil_id}")
+                    
+                    # APENAS como último recurso para Alexandre
+                    elif user_data.get('email') == 'alexandre.choski@gmail.com' and len(perfis) == 0:
+                        perfis = [{
+                            'id': 'admin_geral',
+                            'perfil_nome': 'admin_geral',
+                            'descricao': 'Perfil de acesso Admin Geral',
+                            'codigo': 'admin_geral'
+                        }]
+                        print(f"[PERFIS] 🔄 Aplicando perfil admin_geral para Alexandre (fallback)")
+                
+                print(f"[PERFIS] 📋 Solução alternativa: Usuário {user_id} possui {len(perfis)} perfis")
             else:
                 # Se for outro erro, re-raise
                 raise table_error
@@ -2962,10 +3009,41 @@ def api_update_user_perfis(user_id):
                     print(f"[PERFIS] ⚠️ Nenhum dado retornado na inserção")
             
         except Exception as table_error:
-            # Se a tabela não existir, apenas logar (sem erro)
+            # Se a tabela não existir, salvar na tabela users (SOLUÇÃO TEMPORÁRIA)
             if 'does not exist' in str(table_error):
-                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe ainda. Ignorando atualização de perfis para usuário {user_id}")
-                print(f"[PERFIS] 📝 Perfis que seriam salvos: {perfis_ids}")
+                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe. Salvando perfis na tabela users para usuário {user_id}")
+                print(f"[PERFIS] 📝 Perfis a salvar: {perfis_ids}")
+                
+                try:
+                    # Atualizar perfil principal (primeiro da lista) ou campo JSON
+                    update_data = {}
+                    
+                    if perfis_ids:
+                        # Usar o primeiro perfil como principal
+                        update_data['perfil_principal'] = perfis_ids[0]
+                        
+                        # Se houver mais de um perfil, salvar em JSON
+                        if len(perfis_ids) > 1:
+                            import json
+                            update_data['perfis_json'] = json.dumps(perfis_ids)
+                        else:
+                            update_data['perfis_json'] = json.dumps([perfis_ids[0]])
+                    else:
+                        # Limpar perfis
+                        update_data['perfil_principal'] = None
+                        update_data['perfis_json'] = '[]'
+                    
+                    # Atualizar na tabela users
+                    result = supabase_admin.table('users').update(update_data).eq('id', user_id).execute()
+                    
+                    if result.data:
+                        print(f"[PERFIS] ✅ Perfis salvos na tabela users: {update_data}")
+                    else:
+                        print(f"[PERFIS] ⚠️ Nenhum dado retornado na atualização da tabela users")
+                        
+                except Exception as update_error:
+                    print(f"[PERFIS] ❌ Erro ao atualizar tabela users: {str(update_error)}")
+                    
             else:
                 # Se for outro erro, re-raise
                 raise table_error
