@@ -10,13 +10,13 @@ class PerfilAccessService:
     # Mapeamento de códigos antigos para novos para compatibilidade
     MODULE_MAPPING = {
         'fin': 'financeiro',  # Mapear 'fin' para 'financeiro'
-        'imp': 'importacao',  # Mapear 'imp' para 'importacao' (futuro)
+        'imp': 'importacoes',  # Mapear 'imp' para 'importacoes' (com S para coincidir com menu)
         'exp': 'exportacao',  # Mapear 'exp' para 'exportacao' (futuro)
         'con': 'consultoria', # Mapear 'con' para 'consultoria' (futuro)
         # Mapeamentos específicos para importação
         'dashboard_executivo': 'dashboard_executivo',
-        'processos': 'importacao',  # Processos faz parte de importação
-        'documentos': 'importacao', # Documentos faz parte de importação  
+        'processos': 'importacoes',  # Processos faz parte de importacoes (com S)
+        'documentos': 'importacoes', # Documentos faz parte de importacoes (com S)
         'dashboard_resumido': 'dash_importacoes_resumido',
         'relatorio': 'export_relatorios',
         'agente': 'agente'

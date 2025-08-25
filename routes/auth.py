@@ -222,6 +222,24 @@ def login():
                         'data_loading_status': 'loading'  # Status do carregamento de dados
                     })
                     
+                    # Carregar perfis do usuário
+                    print(f"[AUTH] 🔄 Iniciando carregamento de perfis...")
+                    try:
+                        from services.user_perfis_loader import load_user_perfis
+                        print(f"[AUTH] Carregando perfis para usuário {user_id}")
+                        user_perfis_info = load_user_perfis(user_id)
+                        session['user']['user_perfis_info'] = user_perfis_info
+                        print(f"[AUTH] ✅ {len(user_perfis_info)} perfis carregados na sessão")
+                        
+                        # Debug dos perfis carregados
+                        for perfil in user_perfis_info:
+                            print(f"[AUTH]   📋 Perfil: {perfil.get('perfil_nome')} ({len(perfil.get('modulos', []))} módulos)")
+                    except Exception as perfis_error:
+                        print(f"[AUTH] ⚠️ Erro ao carregar perfis: {perfis_error}")
+                        import traceback
+                        traceback.print_exc()
+                        session['user']['user_perfis_info'] = []
+                    
                     # Pré-carregar dados em background
                     try:
                         print(f"[AUTH] Iniciando pré-carregamento de dados para usuário {user_id}")

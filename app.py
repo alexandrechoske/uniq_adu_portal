@@ -297,6 +297,10 @@ if __name__ == '__main__':
         from test_security_endpoints import register_test_security_blueprint
         register_test_security_blueprint(app)
         print("🔧 Endpoints de teste de segurança registrados")
-    
-    # app.run(debug=True, host='192.168.0.75', port=5000)  # Forçando debug para true
-    app.run(debug=True)  # Forçando debug para true
+
+    # Start server based on FLASK_ENV
+    flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
+    if flask_env == 'development':
+        app.run(debug=True, host='192.168.0.75', port=5000)
+    else:
+        app.run(debug=app.config.get('DEBUG', False))
