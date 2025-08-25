@@ -818,7 +818,7 @@
             </a>
 
             <!-- Dashboard -->
-            {% if 'dashboard' in accessible_modules %}
+            {% if 'dashboard_executivo' in accessible_modules %}
             <a href="{{ url_for('dashboard_executivo.index') }}"
                class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>

@@ -41,11 +41,10 @@ const MODULOS_SISTEMA = {
         color: 'primary',
         pages: [
             { code: 'dashboard_executivo', name: 'Dashboard Executivo', icon: 'mdi-chart-pie' },
-            { code: 'processos', name: 'Processos', icon: 'mdi-clipboard-list' },
-            { code: 'documentos', name: 'Documentos', icon: 'mdi-file-document' },
-            { code: 'dashboard_resumido', name: 'Dashboard Resumido', icon: 'mdi-chart-bar' },
-            { code: 'relatorio', name: 'Relatórios', icon: 'mdi-file-chart' },
-            { code: 'agente', name: 'Agente IA', icon: 'mdi-robot' }
+            { code: 'dashboard_resumido', name: 'Dashboard Importações', icon: 'mdi-chart-bar' },
+            { code: 'documentos', name: 'Conferência Documental', icon: 'mdi-file-document' },
+            { code: 'relatorio', name: 'Exportação de Relatórios', icon: 'mdi-file-chart' },
+            { code: 'agente', name: 'Agente UniQ', icon: 'mdi-robot' }
         ]
     },
     fin: {
@@ -58,19 +57,8 @@ const MODULOS_SISTEMA = {
             { code: 'despesas', name: 'Despesas', icon: 'mdi-receipt' },
             { code: 'faturamento', name: 'Faturamento', icon: 'mdi-file-invoice-dollar' }
         ]
-    },
-    exp: {
-        nome: 'Exportação',
-        icon: 'mdi-airplane-takeoff',
-        color: 'info',
-        pages: []
-    },
-    con: {
-        nome: 'Consultoria',
-        icon: 'mdi-account-tie',
-        color: 'warning',
-        pages: []
     }
+    // Future modules (exp: Exportação, con: Consultoria) will be added when implemented
 };
 
 // =================================

@@ -7,19 +7,28 @@ from flask import session
 import json
 
 class PerfilAccessService:
-    # Mapeamento de códigos antigos para novos para compatibilidade
+    # Mapeamento de códigos de módulos para compatibilidade
     MODULE_MAPPING = {
         'fin': 'financeiro',  # Mapear 'fin' para 'financeiro'
         'imp': 'importacoes',  # Mapear 'imp' para 'importacoes' (com S para coincidir com menu)
         'exp': 'exportacao',  # Mapear 'exp' para 'exportacao' (futuro)
         'con': 'consultoria', # Mapear 'con' para 'consultoria' (futuro)
-        # Mapeamentos específicos para importação
-        'dashboard_executivo': 'dashboard_executivo',
-        'processos': 'importacoes',  # Processos faz parte de importacoes (com S)
-        'documentos': 'importacoes', # Documentos faz parte de importacoes (com S)
-        'dashboard_resumido': 'dash_importacoes_resumido',
-        'relatorio': 'export_relatorios',
-        'agente': 'agente'
+    }
+    
+    # Mapeamento de códigos de páginas para endpoints/módulos
+    PAGE_TO_ENDPOINT_MAPPING = {
+        # Páginas do módulo Importação (imp)
+        'dashboard_executivo': 'dashboard_executivo',  # Dashboard Executivo
+        'dashboard_resumido': 'dash_importacoes_resumido',  # Dashboard Importações
+        'documentos': 'conferencia',  # Conferência Documental 
+        'relatorio': 'export_relatorios',  # Exportação de Relatórios
+        'agente': 'agente',  # Agente UniQ
+        
+        # Páginas do módulo Financeiro (fin)
+        'fluxo_caixa': 'fluxo_de_caixa',  # Fluxo de Caixa
+        'despesas': 'despesas_anual',  # Despesas
+        'faturamento': 'faturamento_anual',  # Faturamento
+        # 'dashboard_executivo' já mapeado acima (compartilhado)
     }
     
     @staticmethod
@@ -48,6 +57,7 @@ class PerfilAccessService:
         
         # Usuários com perfis específicos
         accessible_modules = set()
+        accessible_pages_all = set()  # Para rastrear todas as páginas acessíveis
         
         for perfil_info in user_perfis_info:
             perfil_nome = perfil_info.get('perfil_nome')
@@ -60,6 +70,38 @@ class PerfilAccessService:
                     modulo_mapeado = PerfilAccessService.MODULE_MAPPING.get(modulo_codigo, modulo_codigo)
                     accessible_modules.add(modulo_mapeado)
                     print(f"[ACCESS_SERVICE] Adicionado módulo: {modulo_codigo} → {modulo_mapeado} (perfil: {perfil_nome})")
+                    
+                    # Rastrear páginas para determinar acesso adicional a módulos
+                    modulo_paginas = modulo.get('paginas', [])
+                    for pagina in modulo_paginas:
+                        if isinstance(pagina, str):
+                            accessible_pages_all.add(pagina)
+                        elif isinstance(pagina, dict):
+                            accessible_pages_all.add(pagina.get('codigo', ''))
+        
+        # Adicionar módulos baseados em páginas específicas
+        for pagina_codigo in accessible_pages_all:
+            if pagina_codigo in PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING:
+                endpoint_module = PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING[pagina_codigo]
+                accessible_modules.add(endpoint_module)
+                print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
+                
+                # Também adicionar módulos gerais para compatibilidade com sidebar/menu
+                if pagina_codigo == 'dashboard_executivo':
+                    accessible_modules.add('dashboard_executivo')
+                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo")
+                elif pagina_codigo == 'dashboard_resumido':
+                    accessible_modules.add('importacoes')
+                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: importacoes")
+                elif pagina_codigo == 'documentos':
+                    accessible_modules.add('conferencia')
+                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: conferencia")
+                elif pagina_codigo == 'relatorio':
+                    accessible_modules.add('relatorios')
+                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: relatorios")
+                elif pagina_codigo == 'agente':
+                    accessible_modules.add('agente')
+                    print(f"[ACCESS_SERVICE] Adicionado módulo geral: agente")
         
         accessible_modules = list(accessible_modules)
         print(f"[ACCESS_SERVICE] Módulos acessíveis finais: {accessible_modules}")

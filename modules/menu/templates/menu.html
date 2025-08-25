@@ -23,18 +23,18 @@
         
         <div class="menu-columns" data-user-role="{{ role }}">
             <!-- Coluna: Dashboards -->
-            {% if 'importacao' in accessible_modules %}
+            {% if 'dashboard_executivo' in accessible_modules or 'importacoes' in accessible_modules %}
             <div class="menu-column">
                 <h3 class="column-title"><i class="mdi mdi-chart-line"></i> Dashboards</h3>
                 <div class="column-grid">
-                    {% if 'dashboard' in accessible_modules %}
+                    {% if 'dashboard_executivo' in accessible_modules %}
                     <a href="{{ url_for('dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
                         <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
                         <h4 class="module-title">Dashboard Executivo</h4>
                         <p class="module-desc">Visão estratégica consolidada de importações.</p>
                     </a>
                     {% endif %}
-                    {% if 'importacao' in accessible_modules %}
+                    {% if 'importacoes' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
                         <div class="module-icon"><i class="mdi mdi-ferry text-xl"></i></div>
                         <h4 class="module-title">Dashboard Importações</h4>
@@ -91,14 +91,14 @@
             {% endif %}
             
             <!-- Coluna: Ferramentas -->
-            {% if 'agente' in accessible_modules or 'relatorios' in accessible_modules %}
+            {% if 'agente' in accessible_modules or 'relatorios' in accessible_modules or 'conferencia' in accessible_modules %}
             <div class="menu-column">
                 <h3 class="column-title"><i class="mdi mdi-tools"></i> Ferramentas</h3>
                 <div class="column-grid">
                     {% if 'agente' in accessible_modules %}
                     <a href="{{ url_for('agente.index') }}" class="module-card" data-module="agente">
                         <div class="module-icon"><i class="mdi mdi-robot"></i></div>
-                        <h4 class="module-title">Agente IA</h4>
+                        <h4 class="module-title">Agente Unique</h4>
                         <p class="module-desc">Assistente inteligente para consultas especializadas.</p>
                     </a>
                     {% endif %}
@@ -107,6 +107,13 @@
                         <div class="module-icon"><i class="mdi mdi-file-export"></i></div>
                         <h4 class="module-title">Exportação Relatórios</h4>
                         <p class="module-desc">Extrair processos antigos (&gt; 6 meses).</p>
+                    </a>
+                    {% endif %}
+                    {% if 'conferencia' in accessible_modules %}
+                    <a href="{{ url_for('conferencia.index') }}" class="module-card" data-module="conferencia">
+                        <div class="module-icon"><i class="mdi mdi-file-check"></i></div>
+                        <h4 class="module-title">Conferência Documental</h4>
+                        <p class="module-desc">Validação automatizada de documentos.</p>
                     </a>
                     {% endif %}
                 </div>
