@@ -2592,14 +2592,18 @@ def perfis_create():
                 'message': 'Nome do perfil é obrigatório'
             }), 400
         
-        # Gerar código automático baseado no nome (limpo e único)
-        import re
-        import uuid
-        perfil_codigo = re.sub(r'[^a-zA-Z0-9]', '_', perfil_nome.lower())
-        perfil_codigo = re.sub(r'_+', '_', perfil_codigo).strip('_')
+        # Importar função de normalização
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+        from utils.text_normalizer import normalize_string_for_code
+        
+        # Gerar código automático baseado no nome (usando normalização)
+        perfil_codigo = normalize_string_for_code(perfil_nome)
         
         # Se o código ficar vazio ou muito curto, usar timestamp
         if len(perfil_codigo) < 3:
+            import time
             perfil_codigo = f"perfil_{int(time.time())}"
         
         # Verificar se código já existe e tornar único se necessário
@@ -2607,6 +2611,7 @@ def perfis_create():
         
         if existing_query.data:
             # Adicionar sufixo único
+            import uuid
             perfil_codigo = f"{perfil_codigo}_{str(uuid.uuid4())[:8]}"
         
         print(f"[PERFIS] Criando perfil: {perfil_nome} (código: {perfil_codigo})")

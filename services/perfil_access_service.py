@@ -12,7 +12,14 @@ class PerfilAccessService:
         'fin': 'financeiro',  # Mapear 'fin' para 'financeiro'
         'imp': 'importacao',  # Mapear 'imp' para 'importacao' (futuro)
         'exp': 'exportacao',  # Mapear 'exp' para 'exportacao' (futuro)
-        'con': 'consultoria'  # Mapear 'con' para 'consultoria' (futuro)
+        'con': 'consultoria', # Mapear 'con' para 'consultoria' (futuro)
+        # Mapeamentos específicos para importação
+        'dashboard_executivo': 'dashboard_executivo',
+        'processos': 'importacao',  # Processos faz parte de importação
+        'documentos': 'importacao', # Documentos faz parte de importação  
+        'dashboard_resumido': 'dash_importacoes_resumido',
+        'relatorio': 'export_relatorios',
+        'agente': 'agente'
     }
     
     @staticmethod
@@ -33,7 +40,8 @@ class PerfilAccessService:
         if user_role == 'admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
-                'usuarios', 'agente', 'conferencia', 'materiais', 'config'
+                'usuarios', 'agente', 'conferencia', 'materiais', 'config',
+                'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios'
             ]
             print(f"[ACCESS_SERVICE] Admin - módulos disponíveis: {accessible_modules}")
             return accessible_modules
