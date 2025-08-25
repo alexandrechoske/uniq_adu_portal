@@ -198,6 +198,18 @@ def _resolve_client_branding():
 def inject_client_branding():
     return {'client_branding': _resolve_client_branding()}
 
+@app.context_processor
+def inject_perfil_access_functions():
+    """Disponibiliza funções de controle de acesso baseado em perfis para templates"""
+    from services.perfil_access_service import PerfilAccessService
+    return {
+        'get_filtered_menu_structure': PerfilAccessService.get_filtered_menu_structure,
+        'get_user_accessible_modules': PerfilAccessService.get_user_accessible_modules,
+        'get_user_accessible_pages': PerfilAccessService.get_user_accessible_pages,
+        'user_can_access_module': PerfilAccessService.user_can_access_module,
+        'user_can_access_page': PerfilAccessService.user_can_access_page
+    }
+
 # -------------------------------------------------------------
 # Debug route for client branding (para testes rápidos)
 # Pode ser acessada via bypass de API ou sessão autenticada.

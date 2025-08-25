@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, jsonify, current_app as app
 from modules.auth.routes import login_required
 from extensions import supabase_admin
+from services.perfil_access_service import PerfilAccessService
 import re
 
 bp = Blueprint('menu', __name__,
@@ -15,15 +16,27 @@ def menu_home():
     """Página principal do menu.
 
     Inclui logs defensivos para investigar erro 500 observado em produção.
+    Agora com filtragem de menu baseada em perfis de usuário.
     """
     try:
         user = session.get('user', {})
         if not isinstance(user, dict):
             app.logger.error('[MENU] session["user"] em formato inesperado: %r', user)
             user = {}
+        
         app.logger.debug('[MENU] Render /menu user_id=%s role=%s',
                           user.get('id'), user.get('role'))
-        return render_template('menu.html')
+        
+        # Obter menu filtrado baseado nos perfis do usuário
+        filtered_menu = PerfilAccessService.get_filtered_menu_structure()
+        accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        
+        print(f"[MENU] Menu filtrado para {user.get('email')}: {list(filtered_menu.keys())}")
+        
+        return render_template('menu.html', 
+                             filtered_menu=filtered_menu,
+                             accessible_modules=accessible_modules,
+                             user_perfis=user.get('user_perfis', []))
     except Exception as e:
         app.logger.exception('[MENU] Erro ao renderizar menu_home: %s', e)
         return render_template('errors/500.html'), 500
@@ -102,6 +115,41 @@ def user_companies_debug():
         })
         
     except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/api/menu-filtrado')
+@login_required
+def api_menu_filtrado():
+    """API para obter menu filtrado baseado nos perfis do usuário"""
+    try:
+        user = session.get('user', {})
+        
+        # Obter menu filtrado
+        filtered_menu = PerfilAccessService.get_filtered_menu_structure()
+        accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        
+        # Obter informações dos perfis do usuário
+        user_perfis = user.get('user_perfis', [])
+        user_perfis_info = user.get('user_perfis_info', [])
+        
+        return jsonify({
+            'success': True,
+            'menu': filtered_menu,
+            'accessible_modules': accessible_modules,
+            'user_info': {
+                'email': user.get('email'),
+                'name': user.get('name'),
+                'role': user.get('role'),
+                'perfis': user_perfis,
+                'perfis_info': user_perfis_info
+            }
+        })
+        
+    except Exception as e:
+        app.logger.exception('[MENU] Erro ao obter menu filtrado: %s', e)
         return jsonify({
             'success': False,
             'error': str(e)

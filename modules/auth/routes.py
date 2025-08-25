@@ -9,6 +9,94 @@ import os
 import re
 from services.data_cache import data_cache
 
+import json
+import os
+import re
+from services.data_cache import data_cache
+
+def perfil_required(modulo_codigo, pagina_codigo=None):
+    """
+    Decorador para verificar se o usuário tem acesso a um módulo/página específico baseado em seu perfil
+    
+    Args:
+        modulo_codigo (str): Código do módulo (ex: 'financeiro', 'dashboard', 'usuarios')
+        pagina_codigo (str, optional): Código da página específica dentro do módulo
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            print(f"[PERFIL_CHECK] Verificando acesso para módulo: {modulo_codigo}, página: {pagina_codigo}")
+            
+            # Verificar se usuário está logado
+            if 'user' not in session:
+                print(f"[PERFIL_CHECK] ❌ Usuário não logado")
+                return redirect(url_for('auth.login'))
+            
+            user = session.get('user', {})
+            user_role = user.get('role')
+            user_perfis_info = user.get('user_perfis_info', [])
+            
+            print(f"[PERFIL_CHECK] Usuário: {user.get('email')}, Role: {user_role}")
+            print(f"[PERFIL_CHECK] Perfis do usuário: {len(user_perfis_info)} encontrados")
+            
+            # Admins têm acesso total
+            if user_role == 'admin':
+                print(f"[PERFIL_CHECK] ✅ Admin tem acesso total")
+                return f(*args, **kwargs)
+            
+            # Verificar se tem perfis configurados
+            if not user_perfis_info:
+                print(f"[PERFIL_CHECK] ❌ Usuário sem perfis configurados")
+                flash('Você não tem perfis de acesso configurados. Entre em contato com o administrador.', 'error')
+                return redirect(url_for('menu.menu_home'))
+            
+            # Verificar acesso ao módulo nos perfis do usuário
+            acesso_permitido = False
+            
+            for perfil_info in user_perfis_info:
+                perfil_nome = perfil_info.get('perfil_nome')
+                modulos = perfil_info.get('modulos', [])
+                
+                print(f"[PERFIL_CHECK] Verificando perfil: {perfil_nome}")
+                
+                for modulo in modulos:
+                    modulo_cod = modulo.get('codigo')
+                    modulo_paginas = modulo.get('paginas', [])
+                    
+                    print(f"[PERFIL_CHECK] - Módulo: {modulo_cod}, Páginas: {modulo_paginas}")
+                    
+                    # Verificar se tem acesso ao módulo
+                    if modulo_cod == modulo_codigo:
+                        # Se não especificou página, acesso ao módulo é suficiente
+                        if not pagina_codigo:
+                            acesso_permitido = True
+                            print(f"[PERFIL_CHECK] ✅ Acesso permitido ao módulo {modulo_codigo}")
+                            break
+                        
+                        # Se especificou página, verificar se está na lista
+                        if pagina_codigo in modulo_paginas:
+                            acesso_permitido = True
+                            print(f"[PERFIL_CHECK] ✅ Acesso permitido à página {pagina_codigo} do módulo {modulo_codigo}")
+                            break
+                        
+                        # Se módulo permite todas as páginas (lista vazia ou contém '*')
+                        if not modulo_paginas or '*' in modulo_paginas:
+                            acesso_permitido = True
+                            print(f"[PERFIL_CHECK] ✅ Acesso permitido - módulo {modulo_codigo} permite todas as páginas")
+                            break
+                
+                if acesso_permitido:
+                    break
+            
+            if not acesso_permitido:
+                print(f"[PERFIL_CHECK] ❌ Acesso negado ao módulo {modulo_codigo}")
+                flash(f'Você não tem permissão para acessar este módulo ({modulo_codigo}).', 'error')
+                return redirect(url_for('menu.menu_home'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 # Blueprint com configuração para templates e static locais
 bp = Blueprint('auth', __name__, 
                url_prefix='/auth',
@@ -197,6 +285,42 @@ def login():
                     except Exception as companies_error:
                         print(f"[AUTH] Erro ao buscar empresas: {str(companies_error)}")
                 
+                # Buscar perfis do usuário para controle de acesso
+                user_perfis = []
+                user_perfis_info = []
+                
+                # Verificar se tem perfis no campo perfis_json
+                if user.get('perfis_json'):
+                    try:
+                        perfis_list = json.loads(user['perfis_json']) if isinstance(user['perfis_json'], str) else user['perfis_json']
+                        
+                        for perfil_id in perfis_list:
+                            # Buscar informações detalhadas do perfil
+                            perfil_response = supabase_admin.table('users_perfis').select('*').eq('perfil_nome', perfil_id).execute()
+                            
+                            if perfil_response.data:
+                                # Agrupar módulos por perfil
+                                modulos = []
+                                for registro in perfil_response.data:
+                                    if registro.get('is_active', True):
+                                        modulos.append({
+                                            'codigo': registro['modulo_codigo'],
+                                            'nome': registro['modulo_nome'],
+                                            'paginas': registro.get('paginas_modulo', [])
+                                        })
+                                
+                                user_perfis_info.append({
+                                    'perfil_nome': perfil_id,
+                                    'modulos': modulos
+                                })
+                                
+                        user_perfis = perfis_list
+                        print(f"[AUTH] Perfis carregados: {user_perfis}")
+                        print(f"[AUTH] Módulos disponíveis: {[m['codigo'] for p in user_perfis_info for m in p['modulos']]}")
+                        
+                    except Exception as perfil_error:
+                        print(f"[AUTH] Erro ao carregar perfis: {str(perfil_error)}")
+                
                 # Criar sessão do usuário
                 session.permanent = True
                 session['user'] = {
@@ -206,7 +330,9 @@ def login():
                     'role': user['role'],
                     'is_active': user.get('is_active', True),
                     'user_companies': user_companies,
-                    'user_companies_info': user_companies_info
+                    'user_companies_info': user_companies_info,
+                    'user_perfis': user_perfis,
+                    'user_perfis_info': user_perfis_info
                 }
                 session['created_at'] = datetime.now().timestamp()
                 session['last_activity'] = datetime.now().timestamp()

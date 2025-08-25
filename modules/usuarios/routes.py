@@ -2535,13 +2535,14 @@ def perfis_list():
         
         # Contar usuários vinculados por perfil
         try:
-            usuarios_query = supabase_admin.table(get_users_table()).select('perfil').execute()
+            usuarios_query = supabase_admin.table(get_users_table()).select('perfis_json').execute()
             usuarios_count = {}
             
             for usuario in usuarios_query.data:
-                perfil = usuario.get('perfil')
-                if perfil:
-                    usuarios_count[perfil] = usuarios_count.get(perfil, 0) + 1
+                perfis_json = usuario.get('perfis_json')
+                if perfis_json and isinstance(perfis_json, list):
+                    for perfil in perfis_json:
+                        usuarios_count[perfil] = usuarios_count.get(perfil, 0) + 1
             
             # Atualizar contagem nos perfis
             for perfil_nome in perfis_dict:
@@ -2847,16 +2848,34 @@ def perfis_delete():
         print(f"[PERFIS] Excluindo perfil ID: {perfil_id} (código: {perfil_codigo})")
         
         # Verificar se há usuários usando este perfil
-        usuarios_query = supabase_admin.table(get_users_table()).select('id, name').eq('perfil', perfil_codigo).execute()
+        # A coluna correta é perfis_json, não perfil
+        usuarios_query = supabase_admin.table(get_users_table()).select('id, name, perfis_json').execute()
         
+        usuarios_com_perfil = []
         if usuarios_query.data:
-            # Atualizar usuários para perfil básico
             for usuario in usuarios_query.data:
-                supabase_admin.table(get_users_table()).update({
-                    'perfil': 'cliente_basico'
-                }).eq('id', usuario['id']).execute()
+                perfis_json = usuario.get('perfis_json')
+                if perfis_json and isinstance(perfis_json, list):
+                    if perfil_codigo in perfis_json:
+                        usuarios_com_perfil.append(usuario)
+        
+        if usuarios_com_perfil:
+            # Remover o perfil dos usuários que o possuem
+            for usuario in usuarios_com_perfil:
+                perfis_atuais = usuario.get('perfis_json', [])
+                if isinstance(perfis_atuais, list):
+                    # Remover o perfil da lista
+                    perfis_atualizados = [p for p in perfis_atuais if p != perfil_codigo]
+                    
+                    # Se não restou nenhum perfil, adicionar perfil básico
+                    if not perfis_atualizados:
+                        perfis_atualizados = ['cliente_basico']
+                    
+                    supabase_admin.table(get_users_table()).update({
+                        'perfis_json': perfis_atualizados
+                    }).eq('id', usuario['id']).execute()
             
-            print(f"[PERFIS] {len(usuarios_query.data)} usuários atualizados para perfil cliente_basico")
+            print(f"[PERFIS] {len(usuarios_com_perfil)} usuários tiveram o perfil removido")
         
         # Excluir registros do perfil
         delete_result = supabase_admin.table('users_perfis').delete().eq('perfil_nome', perfil_codigo).execute()

@@ -806,6 +806,10 @@
         <aside id="sidebar" class="sidebar hidden lg:block">
             <!-- Menu de navegação -->
             <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
+            
+            {% set filtered_menu = get_filtered_menu_structure() %}
+            {% set accessible_modules = get_user_accessible_modules() %}
+            
             <!-- Home/Menu -->
             <a href="{{ url_for('menu.menu_home') }}"
                class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}">
@@ -814,71 +818,80 @@
             </a>
 
             <!-- Dashboard -->
+            {% if 'dashboard' in accessible_modules %}
             <a href="{{ url_for('dashboard_executivo.index') }}"
                class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
                 <i class="mdi mdi-view-dashboard text-xl"></i>
                 <span class="sidebar-text">Dashboard Executivo</span>
             </a>
+            {% endif %}
 
             <!-- Dashboard Importações -->
+            {% if 'importacoes' in accessible_modules %}
             <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
                class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
                 <i class="mdi mdi-ferry text-xl"></i>
                 <span class="sidebar-text">Dashboard Importações</span>
             </a>
+            {% endif %}
 
             <!-- Exportação de Relatórios -->
+            {% if 'relatorios' in accessible_modules %}
             <a href="{{ url_for('export_relatorios.index') }}"
                class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
                 <i class="mdi mdi-file-export text-xl"></i>
                 <span class="sidebar-text">Exportação</span>
             </a>
+            {% endif %}
             
-            <!-- Financeiro (apenas para admin e interno_unique) -->
-            <!-- {% if session.get('user', {}).get('role') in ['admin'] %} -->
-            <!-- <div class="sidebar-item-wrapper" id="financeiro-wrapper">
+            <!-- Financeiro (baseado em perfis) -->
+            {% if 'fin' in accessible_modules %}
+            <div class="sidebar-item-wrapper" id="financeiro-wrapper">
                 <div class="sidebar-item {% if request.endpoint and (request.endpoint.startswith('fin_dashboard_executivo.') or request.endpoint.startswith('fin_fluxo_de_caixa.') or request.endpoint.startswith('fin_despesas.') or request.endpoint.startswith('fin_faturamento.')) %}active{% endif %}"
                      title="Módulo Financeiro">
                     <i class="mdi mdi-cash-multiple text-xl"></i>
                     <span class="sidebar-text">Financeiro</span>
-                </div> -->
+                </div>
 
-                <!-- Submenu dropdown -->
-                <!-- <div class="financeiro-submenu">
-                    <a href="{{ url_for('fin_dashboard_executivo.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
-                        <i class="mdi mdi-chart-box"></i>
-                        <span>Dashboard Executivo</span>
-                    </a>
+                <!-- Submenu dropdown baseado em perfis -->
+                <div class="financeiro-submenu">
+                    {% set fin_pages = get_user_accessible_pages('fin') %}
+                    {% if '*' in fin_pages or 'fluxo_caixa' in fin_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
                         <i class="mdi mdi-chart-timeline-variant"></i>
                         <span>Fluxo de Caixa</span>
                     </a>
+                    {% endif %}
+                    {% if '*' in fin_pages or 'despesas' in fin_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
                         <i class="mdi mdi-credit-card-minus"></i>
                         <span>Despesas</span>
                     </a>
+                    {% endif %}
+                    {% if '*' in fin_pages or 'receitas' in fin_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
                         <i class="mdi mdi-receipt"></i>
                         <span>Faturamento</span>
                     </a>
+                    {% endif %}
                 </div>
-            </div> -->
-            <!-- {% endif %} -->
+            </div>
+            {% endif %}
 
-            <!-- Conferência Documental (apenas para admin e interno_unique) -->
-            <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
+            <!-- Conferência Documental -->
+            {% if 'conferencia' in accessible_modules %}
             <a href="{{ url_for('conferencia.index') }}"
                class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
                 <i class="mdi mdi-file-check text-xl"></i>
                 <span class="sidebar-text">Conferência Documental</span>
             </a>
-            {% endif %} -->
+            {% endif %}
 
-            {% if session.get('user', {}).get('role') in ['cliente_unique'] %}
+            <!-- Agente -->
+            {% if 'agente' in accessible_modules %}
             <a href="{{ url_for('agente.index') }}"
                class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
                 <i class="mdi mdi-chat text-xl"></i>
@@ -886,16 +899,15 @@
             </a>
             {% endif %}
 
-            <!-- Usuários (apenas para admins) -->
-            {% if session.get('user', {}).get('role') == 'admin' %}
-
             <!-- Seção Configurações -->
+            {% if 'usuarios' in accessible_modules or 'config' in accessible_modules %}
             <div class="sidebar-section" style="margin-top: 20px;">
                 <div class="sidebar-section-title" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
                     Configurações
                 </div>
 
                 <!-- Usuários -->
+                {% if 'usuarios' in accessible_modules %}
                 <a href="{{ url_for('usuarios.index') }}"
                    class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
                    title="Gerenciar Usuários">
@@ -910,24 +922,20 @@
                     <i class="mdi mdi-shield-account text-xl"></i>
                     <span class="sidebar-text">Perfis de Acesso</span>
                 </a>
+                {% endif %}
 
-                <!-- Logos Clientes -->
+                <!-- Configurações do Sistema -->
+                {% if 'config' in accessible_modules %}
                 <a href="{{ url_for('config.logos_clientes') }}"
                    class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
                    title="Gerenciar Logos de Clientes">
                     <i class="mdi mdi-domain text-xl"></i>
                     <span class="sidebar-text">Logos Clientes</span>
                 </a>
-
-                <!-- Ícones Materiais
-                <a href="{{ url_for('config.icones_materiais') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.icones') %}active{% endif %}"
-                   title="Gerenciar Ícones de Materiais">
-                    <i class="mdi mdi-image-multiple text-xl"></i>
-                    <span class="sidebar-text">Ícones Materiais</span>
-                </a> -->
+                {% endif %}
 
                 <!-- Analytics Dashboard -->
+                {% if session.get('user', {}).get('role') == 'admin' %}
                 <div class="sidebar-item-wrapper" id="analytics-wrapper">
                     <a href="{{ url_for('analytics.analytics_dashboard') }}"
                        class="sidebar-item {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
@@ -950,6 +958,7 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
             </div>
             {% endif %}
             </nav>
