@@ -267,21 +267,31 @@
         .sidebar.collapsed .sidebar-item {
             justify-content: center;
             padding: 0.75rem 0.5rem;
+            margin: 0.25rem;
         }
 
-        .sidebar.collapsed .sidebar-section {
+        /* Quando colapsada, esconder seções mas mostrar todos os itens como ícones simples */
+        .sidebar.collapsed .sidebar-section-title {
             display: none;
         }
 
-        /* Remover botão hambúrguer do cabeçalho da sidebar */
-        .sidebar-header {
-            display: none;
+        .sidebar.collapsed .sidebar-page-item {
+            margin: 0.25rem;
+            padding: 0.75rem 0.5rem;
+            justify-content: center;
         }
 
+        /* Garantir que todos os itens tenham title para tooltips */
         .sidebar.collapsed .sidebar-item {
             position: relative;
         }
 
+        /* Sidebar header (not used but maintained for compatibility) */
+        .sidebar-header {
+            display: none;
+        }
+
+        /* Tooltips para itens quando sidebar está colapsada */
         .sidebar.collapsed .sidebar-item:hover::after {
             content: attr(title);
             position: absolute;
@@ -720,7 +730,8 @@
             
             <!-- Home/Menu Principal -->
             <a href="{{ url_for('menu.menu_home') }}"
-               class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}">
+               class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}"
+               title="Menu Principal">
                 <i class="mdi mdi-home text-xl"></i>
                 <span class="sidebar-text">Menu Principal</span>
             </a>
@@ -738,7 +749,8 @@
                     
                     {% if 'dashboard_executivo' in accessible_modules %}
                     <a href="{{ url_for('dashboard_executivo.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}"
+                       title="Dashboard Executivo">
                         <i class="mdi mdi-view-dashboard"></i>
                         <span class="sidebar-text">Dashboard Executivo</span>
                     </a>
@@ -746,7 +758,8 @@
                     
                     {% if 'importacoes' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}"
+                       title="Dashboard Importações">
                         <i class="mdi mdi-ferry"></i>
                         <span class="sidebar-text">Dashboard Importações</span>
                     </a>
@@ -754,7 +767,8 @@
                     
                     {% if 'conferencia' in accessible_modules %}
                     <a href="{{ url_for('conferencia.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
+                       title="Conferência Documental">
                         <i class="mdi mdi-file-check"></i>
                         <span class="sidebar-text">Conferência Documental</span>
                     </a>
@@ -762,7 +776,8 @@
                     
                     {% if 'relatorios' in accessible_modules %}
                     <a href="{{ url_for('export_relatorios.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}"
+                       title="Exportação de Relatórios">
                         <i class="mdi mdi-file-export"></i>
                         <span class="sidebar-text">Exportação de Relatórios</span>
                     </a>
@@ -770,7 +785,8 @@
                     
                     {% if 'agente' in accessible_modules %}
                     <a href="{{ url_for('agente.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}"
+                       title="Agente Unique">
                         <i class="mdi mdi-chat"></i>
                         <span class="sidebar-text">Agente Unique</span>
                     </a>
@@ -790,7 +806,8 @@
                     
                     {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
+                       title="Dashboard Executivo Financeiro">
                         <i class="mdi mdi-chart-box"></i>
                         <span class="sidebar-text">Dashboard Executivo</span>
                     </a>
@@ -798,7 +815,8 @@
                     
                     {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}"
+                       title="Fluxo de Caixa">
                         <i class="mdi mdi-chart-timeline-variant"></i>
                         <span class="sidebar-text">Fluxo de Caixa</span>
                     </a>
@@ -806,7 +824,8 @@
                     
                     {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}"
+                       title="Despesas">
                         <i class="mdi mdi-credit-card-minus"></i>
                         <span class="sidebar-text">Despesas</span>
                     </a>
@@ -814,7 +833,8 @@
                     
                     {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}"
+                       title="Faturamento">
                         <i class="mdi mdi-receipt"></i>
                         <span class="sidebar-text">Faturamento</span>
                     </a>
@@ -832,13 +852,15 @@
                     
                     {% if 'usuarios' in accessible_modules %}
                     <a href="{{ url_for('usuarios.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
+                       title="Usuários">
                         <i class="mdi mdi-account-group"></i>
                         <span class="sidebar-text">Usuários</span>
                     </a>
                     
                     <a href="{{ url_for('usuarios.perfis_home') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
+                       title="Perfis">
                         <i class="mdi mdi-shield-account"></i>
                         <span class="sidebar-text">Perfis</span>
                     </a>
@@ -846,14 +868,16 @@
                     
                     {% if 'config' in accessible_modules %}
                     <a href="{{ url_for('config.logos_clientes') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
+                       title="Logos Clientes">
                         <i class="mdi mdi-domain"></i>
                         <span class="sidebar-text">Logos Clientes</span>
                     </a>
                     {% endif %}
                     
                     <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+                       title="Analytics">
                         <i class="mdi mdi-chart-bar"></i>
                         <span class="sidebar-text">Analytics</span>
                     </a>
@@ -865,7 +889,8 @@
                 
                 {% if 'dashboard_executivo' in accessible_modules %}
                 <a href="{{ url_for('dashboard_executivo.index') }}"
-                   class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
+                   class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}"
+                   title="Dashboard Executivo">
                     <i class="mdi mdi-view-dashboard text-xl"></i>
                     <span class="sidebar-text">Dashboard Executivo</span>
                 </a>
@@ -873,7 +898,8 @@
                 
                 {% if 'importacoes' in accessible_modules %}
                 <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
-                   class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
+                   class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}"
+                   title="Dashboard Importações">
                     <i class="mdi mdi-ferry text-xl"></i>
                     <span class="sidebar-text">Dashboard Importações</span>
                 </a>
@@ -881,7 +907,8 @@
                 
                 {% if 'conferencia' in accessible_modules %}
                 <a href="{{ url_for('conferencia.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
+                   title="Conferência Documental">
                     <i class="mdi mdi-file-check text-xl"></i>
                     <span class="sidebar-text">Conferência Documental</span>
                 </a>
@@ -889,7 +916,8 @@
                 
                 {% if 'relatorios' in accessible_modules %}
                 <a href="{{ url_for('export_relatorios.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}"
+                   title="Exportação de Relatórios">
                     <i class="mdi mdi-file-export text-xl"></i>
                     <span class="sidebar-text">Exportação de Relatórios</span>
                 </a>
@@ -897,7 +925,8 @@
                 
                 {% if 'agente' in accessible_modules %}
                 <a href="{{ url_for('agente.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}"
+                   title="Agente Unique">
                     <i class="mdi mdi-chat text-xl"></i>
                     <span class="sidebar-text">Agente Unique</span>
                 </a>
@@ -909,7 +938,8 @@
                     
                     {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
-                       class="sidebar-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
+                       class="sidebar-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
+                       title="Dashboard Executivo Financeiro">
                         <i class="mdi mdi-chart-box text-xl"></i>
                         <span class="sidebar-text">Dashboard Executivo Financeiro</span>
                     </a>
@@ -917,7 +947,8 @@
                     
                     {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
-                       class="sidebar-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
+                       class="sidebar-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}"
+                       title="Fluxo de Caixa">
                         <i class="mdi mdi-chart-timeline-variant text-xl"></i>
                         <span class="sidebar-text">Fluxo de Caixa</span>
                     </a>
@@ -925,7 +956,8 @@
                     
                     {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}"
-                       class="sidebar-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
+                       class="sidebar-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}"
+                       title="Despesas">
                         <i class="mdi mdi-credit-card-minus text-xl"></i>
                         <span class="sidebar-text">Despesas</span>
                     </a>
@@ -933,7 +965,8 @@
                     
                     {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}"
-                       class="sidebar-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
+                       class="sidebar-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}"
+                       title="Faturamento">
                         <i class="mdi mdi-receipt text-xl"></i>
                         <span class="sidebar-text">Faturamento</span>
                     </a>
