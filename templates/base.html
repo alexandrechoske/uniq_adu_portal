@@ -202,7 +202,7 @@
             animation: fadeIn 0.5s ease-in-out;
         }
 
-        /* Estilos de recolhimento da sidebar */
+        /* Estilos da sidebar */
         .sidebar {
             transition: width 0.3s ease;
             width: 16rem; /* equivalente a w-64 */
@@ -218,6 +218,44 @@
             overflow-x: visible; /* Permitir que o submenu apareça fora da sidebar */
         }
 
+        /* Sidebar sections */
+        .sidebar-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .sidebar-section-title i {
+            color: var(--color-primary);
+        }
+
+        /* Page items dentro de seções */
+        .sidebar-page-item {
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .sidebar-page-item i {
+            font-size: 1rem;
+            width: 1.25rem;
+        }
+
         .sidebar.collapsed {
             width: 4rem; /* equivalente a w-16 */
         }
@@ -229,6 +267,10 @@
         .sidebar.collapsed .sidebar-item {
             justify-content: center;
             padding: 0.75rem 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-section {
+            display: none;
         }
 
         /* Remover botão hambúrguer do cabeçalho da sidebar */
@@ -256,142 +298,6 @@
             font-size: 0.875rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             pointer-events: none;
-        }
-
-        /* Estilos do submenu Analytics */
-        .sidebar-item-wrapper {
-            position: relative;
-            overflow: visible;
-        }
-
-        .analytics-submenu {
-            position: fixed;
-            left: 16rem;
-            top: auto;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-            min-width: 180px;
-            z-index: 50000;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateX(-10px);
-            transition: all 0.2s ease; /* Manter a transição suave */
-            pointer-events: none;
-        }
-
-        /* Submenu Financeiro - mesmo padrão do Analytics */
-        .financeiro-submenu {
-            position: fixed;
-            left: 16rem;
-            top: auto;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-            min-width: 180px;
-            z-index: 50000;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateX(-10px);
-            transition: all 0.2s ease;
-            pointer-events: none;
-        }
-
-        /* Manter submenu aberto com delay para facilitar navegação */
-        /* REMOVIDO: transition-delay: 0ms !important; */
-        .sidebar-item-wrapper:hover .analytics-submenu,
-        .analytics-submenu:hover {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateX(0) !important;
-            pointer-events: auto !important;
-            /* Removida a linha transition-delay: 0ms !important; daqui */
-        }
-
-        /* Hover para submenu Financeiro */
-        .sidebar-item-wrapper:hover .financeiro-submenu,
-        .financeiro-submenu:hover {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateX(0) !important;
-            pointer-events: auto !important;
-        }
-
-        /* Criar uma "ponte" invisível entre o item e o submenu */
-        .sidebar-item-wrapper::before {
-            content: '';
-            position: absolute;
-            right: -8px;
-            top: 0;
-            width: 8px;
-            height: 100%;
-            background: transparent;
-            z-index: 49999;
-        }
-
-        .submenu-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: #374151;
-            text-decoration: none;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            border-radius: 0.375rem;
-            margin: 0.25rem;
-        }
-
-        .submenu-item:hover {
-            background-color: #f3f4f6;
-        }
-
-        .submenu-item.active {
-            background-color: var(--color-secondary-light);
-            color: var(--color-primary);
-        }
-
-        .submenu-item i {
-            font-size: 1rem;
-            width: 1rem;
-            height: 1rem;
-            flex-shrink: 0;
-        }
-
-        /* Quando sidebar está colapsada, mostrar submenu como tooltip */
-        .sidebar.collapsed .analytics-submenu {
-            left: 4rem;
-            top: auto;
-            transform: translateY(-50%) translateX(-15px);
-        }
-
-        .sidebar.collapsed .sidebar-item-wrapper:hover .analytics-submenu {
-            transform: translateY(-50%) translateX(0);
-            pointer-events: auto;
-        }
-
-        /* Financeiro submenu colapsado */
-        .sidebar.collapsed .financeiro-submenu {
-            left: 4rem;
-            top: auto;
-            transform: translateY(-50%) translateX(-15px);
-        }
-
-        .sidebar.collapsed .sidebar-item-wrapper:hover .financeiro-submenu {
-            transform: translateY(-50%) translateX(0);
-            pointer-events: auto;
-        }
-
-        /* Estilos de navegação da Sidebar */
-        #sidebar-nav {
-            overflow: visible !important;
-        }
-
-        /* JavaScript para posicionamento dinâmico */
-        .analytics-submenu-positioned {
-            position: fixed !important;
         }
 
         /* Responsividade para Mobile */
@@ -809,164 +715,231 @@
             
             {% set filtered_menu = get_filtered_menu_structure() %}
             {% set accessible_modules = get_user_accessible_modules() %}
+            {% set user_role = session.get('user', {}).get('role') %}
+            {% set is_system_user = user_role == 'admin' %}
             
-            <!-- Home/Menu -->
+            <!-- Home/Menu Principal -->
             <a href="{{ url_for('menu.menu_home') }}"
                class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}">
                 <i class="mdi mdi-home text-xl"></i>
                 <span class="sidebar-text">Menu Principal</span>
             </a>
 
-            <!-- Dashboard -->
-            {% if 'dashboard_executivo' in accessible_modules %}
-            <a href="{{ url_for('dashboard_executivo.index') }}"
-               class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
-                <i class="mdi mdi-view-dashboard text-xl"></i>
-                <span class="sidebar-text">Dashboard Executivo</span>
-            </a>
-            {% endif %}
-
-            <!-- Dashboard Importações -->
-            {% if 'importacoes' in accessible_modules %}
-            <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
-               class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
-                <i class="mdi mdi-ferry text-xl"></i>
-                <span class="sidebar-text">Dashboard Importações</span>
-            </a>
-            {% endif %}
-
-            <!-- Exportação de Relatórios -->
-            {% if 'relatorios' in accessible_modules %}
-            <a href="{{ url_for('export_relatorios.index') }}"
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
-                <i class="mdi mdi-file-export text-xl"></i>
-                <span class="sidebar-text">Exportação</span>
-            </a>
-            {% endif %}
-            
-            <!-- Financeiro (baseado em perfis) -->
-            {% if 'financeiro' in accessible_modules %}
-            <div class="sidebar-item-wrapper" id="financeiro-wrapper">
-                <div class="sidebar-item {% if request.endpoint and (request.endpoint.startswith('fin_dashboard_executivo.') or request.endpoint.startswith('fin_fluxo_de_caixa.') or request.endpoint.startswith('fin_despesas.') or request.endpoint.startswith('fin_faturamento.')) %}active{% endif %}"
-                     title="Módulo Financeiro">
-                    <i class="mdi mdi-cash-multiple text-xl"></i>
-                    <span class="sidebar-text">Financeiro</span>
+            {% if is_system_user %}
+                <!-- SEÇÕES PARA USUÁRIOS DO SISTEMA -->
+                
+                <!-- Seção Importações -->
+                {% if 'dashboard_executivo' in accessible_modules or 'importacoes' in accessible_modules or 'relatorios' in accessible_modules or 'conferencia' in accessible_modules or 'agente' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-ferry text-sm"></i>
+                        <span>Importações</span>
+                    </div>
+                    
+                    {% if 'dashboard_executivo' in accessible_modules %}
+                    <a href="{{ url_for('dashboard_executivo.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
+                        <i class="mdi mdi-view-dashboard"></i>
+                        <span class="sidebar-text">Dashboard Executivo</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'importacoes' in accessible_modules %}
+                    <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
+                        <i class="mdi mdi-ferry"></i>
+                        <span class="sidebar-text">Dashboard Importações</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'conferencia' in accessible_modules %}
+                    <a href="{{ url_for('conferencia.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
+                        <i class="mdi mdi-file-check"></i>
+                        <span class="sidebar-text">Conferência Documental</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'relatorios' in accessible_modules %}
+                    <a href="{{ url_for('export_relatorios.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
+                        <i class="mdi mdi-file-export"></i>
+                        <span class="sidebar-text">Exportação de Relatórios</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'agente' in accessible_modules %}
+                    <a href="{{ url_for('agente.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
+                        <i class="mdi mdi-chat"></i>
+                        <span class="sidebar-text">Agente Unique</span>
+                    </a>
+                    {% endif %}
                 </div>
-
-                <!-- Submenu dropdown baseado em perfis -->
-                <div class="financeiro-submenu">
+                {% endif %}
+                
+                <!-- Seção Financeiro -->
+                {% if 'financeiro' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-cash-multiple text-sm"></i>
+                        <span>Financeiro</span>
+                    </div>
+                    
                     {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
-                    {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
-                    <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
-                        <i class="mdi mdi-chart-timeline-variant"></i>
-                        <span>Fluxo de Caixa</span>
-                    </a>
-                    {% endif %}
-                    {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
-                    <a href="{{ url_for('fin_despesas.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
-                        <i class="mdi mdi-credit-card-minus"></i>
-                        <span>Despesas</span>
-                    </a>
-                    {% endif %}
-                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
-                    <a href="{{ url_for('fin_faturamento.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
-                        <i class="mdi mdi-receipt"></i>
-                        <span>Faturamento</span>
-                    </a>
-                    {% endif %}
+                    
                     {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
                         <i class="mdi mdi-chart-box"></i>
-                        <span>Dashboard Executivo</span>
+                        <span class="sidebar-text">Dashboard Executivo</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
+                    <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
+                        <i class="mdi mdi-chart-timeline-variant"></i>
+                        <span class="sidebar-text">Fluxo de Caixa</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
+                    <a href="{{ url_for('fin_despesas.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
+                        <i class="mdi mdi-credit-card-minus"></i>
+                        <span class="sidebar-text">Despesas</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
+                    <a href="{{ url_for('fin_faturamento.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
+                        <i class="mdi mdi-receipt"></i>
+                        <span class="sidebar-text">Faturamento</span>
                     </a>
                     {% endif %}
                 </div>
-            </div>
-            {% endif %}
-
-            <!-- Conferência Documental -->
-            {% if 'conferencia' in accessible_modules %}
-            <a href="{{ url_for('conferencia.index') }}"
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
-                <i class="mdi mdi-file-check text-xl"></i>
-                <span class="sidebar-text">Conferência Documental</span>
-            </a>
-            {% endif %}
-
-            <!-- Agente -->
-            {% if 'agente' in accessible_modules %}
-            <a href="{{ url_for('agente.index') }}"
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
-                <i class="mdi mdi-chat text-xl"></i>
-                <span class="sidebar-text">Agente Unique</span>
-            </a>
-            {% endif %}
-
-            <!-- Seção Configurações -->
-            {% if 'usuarios' in accessible_modules or 'config' in accessible_modules %}
-            <div class="sidebar-section" style="margin-top: 20px;">
-                <div class="sidebar-section-title" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
-                    Configurações
-                </div>
-
-                <!-- Usuários -->
-                {% if 'usuarios' in accessible_modules %}
-                <a href="{{ url_for('usuarios.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
-                   title="Gerenciar Usuários">
-                    <i class="mdi mdi-account-group text-xl"></i>
-                    <span class="sidebar-text">Usuários</span>
-                </a>
-
-                <!-- Perfis de Acesso -->
-                <a href="{{ url_for('usuarios.perfis_home') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
-                   title="Gerenciar Perfis de Acesso">
-                    <i class="mdi mdi-shield-account text-xl"></i>
-                    <span class="sidebar-text">Perfis de Acesso</span>
-                </a>
                 {% endif %}
-
-                <!-- Configurações do Sistema -->
-                {% if 'config' in accessible_modules %}
-                <a href="{{ url_for('config.logos_clientes') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
-                   title="Gerenciar Logos de Clientes">
-                    <i class="mdi mdi-domain text-xl"></i>
-                    <span class="sidebar-text">Logos Clientes</span>
-                </a>
-                {% endif %}
-
-                <!-- Analytics Dashboard -->
-                {% if session.get('user', {}).get('role') == 'admin' %}
-                <div class="sidebar-item-wrapper" id="analytics-wrapper">
+                
+                <!-- Seção Configurações -->
+                {% if 'usuarios' in accessible_modules or 'config' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-cog text-sm"></i>
+                        <span>Configurações</span>
+                    </div>
+                    
+                    {% if 'usuarios' in accessible_modules %}
+                    <a href="{{ url_for('usuarios.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}">
+                        <i class="mdi mdi-account-group"></i>
+                        <span class="sidebar-text">Usuários</span>
+                    </a>
+                    
+                    <a href="{{ url_for('usuarios.perfis_home') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}">
+                        <i class="mdi mdi-shield-account"></i>
+                        <span class="sidebar-text">Perfis</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'config' in accessible_modules %}
+                    <a href="{{ url_for('config.logos_clientes') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}">
+                        <i class="mdi mdi-domain"></i>
+                        <span class="sidebar-text">Logos Clientes</span>
+                    </a>
+                    {% endif %}
+                    
                     <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                       class="sidebar-item {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
-                       title="Analytics Dashboard">
-                        <i class="mdi mdi-chart-line text-xl"></i>
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}">
+                        <i class="mdi mdi-chart-bar"></i>
                         <span class="sidebar-text">Analytics</span>
                     </a>
-
-                    <!-- Submenu dropdown -->
-                    <div class="analytics-submenu">
-                        <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                           class="submenu-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}">
-                            <i class="mdi mdi-chart-bar"></i>
-                            <span>Portal</span>
-                        </a>
-                        <a href="{{ url_for('analytics.analytics_agente') }}"
-                           class="submenu-item {% if request.endpoint == 'analytics.analytics_agente' %}active{% endif %}">
-                            <i class="mdi mdi-robot"></i>
-                            <span>Agente</span>
-                        </a>
-                    </div>
                 </div>
                 {% endif %}
-            </div>
+            
+            {% else %}
+                <!-- LISTA SIMPLES PARA USUÁRIOS COMUNS -->
+                
+                {% if 'dashboard_executivo' in accessible_modules %}
+                <a href="{{ url_for('dashboard_executivo.index') }}"
+                   class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
+                    <i class="mdi mdi-view-dashboard text-xl"></i>
+                    <span class="sidebar-text">Dashboard Executivo</span>
+                </a>
+                {% endif %}
+                
+                {% if 'importacoes' in accessible_modules %}
+                <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
+                   class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
+                    <i class="mdi mdi-ferry text-xl"></i>
+                    <span class="sidebar-text">Dashboard Importações</span>
+                </a>
+                {% endif %}
+                
+                {% if 'conferencia' in accessible_modules %}
+                <a href="{{ url_for('conferencia.index') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
+                    <i class="mdi mdi-file-check text-xl"></i>
+                    <span class="sidebar-text">Conferência Documental</span>
+                </a>
+                {% endif %}
+                
+                {% if 'relatorios' in accessible_modules %}
+                <a href="{{ url_for('export_relatorios.index') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
+                    <i class="mdi mdi-file-export text-xl"></i>
+                    <span class="sidebar-text">Exportação de Relatórios</span>
+                </a>
+                {% endif %}
+                
+                {% if 'agente' in accessible_modules %}
+                <a href="{{ url_for('agente.index') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
+                    <i class="mdi mdi-chat text-xl"></i>
+                    <span class="sidebar-text">Agente Unique</span>
+                </a>
+                {% endif %}
+                
+                <!-- Páginas do Financeiro (se tiver acesso) -->
+                {% if 'financeiro' in accessible_modules %}
+                    {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
+                    
+                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    <a href="{{ url_for('fin_dashboard_executivo.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
+                        <i class="mdi mdi-chart-box text-xl"></i>
+                        <span class="sidebar-text">Dashboard Executivo Financeiro</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
+                    <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
+                        <i class="mdi mdi-chart-timeline-variant text-xl"></i>
+                        <span class="sidebar-text">Fluxo de Caixa</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
+                    <a href="{{ url_for('fin_despesas.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
+                        <i class="mdi mdi-credit-card-minus text-xl"></i>
+                        <span class="sidebar-text">Despesas</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
+                    <a href="{{ url_for('fin_faturamento.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
+                        <i class="mdi mdi-receipt text-xl"></i>
+                        <span class="sidebar-text">Faturamento</span>
+                    </a>
+                    {% endif %}
+                {% endif %}
+                
             {% endif %}
             </nav>
         </aside>
