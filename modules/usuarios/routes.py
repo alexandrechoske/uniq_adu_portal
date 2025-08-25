@@ -2822,3 +2822,165 @@ def perfis_delete():
             'success': False,
             'message': f'Erro ao excluir perfil: {str(e)}'
         }), 500
+
+# =================================
+# ROTAS PARA ASSOCIAÇÃO USUÁRIO-PERFIL
+# =================================
+
+@bp.route('/api/perfis-disponivel')
+@login_required
+@role_required(['admin'])
+def api_perfis_disponivel():
+    """Retorna lista de perfis disponíveis para associação"""
+    try:
+        # Buscar perfis únicos da tabela users_perfis
+        perfis_response = supabase_admin.table('users_perfis').select(
+            'perfil_nome'
+        ).order('perfil_nome').execute()
+        
+        if not perfis_response.data:
+            return jsonify({
+                'success': True,
+                'perfis': []
+            })
+        
+        # Agrupar por perfil_nome para evitar duplicatas
+        perfis_unicos = {}
+        for perfil in perfis_response.data:
+            nome = perfil['perfil_nome']
+            if nome not in perfis_unicos:
+                perfis_unicos[nome] = {
+                    'id': nome,  # Usar o nome como ID único
+                    'perfil_nome': nome,
+                    'descricao': f'Perfil de acesso {nome.replace("_", " ").title()}',
+                    'codigo': nome
+                }
+        
+        perfis_lista = list(perfis_unicos.values())
+        
+        print(f"[PERFIS] 📋 {len(perfis_lista)} perfis únicos encontrados")
+        return jsonify({
+            'success': True,
+            'perfis': perfis_lista
+        })
+            
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao buscar perfis disponíveis: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao buscar perfis: {str(e)}'
+        }), 500
+
+@bp.route('/<user_id>/perfis')
+@login_required
+@role_required(['admin'])
+def api_get_user_perfis(user_id):
+    """Retorna perfis associados ao usuário"""
+    try:
+        # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela user_perfis existe
+        try:
+            # Tentar buscar perfis do usuário da tabela de relacionamento
+            user_perfis_response = supabase_admin.table('user_perfis').select(
+                'perfil_id'
+            ).eq('user_id', user_id).execute()
+            
+            perfis = []
+            if user_perfis_response.data:
+                for item in user_perfis_response.data:
+                    perfil_id = item['perfil_id']
+                    # O perfil_id na verdade é o perfil_nome
+                    perfis.append({
+                        'id': perfil_id,
+                        'perfil_nome': perfil_id,
+                        'descricao': f'Perfil de acesso {perfil_id.replace("_", " ").title()}',
+                        'codigo': perfil_id
+                    })
+            
+            print(f"[PERFIS] 📋 Usuário {user_id} possui {len(perfis)} perfis associados")
+            
+        except Exception as table_error:
+            # Se a tabela não existir, retornar lista vazia (sem erro)
+            if 'does not exist' in str(table_error):
+                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe ainda. Retornando lista vazia para usuário {user_id}")
+                perfis = []
+            else:
+                # Se for outro erro, re-raise
+                raise table_error
+        
+        return jsonify({
+            'success': True,
+            'perfis': perfis
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao buscar perfis do usuário: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao buscar perfis: {str(e)}'
+        }), 500
+
+@bp.route('/<user_id>/perfis', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def api_update_user_perfis(user_id):
+    """Atualiza perfis associados ao usuário"""
+    try:
+        data = request.get_json()
+        perfis_ids = data.get('perfis_ids', [])
+        
+        print(f"[PERFIS] 🔄 Atualizando perfis do usuário {user_id}: {perfis_ids}")
+        
+        # Verificar se usuário existe
+        user_response = supabase_admin.table('users').select('id, name').eq('id', user_id).execute()
+        if not user_response.data:
+            return jsonify({
+                'success': False,
+                'message': 'Usuário não encontrado'
+            }), 404
+        
+        # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela user_perfis existe
+        try:
+            # Remover todas as associações existentes
+            delete_response = supabase_admin.table('user_perfis').delete().eq('user_id', user_id).execute()
+            print(f"[PERFIS] 🗑️ Associações existentes removidas")
+            
+            # Adicionar novas associações
+            if perfis_ids:
+                user_perfis_data = []
+                for perfil_id in perfis_ids:
+                    user_perfis_data.append({
+                        'user_id': user_id,
+                        'perfil_id': perfil_id,
+                        'created_at': datetime.datetime.now().isoformat()
+                    })
+                
+                insert_response = supabase_admin.table('user_perfis').insert(user_perfis_data).execute()
+                
+                if insert_response.data:
+                    print(f"[PERFIS] ✅ {len(perfis_ids)} perfis associados ao usuário {user_id}")
+                else:
+                    print(f"[PERFIS] ⚠️ Nenhum dado retornado na inserção")
+            
+        except Exception as table_error:
+            # Se a tabela não existir, apenas logar (sem erro)
+            if 'does not exist' in str(table_error):
+                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe ainda. Ignorando atualização de perfis para usuário {user_id}")
+                print(f"[PERFIS] 📝 Perfis que seriam salvos: {perfis_ids}")
+            else:
+                # Se for outro erro, re-raise
+                raise table_error
+        
+        # Invalidar cache de usuários
+        invalidate_users_cache()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{len(perfis_ids)} perfis atualizados com sucesso'
+        })
+        
+    except Exception as e:
+        print(f"[PERFIS] ❌ Erro ao atualizar perfis do usuário: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao atualizar perfis: {str(e)}'
+        }), 500

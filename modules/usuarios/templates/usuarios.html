@@ -279,16 +279,57 @@
                             </div>
                         </div>
 
-                        <!-- Seção 2: Empresas Associadas -->
+                                                </div>
+                    </div>
+                </div>
+
+                        <!-- Seção 2: Perfis de Acesso -->
+                        <div class="form-section-perfis">
+                    <div class="section-header collapsible-header" data-target="perfis-content">
+                        <h3 class="section-title">
+                            <i class="mdi mdi-shield-account"></i>
+                            Perfis de Acesso
+                            <i class="mdi mdi-chevron-down collapse-icon"></i>
+                        </h3>
+                        <p class="section-subtitle">Perfis de acesso específicos do sistema</p>
+                    </div>
+                    <div id="perfis-content" class="section-content collapsible-content collapsed">
+                        <div class="perfis-selection-container">
+                            <div class="perfis-search-container">
+                                <div class="search-input-wrapper">
+                                    <i class="mdi mdi-magnify search-icon"></i>
+                                    <input type="text" id="perfis-search" class="form-input" placeholder="Buscar perfis...">
+                                </div>
+                            </div>
+                            
+                            <div class="perfis-list-container">
+                                <div class="list-header">
+                                    <span class="list-title">Perfis Disponíveis</span>
+                                    <span class="count-badge" id="perfis-selected-count">0 selecionados</span>
+                                </div>
+                                <div id="perfis-list" class="perfis-list">
+                                    <!-- Perfis serão carregados aqui -->
+                                </div>
+                                <div id="perfis-empty" class="empty-list">
+                                    <i class="mdi mdi-shield-account-outline"></i>
+                                    <p>Nenhum perfil encontrado</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                        <!-- Seção 3: Empresas Associadas -->
                         <div id="empresas-section" class="form-section-empresas hidden">
-                    <div class="section-header">
+                    <div class="section-header collapsible-header" data-target="empresas-content">
                         <h3 class="section-title">
                             <i class="mdi mdi-domain"></i>
                             Empresas
+                            <i class="mdi mdi-chevron-down collapse-icon"></i>
                         </h3>
                         <p class="section-subtitle">Empresas que este usuário pode acessar</p>
                     </div>
-                    <div class="section-content">
+                    <div id="empresas-content" class="section-content collapsible-content collapsed">
                         <!-- Busca e Adição de Empresas -->
                         <div class="empresa-search-container">
                             <div class="search-add-wrapper">
@@ -321,16 +362,17 @@
                         </div>
                     </div> <!-- Fecha form-sections-row -->
 
-                    <!-- Seção 3: WhatsApp (largura total) -->
+                    <!-- Seção 4: WhatsApp (largura total) -->
                     <div id="whatsapp-section" class="form-section-whatsapp">
-                    <div class="section-header">
+                    <div class="section-header collapsible-header" data-target="whatsapp-content">
                         <h3 class="section-title">
                             <i class="mdi mdi-whatsapp"></i>
                             WhatsApp
+                            <i class="mdi mdi-chevron-down collapse-icon"></i>
                         </h3>
                         <p class="section-subtitle">Números para comunicação e notificações</p>
                     </div>
-                    <div class="section-content">
+                    <div id="whatsapp-content" class="section-content collapsible-content collapsed">
                         <!-- Formulário de Adição de WhatsApp -->
                         <div class="whatsapp-form-container">
                             <div class="whatsapp-form-grid">

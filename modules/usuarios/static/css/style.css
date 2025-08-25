@@ -1919,3 +1919,176 @@
 .modal-overlay.force-show .modal-footer {
     display: flex !important;
 }
+
+/* =================================
+   SEÇÕES COLAPSÁVEIS
+   ================================= */
+
+.collapsible-header {
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+}
+
+.collapsible-header:hover {
+    background-color: var(--bg-gray-50);
+    border-radius: var(--border-radius-sm);
+}
+
+.collapsible-header .section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.collapse-icon {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+    margin-left: auto;
+}
+
+.collapsible-header.expanded .collapse-icon {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.collapsible-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+.collapsible-content.expanded {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+/* =================================
+   SEÇÃO DE PERFIS
+   ================================= */
+
+.form-section-perfis {
+    flex: 1;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.perfis-selection-container {
+    margin-top: 1rem;
+}
+
+.perfis-search-container {
+    margin-bottom: 1rem;
+}
+
+.perfis-search-container .search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.perfis-search-container .search-icon {
+    position: absolute;
+    left: 1rem;
+    color: var(--text-muted);
+    z-index: 2;
+}
+
+.perfis-search-container .form-input {
+    padding-left: 3rem;
+}
+
+.perfis-list-container {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--bg-white);
+}
+
+.perfis-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.perfil-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-light);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.perfil-item:hover {
+    background-color: var(--bg-gray-50);
+}
+
+.perfil-item:last-child {
+    border-bottom: none;
+}
+
+.perfil-item.selected {
+    background-color: rgba(52, 152, 219, 0.1);
+    border-left: 3px solid var(--primary-color);
+}
+
+.perfil-checkbox {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+.perfil-info {
+    flex: 1;
+}
+
+.perfil-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.perfil-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.perfil-codigo {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    font-family: monospace;
+}
+
+.perfis-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+}
+
+.perfis-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+/* Badge de contagem específico para perfis */
+#perfis-selected-count {
+    background: var(--primary-color);
+    color: var(--text-white);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    white-space: nowrap;
+}

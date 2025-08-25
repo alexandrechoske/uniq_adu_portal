@@ -73,6 +73,12 @@ let appState = {
         search: '',
         role: '',
         status: ''
+    },
+    // Novo estado para perfis
+    perfis: {
+        available: [],
+        selected: [],
+        searchTimeout: null
     }
 };
 
@@ -152,7 +158,16 @@ function initializeElements() {
         notificationArea: document.getElementById('notification-area'),
         
         // User Card Template
-        userCardTemplate: document.getElementById('user-card-template')
+        userCardTemplate: document.getElementById('user-card-template'),
+        
+        // Perfis Elements
+        perfisSearch: document.getElementById('perfis-search'),
+        perfisList: document.getElementById('perfis-list'),
+        perfisEmpty: document.getElementById('perfis-empty'),
+        perfisSelectedCount: document.getElementById('perfis-selected-count'),
+        
+        // Collapsible Headers
+        collapsibleHeaders: document.querySelectorAll('.collapsible-header')
     };
     
     // DEBUG: Verificar elementos críticos
@@ -241,6 +256,10 @@ function initializeEventListeners() {
     // Empresas e WhatsApp
     initializeEmpresasEventListeners();
     initializeWhatsappEventListeners();
+    
+    // Perfis e Seções Colapsáveis
+    initializePerfisEventListeners();
+    initializeCollapsibleSections();
     
     // ESC para fechar modal - MELHORADO
     document.addEventListener('keydown', function(e) {
@@ -626,6 +645,7 @@ function openModalForCreate() {
     
     elements.modalTitle.textContent = 'Novo Usuário';
     clearForm();
+    clearPerfisSelection();
     showPasswordSection();
     hideEmpresasSection();
     showModal();
@@ -644,6 +664,9 @@ async function openModalForEdit(userId) {
         
         const userData = await loadUserData(userId);
         fillUserForm(userData);
+        
+        // Carregar perfis do usuário
+        await loadUserPerfis(userId);
         
         hideFormLoading();
         
@@ -872,6 +895,9 @@ async function createUser() {
     
     await saveUserWhatsapp(userId);
     
+    // Salvar perfis
+    await saveUserPerfis(userId);
+    
     showNotification('Usuário criado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
 
@@ -895,6 +921,9 @@ async function updateUser() {
     }
     
     await saveUserWhatsapp(userId);
+    
+    // Salvar perfis
+    await saveUserPerfis(userId);
     
     showNotification('Usuário atualizado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
@@ -1813,4 +1842,304 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
         updateKPIs,
         filterAndDisplayUsers
     };
+}
+
+// =================================
+// GERENCIAMENTO DE PERFIS
+// =================================
+
+/**
+ * Inicializa event listeners para perfis
+ */
+function initializePerfisEventListeners() {
+    // Busca de perfis
+    if (elements.perfisSearch) {
+        elements.perfisSearch.addEventListener('input', handlePerfisSearch);
+    }
+    
+    // Carregamento inicial de perfis disponíveis
+    loadAvailablePerfis();
+}
+
+/**
+ * Carrega perfis disponíveis
+ */
+async function loadAvailablePerfis() {
+    try {
+        const response = await apiRequest('/api/perfis-disponivel');
+        
+        if (response.success) {
+            appState.perfis.available = response.perfis;
+            console.log('[PERFIS] Perfis disponíveis carregados:', appState.perfis.available.length);
+            renderPerfisList();
+        } else {
+            console.error('[PERFIS] Erro ao carregar perfis:', response.message);
+            appState.perfis.available = [];
+            renderPerfisList();
+        }
+    } catch (error) {
+        console.error('[PERFIS] Erro ao carregar perfis disponíveis:', error);
+        appState.perfis.available = [];
+        renderPerfisList();
+    }
+}
+
+/**
+ * Carrega perfis do usuário atual
+ */
+async function loadUserPerfis(userId) {
+    if (!userId) return;
+    
+    try {
+        const response = await apiRequest(`/${userId}/perfis`);
+        
+        if (response.success) {
+            appState.perfis.selected = response.perfis.map(p => p.id);
+            console.log('[PERFIS] Perfis do usuário carregados:', appState.perfis.selected);
+            renderPerfisList();
+            updatePerfisSelectedCount();
+        } else {
+            console.error('[PERFIS] Erro ao carregar perfis do usuário:', response.message);
+            appState.perfis.selected = [];
+            renderPerfisList();
+        }
+    } catch (error) {
+        console.error('[PERFIS] Erro ao carregar perfis do usuário:', error);
+        appState.perfis.selected = [];
+        renderPerfisList();
+    }
+}
+
+/**
+ * Manipula busca de perfis
+ */
+function handlePerfisSearch(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    
+    clearTimeout(appState.perfis.searchTimeout);
+    appState.perfis.searchTimeout = setTimeout(() => {
+        renderPerfisList(searchTerm);
+    }, CONFIG.DEBOUNCE_DELAY);
+}
+
+/**
+ * Renderiza lista de perfis
+ */
+function renderPerfisList(searchTerm = '') {
+    if (!elements.perfisList) return;
+    
+    let filteredPerfis = appState.perfis.available;
+    
+    // Aplicar filtro de busca
+    if (searchTerm) {
+        filteredPerfis = filteredPerfis.filter(perfil => 
+            perfil.perfil_nome.toLowerCase().includes(searchTerm) ||
+            perfil.perfil_descricao.toLowerCase().includes(searchTerm) ||
+            perfil.codigo.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Limpar lista
+    elements.perfisList.innerHTML = '';
+    
+    if (filteredPerfis.length === 0) {
+        elements.perfisEmpty.style.display = 'block';
+        return;
+    }
+    
+    elements.perfisEmpty.style.display = 'none';
+    
+    // Renderizar perfis
+    filteredPerfis.forEach(perfil => {
+        const perfilElement = createPerfilItem(perfil);
+        elements.perfisList.appendChild(perfilElement);
+    });
+}
+
+/**
+ * Cria elemento de perfil
+ */
+function createPerfilItem(perfil) {
+    const div = document.createElement('div');
+    div.className = 'perfil-item';
+    
+    const isSelected = appState.perfis.selected.includes(perfil.id);
+    if (isSelected) {
+        div.classList.add('selected');
+    }
+    
+    div.innerHTML = `
+        <input type="checkbox" 
+               class="perfil-checkbox" 
+               data-perfil-id="${perfil.id}"
+               ${isSelected ? 'checked' : ''}>
+        <div class="perfil-info">
+            <div class="perfil-name">${perfil.perfil_nome}</div>
+            <div class="perfil-description">${perfil.perfil_descricao || 'Sem descrição'}</div>
+        </div>
+        <div class="perfil-codigo">${perfil.codigo}</div>
+    `;
+    
+    // Event listener para checkbox
+    const checkbox = div.querySelector('.perfil-checkbox');
+    checkbox.addEventListener('change', function() {
+        handlePerfilToggle(perfil.id, this.checked);
+    });
+    
+    // Event listener para o item inteiro
+    div.addEventListener('click', function(e) {
+        if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            handlePerfilToggle(perfil.id, checkbox.checked);
+        }
+    });
+    
+    return div;
+}
+
+/**
+ * Manipula seleção/desseleção de perfil
+ */
+function handlePerfilToggle(perfilId, isSelected) {
+    if (isSelected) {
+        if (!appState.perfis.selected.includes(perfilId)) {
+            appState.perfis.selected.push(perfilId);
+        }
+    } else {
+        appState.perfis.selected = appState.perfis.selected.filter(id => id !== perfilId);
+    }
+    
+    // Atualizar UI
+    updatePerfilItemSelection(perfilId, isSelected);
+    updatePerfisSelectedCount();
+    
+    console.log('[PERFIS] Perfis selecionados:', appState.perfis.selected);
+}
+
+/**
+ * Atualiza seleção visual do item de perfil
+ */
+function updatePerfilItemSelection(perfilId, isSelected) {
+    const checkbox = document.querySelector(`[data-perfil-id="${perfilId}"]`);
+    if (checkbox) {
+        const perfilItem = checkbox.closest('.perfil-item');
+        if (isSelected) {
+            perfilItem.classList.add('selected');
+        } else {
+            perfilItem.classList.remove('selected');
+        }
+    }
+}
+
+/**
+ * Atualiza contador de perfis selecionados
+ */
+function updatePerfisSelectedCount() {
+    if (elements.perfisSelectedCount) {
+        const count = appState.perfis.selected.length;
+        elements.perfisSelectedCount.textContent = `${count} selecionado${count !== 1 ? 's' : ''}`;
+    }
+}
+
+/**
+ * Salva perfis do usuário
+ */
+async function saveUserPerfis(userId) {
+    if (!userId) return;
+    
+    try {
+        const response = await apiRequest(`/${userId}/perfis`, 'POST', {
+            perfis_ids: appState.perfis.selected
+        });
+        
+        if (response.success) {
+            console.log('[PERFIS] Perfis do usuário salvos com sucesso');
+            showNotification('Perfis atualizados com sucesso!', NOTIFICATION_TYPES.SUCCESS);
+            return true;
+        } else {
+            console.error('[PERFIS] Erro ao salvar perfis:', response.message);
+            showNotification(`Erro ao salvar perfis: ${response.message}`, NOTIFICATION_TYPES.ERROR);
+            return false;
+        }
+    } catch (error) {
+        console.error('[PERFIS] Erro ao salvar perfis do usuário:', error);
+        showNotification('Erro ao salvar perfis', NOTIFICATION_TYPES.ERROR);
+        return false;
+    }
+}
+
+/**
+ * Limpa seleção de perfis
+ */
+function clearPerfisSelection() {
+    appState.perfis.selected = [];
+    renderPerfisList();
+    updatePerfisSelectedCount();
+}
+
+// =================================
+// SEÇÕES COLAPSÁVEIS
+// =================================
+
+/**
+ * Inicializa seções colapsáveis
+ */
+function initializeCollapsibleSections() {
+    elements.collapsibleHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const targetContent = document.getElementById(targetId);
+            
+            if (targetContent) {
+                toggleCollapsibleSection(this, targetContent);
+            }
+        });
+    });
+}
+
+/**
+ * Toggle de seção colapsável
+ */
+function toggleCollapsibleSection(header, content) {
+    const isExpanded = header.classList.contains('expanded');
+    
+    if (isExpanded) {
+        // Colapsar
+        header.classList.remove('expanded');
+        content.classList.remove('expanded');
+        content.classList.add('collapsed');
+    } else {
+        // Expandir
+        header.classList.add('expanded');
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+    }
+}
+
+/**
+ * Expande seção específica
+ */
+function expandSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const header = document.querySelector(`[data-target="${sectionId}"]`);
+    
+    if (content && header) {
+        header.classList.add('expanded');
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+    }
+}
+
+/**
+ * Colapsa seção específica
+ */
+function collapseSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const header = document.querySelector(`[data-target="${sectionId}"]`);
+    
+    if (content && header) {
+        header.classList.remove('expanded');
+        content.classList.remove('expanded');
+        content.classList.add('collapsed');
+    }
 }
