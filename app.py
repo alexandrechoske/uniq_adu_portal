@@ -149,6 +149,14 @@ app.register_blueprint(documents_bp)  # Document management
 # Register modular menu blueprint
 app.register_blueprint(menu_bp)  # Menu modular
 
+# Register test API endpoints temporarily
+try:
+    from test_api_endpoints import test_api_bp
+    app.register_blueprint(test_api_bp)
+    print("✅ Test API endpoints registrados")
+except Exception as e:
+    print(f"⚠️ Não foi possível registrar test API endpoints: {e}")
+
 # Register modular analytics blueprint
 app.register_blueprint(analytics_bp)  # Analytics modular
 

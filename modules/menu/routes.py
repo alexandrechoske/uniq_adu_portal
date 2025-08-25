@@ -127,6 +127,11 @@ def api_menu_filtrado():
     try:
         user = session.get('user', {})
         
+        # Debug: imprimir dados do usuário
+        print(f"[DEBUG_MENU_API] User data: {user}")
+        print(f"[DEBUG_MENU_API] User perfis: {user.get('user_perfis')}")
+        print(f"[DEBUG_MENU_API] User perfis_info: {user.get('user_perfis_info')}")
+        
         # Obter menu filtrado
         filtered_menu = PerfilAccessService.get_filtered_menu_structure()
         accessible_modules = PerfilAccessService.get_user_accessible_modules()
@@ -134,6 +139,9 @@ def api_menu_filtrado():
         # Obter informações dos perfis do usuário
         user_perfis = user.get('user_perfis', [])
         user_perfis_info = user.get('user_perfis_info', [])
+        
+        print(f"[DEBUG_MENU_API] Filtered menu: {filtered_menu}")
+        print(f"[DEBUG_MENU_API] Accessible modules: {accessible_modules}")
         
         return jsonify({
             'success': True,

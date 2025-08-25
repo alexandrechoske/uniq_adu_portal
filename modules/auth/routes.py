@@ -304,9 +304,9 @@ def login():
                                 for registro in perfil_response.data:
                                     if registro.get('is_active', True):
                                         modulos.append({
-                                            'codigo': registro['modulo_codigo'],
-                                            'nome': registro['modulo_nome'],
-                                            'paginas': registro.get('paginas_modulo', [])
+                                            'codigo': registro['modulo_codigo'],  # Campo correto: modulo_codigo
+                                            'nome': registro['modulo_nome'],      # Campo correto: modulo_nome
+                                            'paginas': registro.get('paginas_modulo', [])  # Campo correto: paginas_modulo
                                         })
                                 
                                 user_perfis_info.append({

@@ -845,7 +845,7 @@
             {% endif %}
             
             <!-- Financeiro (baseado em perfis) -->
-            {% if 'fin' in accessible_modules %}
+            {% if 'financeiro' in accessible_modules %}
             <div class="sidebar-item-wrapper" id="financeiro-wrapper">
                 <div class="sidebar-item {% if request.endpoint and (request.endpoint.startswith('fin_dashboard_executivo.') or request.endpoint.startswith('fin_fluxo_de_caixa.') or request.endpoint.startswith('fin_despesas.') or request.endpoint.startswith('fin_faturamento.')) %}active{% endif %}"
                      title="Módulo Financeiro">
@@ -855,26 +855,33 @@
 
                 <!-- Submenu dropdown baseado em perfis -->
                 <div class="financeiro-submenu">
-                    {% set fin_pages = get_user_accessible_pages('fin') %}
-                    {% if '*' in fin_pages or 'fluxo_caixa' in fin_pages %}
+                    {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
+                    {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
                         <i class="mdi mdi-chart-timeline-variant"></i>
                         <span>Fluxo de Caixa</span>
                     </a>
                     {% endif %}
-                    {% if '*' in fin_pages or 'despesas' in fin_pages %}
+                    {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
                         <i class="mdi mdi-credit-card-minus"></i>
                         <span>Despesas</span>
                     </a>
                     {% endif %}
-                    {% if '*' in fin_pages or 'receitas' in fin_pages %}
+                    {% if '*' in financeiro_pages or 'receitas' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}"
                        class="submenu-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
                         <i class="mdi mdi-receipt"></i>
                         <span>Faturamento</span>
+                    </a>
+                    {% endif %}
+                    {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
+                    <a href="{{ url_for('fin_dashboard_executivo.index') }}"
+                       class="submenu-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
+                        <i class="mdi mdi-chart-box"></i>
+                        <span>Dashboard Executivo</span>
                     </a>
                     {% endif %}
                 </div>

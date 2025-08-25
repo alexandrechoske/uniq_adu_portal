@@ -7,6 +7,13 @@ from flask import session
 import json
 
 class PerfilAccessService:
+    # Mapeamento de códigos antigos para novos para compatibilidade
+    MODULE_MAPPING = {
+        'fin': 'financeiro',  # Mapear 'fin' para 'financeiro'
+        'imp': 'importacao',  # Mapear 'imp' para 'importacao' (futuro)
+        'exp': 'exportacao',  # Mapear 'exp' para 'exportacao' (futuro)
+        'con': 'consultoria'  # Mapear 'con' para 'consultoria' (futuro)
+    }
     
     @staticmethod
     def get_user_accessible_modules():
@@ -25,7 +32,7 @@ class PerfilAccessService:
         # Admin tem acesso a tudo
         if user_role == 'admin':
             accessible_modules = [
-                'dashboard', 'importacoes', 'fin', 'relatorios', 
+                'dashboard', 'importacoes', 'financeiro', 'relatorios', 
                 'usuarios', 'agente', 'conferencia', 'materiais', 'config'
             ]
             print(f"[ACCESS_SERVICE] Admin - módulos disponíveis: {accessible_modules}")
@@ -41,8 +48,10 @@ class PerfilAccessService:
             for modulo in modulos:
                 modulo_codigo = modulo.get('codigo')
                 if modulo_codigo:
-                    accessible_modules.add(modulo_codigo)
-                    print(f"[ACCESS_SERVICE] Adicionado módulo: {modulo_codigo} (perfil: {perfil_nome})")
+                    # Aplicar mapeamento de módulos se necessário
+                    modulo_mapeado = PerfilAccessService.MODULE_MAPPING.get(modulo_codigo, modulo_codigo)
+                    accessible_modules.add(modulo_mapeado)
+                    print(f"[ACCESS_SERVICE] Adicionado módulo: {modulo_codigo} → {modulo_mapeado} (perfil: {perfil_nome})")
         
         accessible_modules = list(accessible_modules)
         print(f"[ACCESS_SERVICE] Módulos acessíveis finais: {accessible_modules}")
@@ -73,12 +82,18 @@ class PerfilAccessService:
         # Verificar nos perfis do usuário
         accessible_pages = set()
         
+        # Criar mapeamento reverso para buscar módulo original
+        reverse_mapping = {v: k for k, v in PerfilAccessService.MODULE_MAPPING.items()}
+        modulo_original = reverse_mapping.get(modulo_codigo, modulo_codigo)
+        
         for perfil_info in user_perfis_info:
             perfil_nome = perfil_info.get('perfil_nome')
             modulos = perfil_info.get('modulos', [])
             
             for modulo in modulos:
-                if modulo.get('codigo') == modulo_codigo:
+                # Verificar tanto o código original quanto o mapeado
+                modulo_db = modulo.get('codigo')
+                if modulo_db == modulo_codigo or modulo_db == modulo_original:
                     modulo_paginas = modulo.get('paginas', [])
                     
                     # Se lista vazia ou contém '*', acesso a todas as páginas
@@ -173,14 +188,16 @@ class PerfilAccessService:
                     'resumo': {'nome': 'Resumo', 'url': '/importacoes/resumo'}
                 }
             },
-            'fin': {
+            'financeiro': {
                 'nome': 'Financeiro',
                 'icone': 'fas fa-dollar-sign',
                 'url': '/financeiro',
                 'paginas': {
                     'fluxo_caixa': {'nome': 'Fluxo de Caixa', 'url': '/financeiro/fluxo-caixa'},
                     'despesas': {'nome': 'Despesas', 'url': '/financeiro/despesas'},
-                    'receitas': {'nome': 'Receitas', 'url': '/financeiro/receitas'}
+                    'receitas': {'nome': 'Receitas', 'url': '/financeiro/receitas'},
+                    'dashboard_executivo': {'nome': 'Dashboard Executivo', 'url': '/financeiro/dashboard'},
+                    'faturamento': {'nome': 'Faturamento', 'url': '/financeiro/faturamento'}
                 }
             },
             'relatorios': {
