@@ -200,3 +200,65 @@ def query_supabase():
             'status': 'error',
             'message': str(e)
         }), 500
+
+@bp.route('/check-tables')
+def check_tables():
+    """
+    Verifica a estrutura das tabelas users e users_dev
+    """
+    try:
+        results = {}
+        
+        # Verificar users
+        try:
+            result_users = supabase_admin.table('users').select('*').limit(1).execute()
+            results['users'] = {
+                'exists': True,
+                'columns': list(result_users.data[0].keys()) if result_users.data else [],
+                'sample_count': len(result_users.data)
+            }
+        except Exception as e:
+            results['users'] = {
+                'exists': False,
+                'error': str(e)
+            }
+        
+        # Verificar users_dev
+        try:
+            result_users_dev = supabase_admin.table('users_dev').select('*').limit(1).execute()
+            results['users_dev'] = {
+                'exists': True,
+                'columns': list(result_users_dev.data[0].keys()) if result_users_dev.data else [],
+                'sample_count': len(result_users_dev.data)
+            }
+        except Exception as e:
+            results['users_dev'] = {
+                'exists': False,
+                'error': str(e)
+            }
+        
+        # Verificar users_perfis
+        try:
+            result_users_perfis = supabase_admin.table('users_perfis').select('*').limit(1).execute()
+            results['users_perfis'] = {
+                'exists': True,
+                'columns': list(result_users_perfis.data[0].keys()) if result_users_perfis.data else [],
+                'sample_count': len(result_users_perfis.data)
+            }
+        except Exception as e:
+            results['users_perfis'] = {
+                'exists': False,
+                'error': str(e)
+            }
+        
+        return jsonify({
+            'status': 'success',
+            'tables': results
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao verificar tabelas: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500

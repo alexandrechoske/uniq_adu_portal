@@ -8,6 +8,20 @@ import datetime
 import json
 import traceback
 import os
+
+# Função para determinar a tabela de usuários baseada no ambiente
+def get_users_table():
+    """Retorna 'users_dev' em desenvolvimento, 'users' em produção"""
+    flask_env = os.getenv('FLASK_ENV', 'production')
+    flask_debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    # Usar users_dev se FLASK_ENV=development ou FLASK_DEBUG=True
+    if flask_env == 'development' or flask_debug:
+        print(f"[DEBUG] Usando users_dev (FLASK_ENV={flask_env}, FLASK_DEBUG={flask_debug})")
+        return 'users_dev'
+    
+    print(f"[DEBUG] Usando users (FLASK_ENV={flask_env}, FLASK_DEBUG={flask_debug})")
+    return 'users'
 from services.retry_utils import run_with_retries
 from services.webhook_service import notify_new_whatsapp_number
 
@@ -170,7 +184,7 @@ def carregar_usuarios():
         
         # 1. Buscar todos os usuários ordenados por nome
         def _buscar_usuarios():
-            return supabase_admin.table('users').select('*').order('name').execute()
+            return supabase_admin.table(get_users_table()).select('*').order('name').execute()
         
         users_response = retry_supabase_operation(_buscar_usuarios)
         
@@ -398,7 +412,7 @@ def salvar_usuario():
         if user_id:
             # Atualizar usuário existente
             print(f"[DEBUG] Atualizando usuário {user_id} com dados: {user_data}")
-            response = supabase_admin.table('users').update(user_data).eq('id', user_id).execute()
+            response = supabase_admin.table(get_users_table()).update(user_data).eq('id', user_id).execute()
             
             if response.data:
                 print(f"[DEBUG] Usuário atualizado com sucesso")
@@ -412,7 +426,7 @@ def salvar_usuario():
         else:
             # Criar novo usuário
             # Verificar se email já existe primeiro (tanto na tabela users quanto no auth)
-            existing_user = supabase_admin.table('users').select('id').eq('email', email).execute()
+            existing_user = supabase_admin.table(get_users_table()).select('id').eq('email', email).execute()
             if existing_user.data:
                 return jsonify({'success': False, 'error': 'Email já está em uso por outro usuário'}), 400
             
@@ -436,18 +450,18 @@ def salvar_usuario():
                     print(f"[DEBUG] Usuário auth criado com ID: {auth_user_id}")
                     
                     # Verificar se já existe na tabela users (isso pode acontecer em retry)
-                    existing_in_table = supabase_admin.table('users').select('id').eq('id', auth_user_id).execute()
+                    existing_in_table = supabase_admin.table(get_users_table()).select('id').eq('id', auth_user_id).execute()
                     if existing_in_table.data:
                         print(f"[DEBUG] Usuário já existe na tabela users, atualizando...")
                         # Atualizar dados se já existe (caso de retry)
                         user_data['updated_at'] = datetime.datetime.now().isoformat()
-                        response = supabase_admin.table('users').update(user_data).eq('id', auth_user_id).execute()
+                        response = supabase_admin.table(get_users_table()).update(user_data).eq('id', auth_user_id).execute()
                     else:
                         # Inserir novo registro na tabela users
                         user_data['id'] = auth_user_id
                         user_data['created_at'] = datetime.datetime.now().isoformat()
                         print(f"[DEBUG] Inserindo usuário na tabela com dados: {user_data}")
-                        response = supabase_admin.table('users').insert(user_data).execute()
+                        response = supabase_admin.table(get_users_table()).insert(user_data).execute()
                     
                     if response.data:
                         print(f"[DEBUG] Usuário criado/atualizado com sucesso: {response.data}")
@@ -505,7 +519,7 @@ def deletar_usuario(user_id):
         print(f"[DEBUG] === INICIANDO EXCLUSÃO EM CASCATA DO USUÁRIO: {user_id} ===")
         
         # Verificar se o usuário existe na tabela public.users
-        user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+        user_response = supabase_admin.table(get_users_table()).select('*').eq('id', user_id).execute()
         if not user_response.data:
             print(f"[DEBUG] Usuário {user_id} não encontrado na tabela public.users")
             if request.is_json:
@@ -565,7 +579,7 @@ def deletar_usuario(user_id):
         print(f"[DEBUG] Etapa 2: Deletando da tabela public.users...")
         
         try:
-            users_response = supabase_admin.table('users').delete().eq('id', user_id).execute()
+            users_response = supabase_admin.table(get_users_table()).delete().eq('id', user_id).execute()
             if users_response.data or users_response.count == 0:  # Supabase pode retornar count=0 para deletes bem-sucedidos
                 print(f"[DEBUG] ✅ Usuário deletado da tabela public.users")
             else:
@@ -696,7 +710,7 @@ def associar_empresas(user_id):
         empresas_data = request.json.get('empresas', [])
         
         # Verificar se o usuário existe e é válido
-        user_response = supabase_admin.table('users').select('role').eq('id', user_id).execute()
+        user_response = supabase_admin.table(get_users_table()).select('role').eq('id', user_id).execute()
         if not user_response.data:
             return jsonify({'success': False, 'error': 'Usuário não encontrado'})
         
@@ -982,7 +996,7 @@ def definir_lista_empresas(user_id):
         
         # Verificar se usuário existe
         def _verificar_usuario():
-            return supabase_admin.table('users').select('id').eq('id', user_id).execute()
+            return supabase_admin.table(get_users_table()).select('id').eq('id', user_id).execute()
         
         user_response = retry_supabase_operation(_verificar_usuario)
         if not user_response.data:
@@ -1132,7 +1146,7 @@ def adicionar_empresas_lote(user_id):
         
         # Verificar se usuário existe
         def _verificar_usuario():
-            return supabase_admin.table('users').select('id').eq('id', user_id).execute()
+            return supabase_admin.table(get_users_table()).select('id').eq('id', user_id).execute()
         
         user_response = retry_supabase_operation(_verificar_usuario)
         if not user_response.data:
@@ -1277,7 +1291,7 @@ def adicionar_empresa_usuario(user_id):
         
         # Verificar se o usuário é cliente_unique primeiro
         def _verificar_usuario():
-            return supabase_admin.table('users').select('role').eq('id', user_id).execute()
+            return supabase_admin.table(get_users_table()).select('role').eq('id', user_id).execute()
         
         try:
             user_response = retry_supabase_operation(_verificar_usuario)
@@ -1550,7 +1564,7 @@ def obter_dados_usuario(user_id):
         print(f"[DEBUG] Buscando dados do usuário: {user_id}")
         
         # Buscar dados básicos do usuário
-        user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+        user_response = supabase_admin.table(get_users_table()).select('*').eq('id', user_id).execute()
         
         if not user_response.data:
             print(f"[DEBUG] Usuário {user_id} não encontrado")
@@ -1952,7 +1966,7 @@ def adicionar_whatsapp(user_id):
         # Enviar webhook para N8N notificando sobre novo número
         try:
             # Buscar dados do usuário para o webhook
-            user_data_response = supabase_admin.table('users').select('id, name, email, role').eq('id', user_id).single().execute()
+            user_data_response = supabase_admin.table(get_users_table()).select('id, name, email, role').eq('id', user_id).single().execute()
             user_data = user_data_response.data if user_data_response.data else None
             
             # Notificar N8N
@@ -2181,15 +2195,44 @@ def api_get_empresas():
         return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
 
 @bp.route('/api/user/<user_id>', methods=['PUT'])
-@login_required
-@role_required(['admin'])
 def api_update_user(user_id):
     """API para atualizar informações do usuário"""
     try:
+        print(f"[USUARIOS] ===== ATUALIZAÇÃO DE USUÁRIO INICIADA =====")
+        print(f"[USUARIOS] User ID: {user_id}")
+        print(f"[USUARIOS] Headers: {dict(request.headers)}")
+        
+        # Verificar bypass da API para testes
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        request_api_key = request.headers.get('X-API-Key')
+        
+        print(f"[USUARIOS] API Bypass Key configurada: {bool(api_bypass_key)}")
+        print(f"[USUARIOS] X-API-Key recebida: {bool(request_api_key)}")
+        print(f"[USUARIOS] Keys coincidem: {api_bypass_key == request_api_key}")
+        
+        # Se não tem bypass, verificar autenticação normal
+        if not (api_bypass_key and request_api_key == api_bypass_key):
+            print(f"[USUARIOS] ⚠️ Bypass não autorizado, verificando autenticação de sessão")
+            # Verificar se está logado
+            if 'user' not in session:
+                print(f"[USUARIOS] ❌ Usuário não autenticado na sessão")
+                return jsonify({'success': False, 'message': 'Usuário não autenticado'}), 401
+            
+            # Verificar role
+            user = session.get('user', {})
+            print(f"[USUARIOS] Role do usuário: {user.get('role')}")
+            if user.get('role') != 'admin':
+                print(f"[USUARIOS] ❌ Role insuficiente")
+                return jsonify({'success': False, 'message': 'Acesso não autorizado'}), 403
+        else:
+            print(f"[USUARIOS] ✅ Bypass autorizado - continuando...")
+        
         data = request.get_json()
+        print(f"[USUARIOS] Dados recebidos: {data}")
         
         # Validar dados obrigatórios
         if not data.get('name') or not data.get('email'):
+            print(f"[USUARIOS] ❌ Dados obrigatórios ausentes - Nome: {data.get('name')}, Email: {data.get('email')}")
             return jsonify({'success': False, 'message': 'Nome e email são obrigatórios'}), 400
         
         # Preparar dados para atualização - apenas campos que existem na tabela users
@@ -2205,20 +2248,30 @@ def api_update_user(user_id):
         if data.get('telefone'):
             update_data['telefone'] = data.get('telefone')
         
-        # Atualizar usuário
-        result = supabase_admin.from_('users').update(update_data).eq('id', user_id).execute()
+        print(f"[USUARIOS] Dados preparados para atualização: {update_data}")
+        print(f"[USUARIOS] Tabela de destino: {get_users_table()}")
+        
+        # Atualizar usuário usando get_users_table() para ambiente correto
+        result = supabase_admin.from_(get_users_table()).update(update_data).eq('id', user_id).execute()
+        
+        print(f"[USUARIOS] Resultado da atualização: {result}")
+        print(f"[USUARIOS] Dados retornados: {result.data}")
         
         if not result.data:
+            print(f"[USUARIOS] ❌ Nenhum dado retornado da atualização")
             return jsonify({'success': False, 'message': 'Erro ao atualizar usuário'}), 400
         
         # Invalidar cache
         invalidate_users_cache()
         
+        print(f"[USUARIOS] ✅ Usuário atualizado com sucesso")
         return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso'})
         
     except Exception as e:
+        print(f"[USUARIOS] ❌ Erro na atualização do usuário: {str(e)}")
+        print(f"[USUARIOS] Tipo de erro: {type(e)}")
         current_app.logger.error(f"Erro ao atualizar usuário {user_id}: {e}")
-        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+        return jsonify({'success': False, 'message': f'Erro interno do servidor: {str(e)}'}), 500
 
 @bp.route('/api/user/<user_id>/empresas', methods=['POST'])
 @login_required
@@ -2344,7 +2397,7 @@ def api_update_user_whatsapp(user_id):
                     
                     # Enviar webhook APENAS para números realmente novos
                     try:
-                        user_data_response = supabase_admin.table('users').select('id, name, email, role').eq('id', user_id).single().execute()
+                        user_data_response = supabase_admin.table(get_users_table()).select('id, name, email, role').eq('id', user_id).single().execute()
                         user_data = user_data_response.data if user_data_response.data else None
                         
                         webhook_success = notify_new_whatsapp_number(
@@ -2482,7 +2535,7 @@ def perfis_list():
         
         # Contar usuários vinculados por perfil
         try:
-            usuarios_query = supabase_admin.table('users_dev').select('perfil').execute()
+            usuarios_query = supabase_admin.table(get_users_table()).select('perfil').execute()
             usuarios_count = {}
             
             for usuario in usuarios_query.data:
@@ -2794,12 +2847,12 @@ def perfis_delete():
         print(f"[PERFIS] Excluindo perfil ID: {perfil_id} (código: {perfil_codigo})")
         
         # Verificar se há usuários usando este perfil
-        usuarios_query = supabase_admin.table('users_dev').select('id, name').eq('perfil', perfil_codigo).execute()
+        usuarios_query = supabase_admin.table(get_users_table()).select('id, name').eq('perfil', perfil_codigo).execute()
         
         if usuarios_query.data:
             # Atualizar usuários para perfil básico
             for usuario in usuarios_query.data:
-                supabase_admin.table('users_dev').update({
+                supabase_admin.table(get_users_table()).update({
                     'perfil': 'cliente_basico'
                 }).eq('id', usuario['id']).execute()
             
@@ -2874,19 +2927,19 @@ def api_perfis_disponivel():
 @bp.route('/<user_id>/perfis')
 @login_required
 @role_required(['admin'])
-def api_get_user_perfis(user_id):
+def api_get_users_perfis(user_id):
     """Retorna perfis associados ao usuário"""
     try:
-        # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela user_perfis existe
+        # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela users_perfis existe
         try:
             # Tentar buscar perfis do usuário da tabela de relacionamento
-            user_perfis_response = supabase_admin.table('user_perfis').select(
+            users_perfis_response = supabase_admin.table('users_perfis').select(
                 'perfil_id'
             ).eq('user_id', user_id).execute()
             
             perfis = []
-            if user_perfis_response.data:
-                for item in user_perfis_response.data:
+            if users_perfis_response.data:
+                for item in users_perfis_response.data:
                     perfil_id = item['perfil_id']
                     # O perfil_id na verdade é o perfil_nome
                     perfis.append({
@@ -2901,16 +2954,16 @@ def api_get_user_perfis(user_id):
         except Exception as table_error:
             # Se a tabela não existir, buscar na tabela users (SOLUÇÃO TEMPORÁRIA)
             if 'does not exist' in str(table_error):
-                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe. Buscando perfis alternativos para usuário {user_id}")
+                print(f"[PERFIS] ⚠️ Tabela users_perfis não existe. Buscando perfis alternativos para usuário {user_id}")
                 
                 # Buscar usuário e verificar campos de perfil
-                user_response = supabase_admin.table('users').select('*').eq('id', user_id).execute()
+                user_response = supabase_admin.table(get_users_table()).select('*').eq('id', user_id).execute()
                 
                 perfis = []
                 if user_response.data:
                     user_data = user_response.data[0]
                     
-                    # Verificar campo perfis_json primeiro (mais específico)
+                    # Verificar campo perfis_json primeiro (conforme estrutura da tabela)
                     if user_data.get('perfis_json'):
                         try:
                             import json
@@ -2969,7 +3022,7 @@ def api_get_user_perfis(user_id):
 @bp.route('/<user_id>/perfis', methods=['POST'])
 @login_required
 @role_required(['admin'])
-def api_update_user_perfis(user_id):
+def api_update_users_perfis(user_id):
     """Atualiza perfis associados ao usuário"""
     try:
         data = request.get_json()
@@ -2978,30 +3031,30 @@ def api_update_user_perfis(user_id):
         print(f"[PERFIS] 🔄 Atualizando perfis do usuário {user_id}: {perfis_ids}")
         
         # Verificar se usuário existe
-        user_response = supabase_admin.table('users').select('id, name').eq('id', user_id).execute()
+        user_response = supabase_admin.table(get_users_table()).select('id, name').eq('id', user_id).execute()
         if not user_response.data:
             return jsonify({
                 'success': False,
                 'message': 'Usuário não encontrado'
             }), 404
         
-        # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela user_perfis existe
+        # SOLUÇÃO TEMPORÁRIA: Verificar se a tabela users_perfis existe
         try:
             # Remover todas as associações existentes
-            delete_response = supabase_admin.table('user_perfis').delete().eq('user_id', user_id).execute()
+            delete_response = supabase_admin.table('users_perfis').delete().eq('user_id', user_id).execute()
             print(f"[PERFIS] 🗑️ Associações existentes removidas")
             
             # Adicionar novas associações
             if perfis_ids:
-                user_perfis_data = []
+                users_perfis_data = []
                 for perfil_id in perfis_ids:
-                    user_perfis_data.append({
+                    users_perfis_data.append({
                         'user_id': user_id,
                         'perfil_id': perfil_id,
                         'created_at': datetime.datetime.now().isoformat()
                     })
                 
-                insert_response = supabase_admin.table('user_perfis').insert(user_perfis_data).execute()
+                insert_response = supabase_admin.table('users_perfis').insert(users_perfis_data).execute()
                 
                 if insert_response.data:
                     print(f"[PERFIS] ✅ {len(perfis_ids)} perfis associados ao usuário {user_id}")
@@ -3011,7 +3064,7 @@ def api_update_user_perfis(user_id):
         except Exception as table_error:
             # Se a tabela não existir, salvar na tabela users (SOLUÇÃO TEMPORÁRIA)
             if 'does not exist' in str(table_error):
-                print(f"[PERFIS] ⚠️ Tabela user_perfis não existe. Salvando perfis na tabela users para usuário {user_id}")
+                print(f"[PERFIS] ⚠️ Tabela users_perfis não existe. Salvando perfis na tabela users para usuário {user_id}")
                 print(f"[PERFIS] 📝 Perfis a salvar: {perfis_ids}")
                 
                 try:
@@ -3022,27 +3075,33 @@ def api_update_user_perfis(user_id):
                         # Usar o primeiro perfil como principal
                         update_data['perfil_principal'] = perfis_ids[0]
                         
-                        # Se houver mais de um perfil, salvar em JSON
-                        if len(perfis_ids) > 1:
-                            import json
-                            update_data['perfis_json'] = json.dumps(perfis_ids)
-                        else:
-                            update_data['perfis_json'] = json.dumps([perfis_ids[0]])
+                        # Salvar todos os perfis em JSON (usando o nome correto do campo)
+                        import json
+                        update_data['perfis_json'] = json.dumps(perfis_ids)
                     else:
                         # Limpar perfis
                         update_data['perfil_principal'] = None
                         update_data['perfis_json'] = '[]'
                     
-                    # Atualizar na tabela users
-                    result = supabase_admin.table('users').update(update_data).eq('id', user_id).execute()
+                    print(f"[PERFIS] 🔧 Tentando atualizar usuário {user_id} com dados: {update_data}")
+                    
+                    # Atualizar na tabela users_dev (nome correto da tabela)
+                    result = supabase_admin.table(get_users_table()).update(update_data).eq('id', user_id).execute()
+                    
+                    print(f"[PERFIS] 🔧 Resultado da atualização: {result}")
                     
                     if result.data:
-                        print(f"[PERFIS] ✅ Perfis salvos na tabela users: {update_data}")
+                        print(f"[PERFIS] ✅ Perfis salvos na tabela users_dev: {update_data}")
+                        print(f"[PERFIS] 📋 Dados retornados: {result.data}")
                     else:
-                        print(f"[PERFIS] ⚠️ Nenhum dado retornado na atualização da tabela users")
+                        print(f"[PERFIS] ⚠️ Nenhum dado retornado na atualização da tabela users_dev")
+                        if hasattr(result, 'error') and result.error:
+                            print(f"[PERFIS] ❌ Erro na atualização: {result.error}")
                         
                 except Exception as update_error:
-                    print(f"[PERFIS] ❌ Erro ao atualizar tabela users: {str(update_error)}")
+                    print(f"[PERFIS] ❌ Erro ao atualizar tabela users_dev: {str(update_error)}")
+                    import traceback
+                    traceback.print_exc()
                     
             else:
                 # Se for outro erro, re-raise

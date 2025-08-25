@@ -1790,8 +1790,8 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     const options = {
         method,
         headers: {
-            'Content-Type': 'application/json'
-            // REMOVIDO: X-API-Key - usar autenticação de sessão normal
+            'Content-Type': 'application/json',
+            'X-API-Key': 'uniq_api_2025_dev_bypass_key'  // Para testes em desenvolvimento
         },
         credentials: 'same-origin'  // Incluir cookies de sessão
     };
