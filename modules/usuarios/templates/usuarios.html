@@ -128,10 +128,11 @@
     <div id="notification-area" class="notification-area hidden"></div>
 
     <!-- Users Cards by Role -->
-    <div class="users-sections">
+    <!-- Users Table by Role -->
+    <div class="users-table-container">
         <!-- Administradores - Only visible to Master Admins -->
         {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
-        <div class="role-section" id="section-admin">
+        <div class="role-table-section" id="section-admin">
             <div class="section-header">
                 <div class="section-title">
                     <div class="section-icon kpi-success">
@@ -146,14 +147,33 @@
                     <span class="count-badge count-admin" id="count-admin">0</span>
                 </div>
             </div>
-            <div class="users-grid" id="grid-admin">
-                <!-- Usuários admin serão inseridos aqui -->
+            <div class="table-container">
+                <table class="users-table" id="table-admin">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Empresas</th>
+                            <th>Números</th>
+                            <th>Perfis</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-admin">
+                        <!-- Usuários admin serão inseridos aqui -->
+                    </tbody>
+                </table>
+                <div class="empty-table" id="empty-admin" style="display: none;">
+                    <i class="mdi mdi-shield-crown-outline"></i>
+                    <p>Nenhum administrador encontrado</p>
+                </div>
             </div>
         </div>
         {% endif %}
 
         <!-- Equipe Interna -->
-        <div class="role-section" id="section-interno">
+        <div class="role-table-section" id="section-interno">
             <div class="section-header">
                 <div class="section-title">
                     <div class="section-icon kpi-info">
@@ -168,13 +188,33 @@
                     <span class="count-badge count-interno" id="count-interno">0</span>
                 </div>
             </div>
-            <div class="users-grid" id="grid-interno">
-                <!-- Usuários internos serão inseridos aqui -->
+            <div class="table-container">
+                <table class="users-table" id="table-interno">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Empresas</th>
+                            <th>Números</th>
+                            <th>Perfis</th>
+                            <th>Admin</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-interno">
+                        <!-- Usuários internos serão inseridos aqui -->
+                    </tbody>
+                </table>
+                <div class="empty-table" id="empty-interno" style="display: none;">
+                    <i class="mdi mdi-account-tie-outline"></i>
+                    <p>Nenhum membro da equipe interna encontrado</p>
+                </div>
             </div>
         </div>
 
         <!-- Clientes -->
-        <div class="role-section" id="section-clientes">
+        <div class="role-table-section" id="section-clientes">
             <div class="section-header">
                 <div class="section-title">
                     <div class="section-icon kpi-warning">
@@ -189,8 +229,27 @@
                     <span class="count-badge count-clientes" id="count-clientes">0</span>
                 </div>
             </div>
-            <div class="users-grid" id="grid-clientes">
-                <!-- Usuários clientes serão inseridos aqui -->
+            <div class="table-container">
+                <table class="users-table" id="table-clientes">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Empresas</th>
+                            <th>Números</th>
+                            <th>Perfis</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-clientes">
+                        <!-- Usuários clientes serão inseridos aqui -->
+                    </tbody>
+                </table>
+                <div class="empty-table" id="empty-clientes" style="display: none;">
+                    <i class="mdi mdi-domain-off"></i>
+                    <p>Nenhum cliente encontrado</p>
+                </div>
             </div>
         </div>
     </div>
@@ -216,9 +275,16 @@
     <div class="modal-container">
         <div class="modal-header">
             <h2 id="modal-title" class="modal-title">Novo Usuário</h2>
-            <button id="btn-close-modal" class="btn-close-modal">
-                <i class="mdi mdi-close"></i>
-            </button>
+            <div class="modal-header-actions">
+                <button type="button" id="btn-cancel-header" class="btn btn-secondary btn-sm">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="submit" id="btn-save-header" class="btn btn-primary btn-sm" form="form-usuario">
+                    <i class="mdi mdi-check"></i>
+                    <span id="save-text-header">Salvar</span>
+                </button>
+            </div>
         </div>
         
         <div class="modal-content">
@@ -232,247 +298,263 @@
                 <!-- Container das Seções em Layout Reorganizado -->
                 <div class="form-sections-container">
                     
-                    <!-- Row: Informações + Empresas lado a lado -->
-                    <div class="form-sections-row">
-                        
-                        <!-- Seção 1: Informações do Usuário -->
-                        <div class="form-section-informacoes active">
-                    <div class="section-header">
-                        <h3 class="section-title">
-                            <i class="mdi mdi-account"></i>
-                            Informações
-                        </h3>
-                    </div>
-                    <div class="section-content">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="nome" class="form-label required">Nome Completo</label>
-                                <input type="text" id="nome" name="nome" class="form-input" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="email" class="form-label required">Email</label>
-                                <input type="email" id="email" name="email" class="form-input" required>
-                                
-                                <!-- Warning when editing users - email cannot be changed -->
-                                <div id="email-readonly-warning" class="alert alert-warning mt-2" style="display: none;">
-                                    <i class="mdi mdi-lock"></i>
-                                    <strong>Email não editável:</strong> O email não pode ser alterado pois é usado como chave de autenticação e está vinculado a outras tabelas. Você pode editar apenas o nome, perfil e status.
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="role" class="form-label required">Perfil de Acesso</label>
-                                <select id="role" name="role" class="form-select" required>
-                                    <option value="">Selecione um perfil</option>
-                                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
-                                    <option value="admin">Administrador</option>
-                                    {% endif %}
-                                    <option value="interno_unique">Equipe Interna</option>
-                                    <option value="cliente_unique">Cliente</option>
-                                </select>
-                            </div>
-                            <!-- Module Administrator Section - Only for Master Admins -->
-                            {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
-                            <div id="module-admin-section" class="form-group module-admin-section" style="display: none;">
-                                <label class="form-label">Administrador de Módulo</label>
-                                <div class="module-admin-options">
-                                    <label class="radio-option">
-                                        <input type="radio" name="module_admin" value="none" checked>
-                                        <span class="radio-custom"></span>
-                                        <span class="option-text">Usuário Regular</span>
-                                    </label>
-                                    <label class="radio-option">
-                                        <input type="radio" name="module_admin" value="admin_operacao">
-                                        <span class="radio-custom"></span>
-                                        <span class="option-text">
-                                            <i class="mdi mdi-truck-delivery"></i>
-                                            Administrador Operacional
-                                        </span>
-                                    </label>
-                                    <label class="radio-option">
-                                        <input type="radio" name="module_admin" value="admin_financeiro">
-                                        <span class="radio-custom"></span>
-                                        <span class="option-text">
-                                            <i class="mdi mdi-cash-multiple"></i>
-                                            Administrador Financeiro
-                                        </span>
-                                    </label>
-                                </div>
-                                <div class="form-hint module-admin-hint">
-                                    <i class="mdi mdi-information"></i>
-                                    Administradores de módulo podem gerenciar usuários e perfis específicos de sua área.
-                                </div>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="form-group status-group">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="ativo" name="ativo" checked>
-                                    <span class="toggle-slider"></span>
-                                    <span class="toggle-label">Usuário Ativo</span>
-                                </label>
-                            </div>
+                    <!-- Seção 1: Informações do Usuário -->
+                    <div class="form-section-informacoes">
+                        <div class="section-header">
+                            <h3 class="section-title">
+                                <i class="mdi mdi-account"></i>
+                                Informações
+                            </h3>
                         </div>
-
-                        <!-- Campos de Senha (apenas para novo usuário) -->
-                        <div id="password-section" class="password-section">
+                        <div class="section-content">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="senha" class="form-label required">Senha</label>
-                                    <input type="password" id="senha" name="senha" class="form-input" required>
-                                    <span class="form-hint">Mínimo 6 caracteres</span>
+                                    <label for="nome" class="form-label required">Nome Completo</label>
+                                    <input type="text" id="nome" name="nome" class="form-input" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="confirmar_senha" class="form-label required">Confirmar Senha</label>
-                                    <input type="password" id="confirmar_senha" name="confirmar_senha" class="form-input" required>
+                                    <label for="email" class="form-label required">Email</label>
+                                    <input type="email" id="email" name="email" class="form-input" required>
+                                    
+                                    <!-- Warning when editing users - email cannot be changed -->
+                                    <div id="email-readonly-warning" class="email-readonly-warning mt-1" style="display: none;">
+                                        <i class="mdi mdi-lock-outline"></i>
+                                        <span>Email é somente leitura</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="role" class="form-label required">Perfil de Acesso</label>
+                                    <select id="role" name="role" class="form-select" required>
+                                        <option value="">Selecione um perfil</option>
+                                        {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
+                                        <option value="admin">Administrador</option>
+                                        {% endif %}
+                                        <option value="interno_unique">Equipe Interna</option>
+                                        <option value="cliente_unique">Cliente</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Module Administrator Section - Only for Master Admins -->
+                                {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
+                                <div id="module-admin-section" class="form-group module-admin-section" style="display: none;">
+                                    <label class="form-label">Administrador de Módulo</label>
+                                    <div class="module-admin-options">
+                                        <label class="radio-option">
+                                            <input type="radio" name="module_admin" value="none" checked>
+                                            <span class="radio-custom"></span>
+                                            <span class="option-text">Usuário Regular</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="module_admin" value="admin_operacao">
+                                            <span class="radio-custom"></span>
+                                            <span class="option-text">
+                                                <i class="mdi mdi-truck-delivery"></i>
+                                                Administrador Operacional
+                                            </span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="module_admin" value="admin_financeiro">
+                                            <span class="radio-custom"></span>
+                                            <span class="option-text">
+                                                <i class="mdi mdi-cash-multiple"></i>
+                                                Administrador Financeiro
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="form-hint module-admin-hint">
+                                        <i class="mdi mdi-information"></i>
+                                        Administradores de módulo podem gerenciar usuários e perfis específicos de sua área.
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="form-group status-group">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="ativo" name="ativo" checked>
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-label">Usuário Ativo</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Campos de Senha (apenas para novo usuário) -->
+                            <div id="password-section" class="password-section">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="senha" class="form-label required">Senha</label>
+                                        <input type="password" id="senha" name="senha" class="form-input" required>
+                                        <span class="form-hint">Mínimo 6 caracteres</span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirmar_senha" class="form-label required">Confirmar Senha</label>
+                                        <input type="password" id="confirmar_senha" name="confirmar_senha" class="form-input" required>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                                                </div>
                     </div>
-                </div>
 
+                    <!-- Row: Perfis e Empresas lado a lado -->
+                    <div class="form-sections-row">
                         <!-- Seção 2: Perfis de Acesso -->
                         <div class="form-section-perfis">
-                    <div class="section-header collapsible-header" data-target="perfis-content">
-                        <h3 class="section-title">
-                            <i class="mdi mdi-shield-account"></i>
-                            Perfis de Acesso
-                            <i class="mdi mdi-chevron-down collapse-icon"></i>
-                        </h3>
-                        <p class="section-subtitle">Perfis de acesso específicos do sistema</p>
-                    </div>
-                    <div id="perfis-content" class="section-content collapsible-content collapsed">
-                        <div class="perfis-selection-container">
-                            <div class="perfis-search-container">
-                                <div class="search-input-wrapper">
-                                    <i class="mdi mdi-magnify search-icon"></i>
-                                    <input type="text" id="perfis-search" class="form-input" placeholder="Buscar perfis...">
-                                </div>
+                            <div class="section-header collapsible-header" data-target="perfis-content">
+                                <h3 class="section-title">
+                                    <i class="mdi mdi-shield-account"></i>
+                                    Perfis de Acesso
+                                    <i class="mdi mdi-chevron-down collapse-icon"></i>
+                                </h3>
+                                <p class="section-subtitle">Perfis de acesso específicos do sistema</p>
                             </div>
-                            
-                            <div class="perfis-list-container">
-                                <div class="list-header">
-                                    <span class="list-title">Perfis Disponíveis</span>
-                                    <span class="count-badge" id="perfis-selected-count">0 selecionados</span>
-                                </div>
-                                <div id="perfis-list" class="perfis-list">
-                                    <!-- Perfis serão carregados aqui -->
-                                </div>
-                                <div id="perfis-empty" class="empty-list">
-                                    <i class="mdi mdi-shield-account-outline"></i>
-                                    <p>Nenhum perfil encontrado</p>
+                            <div id="perfis-content" class="section-content collapsible-content collapsed">
+                                <div class="perfis-selection-container">
+                                    <div class="perfis-search-container">
+                                        <div class="search-input-wrapper">
+                                            <i class="mdi mdi-magnify search-icon"></i>
+                                            <input type="text" id="perfis-search" class="form-input" placeholder="Buscar perfis...">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="perfis-list-container">
+                                        <div class="list-header">
+                                            <span class="list-title">Perfis Disponíveis</span>
+                                            <span class="count-badge" id="perfis-selected-count">0 selecionados</span>
+                                        </div>
+                                        <div id="perfis-list" class="perfis-list">
+                                            <!-- Perfis serão carregados aqui -->
+                                        </div>
+                                        <div id="perfis-empty" class="empty-list">
+                                            <i class="mdi mdi-shield-account-outline"></i>
+                                            <p>Nenhum perfil encontrado</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
                         <!-- Seção 3: Empresas Associadas -->
                         <div id="empresas-section" class="form-section-empresas hidden">
-                    <div class="section-header collapsible-header" data-target="empresas-content">
-                        <h3 class="section-title">
-                            <i class="mdi mdi-domain"></i>
-                            Empresas
-                            <i class="mdi mdi-chevron-down collapse-icon"></i>
-                        </h3>
-                        <p class="section-subtitle">Empresas que este usuário pode acessar</p>
-                    </div>
-                    <div id="empresas-content" class="section-content collapsible-content collapsed">
-                        <!-- Busca e Adição de Empresas -->
-                        <div class="empresa-search-container">
-                            <div class="search-add-wrapper">
-                                <div class="empresa-search-input-wrapper">
-                                    <input type="text" id="empresa-search" class="form-input" placeholder="Buscar empresa por nome ou CNPJ...">
-                                    <div id="empresa-search-results" class="search-results hidden"></div>
-                                </div>
-                                <button type="button" id="btn-add-empresa" class="btn btn-secondary" disabled>
-                                    <i class="mdi mdi-plus"></i>
-                                    Adicionar
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Lista de Empresas Associadas -->
-                        <div class="empresas-list-container">
-                            <div class="list-header">
-                                <h4 class="list-title">
+                            <div class="section-header collapsible-header" data-target="empresas-content">
+                                <h3 class="section-title">
                                     <i class="mdi mdi-domain"></i>
-                                    Empresas Vinculadas
-                                    <span class="count-badge" id="empresas-count">0</span>
-                                </h4>
+                                    Empresas
+                                    <i class="mdi mdi-chevron-down collapse-icon"></i>
+                                </h3>
+                                <p class="section-subtitle">Empresas que este usuário pode acessar</p>
                             </div>
-                            <div id="empresas-list" class="empresas-list">
-                                <div class="empty-list">
-                                    <i class="mdi mdi-domain-off"></i>
-                                    <p>Nenhuma empresa vinculada</p>
+                            <div id="empresas-content" class="section-content collapsible-content collapsed">
+                                <!-- Busca e Adição de Empresas -->
+                                <div class="empresa-search-container">
+                                    <div class="search-add-wrapper">
+                                        <div class="empresa-search-input-wrapper">
+                                            <input type="text" id="empresa-search" class="form-input" placeholder="Buscar empresa por nome ou CNPJ...">
+                                            <div id="empresa-search-results" class="search-results hidden"></div>
+                                        </div>
+                                        <button type="button" id="btn-add-empresa" class="btn btn-secondary" disabled>
+                                            <i class="mdi mdi-plus"></i>
+                                            Adicionar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Lista de Empresas Associadas -->
+                                <div class="empresas-list-container">
+                                    <div class="list-header">
+                                        <h4 class="list-title">
+                                            <i class="mdi mdi-domain"></i>
+                                            Empresas Vinculadas
+                                            <span class="count-badge" id="empresas-count">0</span>
+                                        </h4>
+                                    </div>
+                                    <div id="empresas-list" class="empresas-list">
+                                        <div class="empty-list">
+                                            <i class="mdi mdi-domain-off"></i>
+                                            <p>Nenhuma empresa vinculada</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div> <!-- Fecha form-sections-row -->
+                    </div>
 
                     <!-- Seção 4: WhatsApp (largura total) -->
                     <div id="whatsapp-section" class="form-section-whatsapp">
-                    <div class="section-header collapsible-header" data-target="whatsapp-content">
-                        <h3 class="section-title">
-                            <i class="mdi mdi-whatsapp"></i>
-                            WhatsApp
-                            <i class="mdi mdi-chevron-down collapse-icon"></i>
-                        </h3>
-                        <p class="section-subtitle">Números para comunicação e notificações</p>
-                    </div>
-                    <div id="whatsapp-content" class="section-content collapsible-content collapsed">
-                        <!-- Formulário de Adição de WhatsApp -->
-                        <div class="whatsapp-form-container">
-                            <div class="whatsapp-form-grid">
-                                <div class="form-group">
-                                    <label for="whatsapp-nome" class="form-label">Nome/Identificação</label>
-                                    <input type="text" id="whatsapp-nome" class="form-input" placeholder="Ex: Pessoal, Trabalho, Suporte...">
-                                </div>
-                                <div class="form-group">
-                                    <label for="whatsapp-numero" class="form-label required">Número WhatsApp</label>
-                                    <input type="text" id="whatsapp-numero" class="form-input" placeholder="(11)987654321" maxlength="15">
-                                </div>
-                                <div class="form-group-btn">
-                                    <button type="button" id="btn-add-whatsapp" class="btn btn-secondary">
-                                        <i class="mdi mdi-plus"></i>
-                                        Adicionar
-                                    </button>
+                        <div class="section-header collapsible-header" data-target="whatsapp-content">
+                            <h3 class="section-title">
+                                <i class="mdi mdi-whatsapp"></i>
+                                WhatsApp
+                                <i class="mdi mdi-chevron-down collapse-icon"></i>
+                            </h3>
+                            <p class="section-subtitle">Números para comunicação e notificações</p>
+                        </div>
+                        <div id="whatsapp-content" class="section-content collapsible-content collapsed">
+                            <!-- Formulário de Adição de WhatsApp -->
+                            <div class="whatsapp-form-container">
+                                <div class="whatsapp-form-grid">
+                                    <div class="form-group">
+                                        <label for="whatsapp-nome" class="form-label">Nome/Identificação</label>
+                                        <input type="text" id="whatsapp-nome" class="form-input" placeholder="Ex: Pessoal, Trabalho, Suporte...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="whatsapp-numero" class="form-label required">Número WhatsApp</label>
+                                        <input type="text" id="whatsapp-numero" class="form-input" placeholder="(11)987654321" maxlength="15">
+                                    </div>
+                                    <div class="form-group-btn">
+                                        <button type="button" id="btn-add-whatsapp" class="btn btn-secondary">
+                                            <i class="mdi mdi-plus"></i>
+                                            Adicionar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Lista de Números de WhatsApp -->
-                        <div class="whatsapp-list-container">
-                            <div class="list-header">
-                                <h4 class="list-title">
-                                    <i class="mdi mdi-whatsapp"></i>
-                                    Números Cadastrados
-                                    <span class="count-badge" id="whatsapp-count">0</span>
-                                </h4>
-                            </div>
-                            <div id="whatsapp-list" class="whatsapp-list">
-                                <div class="empty-list">
-                                    <i class="mdi mdi-phone-off"></i>
-                                    <p>Nenhum número cadastrado</p>
+                            <!-- Lista de Números de WhatsApp -->
+                            <div class="whatsapp-list-container">
+                                <div class="list-header">
+                                    <h4 class="list-title">
+                                        <i class="mdi mdi-whatsapp"></i>
+                                        Números Cadastrados
+                                        <span class="count-badge" id="whatsapp-count">0</span>
+                                    </h4>
+                                </div>
+                                <div id="whatsapp-list" class="whatsapp-list">
+                                    <div class="empty-list">
+                                        <i class="mdi mdi-phone-off"></i>
+                                        <p>Nenhum número cadastrado</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
                 </div> <!-- Fecha form-sections-container -->
             </form>
         </div>
 
-        <div class="modal-footer">
-            <button type="button" id="btn-cancel" class="btn btn-secondary">
-                <i class="mdi mdi-close"></i>
-                Cancelar
-            </button>
-            <button type="submit" id="btn-save" class="btn btn-primary" form="form-usuario">
-                <i class="mdi mdi-check"></i>
-                <span id="save-text">Salvar</span>
-            </button>
+
+    </div>
+</div>
+
+<!-- Modal de Visualização de Usuário -->
+<div id="modal-view-usuario" class="modal-overlay hidden">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2 id="view-modal-title" class="modal-title">Detalhes do Usuário</h2>
+            <div class="modal-header-actions">
+                <button type="button" id="btn-edit-from-view" class="btn btn-primary btn-sm">
+                    <i class="mdi mdi-pencil"></i>
+                    Editar
+                </button>
+                <button type="button" id="btn-close-view" class="btn btn-secondary btn-sm">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
+                </button>
+            </div>
+        </div>
+        
+        <div class="modal-content">
+            <div id="user-details-content">
+                <!-- Conteúdo será carregado via JavaScript -->
+            </div>
         </div>
     </div>
 </div>

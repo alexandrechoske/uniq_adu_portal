@@ -140,11 +140,21 @@ function initializeElements() {
         btnCloseModal: document.getElementById('btn-close-modal'),
         btnSave: document.getElementById('btn-save'),
         btnCancel: document.getElementById('btn-cancel'),
+        // Header buttons
+        btnCancelHeader: document.getElementById('btn-cancel-header'),
+        btnSaveHeader: document.getElementById('btn-save-header'),
         
         // Modal
         modalUsuario: document.getElementById('modal-usuario'),
         modalTitle: document.getElementById('modal-title'),
         modalDeleteConfirm: document.getElementById('modal-delete-confirm'),
+        
+        // View Modal
+        modalViewUsuario: document.getElementById('modal-view-usuario'),
+        viewModalTitle: document.getElementById('view-modal-title'),
+        userDetailsContent: document.getElementById('user-details-content'),
+        btnEditFromView: document.getElementById('btn-edit-from-view'),
+        btnCloseView: document.getElementById('btn-close-view'),
         
         // Form
         formUsuario: document.getElementById('form-usuario'),
@@ -167,10 +177,20 @@ function initializeElements() {
         sectionInterno: document.getElementById('section-interno'),
         sectionClientes: document.getElementById('section-clientes'),
         
-        // Grids
-        gridAdmin: document.getElementById('grid-admin'),
-        gridInterno: document.getElementById('grid-interno'),
-        gridClientes: document.getElementById('grid-clientes'),
+        // Table Bodies (replacing grids)
+        tbodyAdmin: document.getElementById('tbody-admin'),
+        tbodyInterno: document.getElementById('tbody-interno'),
+        tbodyClientes: document.getElementById('tbody-clientes'),
+        
+        // Tables
+        tableAdmin: document.getElementById('table-admin'),
+        tableInterno: document.getElementById('table-interno'),
+        tableClientes: document.getElementById('table-clientes'),
+        
+        // Empty States
+        emptyAdmin: document.getElementById('empty-admin'),
+        emptyInterno: document.getElementById('empty-interno'),
+        emptyClientes: document.getElementById('empty-clientes'),
         
         // Counts
         countAdmin: document.getElementById('count-admin'),
@@ -201,9 +221,9 @@ function initializeElements() {
         modalDeleteConfirm: !!elements.modalDeleteConfirm,
         modalUsuario: !!elements.modalUsuario,
         userCardTemplate: !!elements.userCardTemplate,
-        gridAdmin: !!elements.gridAdmin,
-        gridInterno: !!elements.gridInterno,
-        gridClientes: !!elements.gridClientes
+        tbodyAdmin: !!elements.tbodyAdmin,
+        tbodyInterno: !!elements.tbodyInterno,
+        tbodyClientes: !!elements.tbodyClientes
     });
     
     // Verificar se algum elemento crítico está faltando
@@ -241,10 +261,42 @@ function initializeEventListeners() {
         elements.btnCancel.addEventListener('click', closeModal);
     }
     
+    // Header buttons (duplicated for convenience)
+    if (elements.btnCancelHeader) {
+        elements.btnCancelHeader.addEventListener('click', closeModal);
+    }
+    
+    if (elements.btnSaveHeader) {
+        elements.btnSaveHeader.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Trigger form submission
+            if (elements.formUsuario) {
+                elements.formUsuario.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        });
+    }
+    
     if (elements.modalUsuario) {
         elements.modalUsuario.addEventListener('click', function(e) {
             if (e.target === elements.modalUsuario) {
                 closeModal();
+            }
+        });
+    }
+    
+    // View Modal
+    if (elements.btnCloseView) {
+        elements.btnCloseView.addEventListener('click', closeViewModal);
+    }
+    
+    if (elements.btnEditFromView) {
+        elements.btnEditFromView.addEventListener('click', handleEditFromView);
+    }
+    
+    if (elements.modalViewUsuario) {
+        elements.modalViewUsuario.addEventListener('click', function(e) {
+            if (e.target === elements.modalViewUsuario) {
+                closeViewModal();
             }
         });
     }
@@ -292,6 +344,8 @@ function initializeEventListeners() {
         if (e.key === 'Escape') {
             if (elements.modalDeleteConfirm && !elements.modalDeleteConfirm.classList.contains('hidden')) {
                 hideDeleteModal();
+            } else if (elements.modalViewUsuario && !elements.modalViewUsuario.classList.contains('hidden')) {
+                closeViewModal();
             } else if (elements.modalUsuario && !elements.modalUsuario.classList.contains('hidden')) {
                 closeModal();
             }
@@ -455,11 +509,11 @@ function displayUsersByRole() {
     elements.countClientes.textContent = usersByRole.cliente_unique.length;
     
     // Renderizar usuários em cada seção (apenas se as seções existirem)
-    if (elements.gridAdmin) {
-        renderUsersInGrid(elements.gridAdmin, usersByRole.admin);
+    if (elements.tbodyAdmin) {
+        renderUsersInTable(elements.tbodyAdmin, usersByRole.admin, 'admin');
     }
-    renderUsersInGrid(elements.gridInterno, usersByRole.interno_unique);
-    renderUsersInGrid(elements.gridClientes, usersByRole.cliente_unique);
+    renderUsersInTable(elements.tbodyInterno, usersByRole.interno_unique, 'interno');
+    renderUsersInTable(elements.tbodyClientes, usersByRole.cliente_unique, 'clientes');
     
     // Mostrar/ocultar seções baseado na presença de usuários (apenas se existirem)
     if (elements.sectionAdmin) {
@@ -474,78 +528,129 @@ function displayUsersByRole() {
 }
 
 /**
- * Renderiza usuários em um grid específico
+ * Renderiza usuários em uma tabela específica
  */
-function renderUsersInGrid(gridElement, users) {
-    if (!gridElement) {
-        console.warn('[USUARIOS] Grid element não encontrado para renderização');
+function renderUsersInTable(tbodyElement, users, role) {
+    if (!tbodyElement) {
+        console.warn('[USUARIOS] Tbody element não encontrado para renderização');
         return;
     }
     
-    console.log('[USUARIOS] Renderizando', users.length, 'usuários no grid', gridElement.id);
+    console.log('[USUARIOS] Renderizando', users.length, 'usuários na tabela', tbodyElement.id);
     
-    gridElement.innerHTML = '';
+    tbodyElement.innerHTML = '';
     
     users.forEach((user, index) => {
-        console.log(`[USUARIOS] Criando card ${index + 1}:`, user);
-        const cardElement = createUserCard(user);
-        gridElement.appendChild(cardElement);
+        console.log(`[USUARIOS] Criando linha ${index + 1}:`, user);
+        const rowElement = createUserTableRow(user);
+        tbodyElement.appendChild(rowElement);
     });
     
-    console.log('[USUARIOS] Renderização completa para grid', gridElement.id);
+    // Show/hide empty states
+    const emptyElement = document.getElementById(`empty-${role}`);
+    if (emptyElement) {
+        emptyElement.style.display = users.length === 0 ? 'block' : 'none';
+    }
+    
+    console.log('[USUARIOS] Renderização completa para tabela', tbodyElement.id);
 }
 
 /**
- * Cria card de usuário - VERSÃO CORRIGIDA COM EVENT LISTENERS
+ * Cria linha de tabela para usuário - NOVA VERSÃO PARA TABELAS
  */
-function createUserCard(user) {
-    console.log('[USUARIOS] Criando card para usuário:', user.id, user.nome || user.name);
+function createUserTableRow(user) {
+    console.log('[USUARIOS] Criando linha para usuário:', user.id, user.nome || user.name);
     
-    // Criar elemento do card
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'user-card';
-    cardDiv.setAttribute('data-user-id', user.id);
-    cardDiv.setAttribute('data-role', user.role);
+    // Criar elemento da linha
+    const rowElement = document.createElement('tr');
+    rowElement.className = 'user-row';
+    rowElement.setAttribute('data-user-id', user.id);
+    rowElement.setAttribute('data-role', user.role);
     
     // Determinar status
     const isActive = user.ativo === true || user.ativo === 'true' || user.is_active === true;
     const statusClass = isActive ? 'active' : 'inactive';
-    cardDiv.setAttribute('data-status', statusClass);
+    rowElement.setAttribute('data-status', statusClass);
     
-    // Montar HTML do card
-    cardDiv.innerHTML = `
-        <div class="user-card-header">
-            <div class="user-status ${statusClass}"></div>
-            <div class="user-actions">
-                <button class="btn-action btn-edit" title="Editar usuário" data-action="edit" data-user-id="${user.id}">
+    // Determinar se é administrador de módulo
+    const isModuleAdmin = user.perfil_principal && ['admin_operacao', 'admin_financeiro'].includes(user.perfil_principal);
+    const isMasterAdmin = user.perfil_principal === 'master_admin';
+    
+    // Contar totais
+    const totalEmpresas = (user.agent_info?.empresas && Array.isArray(user.agent_info.empresas)) ? user.agent_info.empresas.length : 0;
+    const totalNumeros = (user.whatsapp_numbers && Array.isArray(user.whatsapp_numbers)) ? user.whatsapp_numbers.length : 0;
+    const totalPerfis = (user.perfis && Array.isArray(user.perfis)) ? user.perfis.length : 0;
+    
+    // Montar HTML da linha
+    rowElement.innerHTML = `
+        <td class="user-name-cell">
+            <div class="user-name-container">
+                <span class="user-name">${user.nome || user.name || 'Sem nome'}</span>
+            </div>
+        </td>
+        <td class="user-email-cell">
+            <span class="user-email">${user.email || 'Sem email'}</span>
+        </td>
+        <td class="user-count-cell">
+            <span class="count-badge">${totalEmpresas}</span>
+        </td>
+        <td class="user-count-cell">
+            <span class="count-badge">${totalNumeros}</span>
+        </td>
+        <td class="user-count-cell">
+            <span class="count-badge">${totalPerfis}</span>
+        </td>
+        <td class="user-admin-cell">
+            ${
+                isMasterAdmin ? '<i class="admin-shield mdi mdi-shield-crown" title="Master Admin"></i>' :
+                isModuleAdmin ? '<i class="admin-shield mdi mdi-shield" title="Administrador de Módulo"></i>' :
+                '<span class="admin-none">-</span>'
+            }
+        </td>
+        <td class="user-status-cell">
+            <span class="status-badge status-${statusClass}">
+                <span class="status-dot"></span>
+                ${isActive ? 'Ativo' : 'Inativo'}
+            </span>
+        </td>
+        <td class="user-actions-cell">
+            <div class="table-actions">
+                <button class="btn-table-action btn-view" title="Visualizar usuário" data-action="view" data-user-id="${user.id}">
+                    <i class="mdi mdi-eye"></i>
+                </button>
+                <button class="btn-table-action btn-edit" title="Editar usuário" data-action="edit" data-user-id="${user.id}">
                     <i class="mdi mdi-pencil"></i>
                 </button>
-                <button class="btn-action btn-delete" title="Excluir usuário" data-action="delete" data-user-id="${user.id}">
+                <button class="btn-table-action btn-delete" title="Excluir usuário" data-action="delete" data-user-id="${user.id}">
                     <i class="mdi mdi-delete"></i>
                 </button>
             </div>
-        </div>
-        <div class="user-card-content">
-            <div class="user-info">
-                <h4 class="user-name">${user.nome || user.name || 'Sem nome'}</h4>
-                <p class="user-email">${user.email || 'Sem email'}</p>
-            </div>
-            <div class="user-meta">
-                ${generateEmpresasInfo(user)}
-                ${generateWhatsappInfo(user)}
-            </div>
-        </div>
+        </td>
     `;
     
-    // Adicionar event listeners aos botões - CORREÇÃO PRINCIPAL
-    const editBtn = cardDiv.querySelector('.btn-edit');
-    const deleteBtn = cardDiv.querySelector('.btn-delete');
+    // Adicionar event listeners aos botões
+    const viewBtn = rowElement.querySelector('.btn-view');
+    const editBtn = rowElement.querySelector('.btn-edit');
+    const deleteBtn = rowElement.querySelector('.btn-delete');
     
     console.log('[USUARIOS] DEBUG - Botões encontrados:', {
+        viewBtn: !!viewBtn,
         editBtn: !!editBtn,
         deleteBtn: !!deleteBtn,
         userId: user.id
     });
+    
+    if (viewBtn) {
+        viewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[USUARIOS] ✓ Botão VISUALIZAR clicado para usuário:', user.id);
+            openModalForView(user.id);
+        });
+        console.log('[USUARIOS] ✓ Event listener VISUALIZAR adicionado para usuário:', user.id);
+    } else {
+        console.error('[USUARIOS] ✗ Botão VISUALIZAR não encontrado para usuário:', user.id);
+    }
     
     if (editBtn) {
         editBtn.addEventListener('click', (e) => {
@@ -571,7 +676,7 @@ function createUserCard(user) {
         console.error('[USUARIOS] ✗ Botão EXCLUIR não encontrado para usuário:', user.id);
     }
     
-    return cardDiv;
+    return rowElement;
 }
 
 /**
@@ -2390,5 +2495,231 @@ function collapseSection(sectionId) {
         header.classList.remove('expanded');
         content.classList.remove('expanded');
         content.classList.add('collapsed');
+    }
+}
+
+// =================================
+// VIEW MODAL FUNCTIONALITY
+// =================================
+
+/**
+ * Abre modal para visualizar usuário
+ */
+async function openModalForView(userId) {
+    console.log('[USUARIOS] Abrindo modal de visualização para usuário:', userId);
+    
+    try {
+        // Buscar dados do usuário
+        const user = await fetchUserData(userId);
+        if (!user) {
+            throw new Error('Usuário não encontrado');
+        }
+        
+        appState.currentUser = user;
+        renderUserDetails(user);
+        
+        // Configurar botão de edição
+        if (elements.btnEditFromView) {
+            elements.btnEditFromView.onclick = () => {
+                closeViewModal();
+                setTimeout(() => openModalForEdit(userId), 100);
+            };
+        }
+        
+        // Mostrar modal
+        if (elements.modalViewUsuario) {
+            elements.modalViewUsuario.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao carregar dados do usuário:', error);
+        showNotification('Erro ao carregar dados do usuário: ' + error.message, NOTIFICATION_TYPES.ERROR);
+    }
+}
+
+/**
+ * Fecha modal de visualização
+ */
+function closeViewModal() {
+    console.log('[USUARIOS] Fechando modal de visualização');
+    
+    if (elements.modalViewUsuario) {
+        elements.modalViewUsuario.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    appState.currentUser = null;
+}
+
+/**
+ * Manipula clique no botão "Editar" no modal de visualização
+ */
+function handleEditFromView() {
+    if (appState.currentUser) {
+        const userId = appState.currentUser.id;
+        closeViewModal();
+        setTimeout(() => openModalForEdit(userId), 100);
+    }
+}
+
+/**
+ * Busca dados do usuário para visualização (similar ao loadUserData mas para view)
+ */
+async function fetchUserData(userId) {
+    console.log('[USUARIOS] Buscando dados do usuário para visualização:', userId);
+    const response = await apiRequest(`/${userId}/dados`);
+    
+    console.log('[USUARIOS] Resposta da API para dados do usuário (view):', response);
+    
+    if (!response.success) {
+        throw new Error(response.error || 'Erro ao carregar dados do usuário');
+    }
+    
+    if (!response.data) {
+        throw new Error('Dados do usuário não encontrados na resposta');
+    }
+    
+    return response.data;
+}
+
+/**
+ * Renderiza detalhes do usuário no modal de visualização
+ */
+function renderUserDetails(user) {
+    if (!elements.userDetailsContent) return;
+    
+    // Determinar se é administrador de módulo
+    const isModuleAdmin = user.perfil_principal && ['admin_operacao', 'admin_financeiro'].includes(user.perfil_principal);
+    const isMasterAdmin = user.perfil_principal === 'master_admin';
+    
+    // Status
+    const isActive = user.ativo === true || user.ativo === 'true';
+    
+    // Contar totais
+    const totalEmpresas = (user.agent_info?.empresas && Array.isArray(user.agent_info.empresas)) ? user.agent_info.empresas.length : 0;
+    const totalNumeros = (user.whatsapp_numbers && Array.isArray(user.whatsapp_numbers)) ? user.whatsapp_numbers.length : 0;
+    const totalPerfis = (user.perfis && Array.isArray(user.perfis)) ? user.perfis.length : 0;
+    
+    // Gerar HTML das empresas
+    const empresasHtml = user.agent_info?.empresas && user.agent_info.empresas.length > 0 ? user.agent_info.empresas.map(empresa => `
+        <div class="detail-item-badge">
+            <i class="mdi mdi-domain"></i>
+            <span>${empresa.nome_cliente || empresa.nome || empresa.empresa_nome || 'Empresa sem nome'}</span>
+        </div>
+    `).join('') : '<span class="text-muted">Nenhuma empresa vinculada</span>';
+    
+    // Gerar HTML dos perfis
+    const perfisHtml = user.perfis && user.perfis.length > 0 ? user.perfis.map(perfil => `
+        <div class="detail-item-badge">
+            <i class="mdi mdi-shield-account"></i>
+            <span>${perfil.perfil_nome || perfil.nome || 'Perfil sem nome'}</span>
+        </div>
+    `).join('') : '<span class="text-muted">Nenhum perfil atribuído</span>';
+    
+    // Gerar HTML dos números WhatsApp
+    const whatsappHtml = user.whatsapp_numbers && user.whatsapp_numbers.length > 0 ? user.whatsapp_numbers.map(whatsapp => `
+        <div class="detail-item-badge">
+            <i class="mdi mdi-whatsapp"></i>
+            <span>${whatsapp.nome || 'Sem nome'}: ${whatsapp.numero}</span>
+        </div>
+    `).join('') : '<span class="text-muted">Nenhum número cadastrado</span>';
+    
+    elements.userDetailsContent.innerHTML = `
+        <div class="user-details">
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-information"></i>
+                    Informações Gerais
+                </h6>
+                <div class="detail-item">
+                    <span class="detail-label">Nome:</span>
+                    <span class="detail-value">${user.nome || user.name || 'Sem nome'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">${user.email || 'Sem email'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Perfil de Acesso:</span>
+                    <span class="detail-value">${ROLE_CONFIG[user.role]?.label || user.role}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Tipo de Administrador:</span>
+                    <span class="detail-value">
+                        ${
+                            isMasterAdmin ? '<span class="admin-badge master"><i class="mdi mdi-shield-crown"></i> Master Admin</span>' :
+                            isModuleAdmin ? '<span class="admin-badge module"><i class="mdi mdi-shield"></i> Administrador de Módulo</span>' :
+                            '<span class="text-muted">Usuário Regular</span>'
+                        }
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">
+                        <span class="status-badge status-${isActive ? 'active' : 'inactive'}">
+                            <span class="status-dot"></span>
+                            ${isActive ? 'Ativo' : 'Inativo'}
+                        </span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-chart-box"></i>
+                    Estatísticas
+                </h6>
+                <div class="detail-stats-grid">
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${totalEmpresas}</div>
+                        <div class="detail-stat-label">Empresas</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${totalNumeros}</div>
+                        <div class="detail-stat-label">Números WhatsApp</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${totalPerfis}</div>
+                        <div class="detail-stat-label">Perfis</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-domain"></i>
+                    Empresas Vinculadas
+                </h6>
+                <div class="detail-items-list">
+                    ${empresasHtml}
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-shield-account"></i>
+                    Perfis de Acesso
+                </h6>
+                <div class="detail-items-list">
+                    ${perfisHtml}
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-whatsapp"></i>
+                    Números WhatsApp
+                </h6>
+                <div class="detail-items-list">
+                    ${whatsappHtml}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Atualizar título do modal
+    if (elements.viewModalTitle) {
+        elements.viewModalTitle.textContent = `Detalhes: ${user.nome || user.name || 'Usuário'}`;
     }
 }

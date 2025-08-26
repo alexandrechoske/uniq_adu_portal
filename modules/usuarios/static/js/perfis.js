@@ -111,7 +111,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeElements() {
     elements = {
         // Containers principais
-        perfisGrid: document.getElementById('perfis-grid'),
+        perfisTableContainer: document.getElementById('perfis-table-container'),
+        tbodyPerfis: document.getElementById('tbody-perfis'),
+        tablePerfis: document.getElementById('table-perfis'),
+        emptyPerfis: document.getElementById('empty-perfis'),
         loadingContainer: document.getElementById('loading-perfis'),
         emptyState: document.getElementById('empty-state'),
         
@@ -254,10 +257,12 @@ async function loadPerfisData() {
 // =================================
 
 /**
- * Renderiza a grid de perfis
+ * Renderiza a tabela de perfis
  */
 function renderPerfis() {
-    if (!elements.perfisGrid) return;
+    if (!elements.tbodyPerfis) return;
+    
+    elements.tbodyPerfis.innerHTML = '';
     
     if (appState.filteredPerfis.length === 0) {
         showEmptyState();
@@ -266,78 +271,109 @@ function renderPerfis() {
     
     hideEmptyState();
     
-    elements.perfisGrid.innerHTML = '';
-    
     appState.filteredPerfis.forEach(perfil => {
-        const card = createPerfilCard(perfil);
-        elements.perfisGrid.appendChild(card);
+        const row = createPerfilTableRow(perfil);
+        elements.tbodyPerfis.appendChild(row);
     });
+    
+    // Hide the empty table message if we have data
+    hideEmptyTable();
 }
 
 /**
- * Cria um card de perfil
+ * Cria uma linha de tabela para perfil - NOVA VERSÃO PARA TABELAS
  */
-function createPerfilCard(perfil) {
-    const card = document.createElement('div');
-    card.className = 'perfil-card';
-    card.dataset.perfilId = perfil.codigo;
+function createPerfilTableRow(perfil) {
+    const row = document.createElement('tr');
+    row.className = 'perfil-row';
+    row.dataset.perfilId = perfil.codigo;
     
     // Contar módulos ativos
     const modulosAtivos = perfil.modulos ? perfil.modulos.filter(m => m.ativo).length : 0;
     
-    // Status badge
-    const statusBadge = `<span class="status-badge ${perfil.ativo ? 'ativo' : 'inativo'}">
-        ${perfil.ativo ? 'Ativo' : 'Inativo'}
-    </span>`;
-    
     // Módulos badges
     const modulosBadges = perfil.modulos ? perfil.modulos
         .filter(m => m.ativo)
-        .map(m => `<span class="modulo-badge">
+        .slice(0, 3) // Limitar a 3 badges para não ocupar muito espaço
+        .map(m => `<span class="module-badge">
             <i class="${MODULOS_SISTEMA[m.codigo]?.icon || 'mdi-cube'}"></i>
             ${MODULOS_SISTEMA[m.codigo]?.nome || m.codigo}
         </span>`).join('') : '';
     
-    card.innerHTML = `
-        <div class="perfil-card-header">
-            <div class="perfil-info">
-                <h3 class="perfil-nome">${escapeHtml(perfil.nome)}</h3>
-                <div class="perfil-codigo">${escapeHtml(perfil.codigo)}</div>
+    // Adicionar indicação se há mais módulos
+    const moreModules = perfil.modulos && perfil.modulos.filter(m => m.ativo).length > 3 ? 
+        `<span class="module-badge more">+${perfil.modulos.filter(m => m.ativo).length - 3}</span>` : '';
+    
+    row.innerHTML = `
+        <td class="perfil-name-cell">
+            <div class="perfil-name-container">
+                <span class="perfil-name">${escapeHtml(perfil.nome)}</span>
+                <span class="perfil-code">${escapeHtml(perfil.codigo)}</span>
             </div>
-            <div class="perfil-actions">
-                <button class="btn btn-sm btn-outline-primary" onclick="viewPerfil(${perfil.id})" title="Visualizar">
+        </td>
+        <td class="perfil-description-cell">
+            <p class="perfil-description">${escapeHtml(perfil.descricao || 'Sem descrição')}</p>
+        </td>
+        <td class="perfil-modules-cell">
+            <div class="modules-badges">
+                ${modulosBadges || '<span class="text-muted">Nenhum</span>'}
+                ${moreModules}
+            </div>
+        </td>
+        <td class="perfil-users-cell">
+            <span class="users-count">${perfil.usuarios_count || 0}</span>
+        </td>
+        <td class="perfil-status-cell">
+            <span class="status-badge status-${perfil.ativo ? 'active' : 'inactive'}">
+                <span class="status-dot"></span>
+                ${perfil.ativo ? 'Ativo' : 'Inativo'}
+            </span>
+        </td>
+        <td class="perfil-actions-cell">
+            <div class="table-actions">
+                <button class="btn-table-action btn-view" title="Visualizar perfil" data-action="view" data-perfil-id="${perfil.id}">
                     <i class="mdi mdi-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="editPerfil(${perfil.id})" title="Editar">
+                <button class="btn-table-action btn-edit" title="Editar perfil" data-action="edit" data-perfil-id="${perfil.id}">
                     <i class="mdi mdi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deletePerfil(${perfil.id})" title="Excluir">
+                <button class="btn-table-action btn-delete" title="Excluir perfil" data-action="delete" data-perfil-id="${perfil.id}">
                     <i class="mdi mdi-delete"></i>
                 </button>
             </div>
-        </div>
-        
-        ${perfil.descricao ? `<div class="perfil-description">${escapeHtml(perfil.descricao)}</div>` : ''}
-        
-        <div class="perfil-modulos">
-            <div class="perfil-modulos-title">Módulos Disponíveis (${modulosAtivos})</div>
-            <div class="modulos-list">
-                ${modulosBadges || '<span class="text-muted">Nenhum módulo configurado</span>'}
-            </div>
-        </div>
-        
-        <div class="perfil-stats">
-            <div class="perfil-usuarios-count">
-                <i class="mdi mdi-account-group"></i>
-                <span>${perfil.usuarios_count || 0} usuários</span>
-            </div>
-            <div class="perfil-status">
-                ${statusBadge}
-            </div>
-        </div>
+        </td>
     `;
     
-    return card;
+    // Adicionar event listeners aos botões
+    const viewBtn = row.querySelector('.btn-view');
+    const editBtn = row.querySelector('.btn-edit');
+    const deleteBtn = row.querySelector('.btn-delete');
+    
+    if (viewBtn) {
+        viewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            viewPerfil(perfil.id);
+        });
+    }
+    
+    if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editPerfil(perfil.id);
+        });
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            deletePerfil(perfil.id);
+        });
+    }
+    
+    return row;
 }
 
 // =================================
@@ -934,8 +970,20 @@ function showLoading(show) {
     if (elements.loadingContainer) {
         elements.loadingContainer.style.display = show ? 'flex' : 'none';
     }
-    if (elements.perfisGrid) {
-        elements.perfisGrid.style.display = show ? 'none' : 'grid';
+    if (elements.perfisTableContainer) {
+        elements.perfisTableContainer.style.display = show ? 'none' : 'block';
+    }
+}
+
+function showEmptyTable() {
+    if (elements.emptyPerfis) {
+        elements.emptyPerfis.style.display = 'block';
+    }
+}
+
+function hideEmptyTable() {
+    if (elements.emptyPerfis) {
+        elements.emptyPerfis.style.display = 'none';
     }
 }
 
@@ -943,8 +991,8 @@ function showEmptyState() {
     if (elements.emptyState) {
         elements.emptyState.style.display = 'flex';
     }
-    if (elements.perfisGrid) {
-        elements.perfisGrid.style.display = 'none';
+    if (elements.perfisTableContainer) {
+        elements.perfisTableContainer.style.display = 'none';
     }
 }
 
@@ -952,8 +1000,8 @@ function hideEmptyState() {
     if (elements.emptyState) {
         elements.emptyState.style.display = 'none';
     }
-    if (elements.perfisGrid) {
-        elements.perfisGrid.style.display = 'grid';
+    if (elements.perfisTableContainer) {
+        elements.perfisTableContainer.style.display = 'block';
     }
 }
 

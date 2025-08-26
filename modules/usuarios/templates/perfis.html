@@ -107,9 +107,31 @@
         </div>
     </div>
 
-    <!-- Perfis Grid -->
-    <div id="perfis-grid" class="perfis-grid">
-        <!-- Cards de perfis serão inseridos aqui via JavaScript -->
+    <!-- Perfis Table -->
+    <div id="perfis-table-container" class="perfis-table-container">
+        <div class="table-section">
+            <div class="table-container">
+                <table class="perfis-table" id="table-perfis">
+                    <thead>
+                        <tr>
+                            <th>Nome do Perfil</th>
+                            <th>Descrição</th>
+                            <th>Módulos</th>
+                            <th>Usuários</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-perfis">
+                        <!-- Perfis serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+                <div class="empty-table" id="empty-perfis" style="display: none;">
+                    <i class="mdi mdi-shield-account-outline"></i>
+                    <p>Nenhum perfil encontrado</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Empty State -->

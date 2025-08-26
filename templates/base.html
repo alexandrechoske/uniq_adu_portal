@@ -665,6 +665,12 @@
                     <div class="flex items-center gap-3">
                         <!-- Avatar e informações do usuário -->
                         <div class="flex items-center gap-2">
+                            <!-- Shield icon for Module Administrators -->
+                            {% if session['user'].get('role') == 'interno_unique' and session['user'].get('perfil_principal', '').startswith('admin_') %}
+                            <div class="flex items-center justify-center w-8 h-8 bg-blue-700 rounded-full" title="Administrador de Módulo">
+                                <i class="mdi mdi-shield-account text-white text-lg"></i>
+                            </div>
+                            {% endif %}
 
                             <div class="flex flex-col text-left">
                                 <span class="text-sm font-medium">{{ session['user'].get('email', 'Usuário') }}</span>
@@ -673,6 +679,14 @@
                                         Cliente
                                     {% elif session['user'].get('role') == 'admin' %}
                                         Administrador
+                                    {% elif session['user'].get('role') == 'interno_unique' and session['user'].get('perfil_principal', '').startswith('admin_') %}
+                                        {% if session['user'].get('perfil_principal') == 'admin_operacao' %}
+                                            Admin Operacional
+                                        {% elif session['user'].get('perfil_principal') == 'admin_financeiro' %}
+                                            Admin Financeiro
+                                        {% else %}
+                                            Administrador de Módulo
+                                        {% endif %}
                                     {% else %}
                                         {{ session['user'].get('role', 'Usuário') }}
                                     {% endif %}

@@ -381,7 +381,34 @@ def carregar_usuarios():
                         user_whatsapp_map[user_id] = []
                     user_whatsapp_map[user_id].append(whatsapp)
 
-        # 5. Montar dados finais dos usuários com nova estrutura
+        # 5. Buscar perfis de usuários (se a tabela existir)
+        user_perfis_map = {}
+        try:
+            def _buscar_perfis():
+                return supabase_admin.table('users_perfis').select('user_id, perfil_id, perfis!inner(nome, descricao)').execute()
+            
+            perfis_response = retry_supabase_operation(_buscar_perfis)
+            
+            if perfis_response.data:
+                print(f"[DEBUG] {len(perfis_response.data)} associações de perfis encontradas")
+                for perfil_user in perfis_response.data:
+                    user_id = perfil_user.get('user_id')
+                    if user_id:
+                        if user_id not in user_perfis_map:
+                            user_perfis_map[user_id] = []
+                        user_perfis_map[user_id].append({
+                            'perfil_id': perfil_user.get('perfil_id'),
+                            'nome': perfil_user.get('perfis', {}).get('nome'),
+                            'descricao': perfil_user.get('perfis', {}).get('descricao')
+                        })
+        except Exception as perfil_error:
+            # Se a tabela não existir, continuar sem perfis
+            if 'does not exist' in str(perfil_error):
+                print(f"[DEBUG] Tabela users_perfis não existe, continuando sem perfis")
+            else:
+                print(f"[DEBUG] Erro ao carregar perfis: {str(perfil_error)}")
+
+        # 6. Montar dados finais dos usuários com nova estrutura
         for user in users:
             if not isinstance(user, dict):
                 continue
@@ -408,6 +435,9 @@ def carregar_usuarios():
             
             # Adicionar números de WhatsApp para todos os usuários
             user['whatsapp_numbers'] = user_whatsapp_map.get(user_id, [])
+            
+            # Adicionar perfis para todos os usuários
+            user['perfis'] = user_perfis_map.get(user_id, [])
         
         end_time = time.time()
         print(f"[DEBUG] Carregamento otimizado concluído em {end_time - start_time:.2f}s")
@@ -425,10 +455,28 @@ def carregar_usuarios():
 def index():
     try:
         users = get_cached_users()
-        return render_template('usuarios.html', users=users)
+        
+        # Get user session data for template variables
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        
+        return render_template('usuarios.html', 
+                             users=users,
+                             user_role=user_role,
+                             user_perfil_principal=user_perfil_principal)
     except Exception as e:
         flash(f'Erro ao carregar usuários: {str(e)}', 'error')
-        return render_template('usuarios.html', users=[])
+        
+        # Still pass user variables even on error
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        
+        return render_template('usuarios.html', 
+                             users=[],
+                             user_role=user_role,
+                             user_perfil_principal=user_perfil_principal)
 
 @bp.route('/refresh')
 @login_required
@@ -439,10 +487,28 @@ def refresh():
         invalidate_users_cache()
         users = get_cached_users()
         flash('Lista de usuários atualizada com sucesso!', 'success')
-        return render_template('usuarios.html', users=users)
+        
+        # Get user session data for template variables
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        
+        return render_template('usuarios.html', 
+                             users=users,
+                             user_role=user_role,
+                             user_perfil_principal=user_perfil_principal)
     except Exception as e:
         flash(f'Erro ao atualizar lista de usuários: {str(e)}', 'error')
-        return render_template('usuarios.html', users=[])
+        
+        # Still pass user variables even on error
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        
+        return render_template('usuarios.html', 
+                             users=[],
+                             user_role=user_role,
+                             user_perfil_principal=user_perfil_principal)
 
 @bp.route('/novo', methods=['GET'])
 @login_required
@@ -1733,17 +1799,50 @@ def obter_dados_usuario(user_id):
                             })
                             print(f"[DEBUG] Empresa detalhada: {empresa_info.get('nome_cliente')} (CNPJs: {len(empresa_info.get('cnpjs', []))})")
                 
-                user['empresas'] = empresas_detalhadas
+                # Use the same structure as carregar_usuarios() for consistency
+                user['agent_info'] = {'empresas': empresas_detalhadas}
                 print(f"[DEBUG] Total de empresas detalhadas: {len(empresas_detalhadas)}")
                 
             except Exception as e:
                 print(f"[DEBUG] Erro ao buscar empresas: {str(e)}")
                 import traceback
                 print(f"[DEBUG] Traceback: {traceback.format_exc()}")
-                user['empresas'] = []
+                user['agent_info'] = {'empresas': []}
         else:
-            user['empresas'] = []
+            user['agent_info'] = {'empresas': []}
             print(f"[DEBUG] Usuário com role {user.get('role')} não tem empresas associadas")
+        
+        # Load WhatsApp numbers for all users
+        try:
+            whatsapp_response = supabase_admin.table('user_whatsapp').select('*').eq('user_id', user_id).execute()
+            user['whatsapp_numbers'] = whatsapp_response.data or []
+            print(f"[DEBUG] Total de números WhatsApp: {len(user['whatsapp_numbers'])}")
+        except Exception as e:
+            print(f"[DEBUG] Erro ao buscar números WhatsApp: {str(e)}")
+            user['whatsapp_numbers'] = []
+        
+        # Load user profiles (if the table exists)
+        try:
+            perfis_response = supabase_admin.table('users_perfis').select('user_id, perfil_id, perfis!inner(nome, descricao)').eq('user_id', user_id).execute()
+            
+            perfis = []
+            if perfis_response.data:
+                for perfil_user in perfis_response.data:
+                    perfis.append({
+                        'perfil_id': perfil_user.get('perfil_id'),
+                        'nome': perfil_user.get('perfis', {}).get('nome'),
+                        'descricao': perfil_user.get('perfis', {}).get('descricao')
+                    })
+            
+            user['perfis'] = perfis
+            print(f"[DEBUG] Total de perfis: {len(user['perfis'])}")
+        except Exception as perfil_error:
+            # If the table doesn't exist, continue without profiles
+            if 'does not exist' in str(perfil_error):
+                print(f"[DEBUG] Tabela users_perfis não existe, continuando sem perfis")
+            else:
+                print(f"[DEBUG] Erro ao carregar perfis: {str(perfil_error)}")
+            user['perfis'] = []
         
         return jsonify({'success': True, 'data': user})
         
