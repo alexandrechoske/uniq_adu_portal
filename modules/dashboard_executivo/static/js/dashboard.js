@@ -2082,17 +2082,19 @@ function openProcessModal(operationIndex) {
     
     // Update country flag
     const flagImg = document.getElementById('detail-country-flag');
-    if (countryName && countryName !== 'N/A' && countryName !== '-') {
-        const countryCode = getCountryCode(countryName);
-        if (countryCode) {
-            flagImg.src = `https://flagsapi.com/${countryCode}/flat/32.png`;
-            flagImg.alt = `Bandeira de ${countryName}`;
-            flagImg.style.display = 'inline';
+    if (flagImg) {
+        if (countryName && countryName !== 'N/A' && countryName !== '-') {
+            const countryCode = getCountryCode(countryName);
+            if (countryCode) {
+                flagImg.src = `https://flagsapi.com/${countryCode}/flat/32.png`;
+                flagImg.alt = `Bandeira de ${countryName}`;
+                flagImg.style.display = 'inline';
+            } else {
+                flagImg.style.display = 'none';
+            }
         } else {
             flagImg.style.display = 'none';
         }
-    } else {
-        flagImg.style.display = 'none';
     }
     
     // Update cargo and transport details

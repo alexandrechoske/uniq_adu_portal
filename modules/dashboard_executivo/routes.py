@@ -1665,6 +1665,11 @@ def get_paises_procedencia():
         # Ordenar por total de processos (decrescente)
         paises_stats = paises_stats.sort_values('total_processos', ascending=False)
         
+        # NOVO: Limitar para top 7 países para usuários system
+        user_role = user_data.get('role', '')
+        if user_role in ['admin', 'interno_unique']:
+            paises_stats = paises_stats.head(7)
+        
         # Converter para lista de dicionários
         paises_data = []
         for _, row in paises_stats.iterrows():
