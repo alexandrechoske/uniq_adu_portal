@@ -3297,13 +3297,22 @@ def api_update_users_perfis(user_id):
                         # Usar o primeiro perfil como principal
                         update_data['perfil_principal'] = perfis_ids[0]
                         
-                        # Salvar todos os perfis em JSON (usando o nome correto do campo)
-                        import json
-                        update_data['perfis_json'] = json.dumps(perfis_ids)
+                        # CORREÇÃO: Garantir que perfis_json seja salvo como array JSON, não string
+                        # Se perfis_ids já é uma lista, usar diretamente
+                        # Se for string JSON, converter para lista primeiro
+                        if isinstance(perfis_ids, str):
+                            try:
+                                perfis_array = json.loads(perfis_ids)
+                            except json.JSONDecodeError:
+                                perfis_array = [perfis_ids]  # Se não for JSON válido, tratar como único perfil
+                        else:
+                            perfis_array = perfis_ids  # Já é lista
+                        
+                        update_data['perfis_json'] = perfis_array  # Array direto para PostgreSQL JSONB
                     else:
                         # Limpar perfis
                         update_data['perfil_principal'] = None
-                        update_data['perfis_json'] = '[]'
+                        update_data['perfis_json'] = []  # Array vazio
                     
                     print(f"[PERFIS] 🔧 Tentando atualizar usuário {user_id} com dados: {update_data}")
                     

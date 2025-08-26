@@ -152,6 +152,68 @@ class PerfilAccessService:
             print(f"[ACCESS_SERVICE] Basic Users ({user_perfil_principal}) - módulos acessíveis finais: {accessible_modules}")
             return accessible_modules
         
+        # Specific Profile Users: Users with specific profile names as perfil_principal
+        # Handle users like Kauan with perfil_principal='financeiro_fluxo_de_caixa'
+        if user_role == 'interno_unique' and user_perfil_principal not in ['basico'] and not user_perfil_principal.startswith('admin_'):
+            accessible_modules = set()
+            
+            # Define specific profile access patterns
+            profile_access_map = {
+                'financeiro_fluxo_de_caixa': {
+                    'modules': ['financeiro', 'fluxo_de_caixa'],
+                    'pages': ['fluxo_caixa']
+                },
+                'financeiro_completo': {
+                    'modules': ['financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'],
+                    'pages': ['*']  # All financial pages
+                },
+                'importacao_basico': {
+                    'modules': ['importacoes', 'dashboard_executivo'],
+                    'pages': ['dashboard_executivo', 'dashboard_resumido']
+                },
+                'importacao_completo': {
+                    'modules': ['importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'conferencia', 'agente'],
+                    'pages': ['*']  # All importation pages
+                }
+            }
+            
+            # Check if user's profile is in the map
+            if user_perfil_principal in profile_access_map:
+                profile_config = profile_access_map[user_perfil_principal]
+                accessible_modules.update(profile_config['modules'])
+                print(f"[ACCESS_SERVICE] Specific Profile User ({user_perfil_principal}) - módulos definidos: {profile_config['modules']}")
+            else:
+                # If specific profile not found, try to derive access from perfis_json
+                print(f"[ACCESS_SERVICE] Profile {user_perfil_principal} não encontrado no mapa, tentando derivar do perfis_json")
+                
+                # Try to get access from user_perfis_info if available
+                for perfil_info in user_perfis_info:
+                    perfil_nome = perfil_info.get('perfil_nome')
+                    if perfil_nome == user_perfil_principal:
+                        modulos = perfil_info.get('modulos', [])
+                        
+                        for modulo in modulos:
+                            modulo_codigo = modulo.get('codigo')
+                            if modulo_codigo:
+                                # Apply module mapping
+                                modulo_mapeado = PerfilAccessService.MODULE_MAPPING.get(modulo_codigo, modulo_codigo)
+                                accessible_modules.add(modulo_mapeado)
+                                print(f"[ACCESS_SERVICE] Adicionado módulo do perfis_json: {modulo_codigo} → {modulo_mapeado}")
+                                
+                                # Add specific page modules
+                                modulo_paginas = modulo.get('paginas', [])
+                                for pagina in modulo_paginas:
+                                    pagina_codigo = pagina if isinstance(pagina, str) else pagina.get('codigo', '')
+                                    
+                                    if pagina_codigo in PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING:
+                                        endpoint_module = PerfilAccessService.PAGE_TO_ENDPOINT_MAPPING[pagina_codigo]
+                                        accessible_modules.add(endpoint_module)
+                                        print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
+            
+            accessible_modules = list(accessible_modules)
+            print(f"[ACCESS_SERVICE] Specific Profile User ({user_perfil_principal}) - módulos acessíveis finais: {accessible_modules}")
+            return accessible_modules
+        
         # Fallback - sem acesso
         print(f"[ACCESS_SERVICE] Sem acesso definido para role={user_role}, perfil_principal={user_perfil_principal}")
         return []
@@ -244,6 +306,82 @@ class PerfilAccessService:
             
             accessible_pages = list(accessible_pages)
             print(f"[ACCESS_SERVICE] Basic Users - páginas acessíveis no módulo {modulo_codigo}: {accessible_pages}")
+            return accessible_pages
+        
+        # Specific Profile Users: Handle users with specific profile names as perfil_principal
+        if user_role == 'interno_unique' and user_perfil_principal not in ['basico'] and not user_perfil_principal.startswith('admin_'):
+            # Define specific profile page access patterns
+            profile_page_access_map = {
+                'financeiro_fluxo_de_caixa': {
+                    'financeiro': ['fluxo_caixa'],
+                    'fluxo_de_caixa': ['*']  # Full access to fluxo_de_caixa module
+                },
+                'financeiro_completo': {
+                    'financeiro': ['*'],  # All financial pages
+                    'fin_dashboard_executivo': ['*'],
+                    'fluxo_de_caixa': ['*'],
+                    'despesas_anual': ['*'],
+                    'faturamento_anual': ['*']
+                },
+                'importacao_basico': {
+                    'importacoes': ['dashboard_executivo', 'dashboard_resumido'],
+                    'dashboard_executivo': ['*']
+                },
+                'importacao_completo': {
+                    'importacoes': ['*'],
+                    'dashboard_executivo': ['*'],
+                    'dash_importacoes_resumido': ['*'],
+                    'export_relatorios': ['*'],
+                    'conferencia': ['*'],
+                    'agente': ['*']
+                }
+            }
+            
+            # Check if user's profile has defined access to this module
+            if user_perfil_principal in profile_page_access_map:
+                profile_config = profile_page_access_map[user_perfil_principal]
+                module_access = profile_config.get(modulo_codigo, [])
+                
+                if module_access:
+                    print(f"[ACCESS_SERVICE] Specific Profile User ({user_perfil_principal}) - páginas no módulo {modulo_codigo}: {module_access}")
+                    return module_access
+            
+            # Fallback: try to derive from user_perfis_info
+            accessible_pages = set()
+            
+            # Create reverse mapping for original module search
+            reverse_mapping = {v: k for k, v in PerfilAccessService.MODULE_MAPPING.items()}
+            modulo_original = reverse_mapping.get(modulo_codigo, modulo_codigo)
+            
+            for perfil_info in user_perfis_info:
+                perfil_nome = perfil_info.get('perfil_nome')
+                if perfil_nome == user_perfil_principal:
+                    modulos = perfil_info.get('modulos', [])
+                    
+                    for modulo in modulos:
+                        # Check both original and mapped module codes
+                        modulo_db = modulo.get('codigo')
+                        if modulo_db == modulo_codigo or modulo_db == modulo_original:
+                            modulo_paginas = modulo.get('paginas', [])
+                            
+                            # If empty list or contains '*', access to all pages
+                            if not modulo_paginas or '*' in modulo_paginas:
+                                print(f"[ACCESS_SERVICE] Perfil {perfil_nome} permite todas as páginas do módulo {modulo_codigo}")
+                                return ['*']
+                            
+                            # Add specific pages
+                            for pagina in modulo_paginas:
+                                if isinstance(pagina, dict):
+                                    pagina_codigo = pagina.get('codigo')
+                                    if pagina_codigo:
+                                        accessible_pages.add(pagina_codigo)
+                                        print(f"[ACCESS_SERVICE] Adicionada página: {pagina_codigo} (perfil: {perfil_nome})")
+                                else:
+                                    accessible_pages.add(pagina)
+                                    print(f"[ACCESS_SERVICE] Adicionada página: {pagina} (perfil: {perfil_nome})")
+            
+            accessible_pages = list(accessible_pages)
+            print(f"[ACCESS_SERVICE] Specific Profile User ({user_perfil_principal}) - páginas acessíveis no módulo {modulo_codigo}: {accessible_pages}")
             return accessible_pages
         
         # Fallback - sem acesso

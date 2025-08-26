@@ -43,6 +43,8 @@
             </div>
         </div>
         
+        <!-- Admin KPI - Only visible to Master Admins -->
+        {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
         <div class="kpi-card kpi-success">
             <div class="kpi-icon">
                 <i class="mdi mdi-shield-crown"></i>
@@ -52,6 +54,7 @@
                 <p class="kpi-value" id="kpi-admin">0</p>
             </div>
         </div>
+        {% endif %}
         
         <div class="kpi-card kpi-info">
             <div class="kpi-icon">
@@ -103,7 +106,9 @@
                 <label for="filter-perfil" class="filter-label">Perfil:</label>
                 <select id="filter-perfil" class="filter-select">
                     <option value="">Todos os perfis</option>
+                    {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
                     <option value="admin">Administradores</option>
+                    {% endif %}
                     <option value="interno_unique">Equipe Interna</option>
                     <option value="cliente_unique">Clientes</option>
                 </select>
@@ -124,7 +129,8 @@
 
     <!-- Users Cards by Role -->
     <div class="users-sections">
-        <!-- Administradores -->
+        <!-- Administradores - Only visible to Master Admins -->
+        {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
         <div class="role-section" id="section-admin">
             <div class="section-header">
                 <div class="section-title">
@@ -144,6 +150,7 @@
                 <!-- Usuários admin serão inseridos aqui -->
             </div>
         </div>
+        {% endif %}
 
         <!-- Equipe Interna -->
         <div class="role-section" id="section-interno">
@@ -250,7 +257,9 @@
                                 <label for="role" class="form-label required">Perfil de Acesso</label>
                                 <select id="role" name="role" class="form-select" required>
                                     <option value="">Selecione um perfil</option>
+                                    {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
                                     <option value="admin">Administrador</option>
+                                    {% endif %}
                                     <option value="interno_unique">Equipe Interna</option>
                                     <option value="cliente_unique">Cliente</option>
                                 </select>

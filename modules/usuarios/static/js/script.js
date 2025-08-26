@@ -365,8 +365,10 @@ function updateKPIs() {
     // Usuários ativos
     const ativosCount = users.filter(u => u.ativo === true || u.ativo === 'true').length;
     
-    // Atualizar KPIs
-    elements.kpiAdmin.textContent = adminCount;
+    // Atualizar KPIs (verificar se elementos existem)
+    if (elements.kpiAdmin) {
+        elements.kpiAdmin.textContent = adminCount;
+    }
     elements.kpiInterno.textContent = internoCount;
     elements.kpiClientes.textContent = clientesCount;
     elements.kpiAtivos.textContent = ativosCount;
@@ -445,18 +447,24 @@ function displayUsersByRole() {
     
     console.log('[USUARIOS] Usuários por role:', usersByRole);
     
-    // Atualizar contadores das seções
-    elements.countAdmin.textContent = usersByRole.admin.length;
+    // Atualizar contadores das seções (verificar se elementos existem)
+    if (elements.countAdmin) {
+        elements.countAdmin.textContent = usersByRole.admin.length;
+    }
     elements.countInterno.textContent = usersByRole.interno_unique.length;
     elements.countClientes.textContent = usersByRole.cliente_unique.length;
     
-    // Renderizar usuários em cada seção
-    renderUsersInGrid(elements.gridAdmin, usersByRole.admin);
+    // Renderizar usuários em cada seção (apenas se as seções existirem)
+    if (elements.gridAdmin) {
+        renderUsersInGrid(elements.gridAdmin, usersByRole.admin);
+    }
     renderUsersInGrid(elements.gridInterno, usersByRole.interno_unique);
     renderUsersInGrid(elements.gridClientes, usersByRole.cliente_unique);
     
-    // Mostrar/ocultar seções baseado na presença de usuários
-    toggleSectionVisibility(elements.sectionAdmin, usersByRole.admin.length > 0);
+    // Mostrar/ocultar seções baseado na presença de usuários (apenas se existirem)
+    if (elements.sectionAdmin) {
+        toggleSectionVisibility(elements.sectionAdmin, usersByRole.admin.length > 0);
+    }
     toggleSectionVisibility(elements.sectionInterno, usersByRole.interno_unique.length > 0);
     toggleSectionVisibility(elements.sectionClientes, usersByRole.cliente_unique.length > 0);
     
