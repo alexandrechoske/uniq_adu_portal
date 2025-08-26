@@ -49,28 +49,30 @@ class PerfilAccessService:
         print(f"[ACCESS_SERVICE] Verificando módulos acessíveis para {user_email}")
         print(f"[ACCESS_SERVICE] Role: {user_role}, Perfil Principal: {user_perfil_principal}")
         
-        # Master Admins: admin + admin_geral - acesso total
-        if user_role == 'admin' and user_perfil_principal == 'admin_geral':
+        # Master Admins: admin + master_admin - acesso total
+        if user_role == 'admin' and user_perfil_principal == 'master_admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
                 'usuarios', 'agente', 'conferencia', 'materiais', 'config',
                 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
             ]
-            print(f"[ACCESS_SERVICE] Master Admin (admin_geral) - módulos disponíveis: {accessible_modules}")
+            print(f"[ACCESS_SERVICE] Master Admin (master_admin) - módulos disponíveis: {accessible_modules}")
             return accessible_modules
         
-        # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+        # Module Admins: interno_unique + admin_operacao/admin_financeiro
         if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
             accessible_modules = set()
             
-            if user_perfil_principal == 'admin_importacoes':
-                # Admin de Importações - APENAS módulos de importação + gestão de usuários
+            if user_perfil_principal == 'admin_operacao':
+                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 
-                    'export_relatorios', 'usuarios'
+                    'export_relatorios', 'conferencia', 'agente', 'usuarios',
+                    # Future modules ready for implementation:
+                    'consultoria', 'exportacao'
                 ])
-                print(f"[ACCESS_SERVICE] Module Admin (admin_importacoes) - módulos disponíveis: {list(accessible_modules)}")
+                print(f"[ACCESS_SERVICE] Module Admin (admin_operacao) - módulos disponíveis: {list(accessible_modules)}")
                 
             elif user_perfil_principal == 'admin_financeiro':
                 # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários
@@ -174,6 +176,10 @@ class PerfilAccessService:
                 'importacao_completo': {
                     'modules': ['importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'conferencia', 'agente'],
                     'pages': ['*']  # All importation pages
+                },
+                'importacoes_completo': {
+                    'modules': ['importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'conferencia', 'agente'],
+                    'pages': ['*']  # All importation pages
                 }
             }
             
@@ -237,20 +243,25 @@ class PerfilAccessService:
         print(f"[ACCESS_SERVICE] Verificando páginas acessíveis no módulo {modulo_codigo}")
         print(f"[ACCESS_SERVICE] Role: {user_role}, Perfil Principal: {user_perfil_principal}")
         
-        # Master Admins: admin + admin_geral - acesso total
-        if user_role == 'admin' and user_perfil_principal == 'admin_geral':
-            print(f"[ACCESS_SERVICE] Master Admin (admin_geral) - todas as páginas disponíveis no módulo {modulo_codigo}")
+        # Master Admins: admin + master_admin - acesso total
+        if user_role == 'admin' and user_perfil_principal == 'master_admin':
+            print(f"[ACCESS_SERVICE] Master Admin (master_admin) - todas as páginas disponíveis no módulo {modulo_codigo}")
             return ['*']
         
-        # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+        # Module Admins: interno_unique + admin_operacao/admin_financeiro
         if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
             # Verificar se o usuário administra este módulo
             user_manages_module = False
             
-            if user_perfil_principal == 'admin_importacoes':
-                # Mapear módulos de importação
-                importacao_modules = ['importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios']
-                user_manages_module = modulo_codigo in importacao_modules
+            if user_perfil_principal == 'admin_operacao':
+                # Mapear módulos operacionais: Importações, Consultoria, Exportação
+                operational_modules = [
+                    'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios',
+                    'conferencia', 'agente',  # Existing importacao modules
+                    'consultoria', 'con',  # Future consultoria modules 
+                    'exportacao', 'exp'  # Future exportacao modules
+                ]
+                user_manages_module = modulo_codigo in operational_modules
                 
             elif user_perfil_principal == 'admin_financeiro':
                 # Mapear módulos financeiros
@@ -334,6 +345,14 @@ class PerfilAccessService:
                     'export_relatorios': ['*'],
                     'conferencia': ['*'],
                     'agente': ['*']
+                },
+                'importacoes_completo': {
+                    'importacoes': ['*'],
+                    'dashboard_executivo': ['*'],
+                    'dash_importacoes_resumido': ['*'],
+                    'export_relatorios': ['*'],
+                    'conferencia': ['*'],
+                    'agente': ['*']
                 }
             }
             
@@ -411,8 +430,8 @@ class PerfilAccessService:
             'admin_scope': 'none'
         }
         
-        # Master Admins: admin + admin_geral
-        if user_role == 'admin' and user_perfil_principal == 'admin_geral':
+        # Master Admins: admin + master_admin
+        if user_role == 'admin' and user_perfil_principal == 'master_admin':
             capabilities.update({
                 'can_manage_users': True,
                 'can_manage_all_users': True,
@@ -422,12 +441,12 @@ class PerfilAccessService:
                 'admin_scope': 'system'
             })
             
-        # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+        # Module Admins: interno_unique + admin_operacao/admin_financeiro
         elif user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
             managed_modules = []
             
-            if user_perfil_principal == 'admin_importacoes':
-                managed_modules = ['imp']
+            if user_perfil_principal == 'admin_operacao':
+                managed_modules = ['imp', 'con', 'exp']  # Operational modules
             elif user_perfil_principal == 'admin_financeiro':
                 managed_modules = ['fin']
             

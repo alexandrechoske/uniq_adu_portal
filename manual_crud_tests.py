@@ -227,7 +227,7 @@ def test_security_boundaries_manual():
     print("   - ❌ Should fail: http://localhost:5000/usuarios/perfis")
     print("   - ❌ Should fail: http://localhost:5000/usuarios/")
     print("   - ❌ Should redirect to login: http://localhost:5000/usuarios/api/users")
-    print("3. Login as Lucas (admin_importacoes)")
+    print("3. Login as Lucas (admin_operacao)")
     print("4. Try to:")
     print("   - ❌ Should fail: Create financial profiles")
     print("   - ❌ Should fail: Assign financial profiles to users")

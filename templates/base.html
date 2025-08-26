@@ -727,7 +727,7 @@
             {% set accessible_modules = get_user_accessible_modules() %}
             {% set user_role = session.get('user', {}).get('role') %}
             {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
-            {% set is_system_user = (user_role == 'admin' and user_perfil_principal == 'admin_geral') or (user_role == 'interno_unique' and user_perfil_principal.startswith('admin_')) %}
+            {% set is_system_user = (user_role == 'admin' and user_perfil_principal == 'master_admin') or (user_role == 'interno_unique' and user_perfil_principal.startswith('admin_')) %}
             
             <!-- Home/Menu Principal -->
             <a href="{{ url_for('menu.menu_home') }}"
@@ -861,8 +861,8 @@
                     
                     {% set user_role = session.get('user', {}).get('role') %}
                     {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
-                    {# Only Master Admins (admin + admin_geral) can see Perfis page #}
-                    {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
+                    {# Only Master Admins (admin + master_admin) can see Perfis page #}
+                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
                     <a href="{{ url_for('usuarios.perfis_home') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
                        title="Perfis">

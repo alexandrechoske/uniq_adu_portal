@@ -140,7 +140,7 @@ def invalidate_users_cache():
     print("[DEBUG] Cache de usuários invalidado")
 
 def is_master_admin_required():
-    """Decorador para verificar se o usuário é Master Admin (admin + admin_geral)"""
+    """Decorador para verificar se o usuário é Master Admin (admin + master_admin)"""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -154,7 +154,7 @@ def is_master_admin_required():
             user_perfil_principal = user.get('perfil_principal', 'basico')
             
             # Verificar se é Master Admin
-            if not (user_role == 'admin' and user_perfil_principal == 'admin_geral'):
+            if not (user_role == 'admin' and user_perfil_principal == 'master_admin'):
                 print(f"[ACCESS_DENIED] Usuário {user.get('email')} tentou acessar funcionalidade restrita a Master Admin")
                 print(f"[ACCESS_DENIED] Role atual: {user_role}, Perfil Principal: {user_perfil_principal}")
                 flash('Acesso negado. Esta funcionalidade é restrita a administradores mestres.', 'error')
@@ -176,15 +176,15 @@ def can_edit_user(editor_user, target_user_data):
     print(f"[HIERARCHY_CHECK] Target: {target_role} + {target_perfil_principal}")
     
     # Master Admins podem editar qualquer um
-    if editor_role == 'admin' and editor_perfil_principal == 'admin_geral':
+    if editor_role == 'admin' and editor_perfil_principal == 'master_admin':
         print(f"[HIERARCHY_CHECK] Master Admin pode editar qualquer usuário")
         return True
     
     # Module Admins têm restrições
     if editor_role == 'interno_unique' and editor_perfil_principal.startswith('admin_'):
         # Module Admins NÃO podem editar:
-        # 1. Master Admins (admin + admin_geral)
-        if target_role == 'admin' and target_perfil_principal == 'admin_geral':
+        # 1. Master Admins (admin + master_admin)
+        if target_role == 'admin' and target_perfil_principal == 'master_admin':
             print(f"[HIERARCHY_CHECK] Module Admin não pode editar Master Admin")
             return False
         
@@ -212,22 +212,35 @@ def can_assign_perfil(editor_user, perfil_id):
     print(f"[PERFIL_ASSIGNMENT_CHECK] Tentando atribuir perfil: {perfil_id}")
     
     # Master Admins podem atribuir qualquer perfil
-    if editor_role == 'admin' and editor_perfil_principal == 'admin_geral':
+    if editor_role == 'admin' and editor_perfil_principal == 'master_admin':
         print(f"[PERFIL_ASSIGNMENT_CHECK] Master Admin pode atribuir qualquer perfil")
         return True
     
     # Module Admins têm restrições
     if editor_role == 'interno_unique' and editor_perfil_principal.startswith('admin_'):
-        # Lucas (admin_importacoes) pode atribuir apenas perfis relacionados a importação
-        if editor_perfil_principal == 'admin_importacoes':
-            allowed_perfils = ['cliente_basico', 'imp_basico', 'imp_avancado', 'importacao_basico', 'importacao_avancado']
-            can_assign = perfil_id in allowed_perfils or 'imp' in perfil_id or 'importa' in perfil_id.lower()
-            print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Importações pode atribuir {perfil_id}: {can_assign}")
+        # Admin Operacional pode atribuir perfis relacionados a módulos operacionais (Importação, Consultoria, Exportação)
+        if editor_perfil_principal == 'admin_operacao':
+            allowed_perfils = [
+                'cliente_basico', 'basico', 
+                # Perfis de Importação
+                'imp_basico', 'imp_avancado', 'importacao_basico', 'importacao_avancado', 'importacoes_completo',
+                # Perfis de Consultoria (preparado para futuro)
+                'con_basico', 'con_avancado', 'consultoria_basico', 'consultoria_avancado', 'consultoria_completo',
+                # Perfis de Exportação (preparado para futuro)
+                'exp_basico', 'exp_avancado', 'exportacao_basico', 'exportacao_avancado', 'exportacao_completo'
+            ]
+            can_assign = (
+                perfil_id in allowed_perfils or 
+                'imp' in perfil_id or 'importa' in perfil_id.lower() or 
+                'exp' in perfil_id or 'exporta' in perfil_id.lower() or
+                'con' in perfil_id or 'consultoria' in perfil_id.lower()
+            )
+            print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Operacional pode atribuir {perfil_id}: {can_assign}")
             return can_assign
         
-        # Alexandre (admin_financeiro) pode atribuir apenas perfis relacionados a financeiro
+        # Admin Financeiro pode atribuir apenas perfis relacionados a financeiro
         elif editor_perfil_principal == 'admin_financeiro':
-            allowed_perfils = ['cliente_basico', 'fin_basico', 'fin_avancado', 'financeiro_basico', 'financeiro_avancado']
+            allowed_perfils = ['cliente_basico', 'basico', 'fin_basico', 'fin_avancado', 'financeiro_basico', 'financeiro_avancado', 'financeiro_completo', 'financeiro_fluxo_de_caixa']
             can_assign = perfil_id in allowed_perfils or 'fin' in perfil_id or 'financeiro' in perfil_id.lower()
             print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Financeiro pode atribuir {perfil_id}: {can_assign}")
             return can_assign
@@ -494,10 +507,10 @@ def salvar_usuario():
         if perfil_principal:
             if role == 'cliente_unique' and perfil_principal != 'basico':
                 errors.append('Clientes só podem ter perfil básico')
-            elif role == 'interno_unique' and perfil_principal not in ['basico', 'admin_importacoes', 'admin_financeiro']:
+            elif role == 'interno_unique' and perfil_principal not in ['basico', 'admin_operacao', 'admin_financeiro']:
                 errors.append('Funcionários internos podem ter perfil básico ou admin de módulo')
-            elif role == 'admin' and perfil_principal != 'admin_geral':
-                errors.append('Administradores só podem ter perfil admin_geral')
+            elif role == 'admin' and perfil_principal != 'master_admin':
+                errors.append('Administradores só podem ter perfil master_admin')
 
         # Validações específicas para novo usuário
         if not user_id:
@@ -3166,12 +3179,12 @@ def api_get_users_perfis(user_id):
                     # APENAS como último recurso para Alexandre
                     elif user_data.get('email') == 'alexandre.choski@gmail.com' and len(perfis) == 0:
                         perfis = [{
-                            'id': 'admin_geral',
-                            'perfil_nome': 'admin_geral',
-                            'descricao': 'Perfil de acesso Admin Geral',
-                            'codigo': 'admin_geral'
+                            'id': 'master_admin',
+                            'perfil_nome': 'master_admin',
+                            'descricao': 'Perfil de acesso Master Admin',
+                            'codigo': 'master_admin'
                         }]
-                        print(f"[PERFIS] 🔄 Aplicando perfil admin_geral para Alexandre (fallback)")
+                        print(f"[PERFIS] 🔄 Aplicando perfil master_admin para Alexandre (fallback)")
                 
                 print(f"[PERFIS] 📋 Solução alternativa: Usuário {user_id} possui {len(perfis)} perfis")
             else:
@@ -3212,7 +3225,7 @@ def api_validate_perfis():
         editor_user = session.get('user', {})
         
         # Se não é Master Admin, validar cada perfil
-        if not (editor_user.get('role') == 'admin' and editor_user.get('perfil_principal') == 'admin_geral'):
+        if not (editor_user.get('role') == 'admin' and editor_user.get('perfil_principal') == 'master_admin'):
             invalid_perfis = []
             for perfil_id in perfis_ids:
                 if not can_assign_perfil(editor_user, perfil_id):
@@ -3262,7 +3275,7 @@ def api_update_users_perfis(user_id):
         editor_user = session.get('user', {})
         
         # Se não é Master Admin, validar cada perfil
-        if not (editor_user.get('role') == 'admin' and editor_user.get('perfil_principal') == 'admin_geral'):
+        if not (editor_user.get('role') == 'admin' and editor_user.get('perfil_principal') == 'master_admin'):
             for perfil_id in perfis_ids:
                 if not can_assign_perfil(editor_user, perfil_id):
                     print(f"[PERFIL_ASSIGNMENT_CHECK] Acesso negado: {editor_user.get('email')} tentou atribuir perfil {perfil_id}")

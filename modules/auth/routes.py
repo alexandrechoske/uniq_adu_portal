@@ -191,12 +191,12 @@ def role_required(allowed_roles):
             
             # Verificar se é Module Admin tentando acessar gestão de usuários
             if 'admin' in allowed_roles:
-                # Master Admins: admin + admin_geral
-                if user_role == 'admin' and user_perfil_principal == 'admin_geral':
-                    print(f"[AUTH] Master Admin (admin_geral) autorizado para {allowed_roles}")
+                # Master Admins: admin + master_admin
+                if user_role == 'admin' and user_perfil_principal == 'master_admin':
+                    print(f"[AUTH] Master Admin (master_admin) autorizado para {allowed_roles}")
                     return f(*args, **kwargs)
                 
-                # Module Admins: interno_unique + admin_importacoes/admin_financeiro
+                # Module Admins: interno_unique + admin_operacao/admin_financeiro
                 if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
                     print(f"[AUTH] Module Admin ({user_perfil_principal}) autorizado para {allowed_roles}")
                     return f(*args, **kwargs)

@@ -40,14 +40,14 @@ const ROLE_CONFIG = {
         icon: 'mdi-shield-crown',
         color: 'success',
         description: 'Acesso total ao sistema',
-        perfil_principal_allowed: ['admin_geral']
+        perfil_principal_allowed: ['master_admin']
     },
     interno_unique: {
         label: 'Equipe Interna',
         icon: 'mdi-account-tie',
         color: 'info',
         description: 'Colaboradores da Unique',
-        perfil_principal_allowed: ['basico', 'admin_importacoes', 'admin_financeiro']
+        perfil_principal_allowed: ['basico', 'admin_operacao', 'admin_financeiro']
     },
     cliente_unique: {
         label: 'Cliente',
@@ -64,14 +64,14 @@ const PERFIL_PRINCIPAL_CONFIG = {
         description: 'Acesso básico para consulta',
         icon: 'mdi-account'
     },
-    admin_geral: {
-        label: 'Admin Geral',
+    master_admin: {
+        label: 'Master Admin',
         description: 'Administração completa do sistema',
         icon: 'mdi-shield-crown'
     },
-    admin_importacoes: {
-        label: 'Admin Importações',
-        description: 'Administra apenas o módulo de importações',
+    admin_operacao: {
+        label: 'Admin Operacional',
+        description: 'Administra módulos operacionais (Importação, Consultoria, Exportação)',
         icon: 'mdi-ship'
     },
     admin_financeiro: {
@@ -786,6 +786,76 @@ function handleRoleChange() {
     } else {
         hideEmpresasSection();
     }
+    
+    // Module Administrator section - only for Master Admins creating Equipe Interna users
+    handleModuleAdminSection(role);
+}
+
+/**
+ * Handles Module Administrator section visibility and functionality
+ */
+function handleModuleAdminSection(role) {
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    
+    if (!moduleAdminSection) {
+        // Module admin section not available (user is not Master Admin)
+        return;
+    }
+    
+    if (role === 'interno_unique') {
+        // Show module admin section for Equipe Interna
+        moduleAdminSection.style.display = 'block';
+        moduleAdminSection.classList.add('active');
+        
+        // Initialize module admin event listeners if not already done
+        initializeModuleAdminEventListeners();
+    } else {
+        // Hide module admin section for other roles
+        moduleAdminSection.style.display = 'none';
+        moduleAdminSection.classList.remove('active');
+        
+        // Reset to regular user when hidden
+        const noneRadio = document.querySelector('input[name="module_admin"][value="none"]');
+        if (noneRadio) {
+            noneRadio.checked = true;
+        }
+    }
+}
+
+/**
+ * Initializes Module Administrator section event listeners
+ */
+function initializeModuleAdminEventListeners() {
+    const moduleAdminRadios = document.querySelectorAll('input[name="module_admin"]');
+    
+    moduleAdminRadios.forEach(radio => {
+        // Remove existing listeners to avoid duplicates
+        radio.removeEventListener('change', handleModuleAdminChange);
+        // Add listener
+        radio.addEventListener('change', handleModuleAdminChange);
+    });
+}
+
+/**
+ * Handles Module Administrator radio button changes
+ */
+function handleModuleAdminChange(event) {
+    const selectedValue = event.target.value;
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    
+    console.log('[MODULE_ADMIN] Selected module admin type:', selectedValue);
+    
+    // Update visual feedback based on selection
+    if (selectedValue !== 'none') {
+        moduleAdminSection.classList.add('active');
+        
+        // Show notification about module admin selection
+        const moduleLabel = selectedValue === 'admin_operacao' ? 'Operacional' : 'Financeiro';
+        console.log(`[MODULE_ADMIN] User will be Module Administrator for: ${moduleLabel}`);
+    } else {
+        moduleAdminSection.classList.remove('active');
+        console.log('[MODULE_ADMIN] User will be regular internal user');
+    }
 }
 
 /**
@@ -919,6 +989,19 @@ function hideFormLoading() {
 function clearForm() {
     if (elements.formUsuario) {
         elements.formUsuario.reset();
+    }
+    
+    // Reset module admin section
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    if (moduleAdminSection) {
+        moduleAdminSection.style.display = 'none';
+        moduleAdminSection.classList.remove('active');
+        
+        // Reset to "none" option
+        const noneRadio = document.querySelector('input[name="module_admin"][value="none"]');
+        if (noneRadio) {
+            noneRadio.checked = true;
+        }
     }
     
     clearEmpresasList();
@@ -1061,7 +1144,7 @@ async function updateUser() {
  * Coleta dados do formulário
  */
 function collectUserFormData() {
-    return {
+    const formData = {
         name: document.getElementById('nome').value.trim(),
         email: document.getElementById('email').value.trim(),
         role: document.getElementById('role').value,
@@ -1069,6 +1152,33 @@ function collectUserFormData() {
         password: document.getElementById('senha')?.value,
         confirm_password: document.getElementById('confirmar_senha')?.value
     };
+    
+    // Handle Module Administrator selection for perfil_principal
+    const moduleAdminSelection = getModuleAdminSelection();
+    
+    if (moduleAdminSelection && moduleAdminSelection !== 'none') {
+        // User selected a module admin role
+        formData.perfil_principal = moduleAdminSelection;
+        console.log('[MODULE_ADMIN] Setting perfil_principal to:', moduleAdminSelection);
+    } else {
+        // Regular user or admin role
+        if (formData.role === 'admin') {
+            formData.perfil_principal = 'master_admin';
+        } else {
+            formData.perfil_principal = 'basico';
+        }
+    }
+    
+    console.log('[FORM_DATA] Collected user data:', formData);
+    return formData;
+}
+
+/**
+ * Gets the selected module administrator option
+ */
+function getModuleAdminSelection() {
+    const selectedRadio = document.querySelector('input[name="module_admin"]:checked');
+    return selectedRadio ? selectedRadio.value : 'none';
 }
 
 /**

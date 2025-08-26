@@ -44,7 +44,7 @@
         </div>
         
         <!-- Admin KPI - Only visible to Master Admins -->
-        {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
+        {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
         <div class="kpi-card kpi-success">
             <div class="kpi-icon">
                 <i class="mdi mdi-shield-crown"></i>
@@ -106,7 +106,7 @@
                 <label for="filter-perfil" class="filter-label">Perfil:</label>
                 <select id="filter-perfil" class="filter-select">
                     <option value="">Todos os perfis</option>
-                    {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
+                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
                     <option value="admin">Administradores</option>
                     {% endif %}
                     <option value="interno_unique">Equipe Interna</option>
@@ -130,7 +130,7 @@
     <!-- Users Cards by Role -->
     <div class="users-sections">
         <!-- Administradores - Only visible to Master Admins -->
-        {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
+        {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
         <div class="role-section" id="section-admin">
             <div class="section-header">
                 <div class="section-title">
@@ -263,13 +263,47 @@
                                 <label for="role" class="form-label required">Perfil de Acesso</label>
                                 <select id="role" name="role" class="form-select" required>
                                     <option value="">Selecione um perfil</option>
-                                    {% if user_role == 'admin' and user_perfil_principal == 'admin_geral' %}
+                                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
                                     <option value="admin">Administrador</option>
                                     {% endif %}
                                     <option value="interno_unique">Equipe Interna</option>
                                     <option value="cliente_unique">Cliente</option>
                                 </select>
                             </div>
+                            <!-- Module Administrator Section - Only for Master Admins -->
+                            {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
+                            <div id="module-admin-section" class="form-group module-admin-section" style="display: none;">
+                                <label class="form-label">Administrador de Módulo</label>
+                                <div class="module-admin-options">
+                                    <label class="radio-option">
+                                        <input type="radio" name="module_admin" value="none" checked>
+                                        <span class="radio-custom"></span>
+                                        <span class="option-text">Usuário Regular</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="module_admin" value="admin_operacao">
+                                        <span class="radio-custom"></span>
+                                        <span class="option-text">
+                                            <i class="mdi mdi-truck-delivery"></i>
+                                            Administrador Operacional
+                                        </span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="module_admin" value="admin_financeiro">
+                                        <span class="radio-custom"></span>
+                                        <span class="option-text">
+                                            <i class="mdi mdi-cash-multiple"></i>
+                                            Administrador Financeiro
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="form-hint module-admin-hint">
+                                    <i class="mdi mdi-information"></i>
+                                    Administradores de módulo podem gerenciar usuários e perfis específicos de sua área.
+                                </div>
+                            </div>
+                            {% endif %}
+                            
                             <div class="form-group status-group">
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="ativo" name="ativo" checked>

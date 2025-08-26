@@ -875,6 +875,151 @@
     color: var(--text-primary);
 }
 
+/* =================================
+   MODULE ADMINISTRATOR SECTION
+   ================================= */
+
+.module-admin-section {
+    background: var(--bg-gray-50);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin-top: 1rem;
+    transition: var(--transition);
+}
+
+.module-admin-section .form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.module-admin-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-white);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+}
+
+.radio-option:hover {
+    border-color: var(--primary-light);
+    background: var(--bg-gray-50);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.radio-option input[type="radio"] {
+    display: none;
+}
+
+.radio-custom {
+    position: relative;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    background: var(--bg-white);
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: var(--transition);
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom {
+    border-color: var(--primary-color);
+    background: var(--bg-white);
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom::after {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.option-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.option-text i {
+    font-size: 1.125rem;
+    color: var(--primary-color);
+    opacity: 0.8;
+}
+
+.module-admin-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(52, 152, 219, 0.1);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.module-admin-hint i {
+    color: var(--info-color);
+    font-size: 0.875rem;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+/* Module admin section highlight when active */
+.module-admin-section.active {
+    border-color: var(--primary-color);
+    background: rgba(52, 152, 219, 0.05);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Responsive adjustments for module admin section */
+@media (max-width: 768px) {
+    .module-admin-options {
+        gap: 0.5rem;
+    }
+    
+    .radio-option {
+        padding: 0.75rem;
+    }
+    
+    .option-text {
+        font-size: 0.8rem;
+    }
+}
+
 /* Password Section */
 .password-section {
     margin-top: 1.5rem;
