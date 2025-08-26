@@ -174,6 +174,32 @@ register_financeiro_blueprints(app)
 logging_middleware.init_app(app)
 
 # -------------------------------------------------------------
+# Security Headers Middleware
+# -------------------------------------------------------------
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    # Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Prevent clickjacking attacks
+    response.headers['X-Frame-Options'] = 'DENY'
+    
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Strict Transport Security (HTTPS)
+    # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    # Content Security Policy (basic)
+    response.headers['Content-Security-Policy'] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https:; img-src 'self' data: https:; font-src 'self' data: https:;"
+    
+    # Referrer Policy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    return response
+
+# -------------------------------------------------------------
 # Global Client Branding Context
 # -------------------------------------------------------------
 from services.client_branding import get_client_branding, DEFAULT_BRANDING
