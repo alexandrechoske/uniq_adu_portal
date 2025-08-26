@@ -2368,14 +2368,23 @@ def api_update_user(user_id):
         print(f"[USUARIOS] Dados recebidos: {data}")
         
         # Validar dados obrigatórios
-        if not data.get('name') or not data.get('email'):
-            print(f"[USUARIOS] ❌ Dados obrigatórios ausentes - Nome: {data.get('name')}, Email: {data.get('email')}")
-            return jsonify({'success': False, 'message': 'Nome e email são obrigatórios'}), 400
+        if not data.get('name'):
+            print(f"[USUARIOS] ❌ Nome obrigatório ausente")
+            return jsonify({'success': False, 'message': 'Nome é obrigatório'}), 400
         
-        # Preparar dados para atualização - apenas campos que existem na tabela users
+        # Get current user data to preserve email (authentication key)
+        current_user_response = supabase_admin.table(get_users_table()).select('email').eq('id', user_id).execute()
+        if not current_user_response.data:
+            print(f"[USUARIOS] ❌ Usuário não encontrado para preservar email")
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        current_user_email = current_user_response.data[0]['email']
+        print(f"[USUARIOS] 🔒 EMAIL PRESERVATION: Preservando email original '{current_user_email}' - ignorando qualquer mudança")
+        
+        # Preparar dados para atualização - email preservado, apenas campos editáveis
         update_data = {
             'name': data.get('name'),
-            'email': data.get('email'),
+            'email': current_user_email,  # ALWAYS preserve original email
             'role': data.get('role'),
             'is_active': data.get('is_active'),
             'updated_at': datetime.datetime.now().isoformat()
@@ -2402,6 +2411,8 @@ def api_update_user(user_id):
         invalidate_users_cache()
         
         print(f"[USUARIOS] ✅ Usuário atualizado com sucesso")
+        print(f"[USUARIOS] 🔒 EMAIL PRESERVATION: Email '{current_user_email}' permaneceu inalterado (segurança de autenticação)")
+        print(f"[USUARIOS] ⚙️ Campos atualizados: nome, role, status (email preservado)")
         return jsonify({'success': True, 'message': 'Usuário atualizado com sucesso'})
         
     except Exception as e:

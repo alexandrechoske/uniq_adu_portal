@@ -680,6 +680,7 @@ function openModalForCreate() {
     elements.modalTitle.textContent = 'Novo Usuário';
     clearForm();
     clearPerfisSelection();
+    removeEmailFieldRestrictions(); // Ensure email field is enabled for new users
     showPasswordSection();
     hideEmpresasSection();
     showModal();
@@ -750,6 +751,13 @@ function fillUserForm(user) {
     document.getElementById('role').value = user.role || '';
     // A API retorna 'is_active' ao invés de 'ativo'
     document.getElementById('ativo').checked = user.is_active === true || user.ativo === true || user.ativo === 'true';
+    
+    // Apply email field restrictions if in edit mode
+    if (appState.currentMode === MODAL_MODES.EDIT) {
+        applyEmailFieldRestrictions();
+    } else {
+        removeEmailFieldRestrictions();
+    }
     
     handleRoleChange();
     hidePasswordSection();
@@ -822,6 +830,50 @@ function hidePasswordSection() {
             confirmarSenhaField.required = false;
             confirmarSenhaField.value = '';
         }
+    }
+}
+
+/**
+ * Apply email field restrictions for edit mode
+ * Similar to profile name restrictions - email cannot be changed
+ * as it's used as authentication key and linked to other tables
+ */
+function applyEmailFieldRestrictions() {
+    const emailField = document.getElementById('email');
+    const warningDiv = document.getElementById('email-readonly-warning');
+    
+    if (emailField) {
+        // Disable the email field
+        emailField.disabled = true;
+        emailField.style.backgroundColor = '#f8f9fa';
+        emailField.style.cursor = 'not-allowed';
+        
+        console.log('[USUARIOS] Email field disabled for edit mode - preserving authentication key');
+    }
+    
+    if (warningDiv) {
+        // Show warning message
+        warningDiv.style.display = 'block';
+    }
+}
+
+/**
+ * Remove email field restrictions for create mode
+ */
+function removeEmailFieldRestrictions() {
+    const emailField = document.getElementById('email');
+    const warningDiv = document.getElementById('email-readonly-warning');
+    
+    if (emailField) {
+        // Re-enable the email field
+        emailField.disabled = false;
+        emailField.style.backgroundColor = '';
+        emailField.style.cursor = '';
+    }
+    
+    if (warningDiv) {
+        // Hide warning message
+        warningDiv.style.display = 'none';
     }
 }
 
