@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, jsonify, request
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+from decorators.perfil_decorators import perfil_required
 from routes.api import get_user_companies
 from permissions import check_permission
 from datetime import datetime, timedelta
@@ -431,14 +432,15 @@ def user_can_view_materials(user_data):
 
 @bp.route('/')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def index():
-    """Página principal do Dashboard Executivo"""
+    """Página principal do Dashboard Executivo - APENAS para módulo de importações"""
+    print(f"[DASHBOARD_EXECUTIVO] Acesso autorizado ao dashboard executivo de importações")
     return render_template('dashboard_executivo.html')
 
 @bp.route('/api/load-data')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def load_data():
     """Carregar dados da tabela importacoes_processos_aberta"""
     try:
@@ -478,7 +480,7 @@ def load_data():
 
 @bp.route('/api/kpis')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def dashboard_kpis():
     """Calcular KPIs para o dashboard executivo"""
     try:
@@ -706,7 +708,7 @@ def dashboard_kpis():
 
 @bp.route('/api/charts')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def dashboard_charts():
     """Gerar dados para os gráficos do dashboard executivo"""
     try:
@@ -1005,7 +1007,7 @@ def monthly_chart():
 
 @bp.route('/api/recent-operations')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def recent_operations():
     """Obter operações recentes para a tabela"""
     try:
@@ -1109,7 +1111,7 @@ def recent_operations():
 
 @bp.route('/api/filter-options')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def filter_options():
     """Obter opções para filtros"""
     try:
@@ -1176,7 +1178,7 @@ def filter_options():
 
 @bp.route('/api/force-refresh', methods=['POST'])
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def force_refresh_dashboard():
     """
     Force refresh específico para o Dashboard Executivo

@@ -354,12 +354,34 @@ function openPerfilModal(mode, perfilId = null) {
         elements.modalTitle.textContent = 'Novo Perfil';
         elements.btnSaveText.textContent = 'Criar Perfil';
         resetForm();
+        
+        // Enable name field for create mode
+        elements.perfilNome.disabled = false;
+        elements.perfilNome.style.backgroundColor = '';
+        
+        // Hide readonly warning
+        const readonlyWarning = document.getElementById('readonly-warning');
+        if (readonlyWarning) {
+            readonlyWarning.style.display = 'none';
+        }
+        
     } else if (mode === MODAL_MODES.EDIT && perfilId) {
         const perfil = appState.perfis.find(p => p.id === perfilId);
         if (perfil) {
             elements.modalTitle.textContent = 'Editar Perfil';
             elements.btnSaveText.textContent = 'Salvar Alterações';
             populateForm(perfil);
+            
+            // Disable name field for edit mode to prevent breaking user relationships
+            elements.perfilNome.disabled = true;
+            elements.perfilNome.style.backgroundColor = '#f8f9fa';
+            elements.perfilNome.style.cursor = 'not-allowed';
+            
+            // Show readonly warning
+            const readonlyWarning = document.getElementById('readonly-warning');
+            if (readonlyWarning) {
+                readonlyWarning.style.display = 'block';
+            }
         }
     }
     
@@ -700,21 +722,32 @@ function collectFormData() {
         }
     });
     
-    return {
+    const formData = {
         id: elements.perfilId.value || null,  // ID do banco (null para novo perfil)
-        nome: elements.perfilNome.value.trim(),
         descricao: elements.perfilDescricao.value.trim(),
         ativo: elements.perfilAtivo.checked,
         modulos: modulos
     };
+    
+    // RESTRIÇÃO: Só incluir nome para perfis novos (CREATE mode)
+    // Em modo de edição, o nome é preservado para manter relacionamentos com usuários
+    if (appState.currentMode === MODAL_MODES.CREATE) {
+        formData.nome = elements.perfilNome.value.trim();
+        console.log('[PERFIS] Modo CREATE - incluindo nome no formData:', formData.nome);
+    } else {
+        console.log('[PERFIS] Modo EDIT - nome excluído do formData para preservar relacionamentos');
+    }
+    
+    return formData;
 }
 
 /**
  * Valida dados do formulário
  */
 function validateFormData(data) {
-    // Validar campos obrigatórios
-    if (!data.nome) {
+    // Validar nome apenas em modo de criação (CREATE mode)
+    // Em modo de edição, o nome não é enviado (preservação de relacionamentos)
+    if (appState.currentMode === MODAL_MODES.CREATE && !data.nome) {
         showNotification('O nome do perfil é obrigatório', NOTIFICATION_TYPES.ERROR);
         elements.perfilNome.focus();
         return false;

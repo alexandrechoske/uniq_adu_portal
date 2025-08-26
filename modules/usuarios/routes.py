@@ -464,7 +464,7 @@ def salvar_usuario():
         name = data.get('name', '').strip()
         email = data.get('email', '').strip()
         role = data.get('role', '').strip()
-        perfil_principal = data.get('perfil_principal', 'basico').strip()  # Novo campo
+        perfil_principal = data.get('perfil_principal', '').strip() or None  # Don't default to 'basico'
         is_active = data.get('is_active', True)
         password = data.get('password', '').strip() if not user_id else None
         confirm_password = data.get('confirm_password', '').strip() if not user_id else None
@@ -2806,7 +2806,7 @@ def perfis_create():
 @login_required
 @is_master_admin_required()
 def perfis_update():
-    """Atualiza um perfil existente"""
+    """Atualiza um perfil existente - apenas descrição e páginas (não o nome)"""
     try:
         data = request.get_json()
         
@@ -2817,7 +2817,9 @@ def perfis_update():
             }), 400
         
         perfil_id = data.get('id')  # Usar ID como chave primária
-        perfil_nome = data.get('nome', '').strip()
+        # RESTRIÇÃO: Não permitir alteração do nome para preservar relacionamentos
+        # perfil_nome = data.get('nome', '').strip()  # REMOVIDO - nome não editável
+        perfil_descricao = data.get('descricao', '').strip()  # Descrição editável
         perfil_ativo = data.get('ativo', True)
         modulos = data.get('modulos', [])
         
@@ -2827,13 +2829,7 @@ def perfis_update():
                 'message': 'ID do perfil é obrigatório'
             }), 400
         
-        if not perfil_nome:
-            return jsonify({
-                'success': False,
-                'message': 'Nome do perfil é obrigatório'
-            }), 400
-        
-        # Buscar perfil existente para obter o código
+        # Buscar perfil existente para obter o código (nome permanece imutável)
         existing_perfil = supabase_admin.table('users_perfis').select('perfil_nome').eq('id', perfil_id).limit(1).execute()
         
         if not existing_perfil.data:
@@ -2845,20 +2841,23 @@ def perfis_update():
         perfil_codigo = existing_perfil.data[0]['perfil_nome']
         
         print(f"[PERFIS] Atualizando perfil ID: {perfil_id} (código: {perfil_codigo})")
+        print(f"[PERFIS] RESTRIÇÃO: Nome '{perfil_codigo}' permanecerá inalterado para preservar vínculos com usuários")
+        print(f"[PERFIS] Atualizando apenas: descrição e páginas/módulos")
         
         # Remover registros existentes do perfil
         delete_result = supabase_admin.table('users_perfis').delete().eq('perfil_nome', perfil_codigo).execute()
         
-        # Inserir novos módulos do perfil
+        # Inserir novos módulos do perfil (com o mesmo nome/código)
         registros_inserir = []
         for modulo in modulos:
             if modulo.get('ativo'):
                 registros_inserir.append({
-                    'perfil_nome': perfil_codigo,
+                    'perfil_nome': perfil_codigo,  # Nome permanece o mesmo
                     'modulo_codigo': modulo['codigo'],
                     'modulo_nome': modulo['nome'],
                     'paginas_modulo': modulo.get('paginas', []),
                     'is_active': perfil_ativo,
+                    'descricao': perfil_descricao,  # Descrição editável
                     'created_at': datetime.datetime.now().isoformat(),
                     'updated_at': datetime.datetime.now().isoformat()
                 })
@@ -2866,11 +2865,12 @@ def perfis_update():
         # Se não há módulos, criar ao menos um registro base
         if not registros_inserir:
             registros_inserir.append({
-                'perfil_nome': perfil_codigo,
+                'perfil_nome': perfil_codigo,  # Nome permanece o mesmo
                 'modulo_codigo': 'sistema',
                 'modulo_nome': 'Sistema',
                 'paginas_modulo': [],
                 'is_active': perfil_ativo,
+                'descricao': perfil_descricao,  # Descrição editável
                 'created_at': datetime.datetime.now().isoformat(),
                 'updated_at': datetime.datetime.now().isoformat()
             })
@@ -2881,11 +2881,11 @@ def perfis_update():
         if not insert_result.data:
             raise Exception("Falha ao atualizar perfil na base de dados")
         
-        print(f"[PERFIS] ✅ Perfil {perfil_codigo} atualizado com sucesso")
+        print(f"[PERFIS] ✅ Perfil {perfil_codigo} atualizado com sucesso (nome preservado)")
         
         return jsonify({
             'success': True,
-            'message': 'Perfil atualizado com sucesso'
+            'message': 'Perfil atualizado com sucesso. O nome foi preservado para manter os vínculos com usuários.'
         })
         
         if not data:
@@ -3294,8 +3294,16 @@ def api_update_users_perfis(user_id):
                     update_data = {}
                     
                     if perfis_ids:
-                        # Usar o primeiro perfil como principal
-                        update_data['perfil_principal'] = perfis_ids[0]
+                        # Filter out 'basico' from perfis_ids if other profiles exist
+                        non_basico_perfis = [p for p in perfis_ids if p != 'basico']
+                        
+                        # Use non-basico profile as principal if available, otherwise use first profile
+                        if non_basico_perfis:
+                            update_data['perfil_principal'] = non_basico_perfis[0]
+                            print(f"[PERFIS] Setting perfil_principal to non-basico profile: {non_basico_perfis[0]}")
+                        else:
+                            update_data['perfil_principal'] = perfis_ids[0]
+                            print(f"[PERFIS] Setting perfil_principal to first profile: {perfis_ids[0]}")
                         
                         # CORREÇÃO: Garantir que perfis_json seja salvo como array JSON, não string
                         # Se perfis_ids já é uma lista, usar diretamente

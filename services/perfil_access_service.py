@@ -165,7 +165,7 @@ class PerfilAccessService:
                 },
                 'financeiro_completo': {
                     'modules': ['financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'],
-                    'pages': ['*']  # All financial pages
+                    'pages': ['fin_dashboard_executivo', 'fluxo_caixa', 'despesas', 'faturamento']  # Only financial pages
                 },
                 'importacao_basico': {
                     'modules': ['importacoes', 'dashboard_executivo'],
