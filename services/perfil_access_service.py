@@ -157,7 +157,9 @@ class PerfilAccessService:
         
         # Specific Profile Users: Users with specific profile names as perfil_principal
         # Handle users like Kauan with perfil_principal='financeiro_fluxo_de_caixa'
-        if user_role == 'interno_unique' and user_perfil_principal not in ['basico'] and not user_perfil_principal.startswith('admin_'):
+        # AND client users like Schulz with perfil_principal='operacao_importacoes_acesso_comum'
+        if ((user_role == 'interno_unique' or user_role == 'cliente_unique') and 
+            user_perfil_principal not in ['basico'] and not user_perfil_principal.startswith('admin_')):
             accessible_modules = set()
             
             # PRIMARY METHOD: Try to derive access from database (user_perfis_info)
@@ -226,7 +228,7 @@ class PerfilAccessService:
                     print(f"[ACCESS_SERVICE] No access found for profile {user_perfil_principal} - user may need profile assignment")
             
             accessible_modules = list(accessible_modules)
-            print(f"[ACCESS_SERVICE] Specific Profile User ({user_perfil_principal}) - módulos acessíveis finais: {accessible_modules}")
+            print(f"[ACCESS_SERVICE] Specific Profile User ({user_role}/{user_perfil_principal}) - módulos acessíveis finais: {accessible_modules}")
             return accessible_modules
         
         # Fallback - sem acesso
@@ -329,7 +331,9 @@ class PerfilAccessService:
             return accessible_pages
         
         # Specific Profile Users: Handle users with specific profile names as perfil_principal
-        if user_role == 'interno_unique' and user_perfil_principal not in ['basico'] and not user_perfil_principal.startswith('admin_'):
+        # Both interno_unique and cliente_unique users can have specific profiles
+        if ((user_role == 'interno_unique' or user_role == 'cliente_unique') and 
+            user_perfil_principal not in ['basico'] and not user_perfil_principal.startswith('admin_')):
             # PRIMARY METHOD: Try to derive from database (user_perfis_info)
             accessible_pages = set()
             
@@ -369,7 +373,7 @@ class PerfilAccessService:
             
             if found_in_database:
                 accessible_pages = list(accessible_pages)
-                print(f"[ACCESS_SERVICE] Database-driven access for {user_perfil_principal} in {modulo_codigo}: {accessible_pages}")
+                print(f"[ACCESS_SERVICE] Database-driven access for {user_role}/{user_perfil_principal} in {modulo_codigo}: {accessible_pages}")
                 return accessible_pages
             else:
                 # FALLBACK: Use hardcoded mappings for legacy profiles only

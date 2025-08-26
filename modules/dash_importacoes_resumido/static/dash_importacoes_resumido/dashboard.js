@@ -1014,6 +1014,12 @@ class DashboardImportacoesResumido {
 
 // Inicializar quando o DOM estiver carregado
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if user has company warning - if so, don't initialize dashboard
+    if (window.showCompanyWarning) {
+        console.log('[DASH_RESUMIDO] Dashboard bloqueado - usuário sem empresas vinculadas');
+        return; // Exit early, don't initialize any dashboard functionality
+    }
+    
     window.dashboardImportacoes = new DashboardImportacoesResumido();
 });
 
