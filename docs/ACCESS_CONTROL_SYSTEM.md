@@ -186,6 +186,7 @@ INSERT INTO users_perfis VALUES
 | Profile Name | Module | Access Level | Description |
 |--------------|--------|--------------|-------------|
 | `importacoes_completo` | imp | Full | Complete importation access |
+| `operacoes_importacao_todas_paginas` | imp | Full | Complete operational importation access |
 | `importacao_basico` | imp | Limited | Basic importation functions |
 | `importacao_avancado` | imp | Advanced | Advanced importation functions |
 
@@ -418,6 +419,21 @@ GROUP BY modulo_codigo;
 
 ### Common Issues
 
+#### Issue: Module not showing in navigation but accessible via direct URL
+**Symptoms**: Module accessible via direct URL (e.g., `/export_relatorios/`) but not visible in sidebar/navigation  
+**Causes**: 
+- Module mapping mismatch between access service and template
+- Template checking for different module name than service provides
+- Missing module in accessible_modules list
+
+**Solution**: 
+Ensure both module names are added to accessible_modules for compatibility:
+```python
+# Add both names for compatibility
+accessible_modules.add('relatorios')  # For sidebar compatibility  
+accessible_modules.add('export_relatorios')  # For direct access
+```
+
 #### Issue: User shows "Check Configuration"
 **Symptoms**: User appears in query with ⚠️ status  
 **Causes**: 
@@ -576,5 +592,67 @@ This document should be updated when:
 ---
 
 **End of Documentation**
+
+## 🚀 Database-Driven Profile System (NEW)
+
+### **🆕 Automatic Profile Access**
+
+The system now **automatically derives access from database profiles** instead of requiring hardcoded mappings for every new profile. This means:
+
+✅ **No manual coding required** when creating new profiles  
+✅ **Database-driven**: Profiles work immediately when created in `users_perfis` table  
+✅ **Consistent mapping**: Same logic applied to all profiles automatically  
+✅ **Maintainable**: Changes in database immediately reflect in access control  
+
+### **How It Works**
+
+1. **User logs in** with `perfil_principal = 'any_profile_name'`
+2. **System looks up** profile in `users_perfis` table automatically
+3. **Pages are mapped** to modules using `PAGE_TO_ENDPOINT_MAPPING`
+4. **Sidebar compatibility** is added automatically for navigation
+5. **Access granted** without any code changes
+
+### **Example: Adding New Profile**
+
+```sql
+-- 1. Just create the profile in database
+INSERT INTO users_perfis VALUES 
+(41, 'new_custom_profile', 'imp', 'Importação', 
+ '["dashboard_executivo", "relatorio", "agente"]', true, false);
+
+-- 2. Assign to user
+UPDATE users_dev SET perfil_principal = 'new_custom_profile' 
+WHERE email = 'user@company.com';
+
+-- 3. User automatically gets access to:
+-- - dashboard_executivo module
+-- - relatorios + export_relatorios modules (from "relatorio" page)
+-- - agente module
+-- No code changes needed!
+```
+
+### **Page-to-Module Mapping**
+
+The system uses `PAGE_TO_ENDPOINT_MAPPING` to automatically convert database page codes to accessible modules:
+
+```python
+PAGE_TO_ENDPOINT_MAPPING = {
+    'dashboard_executivo': 'dashboard_executivo',
+    'dashboard_resumido': 'dash_importacoes_resumido', 
+    'documentos': 'conferencia',
+    'relatorio': 'export_relatorios',  # Also adds 'relatorios' for sidebar
+    'agente': 'agente',
+    'fin_dashboard_executivo': 'fin_dashboard_executivo',
+    'fluxo_caixa': 'fluxo_de_caixa',
+    'despesas': 'despesas_anual',
+    'faturamento': 'faturamento_anual'
+}
+```
+
+### **Legacy Support**
+
+For profiles not found in database, the system falls back to legacy hardcoded mappings (currently only `financeiro_fluxo_de_caixa` and `financeiro_completo`), but **new profiles should always be database-driven**.
+
+---
 
 *This document serves as the authoritative reference for the Unique Aduaneira Portal access control system. Keep it updated as the system evolves.*

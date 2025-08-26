@@ -2912,63 +2912,6 @@ def perfis_update():
             'message': 'Perfil atualizado com sucesso. O nome foi preservado para manter os vínculos com usuários.'
         })
         
-        if not data:
-            return jsonify({
-                'success': False,
-                'message': 'Dados não fornecidos'
-            }), 400
-        
-        perfil_codigo = data.get('codigo', '').strip().lower()
-        perfil_nome = data.get('nome', '').strip()
-        perfil_ativo = data.get('ativo', True)
-        modulos = data.get('modulos', [])
-        
-        if not perfil_codigo:
-            return jsonify({
-                'success': False,
-                'message': 'Código do perfil é obrigatório'
-            }), 400
-        
-        print(f"[PERFIS] Atualizando perfil: {perfil_codigo}")
-        
-        # Remover registros existentes do perfil
-        delete_result = supabase_admin.table('users_perfis').delete().eq('perfil_nome', perfil_codigo).execute()
-        
-        # Inserir novos módulos do perfil
-        registros_inserir = []
-        for modulo in modulos:
-            if modulo.get('ativo'):
-                registros_inserir.append({
-                    'perfil_nome': perfil_codigo,
-                    'modulo_codigo': modulo['codigo'],
-                    'modulo_nome': modulo['nome'],
-                    'paginas_modulo': modulo.get('paginas', []),
-                    'is_active': perfil_ativo
-                })
-        
-        # Se não há módulos, criar ao menos um registro base
-        if not registros_inserir:
-            registros_inserir.append({
-                'perfil_nome': perfil_codigo,
-                'modulo_codigo': 'sistema',
-                'modulo_nome': 'Sistema',
-                'paginas_modulo': [],
-                'is_active': perfil_ativo
-            })
-        
-        # Inserir novos registros
-        insert_result = supabase_admin.table('users_perfis').insert(registros_inserir).execute()
-        
-        if not insert_result.data:
-            raise Exception("Falha ao atualizar perfil na base de dados")
-        
-        print(f"[PERFIS] ✅ Perfil {perfil_codigo} atualizado com sucesso")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Perfil atualizado com sucesso'
-        })
-        
     except Exception as e:
         print(f"[PERFIS] ❌ Erro ao atualizar perfil: {str(e)}")
         current_app.logger.error(f"Erro ao atualizar perfil: {str(e)}")
