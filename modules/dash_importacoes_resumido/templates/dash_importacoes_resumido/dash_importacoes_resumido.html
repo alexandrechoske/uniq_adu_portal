@@ -8,6 +8,17 @@
 
 {% block content %}
 <div class="dashboard-resumido-container">
+    <!-- Warning Alert for No Companies -->
+    <div id="no-companies-warning" class="alert alert-warning" style="display: none; margin-bottom: 20px;">
+        <div class="alert-content">
+            <i class="mdi mdi-alert-circle alert-icon"></i>
+            <div class="alert-text">
+                <h4>Empresas não vinculadas</h4>
+                <p>Seu perfil não possui empresas vinculadas. Entre em contato com o administrador para vincular empresas e visualizar os dados do dashboard.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-spinner">

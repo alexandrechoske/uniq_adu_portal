@@ -33,6 +33,15 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
     role = user_data.get('role')
     if not user_id:
         return []
+    
+    # VALIDATION: Check if cliente_unique has companies
+    if role == 'cliente_unique':
+        user_cnpjs = get_user_companies(user_data)
+        if not user_cnpjs:
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) cliente_unique {user_id} without companies -> return empty")
+            data_cache.set_cache(user_id, 'dashboard_v2_data', [])
+            return []
+    
     existing = data_cache.get_cache(user_id, 'dashboard_v2_data')
     if existing and not force:
         return existing
@@ -451,6 +460,18 @@ def load_data():
         user_role = user_data.get('role')
         user_id = user_data.get('id')
         
+        # VALIDATION: Check if cliente_unique has companies before loading data
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user_data)
+            if not user_cnpjs:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Cliente sem empresas vinculadas',
+                    'error_type': 'no_companies',
+                    'message': 'Seu perfil não possui empresas vinculadas. Entre em contato com o administrador para vinculação.',
+                    'data': []
+                })
+        
         # Usar helper resiliente (elimina race conditions)
         enriched_data = fetch_and_cache_dashboard_data(user_data)
         if not enriched_data:
@@ -487,6 +508,19 @@ def dashboard_kpis():
         # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
+        user_role = user_data.get('role')
+        
+        # VALIDATION: Check if cliente_unique has companies
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user_data)
+            if not user_cnpjs:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Cliente sem empresas vinculadas',
+                    'error_type': 'no_companies',
+                    'kpis': {}
+                })
+        
         data = fetch_and_cache_dashboard_data(user_data)
         if not data:
             return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'kpis': {}})
@@ -715,6 +749,19 @@ def dashboard_charts():
         # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
+        user_role = user_data.get('role')
+        
+        # VALIDATION: Check if cliente_unique has companies
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user_data)
+            if not user_cnpjs:
+                return jsonify({
+                    'success': False, 
+                    'error': 'Cliente sem empresas vinculadas',
+                    'error_type': 'no_companies',
+                    'charts': {}
+                })
+        
         data = fetch_and_cache_dashboard_data(user_data)
         if not data:
             return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'charts': {}})
@@ -1014,6 +1061,19 @@ def recent_operations():
         # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
         user_id = user_data.get('id')
+        user_role = user_data.get('role')
+        
+        # VALIDATION: Check if cliente_unique has companies
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user_data)
+            if not user_cnpjs:
+                return jsonify({
+                    'success': False,
+                    'error': 'Cliente sem empresas vinculadas',
+                    'error_type': 'no_companies',
+                    'operations': []
+                })
+        
         data = fetch_and_cache_dashboard_data(user_data)
         if not data:
             return jsonify({'success': False,'error': 'Dados não encontrados após tentativa de carregamento.','operations': []})
