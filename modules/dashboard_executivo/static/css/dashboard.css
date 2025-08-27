@@ -8,6 +8,23 @@
     background-color: #f8f9fa;
 }
 
+/* === PADRONIZAÇÃO DE FONTES === */
+/* Forçar todas as tabelas, gráficos e componentes a usar a mesma fonte */
+.chart-section,
+.enhanced-table-section,
+.data-table,
+.enhanced-table-container,
+.mini-kpi-table,
+.chart-container,
+canvas {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Forçar fonte nos elementos Chart.js */
+.chart-canvas * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
 /* Loading Overlay */
 .loading-overlay {
     display: none !important;
@@ -556,6 +573,27 @@
 .badge-danger {
     background-color: #dc3545;
     color: white;
+}
+
+/* === CORREÇÃO: Badge Monocromático para Status === */
+/* Nova classe para pegada minimalista nos status da tabela */
+.badge-light-monochrome {
+    background-color: #f8f9fa !important;  /* Cinza muito claro */
+    color: #495057 !important;             /* Texto cinza escuro legível */
+    border: 1px solid #e9ecef !important;  /* Borda sutil */
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;             /* Transição suave */
+}
+
+/* Hover effect sutil para melhor UX */
+.badge-light-monochrome:hover {
+    background-color: #e9ecef !important;
+    color: #343a40 !important;
+    border-color: #dee2e6 !important;
 }
 
 .valor-custo {

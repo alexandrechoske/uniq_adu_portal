@@ -1632,15 +1632,49 @@ def get_paises_procedencia():
         # Ordenar por total de processos (decrescente)
         paises_stats = paises_stats.sort_values('total_processos', ascending=False)
         
-        # Converter para lista de dicionários
-        paises_data = []
-        for _, row in paises_stats.iterrows():
-            paises_data.append({
-                'pais_procedencia': str(row['pais_procedencia']),
-                'total_processos': int(row['total_processos']),
-                'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
-                'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
-            })
+        # LIMITAÇÃO PARA TOP 7 PAÍSES + OUTROS (para evitar quebra de layout)
+        if len(paises_stats) > 7:
+            print(f"[DASHBOARD_EXECUTIVO] Limitando exibição: {len(paises_stats)} -> 7 países + outros")
+            
+            # Top 7 países
+            top_7 = paises_stats.head(7)
+            
+            # Calcular "Outros" para países restantes
+            outros_stats = paises_stats.tail(len(paises_stats) - 7)
+            outros_processos = outros_stats['total_processos'].sum()
+            outros_custo = outros_stats['total_custo'].sum()
+            
+            # Converter top 7 para lista
+            paises_data = []
+            for _, row in top_7.iterrows():
+                paises_data.append({
+                    'pais_procedencia': str(row['pais_procedencia']),
+                    'total_processos': int(row['total_processos']),
+                    'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
+                    'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
+                })
+            
+            # Adicionar linha "Outros" se houver países excluídos
+            if len(outros_stats) > 0:
+                paises_data.append({
+                    'pais_procedencia': f'Outros ({len(outros_stats)} países)',
+                    'total_processos': int(outros_processos),
+                    'total_custo': float(outros_custo),
+                    'url_bandeira': None  # Sem bandeira para "Outros"
+                })
+                
+            print(f"[DASHBOARD_EXECUTIVO] Retornando 7 + 1 'Outros' = {len(paises_data)} itens")
+            
+        else:
+            # Manter lógica original se já tiver 7 ou menos países
+            paises_data = []
+            for _, row in paises_stats.iterrows():
+                paises_data.append({
+                    'pais_procedencia': str(row['pais_procedencia']),
+                    'total_processos': int(row['total_processos']),
+                    'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
+                    'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
+                })
         
         print(f"[DASHBOARD_EXECUTIVO] Retornando dados de {len(paises_data)} países")
         

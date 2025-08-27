@@ -2004,24 +2004,9 @@ function openProcessModal(operationIndex) {
     
     updateElementValue('detail-status', statusToDisplay);
     
-    // Update country information with flag
-    const countryName = operation.pais_procedencia || operation.urf_entrada || operation.pais_origem || 'N/A';
-    updateElementValue('detail-country-name', countryName);
-    
-    // Update country flag
-    const flagImg = document.getElementById('detail-country-flag');
-    if (countryName && countryName !== 'N/A' && countryName !== '-') {
-        const countryCode = getCountryCode(countryName);
-        if (countryCode) {
-            flagImg.src = `https://flagsapi.com/${countryCode}/flat/32.png`;
-            flagImg.alt = `Bandeira de ${countryName}`;
-            flagImg.style.display = 'inline';
-        } else {
-            flagImg.style.display = 'none';
-        }
-    } else {
-        flagImg.style.display = 'none';
-    }
+    // CORREÇÃO: Remover referências a elementos inexistentes no template
+    // Os elementos 'detail-country-name' e 'detail-country-flag' não existem no process_modal.html
+    // Removido para evitar erro "Cannot read properties of null"
     
     // Update cargo and transport details
     updateElementValue('detail-modal', operation.modal);
@@ -2287,7 +2272,7 @@ function updateElementValue(elementId, value, useCanalBadge = false) {
             console.log(`[MODAL_DEBUG] Elemento ${elementId} atualizado com: "${displayValue}"`);
         }
     } else {
-        console.warn(`[MODAL_DEBUG] Elemento ${elementId} não encontrado no DOM`);
+        console.warn(`[MODAL_DEBUG] Elemento ${elementId} não encontrado no DOM - operação ignorada`);
     }
 }
 
@@ -2648,34 +2633,11 @@ function getStatusBadge(status) {
         console.log('[STATUS_BADGE_DEBUG] Status extraído:', displayStatus);
     }
 
-    // Mapeamento para status_macro_sistema
-    const statusMap = {
-        'AG. EMBARQUE': 'info',
-        'AG EMBARQUE': 'info',
-        'AG. FECHAMENTO': 'info',
-        'AG. ENTREGA DA DHL NO IMPORTADOR': 'primary',
-        'AG MAPA': 'info',
-        'ABERTURA': 'secondary',
-        'NUMERÁRIO ENVIADO': 'warning',
-        'DECLARAÇÃO DESEMBARAÇADA': 'success',
-        'AG CARREGAMENTO': 'info',
-        'AG CHEGADA': 'primary',
-        'AG. CARREGAMENTO': 'info',
-        'AG. REGISTRO': 'primary',
-        'DI REGISTRADA': 'warning',
-        'DI DESEMBARAÇADA': 'success'
-    };
+    // CORREÇÃO: Pegada monocromática - todos os status usam cinza claro
+    // Removido mapeamento de cores diferentes para manter design minimalista
+    console.log('[STATUS_BADGE_DEBUG] Aplicando estilo monocromático para:', displayStatus);
 
-    // Primeiro tenta match exato, depois normalizado
-    let badgeClass = statusMap[displayStatus];
-    if (!badgeClass) {
-        const normalize = s => s?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-        badgeClass = statusMap[normalize(displayStatus)] || 'secondary';
-    }
-
-    console.log('[STATUS_BADGE_DEBUG] Badge class:', badgeClass, 'para status:', displayStatus);
-
-    return `<span class="badge badge-${badgeClass}">${displayStatus}</span>`;
+    return `<span class="badge badge-light-monochrome">${displayStatus}</span>`;
 }
 
 function getCanalBadge(canal) {
