@@ -9,13 +9,13 @@
 {% block content %}
 <div class="dashboard-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-generic">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Ferramentas', 'icon': 'mdi mdi-tools', 'url': url_for('menu.ferramentas')},
                 {'name': 'Agente Unique', 'icon': 'mdi mdi-robot'}
-            ]) }}
+            ], 'generic') }}
         </div>
         {% if is_admin_view %}
         <div class="actions-right">
@@ -218,30 +218,6 @@
             </div>
         </div>
 
-        <!-- Ações Rápidas -->
-        <div class="quick-actions-card">
-            <div class="card-header">
-                <div class="card-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
-                    <i class="mdi mdi-lightning-bolt"></i>
-                </div>
-                <h3 class="card-title">Ações Rápidas</h3>
-            </div>
-            
-            <div class="quick-actions-grid">
-                <button class="btn btn-primary" onclick="refreshData()">
-                    <i class="mdi mdi-refresh"></i>
-                    Recarregar Dados
-                </button>
-                <button class="btn btn-info" onclick="exportAllData()">
-                    <i class="mdi mdi-download"></i>
-                    Exportar Relatório
-                </button>
-                <button class="btn btn-warning" onclick="showBulkActions()">
-                    <i class="mdi mdi-cog"></i>
-                    Ações em Massa
-                </button>
-            </div>
-        </div>
     </div>
 
     {% else %}

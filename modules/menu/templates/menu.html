@@ -8,11 +8,11 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <div class="actions-bar">
+    <div class="actions-bar module-header-menu">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu Principal', 'icon': 'mdi mdi-view-dashboard'}
-            ]) }}
+            ], 'menu') }}
         </div>
     </div>
     <div class="main-content">

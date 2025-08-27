@@ -11,20 +11,20 @@
 {% block content %}
 <div class="usuarios-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-configuracoes">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
                 {'name': 'Usuários', 'icon': 'mdi mdi-account-multiple'}
-            ]) }}
+            ], 'configuracoes') }}
         </div>
         <div class="actions-right">
-            <button id="btn-refresh" class="btn btn-secondary">
+            <button id="btn-refresh" class="btn btn-outline-light">
                 <i class="mdi mdi-refresh"></i>
                 Atualizar
             </button>
-            <button id="btn-novo-usuario" class="btn btn-primary">
+            <button id="btn-novo-usuario" class="btn btn-light">
                 <i class="mdi mdi-plus"></i>
                 Novo Usuário
             </button>

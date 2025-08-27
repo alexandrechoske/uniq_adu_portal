@@ -58,10 +58,14 @@
     gap: 1rem;
     margin-bottom: 2rem;
     padding: 1rem 1.5rem;
-    background: var(--bg-white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
+}
+
+/* Apenas actions-bar SEM classe de módulo recebem fundo branco */
+.actions-bar:not([class*="module-header"]) {
+    background: var(--bg-white);
 }
 
 .actions-left {

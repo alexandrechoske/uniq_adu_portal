@@ -53,6 +53,9 @@ except Exception as e:
 # Import session handler
 from session_handler import init_session_handler
 
+# Import module color helpers
+from utils.module_colors import register_module_color_helpers
+
 # Import routes after app initialization to avoid circular imports
 from routes import dashboard, api
 from routes import background_tasks
@@ -161,6 +164,9 @@ app.register_blueprint(export_relatorios_bp)
 
 # Register financeiro blueprints (módulo financeiro completo)
 register_financeiro_blueprints(app)
+
+# Register module color helpers for templates
+register_module_color_helpers(app)
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)

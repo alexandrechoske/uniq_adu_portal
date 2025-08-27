@@ -32,24 +32,24 @@
 <div class="dashboard-container">
 {% endif %}
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-importacoes">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
                 {'name': 'Dashboard Executivo', 'icon': 'mdi mdi-chart-line'}
-            ]) }}
+            ], 'importacoes') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
                 <span id="filter-summary-text">Vendo dados completos</span>
             </div>
         </div>
         <div class="actions-right">
-            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+            <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
                 Remover Filtros
             </button>
-            <button id="open-filters" class="btn btn-primary">
+            <button id="open-filters" class="btn btn-light">
                 <i class="mdi mdi-filter"></i>
                 Filtros
             </button>

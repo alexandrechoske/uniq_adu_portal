@@ -21,19 +21,11 @@
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- CORES OFICIAIS DA UNIQUE ADUANEIRA -->
+    <link href="{{ url_for('static', filename='css/unique-colors.css') }}" rel="stylesheet">
+    
     <style>
-        /* Cores da Marca Unique Aduaneira */
-        :root {
-            --color-primary: #3498DB;
-            --color-secondary: #3498DB;
-            --color-white: #FFFFFF;
-            --color-primary-light: rgba(31, 64, 111, 0.1);
-            --color-secondary-light: rgba(52, 152, 219, 0.1);
-            --color-text-primary: #1f2937;
-            --color-text-secondary: #6b7280;
-            --color-text-muted: #9ca3af;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
@@ -46,7 +38,7 @@
             left: 0;
             right: 0;
             height: 4rem;
-            background: var(--color-primary) !important; /* Azul sólido consistente */
+            background: var(--unique-primary-dark) !important; /* Cor oficial Unique */
             z-index: 1000;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 2px 4px rgba(31, 64, 111, 0.1);
@@ -198,9 +190,9 @@
 
         /* Item de sidebar ativo - Usando cores da marca */
         .sidebar-item.active {
-            background-color: var(--color-secondary-light);
-            color: var(--color-primary);
-            border-left: 3px solid var(--color-secondary);
+            background-color: rgba(45, 107, 146, 0.1);
+            color: var(--unique-primary-medium);
+            border-left: 3px solid var(--unique-primary-medium);
         }
 
         @keyframes fadeIn {
@@ -248,7 +240,7 @@
         }
 
         .sidebar-section-title i {
-            color: var(--color-primary);
+            color: var(--unique-primary-medium);
         }
 
         /* Page items dentro de seções */
@@ -558,21 +550,22 @@
         }
 
         .breadcrumb-item:not(:last-child):hover {
-            color: var(--color-primary);
+            color: var(--unique-primary-medium);
         }
 
-        .breadcrumb-item a {
+        /* Breadcrumb genérico - menor especificidade para permitir override dos módulos */
+        .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a {
             color: inherit;
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s ease;
         }
 
-        .breadcrumb-item a:hover {
-            color: var(--color-primary);
+        .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a:hover {
+            color: var(--unique-primary-medium);
         }
 
-        .breadcrumb-item:last-child {
+        .breadcrumb:not(.module-breadcrumb) .breadcrumb-item:last-child {
             color: var(--color-text-primary);
             font-weight: 600;
         }
@@ -608,16 +601,16 @@
     {% for item in items %}
         <div class="breadcrumb-item">
             {% if item.icon %}
-                <i class="{{ item.icon }} breadcrumb-icon"></i>
+                <i class="{{ item.icon }} breadcrumb-icon" style="color: black !important;"></i>
             {% endif %}
             {% if item.url and not loop.last %}
-                <a href="{{ item.url }}">{{ item.name }}</a>
+                <a href="{{ item.url }}" style="color: black !important;">{{ item.name }}</a>
             {% else %}
-                <span>{{ item.name }}</span>
+                <span style="color: black !important;">{{ item.name }}</span>
             {% endif %}
         </div>
         {% if not loop.last %}
-            <span class="breadcrumb-separator">
+            <span class="breadcrumb-separator" style="color: black !important;">
                 <i class="mdi mdi-chevron-right"></i>
             </span>
         {% endif %}
@@ -790,14 +783,14 @@
                     </a>
                     {% endif %}
                     
-                    {% if 'conferencia' in accessible_modules %}
+                    <!-- {% if 'conferencia' in accessible_modules %}
                     <a href="{{ url_for('conferencia.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
                        title="Conferência Documental">
                         <i class="mdi mdi-file-check"></i>
                         <span class="sidebar-text">Conferência Documental</span>
                     </a>
-                    {% endif %}
+                    {% endif %} -->
                     
                     {% if 'relatorios' in accessible_modules %}
                     <a href="{{ url_for('export_relatorios.index') }}"
@@ -1024,6 +1017,22 @@
     {% if session.get('user') %}
     <script>
         document.body.classList.add('logged-in');
+        
+        // Auto-aplicar cores de módulo baseado na URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname.toLowerCase();
+            const actionsBar = document.querySelector('.actions-bar');
+            
+            if (actionsBar && !actionsBar.className.includes('module-header-')) {
+                if (currentPath.includes('/financeiro/')) {
+                    actionsBar.classList.add('module-header-financeiro');
+                } else if (currentPath.includes('/dashboard-executivo/') || currentPath.includes('/importac')) {
+                    actionsBar.classList.add('module-header-importacoes');
+                } else {
+                    actionsBar.classList.add('module-header-generic');
+                }
+            }
+        });
     </script>
       <!-- Script para gerenciamento de sessão -->
     <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>

@@ -183,36 +183,36 @@
 /* Media queries antigas para sidebar removidas */
 
 
-/* === DESIGN SYSTEM - VARIÁVEIS MODERNAS === */
+/* === DESIGN SYSTEM - VARIÁVEIS MODERNAS COM CORES UNIQUE === */
 :root {
-    /* Paleta de cores minimalista */
-    --color-background: #fafbfc;
-    --color-surface: #ffffff;
-    --color-surface-hover: #f8fafc;
-    --color-border: #e2e8f0;
-    --color-border-light: #f1f5f9;
+    /* Paleta de cores Unique */
+    --color-background: var(--unique-background-light);
+    --color-surface: var(--unique-background-white);
+    --color-surface-hover: var(--unique-background-light);
+    --color-border: var(--unique-border-light);
+    --color-border-light: var(--unique-border-lighter);
 
     /* Textos */
-    --color-text-primary: #0f172a;
-    --color-text-secondary: #475569;
-    --color-text-muted: #64748b;
-    --color-text-light: #94a3b8;
+    --color-text-primary: var(--unique-text-primary);
+    --color-text-secondary: var(--unique-text-secondary);
+    --color-text-muted: var(--unique-text-muted);
+    --color-text-light: var(--unique-text-light);
 
-    /* Cores de destaque elegantes */
-    --color-primary: #3b82f6;
-    --color-primary-light: #dbeafe;
-    --color-secondary: #1F406F;
-    --color-secondary-light: #e1f2fe;
-    --color-success: #10b981;
-    --color-success-light: #d1fae5;
-    --color-warning: #f59e0b;
-    --color-warning-light: #fef3c7;
-    --color-danger: #ef4444;
-    --color-danger-light: #fee2e2;
-    --color-info: #06b6d4;
-    --color-info-light: #cffafe;
-    --color-purple: #8b5cf6;
-    --color-purple-light: #ede9fe;
+    /* Cores de destaque Unique */
+    --color-primary: var(--unique-primary);
+    --color-primary-light: var(--unique-background-light);
+    --color-secondary: var(--unique-secondary);
+    --color-secondary-light: var(--unique-background-light);
+    --color-success: var(--unique-success);
+    --color-success-light: var(--unique-success-light);
+    --color-warning: var(--unique-warning);
+    --color-warning-light: var(--unique-warning-light);
+    --color-danger: var(--unique-danger);
+    --color-danger-light: var(--unique-danger-light);
+    --color-info: var(--unique-info);
+    --color-info-light: var(--unique-info-light);
+    --color-purple: var(--unique-accent);
+    --color-purple-light: var(--unique-accent-light);
 
     /* Sombras minimalistas */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
