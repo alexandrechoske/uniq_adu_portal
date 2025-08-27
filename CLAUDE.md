@@ -1,1 +1,0 @@
-- Always check the applications styles when creating a new page and elements.

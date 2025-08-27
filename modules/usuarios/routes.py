@@ -3430,8 +3430,8 @@ def api_update_users_perfis(user_id):
         
         print(f"[PERFIS] 🔄 Atualizando perfis do usuário {user_id}: {perfis_ids}")
         
-        # Verificar se usuário existe
-        user_response = supabase_admin.table(get_users_table()).select('id, name').eq('id', user_id).execute()
+        # Verificar se usuário existe e buscar role para lógica de perfil_principal
+        user_response = supabase_admin.table(get_users_table()).select('id, name, role').eq('id', user_id).execute()
         if not user_response.data:
             return jsonify({
                 'success': False,
@@ -3485,30 +3485,61 @@ def api_update_users_perfis(user_id):
                     update_data = {}
                     
                     if perfis_ids:
-                        # CORREÇÃO: perfil_principal deve sempre ser 'basico' para usuários regulares
-                        # Os perfis funcionais ficam armazenados em perfis_json
-                        update_data['perfil_principal'] = 'basico'
-                        print(f"[PERFIS] Setting perfil_principal to basico (profiles stored in perfis_json: {perfis_ids})")
+                        # CORREÇÃO: Set perfil_principal correctly based on user role and assigned profiles
+                        # For Module Admins (interno_unique with admin profiles), use the admin profile
+                        # For regular users, use 'basico'
                         
-                        # CRITICAL FIX: Filter out 'basico' from perfis_json since it belongs only in perfil_principal
+                        # Filter out 'basico' from functional profiles
                         functional_profiles = [p for p in perfis_ids if p != 'basico']
                         print(f"[PERFIS] Filtering out 'basico' from perfis_json. Original: {perfis_ids}, Filtered: {functional_profiles}")
                         
-                        # CORREÇÃO: Garantir que perfis_json seja salvo como array JSON, não string
-                        # Se perfis_ids já é uma lista, usar diretamente
-                        # Se for string JSON, converter para lista primeiro
+                        # DEBUG: Log user data for troubleshooting
+                        user_data = user_response.data[0] if user_response.data else {}
+                        user_role = user_data.get('role', 'UNKNOWN')
+                        print(f"[PERFIS] DEBUG - User data: {user_data}")
+                        print(f"[PERFIS] DEBUG - User role: {user_role}")
+                        print(f"[PERFIS] DEBUG - Admin profiles in functional_profiles: {[p for p in functional_profiles if p in ['admin_operacao', 'admin_financeiro']]}")
+                        
+                        # Determine perfil_principal based on role and assigned profiles
+                        if user_response.data and len(user_response.data) > 0:
+                            user_role = user_response.data[0].get('role')
+                            if user_role == 'interno_unique':
+                                # For interno_unique users, check if they have admin profiles
+                                admin_profiles = [p for p in functional_profiles if p in ['admin_operacao', 'admin_financeiro']]
+                                if admin_profiles:
+                                    # Use the first admin profile as principal
+                                    update_data['perfil_principal'] = admin_profiles[0]
+                                    print(f"[PERFIS] Setting perfil_principal to admin profile: {admin_profiles[0]}")
+                                else:
+                                    # Regular interno_unique user
+                                    update_data['perfil_principal'] = 'basico'
+                                    print(f"[PERFIS] Setting perfil_principal to basico for regular interno_unique user")
+                            elif user_role == 'admin':
+                                # For admin users, always use master_admin
+                                update_data['perfil_principal'] = 'master_admin'
+                                print(f"[PERFIS] Setting perfil_principal to master_admin for admin user")
+                            else:
+                                # For cliente_unique or other roles, use basico
+                                update_data['perfil_principal'] = 'basico'
+                                print(f"[PERFIS] Setting perfil_principal to basico for cliente_unique or other roles (role: {user_role})")
+                        else:
+                            # Fallback if no user data found
+                            update_data['perfil_principal'] = 'basico'
+                            print(f"[PERFIS] WARNING: No user data found, defaulting perfil_principal to basico")
+                        
+                        # Prepare perfis_json (functional profiles only)
                         if isinstance(functional_profiles, str):
                             try:
                                 perfis_array = json.loads(functional_profiles)
                             except json.JSONDecodeError:
-                                perfis_array = [functional_profiles]  # Se não for JSON válido, tratar como único perfil
+                                perfis_array = [functional_profiles]  # If not valid JSON, treat as single profile
                         else:
-                            perfis_array = functional_profiles  # Já é lista
+                            perfis_array = functional_profiles  # Already a list
                         
-                        update_data['perfis_json'] = perfis_array  # Array direto para PostgreSQL JSONB
+                        update_data['perfis_json'] = perfis_array  # Direct array for PostgreSQL JSONB
                     else:
-                        # Limpar perfis - set both to null/empty since no functional profiles
-                        update_data['perfil_principal'] = 'basico'  # Always basico for regular users
+                        # No functional profiles - set defaults
+                        update_data['perfil_principal'] = 'basico'  # Default for regular users
                         update_data['perfis_json'] = []  # Empty array for no functional profiles
                         print(f"[PERFIS] No functional profiles after filtering, setting perfil_principal=basico and empty perfis_json")
                     
@@ -3579,10 +3610,28 @@ def api_cleanup_profiles():
                 # Filter out 'basico' from perfis_json
                 cleaned_profiles = [p for p in perfis_json if p != 'basico']
                 
-                # Update user with cleaned profiles
+                # Determine correct perfil_principal based on user role and remaining profiles
+                perfil_principal = 'basico'  # Default
+                
+                # Get user role to determine correct perfil_principal
+                user_details = supabase_admin.table(get_users_table()).select('role').eq('id', user_id).execute()
+                if user_details.data:
+                    user_role = user_details.data[0].get('role')
+                    if user_role == 'interno_unique':
+                        # Check if user has admin profiles
+                        admin_profiles = [p for p in cleaned_profiles if p in ['admin_operacao', 'admin_financeiro']]
+                        if admin_profiles:
+                            perfil_principal = admin_profiles[0]  # Use first admin profile
+                        else:
+                            perfil_principal = 'basico'  # Regular interno_unique user
+                    elif user_role == 'admin':
+                        perfil_principal = 'master_admin'  # Admin users always use master_admin
+                    # cliente_unique users use 'basico' (default)
+                
+                # Update user with cleaned profiles and correct perfil_principal
                 update_data = {
                     'perfis_json': cleaned_profiles,
-                    'perfil_principal': 'basico'  # Ensure perfil_principal is always basico
+                    'perfil_principal': perfil_principal
                 }
                 
                 result = supabase_admin.table(get_users_table()).update(update_data).eq('id', user_id).execute()

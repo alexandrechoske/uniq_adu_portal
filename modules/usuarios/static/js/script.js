@@ -876,6 +876,10 @@ function fillUserForm(user) {
     }
     
     handleRoleChange();
+    
+    // CRITICAL FIX: Set the correct module admin radio button based on user's perfil_principal
+    setModuleAdminSelection(user);
+    
     hidePasswordSection();
     
     // Carregar empresas e WhatsApp se necessário
@@ -1280,8 +1284,22 @@ function collectUserFormData() {
         // Regular user or admin role
         if (formData.role === 'admin') {
             formData.perfil_principal = 'master_admin';
+        } else if (appState.currentMode === MODAL_MODES.EDIT && appState.currentUser) {
+            // CRITICAL FIX: When editing existing user and no module admin selected,
+            // preserve the existing perfil_principal if it's a valid one
+            const currentPerfilPrincipal = appState.currentUser.perfil_principal;
+            if (currentPerfilPrincipal && 
+                ['admin_operacao', 'admin_financeiro', 'basico'].includes(currentPerfilPrincipal)) {
+                formData.perfil_principal = currentPerfilPrincipal;
+                console.log('[MODULE_ADMIN] Preserving existing perfil_principal:', currentPerfilPrincipal);
+            } else {
+                formData.perfil_principal = 'basico';
+                console.log('[MODULE_ADMIN] Defaulting to basico (invalid or missing current perfil_principal)');
+            }
         } else {
+            // Creating new user - default to basico
             formData.perfil_principal = 'basico';
+            console.log('[MODULE_ADMIN] New user defaulting to basico');
         }
     }
     
@@ -1295,6 +1313,59 @@ function collectUserFormData() {
 function getModuleAdminSelection() {
     const selectedRadio = document.querySelector('input[name="module_admin"]:checked');
     return selectedRadio ? selectedRadio.value : 'none';
+}
+
+/**
+ * Sets the module administrator radio button based on user's perfil_principal
+ * CRITICAL FIX: This ensures the correct radio button is selected when editing users
+ */
+function setModuleAdminSelection(user) {
+    console.log('[MODULE_ADMIN] Setting module admin selection for user:', user);
+    
+    // Only proceed if the module admin section exists (Master Admin interface)
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    if (!moduleAdminSection) {
+        console.log('[MODULE_ADMIN] Module admin section not found - user is not Master Admin');
+        return;
+    }
+    
+    // Only set for interno_unique users
+    if (user.role !== 'interno_unique') {
+        console.log('[MODULE_ADMIN] User is not interno_unique, skipping module admin selection');
+        return;
+    }
+    
+    const perfilPrincipal = user.perfil_principal;
+    console.log('[MODULE_ADMIN] User perfil_principal:', perfilPrincipal);
+    
+    // Determine which radio button to select based on perfil_principal
+    let targetValue = 'none'; // Default to regular user
+    
+    if (perfilPrincipal === 'admin_operacao') {
+        targetValue = 'admin_operacao';
+        console.log('[MODULE_ADMIN] User is Operational Module Admin');
+    } else if (perfilPrincipal === 'admin_financeiro') {
+        targetValue = 'admin_financeiro';
+        console.log('[MODULE_ADMIN] User is Financial Module Admin');
+    } else if (perfilPrincipal === 'basico') {
+        targetValue = 'none';
+        console.log('[MODULE_ADMIN] User is regular internal user');
+    } else {
+        console.warn('[MODULE_ADMIN] Unexpected perfil_principal for interno_unique user:', perfilPrincipal);
+        targetValue = 'none'; // Default to safe option
+    }
+    
+    // Set the correct radio button
+    const targetRadio = document.querySelector(`input[name="module_admin"][value="${targetValue}"]`);
+    if (targetRadio) {
+        targetRadio.checked = true;
+        console.log('[MODULE_ADMIN] Successfully set radio button to:', targetValue);
+        
+        // Trigger change event to update UI if needed
+        targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+        console.error('[MODULE_ADMIN] Could not find radio button for value:', targetValue);
+    }
 }
 
 /**

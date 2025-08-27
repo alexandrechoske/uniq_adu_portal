@@ -160,6 +160,7 @@ def login_required(f):
                 'id': 'api_bypass',
                 'email': 'api@bypass.com',
                 'role': 'admin',
+                'perfil_principal': 'master_admin',  # CRITICAL FIX: API bypass needs master_admin privileges
                 'name': 'API Bypass',
                 'user_companies': []
             }
