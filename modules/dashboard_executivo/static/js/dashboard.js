@@ -130,6 +130,12 @@ let dashboardState = {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
     
+    // Check if user has company warning - if so, don't initialize dashboard
+    if (window.showCompanyWarning) {
+        console.log('[DASHBOARD_EXECUTIVO] Dashboard bloqueado - usuário sem empresas vinculadas');
+        return; // Exit early, don't initialize any dashboard functionality
+    }
+    
     // Detectar se o usuário está voltando para a página (cache do navegador)
     window.addEventListener('pageshow', function(event) {
         if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
@@ -626,6 +632,12 @@ function validateAndRecreateCharts() {
 }
 
 async function initializeDashboard() {
+    // Check if user has company warning - exit early if so
+    if (window.showCompanyWarning) {
+        console.log('[DASHBOARD_EXECUTIVO] Dashboard bloqueado - usuário sem empresas vinculadas');
+        return;
+    }
+    
     // Evitar múltiplas inicializações simultâneas
     if (dashboardState.isLoading || dashboardState.isInitialized) {
         console.log('[DASHBOARD_EXECUTIVO] Dashboard já está carregando ou inicializado');

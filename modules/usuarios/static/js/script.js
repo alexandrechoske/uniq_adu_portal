@@ -576,6 +576,17 @@ function createUserTableRow(user) {
     const isModuleAdmin = user.perfil_principal && ['admin_operacao', 'admin_financeiro'].includes(user.perfil_principal);
     const isMasterAdmin = user.perfil_principal === 'master_admin';
     
+    // NOVA LÓGICA: Verificar se tem perfis de admin baseado em is_admin_profile
+    const hasAdminProfile = user.perfis && Array.isArray(user.perfis) && user.perfis.some(perfil => perfil.is_admin_profile === true);
+    
+    console.log(`[DEBUG] Admin check for ${user.nome || user.name}:`, {
+        perfil_principal: user.perfil_principal,
+        isModuleAdmin: isModuleAdmin,
+        isMasterAdmin: isMasterAdmin,
+        hasAdminProfile: hasAdminProfile,
+        perfis: user.perfis
+    });
+    
     // Contar totais
     const totalEmpresas = (user.agent_info?.empresas && Array.isArray(user.agent_info.empresas)) ? user.agent_info.empresas.length : 0;
     const totalNumeros = (user.whatsapp_numbers && Array.isArray(user.whatsapp_numbers)) ? user.whatsapp_numbers.length : 0;
@@ -603,7 +614,7 @@ function createUserTableRow(user) {
         <td class="user-admin-cell">
             ${
                 isMasterAdmin ? '<i class="admin-shield mdi mdi-shield-crown" title="Master Admin"></i>' :
-                isModuleAdmin ? '<i class="admin-shield mdi mdi-shield" title="Administrador de Módulo"></i>' :
+                hasAdminProfile ? '<i class="admin-shield mdi mdi-shield" title="Administrador de Módulo"></i>' :
                 '<span class="admin-none">-</span>'
             }
         </td>
@@ -2241,11 +2252,18 @@ async function loadAvailablePerfis() {
 async function loadUserPerfis(userId) {
     if (!userId) return;
     
+    console.log('[PERFIS_DEBUG] Loading profiles for user:', userId);
+    
     try {
         const response = await apiRequest(`/${userId}/perfis`);
         
+        console.log('[PERFIS_DEBUG] Raw response from backend:', response);
+        
         if (response.success) {
-            appState.perfis.selected = response.perfis.map(p => p.id);
+            const profileIds = response.perfis.map(p => p.id);
+            console.log('[PERFIS_DEBUG] Profile IDs extracted from response:', profileIds);
+            
+            appState.perfis.selected = profileIds;
             console.log('[PERFIS] Perfis do usuário carregados:', appState.perfis.selected);
             renderPerfisList();
             updatePerfisSelectedCount();
@@ -2285,7 +2303,7 @@ function renderPerfisList(searchTerm = '') {
     if (searchTerm) {
         filteredPerfis = filteredPerfis.filter(perfil => 
             perfil.perfil_nome.toLowerCase().includes(searchTerm) ||
-            perfil.perfil_descricao.toLowerCase().includes(searchTerm) ||
+            perfil.descricao.toLowerCase().includes(searchTerm) ||
             perfil.codigo.toLowerCase().includes(searchTerm)
         );
     }
@@ -2326,7 +2344,7 @@ function createPerfilItem(perfil) {
                ${isSelected ? 'checked' : ''}>
         <div class="perfil-info">
             <div class="perfil-name">${perfil.perfil_nome}</div>
-            <div class="perfil-description">${perfil.perfil_descricao || 'Sem descrição'}</div>
+            <div class="perfil-description">${perfil.descricao || 'Sem descrição'}</div>
         </div>
         <div class="perfil-codigo">${perfil.codigo}</div>
     `;
@@ -2352,13 +2370,20 @@ function createPerfilItem(perfil) {
  * Manipula seleção/desseleção de perfil
  */
 function handlePerfilToggle(perfilId, isSelected) {
+    console.log('[PERFIS_DEBUG] Profile toggle called:', { perfilId, isSelected });
+    console.log('[PERFIS_DEBUG] Current selected before toggle:', JSON.stringify(appState.perfis.selected));
+    
     if (isSelected) {
         if (!appState.perfis.selected.includes(perfilId)) {
             appState.perfis.selected.push(perfilId);
+            console.log('[PERFIS_DEBUG] Added profile:', perfilId);
         }
     } else {
         appState.perfis.selected = appState.perfis.selected.filter(id => id !== perfilId);
+        console.log('[PERFIS_DEBUG] Removed profile:', perfilId);
     }
+    
+    console.log('[PERFIS_DEBUG] Selected after toggle:', JSON.stringify(appState.perfis.selected));
     
     // Atualizar UI
     updatePerfilItemSelection(perfilId, isSelected);
@@ -2398,9 +2423,17 @@ function updatePerfisSelectedCount() {
 async function saveUserPerfis(userId) {
     if (!userId) return;
     
+    // CRITICAL FIX: Filter out 'basico' from selected profiles since it belongs only in perfil_principal
+    const functionalProfiles = appState.perfis.selected.filter(profileId => profileId !== 'basico');
+    
+    console.log('[PERFIS_DEBUG] About to save profiles for user:', userId);
+    console.log('[PERFIS_DEBUG] Selected profiles before filtering:', appState.perfis.selected);
+    console.log('[PERFIS_DEBUG] Functional profiles after filtering out basico:', functionalProfiles);
+    console.log('[PERFIS_DEBUG] Profile array contents:', JSON.stringify(functionalProfiles));
+    
     try {
         const response = await apiRequest(`/${userId}/perfis`, 'POST', {
-            perfis_ids: appState.perfis.selected
+            perfis_ids: functionalProfiles
         });
         
         if (response.success) {
@@ -2593,6 +2626,9 @@ function renderUserDetails(user) {
     const isModuleAdmin = user.perfil_principal && ['admin_operacao', 'admin_financeiro'].includes(user.perfil_principal);
     const isMasterAdmin = user.perfil_principal === 'master_admin';
     
+    // NOVA LÓGICA: Verificar se tem perfis de admin baseado em is_admin_profile
+    const hasAdminProfile = user.perfis && Array.isArray(user.perfis) && user.perfis.some(perfil => perfil.is_admin_profile === true);
+    
     // Status
     const isActive = user.ativo === true || user.ativo === 'true';
     
@@ -2649,7 +2685,7 @@ function renderUserDetails(user) {
                     <span class="detail-value">
                         ${
                             isMasterAdmin ? '<span class="admin-badge master"><i class="mdi mdi-shield-crown"></i> Master Admin</span>' :
-                            isModuleAdmin ? '<span class="admin-badge module"><i class="mdi mdi-shield"></i> Administrador de Módulo</span>' :
+                            hasAdminProfile ? '<span class="admin-badge module"><i class="mdi mdi-shield"></i> Administrador de Módulo</span>' :
                             '<span class="text-muted">Usuário Regular</span>'
                         }
                     </span>

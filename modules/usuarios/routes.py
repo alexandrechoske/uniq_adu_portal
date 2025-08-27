@@ -381,32 +381,108 @@ def carregar_usuarios():
                         user_whatsapp_map[user_id] = []
                     user_whatsapp_map[user_id].append(whatsapp)
 
-        # 5. Buscar perfis de usuários (se a tabela existir)
+        # 5. Processar perfis dos usuários a partir do campo perfis_json
         user_perfis_map = {}
         try:
-            def _buscar_perfis():
-                return supabase_admin.table('users_perfis').select('user_id, perfil_id, perfis!inner(nome, descricao)').execute()
+            print(f"[DEBUG] Iniciando processamento de perfis...")
             
-            perfis_response = retry_supabase_operation(_buscar_perfis)
+            # Buscar definições de perfis na tabela users_perfis para obter nomes e descrições
+            def _buscar_definicoes_perfis():
+                return supabase_admin.table('users_perfis').select('perfil_nome, descricao, modulo_nome, is_admin_profile').execute()
             
-            if perfis_response.data:
-                print(f"[DEBUG] {len(perfis_response.data)} associações de perfis encontradas")
-                for perfil_user in perfis_response.data:
-                    user_id = perfil_user.get('user_id')
-                    if user_id:
-                        if user_id not in user_perfis_map:
-                            user_perfis_map[user_id] = []
-                        user_perfis_map[user_id].append({
-                            'perfil_id': perfil_user.get('perfil_id'),
-                            'nome': perfil_user.get('perfis', {}).get('nome'),
-                            'descricao': perfil_user.get('perfis', {}).get('descricao')
-                        })
+            definicoes_response = retry_supabase_operation(_buscar_definicoes_perfis)
+            
+            print(f"[DEBUG] Resposta das definições de perfis: {definicoes_response.data[:3] if definicoes_response.data else 'None'}...")  # Mostrar apenas primeiros 3
+            
+            # Criar mapa de perfil_nome -> dados do perfil (agrupando módulos)
+            perfis_definicoes_map = {}
+            if definicoes_response.data:
+                for perfil_def in definicoes_response.data:
+                    perfil_nome = perfil_def.get('perfil_nome')
+                    if perfil_nome:
+                        if perfil_nome not in perfis_definicoes_map:
+                            perfis_definicoes_map[perfil_nome] = {
+                                'nome': perfil_nome,
+                                'descricao': perfil_def.get('descricao') or f'Perfil {perfil_nome}',
+                                'modulos': set(),  # Usar set para evitar duplicatas
+                                'is_admin_profile': perfil_def.get('is_admin_profile', False)
+                            }
+                        # Adicionar módulo
+                        modulo_nome = perfil_def.get('modulo_nome')
+                        if modulo_nome:
+                            perfis_definicoes_map[perfil_nome]['modulos'].add(modulo_nome)
+                
+                # Converter sets para listas
+                for perfil_nome in perfis_definicoes_map:
+                    perfis_definicoes_map[perfil_nome]['modulos'] = list(perfis_definicoes_map[perfil_nome]['modulos'])
+            
+            print(f"[DEBUG] {len(perfis_definicoes_map)} definições de perfis carregadas: {list(perfis_definicoes_map.keys())}")
+            
+            # Processar perfis_json de cada usuário
+            for user in users:
+                if not isinstance(user, dict):
+                    continue
+                    
+                user_id = user.get('id')
+                perfis_json = user.get('perfis_json')
+                user_name = user.get('name') or user.get('nome', 'Sem nome')
+                
+                print(f"[DEBUG] Processando perfis para usuário {user_name} ({user_id}): {perfis_json} (tipo: {type(perfis_json)})")
+                
+                if perfis_json:
+                    # Converter para lista se for string
+                    if isinstance(perfis_json, str):
+                        try:
+                            perfis_list = json.loads(perfis_json)
+                            print(f"[DEBUG] Decodificado string JSON para lista: {perfis_list}")
+                        except json.JSONDecodeError:
+                            print(f"[DEBUG] ERRO ao decodificar perfis_json para usuário {user_id}: {perfis_json}")
+                            perfis_list = []
+                    elif isinstance(perfis_json, list):
+                        perfis_list = perfis_json
+                        print(f"[DEBUG] Já é uma lista: {perfis_list}")
+                    else:
+                        perfis_list = []
+                        print(f"[DEBUG] Tipo não suportado ({type(perfis_json)}), usando lista vazia")
+                    
+                    # Criar lista de perfis com dados completos
+                    user_perfis = []
+                    for perfil_nome in perfis_list:
+                        if perfil_nome and perfil_nome.strip():  # Validar nome não vazio
+                            perfil_nome = perfil_nome.strip()
+                            print(f"[DEBUG] Verificando perfil '{perfil_nome}' para usuário {user_name}")
+                            if perfil_nome in perfis_definicoes_map:
+                                user_perfis.append(perfis_definicoes_map[perfil_nome])
+                                print(f"[DEBUG] ✓ Perfil {perfil_nome} encontrado para usuário {user_name}")
+                            else:
+                                # Perfil sem definição, usar nome apenas
+                                user_perfis.append({
+                                    'nome': perfil_nome,
+                                    'descricao': f'Perfil {perfil_nome} (sem definição)',
+                                    'modulos': [],
+                                    'is_admin_profile': False
+                                })
+                                print(f"[DEBUG] ⚠️ Perfil {perfil_nome} NÃO encontrado para usuário {user_name} - criando entrada manual")
+                    
+                    if user_perfis:
+                        user_perfis_map[user_id] = user_perfis
+                        print(f"[DEBUG] ✓ Usuário {user_name}: {len(user_perfis)} perfis carregados")
+                    else:
+                        print(f"[DEBUG] ✗ Usuário {user_name}: nenhum perfil válido encontrado")
+                else:
+                    print(f"[DEBUG] ⊘ Usuário {user_name}: perfis_json é nulo ou vazio")
+            
+            print(f"[DEBUG] ========== RESUMO FINAL DE PERFIS ==========")
+            print(f"[DEBUG] Total de usuários com perfis: {len(user_perfis_map)}")
+            for user_id, perfis in user_perfis_map.items():
+                user_name = next((u.get('name') or u.get('nome', 'Sem nome') for u in users if u.get('id') == user_id), 'Usuário desconhecido')
+                print(f"[DEBUG] - {user_name} ({user_id}): {len(perfis)} perfis = {[p['nome'] for p in perfis]}")
+            print(f"[DEBUG] ===============================================")
+            
         except Exception as perfil_error:
-            # Se a tabela não existir, continuar sem perfis
-            if 'does not exist' in str(perfil_error):
-                print(f"[DEBUG] Tabela users_perfis não existe, continuando sem perfis")
-            else:
-                print(f"[DEBUG] Erro ao carregar perfis: {str(perfil_error)}")
+            print(f"[DEBUG] ERRO ao processar perfis: {str(perfil_error)}")
+            import traceback
+            traceback.print_exc()
 
         # 6. Montar dados finais dos usuários com nova estrutura
         for user in users:
@@ -1821,27 +1897,76 @@ def obter_dados_usuario(user_id):
             print(f"[DEBUG] Erro ao buscar números WhatsApp: {str(e)}")
             user['whatsapp_numbers'] = []
         
-        # Load user profiles (if the table exists)
+        # Load user profiles from perfis_json field
         try:
-            perfis_response = supabase_admin.table('users_perfis').select('user_id, perfil_id, perfis!inner(nome, descricao)').eq('user_id', user_id).execute()
-            
+            perfis_json = user.get('perfis_json')
             perfis = []
-            if perfis_response.data:
-                for perfil_user in perfis_response.data:
-                    perfis.append({
-                        'perfil_id': perfil_user.get('perfil_id'),
-                        'nome': perfil_user.get('perfis', {}).get('nome'),
-                        'descricao': perfil_user.get('perfis', {}).get('descricao')
-                    })
+            
+            print(f"[DEBUG] Carregando perfis para usuário {user_id}, perfis_json: {perfis_json}")
+            
+            if perfis_json:
+                # Convert to list if string
+                if isinstance(perfis_json, str):
+                    try:
+                        perfis_list = json.loads(perfis_json)
+                    except json.JSONDecodeError:
+                        print(f"[DEBUG] Erro ao decodificar perfis_json para usuário {user_id}: {perfis_json}")
+                        perfis_list = []
+                elif isinstance(perfis_json, list):
+                    perfis_list = perfis_json
+                else:
+                    perfis_list = []
+                
+                # Load profile definitions to get descriptions (grouping modules)
+                definicoes_response = supabase_admin.table('users_perfis').select('perfil_nome, descricao, modulo_nome, is_admin_profile').execute()
+                
+                perfis_definicoes_map = {}
+                if definicoes_response.data:
+                    for perfil_def in definicoes_response.data:
+                        perfil_nome = perfil_def.get('perfil_nome')
+                        if perfil_nome:
+                            if perfil_nome not in perfis_definicoes_map:
+                                perfis_definicoes_map[perfil_nome] = {
+                                    'nome': perfil_nome,
+                                    'descricao': perfil_def.get('descricao') or f'Perfil {perfil_nome}',
+                                    'modulos': set(),  # Usar set para evitar duplicatas
+                                    'is_admin_profile': perfil_def.get('is_admin_profile', False)
+                                }
+                            # Adicionar módulo
+                            modulo_nome = perfil_def.get('modulo_nome')
+                            if modulo_nome:
+                                perfis_definicoes_map[perfil_nome]['modulos'].add(modulo_nome)
+                    
+                    # Converter sets para listas
+                    for perfil_nome in perfis_definicoes_map:
+                        perfis_definicoes_map[perfil_nome]['modulos'] = list(perfis_definicoes_map[perfil_nome]['modulos'])
+                
+                print(f"[DEBUG] Definições de perfis carregadas: {list(perfis_definicoes_map.keys())}")
+                
+                # Build complete profile list
+                for perfil_nome in perfis_list:
+                    if perfil_nome and perfil_nome.strip():
+                        perfil_nome = perfil_nome.strip()
+                        if perfil_nome in perfis_definicoes_map:
+                            perfis.append(perfis_definicoes_map[perfil_nome])
+                            print(f"[DEBUG] Perfil {perfil_nome} encontrado e adicionado")
+                        else:
+                            # Profile without definition, use name only
+                            perfis.append({
+                                'nome': perfil_nome,
+                                'descricao': f'Perfil {perfil_nome} (sem definição)',
+                                'modulos': [],
+                                'is_admin_profile': False
+                            })
+                            print(f"[DEBUG] Perfil {perfil_nome} NÃO encontrado - criando entrada manual")
             
             user['perfis'] = perfis
             print(f"[DEBUG] Total de perfis: {len(user['perfis'])}")
+            
         except Exception as perfil_error:
-            # If the table doesn't exist, continue without profiles
-            if 'does not exist' in str(perfil_error):
-                print(f"[DEBUG] Tabela users_perfis não existe, continuando sem perfis")
-            else:
-                print(f"[DEBUG] Erro ao carregar perfis: {str(perfil_error)}")
+            print(f"[DEBUG] Erro ao carregar perfis: {str(perfil_error)}")
+            import traceback
+            traceback.print_exc()
             user['perfis'] = []
         
         return jsonify({'success': True, 'data': user})
@@ -2836,7 +2961,7 @@ def perfis_create():
             }), 400
         
         perfil_nome = data.get('nome', '').strip()
-        perfil_descricao = data.get('descricao', '').strip()
+        descricao = data.get('descricao', '').strip()
         perfil_ativo = data.get('ativo', True)
         modulos = data.get('modulos', [])
         
@@ -2912,7 +3037,7 @@ def perfis_create():
                 'id': insert_result.data[0]['id'],
                 'codigo': perfil_codigo,
                 'nome': perfil_nome,
-                'descricao': perfil_descricao,
+                'descricao': descricao,
                 'ativo': perfil_ativo
             }
         })
@@ -2942,7 +3067,7 @@ def perfis_update():
         perfil_id = data.get('id')  # Usar ID como chave primária
         # RESTRIÇÃO: Não permitir alteração do nome para preservar relacionamentos
         # perfil_nome = data.get('nome', '').strip()  # REMOVIDO - nome não editável
-        perfil_descricao = data.get('descricao', '').strip()  # Descrição editável
+        descricao = data.get('descricao', '').strip()  # Descrição editável
         perfil_ativo = data.get('ativo', True)
         modulos = data.get('modulos', [])
         
@@ -2980,7 +3105,7 @@ def perfis_update():
                     'modulo_nome': modulo['nome'],
                     'paginas_modulo': modulo.get('paginas', []),
                     'is_active': perfil_ativo,
-                    'descricao': perfil_descricao,  # Descrição editável
+                    'descricao': descricao,  # Descrição editável
                     'created_at': datetime.datetime.now().isoformat(),
                     'updated_at': datetime.datetime.now().isoformat()
                 })
@@ -2993,7 +3118,7 @@ def perfis_update():
                 'modulo_nome': 'Sistema',
                 'paginas_modulo': [],
                 'is_active': perfil_ativo,
-                'descricao': perfil_descricao,  # Descrição editável
+                'descricao': descricao,  # Descrição editável
                 'created_at': datetime.datetime.now().isoformat(),
                 'updated_at': datetime.datetime.now().isoformat()
             })
@@ -3360,33 +3485,32 @@ def api_update_users_perfis(user_id):
                     update_data = {}
                     
                     if perfis_ids:
-                        # Filter out 'basico' from perfis_ids if other profiles exist
-                        non_basico_perfis = [p for p in perfis_ids if p != 'basico']
+                        # CORREÇÃO: perfil_principal deve sempre ser 'basico' para usuários regulares
+                        # Os perfis funcionais ficam armazenados em perfis_json
+                        update_data['perfil_principal'] = 'basico'
+                        print(f"[PERFIS] Setting perfil_principal to basico (profiles stored in perfis_json: {perfis_ids})")
                         
-                        # Use non-basico profile as principal if available, otherwise use first profile
-                        if non_basico_perfis:
-                            update_data['perfil_principal'] = non_basico_perfis[0]
-                            print(f"[PERFIS] Setting perfil_principal to non-basico profile: {non_basico_perfis[0]}")
-                        else:
-                            update_data['perfil_principal'] = perfis_ids[0]
-                            print(f"[PERFIS] Setting perfil_principal to first profile: {perfis_ids[0]}")
+                        # CRITICAL FIX: Filter out 'basico' from perfis_json since it belongs only in perfil_principal
+                        functional_profiles = [p for p in perfis_ids if p != 'basico']
+                        print(f"[PERFIS] Filtering out 'basico' from perfis_json. Original: {perfis_ids}, Filtered: {functional_profiles}")
                         
                         # CORREÇÃO: Garantir que perfis_json seja salvo como array JSON, não string
                         # Se perfis_ids já é uma lista, usar diretamente
                         # Se for string JSON, converter para lista primeiro
-                        if isinstance(perfis_ids, str):
+                        if isinstance(functional_profiles, str):
                             try:
-                                perfis_array = json.loads(perfis_ids)
+                                perfis_array = json.loads(functional_profiles)
                             except json.JSONDecodeError:
-                                perfis_array = [perfis_ids]  # Se não for JSON válido, tratar como único perfil
+                                perfis_array = [functional_profiles]  # Se não for JSON válido, tratar como único perfil
                         else:
-                            perfis_array = perfis_ids  # Já é lista
+                            perfis_array = functional_profiles  # Já é lista
                         
                         update_data['perfis_json'] = perfis_array  # Array direto para PostgreSQL JSONB
                     else:
-                        # Limpar perfis
-                        update_data['perfil_principal'] = None
-                        update_data['perfis_json'] = []  # Array vazio
+                        # Limpar perfis - set both to null/empty since no functional profiles
+                        update_data['perfil_principal'] = 'basico'  # Always basico for regular users
+                        update_data['perfis_json'] = []  # Empty array for no functional profiles
+                        print(f"[PERFIS] No functional profiles after filtering, setting perfil_principal=basico and empty perfis_json")
                     
                     print(f"[PERFIS] 🔧 Tentando atualizar usuário {user_id} com dados: {update_data}")
                     
@@ -3425,4 +3549,64 @@ def api_update_users_perfis(user_id):
         return jsonify({
             'success': False,
             'message': f'Erro ao atualizar perfis: {str(e)}'
+        }), 500
+
+@bp.route('/api/cleanup-profiles', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def api_cleanup_profiles():
+    """ADMIN ONLY: Remove 'basico' from perfis_json of all users (one-time cleanup)"""
+    try:
+        print(f"[CLEANUP] Starting profile cleanup to remove 'basico' from perfis_json...")
+        
+        # Get all users with perfis_json containing 'basico'
+        users_response = supabase_admin.table(get_users_table()).select('id, name, perfis_json').execute()
+        
+        if not users_response.data:
+            return jsonify({
+                'success': True,
+                'message': 'No users found to clean up'
+            })
+        
+        cleaned_count = 0
+        
+        for user in users_response.data:
+            user_id = user['id']
+            user_name = user['name']
+            perfis_json = user['perfis_json']
+            
+            if perfis_json and isinstance(perfis_json, list) and 'basico' in perfis_json:
+                # Filter out 'basico' from perfis_json
+                cleaned_profiles = [p for p in perfis_json if p != 'basico']
+                
+                # Update user with cleaned profiles
+                update_data = {
+                    'perfis_json': cleaned_profiles,
+                    'perfil_principal': 'basico'  # Ensure perfil_principal is always basico
+                }
+                
+                result = supabase_admin.table(get_users_table()).update(update_data).eq('id', user_id).execute()
+                
+                if result.data:
+                    print(f"[CLEANUP] ✅ Cleaned user {user_name}: {perfis_json} -> {cleaned_profiles}")
+                    cleaned_count += 1
+                else:
+                    print(f"[CLEANUP] ❌ Failed to clean user {user_name}")
+        
+        # Invalidate cache after cleanup
+        invalidate_users_cache()
+        
+        print(f"[CLEANUP] ✅ Profile cleanup completed. {cleaned_count} users updated.")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Profile cleanup completed. {cleaned_count} users updated.',
+            'cleaned_count': cleaned_count
+        })
+        
+    except Exception as e:
+        print(f"[CLEANUP] ❌ Error during profile cleanup: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error during cleanup: {str(e)}'
         }), 500

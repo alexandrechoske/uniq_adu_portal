@@ -122,6 +122,17 @@ def dashboard():
     if not check_permission('dashboard_executivo.visualizar'):
         return render_template('errors/403.html'), 403
     
+    # Verificar se é cliente_unique sem empresas associadas
+    user_data = session.get('user', {})
+    user_role = user_data.get('role')
+    
+    if user_role == 'cliente_unique':
+        user_cnpjs = get_user_companies(user_data)
+        if not user_cnpjs:
+            print(f"[DASH_RESUMIDO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            # Passar flag para o template indicar que deve mostrar aviso
+            return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html', show_company_warning=True)
+    
     return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html')
 
 @dash_importacoes_resumido_bp.route('/api/data')
@@ -195,7 +206,7 @@ def get_dashboard_data():
                         query = query.in_('cnpj_importador', user_cnpjs)
                         print(f"[DEBUG] Query filtrada por CNPJs das empresas vinculadas: {user_cnpjs}")
                     else:
-                        print(f"[DEBUG] Usuário {user_role} sem CNPJs vinculados - retornando vazio")
+                        print(f"[DEBUG] Usuário {user_role} sem CNPJs vinculados - retornando aviso de segurança")
                         return jsonify({
                             'success': False,
                             'error': 'Cliente sem empresas vinculadas',

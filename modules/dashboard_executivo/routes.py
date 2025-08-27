@@ -445,6 +445,18 @@ def user_can_view_materials(user_data):
 def index():
     """Página principal do Dashboard Executivo - APENAS para módulo de importações"""
     print(f"[DASHBOARD_EXECUTIVO] Acesso autorizado ao dashboard executivo de importações")
+    
+    # Verificar se é cliente_unique sem empresas associadas
+    user_data = session.get('user', {})
+    user_role = user_data.get('role')
+    
+    if user_role == 'cliente_unique':
+        user_cnpjs = get_user_companies(user_data)
+        if not user_cnpjs:
+            print(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            # Passar flag para o template indicar que deve mostrar aviso
+            return render_template('dashboard_executivo.html', show_company_warning=True)
+    
     return render_template('dashboard_executivo.html')
 
 @bp.route('/api/load-data')
@@ -1347,6 +1359,21 @@ def bootstrap_dashboard():
     """
     try:
         user_data = session.get('user', {})
+        user_role = user_data.get('role')
+        user_email = user_data.get('email')
+        
+        # SECURITY: Verificar se cliente_unique tem empresas associadas
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user_data)
+            if not user_cnpjs:
+                print(f"[DASHBOARD_EXECUTIVO] Cliente {user_email} sem empresas vinculadas - bloqueando acesso aos dados")
+                return jsonify({
+                    'success': False, 
+                    'error': 'no_companies',
+                    'message': 'Usuário sem empresas vinculadas. Entre em contato com o administrador para associar empresas ao seu perfil.',
+                    'show_warning': True
+                }), 200
+        
         base_data = fetch_and_cache_dashboard_data(user_data)
         if not base_data:
             return jsonify({'success': False, 'error': 'Sem dados base.'}), 200
