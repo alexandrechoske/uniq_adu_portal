@@ -19,6 +19,61 @@ let isLoading = false;
 let loadAttempts = 0;
 const maxLoadAttempts = 3;
 
+// ===== VALIDATION FUNCTIONS FOR NO-COMPANIES USERS =====
+/**
+ * Show warning message for users without companies
+ */
+function showNoCompaniesWarning() {
+    const warningElement = document.getElementById('no-companies-warning');
+    if (warningElement) {
+        warningElement.style.display = 'block';
+    }
+    
+    // Hide all dashboard content
+    hideDashboardContent();
+    
+    console.log('[DASHBOARD_EXECUTIVO] Mostrando aviso para usuário sem empresas vinculadas');
+}
+
+/**
+ * Hide dashboard content when user has no companies
+ */
+function hideDashboardContent() {
+    // Hide KPI cards
+    const kpiGrid = document.querySelector('.kpi-grid');
+    if (kpiGrid) kpiGrid.style.display = 'none';
+    
+    // Hide charts
+    const chartSections = document.querySelectorAll('.chart-section, .dashboard-line-1, .enhanced-table-section');
+    chartSections.forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Hide filter buttons
+    const filterButtons = document.querySelectorAll('#open-filters, #reset-filters');
+    filterButtons.forEach(btn => {
+        btn.style.display = 'none';
+    });
+}
+
+/**
+ * Check if API response indicates no-companies error
+ */
+function hasNoCompaniesError(response) {
+    return response && response.error_type === 'no_companies';
+}
+
+/**
+ * Handle no-companies error from API responses
+ */
+function handleNoCompaniesError(response) {
+    if (hasNoCompaniesError(response)) {
+        showNoCompaniesWarning();
+        return true;
+    }
+    return false;
+}
+
 // Paleta consistente para tipos de dado
 const DASH_COLORS = {
     processos: '#007bff', // azul
@@ -949,6 +1004,11 @@ async function loadDataWithRetry(maxRetries = 3) {
             const response = await fetch('/dashboard-executivo/api/load-data');
             const result = await response.json();
             
+            // Check for no-companies error
+            if (handleNoCompaniesError(result)) {
+                return [];
+            }
+            
             if (result.success && result.data && result.data.length > 0) {
                 console.log(`[DASHBOARD_EXECUTIVO] Dados carregados com sucesso: ${result.total_records} registros`);
                 return result.data;
@@ -1062,6 +1122,12 @@ async function loadDashboardKPIs() {
         const queryString = buildFilterQueryString();
         const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
+        
+        // Check for no-companies error
+        if (handleNoCompaniesError(result)) {
+            return;
+        }
+        
         if (result.success) {
             updateDashboardKPIs(result.kpis);
         } else {
@@ -1102,6 +1168,12 @@ async function loadDashboardKPIsWithRetry(maxRetries = 2) {
             const queryString = buildFilterQueryString();
             const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
             const result = await response.json();
+            
+            // Check for no-companies error
+            if (handleNoCompaniesError(result)) {
+                return;
+            }
+            
             if (result.success && result.kpis) {
                 console.log('[DASHBOARD_EXECUTIVO] KPIs carregados com sucesso');
                 dashboardCache.set('kpis', result.kpis);
@@ -1135,6 +1207,12 @@ async function loadDashboardCharts() {
         const queryString = buildFilterQueryString();
         const response = await fetchWithAbort('charts', `/dashboard-executivo/api/charts?${queryString}`);
         const result = await response.json();
+        
+        // Check for no-companies error
+        if (handleNoCompaniesError(result)) {
+            return;
+        }
+        
         if (result.success) {
             // Processar permissão de materiais
             if (typeof result.can_view_materials !== 'undefined') {
@@ -1233,6 +1311,12 @@ async function loadRecentOperations() {
         const queryString = buildFilterQueryString();
         const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
+        
+        // Check for no-companies error
+        if (handleNoCompaniesError(result)) {
+            return;
+        }
+        
         if (result.success) {
             // CORREÇÃO: Usar dados completos para mini popups
             if (result.operations_all) {
@@ -2010,17 +2094,19 @@ function openProcessModal(operationIndex) {
     
     // Update country flag
     const flagImg = document.getElementById('detail-country-flag');
-    if (countryName && countryName !== 'N/A' && countryName !== '-') {
-        const countryCode = getCountryCode(countryName);
-        if (countryCode) {
-            flagImg.src = `https://flagsapi.com/${countryCode}/flat/32.png`;
-            flagImg.alt = `Bandeira de ${countryName}`;
-            flagImg.style.display = 'inline';
+    if (flagImg) {
+        if (countryName && countryName !== 'N/A' && countryName !== '-') {
+            const countryCode = getCountryCode(countryName);
+            if (countryCode) {
+                flagImg.src = `https://flagsapi.com/${countryCode}/flat/32.png`;
+                flagImg.alt = `Bandeira de ${countryName}`;
+                flagImg.style.display = 'inline';
+            } else {
+                flagImg.style.display = 'none';
+            }
         } else {
             flagImg.style.display = 'none';
         }
-    } else {
-        flagImg.style.display = 'none';
     }
     
     // Update cargo and transport details

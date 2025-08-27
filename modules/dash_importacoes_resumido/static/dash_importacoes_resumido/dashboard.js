@@ -36,6 +36,57 @@ class DashboardImportacoesResumido {
         this.init();
     }
     
+    // ===== VALIDATION FUNCTIONS FOR NO-COMPANIES USERS =====
+    /**
+     * Show warning message for users without companies
+     */
+    showNoCompaniesWarning() {
+        const warningElement = document.getElementById('no-companies-warning');
+        if (warningElement) {
+            warningElement.style.display = 'block';
+        }
+        
+        // Hide main dashboard content
+        this.hideDashboardContent();
+        
+        console.log('[DASHBOARD_RESUMIDO] Mostrando aviso para usuário sem empresas vinculadas');
+    }
+    
+    /**
+     * Hide dashboard content when user has no companies
+     */
+    hideDashboardContent() {
+        // Hide main content
+        const mainContent = document.querySelector('.dashboard-main-content');
+        if (mainContent) mainContent.style.display = 'none';
+        
+        // Hide settings button
+        const settingsBtn = document.getElementById('btn-settings');
+        if (settingsBtn) settingsBtn.style.display = 'none';
+        
+        // Hide TV mode button
+        const tvBtn = document.getElementById('btn-fullscreen-tv');
+        if (tvBtn) tvBtn.style.display = 'none';
+    }
+    
+    /**
+     * Check if API response indicates no-companies error
+     */
+    hasNoCompaniesError(response) {
+        return response && response.error_type === 'no_companies';
+    }
+    
+    /**
+     * Handle no-companies error from API responses
+     */
+    handleNoCompaniesError(response) {
+        if (this.hasNoCompaniesError(response)) {
+            this.showNoCompaniesWarning();
+            return true;
+        }
+        return false;
+    }
+    
     init() {
         this.loadSettings();
         this.bindEvents();
@@ -547,6 +598,11 @@ class DashboardImportacoesResumido {
             }
             
             const data = await response.json();
+            
+            // Check for no-companies error
+            if (this.handleNoCompaniesError(data)) {
+                return;
+            }
             
             if (data.success) {
                 this.updateHeader(data.header);

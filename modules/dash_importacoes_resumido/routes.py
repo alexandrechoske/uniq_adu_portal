@@ -151,6 +151,29 @@ def get_dashboard_data():
             return jsonify({'error': 'Usuário não autenticado'}), 401
 
         print(f"[DEBUG] Dashboard API chamada por user_id: {user_id}, role: {user_role}")
+        
+        # VALIDATION: Check if cliente_unique has companies before loading data
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user)
+            if not user_cnpjs:
+                return jsonify({
+                    'success': False,
+                    'error': 'Cliente sem empresas vinculadas',
+                    'error_type': 'no_companies',
+                    'message': 'Seu perfil não possui empresas vinculadas. Entre em contato com o administrador para vinculação.',
+                    'header': {
+                        'total_processos': 0,
+                        'count_maritimo': 0,
+                        'count_aereo': 0,
+                        'count_terrestre': 0,
+                        'current_time': datetime.now().strftime('%H:%M'),
+                        'current_date': datetime.now().strftime('%d %B').upper(),
+                        'exchange_rates': get_exchange_rates(),
+                        'client': get_client_branding(user_email)
+                    },
+                    'data': [],
+                    'pagination': {'total': 0, 'pages': 0, 'current_page': 1, 'per_page': 10}
+                })
 
         # Obter filtros da requisição
         page = int(request.args.get('page', 1))
@@ -186,9 +209,9 @@ def get_dashboard_data():
                         print(f"[DEBUG] Usuário {user_role} sem CNPJs vinculados - retornando aviso de segurança")
                         return jsonify({
                             'success': False,
-                            'error': 'no_companies', 
-                            'message': 'Usuário sem empresas vinculadas. Entre em contato com o administrador para associar empresas ao seu perfil.',
-                            'show_warning': True,
+                            'error': 'Cliente sem empresas vinculadas',
+                            'error_type': 'no_companies',
+                            'message': 'Seu perfil não possui empresas vinculadas. Entre em contato com o administrador para vinculação.',
                             'header': {
                                 'total_processos': 0,
                                 'count_maritimo': 0,
