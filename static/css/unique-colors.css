@@ -423,6 +423,28 @@ div.actions-bar.module-header-generic nav.breadcrumb .breadcrumb-item:last-child
     color: var(--unique-accent-light) !important;
 }
 
+/* === HEADER DINÂMICO POR MÓDULO === */
+/* Header padrão (importações/geral) */
+.top-navbar {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-dark));
+    transition: background 0.3s ease;
+}
+
+/* Header para módulo financeiro */
+.top-navbar.header-financeiro {
+    background: linear-gradient(135deg, var(--unique-module-financeiro), #d35400) !important;
+}
+
+/* Header para módulo importações (padrão) */
+.top-navbar.header-importacoes {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-dark)) !important;
+}
+
+/* Header genérico */
+.top-navbar.header-generic {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-light)) !important;
+}
+
 /* === SIDEBAR === */
 .sidebar-unique {
     background-color: var(--unique-primary-medium);

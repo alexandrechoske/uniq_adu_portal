@@ -12,22 +12,13 @@
 {% block content %}
 <div class="dashboard-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
-            
-<nav class="breadcrumb">
-    
-        <div class="breadcrumb-item">
-            
-                <i class="mdi mdi-view-dashboard breadcrumb-icon"></i>
-            
-            
-                <span>Menu Principal</span>
-            
-        </div>
-        
-    
-</nav>
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
+                {'name': 'Faturamento', 'icon': 'mdi mdi-receipt'}
+            ], 'financeiro') }}
 
         </div>
     </div>

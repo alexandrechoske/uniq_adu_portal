@@ -12,13 +12,13 @@
 {% block content %}
 <div class="despesas-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
                 {'name': 'Controle de Despesas', 'icon': 'mdi mdi-cash-minus'}
-            ]) }}
+            ], 'financeiro') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
                 <span id="filter-summary-text">Vendo dados do ano atual</span>

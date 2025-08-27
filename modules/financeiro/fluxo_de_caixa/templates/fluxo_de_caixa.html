@@ -11,13 +11,13 @@
 {% block content %}
 <div class="fluxo-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
                 {'name': 'Fluxo de Caixa', 'icon': 'mdi mdi-chart-waterfall'}
-            ]) }}
+            ], 'financeiro') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
                 <span id="filter-summary-text">Vendo dados dos últimos 12 meses</span>

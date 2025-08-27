@@ -1149,6 +1149,53 @@
 
                 financeiroSubmenu.addEventListener('mouseleave', hideFinanceiroSubmenu);
             }
+
+            // === SISTEMA DE CORES DINÂMICAS DO HEADER ===
+            function applyDynamicHeaderColor() {
+                const header = document.querySelector('.top-navbar');
+                if (!header) return;
+
+                const currentPath = window.location.pathname.toLowerCase();
+                
+                // Remover todas as classes de módulo do header
+                header.classList.remove('header-financeiro', 'header-importacoes', 'header-generic');
+                
+                // Detectar módulo baseado na URL e aplicar classe correspondente
+                if (currentPath.includes('/financeiro/')) {
+                    header.classList.add('header-financeiro');
+                    console.log('[HEADER] Aplicada cor financeiro (laranja)');
+                } else if (currentPath.includes('/importac') || currentPath.includes('/dashboard-exec')) {
+                    header.classList.add('header-importacoes');
+                    console.log('[HEADER] Aplicada cor importações (azul)');
+                } else {
+                    header.classList.add('header-generic');
+                    console.log('[HEADER] Aplicada cor genérica (azul claro)');
+                }
+            }
+
+            // Aplicar cor do header no carregamento da página
+            applyDynamicHeaderColor();
+
+            // Re-aplicar cor do header em mudanças de navegação (SPA behavior)
+            window.addEventListener('popstate', applyDynamicHeaderColor);
+
+            // Aplicar cores dinâmicas para módulos específicos no actions-bar também
+            function applyModuleHeaderColors() {
+                const currentPath = window.location.pathname.toLowerCase();
+                const actionsBars = document.querySelectorAll('.actions-bar');
+                
+                actionsBars.forEach(bar => {
+                    if (currentPath.includes('/financeiro/')) {
+                        if (!bar.classList.contains('module-header-financeiro')) {
+                            bar.classList.remove('module-header-importacoes', 'module-header-generic');
+                            bar.classList.add('module-header-financeiro');
+                        }
+                    }
+                });
+            }
+
+            // Aplicar cores dos actions-bars também
+            applyModuleHeaderColors();
         });
     </script>
 
