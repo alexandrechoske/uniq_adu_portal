@@ -55,7 +55,6 @@ from session_handler import init_session_handler
 
 # Import routes after app initialization to avoid circular imports
 from routes import dashboard, api
-from routes import conferencia_pdf, debug, paginas
 from routes import background_tasks
 
 # Import modular dashboard blueprints
@@ -106,15 +105,8 @@ from modules.financeiro.routes import register_financeiro_blueprints
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
-# app.register_blueprint(relatorios.bp)  # Comentado - usando versão modular
-# app.register_blueprint(usuarios.bp)  # Comentado - usando versão modular
-# app.register_blueprint(agente.bp)  # Comentado - usando versão modular
+
 app.register_blueprint(api.bp, url_prefix='/api')  # Registrando o blueprint da API com prefixo
-# app.register_blueprint(conferencia.bp)  # Comentado - usando versão modular
-app.register_blueprint(conferencia_pdf.bp)  # Registrando o blueprint de PDF anotado para Conferência
-app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
-# app.register_blueprint(paginas.bp)  # Comentado - usando versão modular
-# app.register_blueprint(config.bp)  # Comentado - usando versão modular
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
 
 # Register modular dashboard blueprints
