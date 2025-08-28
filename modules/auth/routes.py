@@ -484,20 +484,36 @@ def forgot_password():
             # Configurar URL de redirecionamento
             redirect_url = request.url_root.rstrip('/') + url_for('auth.reset_password')
             
-            auth_response = supabase.auth.reset_password_for_email(
-                email,
-                {
-                    "redirect_to": redirect_url
-                }
-            )
+            # Try to send the password reset email
+            try:
+                auth_response = supabase.auth.reset_password_for_email(
+                    email,
+                    {
+                        "redirect_to": redirect_url
+                    }
+                )
+                print(f"[PASSWORD_RESET] Resposta do Supabase: {auth_response}")
+                flash('Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.', 'info')
+            except Exception as email_error:
+                print(f"[PASSWORD_RESET] Erro ao enviar email de recuperação: {str(email_error)}")
+                print(f"[PASSWORD_RESET] Tipo de erro: {type(email_error)}")
+                # Log more detailed error information
+                import traceback
+                print(f"[PASSWORD_RESET] Traceback completo:")
+                traceback.print_exc()
+                
+                # Check if it's a specific Supabase error
+                if hasattr(email_error, 'message'):
+                    print(f"[PASSWORD_RESET] Mensagem de erro detalhada: {email_error.message}")
+                
+                flash('Erro ao enviar email de recuperação. Por favor, tente novamente mais tarde ou entre em contato com o suporte.', 'error')
             
-            print(f"[PASSWORD_RESET] Resposta do Supabase: {auth_response}")
-            
-            flash('Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.', 'info')
             return redirect(url_for('auth.login'))
             
         except Exception as e:
-            print(f"[PASSWORD_RESET] Erro ao enviar email de recuperação: {str(e)}")
+            print(f"[PASSWORD_RESET] Erro geral no processo de reset: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash('Erro interno. Tente novamente mais tarde.', 'error')
             return render_template('forgot_password.html')
     
@@ -530,8 +546,16 @@ def reset_password():
                     session['reset_refresh_token'] = refresh_token
                     session['reset_user_email'] = auth_response.user.email
                     return render_template('reset_password.html', user_email=auth_response.user.email)
+                else:
+                    print(f"[PASSWORD_RESET] Falha ao autenticar com tokens da query string")
+                    flash('Link de recuperação inválido ou expirado. Solicite um novo link.', 'error')
+                    return redirect(url_for('auth.forgot_password'))
             except Exception as e:
                 print(f"[PASSWORD_RESET] Erro ao processar tokens da query string: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                flash('Link de recuperação inválido. Solicite um novo link.', 'error')
+                return redirect(url_for('auth.forgot_password'))
         
         # Se temos token simples (método de fallback), mostrar confirmação
         elif token and token_type == 'recovery':
@@ -623,6 +647,8 @@ def reset_password():
                 
         except Exception as e:
             print(f"[PASSWORD_RESET] Erro ao processar reset: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash('Erro interno. Tente novamente ou solicite um novo link.', 'error')
             return redirect(url_for('auth.forgot_password'))
                 

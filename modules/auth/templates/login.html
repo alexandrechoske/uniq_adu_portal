@@ -3,11 +3,12 @@
 {% block title %}Login - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/unique-colors.css') }}">
     <link rel="stylesheet" href="{{ url_for('auth.static', filename='css/auth.css') }}">
 {% endblock %}
 
 {% block auth_content %}
-<div class="login-container relative bg-white">
+<div class="login-container relative">
     {# Background Shapes #}
     <div class="background-shapes">
         <div class="shape shape-1"></div>
@@ -19,13 +20,19 @@
         <div class="login-content">
             {# Seção do Logo #}
             <div class="logo-section">
-                <img class="h-24 w-auto mb-4" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
+                <img class="h-28 w-auto mb-5" src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
                 <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900">
                     Portal UniSystem
                 </h2>
-                <p class="mt-2 text-sm text-gray-600 hidden md:block">
+                <p class="mt-3 text-sm text-gray-600 hidden md:block">
                     Acesse sua conta para gerenciar suas operações
                 </p>
+                <div class="mt-4 hidden md:block">
+                    <div class="flex items-center justify-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-unique-primary-medium animate-pulse"></div>
+                        <span class="text-xs text-unique-primary-medium font-medium">Sistema Integrado</span>
+                    </div>
+                </div>
             </div>
 
             {# Seção do Formulário #}
@@ -33,8 +40,8 @@
                 {# Status da Conexão #}
                 <div id="connection-status" class="connection-status-box alert-info mb-4">
                     <div class="flex items-center">
-                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
-                        <span class="text-blue-700">Verificando conexão com o Banco de dados...</span>
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-unique-primary-medium mr-3"></div>
+                        <span class="text-unique-primary-dark">Verificando conexão com o Banco de dados...</span>
                     </div>
                 </div>
 
@@ -49,9 +56,9 @@
                 {% endwith %}
 
                 <form id="login-form" class="space-y-4" method="POST" action="{{ url_for('auth.login') }}">
-                    <div class="space-y-3">
+                    <div class="space-y-4">
                         <div>
-                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email corporativo</label>
                             <input id="email" name="email" type="email" required 
                                    class="block w-full input-field"
                                    placeholder="seu@email.com">
@@ -64,16 +71,16 @@
                         </div>
                     </div>
 
-                    <div class="text-sm">
-                        <a href="{{ url_for('auth.forgot_password') }}" class="font-medium text-unique-blue hover:text-unique-dark-blue">
+                    <div class="flex items-center justify-between text-sm">
+                        <a href="{{ url_for('auth.forgot_password') }}" class="font-medium text-unique-primary-medium hover:text-unique-primary-dark transition-colors duration-200">
                             Esqueceu sua senha?
                         </a>
                     </div>
 
-                    <div class="pt-2">
+                    <div class="pt-3">
                         <button type="submit" id="login-button"
                                 class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white submit-button">
-                            <span id="login-text">Entrar</span>
+                            <span id="login-text">Entrar no Sistema</span>
                             <span id="login-spinner" class="hidden">
                                 <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -87,12 +94,15 @@
                             </span>
                         </button>
                     </div>
+                    
+                    <div class="mt-4 text-center text-xs text-gray-500">
+                        <p>© 2024 Unique Aduaneira. Todos os direitos reservados.</p>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
 
 <script src="{{ url_for('auth.static', filename='js/auth.js') }}"></script>
 

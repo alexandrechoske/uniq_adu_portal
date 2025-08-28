@@ -7,6 +7,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginSpinner = document.getElementById('login-spinner');
     const loginSuccess = document.getElementById('login-success');
     
+    // Add floating animation to bubbles on page load
+    const bubbles = document.querySelectorAll('.shape');
+    bubbles.forEach((bubble, index) => {
+        // Add slight delay to each bubble for a staggered effect
+        bubble.style.animationDelay = `${index * 0.5}s`;
+    });
+    
+    // Add interactive effects to form elements
+    const inputs = loginForm.querySelectorAll('input');
+    inputs.forEach(input => {
+        // Add focus effects
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('ring-2', 'ring-unique-primary-medium', 'ring-opacity-50');
+        });
+        
+        // Remove focus effects
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('ring-2', 'ring-unique-primary-medium', 'ring-opacity-50');
+        });
+    });
+    
     // Testar conexão com o Supabase
     fetch('/auth/test-connection')
         .then(response => {
@@ -20,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDiv.innerHTML = `
                     <div class="flex items-center">
                         <div class="w-3 h-3 rounded-full bg-green-500 mr-2 animate-pulse"></div>
-                        <span>Conexão com o Banco de dados</span>
+                        <span class="text-unique-success font-medium">Conexão com o Banco de dados estabelecida</span>
                     </div>
                 `;
             } else {
@@ -28,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDiv.innerHTML = `
                     <div class="flex items-center">
                         <div class="w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></div>
-                        <span>Conexão com o Banco de dados</span>
+                        <span class="text-unique-danger font-medium">Problemas na conexão com o Banco de dados</span>
                     </div>
                 `;
             }
@@ -39,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
             statusDiv.innerHTML = `
                 <div class="flex items-center">
                     <div class="w-3 h-3 rounded-full bg-red-500 mr-2 animate-pulse"></div>
-                    <span>Conexão com o Banco de dados</span>
+                    <span class="text-unique-danger font-medium">Erro na verificação de conexão</span>
                 </div>
             `;
         });
@@ -73,6 +94,13 @@ document.addEventListener('DOMContentLoaded', function() {
         loginSpinner.classList.remove('hidden');
         loginButton.classList.add('loading');
         loginButton.disabled = true;
+        
+        // Add pulse animation to button
+        loginButton.classList.add('animate-pulse');
+        setTimeout(() => {
+            loginButton.classList.remove('animate-pulse');
+        }, 1000);
+        
         // Collect form data
         const formData = new FormData(loginForm);
         // Send form data via fetch
@@ -93,9 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 loginSuccess.classList.add('success-animate');
                 loginButton.classList.remove('loading');
                 loginButton.classList.add('success');
+                
+                // Add celebration effect
+                createCelebrationEffect();
+                
                 setTimeout(() => {
                     window.location.href = response.url;
-                }, 600);
+                }, 800);
                 return;
             }
             return response.text();
@@ -123,6 +155,71 @@ document.addEventListener('DOMContentLoaded', function() {
             loginText.classList.remove('hidden');
             loginButton.classList.remove('loading');
             loginButton.disabled = false;
+            
+            // Show error state
+            loginButton.classList.add('bg-unique-danger');
+            setTimeout(() => {
+                loginButton.classList.remove('bg-unique-danger');
+            }, 1000);
         });
     });
+    
+    // Function to create celebration effect on successful login
+    function createCelebrationEffect() {
+        const buttonRect = loginButton.getBoundingClientRect();
+        const centerX = buttonRect.left + buttonRect.width / 2;
+        const centerY = buttonRect.top + buttonRect.height / 2;
+        
+        // Create multiple floating elements
+        for (let i = 0; i < 15; i++) {
+            const particle = document.createElement('div');
+            particle.style.position = 'fixed';
+            particle.style.left = `${centerX}px`;
+            particle.style.top = `${centerY}px`;
+            particle.style.width = `${Math.random() * 10 + 5}px`;
+            particle.style.height = particle.style.width;
+            particle.style.backgroundColor = getRandomColor();
+            particle.style.borderRadius = '50%';
+            particle.style.zIndex = '1000';
+            particle.style.pointerEvents = 'none';
+            
+            document.body.appendChild(particle);
+            
+            // Animate particle
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 50 + Math.random() * 100;
+            const duration = 1000 + Math.random() * 1000;
+            
+            particle.animate([
+                { 
+                    transform: 'translate(0, 0) scale(1)',
+                    opacity: 1
+                },
+                { 
+                    transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px) scale(0)`,
+                    opacity: 0
+                }
+            ], {
+                duration: duration,
+                easing: 'cubic-bezier(0.215, 0.61, 0.355, 1)'
+            });
+            
+            // Remove particle after animation
+            setTimeout(() => {
+                particle.remove();
+            }, duration);
+        }
+    }
+    
+    // Function to get random company colors
+    function getRandomColor() {
+        const colors = [
+            '#165672', // unique-primary-dark
+            '#2d6b92', // unique-primary-medium
+            '#4a8bb8', // unique-primary-light
+            '#e2ba0a', // unique-accent
+            '#f4d03f'  // unique-accent-light
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
 });
