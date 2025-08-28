@@ -2,6 +2,7 @@
 Integração robusta do sistema de logging com autenticação
 IMPORTANTE: Logging NUNCA deve falhar ou impedir login/logout
 """
+import os
 from flask import session, request
 from datetime import datetime
 import time
@@ -19,6 +20,11 @@ class AuthLoggingIntegration:
     
     def __init__(self):
         self.enabled = True
+        # Check if we're in development mode
+        self.flask_env = os.getenv('FLASK_ENV', 'production')
+        if self.flask_env == 'development':
+            self.enabled = False
+            print("[AUTH_LOGGING] Logging de autenticação desabilitado no ambiente de desenvolvimento")
     
     def log_login_attempt(self, email=None, success=True, error_message=None, user_data=None):
         """
@@ -34,7 +40,7 @@ class AuthLoggingIntegration:
             bool: Sempre True (nunca falha)
         """
         try:
-            if not self.enabled:
+            if not self.enabled or self.flask_env == 'development':
                 return True
             
             # Se login bem-sucedido, salvar timestamp na sessão
@@ -80,7 +86,7 @@ class AuthLoggingIntegration:
             bool: Sempre True (nunca falha)
         """
         try:
-            if not self.enabled:
+            if not self.enabled or self.flask_env == 'development':
                 return True
             
             # Calcular duração da sessão se disponível
@@ -118,7 +124,7 @@ class AuthLoggingIntegration:
             bool: Sempre True (nunca falha)
         """
         try:
-            if not self.enabled:
+            if not self.enabled or self.flask_env == 'development':
                 return True
             
             access_logger.log_access(
@@ -141,7 +147,7 @@ class AuthLoggingIntegration:
     def log_password_reset(self, email, success=True):
         """Registra tentativa de reset de senha"""
         try:
-            if not self.enabled:
+            if not self.enabled or self.flask_env == 'development':
                 return True
             
             access_logger.log_access(
@@ -162,7 +168,7 @@ class AuthLoggingIntegration:
     def log_session_expired(self, user_email=None):
         """Registra expiração de sessão"""
         try:
-            if not self.enabled:
+            if not self.enabled or self.flask_env == 'development':
                 return True
             
             access_logger.log_access(
