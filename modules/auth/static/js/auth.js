@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginText = document.getElementById('login-text');
     const loginSpinner = document.getElementById('login-spinner');
     const loginSuccess = document.getElementById('login-success');
+    const loginContainer = document.querySelector('.login-container');
+    const loginCard = document.querySelector('.login-card');
+    const loginContent = document.querySelector('.login-content');
+    const logoImage = document.querySelector('.logo-section img');
     
     // Add floating animation to bubbles on page load
     const bubbles = document.querySelectorAll('.shape');
@@ -101,6 +105,9 @@ document.addEventListener('DOMContentLoaded', function() {
             loginButton.classList.remove('animate-pulse');
         }, 1000);
         
+        // Start the login animation
+        startLoginAnimation();
+        
         // Collect form data
         const formData = new FormData(loginForm);
         // Send form data via fetch
@@ -122,11 +129,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 loginButton.classList.remove('loading');
                 loginButton.classList.add('success');
                 
-                // Add celebration effect
-                createCelebrationEffect();
-                
+                // Complete the animation and redirect
                 setTimeout(() => {
-                    window.location.href = response.url;
+                    showSuccessAnimation(response.url);
                 }, 800);
                 return;
             }
@@ -135,6 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(html => {
             if (html) {
                 console.log('HTML recebido do backend:', html);
+                // Reset animations if there's an error
+                resetLoginAnimation();
                 loginSpinner.classList.add('hidden');
                 loginText.classList.remove('hidden');
                 loginButton.classList.remove('loading');
@@ -151,6 +158,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Erro durante o login:', error);
+            // Reset animations if there's an error
+            resetLoginAnimation();
             loginSpinner.classList.add('hidden');
             loginText.classList.remove('hidden');
             loginButton.classList.remove('loading');
@@ -164,51 +173,68 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Function to create celebration effect on successful login
-    function createCelebrationEffect() {
-        const buttonRect = loginButton.getBoundingClientRect();
-        const centerX = buttonRect.left + buttonRect.width / 2;
-        const centerY = buttonRect.top + buttonRect.height / 2;
+    // Function to start the login animation
+    function startLoginAnimation() {
+        // Create a circular animation container
+        const circle = document.createElement('div');
+        circle.id = 'login-circle';
+        circle.innerHTML = `
+            <div class="circle-inner">
+                <img src="${logoImage.src}" alt="UniSystem" class="circle-logo">
+                <div class="circle-spinner"></div>
+            </div>
+        `;
+        document.body.appendChild(circle);
         
-        // Create multiple floating elements
-        for (let i = 0; i < 15; i++) {
-            const particle = document.createElement('div');
-            particle.style.position = 'fixed';
-            particle.style.left = `${centerX}px`;
-            particle.style.top = `${centerY}px`;
-            particle.style.width = `${Math.random() * 10 + 5}px`;
-            particle.style.height = particle.style.width;
-            particle.style.backgroundColor = getRandomColor();
-            particle.style.borderRadius = '50%';
-            particle.style.zIndex = '1000';
-            particle.style.pointerEvents = 'none';
+        // Hide the original content
+        loginContainer.style.opacity = '0';
+        loginContainer.style.visibility = 'hidden';
+        
+        // Trigger the animation
+        setTimeout(() => {
+            circle.classList.add('circle-animation');
+        }, 50);
+    }
+    
+    // Function to show success animation
+    function showSuccessAnimation(redirectUrl) {
+        const circle = document.getElementById('login-circle');
+        if (circle) {
+            // Change to checkmark
+            circle.innerHTML = `
+                <div class="circle-inner success">
+                    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </div>
+            `;
             
-            document.body.appendChild(particle);
+            // Add success animation
+            circle.classList.add('circle-success');
             
-            // Animate particle
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 50 + Math.random() * 100;
-            const duration = 1000 + Math.random() * 1000;
-            
-            particle.animate([
-                { 
-                    transform: 'translate(0, 0) scale(1)',
-                    opacity: 1
-                },
-                { 
-                    transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px) scale(0)`,
-                    opacity: 0
-                }
-            ], {
-                duration: duration,
-                easing: 'cubic-bezier(0.215, 0.61, 0.355, 1)'
-            });
-            
-            // Remove particle after animation
+            // Redirect after animation completes
             setTimeout(() => {
-                particle.remove();
-            }, duration);
+                window.location.href = redirectUrl;
+            }, 1000);
         }
+    }
+    
+    // Function to reset animations if login fails
+    function resetLoginAnimation() {
+        // Remove the circle if it exists
+        const circle = document.getElementById('login-circle');
+        if (circle) {
+            circle.remove();
+        }
+        
+        // Show the original content
+        loginContainer.style.opacity = '1';
+        loginContainer.style.visibility = 'visible';
+        loginText.classList.remove('hidden');
+        loginSpinner.classList.add('hidden');
+        loginButton.classList.remove('loading');
+        loginButton.disabled = false;
     }
     
     // Function to get random company colors
