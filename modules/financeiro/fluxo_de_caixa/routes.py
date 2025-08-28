@@ -481,8 +481,8 @@ def api_check_tables():
 # Funções auxiliares
 def _get_financial_table():
     """Retorna a tabela financeira disponível"""
-    # Por enquanto, sempre usar fin_base_resultado que sabemos que existe
-    return 'fin_base_resultado'
+    # Usar a view consolidada que combina receitas e despesas com saldo acumulado
+    return 'vw_fin_resultado_consolidado'
 def _get_periodo_dates(periodo):
     """Retorna datas de início e fim baseado no período selecionado"""
     hoje = datetime.now()
