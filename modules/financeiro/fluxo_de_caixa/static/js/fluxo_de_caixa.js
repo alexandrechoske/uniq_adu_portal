@@ -5,7 +5,7 @@
 
 class FluxoCaixaController {
     constructor() {
-        this.currentPeriodo = 'ultimos_12_meses';
+        this.currentPeriodo = 'ano_atual';  // Mudado para ano atual
         this.currentCategoriaDrill = null;
         this.currentPage = 1;
         this.pageLimit = 25;
@@ -161,20 +161,6 @@ class FluxoCaixaController {
         // Saldo Final
         $('#valor-saldo').text(formatCurrencyShort(data.saldo_final.valor));
         this.updateVariation('#var-saldo', data.saldo_final.variacao);
-        
-        // Burn Rate
-        $('#valor-burn-rate').text(data.burn_rate > 0 ? formatCurrencyShort(data.burn_rate) : 'N/A');
-        
-        // Runway
-        if (data.runway === Infinity || data.runway === null || data.runway === undefined) {
-            $('#valor-runway').text('∞ anos');
-        } else if (data.runway <= 0) {
-            $('#valor-runway').text('0 meses');
-        } else if (data.runway > 60) {
-            $('#valor-runway').text('5+ anos');
-        } else {
-            $('#valor-runway').text(`${Math.round(data.runway)} meses`);
-        }
     }
     
     updateVariation(selector, variation) {
@@ -367,7 +353,7 @@ class FluxoCaixaController {
             this.charts.fluxoMensal.destroy();
         }
         
-        // Cores baseadas no valor (verde para positivo, vermelho para negativo)
+        // Cores baseadas no valor do resultado líquido (verde para positivo, vermelho para negativo)
         const backgroundColors = data.resultados.map(value => 
             value >= 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)'
         );
@@ -380,7 +366,7 @@ class FluxoCaixaController {
             data: {
                 labels: data.meses,
                 datasets: [{
-                    label: 'Resultado Mensal',
+                    label: 'Resultado Líquido',
                     data: data.resultados,
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
@@ -411,12 +397,17 @@ class FluxoCaixaController {
                         display: true,
                         position: 'left',
                         grid: {
-                            display: false
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)'
                         },
                         ticks: {
                             callback: function(value) {
                                 return formatCurrencyShort(value);
                             }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Resultado Líquido'
                         }
                     },
                     y1: {
@@ -430,11 +421,39 @@ class FluxoCaixaController {
                             callback: function(value) {
                                 return formatCurrencyShort(value);
                             }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Saldo Acumulado'
                         }
                     },
                     x: {
                         grid: {
                             display: false
+                        }
+                    }
+                },
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Fluxo de Caixa com Saldo Acumulado (Gráfico de Cascata)'
+                    },
+                    tooltip: {
+                        ...this.chartDefaults.plugins.tooltip,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    // Resultado Líquido
+                                    const value = context.parsed.y;
+                                    const status = value >= 0 ? 'Ganho' : 'Perda';
+                                    return `${context.dataset.label}: ${formatCurrencyShort(value)} (${status})`;
+                                } else {
+                                    // Saldo Acumulado
+                                    const value = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatCurrencyShort(value)}`;
+                                }
+                            }
                         }
                     }
                 }
@@ -535,46 +554,69 @@ class FluxoCaixaController {
             this.charts.projecao.destroy();
         }
         
-        // Combinar dados históricos e projeção
-        const allLabels = [...data.meses_historicos, ...data.meses_projecao];
-        const historicoData = [...data.saldo_historico, ...Array(data.meses_projecao.length).fill(null)];
-        const projecaoData = [...Array(data.meses_historicos.length).fill(null), ...data.saldo_projetado];
-        
         this.charts.projecao = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: allLabels,
-                datasets: [{
-                    label: 'Saldo Histórico',
-                    data: historicoData,
-                    borderColor: 'rgba(40, 167, 69, 1)',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(40, 167, 69, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }, {
-                    label: 'Projeção',
-                    data: projecaoData,
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    borderWidth: 3,
-                    borderDash: [10, 5],
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(220, 53, 69, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }]
+                labels: data.meses,
+                datasets: [
+                    {
+                        label: 'Entradas Projetadas',
+                        data: data.entradas_projetadas,
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(40, 167, 69, 1)',
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Saídas Projetadas',
+                        data: data.saidas_projetadas,
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(220, 53, 69, 1)',
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Saldo Projetado',
+                        data: data.saldo_projetado,
+                        borderColor: 'rgba(23, 162, 184, 1)',
+                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: 'rgba(23, 162, 184, 1)',
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        yAxisID: 'y1'
+                    }
+                ]
             },
             options: {
                 ...this.chartDefaults,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
                     y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
                         grid: {
                             display: false
                         },
@@ -584,9 +626,17 @@ class FluxoCaixaController {
                             }
                         }
                     },
-                    x: {
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
                         grid: {
-                            display: false
+                            drawOnChartArea: false,
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyShort(value);
+                            }
                         }
                     }
                 }
@@ -597,7 +647,12 @@ class FluxoCaixaController {
     async loadTableData() {
         try {
             const searchTerm = $('#search-table').val();
-            const url = `/financeiro/fluxo-de-caixa/api/tabela-dados?periodo=${this.currentPeriodo}&page=${this.currentPage}&limit=${this.pageLimit}`;
+            let url = `/financeiro/fluxo-de-caixa/api/tabela-dados?periodo=${this.currentPeriodo}&page=${this.currentPage}&limit=${this.pageLimit}`;
+            
+            // Adicionar parâmetro de busca se fornecido
+            if (searchTerm && searchTerm.trim() !== '') {
+                url += `&search=${encodeURIComponent(searchTerm.trim())}`;
+            }
             
             const response = await fetch(url);
             const data = await response.json();
@@ -629,19 +684,19 @@ class FluxoCaixaController {
         }
         
         data.dados.forEach(row => {
-            const tipoClass = row.tipo === 'Receita' ? 'text-success' : 'text-danger';
-            const valorFormatted = row.tipo === 'Receita' ? 
-                formatCurrency(row.valor) : 
-                `-${formatCurrency(row.valor)}`;
+            const tipoClass = row.tipo_movto === 'Receita' ? 'text-success' : 'text-danger';
+            const valorFormatted = row.tipo_movto === 'Receita' ? 
+                formatCurrency(parseFloat(row.valor_original || row.valor_fluxo || 0)) : 
+                `-${formatCurrency(parseFloat(row.valor_original || row.valor_fluxo || 0))}`;
             
             tbody.append(`
                 <tr>
-                    <td>${formatDate(row.data)}</td>
-                    <td>${row.categoria}</td>
-                    <td>${row.classe}</td>
-                    <td>${row.codigo}</td>
-                    <td>${row.descricao}</td>
-                    <td><span class="badge ${row.tipo === 'Receita' ? 'bg-success' : 'bg-danger'}">${row.tipo}</span></td>
+                    <td>${row.data_formatada || formatDate(row.data)}</td>
+                    <td>${row.categoria || '-'}</td>
+                    <td>${row.classe || '-'}</td>
+                    <td>${row.codigo || '-'}</td>
+                    <td>${row.descricao || '-'}</td>
+                    <td><span class="badge ${row.tipo_movto === 'Receita' ? 'bg-success' : 'bg-danger'}">${row.tipo_movto || 'N/A'}</span></td>
                     <td class="${tipoClass} fw-bold">${valorFormatted}</td>
                 </tr>
             `);
@@ -785,10 +840,13 @@ function formatCurrencyShort(value) {
     const prefix = value < 0 ? '-' : '';
     
     if (absValue >= 1000000) {
-        return `${prefix}R$ ${(absValue / 1000000).toFixed(1)}M`;
+        // Milhões: usar 2 casas decimais para maior precisão
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
     } else if (absValue >= 1000) {
+        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
         return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
     }
+    // Valores menores que 1000: formato completo
     return formatCurrency(value);
 }
 

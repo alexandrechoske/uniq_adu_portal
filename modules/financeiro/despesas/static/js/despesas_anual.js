@@ -790,16 +790,20 @@ function formatCurrencyShort(value) {
     const absValue = Math.abs(value);
     let suffix = '';
     let divisor = 1;
+    let maxDecimals = 0;
     
     if (absValue >= 1000000000) {
         suffix = 'B';
         divisor = 1000000000;
+        maxDecimals = 2; // Bilhões com 2 casas decimais
     } else if (absValue >= 1000000) {
         suffix = 'M';
         divisor = 1000000;
+        maxDecimals = 2; // Milhões com 2 casas decimais
     } else if (absValue >= 1000) {
         suffix = 'K';
         divisor = 1000;
+        maxDecimals = 1; // Milhares com 1 casa decimal
     }
     
     const shortValue = value / divisor;
@@ -807,8 +811,8 @@ function formatCurrencyShort(value) {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-        minimumFractionDigits: suffix ? 1 : 0,
-        maximumFractionDigits: suffix ? 1 : 0
+        minimumFractionDigits: suffix ? maxDecimals : 0,
+        maximumFractionDigits: suffix ? maxDecimals : 0
     }).format(shortValue) + suffix;
 }
 

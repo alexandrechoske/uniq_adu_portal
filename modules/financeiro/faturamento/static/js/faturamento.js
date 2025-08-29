@@ -509,10 +509,13 @@ function formatCurrencyShort(value) {
     const prefix = value < 0 ? '-' : '';
     
     if (absValue >= 1000000) {
-        return `${prefix}R$ ${(absValue / 1000000).toFixed(1)}M`;
+        // Milhões: usar 2 casas decimais para maior precisão
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
     } else if (absValue >= 1000) {
+        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
         return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
     }
+    // Valores menores que 1000: formato completo
     return formatCurrency(value);
 }
 

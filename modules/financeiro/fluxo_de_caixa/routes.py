@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, session, jsonify, request
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
 from decorators.perfil_decorators import perfil_required
-from permissions import check_permission
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
@@ -40,31 +39,37 @@ def api_kpis():
         table_name = _get_financial_table()
         
         # Buscar dados do período atual
-        query = supabase_admin.table(table_name).select('*')
+        query = supabase_admin.table(table_name).select('*').order('ordem')
         if data_inicio and data_fim:
             query = query.gte('data', data_inicio).lte('data', data_fim)
+        
+        # Filtrar TRANSFERENCIA DE CONTAS
+        query = query.neq('classe', 'TRANSFERENCIA DE CONTAS')
         
         response = query.execute()
         dados_periodo = response.data
         
-        # Calcular KPIs do período atual
-        total_entradas = sum(float(item['valor']) for item in dados_periodo if item['tipo'] == 'Receita')
-        total_saidas = sum(float(item['valor']) for item in dados_periodo if item['tipo'] == 'Despesa')
+        # Calcular KPIs do período atual usando a nova estrutura
+        total_entradas = sum(float(item['valor_fluxo']) for item in dados_periodo if item['tipo_movto'] == 'Receita')
+        total_saidas = sum(float(item['valor_fluxo']) for item in dados_periodo if item['tipo_movto'] == 'Despesa')
         resultado_liquido = total_entradas - total_saidas
         
         # Buscar dados do período anterior para comparação
         data_inicio_anterior, data_fim_anterior = _get_periodo_anterior_dates(periodo)
         
-        query_anterior = supabase_admin.table(table_name).select('*')
+        query_anterior = supabase_admin.table(table_name).select('*').order('ordem')
         if data_inicio_anterior and data_fim_anterior:
             query_anterior = query_anterior.gte('data', data_inicio_anterior).lte('data', data_fim_anterior)
+        
+        # Filtrar TRANSFERENCIA DE CONTAS também no período anterior
+        query_anterior = query_anterior.neq('classe', 'TRANSFERENCIA DE CONTAS')
         
         response_anterior = query_anterior.execute()
         dados_anterior = response_anterior.data
         
         # Calcular KPIs do período anterior
-        entradas_anterior = sum(float(item['valor']) for item in dados_anterior if item['tipo'] == 'Receita')
-        saidas_anterior = sum(float(item['valor']) for item in dados_anterior if item['tipo'] == 'Despesa')
+        entradas_anterior = sum(float(item['valor_fluxo']) for item in dados_anterior if item['tipo_movto'] == 'Receita')
+        saidas_anterior = sum(float(item['valor_fluxo']) for item in dados_anterior if item['tipo_movto'] == 'Despesa')
         resultado_anterior = entradas_anterior - saidas_anterior
         
         # Calcular variações percentuais
@@ -89,7 +94,7 @@ def api_kpis():
                 'variacao': var_entradas
             },
             'total_saidas': {
-                'valor': total_saidas,
+                'valor': -total_saidas,  # Exibir como negativo na interface
                 'variacao': var_saidas
             },
             'saldo_final': {
@@ -117,9 +122,13 @@ def api_despesas_categoria():
         data_inicio, data_fim = _get_periodo_dates(periodo)
         table_name = _get_financial_table()
         
-        query = supabase_admin.table(table_name).select('*').eq('tipo', 'Despesa')
+        # Query para despesas usando a nova estrutura
+        query = supabase_admin.table(table_name).select('*').eq('tipo_movto', 'Despesa')
         if data_inicio and data_fim:
             query = query.gte('data', data_inicio).lte('data', data_fim)
+        
+        # Filtrar TRANSFERENCIA DE CONTAS
+        query = query.neq('classe', 'TRANSFERENCIA DE CONTAS')
         
         response = query.execute()
         dados = response.data
@@ -133,12 +142,16 @@ def api_despesas_categoria():
             dados_filtrados = [item for item in dados if item['categoria'] == categoria_drill]
             agrupamento = defaultdict(float)
             for item in dados_filtrados:
-                agrupamento[item['classe']] += float(item['valor'])
+                classe = item.get('classe', 'Sem Classe')
+                valor = float(item['valor_fluxo'])  # Usar valor_fluxo que é sempre positivo
+                agrupamento[classe] += valor
         else:
             # Visão principal: agrupar por categoria
             agrupamento = defaultdict(float)
             for item in dados:
-                agrupamento[item['categoria']] += float(item['valor'])
+                categoria = item.get('categoria', 'Sem Categoria')
+                valor = float(item['valor_fluxo'])  # Usar valor_fluxo que é sempre positivo
+                agrupamento[categoria] += valor
         
         # Converter para listas e ordenar do maior para menor
         items = list(agrupamento.items())
@@ -161,47 +174,72 @@ def api_despesas_categoria():
 @login_required
 @perfil_required('financeiro', 'fluxo_caixa')
 def api_fluxo_mensal():
-    """API para gráfico de fluxo de caixa mês a mês (cascata)"""
+    """API para gráfico de fluxo de caixa mês a mês com receitas e despesas separadas"""
     try:
         periodo = request.args.get('periodo', 'ano_atual')
         data_inicio, data_fim = _get_periodo_dates(periodo)
         table_name = _get_financial_table()
         
-        query = supabase_admin.table(table_name).select('*')
+        query = supabase_admin.table(table_name).select('*').order('ordem')
         if data_inicio and data_fim:
             query = query.gte('data', data_inicio).lte('data', data_fim)
+        
+        # Filtrar TRANSFERENCIA DE CONTAS
+        query = query.neq('classe', 'TRANSFERENCIA DE CONTAS')
         
         response = query.execute()
         dados = response.data
         
-        # Agrupar por mês
-        fluxo_mensal = defaultdict(lambda: {'entradas': 0, 'saidas': 0})
+        # Agrupar por mês usando o campo ano_mes da view
+        fluxo_mensal = defaultdict(lambda: {'receitas': 0, 'despesas': 0, 'saldo_acumulado': 0})
         
         for item in dados:
-            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
-            mes_key = data_item.strftime('%Y-%m')
+            ano_mes = item['ano_mes']  # Usar o campo ano_mes da view
+            valor_fluxo = float(item['valor_fluxo'])  # Sempre positivo
+            saldo_acumulado = float(item['saldo_acumulado'])
             
-            if item['tipo'] == 'Receita':
-                fluxo_mensal[mes_key]['entradas'] += float(item['valor'])
-            else:
-                fluxo_mensal[mes_key]['saidas'] += float(item['valor'])
+            if item['tipo_movto'] == 'Receita':
+                fluxo_mensal[ano_mes]['receitas'] += valor_fluxo
+            else:  # Despesa
+                fluxo_mensal[ano_mes]['despesas'] += valor_fluxo
+            
+            # Usar o último saldo acumulado do mês
+            fluxo_mensal[ano_mes]['saldo_acumulado'] = saldo_acumulado
         
         # Converter para formato do gráfico
         meses = sorted(fluxo_mensal.keys())
+        receitas_mes = []
+        despesas_mes = []
         resultados = []
+        saldo_acumulado_mes = []
         saldo_acumulado = []
         saldo_atual = 0
         
         for mes in meses:
-            resultado_mes = fluxo_mensal[mes]['entradas'] - fluxo_mensal[mes]['saidas']
+            receita = fluxo_mensal[mes]['receitas']
+            despesa = fluxo_mensal[mes]['despesas']
+            resultado_mes = receita - despesa
+            saldo_final_mes = fluxo_mensal[mes]['saldo_acumulado']
+            
+            receitas_mes.append(receita)
+            despesas_mes.append(despesa)
             resultados.append(resultado_mes)
-            saldo_atual += resultado_mes
-            saldo_acumulado.append(saldo_atual)
+            saldo_acumulado_mes.append(saldo_final_mes)
+        
+        # Formatar nomes dos meses
+        meses_formatados = []
+        for mes in meses:
+            ano, mes_num = mes.split('-')
+            data_temp = datetime.strptime(f"{ano}-{mes_num}-01", '%Y-%m-%d')
+            mes_formatado = data_temp.strftime('%b/%Y')
+            meses_formatados.append(mes_formatado)
         
         return jsonify({
-            'meses': [datetime.strptime(mes, '%Y-%m').strftime('%b/%Y') for mes in meses],
+            'meses': meses_formatados,
+            'receitas': receitas_mes,
+            'despesas': despesas_mes,
             'resultados': resultados,
-            'saldo_acumulado': saldo_acumulado
+            'saldo_acumulado': saldo_acumulado_mes  # Usar saldo já calculado na view
         })
         
     except Exception as e:
@@ -217,9 +255,12 @@ def api_fluxo_estrutural():
         data_inicio, data_fim = _get_periodo_dates(periodo)
         table_name = _get_financial_table()
         
-        query = supabase_admin.table(table_name).select('*')
+        query = supabase_admin.table(table_name).select('*').order('ordem')
         if data_inicio and data_fim:
             query = query.gte('data', data_inicio).lte('data', data_fim)
+        
+        # Filtrar TRANSFERENCIA DE CONTAS
+        query = query.neq('classe', 'TRANSFERENCIA DE CONTAS')
         
         response = query.execute()
         dados = response.data
@@ -231,27 +272,28 @@ def api_fluxo_estrutural():
             'FCF': ['EMPRÉSTIMOS', 'RENDIMENTO']
         }
         
-        # Agrupar por mês e tipo de fluxo
+        # Agrupar por mês e tipo de fluxo usando a nova estrutura
         fluxo_estrutural = defaultdict(lambda: {'FCO': 0, 'FCI': 0, 'FCF': 0})
         
         for item in dados:
-            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
-            mes_key = data_item.strftime('%Y-%m')
+            ano_mes = item['ano_mes']  # Usar ano_mes da view
             categoria = item['categoria'].upper()
-            valor = float(item['valor'])
+            valor_fluxo = float(item['valor_fluxo'])  # Sempre positivo
             
-            # Aplicar sinal correto (receita positiva, despesa negativa)
-            if item['tipo'] == 'Despesa':
-                valor = -valor
+            # Aplicar sinal correto baseado no tipo_movto
+            if item['tipo_movto'] == 'Despesa':
+                valor = -valor_fluxo
+            else:
+                valor = valor_fluxo
             
             # Classificar em FCO, FCI ou FCF
-            tipo_fluxo = 'FCO'  # Default
+            tipo_fluxo = 'FCO'  # Default - Fluxo de Caixa Operacional
             for fluxo, categorias in classificacao_fluxo.items():
                 if any(cat in categoria for cat in categorias):
                     tipo_fluxo = fluxo
                     break
             
-            fluxo_estrutural[mes_key][tipo_fluxo] += valor
+            fluxo_estrutural[ano_mes][tipo_fluxo] += valor
         
         # Converter para formato do gráfico
         meses = sorted(fluxo_estrutural.keys())
@@ -259,11 +301,20 @@ def api_fluxo_estrutural():
         fci_valores = [fluxo_estrutural[mes]['FCI'] for mes in meses]
         fcf_valores = [fluxo_estrutural[mes]['FCF'] for mes in meses]
         
+        # Formatar nomes dos meses
+        meses_formatados = []
+        for mes in meses:
+            ano, mes_num = mes.split('-')
+            data_temp = datetime.strptime(f"{ano}-{mes_num}-01", '%Y-%m-%d')
+            mes_formatado = data_temp.strftime('%b/%Y')
+            meses_formatados.append(mes_formatado)
+        
         return jsonify({
-            'meses': [datetime.strptime(mes, '%Y-%m').strftime('%b/%Y') for mes in meses],
+            'meses': meses_formatados,
             'fco': fco_valores,
             'fci': fci_valores,
-            'fcf': fcf_valores
+            'fcf': fcf_valores,
+            'total_registros': len(dados)
         })
         
     except Exception as e:
@@ -280,24 +331,27 @@ def api_projecao():
         data_inicio = data_fim - timedelta(days=180)
         table_name = _get_financial_table()
         
-        query = supabase_admin.table(table_name).select('*')
+        query = supabase_admin.table(table_name).select('*').order('ordem')
         query = query.gte('data', data_inicio.strftime('%Y-%m-%d'))
         query = query.lte('data', data_fim.strftime('%Y-%m-%d'))
+        
+        # Filtrar TRANSFERENCIA DE CONTAS
+        query = query.neq('classe', 'TRANSFERENCIA DE CONTAS')
         
         response = query.execute()
         dados = response.data
         
-        # Calcular médias mensais dos últimos 6 meses
+        # Calcular médias mensais dos últimos 6 meses usando a nova estrutura
         fluxo_mensal = defaultdict(lambda: {'entradas': 0, 'saidas': 0})
         
         for item in dados:
-            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
-            mes_key = data_item.strftime('%Y-%m')
+            ano_mes = item['ano_mes']
+            valor_fluxo = float(item['valor_fluxo'])
             
-            if item['tipo'] == 'Receita':
-                fluxo_mensal[mes_key]['entradas'] += float(item['valor'])
+            if item['tipo_movto'] == 'Receita':
+                fluxo_mensal[ano_mes]['entradas'] += valor_fluxo
             else:
-                fluxo_mensal[mes_key]['saidas'] += float(item['valor'])
+                fluxo_mensal[ano_mes]['saidas'] += valor_fluxo
         
         # Calcular médias
         total_meses = len(fluxo_mensal)
@@ -307,38 +361,45 @@ def api_projecao():
         else:
             media_entradas = media_saidas = 0
         
+        # Obter último saldo acumulado dos dados históricos
+        if dados:
+            ultimo_saldo = max(float(item['saldo_acumulado']) for item in dados)
+        else:
+            ultimo_saldo = 0
+        
         # Gerar projeção para os próximos 6 meses
         meses_projecao = []
+        entradas_projetadas = []
+        saidas_projetadas = []
         saldo_projetado = []
-        saldo_atual = sum(
-            fluxo_mensal[mes]['entradas'] - fluxo_mensal[mes]['saidas'] 
-            for mes in fluxo_mensal.keys()
-        )
+        saldo_atual = ultimo_saldo
         
         for i in range(6):
             data_projecao = data_fim + timedelta(days=30 * (i + 1))
             mes_nome = data_projecao.strftime('%b/%Y')
             meses_projecao.append(mes_nome)
             
-            saldo_atual += (media_entradas - media_saidas)
+            # Projetar valores com pequena variação (±5%)
+            import random
+            variacao = random.uniform(0.95, 1.05)
+            entrada_projetada = media_entradas * variacao
+            saida_projetada = media_saidas * variacao
+            
+            entradas_projetadas.append(entrada_projetada)
+            saidas_projetadas.append(saida_projetada)
+            
+            saldo_atual += (entrada_projetada - saida_projetada)
             saldo_projetado.append(saldo_atual)
         
-        # Dados históricos
-        meses_historicos = sorted(fluxo_mensal.keys())
-        saldo_historico = []
-        saldo_acum = 0
-        
-        for mes in meses_historicos:
-            saldo_acum += fluxo_mensal[mes]['entradas'] - fluxo_mensal[mes]['saidas']
-            saldo_historico.append(saldo_acum)
-        
         return jsonify({
-            'meses_historicos': [datetime.strptime(mes, '%Y-%m').strftime('%b/%Y') for mes in meses_historicos],
-            'saldo_historico': saldo_historico,
-            'meses_projecao': meses_projecao,
+            'meses': meses_projecao,
+            'entradas_projetadas': entradas_projetadas,
+            'saidas_projetadas': saidas_projetadas,
             'saldo_projetado': saldo_projetado,
             'media_entradas': media_entradas,
-            'media_saidas': media_saidas
+            'media_saidas': media_saidas,
+            'ultimo_saldo': ultimo_saldo,
+            'meses_base': total_meses
         })
         
     except Exception as e:
@@ -353,6 +414,7 @@ def api_tabela_dados():
         periodo = request.args.get('periodo', 'ano_atual')
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 50))
+        search = request.args.get('search', '').strip()  # Parâmetro de busca
         
         data_inicio, data_fim = _get_periodo_dates(periodo)
         table_name = _get_financial_table()
@@ -362,6 +424,14 @@ def api_tabela_dados():
         if data_inicio and data_fim:
             query = query.gte('data', data_inicio).lte('data', data_fim)
         
+        # Filtrar TRANSFERENCIA DE CONTAS
+        query = query.neq('classe', 'TRANSFERENCIA DE CONTAS')
+        
+        # Aplicar filtro de busca se fornecido
+        if search:
+            # Buscar em descrição, categoria, classe ou código
+            query = query.or_(f'descricao.ilike.%{search}%,categoria.ilike.%{search}%,classe.ilike.%{search}%,codigo.ilike.%{search}%')
+        
         # Aplicar ordenação e paginação
         offset = (page - 1) * limit
         query = query.order('data', desc=True).range(offset, offset + limit - 1)
@@ -369,10 +439,16 @@ def api_tabela_dados():
         response = query.execute()
         dados = response.data
         
-        # Contar total de registros
+        # Contar total de registros (com filtro se aplicável)
         count_query = supabase_admin.table(table_name).select('*', count='exact')
         if data_inicio and data_fim:
             count_query = count_query.gte('data', data_inicio).lte('data', data_fim)
+        
+        # Filtrar TRANSFERENCIA DE CONTAS na contagem também
+        count_query = count_query.neq('classe', 'TRANSFERENCIA DE CONTAS')
+        
+        if search:
+            count_query = count_query.or_(f'descricao.ilike.%{search}%,categoria.ilike.%{search}%,classe.ilike.%{search}%,codigo.ilike.%{search}%')
         
         count_response = count_query.execute()
         total_registros = count_response.count
@@ -481,11 +557,20 @@ def api_check_tables():
 # Funções auxiliares
 def _get_financial_table():
     """Retorna a tabela financeira disponível"""
-    # Usar a view consolidada que combina receitas e despesas com saldo acumulado
-    return 'vw_fin_resultado_consolidado'
+    # Usar a nova view de fluxo de caixa com saldo acumulado já calculado
+    return 'vw_fluxo_caixa'
 def _get_periodo_dates(periodo):
     """Retorna datas de início e fim baseado no período selecionado"""
     hoje = datetime.now()
+    
+    # Verificar se é período personalizado (formato: data_inicio|data_fim)
+    if '|' in periodo:
+        try:
+            data_inicio_str, data_fim_str = periodo.split('|')
+            return data_inicio_str, data_fim_str
+        except ValueError:
+            # Se não conseguir processar, usar padrão
+            pass
     
     if periodo == 'mes_atual':
         inicio = hoje.replace(day=1)
@@ -509,7 +594,7 @@ def _get_periodo_dates(periodo):
         inicio = hoje.replace(year=hoje.year - 1, month=1, day=1)
         fim = hoje.replace(year=hoje.year - 1, month=12, day=31)
     else:
-        # Período personalizado ou últimos 12 meses como padrão
+        # Período padrão - últimos 12 meses
         fim = hoje
         inicio = hoje - timedelta(days=365)
     
@@ -556,20 +641,18 @@ def _calcular_burn_rate(dados):
     if not dados:
         return 0
     
-    # Agrupar por mês
+    # Agrupar por mês usando a nova estrutura
     fluxo_mensal = defaultdict(lambda: {'entradas': 0, 'saidas': 0})
     
     for item in dados:
         try:
-            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
-            mes_key = data_item.strftime('%Y-%m')
+            ano_mes = item['ano_mes']  # Usar o campo ano_mes da view
+            valor_fluxo = float(item['valor_fluxo'])  # Sempre positivo
             
-            valor = float(item.get('valor', 0))
-            
-            if item['tipo'] == 'Receita':
-                fluxo_mensal[mes_key]['entradas'] += valor
-            else:
-                fluxo_mensal[mes_key]['saidas'] += valor
+            if item['tipo_movto'] == 'Receita':
+                fluxo_mensal[ano_mes]['entradas'] += valor_fluxo
+            else:  # Despesa
+                fluxo_mensal[ano_mes]['saidas'] += valor_fluxo
         except (ValueError, KeyError):
             continue
     
@@ -591,12 +674,12 @@ def _calcular_burn_rate(dados):
 def _calcular_runway(saldo_atual, burn_rate):
     """Calcula o runway em meses baseado no saldo atual e gastos mensais"""
     if burn_rate <= 0:
-        return float('inf')  # Se não há gastos, runway é infinito
+        return 999  # Se não há gastos, runway é muito alto (999 meses = ~83 anos)
     
     if saldo_atual <= 0:
         return 0  # Sem saldo, runway é zero
     
-    runway_meses = saldo_atual / burn_rate
+    runway_meses = abs(saldo_atual / burn_rate)  # Usar valor absoluto para garantir positivo
     
     # Limitar a um valor máximo razoável (5 anos = 60 meses)
     if runway_meses > 60:
