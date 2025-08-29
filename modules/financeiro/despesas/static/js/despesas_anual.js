@@ -365,7 +365,7 @@ class DespesasController {
                     <td class="currency">${formatCurrency(item.valor)}</td>
                     <td class="percentage">${item.percentual.toFixed(1)}%</td>
                     <td>
-                        <button class="action-btn" onclick="despesasController.drillDownCategoria('${item.categoria}')">
+                        <button class="action-btn" onclick="despesasController.openDetalhesModal('${item.categoria}')">
                             <i class="mdi mdi-magnify"></i>
                             Detalhes
                         </button>
@@ -710,7 +710,6 @@ class DespesasController {
         this.currentPage = 1;
         
         this.closeFiltersModal();
-        this.voltarCategorias();
         await this.loadData();
     }
     
@@ -725,7 +724,6 @@ class DespesasController {
         $('#data-fim').val('');
         
         this.closeFiltersModal();
-        this.voltarCategorias();
         this.loadData();
     }
     

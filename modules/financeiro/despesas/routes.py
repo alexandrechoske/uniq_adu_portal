@@ -42,11 +42,14 @@ def api_kpis():
         data_inicio, data_fim = _get_periodo_dates(periodo)
         
         # Buscar despesas do período atual
+        print(f"Debug - Querying despesas from fin_despesa_anual table for period {data_inicio} to {data_fim}")
         response_atual = supabase_admin.table('fin_despesa_anual') \
             .select('categoria, classe, valor') \
             .gte('data', data_inicio) \
             .lte('data', data_fim) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .execute()
+        print(f"Debug - Found {len(response_atual.data) if response_atual.data else 0} records in despesas data")
         
         if response_atual.data:
             df_atual = pd.DataFrame(response_atual.data)
@@ -60,9 +63,32 @@ def api_kpis():
             ]['valor'].sum()
             
             # Folha Líquida (classe específica)
-            folha_liquida = df_atual[
-                df_atual['classe'] == 'SALARIOS E ORDENADOS'
-            ]['valor'].sum()
+            print(f"Debug - Available classes in data: {df_atual['classe'].unique()}")
+            # Try exact match first
+            folha_liquida_data = df_atual[
+                df_atual['classe'].str.upper() == 'SALARIOS E ORDENADOS'
+            ]
+            folha_liquida = folha_liquida_data['valor'].sum()
+            print(f"Debug - Registros de SALARIOS E ORDENADOS (exact match): {len(folha_liquida_data)}, Valor total: {folha_liquida}")
+            
+            # If no data found, try case-insensitive match
+            if len(folha_liquida_data) == 0:
+                folha_liquida_data = df_atual[
+                    df_atual['classe'].str.upper().str.contains('SALARIOS', na=False)
+                ]
+                folha_liquida = folha_liquida_data['valor'].sum()
+                print(f"Debug - Fallback registros com 'SALARIOS': {len(folha_liquida_data)}, Valor total: {folha_liquida}")
+                
+                # If still no data, show all classes containing 'SALARIO' for debugging
+                if len(folha_liquida_data) == 0:
+                    salario_classes = df_atual[df_atual['classe'].str.upper().str.contains('SALARIO', na=False)]
+                    print(f"Debug - All classes containing 'SALARIO': {salario_classes['classe'].unique() if not salario_classes.empty else 'None'}")
+                    
+                    # Try to find any class related to payroll/salary
+                    if len(salario_classes) > 0:
+                        folha_liquida_data = salario_classes
+                        folha_liquida = folha_liquida_data['valor'].sum()
+                        print(f"Debug - Using all SALARIO classes: {len(folha_liquida_data)}, Valor total: {folha_liquida}")
             
             # Impostos
             impostos = df_atual[
@@ -76,6 +102,7 @@ def api_kpis():
                 .select('categoria, classe, valor') \
                 .gte('data', data_inicio_anterior) \
                 .lte('data', data_fim_anterior) \
+                .neq('classe', 'TRANSFERENCIA DE CONTAS') \
                 .execute()
             
             # Calcular variações
@@ -87,9 +114,32 @@ def api_kpis():
                 funcionarios_anterior = df_anterior[
                     df_anterior['categoria'] == 'Despesas com Funcionários'
                 ]['valor'].sum()
-                folha_anterior = df_anterior[
-                    df_anterior['classe'] == 'SALARIOS E ORDENADOS'
-                ]['valor'].sum()
+                print(f"Debug - Available classes in previous period data: {df_anterior['classe'].unique()}")
+                # Try exact match first
+                folha_anterior_data = df_anterior[
+                    df_anterior['classe'].str.upper() == 'SALARIOS E ORDENADOS'
+                ]
+                folha_anterior = folha_anterior_data['valor'].sum()
+                print(f"Debug - Previous period registros de SALARIOS E ORDENADOS (exact match): {len(folha_anterior_data)}, Valor total: {folha_anterior}")
+                
+                # If no data found, try case-insensitive match
+                if len(folha_anterior_data) == 0:
+                    folha_anterior_data = df_anterior[
+                        df_anterior['classe'].str.upper().str.contains('SALARIOS', na=False)
+                    ]
+                    folha_anterior = folha_anterior_data['valor'].sum()
+                    print(f"Debug - Previous period fallback registros com 'SALARIOS': {len(folha_anterior_data)}, Valor total: {folha_anterior}")
+                    
+                    # If still no data, show all classes containing 'SALARIO' for debugging
+                    if len(folha_anterior_data) == 0:
+                        salario_classes = df_anterior[df_anterior['classe'].str.upper().str.contains('SALARIO', na=False)]
+                        print(f"Debug - Previous period all classes containing 'SALARIO': {salario_classes['classe'].unique() if not salario_classes.empty else 'None'}")
+                        
+                        # Try to find any class related to payroll/salary
+                        if len(salario_classes) > 0:
+                            folha_anterior_data = salario_classes
+                            folha_anterior = folha_anterior_data['valor'].sum()
+                            print(f"Debug - Previous period using all SALARIO classes: {len(folha_anterior_data)}, Valor total: {folha_anterior}")
                 impostos_anterior = df_anterior[
                     df_anterior['categoria'] == 'Imposto sobre faturamento'
                 ]['valor'].sum()
@@ -103,7 +153,8 @@ def api_kpis():
             
             # Buscar faturamento para % Folha sobre Faturamento
             try:
-                response_faturamento = supabase_admin.table('faturamento_consolidado') \
+                # First try the standard table
+                response_faturamento = supabase_admin.table('fin_faturamento_anual') \
                     .select('valor_total') \
                     .gte('data', data_inicio) \
                     .lte('data', data_fim) \
@@ -112,11 +163,56 @@ def api_kpis():
                 faturamento_total = 0
                 if response_faturamento.data:
                     df_faturamento = pd.DataFrame(response_faturamento.data)
+                    print(f"Debug - Faturamento data columns: {df_faturamento.columns.tolist()}")
+                    print(f"Debug - Faturamento data sample: {df_faturamento.head()}")
                     faturamento_total = df_faturamento['valor_total'].sum()
+                    print(f"Debug - Faturamento total from fin_faturamento_anual: {faturamento_total}")
+                
+                # If no data found, try alternative table names
+                if faturamento_total == 0:
+                    print("Trying alternative faturamento table names...")
+                    # Try other possible table names
+                    for table_name in ['faturamento_consolidado', 'vw_fluxo_caixa']:
+                        try:
+                            # Try different column names based on table
+                            column_name = 'valor_total'
+                            alt_query = supabase_admin.table(table_name).select(column_name) \
+                                .gte('data', data_inicio) \
+                                .lte('data', data_fim)
+                            
+                            # For vw_fluxo_caixa, only get receitas
+                            if table_name == 'vw_fluxo_caixa':
+                                column_name = 'valor_fluxo'
+                                alt_query = alt_query.eq('tipo_movto', 'Receita')
+                            
+                            alt_response = alt_query.execute()
+                            if alt_response.data:
+                                df_alt = pd.DataFrame(alt_response.data)
+                                print(f"Debug - Alternative table {table_name} data columns: {df_alt.columns.tolist()}")
+                                print(f"Debug - Alternative table {table_name} data sample: {df_alt.head()}")
+                                # Use the appropriate column name
+                                column_name = 'valor_total'
+                                if table_name == 'vw_fluxo_caixa':
+                                    column_name = 'valor_fluxo'
+                                alt_total = df_alt[column_name].sum()
+                                print(f"Debug - Alternative table {table_name} total: {alt_total}")
+                                if alt_total > 0:
+                                    faturamento_total = alt_total
+                                    print(f"Found faturamento data in {table_name}: {faturamento_total}")
+                                    break
+                        except Exception as alt_error:
+                            print(f"Alternative table {table_name} not found: {str(alt_error)}")
+                            continue
                 
                 percentual_folha = (folha_liquida / faturamento_total * 100) if faturamento_total > 0 else 0
-            except:
+                
+                # Debug logging
+                print(f"Debug - Folha Líquida: {folha_liquida}, Faturamento Total: {faturamento_total}, Percentual: {percentual_folha}")
+            except Exception as faturamento_error:
                 percentual_folha = 0
+                print(f"Erro ao buscar faturamento: {str(faturamento_error)}")
+                import traceback
+                traceback.print_exc()
             
             return jsonify({
                 'success': True,
@@ -172,6 +268,7 @@ def api_categorias():
             .select('categoria, valor') \
             .gte('data', data_inicio) \
             .lte('data', data_fim) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .execute()
         
         if response.data:
@@ -220,6 +317,7 @@ def api_tendencias():
             .select('data, categoria, valor') \
             .gte('data', data_inicio.strftime('%Y-%m-%d')) \
             .lte('data', data_fim.strftime('%Y-%m-%d')) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .execute()
         
         if response.data:
@@ -287,6 +385,7 @@ def api_detalhes_categoria(categoria):
             .eq('categoria', categoria) \
             .gte('data', data_inicio) \
             .lte('data', data_fim) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .order('data', desc=True) \
             .range(offset, offset + limit - 1) \
             .execute()
@@ -336,6 +435,7 @@ def api_fornecedores():
             .select('descricao, valor') \
             .gte('data', data_inicio) \
             .lte('data', data_fim) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .execute()
         
         if response.data:
