@@ -107,22 +107,80 @@ class FluxoCaixaController {
                 this.closeFiltersModal();
             }
         });
+        
+        // Modal de informações da projeção - correção do backdrop
+        $('#modal-info-projecao').on('hidden.bs.modal', function () {
+            // Remove qualquer backdrop residual
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '');
+            $('body').css('padding-right', '');
+        });
+        
+        // Garantir que o modal seja corretamente inicializado
+        $('#btn-info-projecao').on('click', function() {
+            // Remove backdrop anterior se existir
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+        });
     }
     
-    async loadData() {
+    async loadData(retryCount = 0) {
         this.showLoading(true);
         
         try {
+            // Load data in parallel but handle errors individually
+            const kpisPromise = this.loadKPIs().catch(error => {
+                console.error('Erro ao carregar KPIs:', error);
+                this.showError('Erro ao carregar KPIs. Os valores serão exibidos como "Erro ao carregar".');
+                return null;
+            });
+            
+            const despesasPromise = this.loadDespesasCategoria().catch(error => {
+                console.error('Erro ao carregar despesas por categoria:', error);
+                return null;
+            });
+            
+            const fluxoMensalPromise = this.loadFluxoMensal().catch(error => {
+                console.error('Erro ao carregar fluxo mensal:', error);
+                return null;
+            });
+            
+            const fluxoEstruturalPromise = this.loadFluxoEstrutural().catch(error => {
+                console.error('Erro ao carregar fluxo estrutural:', error);
+                return null;
+            });
+            
+            const projecaoPromise = this.loadProjecao().catch(error => {
+                console.error('Erro ao carregar projeção:', error);
+                return null;
+            });
+            
+            const tableDataPromise = this.loadTableData().catch(error => {
+                console.error('Erro ao carregar dados da tabela:', error);
+                return null;
+            });
+            
+            // Wait for all promises to complete
             await Promise.all([
-                this.loadKPIs(),
-                this.loadDespesasCategoria(),
-                this.loadFluxoMensal(),
-                this.loadFluxoEstrutural(),
-                this.loadProjecao(),
-                this.loadTableData()
+                kpisPromise,
+                despesasPromise,
+                fluxoMensalPromise,
+                fluxoEstruturalPromise,
+                projecaoPromise,
+                tableDataPromise
             ]);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            
+            // Retry logic for temporary failures
+            if (retryCount < 2) {
+                console.log(`Tentando novamente... (${retryCount + 1}/3)`);
+                setTimeout(() => {
+                    this.loadData(retryCount + 1);
+                }, 2000); // Wait 2 seconds before retry
+                return;
+            }
+            
             this.showError('Erro ao carregar dados. Tente novamente.');
         } finally {
             this.showLoading(false);
@@ -134,18 +192,66 @@ class FluxoCaixaController {
             const response = await fetch(`/financeiro/fluxo-de-caixa/api/kpis?periodo=${this.currentPeriodo}`);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar KPIs');
             }
             
             this.updateKPIs(data);
         } catch (error) {
             console.error('Erro ao carregar KPIs:', error);
+            this.showError('Erro ao carregar KPIs: ' + (error.message || 'Erro desconhecido'));
+            // Update KPIs with error message
+            this.updateKPIsWithError();
         }
+    }
+
+    updateKPIsWithError() {
+        // Show error state in KPIs
+        const errorText = 'Erro ao carregar';
+        
+        // KPIs Mensais (Mês Atual)
+        $('#valor-entradas-mes').text(errorText);
+        $('#var-entradas-mes').text('');
+        
+        $('#valor-saidas-mes').text(errorText);
+        $('#var-saidas-mes').text('');
+        
+        $('#valor-saldo-mes').text(errorText);
+        $('#var-saldo-mes').text('');
+        
+        // KPIs Acumulados do Período
+        $('#valor-resultado').text(errorText);
+        $('#var-resultado').text('');
+        
+        $('#valor-entradas').text(errorText);
+        $('#var-entradas').text('');
+        
+        $('#valor-saidas').text(errorText);
+        $('#var-saidas').text('');
+        
+        $('#valor-saldo').text(errorText);
+        $('#var-saldo').text('');
     }
     
     updateKPIs(data) {
-        // Resultado Líquido
+        // KPIs Mensais (Mês Atual)
+        if (data.entradas_mes_atual) {
+            $('#valor-entradas-mes').text(formatCurrencyShort(data.entradas_mes_atual.valor));
+            this.updateVariationMonthly('#var-entradas-mes', data.entradas_mes_atual.variacao);
+        }
+        
+        if (data.saidas_mes_atual) {
+            $('#valor-saidas-mes').text(formatCurrencyShort(data.saidas_mes_atual.valor));
+            this.updateVariationMonthly('#var-saidas-mes', data.saidas_mes_atual.variacao);
+        }
+        
+        if (data.saldo_mes_atual) {
+            $('#valor-saldo-mes').text(formatCurrencyShort(data.saldo_mes_atual.valor));
+            this.updateVariationMonthly('#var-saldo-mes', data.saldo_mes_atual.variacao);
+            this.updateKPICardColor('#kpi-saldo-mes', data.saldo_mes_atual.valor);
+        }
+        
+        // KPIs Acumulados do Período
         $('#valor-resultado').text(formatCurrencyShort(data.resultado_liquido.valor));
         this.updateVariation('#var-resultado', data.resultado_liquido.variacao);
         this.updateKPICardColor('#kpi-resultado', data.resultado_liquido.valor);
@@ -161,6 +267,25 @@ class FluxoCaixaController {
         // Saldo Final
         $('#valor-saldo').text(formatCurrencyShort(data.saldo_final.valor));
         this.updateVariation('#var-saldo', data.saldo_final.variacao);
+    }
+    
+    updateVariationMonthly(selector, variation) {
+        const element = $(selector);
+        const isPositive = variation > 0;
+        const isNegative = variation < 0;
+        
+        element.removeClass('variation-positive variation-negative variation-neutral');
+        
+        if (isPositive) {
+            element.addClass('variation-positive');
+            element.html(`<i class="mdi mdi-trending-up"></i> +${variation.toFixed(1)}% vs. mês anterior`);
+        } else if (isNegative) {
+            element.addClass('variation-negative');
+            element.html(`<i class="mdi mdi-trending-down"></i> ${variation.toFixed(1)}% vs. mês anterior`);
+        } else {
+            element.addClass('variation-neutral');
+            element.html(`<i class="mdi mdi-minus"></i> Sem variação`);
+        }
     }
     
     updateVariation(selector, variation) {
@@ -210,14 +335,63 @@ class FluxoCaixaController {
             const response = await fetch(url);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar despesas por categoria');
             }
             
             this.renderDespesasChart(data);
         } catch (error) {
             console.error('Erro ao carregar despesas por categoria:', error);
+            this.showError('Erro ao carregar despesas por categoria: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderDespesasChartError();
         }
+    }
+
+    renderDespesasChartError() {
+        const ctx = document.getElementById('chart-despesas-categoria').getContext('2d');
+        
+        // Destroy chart if it exists
+        if (this.charts.despesas) {
+            this.charts.despesas.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.despesas = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Update chart title to show error
+        $('#chart-despesas-title').text('Erro ao carregar despesas por categoria');
     }
     
     renderDespesasChart(data) {
@@ -336,14 +510,59 @@ class FluxoCaixaController {
             const response = await fetch(`/financeiro/fluxo-de-caixa/api/fluxo-mensal?periodo=${this.currentPeriodo}`);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar fluxo mensal');
             }
             
             this.renderFluxoMensalChart(data);
         } catch (error) {
             console.error('Erro ao carregar fluxo mensal:', error);
+            this.showError('Erro ao carregar fluxo mensal: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderFluxoMensalChartError();
         }
+    }
+
+    renderFluxoMensalChartError() {
+        const ctx = document.getElementById('chart-fluxo-mensal').getContext('2d');
+        
+        if (this.charts.fluxoMensal) {
+            this.charts.fluxoMensal.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.fluxoMensal = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
     }
     
     renderFluxoMensalChart(data) {
@@ -466,14 +685,59 @@ class FluxoCaixaController {
             const response = await fetch(`/financeiro/fluxo-de-caixa/api/fluxo-estrutural?periodo=${this.currentPeriodo}`);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar fluxo estrutural');
             }
             
             this.renderFluxoEstruturalChart(data);
         } catch (error) {
             console.error('Erro ao carregar fluxo estrutural:', error);
+            this.showError('Erro ao carregar fluxo estrutural: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderFluxoEstruturalChartError();
         }
+    }
+
+    renderFluxoEstruturalChartError() {
+        const ctx = document.getElementById('chart-fluxo-estrutural').getContext('2d');
+        
+        if (this.charts.fluxoEstrutural) {
+            this.charts.fluxoEstrutural.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.fluxoEstrutural = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
     }
     
     renderFluxoEstruturalChart(data) {
@@ -537,13 +801,70 @@ class FluxoCaixaController {
             const response = await fetch('/financeiro/fluxo-de-caixa/api/projecao');
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar projeção');
             }
             
             this.renderProjecaoChart(data);
         } catch (error) {
             console.error('Erro ao carregar projeção:', error);
+            this.showError('Erro ao carregar projeção: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderProjecaoChartError();
+        }
+    }
+
+    renderProjecaoChartError() {
+        const ctx = document.getElementById('chart-projecao').getContext('2d');
+        
+        if (this.charts.projecao) {
+            this.charts.projecao.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.projecao = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Show error message in the chart container
+        const chartContainer = document.querySelector('#chart-projecao').closest('.chart-content');
+        if (chartContainer) {
+            chartContainer.innerHTML = `
+                <div class="chart-error">
+                    <i class="mdi mdi-alert-circle" style="font-size: 3rem; color: #dc3545;"></i>
+                    <p>Erro ao carregar dados da projeção</p>
+                    <small>Por favor, tente novamente mais tarde</small>
+                </div>
+            `;
         }
     }
     
@@ -553,95 +874,264 @@ class FluxoCaixaController {
         if (this.charts.projecao) {
             this.charts.projecao.destroy();
         }
-        
-        this.charts.projecao = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.meses,
-                datasets: [
-                    {
-                        label: 'Entradas Projetadas',
-                        data: data.entradas_projetadas,
-                        borderColor: 'rgba(40, 167, 69, 1)',
-                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4,
-                        pointBackgroundColor: 'rgba(40, 167, 69, 1)',
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2,
-                        pointRadius: 4
-                    },
-                    {
-                        label: 'Saídas Projetadas',
-                        data: data.saidas_projetadas,
-                        borderColor: 'rgba(220, 53, 69, 1)',
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4,
-                        pointBackgroundColor: 'rgba(220, 53, 69, 1)',
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2,
-                        pointRadius: 4
-                    },
-                    {
-                        label: 'Saldo Projetado',
-                        data: data.saldo_projetado,
-                        borderColor: 'rgba(23, 162, 184, 1)',
-                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2,
-                        pointRadius: 5,
-                        yAxisID: 'y1'
-                    }
-                ]
-            },
-            options: {
-                ...this.chartDefaults,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        grid: {
-                            display: false
+
+        // Verificar se temos os novos dados (histórico + projeção)
+        if (data.historico_length !== undefined) {
+            // Novo formato com histórico + projeção
+            const historicoLength = data.historico_length;
+            const mesesHistoricos = data.meses.slice(0, historicoLength);
+            const mesesProjecao = data.meses.slice(historicoLength);
+            const entradasHistoricas = data.entradas.slice(0, historicoLength);
+            const entradasProjecao = data.entradas.slice(historicoLength);
+            const saidasHistoricas = data.saidas.slice(0, historicoLength);
+            const saidasProjecao = data.saidas.slice(historicoLength);
+            const saldoHistorico = data.saldo.slice(0, historicoLength);
+            const saldoProjecao = data.saldo.slice(historicoLength);
+
+            this.charts.projecao = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.meses,
+                    datasets: [
+                        {
+                            label: 'Entradas (Histórico)',
+                            data: [...entradasHistoricas, ...Array(mesesProjecao.length).fill(null)],
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(40, 167, 69, 1)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
                         },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrencyShort(value);
+                        {
+                            label: 'Entradas (Projeção)',
+                            data: [...Array(historicoLength).fill(null), ...entradasProjecao],
+                            borderColor: 'rgba(40, 167, 69, 0.6)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.05)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(40, 167, 69, 0.6)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Saídas (Histórico)',
+                            data: [...saidasHistoricas, ...Array(mesesProjecao.length).fill(null)],
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(220, 53, 69, 1)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Saídas (Projeção)',
+                            data: [...Array(historicoLength).fill(null), ...saidasProjecao],
+                            borderColor: 'rgba(220, 53, 69, 0.6)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.05)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(220, 53, 69, 0.6)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Saldo (Histórico)',
+                            data: [...saldoHistorico, ...Array(mesesProjecao.length).fill(null)],
+                            borderColor: 'rgba(23, 162, 184, 1)',
+                            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(23, 162, 184, 1)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Saldo (Projeção)',
+                            data: [...Array(historicoLength).fill(null), ...saldoProjecao],
+                            borderColor: 'rgba(23, 162, 184, 0.6)',
+                            backgroundColor: 'rgba(23, 162, 184, 0.05)',
+                            borderWidth: 3,
+                            borderDash: [5, 5],
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(23, 162, 184, 0.6)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    ...this.chartDefaults,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
                             }
                         }
                     },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Período (Últimos 6 meses + Próximos 6 meses)'
+                            }
                         },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrencyShort(value);
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Entradas / Saídas'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrencyShort(value);
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Saldo Acumulado'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrencyShort(value);
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            // Formato antigo (fallback)
+            this.charts.projecao = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.meses,
+                    datasets: [
+                        {
+                            label: 'Entradas Projetadas',
+                            data: data.entradas_projetadas,
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(40, 167, 69, 1)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Saídas Projetadas',
+                            data: data.saidas_projetadas,
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(220, 53, 69, 1)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Saldo Projetado',
+                            data: data.saldo_projetado,
+                            borderColor: 'rgba(23, 162, 184, 1)',
+                            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(23, 162, 184, 1)',
+                            pointBorderColor: 'white',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    ...this.chartDefaults,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrencyShort(value);
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrencyShort(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
     
     async loadTableData() {
@@ -657,7 +1147,7 @@ class FluxoCaixaController {
             const response = await fetch(url);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar dados da tabela');
             }
             
@@ -665,7 +1155,25 @@ class FluxoCaixaController {
             this.updatePagination(data);
         } catch (error) {
             console.error('Erro ao carregar dados da tabela:', error);
+            this.showError('Erro ao carregar dados da tabela: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in table
+            this.renderTableError();
         }
+    }
+
+    renderTableError() {
+        const tbody = $('#tabela-dados tbody');
+        tbody.empty();
+        
+        tbody.append(`
+            <tr>
+                <td colspan="7" class="text-center text-danger">
+                    <i class="mdi mdi-alert-circle" style="font-size: 2rem;"></i>
+                    <div>Erro ao carregar dados da tabela</div>
+                    <small>Por favor, tente novamente mais tarde</small>
+                </td>
+            </tr>
+        `);
     }
     
     renderTable(data) {
@@ -821,9 +1329,40 @@ class FluxoCaixaController {
     }
     
     showError(message) {
-        // Implementar notificação de erro
-        console.error(message);
-        alert(message); // Temporário - substituir por toast/notification
+        // Create or update error notification
+        let errorContainer = document.getElementById('error-notification');
+        if (!errorContainer) {
+            errorContainer = document.createElement('div');
+            errorContainer.id = 'error-notification';
+            errorContainer.className = 'alert alert-danger alert-dismissible fade show';
+            errorContainer.role = 'alert';
+            errorContainer.style.position = 'fixed';
+            errorContainer.style.top = '20px';
+            errorContainer.style.right = '20px';
+            errorContainer.style.zIndex = '9999';
+            errorContainer.style.maxWidth = '400px';
+            errorContainer.innerHTML = `
+                <strong>Erro!</strong> <span class="error-message"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.body.appendChild(errorContainer);
+        }
+        
+        // Update error message
+        const messageElement = errorContainer.querySelector('.error-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+        
+        // Show the error
+        errorContainer.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (errorContainer) {
+                errorContainer.style.display = 'none';
+            }
+        }, 5000);
     }
 }
 
