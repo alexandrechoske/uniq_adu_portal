@@ -3,6 +3,7 @@ from extensions import supabase, supabase_admin
 from routes.auth import login_required
 from decorators.perfil_decorators import perfil_required
 from datetime import datetime
+import calendar
 import json
 from collections import defaultdict
 
@@ -40,7 +41,7 @@ def api_geral_kpis():
         
         # Buscar meta do ano
         meta_response = supabase_admin.table('fin_metas_financeiras').select('meta').eq('ano', str(ano)).execute()
-        meta_anual = meta_response.data[0]['meta'] if meta_response.data else 0
+        meta_anual = sum(item['meta'] for item in meta_response.data) if meta_response.data else 0
         
         # Calcular valores
         target_realizado = total_faturado
@@ -150,7 +151,7 @@ def api_geral_proporcao():
         
         # Buscar meta do ano
         meta_response = supabase_admin.table('fin_metas_financeiras').select('meta').eq('ano', str(ano)).execute()
-        meta_anual = meta_response.data[0]['meta'] if meta_response.data else 0
+        meta_anual = sum(item['meta'] for item in meta_response.data) if meta_response.data else 0
         
         # Calcular percentual faturado vs meta
         pct_faturado = (total_geral / meta_anual * 100) if meta_anual > 0 else 0
@@ -234,12 +235,22 @@ def api_setor_dados_completos():
         for item in dados_faturamento:
             data_item = datetime.strptime(item['data'], '%Y-%m-%d')
             mes_key = data_item.strftime('%Y-%m')
-            faturamento_mensal[mes_key] += float(item['valor'])
             
-            # Para comparação com ano anterior
-            data_anterior = data_item.replace(year=data_item.year - 1)
-            mes_anterior_key = data_anterior.strftime('%Y-%m')
-            faturamento_mensal_anterior[mes_anterior_key] += float(item['valor'])
+            # Fix the date error by ensuring we don't go out of range when creating the previous year date
+            try:
+                # Para comparação com ano anterior
+                if data_item.month == 2 and data_item.day == 29:
+                    # Handle leap year case - use Feb 28 of previous year
+                    data_anterior = data_item.replace(year=data_item.year - 1, day=28)
+                else:
+                    data_anterior = data_item.replace(year=data_item.year - 1)
+                mes_anterior_key = data_anterior.strftime('%Y-%m')
+                faturamento_mensal_anterior[mes_anterior_key] += float(item['valor'])
+            except ValueError:
+                # Handle any other date errors by skipping this item for previous year comparison
+                pass
+            
+            faturamento_mensal[mes_key] += float(item['valor'])
         
         # Preparar dados mensais
         meses_data = []
@@ -279,5 +290,82 @@ def api_setor_dados_completos():
             'grafico_mensal': meses_data,
             'ranking_clientes': ranking_lista
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# API endpoints for Metas management
+@faturamento_bp.route('/api/metas', methods=['GET'])
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_get_metas():
+    """API para obter todas as metas financeiras"""
+    try:
+        # Only get financeiro type metas
+        response = supabase_admin.table('fin_metas_financeiras').select('*').eq('tipo', 'financeiro').order('ano', desc=True).order('mes').execute()
+        return jsonify(response.data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/metas', methods=['POST'])
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_create_meta():
+    """API para criar ou atualizar uma meta financeira"""
+    try:
+        data = request.get_json()
+        ano = data.get('ano')
+        mes = data.get('mes')  # New field
+        meta = data.get('meta')
+        tipo = data.get('tipo', 'financeiro')  # Default to financeiro
+        
+        if not ano or meta is None:
+            return jsonify({'error': 'Ano e meta são obrigatórios'}), 400
+        
+        # Verificar se já existe uma meta para este ano e mês e tipo
+        query = supabase_admin.table('fin_metas_financeiras').select('*').eq('ano', str(ano)).eq('tipo', tipo)
+        if mes:
+            query = query.eq('mes', mes)
+        else:
+            query = query.is_('mes', 'null')
+        
+        existing_response = query.execute()
+        
+        if existing_response.data:
+            # Atualizar meta existente
+            meta_id = existing_response.data[0]['id']
+            update_data = {
+                'meta': meta,
+                'tipo': tipo
+            }
+            # Only include mes in update if it was provided
+            if mes is not None:
+                update_data['mes'] = mes
+            
+            update_response = supabase_admin.table('fin_metas_financeiras').update(update_data).eq('id', meta_id).execute()
+            return jsonify(update_response.data[0])
+        else:
+            # Criar nova meta
+            create_data = {
+                'ano': str(ano),
+                'meta': meta,
+                'tipo': tipo
+            }
+            # Only include mes in creation if it was provided
+            if mes is not None:
+                create_data['mes'] = mes
+                
+            create_response = supabase_admin.table('fin_metas_financeiras').insert(create_data).execute()
+            return jsonify(create_response.data[0])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/metas/<int:meta_id>', methods=['DELETE'])
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_delete_meta(meta_id):
+    """API para excluir uma meta financeira"""
+    try:
+        response = supabase_admin.table('fin_metas_financeiras').delete().eq('id', meta_id).execute()
+        return jsonify({'message': 'Meta excluída com sucesso'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

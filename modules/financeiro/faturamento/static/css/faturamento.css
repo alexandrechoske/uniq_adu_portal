@@ -538,6 +538,55 @@
     display: block;
 }
 
+/* Year/Month Button Selection */
+.year-month-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.year-month-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.year-month-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.year-month-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Metas Table Styles */
+#metas-table th,
+#metas-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+#metas-table th:first-child,
+#metas-table td:first-child {
+    text-align: left;
+}
+
+#metas-table .delete-meta {
+    padding: 2px 6px;
+}
+
+#metas-table .delete-meta i {
+    font-size: 16px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .faturamento-container {
@@ -596,6 +645,23 @@
     .nav-tabs {
         flex-direction: column;
     }
+    
+    .year-month-selector {
+        flex-direction: column;
+    }
+    
+    /* Metas table responsive */
+    #metas-table {
+        font-size: 12px;
+    }
+    
+    #metas-table .delete-meta {
+        padding: 1px 4px;
+    }
+    
+    #metas-table .delete-meta i {
+        font-size: 14px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -612,6 +678,11 @@
     
     .kpi-value {
         font-size: 1.5rem;
+    }
+    
+    /* Metas table on very small screens */
+    #metas-table thead {
+        display: none;
     }
 }
 
@@ -709,6 +780,7 @@
     font-weight: 500;
     color: #495057;
     margin-bottom: 0.5rem;
+    display: block;
 }
 
 /* Utility Classes */

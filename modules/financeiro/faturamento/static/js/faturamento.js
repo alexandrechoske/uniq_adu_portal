@@ -68,6 +68,7 @@ class FaturamentoController {
     init() {
         this.setupEventListeners();
         this.loadData();
+        this.loadMetas(); // Load metas on initialization
     }
     
     setupEventListeners() {
@@ -83,6 +84,11 @@ class FaturamentoController {
         $('#apply-filters').on('click', () => this.applyFilters());
         $('#clear-filters').on('click', () => this.resetFilters());
         
+        // Metas
+        $('#open-metas-modal').on('click', () => this.openMetasModal());
+        $('#close-metas-modal, #cancel-metas').on('click', () => this.closeMetasModal());
+        $('#save-meta').on('click', () => this.saveMeta());
+        
         // Setor filter
         $('#setor-select').on('change', (e) => {
             this.currentSetor = e.target.value;
@@ -96,9 +102,11 @@ class FaturamentoController {
         });
         
         // Fechar modal ao clicar fora
-        $('#filter-modal').on('click', (e) => {
+        $('#filter-modal, #metas-modal').on('click', (e) => {
             if (e.target.id === 'filter-modal') {
                 this.closeFiltersModal();
+            } else if (e.target.id === 'metas-modal') {
+                this.closeMetasModal();
             }
         });
     }
@@ -202,7 +210,7 @@ class FaturamentoController {
                     <td>${formatCurrency(row.faturamento_anterior)}</td>
                     <td class="${variacaoClass}">
                         <i class="${variacaoIcon}"></i>
-                        ${row.variacao.toFixed(1)}%
+                        ${Math.abs(row.variacao).toFixed(1)}%
                     </td>
                 </tr>
             `);
@@ -218,38 +226,50 @@ class FaturamentoController {
                 throw new Error(data.error || 'Erro ao carregar dados de proporção');
             }
             
-            this.renderProporcaoCharts(data);
+            this.renderChartProporcao(data.setores);
+            this.renderChartMetaRealizacao(data.meta);
         } catch (error) {
             console.error('Erro ao carregar gráficos de proporção:', error);
         }
     }
     
-    renderProporcaoCharts(data) {
-        // Gráfico de Proporção do Faturamento
-        const proporcaoCtx = document.getElementById('chart-proporcao-faturamento').getContext('2d');
+    renderChartProporcao(setores) {
+        const ctx = document.getElementById('chart-proporcao-faturamento').getContext('2d');
         
         // Destruir gráfico anterior se existir
         if (this.charts.proporcao) {
             this.charts.proporcao.destroy();
         }
         
-        this.charts.proporcao = new Chart(proporcaoCtx, {
+        const labels = ['Importação', 'Consultoria', 'Exportação'];
+        const valores = [
+            setores.importacao.valor,
+            setores.consultoria.valor,
+            setores.exportacao.valor
+        ];
+        const percentuais = [
+            setores.importacao.percentual,
+            setores.consultoria.percentual,
+            setores.exportacao.percentual
+        ];
+        
+        this.charts.proporcao = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Importação', 'Consultoria', 'Exportação'],
+                labels: labels,
                 datasets: [{
-                    data: [
-                        data.setores.importacao.percentual,
-                        data.setores.consultoria.percentual,
-                        data.setores.exportacao.percentual
-                    ],
+                    data: valores,
                     backgroundColor: [
-                        '#007bff',
-                        '#28a745',
-                        '#ffc107'
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(23, 162, 184, 0.8)',
+                        'rgba(108, 117, 125, 0.8)'
                     ],
-                    borderWidth: 2,
-                    borderColor: '#fff'
+                    borderColor: [
+                        'rgba(40, 167, 69, 1)',
+                        'rgba(23, 162, 184, 1)',
+                        'rgba(108, 117, 125, 1)'
+                    ],
+                    borderWidth: 2
                 }]
             },
             options: {
@@ -267,43 +287,48 @@ class FaturamentoController {
                         callbacks: {
                             label: function(context) {
                                 const label = context.label || '';
-                                const value = context.parsed;
-                                return `${label}: ${value.toFixed(1)}%`;
+                                const value = context.raw;
+                                const percent = percentuais[context.dataIndex];
+                                return `${label}: ${formatCurrency(value)} (${percent.toFixed(1)}%)`;
                             }
                         }
                     }
                 }
             }
         });
-        
-        // Gráfico de Meta Anual - Faturado vs A Realizar
-        const metaCtx = document.getElementById('chart-meta-realizacao').getContext('2d');
+    }
+    
+    renderChartMetaRealizacao(meta) {
+        const ctx = document.getElementById('chart-meta-realizacao').getContext('2d');
         
         // Destruir gráfico anterior se existir
         if (this.charts.meta) {
             this.charts.meta.destroy();
         }
         
-        this.charts.meta = new Chart(metaCtx, {
+        // Create a gauge chart instead of pie chart
+        this.charts.meta = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['Faturado', 'A Realizar'],
                 datasets: [{
-                    data: [
-                        data.meta.faturado.percentual,
-                        data.meta.a_realizar.percentual
-                    ],
+                    data: [meta.faturado.valor, meta.a_realizar.valor],
                     backgroundColor: [
-                        '#28a745',
-                        '#dc3545'
+                        meta.faturado.valor > 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)',
+                        meta.a_realizar.valor > 0 ? 'rgba(255, 193, 7, 0.8)' : 'rgba(200, 200, 200, 0.8)'
                     ],
-                    borderWidth: 2,
-                    borderColor: '#fff'
+                    borderColor: [
+                        meta.faturado.valor > 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)',
+                        meta.a_realizar.valor > 0 ? 'rgba(255, 193, 7, 1)' : 'rgba(200, 200, 200, 1)'
+                    ],
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                rotation: 270, // Start from top
+                circumference: 180, // Half circle
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -316,9 +341,18 @@ class FaturamentoController {
                         callbacks: {
                             label: function(context) {
                                 const label = context.label || '';
-                                const value = context.parsed;
-                                return `${label}: ${value.toFixed(1)}%`;
+                                const value = context.raw;
+                                const percent = context.dataset.data[0] + context.dataset.data[1] > 0 ? 
+                                    (value / (context.dataset.data[0] + context.dataset.data[1]) * 100).toFixed(1) : 0;
+                                return `${label}: ${formatCurrency(value)} (${percent}%)`;
                             }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: `Meta: ${formatCurrency(meta.faturado.valor + meta.a_realizar.valor)}`,
+                        font: {
+                            size: 14
                         }
                     }
                 }
@@ -340,6 +374,7 @@ class FaturamentoController {
             this.renderClientesTable(data.ranking_clientes);
         } catch (error) {
             console.error('Erro ao carregar dados do setor:', error);
+            this.showError('Erro ao carregar dados do setor: ' + error.message);
         }
     }
     
@@ -362,7 +397,13 @@ class FaturamentoController {
         // Preparar dados para o gráfico
         const meses = data.map(item => {
             const date = new Date(item.mes + '-01');
-            return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+            // Fix the date error by ensuring we don't go out of range when creating the date
+            try {
+                return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+            } catch (e) {
+                // Fallback if there's still an error
+                return item.mes;
+            }
         });
         
         const valoresAtuais = data.map(item => item.faturamento);
@@ -443,6 +484,169 @@ class FaturamentoController {
         });
     }
     
+    // Metas Management Functions
+    async loadMetas() {
+        try {
+            const response = await fetch(`/financeiro/faturamento/api/metas`);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao carregar metas');
+            }
+            
+            this.renderMetasTable(data);
+        } catch (error) {
+            console.error('Erro ao carregar metas:', error);
+        }
+    }
+    
+    renderMetasTable(metas) {
+        const tbody = $('#metas-table-body');
+        tbody.empty();
+        
+        if (metas.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="14" class="text-center text-muted">
+                        Nenhuma meta cadastrada.
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+        
+        // Group metas by year
+        const metasByYear = {};
+        metas.forEach(meta => {
+            if (meta.tipo === 'financeiro') { // Only show financeiro type metas
+                const year = meta.ano;
+                if (!metasByYear[year]) {
+                    metasByYear[year] = {};
+                }
+                // Store meta value by month (or 'anual' for annual metas)
+                const monthKey = meta.mes || 'anual';
+                metasByYear[year][monthKey] = meta;
+            }
+        });
+        
+        // Create rows for each year
+        Object.keys(metasByYear).sort((a, b) => b - a).forEach(year => {
+            const yearMetas = metasByYear[year];
+            const row = $('<tr></tr>');
+            
+            // Year column
+            row.append(`<td>${year}</td>`);
+            
+            // Monthly columns (January to December)
+            for (let month = 1; month <= 12; month++) {
+                const monthKey = month.toString().padStart(2, '0');
+                const meta = yearMetas[monthKey];
+                
+                if (meta) {
+                    row.append(`<td>${formatCurrency(meta.meta)} <button class="btn btn-sm btn-danger delete-meta ms-2" data-id="${meta.id}"><i class="mdi mdi-delete"></i></button></td>`);
+                } else {
+                    row.append(`<td>-</td>`);
+                }
+            }
+            
+            // Annual column
+            const annualMeta = yearMetas['anual'];
+            if (annualMeta) {
+                row.append(`<td>${formatCurrency(annualMeta.meta)} <button class="btn btn-sm btn-danger delete-meta ms-2" data-id="${annualMeta.id}"><i class="mdi mdi-delete"></i></button></td>`);
+            } else {
+                row.append(`<td>-</td>`);
+            }
+            
+            // Actions column (empty for now)
+            row.append(`<td></td>`);
+            
+            tbody.append(row);
+        });
+        
+        // Add event listeners for delete buttons
+        $('.delete-meta').on('click', (e) => {
+            const id = $(e.target).closest('.delete-meta').data('id');
+            this.deleteMeta(id);
+        });
+    }
+    
+    openMetasModal() {
+        $('#metas-modal').show();
+        $('#meta-ano').val(this.currentAno);
+        // Set current month
+        const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+        $('#meta-mes').val(currentMonth);
+        this.loadMetas();
+    }
+    
+    closeMetasModal() {
+        $('#metas-modal').hide();
+    }
+    
+    async saveMeta() {
+        const ano = $('#meta-ano').val();
+        const mes = $('#meta-mes').val();
+        const valor = $('#meta-valor').val();
+        
+        if (!ano || !valor) {
+            this.showError('Por favor, preencha todos os campos obrigatórios (Ano e Valor).');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/financeiro/faturamento/api/metas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ano: ano,
+                    mes: mes,
+                    meta: parseFloat(valor)
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao salvar meta');
+            }
+            
+            this.showSuccess('Meta salva com sucesso!');
+            $('#meta-valor').val('');
+            this.loadMetas();
+            this.loadData(); // Reload data to update KPIs
+        } catch (error) {
+            console.error('Erro ao salvar meta:', error);
+            this.showError('Erro ao salvar meta: ' + error.message);
+        }
+    }
+    
+    async deleteMeta(id) {
+        if (!confirm('Tem certeza que deseja excluir esta meta?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/financeiro/faturamento/api/metas/${id}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao excluir meta');
+            }
+            
+            this.showSuccess('Meta excluída com sucesso!');
+            this.loadMetas();
+            this.loadData(); // Reload data to update KPIs
+        } catch (error) {
+            console.error('Erro ao excluir meta:', error);
+            this.showError('Erro ao excluir meta: ' + error.message);
+        }
+    }
+    
     openFiltersModal() {
         const modal = document.getElementById('filter-modal');
         if (modal) {
@@ -492,51 +696,63 @@ class FaturamentoController {
     showError(message) {
         // Implementar notificação de erro
         console.error(message);
-        alert(message); // Temporário - substituir por toast/notification
+        alert('Erro: ' + message); // Temporário - substituir por toast/notification
+    }
+    
+    showSuccess(message) {
+        // Implementar notificação de sucesso
+        console.log('Sucesso: ' + message);
+        alert('Sucesso: ' + message); // Temporário - substituir por toast/notification
     }
 }
 
 // Funções utilitárias
 function formatCurrency(value) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return 'R$ 0,00';
+    }
+    
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
-        currency: 'BRL'
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     }).format(value);
 }
 
 function formatCurrencyShort(value) {
-    const absValue = Math.abs(value);
-    const prefix = value < 0 ? '-' : '';
-    
-    if (absValue >= 1000000) {
-        // Milhões: usar 2 casas decimais para maior precisão
-        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
-    } else if (absValue >= 1000) {
-        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
-        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
+    if (value === null || value === undefined || isNaN(value)) {
+        return 'R$ 0';
     }
-    // Valores menores que 1000: formato completo
-    return formatCurrency(value);
+    
+    const absValue = Math.abs(value);
+    let suffix = '';
+    let divisor = 1;
+    let maxDecimals = 0;
+    
+    if (absValue >= 1000000000) {
+        suffix = 'B';
+        divisor = 1000000000;
+        maxDecimals = 2; // Bilhões com 2 casas decimais
+    } else if (absValue >= 1000000) {
+        suffix = 'M';
+        divisor = 1000000;
+        maxDecimals = 2; // Milhões com 2 casas decimais
+    } else if (absValue >= 1000) {
+        suffix = 'K';
+        divisor = 1000;
+        maxDecimals = 1; // Milhares com 1 casa decimal
+    }
+    
+    const formattedValue = (absValue / divisor).toLocaleString('pt-BR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: maxDecimals
+    });
+    
+    return `R$ ${formattedValue}${suffix}`;
 }
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Inicializar quando o documento estiver pronto
-$(document).ready(function() {
-    window.FaturamentoController = FaturamentoController;
+// Inicializar controlador após o carregamento do DOM
+document.addEventListener('DOMContentLoaded', function() {
+    window.faturamentoController = new FaturamentoController();
 });
