@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, session, jsonify
 from modules.auth.routes import login_required
+from decorators.perfil_decorators import perfil_required
 
 # Blueprint para Dashboard Executivo Financeiro
 dashboard_executivo_financeiro_bp = Blueprint(
@@ -13,28 +14,16 @@ dashboard_executivo_financeiro_bp = Blueprint(
 
 @dashboard_executivo_financeiro_bp.route('/')
 @login_required
+@perfil_required('financeiro', 'fin_dashboard_executivo')
 def index():
     """Dashboard Executivo Financeiro - Visão estratégica das finanças"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    # Verificar permissões - apenas admin e interno_unique
-    if user_role not in ['admin', 'interno_unique']:
-        return render_template('errors/403.html'), 403
-    
     return render_template('dashboard_executivo_financeiro.html')
 
 @dashboard_executivo_financeiro_bp.route('/api/dados-financeiros')
 @login_required
+@perfil_required('financeiro', 'fin_dashboard_executivo')
 def api_dados_financeiros():
     """API para dados do dashboard executivo financeiro"""
-    user = session.get('user', {})
-    user_role = user.get('role', '')
-    
-    # Verificar permissões
-    if user_role not in ['admin', 'interno_unique']:
-        return jsonify({'error': 'Acesso negado'}), 403
-    
     # TODO: Implementar lógica de dados financeiros
     dados_mock = {
         'receita_total': 150000.00,
