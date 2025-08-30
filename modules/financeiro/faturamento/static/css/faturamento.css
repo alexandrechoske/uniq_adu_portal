@@ -1,7 +1,7 @@
-/* Faturamento Styles - Based on fluxo_de_caixa.css patterns */
+/* Faturamento Styles - Based on despesas layout patterns */
 
 .faturamento-container {
-    max-width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -43,6 +43,7 @@
 .last-update {
     font-size: 0.9rem;
     opacity: 0.8;
+    color: #6c757d;
 }
 
 /* Actions Bar */
@@ -55,7 +56,8 @@
     padding: 1rem;
     background: white;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .actions-left {
@@ -130,7 +132,8 @@
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -141,7 +144,7 @@
 
 .kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 .kpi-card::before {
@@ -181,7 +184,7 @@
 .kpi-value {
     font-size: 2rem;
     font-weight: 700;
-    color: #2c3e50;
+    color: #212529;
     margin: 0;
     line-height: 1.2;
 }
@@ -244,18 +247,34 @@
     margin-bottom: 2rem;
 }
 
+.charts-grid-full-width {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.charts-grid-two-elements {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
 /* Chart Container */
 .chart-container {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
 
 .chart-container-full {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow: hidden;
     width: 100%;
 }
@@ -271,7 +290,7 @@
 .chart-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: #212529;
     margin: 0;
     display: flex;
     align-items: center;
@@ -304,7 +323,8 @@
 .table-container {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow: hidden;
     margin-bottom: 2rem;
 }
@@ -312,7 +332,8 @@
 .table-container-metas {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow-x: auto;
     margin-bottom: 2rem;
     max-width: 100%;
@@ -329,7 +350,7 @@
 .table-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: #212529;
     margin: 0;
     display: flex;
     align-items: center;
@@ -633,7 +654,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .faturamento-container {
-        padding: 1rem;
+        padding: 10px;
     }
     
     .actions-bar {

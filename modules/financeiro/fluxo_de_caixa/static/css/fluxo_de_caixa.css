@@ -1,7 +1,7 @@
-/* Fluxo de Caixa Styles */
+/* Fluxo de Caixa Styles - Based on despesas layout patterns */
 
 .fluxo-container {
-    max-width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -43,6 +43,7 @@
 .last-update {
     font-size: 0.9rem;
     opacity: 0.8;
+    color: #6c757d;
 }
 
 /* Actions Bar */
@@ -55,7 +56,8 @@
     padding: 1rem;
     background: white;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .actions-left {
@@ -112,7 +114,8 @@
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -123,7 +126,7 @@
 
 .kpi-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 .kpi-card::before {
@@ -163,7 +166,7 @@
 .kpi-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #2c3e50;
+    color: #212529;
     margin: 0;
     line-height: 1.2;
 }
@@ -242,7 +245,8 @@
 .chart-container {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
 
@@ -257,7 +261,7 @@
 .chart-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: #212529;
     margin: 0;
     display: flex;
     align-items: center;
@@ -281,13 +285,16 @@
 
 .chart-content canvas {
     max-height: 450px;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* Table Container */
 .table-container {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow: hidden;
     margin-bottom: 2rem;
 }
@@ -303,7 +310,7 @@
 .table-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: #212529;
     margin: 0;
     display: flex;
     align-items: center;
@@ -527,7 +534,7 @@
 
 @media (max-width: 768px) {
     .fluxo-container {
-        padding: 1rem;
+        padding: 10px;
     }
     
     .actions-bar {

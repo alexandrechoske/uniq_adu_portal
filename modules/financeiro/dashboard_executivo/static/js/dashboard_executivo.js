@@ -401,11 +401,16 @@ function updateFaturamentoPorSetorChart(data) {
             plugins: {
                 legend: {
                     position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10
+                    }
                 },
                 title: {
                     display: false
                 }
-            }
+            },
+            aspectRatio: 1.5
         }
     });
 }

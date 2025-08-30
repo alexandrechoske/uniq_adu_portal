@@ -1,10 +1,11 @@
 /* Dashboard Executivo Financeiro - Custom Styles */
 
 .dashboard-executivo-container {
-    padding: 1rem;
-    background-color: #f8f9fa;
-    max-width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
 }
 
 .page-header {
@@ -78,7 +79,7 @@
 
 .btn {
     padding: 0.5rem 1rem;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.875rem;
     font-weight: 500;
     border: none;
@@ -89,19 +90,23 @@
 .btn-primary {
     background-color: #0d6efd;
     color: white;
+    border: 1px solid #0d6efd;
 }
 
 .btn-primary:hover {
     background-color: #0b5ed7;
+    border-color: #0b5ed7;
 }
 
 .btn-secondary {
     background-color: #6c757d;
     color: white;
+    border: 1px solid #6c757d;
 }
 
 .btn-secondary:hover {
     background-color: #5c636a;
+    border-color: #5c636a;
 }
 
 /* KPI Cards Grid */
@@ -114,9 +119,10 @@
 
 .kpi-card {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     cursor: pointer;
     position: relative;
@@ -127,8 +133,8 @@
 }
 
 .kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 .kpi-card::before {
@@ -136,8 +142,8 @@
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    height: 4px;
+    width: 4px;
+    height: 100%;
     background: linear-gradient(90deg, #0d6efd, #6610f2);
 }
 
@@ -201,13 +207,12 @@
 /* Charts Grid - Updated for correct layout */
 .charts-grid {
     display: grid;
-    grid-template-columns: 60% 40%;
-    grid-template-rows: auto auto auto auto;
+    grid-template-columns: 70% 30%;
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
-/* Line 2: Resultado Mensal (60%) and Proporção do Faturamento (40%) */
+/* Line 2: Resultado Mensal (70%) and Proporção do Faturamento (30%) */
 .large-chart {
     grid-row: 1;
     grid-column: 1;
@@ -218,7 +223,7 @@
     grid-column: 2;
 }
 
-/* Line 3: Evolução Saldo Acumulado (40%), Top 5 Categorias de Despesa (40%), Top 5 Clientes (20%) */
+/* Line 3: Evolução Saldo Acumulado (30%), Top 5 Categorias de Despesa (30%), Top 5 Clientes (40%) */
 .medium-chart:first-of-type {
     /* This is the "Evolução do Saldo Acumulado" */
     grid-row: 2;
@@ -240,7 +245,7 @@
 /* For large screens, we want a 3-column layout for line 3 */
 @media (min-width: 1200px) {
     .charts-grid {
-        grid-template-columns: 40% 40% 20%;
+        grid-template-columns: 30% 30% 40%;
         grid-template-rows: auto auto;
     }
     
@@ -252,6 +257,7 @@
     .small-chart {
         grid-row: 1;
         grid-column: 3;
+        align-self: start;
     }
     
     .medium-chart:first-of-type {
@@ -276,9 +282,10 @@
 /* Default layout for smaller screens (stacked) */
 .chart-container {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.5rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .chart-header {
@@ -314,7 +321,7 @@
 }
 
 .small-chart .chart-content {
-    min-height: 200px;
+    min-height: 300px;
 }
 
 .small-table .chart-content {
@@ -425,7 +432,7 @@
 /* Responsive Design */
 @media (max-width: 1199px) and (min-width: 992px) {
     .charts-grid {
-        grid-template-columns: 50% 50%;
+        grid-template-columns: 60% 40%;
     }
     
     .large-chart {
@@ -470,6 +477,18 @@
         grid-row: auto;
         grid-column: auto;
     }
+    
+    .large-chart .chart-content {
+        min-height: 350px;
+    }
+    
+    .medium-chart .chart-content {
+        min-height: 300px;
+    }
+    
+    .small-chart .chart-content {
+        min-height: 250px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -489,6 +508,7 @@
     .charts-grid {
         grid-template-columns: 1fr;
         grid-template-rows: auto;
+        gap: 1rem;
     }
     
     .chart-container {
@@ -504,7 +524,23 @@
     }
     
     .dashboard-executivo-container {
-        padding: 0.5rem;
+        padding: 10px;
+    }
+    
+    .large-chart .chart-content {
+        min-height: 300px;
+    }
+    
+    .medium-chart .chart-content {
+        min-height: 250px;
+    }
+    
+    .small-chart .chart-content {
+        min-height: 200px;
+    }
+    
+    .small-table .chart-content {
+        min-height: 300px;
     }
 }
 
@@ -523,6 +559,8 @@
     transition: background-color 0.2s ease;
     margin-top: 0.5rem;
     align-self: flex-start;
+    border: none;
+    cursor: pointer;
 }
 
 .nav-button:hover {
