@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="dashboard-executivo-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
@@ -22,90 +22,178 @@
         </div>
     </div>
     
-    <!-- Conteúdo Principal -->
-    <div class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="mdi mdi-chart-line"></i>
-                Dashboard Executivo Financeiro
-            </h1>
-            <p class="page-description">
-                Visão executiva completa dos indicadores financeiros da empresa
-            </p>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Carregando dados do dashboard executivo...</p>
+        </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="year-filter">Ano</label>
+                <select id="year-filter" class="form-select">
+                    {% for year in range(2020, 2030) %}
+                    <option value="{{ year }}" {% if loop.index == 6 %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button id="refresh-data" class="btn btn-primary">
+                    <i class="mdi mdi-refresh"></i>
+                    Atualizar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <!-- Faturamento Total -->
+        <div class="kpi-card kpi-success" id="kpi-faturamento">
+            <div class="kpi-content">
+                <p class="kpi-label">Faturamento Total</p>
+                <p class="kpi-value" id="valor-faturamento">-</p>
+                <p class="kpi-variation" id="var-faturamento">-</p>
+            </div>
+            <a href="{{ url_for('fin_faturamento.index') }}" class="nav-button">
+                <i class="mdi mdi-arrow-right"></i>
+                Ver detalhes
+            </a>
         </div>
         
-        <!-- Conteúdo será desenvolvido aqui -->
-        <div class="content-placeholder">
-            <div class="placeholder-card">
-                <i class="mdi mdi-chart-line placeholder-icon"></i>
-                <h3>Dashboard Executivo Financeiro</h3>
-                <p>Esta página será desenvolvida com gráficos e KPIs financeiros executivos.</p>
+        <!-- Despesas Totais -->
+        <div class="kpi-card kpi-danger" id="kpi-despesas">
+            <div class="kpi-content">
+                <p class="kpi-label">Despesas Totais</p>
+                <p class="kpi-value" id="valor-despesas">-</p>
+                <p class="kpi-variation" id="var-despesas">-</p>
+            </div>
+            <a href="{{ url_for('fin_despesas.index') }}" class="nav-button">
+                <i class="mdi mdi-arrow-right"></i>
+                Ver detalhes
+            </a>
+        </div>
+        
+        <!-- Resultado Líquido -->
+        <div class="kpi-card kpi-info" id="kpi-resultado">
+            <div class="kpi-content">
+                <p class="kpi-label">Resultado Líquido</p>
+                <p class="kpi-value" id="valor-resultado">-</p>
+                <p class="kpi-variation" id="var-resultado">-</p>
+            </div>
+            <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="nav-button">
+                <i class="mdi mdi-arrow-right"></i>
+                Ver detalhes
+            </a>
+        </div>
+        
+        <!-- Margem Líquida -->
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-content">
+                <p class="kpi-label">Margem Líquida</p>
+                <p class="kpi-value" id="valor-margem">-</p>
+                <p class="kpi-variation" id="var-margem">-</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <!-- Atingimento de Meta -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-target"></i>
+                    Atingimento de Meta de Faturamento
+                </h3>
+            </div>
+            <div class="chart-content">
+                <div id="meta-atingimento-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <p>Dados de meta serão carregados aqui</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Resultado Mensal -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-bar"></i>
+                    Resultado Mensal
+                </h3>
+            </div>
+            <div class="chart-content">
+                <div id="resultado-mensal-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <p>Dados de resultado mensal serão carregados aqui</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Faturamento por Setor -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">
+                <i class="mdi mdi-chart-donut"></i>
+                Faturamento por Setor
+            </h3>
+        </div>
+        <div class="chart-content">
+            <div id="faturamento-setor-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                <p>Dados de faturamento por setor serão carregados aqui</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tables Section -->
+    <div class="tables-section">
+        <!-- Top 5 Categorias de Despesa -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-format-list-bulleted"></i>
+                    Top 5 Categorias de Despesa
+                </h3>
+            </div>
+            <div class="table-content">
+                <div id="top-despesas-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <p>Dados de top despesas serão carregados aqui</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top 5 Clientes por Faturamento -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-account-multiple"></i>
+                    Top 5 Clientes por Faturamento
+                </h3>
+            </div>
+            <div class="table-content">
+                <div class="enhanced-table-container">
+                    <table id="table-clientes" class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Cliente</th>
+                                <th>Faturamento Total</th>
+                                <th>% do Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-.content-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px;
-    padding: 2rem;
-}
-
-.placeholder-card {
-    text-align: center;
-    background: white;
-    border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-}
-
-.placeholder-icon {
-    font-size: 4rem;
-    color: var(--color-primary);
-    margin-bottom: 1rem;
-}
-
-.placeholder-card h3 {
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.placeholder-card p {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.page-header {
-    margin-bottom: 2rem;
-}
-
-.page-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.page-title i {
-    color: var(--color-primary);
-}
-
-.page-description {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    margin: 0;
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}

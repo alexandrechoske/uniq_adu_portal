@@ -58,6 +58,13 @@
                 <h3 class="column-title"><i class="mdi mdi-cash-multiple"></i> Financeiro</h3>
                 <div class="column-grid">
                     {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
+                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="fin_dashboard_executivo">
+                        <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
+                        <h4 class="module-title">Dashboard Executivo</h4>
+                        <p class="module-desc">Visão executiva do módulo financeiro.</p>
+                    </a>
+                    {% endif %}
                     {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="module-card" data-module="fluxo_caixa">
                         <div class="module-icon"><i class="mdi mdi-chart-timeline-variant"></i></div>
@@ -77,13 +84,6 @@
                         <div class="module-icon"><i class="mdi mdi-receipt"></i></div>
                         <h4 class="module-title">Faturamento</h4>
                         <p class="module-desc">Controle de receitas e faturamento.</p>
-                    </a>
-                    {% endif %}
-                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
-                    <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="fin_dashboard_executivo">
-                        <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
-                        <h4 class="module-title">Dashboard Executivo</h4>
-                        <p class="module-desc">Visão executiva do módulo financeiro.</p>
                     </a>
                     {% endif %}
                 </div>

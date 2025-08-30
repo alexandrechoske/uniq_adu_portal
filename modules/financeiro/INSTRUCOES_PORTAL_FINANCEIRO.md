@@ -8,6 +8,9 @@
 PRIMARY: vw_fluxo_caixa
 SUPPORT: fin_resultado_anual, fin_despesa_anual, fin_faturamento_anual
 
+-- Tabelas para metas
+METAS: fin_metas_financeiras
+
 ### 💰 **2. FLUXO DE CAIXA**  
 ```sql
 -- Tabela principal (já implementada com 99.99% precisão)
@@ -33,6 +36,11 @@ DETAIL: vw_fluxo_caixa WHERE tipo_movto = 'Receita'
 
 
 ## 🎯 **RESUMO TÉCNICO POR PÁGINA:**
+
+### **Dashboard Executivo:**
+- **Foco:** Visão geral "at-a-glance" da saúde financeira da empresa
+- **Tabelas principais:** `vw_fluxo_caixa`, `fin_despesa_anual`, `fin_faturamento_anual`
+- **Dados:** KPIs de desempenho, atingimento de metas, resultados mensais, faturamento por setor, top despesas e clientes
 
 ### **Fluxo de Caixa:**
 - **Foco:** Movimentação completa com saldo acumulado
