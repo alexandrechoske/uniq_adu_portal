@@ -254,12 +254,21 @@ def api_setor_dados_completos():
         
         # Preparar dados mensais
         meses_data = []
-        meses_unicos = set(list(faturamento_mensal.keys()) + list(faturamento_mensal_anterior.keys()))
+        # Get all unique months from the current period data
+        meses_unicos = set(faturamento_mensal.keys())
         for mes_key in sorted(meses_unicos):
+            # For each month in current period, we want to show:
+            # 1. Current period value (faturamento)
+            # 2. Previous period value (faturamento_anterior) for the same month
+            
+            # Calculate the previous year's month key for comparison
+            year, month = mes_key.split('-')
+            mes_anterior_key = f"{int(year)-1}-{month}"
+            
             meses_data.append({
                 'mes': mes_key,
                 'faturamento': faturamento_mensal.get(mes_key, 0),
-                'faturamento_anterior': faturamento_mensal_anterior.get(mes_key, 0)
+                'faturamento_anterior': faturamento_mensal_anterior.get(mes_anterior_key, 0)
             })
         
         # Ranking de clientes

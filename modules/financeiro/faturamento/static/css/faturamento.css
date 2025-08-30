@@ -1,7 +1,7 @@
 /* Faturamento Styles - Based on fluxo_de_caixa.css patterns */
 
 .faturamento-container {
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -252,6 +252,14 @@
     overflow: hidden;
 }
 
+.chart-container-full {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    width: 100%;
+}
+
 .chart-header {
     padding: 1.5rem 1.5rem 1rem 1.5rem;
     border-bottom: 1px solid #e9ecef;
@@ -283,10 +291,13 @@
     padding: 1.5rem;
     position: relative;
     min-height: 300px;
+    max-height: 400px; /* Limit the height */
 }
 
 .chart-content canvas {
     max-height: 300px;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* Table Container */
@@ -296,6 +307,15 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     margin-bottom: 2rem;
+}
+
+.table-container-metas {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    margin-bottom: 2rem;
+    max-width: 100%;
 }
 
 .table-header {
@@ -328,6 +348,7 @@
 
 .table-content {
     overflow-x: auto;
+    max-height: 300px; /* Limit the height */
 }
 
 .enhanced-table {
@@ -339,8 +360,9 @@
 .enhanced-table th,
 .enhanced-table td {
     padding: 0.75rem;
-    text-align: left;
+    text-align: center;
     border-bottom: 1px solid #e9ecef;
+    white-space: nowrap;
 }
 
 .enhanced-table th {
@@ -350,6 +372,11 @@
     position: sticky;
     top: 0;
     z-index: 10;
+}
+
+.enhanced-table th:first-child,
+.enhanced-table td:first-child {
+    text-align: left;
 }
 
 .enhanced-table tbody tr:hover {
@@ -438,6 +465,21 @@
     max-width: 800px;
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Metas Modal Wide Styles */
+.metas-modal-wide .filter-modal-content {
+    width: 95%;
+    max-width: 1200px;
+}
+
+.metas-modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.metas-modal-body {
+    overflow-x: auto;
 }
 
 .filter-modal-header {
@@ -572,6 +614,7 @@
 #metas-table td {
     text-align: center;
     vertical-align: middle;
+    min-width: 100px;
 }
 
 #metas-table th:first-child,
@@ -608,12 +651,13 @@
         grid-template-columns: 1fr;
     }
     
-    .charts-grid {
+    .charts-grid-two-elements {
         grid-template-columns: 1fr;
     }
     
     .chart-content {
         padding: 1rem;
+        max-height: none; /* Remove height limit on mobile */
     }
     
     .table-header {

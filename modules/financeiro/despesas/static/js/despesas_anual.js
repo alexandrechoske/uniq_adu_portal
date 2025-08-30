@@ -179,42 +179,24 @@ class DespesasController {
     }
     
     updateKPIs(data) {
-        console.log('KPI Data received:', data); // Debug log
-        
         // Total de Despesas
-        $('#valor-total-despesas').text(formatCurrencyShort(data.total_despesas || 0));
+        $('#valor-total-despesas').text(formatCurrencyShort(data.total_despesas));
         this.updateVariacao('#var-total-despesas', data.variacoes.total_despesas);
         
         // Despesas com Funcionários
-        $('#valor-funcionarios').text(formatCurrencyShort(data.despesas_funcionarios || 0));
+        $('#valor-funcionarios').text(formatCurrencyShort(data.despesas_funcionarios));
         this.updateVariacao('#var-funcionarios', data.variacoes.despesas_funcionarios);
         
         // Folha Líquida
-        $('#valor-folha-liquida').text(formatCurrencyShort(data.folha_liquida || 0));
+        $('#valor-folha-liquida').text(formatCurrencyShort(data.folha_liquida));
         this.updateVariacao('#var-folha-liquida', data.variacoes.folha_liquida);
         
         // Impostos
-        $('#valor-impostos').text(formatCurrencyShort(data.impostos || 0));
+        $('#valor-impostos').text(formatCurrencyShort(data.impostos));
         this.updateVariacao('#var-impostos', data.variacoes.impostos);
         
         // Percentual Folha sobre Faturamento
-        console.log('Percentual folha faturamento:', data.percentual_folha_faturamento); // Debug log
-        console.log('Folha liquida:', data.folha_liquida); // Debug log
-        console.log('Faturamento total:', data.faturamento_total); // Debug log
-        console.log('Total despesas:', data.total_despesas); // Debug log
-        
-        // Format the percentage with proper decimal handling
-        const percentual = parseFloat(data.percentual_folha_faturamento) || 0;
-        $('#valor-percentual-folha').text(percentual.toFixed(1) + '%');
-        
-        // Additional debugging
-        console.log('Formatted percentual:', percentual.toFixed(1) + '%');
-        
-        // Show calculation details for debugging
-        if (data.folha_liquida && data.faturamento_total && data.faturamento_total > 0) {
-            const calculatedPercentual = (data.folha_liquida / data.faturamento_total) * 100;
-            console.log('Manual calculation:', `${data.folha_liquida} / ${data.faturamento_total} * 100 = ${calculatedPercentual}`);
-        }
+        $('#valor-percentual-folha').text(data.percentual_folha_faturamento.toFixed(1) + '%');
     }
     
     updateVariacao(selector, variacao) {

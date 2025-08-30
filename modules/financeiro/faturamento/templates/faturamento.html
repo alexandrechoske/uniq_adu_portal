@@ -102,10 +102,10 @@
             </div>
         </div>
         
-        <!-- Charts Grid -->
-        <div class="charts-grid">
-            <!-- Tabela de Faturamento Mensal -->
-            <div class="chart-container">
+        <!-- Charts Grid - Reorganized layout -->
+        <div class="charts-grid-full-width">
+            <!-- Tabela de Faturamento Mensal (Full Width) -->
+            <div class="chart-container-full">
                 <div class="chart-header">
                     <h3 class="chart-title">
                         <i class="mdi mdi-table"></i>
@@ -117,10 +117,19 @@
                         <thead>
                             <tr>
                                 <th>Ano</th>
-                                <th>Mês</th>
-                                <th>Faturamento Total</th>
-                                <th>Faturamento Ano Anterior</th>
-                                <th>% mesmo período ano anterior</th>
+                                <th>Janeiro</th>
+                                <th>Fevereiro</th>
+                                <th>Março</th>
+                                <th>Abril</th>
+                                <th>Maio</th>
+                                <th>Junho</th>
+                                <th>Julho</th>
+                                <th>Agosto</th>
+                                <th>Setembro</th>
+                                <th>Outubro</th>
+                                <th>Novembro</th>
+                                <th>Dezembro</th>
+                                <th>Meta</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -129,7 +138,10 @@
                     </table>
                 </div>
             </div>
-            
+        </div>
+        
+        <!-- Gauge and Proporção Charts (Below the table) -->
+        <div class="charts-grid-two-elements">
             <!-- Gráfico 1 - Proporção do Faturamento -->
             <div class="chart-container">
                 <div class="chart-header">
@@ -184,7 +196,7 @@
                     <i class="mdi mdi-domain"></i>
                 </div>
                 <div class="kpi-content">
-                    <p class="kpi-label">Faturamento Total [Setor]</p>
+                    <p class="kpi-label">Faturamento Total do Setor</p>
                     <p class="kpi-value" id="valor-faturamento-setor">-</p>
                 </div>
             </div>
@@ -194,20 +206,20 @@
                     <i class="mdi mdi-percent"></i>
                 </div>
                 <div class="kpi-content">
-                    <p class="kpi-label">% [Setor]</p>
+                    <p class="kpi-label">% Participação no Faturamento Total</p>
                     <p class="kpi-value" id="valor-percentual-setor">-</p>
                 </div>
             </div>
         </div>
         
-        <!-- Charts Grid -->
+        <!-- Charts and Tables Grid -->
         <div class="charts-grid">
             <!-- Gráfico de Faturamento Mensal do Setor -->
             <div class="chart-container">
                 <div class="chart-header">
                     <h3 class="chart-title">
-                        <i class="mdi mdi-chart-bar"></i>
-                        Faturamento Mensal do Setor
+                        <i class="mdi mdi-chart-line"></i>
+                        Comparativo de Faturamento por Período
                     </h3>
                 </div>
                 <div class="chart-content">
@@ -229,8 +241,8 @@
                             <tr>
                                 <th>Cliente</th>
                                 <th>Classe</th>
-                                <th>Valor</th>
-                                <th>%GT Valor</th>
+                                <th>Valor Faturado</th>
+                                <th>% Participação no Setor</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -285,8 +297,8 @@
     </div>
     
     <!-- Modal de Metas -->
-    <div id="metas-modal" class="filter-modal" style="display: none;">
-        <div class="filter-modal-content">
+    <div id="metas-modal" class="filter-modal metas-modal-wide" style="display: none;">
+        <div class="filter-modal-content metas-modal-content">
             <div class="filter-modal-header">
                 <h2 class="filter-modal-title">
                     <i class="mdi mdi-target"></i>
@@ -296,7 +308,7 @@
                     <i class="mdi mdi-close"></i>
                 </button>
             </div>
-            <div class="filter-modal-body">
+            <div class="filter-modal-body metas-modal-body">
                 <div class="filter-section">
                     <h3 class="filter-section-title">🎯 Definir Meta</h3>
                     <div class="filter-input-group">
@@ -342,8 +354,8 @@
                     <input type="hidden" id="meta-tipo" value="financeiro">
                 </div>
                 <div class="filter-section">
-                    <h3 class="filter-section-title">📋 Metas Cadastradas</h3>
-                    <div class="table-container">
+                    <h3 class="filter-section-title">📋 Metas Cadastradas (2025)</h3>
+                    <div class="table-container-metas">
                         <table class="enhanced-table" id="metas-table">
                             <thead>
                                 <tr>
@@ -482,5 +494,6 @@ document.addEventListener('DOMContentLoaded', function() {
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script src="{{ url_for('fin_faturamento.static', filename='js/faturamento.js') }}"></script>
 {% endblock %}

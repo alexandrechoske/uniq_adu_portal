@@ -64,72 +64,31 @@ def api_kpis():
             
             # Folha Líquida (classe específica)
             print(f"Debug - Available classes in data: {df_atual['classe'].unique()}")
-            print(f"Debug - Available categories in data: {df_atual['categoria'].unique()}")
-            
-            # Show all unique class names for debugging
-            if 'classe' in df_atual.columns:
-                all_classes = df_atual['classe'].dropna().unique()
-                print(f"Debug - All non-null class names: {all_classes}")
-            
-            # First try exact match for "SALARIOS E ORDENADOS" as specified in the requirements
+            # Try exact match first
             folha_liquida_data = df_atual[
-                df_atual['classe'] == 'SALARIOS E ORDENADOS'
+                df_atual['classe'].str.upper() == 'SALARIOS E ORDENADOS'
             ]
             folha_liquida = folha_liquida_data['valor'].sum()
-            print(f"Debug - Registros com 'SALARIOS E ORDENADOS' (exact match): {len(folha_liquida_data)}, Valor total: {folha_liquida}")
+            print(f"Debug - Registros de SALARIOS E ORDENADOS (exact match): {len(folha_liquida_data)}, Valor total: {folha_liquida}")
             
-            # If no exact match, try case-insensitive match
+            # If no data found, try case-insensitive match
             if len(folha_liquida_data) == 0:
                 folha_liquida_data = df_atual[
-                    df_atual['classe'].str.upper() == 'SALARIOS E ORDENADOS'
+                    df_atual['classe'].str.upper().str.contains('SALARIOS', na=False)
                 ]
                 folha_liquida = folha_liquida_data['valor'].sum()
-                print(f"Debug - Registros com 'SALARIOS E ORDENADOS' (case-insensitive): {len(folha_liquida_data)}, Valor total: {folha_liquida}")
-            
-            # If still no data, try pattern matching as fallback
-            if len(folha_liquida_data) == 0:
-                folha_class_patterns = [
-                    'SALÁRIOS E ORDENADOS',
-                    'SALARIOS',
-                    'SALÁRIOS',
-                    'SALARIO',
-                    'SALÁRIO',
-                    'FOLHA DE PAGAMENTO'
-                ]
+                print(f"Debug - Fallback registros com 'SALARIOS': {len(folha_liquida_data)}, Valor total: {folha_liquida}")
                 
-                # Try each pattern until we find data
-                for pattern in folha_class_patterns:
-                    folha_liquida_data = df_atual[
-                        df_atual['classe'].str.upper().str.contains(pattern, na=False)
-                    ]
-                    folha_liquida = folha_liquida_data['valor'].sum()
-                    print(f"Debug - Registros com '{pattern}': {len(folha_liquida_data)}, Valor total: {folha_liquida}")
+                # If still no data, show all classes containing 'SALARIO' for debugging
+                if len(folha_liquida_data) == 0:
+                    salario_classes = df_atual[df_atual['classe'].str.upper().str.contains('SALARIO', na=False)]
+                    print(f"Debug - All classes containing 'SALARIO': {salario_classes['classe'].unique() if not salario_classes.empty else 'None'}")
                     
-                    if len(folha_liquida_data) > 0:
-                        break
-            
-            # If still no data, try looking in categories as well
-            if len(folha_liquida_data) == 0:
-                folha_category_patterns = [
-                    'Despesas com Funcionários',
-                    'Folha de Pagamento',
-                    'Salários'
-                ]
-                
-                for pattern in folha_category_patterns:
-                    folha_liquida_data = df_atual[
-                        df_atual['categoria'].str.upper().str.contains(pattern, na=False)
-                    ]
-                    folha_liquida = folha_liquida_data['valor'].sum()
-                    print(f"Debug - Registros com categoria '{pattern}': {len(folha_liquida_data)}, Valor total: {folha_liquida}")
-                    
-                    if len(folha_liquida_data) > 0:
-                        break
-            
-            # If still no data, show all unique categories for debugging
-            if len(folha_liquida_data) == 0 and 'categoria' in df_atual.columns:
-                all_categories = df_atual['categoria'].dropna().unique()
-                print(f"Debug - All non-null categories: {all_categories}")
+                    # Try to find any class related to payroll/salary
+                    if len(salario_classes) > 0:
+                        folha_liquida_data = salario_classes
+                        folha_liquida = folha_liquida_data['valor'].sum()
+                        print(f"Debug - Using all SALARIO classes: {len(folha_liquida_data)}, Valor total: {folha_liquida}")
             
             # Impostos
             impostos = df_atual[
@@ -156,51 +115,31 @@ def api_kpis():
                     df_anterior['categoria'] == 'Despesas com Funcionários'
                 ]['valor'].sum()
                 print(f"Debug - Available classes in previous period data: {df_anterior['classe'].unique()}")
-                
-                # Calculate folha liquida for previous period using same logic
-                folha_anterior = 0
-                folha_anterior_data = pd.DataFrame()
-                
-                # First try exact match for "SALARIOS E ORDENADOS" as specified in the requirements
+                # Try exact match first
                 folha_anterior_data = df_anterior[
-                    df_anterior['classe'] == 'SALARIOS E ORDENADOS'
+                    df_anterior['classe'].str.upper() == 'SALARIOS E ORDENADOS'
                 ]
                 folha_anterior = folha_anterior_data['valor'].sum()
-                print(f"Debug - Previous period registros com 'SALARIOS E ORDENADOS' (exact match): {len(folha_anterior_data)}, Valor total: {folha_anterior}")
+                print(f"Debug - Previous period registros de SALARIOS E ORDENADOS (exact match): {len(folha_anterior_data)}, Valor total: {folha_anterior}")
                 
-                # If no exact match, try case-insensitive match
+                # If no data found, try case-insensitive match
                 if len(folha_anterior_data) == 0:
                     folha_anterior_data = df_anterior[
-                        df_anterior['classe'].str.upper() == 'SALARIOS E ORDENADOS'
+                        df_anterior['classe'].str.upper().str.contains('SALARIOS', na=False)
                     ]
                     folha_anterior = folha_anterior_data['valor'].sum()
-                    print(f"Debug - Previous period registros com 'SALARIOS E ORDENADOS' (case-insensitive): {len(folha_anterior_data)}, Valor total: {folha_anterior}")
-                
-                # If still no data, try pattern matching as fallback
-                if len(folha_anterior_data) == 0:
-                    # Try each pattern until we find data
-                    for pattern in folha_class_patterns:
-                        folha_anterior_data = df_anterior[
-                            df_anterior['classe'].str.upper().str.contains(pattern, na=False)
-                        ]
-                        folha_anterior = folha_anterior_data['valor'].sum()
-                        print(f"Debug - Previous period registros com '{pattern}': {len(folha_anterior_data)}, Valor total: {folha_anterior}")
+                    print(f"Debug - Previous period fallback registros com 'SALARIOS': {len(folha_anterior_data)}, Valor total: {folha_anterior}")
+                    
+                    # If still no data, show all classes containing 'SALARIO' for debugging
+                    if len(folha_anterior_data) == 0:
+                        salario_classes = df_anterior[df_anterior['classe'].str.upper().str.contains('SALARIO', na=False)]
+                        print(f"Debug - Previous period all classes containing 'SALARIO': {salario_classes['classe'].unique() if not salario_classes.empty else 'None'}")
                         
-                        if len(folha_anterior_data) > 0:
-                            break
-                
-                # If still no data, try looking in categories as well
-                if len(folha_anterior_data) == 0:
-                    for pattern in folha_category_patterns:
-                        folha_anterior_data = df_anterior[
-                            df_anterior['categoria'].str.upper().str.contains(pattern, na=False)
-                        ]
-                        folha_anterior = folha_anterior_data['valor'].sum()
-                        print(f"Debug - Previous period registros com categoria '{pattern}': {len(folha_anterior_data)}, Valor total: {folha_anterior}")
-                        
-                        if len(folha_anterior_data) > 0:
-                            break
-                
+                        # Try to find any class related to payroll/salary
+                        if len(salario_classes) > 0:
+                            folha_anterior_data = salario_classes
+                            folha_anterior = folha_anterior_data['valor'].sum()
+                            print(f"Debug - Previous period using all SALARIO classes: {len(folha_anterior_data)}, Valor total: {folha_anterior}")
                 impostos_anterior = df_anterior[
                     df_anterior['categoria'] == 'Imposto sobre faturamento'
                 ]['valor'].sum()
@@ -211,154 +150,70 @@ def api_kpis():
                     'folha_liquida': _calcular_variacao(folha_liquida, folha_anterior),
                     'impostos': _calcular_variacao(impostos, impostos_anterior)
                 }
-            else:
-                # If no previous period data, set variations to None or 0
-                variacoes = {
-                    'total_despesas': None,
-                    'despesas_funcionarios': None,
-                    'folha_liquida': None,
-                    'impostos': None
-                }
             
             # Buscar faturamento para % Folha sobre Faturamento
             try:
-                faturamento_total = 0
-                
-                # According to documentation and user requirements, use fin_faturamento_anual with valor column
-                print(f"Debug - Trying to get faturamento data from fin_faturamento_anual using column valor")
-                
+                # First try the standard table
                 response_faturamento = supabase_admin.table('fin_faturamento_anual') \
-                    .select('valor') \
+                    .select('valor_total') \
                     .gte('data', data_inicio) \
                     .lte('data', data_fim) \
                     .execute()
                 
+                faturamento_total = 0
                 if response_faturamento.data:
                     df_faturamento = pd.DataFrame(response_faturamento.data)
-                    print(f"Debug - fin_faturamento_anual data columns: {df_faturamento.columns.tolist()}")
-                    print(f"Debug - fin_faturamento_anual data sample: {df_faturamento.head()}")
-                    
-                    if 'valor' in df_faturamento.columns:
-                        faturamento_total = df_faturamento['valor'].sum()
-                        print(f"Debug - Faturamento total from fin_faturamento_anual: {faturamento_total}")
-                    else:
-                        print(f"Debug - Column valor not found in fin_faturamento_anual")
-                else:
-                    print(f"Debug - No data found in fin_faturamento_anual")
+                    print(f"Debug - Faturamento data columns: {df_faturamento.columns.tolist()}")
+                    print(f"Debug - Faturamento data sample: {df_faturamento.head()}")
+                    faturamento_total = df_faturamento['valor_total'].sum()
+                    print(f"Debug - Faturamento total from fin_faturamento_anual: {faturamento_total}")
                 
-                # Only try alternative tables if the primary table didn't work
+                # If no data found, try alternative table names
                 if faturamento_total == 0:
-                    print("Debug - Primary faturamento table didn't work, trying alternatives...")
-                    # According to documentation, try these tables in order:
-                    # 1. fin_faturamento_anual (primary) - already tried above with correct column
-                    # 2. fin_resultado_anual WHERE tipo = 'Receita' (alternative)
-                    # 3. vw_fluxo_caixa WHERE tipo_movto = 'Receita' (detail)
-                    
-                    table_attempts = [
-                        {'name': 'fin_resultado_anual', 'column': 'valor', 'filter': {'tipo': 'Receita'}},
-                        {'name': 'vw_fluxo_caixa', 'column': 'valor_fluxo', 'filter': {'tipo_movto': 'Receita'}}
-                    ]
-                    
-                    # First, let's check what tables actually exist and have data
-                    print("Debug - Checking available tables...")
-                    for table_info in table_attempts:
+                    print("Trying alternative faturamento table names...")
+                    # Try other possible table names
+                    for table_name in ['faturamento_consolidado', 'vw_fluxo_caixa']:
                         try:
-                            table_name = table_info['name']
-                            print(f"Debug - Checking table: {table_name}")
-                            # Try to get a small sample of data
-                            sample_query = supabase_admin.table(table_name).select('*').limit(1)
-                            sample_response = sample_query.execute()
-                            if sample_response.data:
-                                print(f"Debug - Table {table_name} exists and has data")
-                            else:
-                                print(f"Debug - Table {table_name} exists but has no data")
-                        except Exception as sample_error:
-                            print(f"Debug - Table {table_info['name']} not accessible: {str(sample_error)}")
-                    
-                    for table_info in table_attempts:
-                        try:
-                            table_name = table_info['name']
-                            column_name = table_info['column']
-                            filter_conditions = table_info['filter']
-                            
-                            print(f"Debug - Trying to get faturamento data from {table_name} using column {column_name}")
-                            
-                            query = supabase_admin.table(table_name).select(column_name) \
+                            # Try different column names based on table
+                            column_name = 'valor_total'
+                            alt_query = supabase_admin.table(table_name).select(column_name) \
                                 .gte('data', data_inicio) \
                                 .lte('data', data_fim)
                             
-                            # Apply filter conditions if any
-                            if filter_conditions:
-                                for key, value in filter_conditions.items():
-                                    query = query.eq(key, value)
+                            # For vw_fluxo_caixa, only get receitas
+                            if table_name == 'vw_fluxo_caixa':
+                                column_name = 'valor_fluxo'
+                                alt_query = alt_query.eq('tipo_movto', 'Receita')
                             
-                            response_faturamento = query.execute()
-                            
-                            if response_faturamento.data:
-                                df_faturamento = pd.DataFrame(response_faturamento.data)
-                                print(f"Debug - {table_name} data columns: {df_faturamento.columns.tolist()}")
-                                print(f"Debug - {table_name} data sample: {df_faturamento.head()}")
-                                
-                                if column_name in df_faturamento.columns:
-                                    faturamento_total = df_faturamento[column_name].sum()
-                                    print(f"Debug - Faturamento total from {table_name}: {faturamento_total}")
-                                    if faturamento_total > 0:
-                                        break  # Found valid data, exit loop
-                                else:
-                                    print(f"Debug - Column {column_name} not found in {table_name}")
-                            else:
-                                print(f"Debug - No data found in {table_name}")
-                        except Exception as table_error:
-                            print(f"Debug - Error accessing {table_info['name']}: {str(table_error)}")
+                            alt_response = alt_query.execute()
+                            if alt_response.data:
+                                df_alt = pd.DataFrame(alt_response.data)
+                                print(f"Debug - Alternative table {table_name} data columns: {df_alt.columns.tolist()}")
+                                print(f"Debug - Alternative table {table_name} data sample: {df_alt.head()}")
+                                # Use the appropriate column name
+                                column_name = 'valor_total'
+                                if table_name == 'vw_fluxo_caixa':
+                                    column_name = 'valor_fluxo'
+                                alt_total = df_alt[column_name].sum()
+                                print(f"Debug - Alternative table {table_name} total: {alt_total}")
+                                if alt_total > 0:
+                                    faturamento_total = alt_total
+                                    print(f"Found faturamento data in {table_name}: {faturamento_total}")
+                                    break
+                        except Exception as alt_error:
+                            print(f"Alternative table {table_name} not found: {str(alt_error)}")
                             continue
                 
-                percentual_folha = 0
-                if faturamento_total and faturamento_total > 0:
-                    try:
-                        # Ensure we have valid numbers
-                        folha_liquida_float = float(folha_liquida) if folha_liquida is not None else 0
-                        faturamento_total_float = float(faturamento_total) if faturamento_total is not None else 0
-                        
-                        if faturamento_total_float > 0:
-                            percentual_folha = (folha_liquida_float / faturamento_total_float) * 100
-                            print(f"Debug - Calculated percentual: ({folha_liquida_float} / {faturamento_total_float}) * 100 = {percentual_folha}")
-                        else:
-                            print(f"Debug - Faturamento total is zero or negative: {faturamento_total_float}")
-                    except (ValueError, TypeError) as calc_error:
-                        print(f"Debug - Error calculating percentual: {str(calc_error)}")
-                        percentual_folha = 0
-                else:
-                    print(f"Debug - Faturamento total is zero or None: {faturamento_total}")
+                percentual_folha = (folha_liquida / faturamento_total * 100) if faturamento_total > 0 else 0
                 
                 # Debug logging
                 print(f"Debug - Folha Líquida: {folha_liquida}, Faturamento Total: {faturamento_total}, Percentual: {percentual_folha}")
-                
-                # Store faturamento_total in the response for debugging
-                response_data = {
-                    'total_despesas': float(total_despesas),
-                    'despesas_funcionarios': float(despesas_funcionarios),
-                    'folha_liquida': float(folha_liquida),
-                    'impostos': float(impostos),
-                    'percentual_folha_faturamento': float(percentual_folha),
-                    'faturamento_total': float(faturamento_total) if faturamento_total else 0,  # Add this for debugging
-                    'variacoes': variacoes,
-                    'periodo': {
-                        'inicio': data_inicio,
-                        'fim': data_fim
-                    }
-                }
-                print(f"Debug - Response data: {response_data}")
-                return jsonify({
-                    'success': True,
-                    'data': response_data
-                })
             except Exception as faturamento_error:
                 percentual_folha = 0
                 print(f"Erro ao buscar faturamento: {str(faturamento_error)}")
                 import traceback
                 traceback.print_exc()
             
-            # This part should not be reached, but just in case
             return jsonify({
                 'success': True,
                 'data': {
@@ -367,7 +222,6 @@ def api_kpis():
                     'folha_liquida': float(folha_liquida),
                     'impostos': float(impostos),
                     'percentual_folha_faturamento': float(percentual_folha),
-                    'faturamento_total': 0,  # Add this for debugging
                     'variacoes': variacoes,
                     'periodo': {
                         'inicio': data_inicio,
@@ -394,8 +248,6 @@ def api_kpis():
             
     except Exception as e:
         print(f"Erro ao buscar KPIs de despesas: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @despesas_bp.route('/api/categorias')
@@ -618,34 +470,25 @@ def _get_periodo_dates(periodo):
     
     if periodo == 'mes_atual':
         inicio = hoje.replace(day=1)
-        # Set fim to the last day of the current month
-        if hoje.month == 12:
-            fim = hoje.replace(year=hoje.year+1, month=1, day=1) - timedelta(days=1)
-        else:
-            fim = hoje.replace(month=hoje.month+1, day=1) - timedelta(days=1)
+        fim = hoje
     elif periodo == 'trimestre_atual':
         trimestre = (hoje.month - 1) // 3
         inicio = hoje.replace(month=trimestre * 3 + 1, day=1)
-        # Set fim to the last day of the current quarter
-        if (trimestre + 1) * 3 > 12:
-            fim = hoje.replace(year=hoje.year+1, month=1, day=1) - timedelta(days=1)
-        else:
-            fim = hoje.replace(month=(trimestre + 1) * 3 + 1, day=1) - timedelta(days=1)
+        fim = hoje
     elif periodo == 'ano_atual':
         inicio = hoje.replace(month=1, day=1)
-        # Set fim to the last day of the current year
-        fim = hoje.replace(year=hoje.year, month=12, day=31)
+        fim = hoje
     elif periodo == 'ultimos_12_meses':
-        fim = hoje.replace(year=hoje.year, month=hoje.month, day=1) - timedelta(days=1)
-        inicio = fim - timedelta(days=365)
+        inicio = hoje - timedelta(days=365)
+        fim = hoje
     elif periodo == 'personalizado':
         # Implementar lógica para período personalizado
         inicio = hoje.replace(month=1, day=1)
-        fim = hoje.replace(year=hoje.year, month=12, day=31)
+        fim = hoje
     else:
         # Padrão: ano atual
         inicio = hoje.replace(month=1, day=1)
-        fim = hoje.replace(year=hoje.year, month=12, day=31)
+        fim = hoje
     
     return inicio.strftime('%Y-%m-%d'), fim.strftime('%Y-%m-%d')
 

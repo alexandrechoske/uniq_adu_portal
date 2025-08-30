@@ -193,28 +193,139 @@ class FaturamentoController {
         const tbody = $('#tabela-faturamento-mensal tbody');
         tbody.empty();
         
+        // Check if data exists
+        if (!data || !Array.isArray(data)) {
+            console.error('Invalid data for table rendering');
+            return;
+        }
+        
+        // Create a map of month data for easier access
+        const monthData = {};
+        let totalMeta = 0;
+        
+        data.forEach(row => {
+            // Ensure row has required properties
+            if (!row || !row.ano || !row.mes) {
+                return;
+            }
+            
+            if (!monthData[row.ano]) {
+                monthData[row.ano] = {};
+            }
+            monthData[row.ano][row.mes] = {
+                faturamento: row.faturamento_total || 0,
+                anterior: row.faturamento_anterior || 0,
+                variacao: row.variacao || 0
+            };
+        });
+        
+        // Create the pivoted table row
         const monthNames = [
             'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
         ];
         
-        data.forEach(row => {
-            const variacaoClass = row.variacao > 0 ? 'text-success' : row.variacao < 0 ? 'text-danger' : '';
-            const variacaoIcon = row.variacao > 0 ? 'mdi mdi-trending-up' : row.variacao < 0 ? 'mdi mdi-trending-down' : 'mdi mdi-minus';
-            
-            tbody.append(`
-                <tr>
-                    <td>${row.ano}</td>
-                    <td>${monthNames[row.mes - 1]}</td>
-                    <td class="fw-bold">${formatCurrency(row.faturamento_total)}</td>
-                    <td>${formatCurrency(row.faturamento_anterior)}</td>
-                    <td class="${variacaoClass}">
-                        <i class="${variacaoIcon}"></i>
-                        ${Math.abs(row.variacao).toFixed(1)}%
-                    </td>
-                </tr>
-            `);
+        // Get metas for the current year
+        this.loadMetasForYear(this.currentAno).then(metas => {
+            Object.keys(monthData).forEach(ano => {
+                const row = $('<tr></tr>');
+                row.append(`<td>${ano}</td>`);
+                
+                let totalFaturamento = 0;
+                
+                // Add data for each month
+                for (let mes = 1; mes <= 12; mes++) {
+                    if (monthData[ano] && monthData[ano][mes]) {
+                        const mesData = monthData[ano][mes];
+                        const faturamento = typeof mesData.faturamento === 'object' ? 0 : (mesData.faturamento || 0);
+                        totalFaturamento += faturamento;
+                        const variacao = typeof mesData.variacao === 'object' ? 0 : (mesData.variacao || 0);
+                        const variacaoClass = variacao > 0 ? 'text-success' : variacao < 0 ? 'text-danger' : '';
+                        const variacaoIcon = variacao > 0 ? 'mdi mdi-trending-up' : variacao < 0 ? 'mdi mdi-trending-down' : 'mdi mdi-minus';
+                        
+                        row.append(`
+                            <td>
+                                <div class="fw-bold">${formatCurrency(faturamento)}</div>
+                                <div class="${variacaoClass}">
+                                    <i class="${variacaoIcon}"></i>
+                                    ${Math.abs(variacao).toFixed(1)}%
+                                </div>
+                            </td>
+                        `);
+                    } else {
+                        row.append(`<td>-</td>`);
+                    }
+                }
+                
+                // Add meta column
+                const metaValue = metas && metas.anual ? (metas.anual.meta || 0) : 0;
+                const numericMeta = typeof metaValue === 'object' ? 0 : metaValue;
+                row.append(`<td class="fw-bold">${formatCurrency(numericMeta)}</td>`);
+                
+                tbody.append(row);
+            });
+        }).catch(error => {
+            console.error('Error loading metas:', error);
+            // Render table without metas if there's an error
+            Object.keys(monthData).forEach(ano => {
+                const row = $('<tr></tr>');
+                row.append(`<td>${ano}</td>`);
+                
+                // Add data for each month
+                for (let mes = 1; mes <= 12; mes++) {
+                    if (monthData[ano] && monthData[ano][mes]) {
+                        const mesData = monthData[ano][mes];
+                        const faturamento = typeof mesData.faturamento === 'object' ? 0 : (mesData.faturamento || 0);
+                        const variacao = typeof mesData.variacao === 'object' ? 0 : (mesData.variacao || 0);
+                        const variacaoClass = variacao > 0 ? 'text-success' : variacao < 0 ? 'text-danger' : '';
+                        const variacaoIcon = variacao > 0 ? 'mdi mdi-trending-up' : variacao < 0 ? 'mdi mdi-trending-down' : 'mdi mdi-minus';
+                        
+                        row.append(`
+                            <td>
+                                <div class="fw-bold">${formatCurrency(faturamento)}</div>
+                                <div class="${variacaoClass}">
+                                    <i class="${variacaoIcon}"></i>
+                                    ${Math.abs(variacao).toFixed(1)}%
+                                </div>
+                            </td>
+                        `);
+                    } else {
+                        row.append(`<td>-</td>`);
+                    }
+                }
+                
+                // Add meta column with 0 if there's an error
+                row.append(`<td class="fw-bold">${formatCurrency(0)}</td>`);
+                
+                tbody.append(row);
+            });
         });
+    }
+    
+    async loadMetasForYear(ano) {
+        try {
+            const response = await fetch(`/financeiro/faturamento/api/metas?ano=${ano}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            
+            // Process metas data
+            const metas = {};
+            if (Array.isArray(data)) {
+                data.forEach(meta => {
+                    if (meta && meta.tipo === 'financeiro') {
+                        const key = meta.mes || 'anual';
+                        metas[key] = meta;
+                    }
+                });
+            }
+            
+            return metas;
+        } catch (error) {
+            console.error('Erro ao carregar metas:', error);
+            return null;
+        }
     }
     
     async loadGeralProporcao() {
@@ -234,26 +345,46 @@ class FaturamentoController {
     }
     
     renderChartProporcao(setores) {
-        const ctx = document.getElementById('chart-proporcao-faturamento').getContext('2d');
+        const ctx = document.getElementById('chart-proporcao-faturamento');
+        if (!ctx) {
+            console.error('Chart context not found');
+            return;
+        }
+        
+        const ctx2d = ctx.getContext('2d');
+        if (!ctx2d) {
+            console.error('Unable to get 2D context');
+            return;
+        }
         
         // Destruir gráfico anterior se existir
         if (this.charts.proporcao) {
             this.charts.proporcao.destroy();
         }
         
+        // Check if setores data exists
+        if (!setores) {
+            console.error('Setores data is missing');
+            return;
+        }
+        
         const labels = ['Importação', 'Consultoria', 'Exportação'];
         const valores = [
-            setores.importacao.valor,
-            setores.consultoria.valor,
-            setores.exportacao.valor
+            (setores.importacao && setores.importacao.valor) || 0,
+            (setores.consultoria && setores.consultoria.valor) || 0,
+            (setores.exportacao && setores.exportacao.valor) || 0
         ];
         const percentuais = [
-            setores.importacao.percentual,
-            setores.consultoria.percentual,
-            setores.exportacao.percentual
+            (setores.importacao && setores.importacao.percentual) || 0,
+            (setores.consultoria && setores.consultoria.percentual) || 0,
+            (setores.exportacao && setores.exportacao.percentual) || 0
         ];
         
-        this.charts.proporcao = new Chart(ctx, {
+        // Calculate total for determining small values
+        const total = valores.reduce((sum, value) => sum + (typeof value === 'object' ? 0 : value), 0);
+        const threshold = total * 0.05; // 5% threshold for hiding labels
+        
+        this.charts.proporcao = new Chart(ctx2d, {
             type: 'doughnut',
             data: {
                 labels: labels,
@@ -269,7 +400,12 @@ class FaturamentoController {
                         'rgba(23, 162, 184, 1)',
                         'rgba(108, 117, 125, 1)'
                     ],
-                    borderWidth: 2
+                    borderWidth: 2,
+                    // Explode small slices
+                    offset: valores.map(value => {
+                        const numericValue = typeof value === 'object' ? 0 : value;
+                        return numericValue < threshold ? 20 : 0;
+                    })
                 }]
             },
             options: {
@@ -287,39 +423,100 @@ class FaturamentoController {
                         callbacks: {
                             label: function(context) {
                                 const label = context.label || '';
-                                const value = context.raw;
-                                const percent = percentuais[context.dataIndex];
-                                return `${label}: ${formatCurrency(value)} (${percent.toFixed(1)}%)`;
+                                const value = context.raw || 0;
+                                // Ensure value is a number
+                                const numericValue = typeof value === 'object' ? 0 : value;
+                                const dataIndex = context.dataIndex;
+                                if (dataIndex < percentuais.length) {
+                                    const percent = percentuais[dataIndex] || 0;
+                                    // Ensure percent is a number
+                                    const numericPercent = typeof percent === 'object' ? 0 : percent;
+                                    return `${label}: ${formatCurrency(numericValue)} (${numericPercent.toFixed(1)}%)`;
+                                }
+                                return `${label}: ${formatCurrency(numericValue)}`;
                             }
                         }
+                    },
+                    // Add data labels plugin
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            // Ensure value is a number
+                            const numericValue = typeof value === 'object' ? 0 : value;
+                            if (numericValue === null || numericValue === undefined) return '';
+                            
+                            // Hide labels for very small values
+                            if (numericValue < threshold) return '';
+                            
+                            const dataIndex = ctx.dataIndex;
+                            if (dataIndex < percentuais.length) {
+                                const percent = percentuais[dataIndex] || 0;
+                                // Ensure percent is a number
+                                const numericPercent = typeof percent === 'object' ? 0 : percent;
+                                return `${numericPercent.toFixed(1)}%\n${formatCurrencyShort(numericValue)}`;
+                            }
+                            return formatCurrencyShort(numericValue);
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        textAlign: 'center'
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels] // Add the data labels plugin
         });
     }
     
     renderChartMetaRealizacao(meta) {
-        const ctx = document.getElementById('chart-meta-realizacao').getContext('2d');
+        const ctx = document.getElementById('chart-meta-realizacao');
+        if (!ctx) {
+            console.error('Chart context not found');
+            return;
+        }
+        
+        const ctx2d = ctx.getContext('2d');
+        if (!ctx2d) {
+            console.error('Unable to get 2D context');
+            return;
+        }
         
         // Destruir gráfico anterior se existir
         if (this.charts.meta) {
             this.charts.meta.destroy();
         }
         
+        // Check if meta data exists
+        if (!meta) {
+            console.error('Meta data is missing');
+            return;
+        }
+        
+        // Calculate percentages
+        const faturadoValor = (meta.faturado && meta.faturado.valor) || 0;
+        const aRealizarValor = (meta.a_realizar && meta.a_realizar.valor) || 0;
+        // Ensure values are numbers
+        const numericFaturado = typeof faturadoValor === 'object' ? 0 : faturadoValor;
+        const numericARealizar = typeof aRealizarValor === 'object' ? 0 : aRealizarValor;
+        const total = numericFaturado + numericARealizar;
+        const faturadoPercent = total > 0 ? (numericFaturado / total * 100) : 0;
+        const aRealizarPercent = total > 0 ? (numericARealizar / total * 100) : 0;
+        
         // Create a gauge chart instead of pie chart
-        this.charts.meta = new Chart(ctx, {
+        this.charts.meta = new Chart(ctx2d, {
             type: 'doughnut',
             data: {
                 labels: ['Faturado', 'A Realizar'],
                 datasets: [{
-                    data: [meta.faturado.valor, meta.a_realizar.valor],
+                    data: [numericFaturado, numericARealizar],
                     backgroundColor: [
-                        meta.faturado.valor > 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)',
-                        meta.a_realizar.valor > 0 ? 'rgba(255, 193, 7, 0.8)' : 'rgba(200, 200, 200, 0.8)'
+                        numericFaturado > 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)',
+                        numericARealizar > 0 ? 'rgba(255, 193, 7, 0.8)' : 'rgba(200, 200, 200, 0.8)'
                     ],
                     borderColor: [
-                        meta.faturado.valor > 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)',
-                        meta.a_realizar.valor > 0 ? 'rgba(255, 193, 7, 1)' : 'rgba(200, 200, 200, 1)'
+                        numericFaturado > 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)',
+                        numericARealizar > 0 ? 'rgba(255, 193, 7, 1)' : 'rgba(200, 200, 200, 1)'
                     ],
                     borderWidth: 2
                 }]
@@ -341,22 +538,50 @@ class FaturamentoController {
                         callbacks: {
                             label: function(context) {
                                 const label = context.label || '';
-                                const value = context.raw;
-                                const percent = context.dataset.data[0] + context.dataset.data[1] > 0 ? 
-                                    (value / (context.dataset.data[0] + context.dataset.data[1]) * 100).toFixed(1) : 0;
-                                return `${label}: ${formatCurrency(value)} (${percent}%)`;
+                                const value = context.raw || 0;
+                                // Ensure value is a number
+                                const numericValue = typeof value === 'object' ? 0 : value;
+                                const total = context.dataset.data.reduce((a, b) => {
+                                    const aValue = typeof a === 'object' ? 0 : a;
+                                    const bValue = typeof b === 'object' ? 0 : b;
+                                    return (aValue || 0) + (bValue || 0);
+                                }, 0);
+                                const percent = total > 0 ? ((numericValue / total) * 100).toFixed(1) : '0.0';
+                                return `${label}: ${formatCurrency(numericValue)} (${percent}%)`;
                             }
                         }
                     },
                     title: {
                         display: true,
-                        text: `Meta: ${formatCurrency(meta.faturado.valor + meta.a_realizar.valor)}`,
+                        text: `Meta: ${formatCurrency(numericFaturado + numericARealizar)}`,
                         font: {
                             size: 14
                         }
+                    },
+                    // Add data labels plugin
+                    datalabels: {
+                        formatter: (value, ctx) => {
+                            // Ensure value is a number
+                            const numericValue = typeof value === 'object' ? 0 : value;
+                            if (numericValue === null || numericValue === undefined || numericValue === 0) return '';
+                            const total = ctx.dataset.data.reduce((a, b) => {
+                                const aValue = typeof a === 'object' ? 0 : a;
+                                const bValue = typeof b === 'object' ? 0 : b;
+                                return (aValue || 0) + (bValue || 0);
+                            }, 0);
+                            const percent = total > 0 ? ((numericValue / total) * 100).toFixed(1) : '0.0';
+                            return `${formatCurrencyShort(numericValue)}\n${percent}%`;
+                        },
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        textAlign: 'center'
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels] // Add the data labels plugin
         });
     }
     
@@ -382,8 +607,8 @@ class FaturamentoController {
         // Faturamento Total [Setor]
         $('#valor-faturamento-setor').text(formatCurrencyShort(kpis.faturamento_total));
         
-        // % [Setor]
-        $('#valor-percentual-setor').text(`${kpis.percentual_participacao.toFixed(1)}%`);
+        // % [Setor] - Make it clearer what this percentage represents
+        $('#valor-percentual-setor').html(`${kpis.percentual_participacao.toFixed(1)}%<br><small class="text-muted">do faturamento total</small>`);
     }
     
     renderSetorChart(data) {
@@ -394,35 +619,50 @@ class FaturamentoController {
             this.charts.setor.destroy();
         }
         
-        // Preparar dados para o gráfico
-        const meses = data.map(item => {
-            const date = new Date(item.mes + '-01');
-            // Fix the date error by ensuring we don't go out of range when creating the date
-            try {
-                return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-            } catch (e) {
-                // Fallback if there's still an error
-                return item.mes;
+        // Preparar dados para o gráfico - Correctly interpret the backend data
+        const months = [];
+        const currentPeriodData = [];
+        const previousPeriodData = [];
+        
+        // Extract unique months and sort them
+        const monthKeys = [...new Set(data.map(item => item.mes))].sort();
+        
+        // Create month labels and populate data arrays
+        monthKeys.forEach(monthKey => {
+            const monthData = data.find(item => item.mes === monthKey);
+            if (monthData) {
+                // Format month label (e.g., "2024-01" -> "jan/24")
+                const [year, month] = monthKey.split('-');
+                const monthName = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'short' });
+                months.push(`${monthName}/${year.slice(2)}`);
+                
+                // Use the values as sent from backend
+                // faturamento = current period value
+                // faturamento_anterior = previous period value for the same month
+                currentPeriodData.push(monthData.faturamento || 0);
+                previousPeriodData.push(monthData.faturamento_anterior || 0);
             }
         });
         
-        const valoresAtuais = data.map(item => item.faturamento);
-        const valoresAnteriores = data.map(item => item.faturamento_anterior);
-        
         this.charts.setor = new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
-                labels: meses,
+                labels: months,
                 datasets: [{
-                    label: 'Faturamento Atual',
-                    data: valoresAtuais,
-                    backgroundColor: 'rgba(40, 167, 69, 0.8)',
+                    label: 'Período Atual',
+                    data: currentPeriodData,
                     borderColor: 'rgba(40, 167, 69, 1)',
-                    borderWidth: 2
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(40, 167, 69, 1)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
                 }, {
-                    label: 'Faturamento Ano Anterior',
-                    data: valoresAnteriores,
-                    type: 'line',
+                    label: 'Mesmo Período Anterior',
+                    data: previousPeriodData,
                     borderColor: 'rgba(23, 162, 184, 1)',
                     backgroundColor: 'rgba(23, 162, 184, 0.1)',
                     borderWidth: 3,
@@ -436,6 +676,33 @@ class FaturamentoController {
             },
             options: {
                 ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.parsed.y || context.parsed;
+                                return context.dataset.label + ': ' + formatCurrency(value);
+                            }
+                        }
+                    }
+                },
                 scales: {
                     y: {
                         grid: {
@@ -445,11 +712,27 @@ class FaturamentoController {
                             callback: function(value) {
                                 return formatCurrencyShort(value);
                             }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Valor (R$)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
                         }
                     },
                     x: {
                         grid: {
                             display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Período',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
                         }
                     }
                 }
@@ -504,32 +787,33 @@ class FaturamentoController {
         const tbody = $('#metas-table-body');
         tbody.empty();
         
-        if (metas.length === 0) {
+        // Filter to show only 2025 data
+        const metas2025 = metas.filter(meta => meta.ano === '2025' && meta.tipo === 'financeiro');
+        
+        if (metas2025.length === 0) {
             tbody.append(`
                 <tr>
                     <td colspan="14" class="text-center text-muted">
-                        Nenhuma meta cadastrada.
+                        Nenhuma meta cadastrada para 2025.
                     </td>
                 </tr>
             `);
             return;
         }
         
-        // Group metas by year
+        // Group metas by year (should only be 2025)
         const metasByYear = {};
-        metas.forEach(meta => {
-            if (meta.tipo === 'financeiro') { // Only show financeiro type metas
-                const year = meta.ano;
-                if (!metasByYear[year]) {
-                    metasByYear[year] = {};
-                }
-                // Store meta value by month (or 'anual' for annual metas)
-                const monthKey = meta.mes || 'anual';
-                metasByYear[year][monthKey] = meta;
+        metas2025.forEach(meta => {
+            const year = meta.ano;
+            if (!metasByYear[year]) {
+                metasByYear[year] = {};
             }
+            // Store meta value by month (or 'anual' for annual metas)
+            const monthKey = meta.mes || 'anual';
+            metasByYear[year][monthKey] = meta;
         });
         
-        // Create rows for each year
+        // Create rows for each year (should only be 2025)
         Object.keys(metasByYear).sort((a, b) => b - a).forEach(year => {
             const yearMetas = metasByYear[year];
             const row = $('<tr></tr>');
@@ -708,7 +992,8 @@ class FaturamentoController {
 
 // Funções utilitárias
 function formatCurrency(value) {
-    if (value === null || value === undefined || isNaN(value)) {
+    // Check if value is null, undefined, or not a number
+    if (value === null || value === undefined || isNaN(value) || typeof value !== 'number') {
         return 'R$ 0,00';
     }
     
@@ -721,7 +1006,8 @@ function formatCurrency(value) {
 }
 
 function formatCurrencyShort(value) {
-    if (value === null || value === undefined || isNaN(value)) {
+    // Check if value is null, undefined, or not a number
+    if (value === null || value === undefined || isNaN(value) || typeof value !== 'number') {
         return 'R$ 0';
     }
     
@@ -751,6 +1037,54 @@ function formatCurrencyShort(value) {
     
     return `R$ ${formattedValue}${suffix}`;
 }
+
+// Incluir o plugin de data labels do Chart.js
+const ChartDataLabels = {
+    id: 'ChartDataLabels',
+    afterDatasetsDraw(chart) {
+        const { ctx, data, chartArea: { top, bottom, left, right, width, height }, scales: { x, y } } = chart;
+        
+        ctx.save();
+        
+        data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            
+            meta.data.forEach((datapoint, index) => {
+                const { x, y } = datapoint.tooltipPosition();
+                
+                // Format the value
+                const value = dataset.data[index];
+                // Ensure value is a number
+                const numericValue = typeof value === 'object' ? 0 : value;
+                if (numericValue === 0 || numericValue === null || numericValue === undefined) return;
+                
+                // Check if there's a custom formatter in the options
+                let formattedValue = numericValue;
+                if (chart.options.plugins && chart.options.plugins.datalabels && chart.options.plugins.datalabels.formatter) {
+                    try {
+                        formattedValue = chart.options.plugins.datalabels.formatter(numericValue, { dataIndex: index, dataset });
+                    } catch (e) {
+                        formattedValue = formatCurrencyShort(numericValue);
+                    }
+                } else {
+                    formattedValue = formatCurrencyShort(numericValue);
+                }
+                
+                // Style
+                ctx.font = 'bold 12px sans-serif';
+                ctx.fillStyle = chart.options.plugins && chart.options.plugins.datalabels && chart.options.plugins.datalabels.color ? 
+                    chart.options.plugins.datalabels.color : '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw text
+                ctx.fillText(formattedValue, x, y - 10);
+            });
+        });
+        
+        ctx.restore();
+    }
+};
 
 // Inicializar controlador após o carregamento do DOM
 document.addEventListener('DOMContentLoaded', function() {
