@@ -48,6 +48,14 @@ function setupEventListeners() {
 }
 
 function setupKPICardClickHandlers() {
+    // Resultado card - navigate to Fluxo de Caixa page
+    const resultadoCard = document.getElementById('kpi-resultado');
+    if (resultadoCard) {
+        resultadoCard.addEventListener('click', function() {
+            window.location.href = '/financeiro/fluxo-de-caixa';
+        });
+    }
+    
     // Faturamento card - navigate to Faturamento page
     const faturamentoCard = document.getElementById('kpi-faturamento');
     if (faturamentoCard) {
@@ -64,10 +72,10 @@ function setupKPICardClickHandlers() {
         });
     }
     
-    // Resultado card - navigate to Fluxo de Caixa page
-    const resultadoCard = document.getElementById('kpi-resultado');
-    if (resultadoCard) {
-        resultadoCard.addEventListener('click', function() {
+    // Saldo Acumulado card - navigate to Fluxo de Caixa page
+    const saldoAcumuladoCard = document.getElementById('kpi-saldo-acumulado');
+    if (saldoAcumuladoCard) {
+        saldoAcumuladoCard.addEventListener('click', function() {
             window.location.href = '/financeiro/fluxo-de-caixa';
         });
     }
@@ -84,8 +92,10 @@ function loadData() {
         loadKPIs(year),
         loadMetaAtingimento(year),
         loadResultadoMensal(year),
+        loadSaldoAcumulado(year),
         loadFaturamentoPorSetor(year),
         loadTopDespesas(year),
+        loadProjecaoFluxoCaixa(year),
         loadTopClientes(year)
     ]).then(() => {
         hideLoading();
@@ -118,7 +128,7 @@ function loadMetaAtingimento(year) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateMetaAtingimento(data.data);
+                updateMetaProgressoKPI(data.data);
             } else {
                 throw new Error(data.error || 'Erro ao carregar meta de atingimento');
             }
@@ -132,9 +142,23 @@ function loadResultadoMensal(year) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateResultadoMensal(data.data);
+                updateResultadoMensalChart(data.data);
             } else {
                 throw new Error(data.error || 'Erro ao carregar resultado mensal');
+            }
+        });
+}
+
+function loadSaldoAcumulado(year) {
+    console.log(`Loading saldo acumulado for year: ${year}`);
+    
+    return fetch(`/financeiro/dashboard-executivo/api/saldo-acumulado?ano=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateSaldoAcumuladoChart(data.data);
+            } else {
+                throw new Error(data.error || 'Erro ao carregar saldo acumulado');
             }
         });
 }
@@ -146,7 +170,7 @@ function loadFaturamentoPorSetor(year) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateFaturamentoPorSetor(data.data);
+                updateFaturamentoPorSetorChart(data.data);
             } else {
                 throw new Error(data.error || 'Erro ao carregar faturamento por setor');
             }
@@ -160,9 +184,23 @@ function loadTopDespesas(year) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateTopDespesas(data.data);
+                updateTopDespesasChart(data.data);
             } else {
                 throw new Error(data.error || 'Erro ao carregar top despesas');
+            }
+        });
+}
+
+function loadProjecaoFluxoCaixa(year) {
+    console.log(`Loading projecao fluxo de caixa for year: ${year}`);
+    
+    return fetch(`/financeiro/dashboard-executivo/api/projecao-fluxo-caixa?ano=${year}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateProjecaoFluxoCaixaChart(data.data);
+            } else {
+                throw new Error(data.error || 'Erro ao carregar projeção de fluxo de caixa');
             }
         });
 }
@@ -184,49 +222,325 @@ function loadTopClientes(year) {
 function updateKPIs(data) {
     console.log('Updating KPIs:', data);
     
+    // Resultado Líquido
+    updateKPIValue('valor-resultado', data.resultado_liquido, data.resultado_variacao);
+    
     // Faturamento Total
     updateKPIValue('valor-faturamento', data.faturamento_total, data.faturamento_variacao);
     
     // Despesas Totais
     updateKPIValue('valor-despesas', data.despesas_total, data.despesas_variacao);
     
-    // Resultado Líquido
-    updateKPIValue('valor-resultado', data.resultado_liquido, data.resultado_variacao);
-    
     // Margem Líquida
-    updateKPIValue('valor-margem', data.margem_liquida, data.margem_variacao);
+    updateKPIValue('valor-margem-liquida', data.margem_liquida, data.margem_variacao);
 }
 
-function updateMetaAtingimento(data) {
-    console.log('Updating meta atingimento:', data);
+function updateMetaProgressoKPI(data) {
+    console.log('Updating meta progresso KPI:', data);
     
-    // This would update a gauge or progress chart
-    // For now, we'll just log it
-    console.log(`Meta: ${data.meta}, Realizado: ${data.realizado}, Percentual: ${data.percentual}%`);
+    // Progresso da Meta Anual
+    updateKPIValue('valor-meta-progresso', data.percentual, null);
+    
+    // Update variation text to show actual values
+    const variationElement = document.getElementById('var-meta-progresso');
+    if (variationElement) {
+        variationElement.textContent = `${formatCompactNumber(data.realizado)} / ${formatCompactNumber(data.meta)}`;
+        variationElement.className = 'kpi-variation';
+    }
 }
 
-function updateResultadoMensal(data) {
-    console.log('Updating resultado mensal:', data);
+function updateResultadoMensalChart(data) {
+    console.log('Updating resultado mensal chart:', data);
     
-    // This would update a bar/line chart
-    // For now, we'll just log it
-    console.log('Resultado mensal data:', data);
+    const ctx = document.getElementById('chart-resultado-mensal').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.resultadoMensalChart) {
+        window.resultadoMensalChart.destroy();
+    }
+    
+    // Prepare data
+    const labels = data.map(item => getMonthName(item.mes.split('-')[1]));
+    const receitas = data.map(item => item.receitas);
+    const despesas = data.map(item => item.despesas);
+    const resultados = data.map(item => item.resultado);
+    
+    window.resultadoMensalChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Receitas',
+                    data: receitas,
+                    backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Despesas',
+                    data: despesas,
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Resultado',
+                    data: resultados,
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + formatCompactNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
-function updateFaturamentoPorSetor(data) {
-    console.log('Updating faturamento por setor:', data);
+function updateSaldoAcumuladoChart(data) {
+    console.log('Updating saldo acumulado chart:', data);
     
-    // This would update a donut chart
-    // For now, we'll just log it
-    console.log('Faturamento por setor data:', data);
+    const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.saldoAcumuladoChart) {
+        window.saldoAcumuladoChart.destroy();
+    }
+    
+    // Prepare data
+    const labels = data.map(item => getMonthName(item.mes.split('-')[1]));
+    const saldos = data.map(item => item.saldo_acumulado);
+    
+    window.saldoAcumuladoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Saldo Acumulado',
+                    data: saldos,
+                    backgroundColor: 'rgba(13, 202, 240, 0.2)',
+                    borderColor: 'rgba(13, 202, 240, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + formatCompactNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Update KPI with final saldo acumulado value
+    if (data.length > 0) {
+        const finalSaldo = data[data.length - 1].saldo_acumulado;
+        updateKPIValue('valor-saldo-acumulado', finalSaldo, null);
+    }
 }
 
-function updateTopDespesas(data) {
-    console.log('Updating top despesas:', data);
+function updateFaturamentoPorSetorChart(data) {
+    console.log('Updating faturamento por setor chart:', data);
     
-    // This would update a horizontal bar chart
-    // For now, we'll just log it
-    console.log('Top despesas data:', data);
+    const ctx = document.getElementById('chart-faturamento-setor').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.faturamentoSetorChart) {
+        window.faturamentoSetorChart.destroy();
+    }
+    
+    // Prepare data
+    const labels = ['Importação', 'Consultoria', 'Exportação'];
+    const values = [data.importacao.valor, data.consultoria.valor, data.exportacao.valor];
+    const backgroundColors = [
+        'rgba(25, 135, 84, 0.7)',
+        'rgba(13, 110, 253, 0.7)',
+        'rgba(255, 193, 7, 0.7)'
+    ];
+    
+    window.faturamentoSetorChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                title: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function updateTopDespesasChart(data) {
+    console.log('Updating top despesas chart:', data);
+    
+    const ctx = document.getElementById('chart-top-despesas').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.topDespesasChart) {
+        window.topDespesasChart.destroy();
+    }
+    
+    // Prepare data
+    const labels = data.map(item => item.categoria);
+    const values = data.map(item => item.total);
+    
+    window.topDespesasChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Valor',
+                    data: values,
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + formatCompactNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateProjecaoFluxoCaixaChart(data) {
+    console.log('Updating projecao fluxo de caixa chart:', data);
+    
+    const ctx = document.getElementById('chart-projecao-fluxo-caixa').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.projecaoFluxoCaixaChart) {
+        window.projecaoFluxoCaixaChart.destroy();
+    }
+    
+    // Prepare data
+    const labels = data.map(item => item.periodo);
+    const valores = data.map(item => item.valor);
+    
+    // Determine colors based on values (positive = green, negative = red)
+    const backgroundColors = valores.map(value => 
+        value >= 0 ? 'rgba(25, 135, 84, 0.7)' : 'rgba(220, 53, 69, 0.7)'
+    );
+    
+    const borderColors = valores.map(value => 
+        value >= 0 ? 'rgba(25, 135, 84, 1)' : 'rgba(220, 53, 69, 1)'
+    );
+    
+    window.projecaoFluxoCaixaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Projeção de Fluxo de Caixa',
+                    data: valores,
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + formatCompactNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function updateTopClientes(data) {
@@ -252,8 +566,7 @@ function updateTopClientes(data) {
 
 function initializeCharts() {
     console.log('Initializing charts...');
-    // Chart initialization would go here
-    // For now, we'll just log it
+    // Chart initialization is done when data is loaded
 }
 
 function showLoading() {
@@ -328,8 +641,21 @@ function updateKPIValue(elementId, value, variation) {
     }
     
     if (variationElement) {
-        const variationText = variation !== null ? `${variation >= 0 ? '+' : ''}${variation.toFixed(2)}%` : '-';
-        variationElement.textContent = variationText;
-        variationElement.className = 'kpi-variation ' + (variation > 0 ? 'positive' : variation < 0 ? 'negative' : '');
+        if (variation !== null) {
+            const variationText = `${variation >= 0 ? '+' : ''}${variation.toFixed(2)}%`;
+            variationElement.textContent = variationText;
+            variationElement.className = 'kpi-variation ' + (variation > 0 ? 'positive' : variation < 0 ? 'negative' : '');
+        } else {
+            variationElement.textContent = '';
+            variationElement.className = 'kpi-variation';
+        }
     }
+}
+
+function getMonthName(monthNumber) {
+    const months = [
+        'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+    ];
+    return months[parseInt(monthNumber) - 1] || monthNumber;
 }

@@ -155,6 +155,14 @@
     background: linear-gradient(90deg, #0dcaf0, #0d6efd);
 }
 
+.kpi-card.kpi-primary::before {
+    background: linear-gradient(90deg, #0d6efd, #6610f2);
+}
+
+.kpi-card.kpi-purple::before {
+    background: linear-gradient(90deg, #6f42c1, #d63384);
+}
+
 .kpi-content {
     display: flex;
     flex-direction: column;
@@ -227,11 +235,17 @@
     position: relative;
 }
 
+.chart-content canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 /* Tables Section */
 .tables-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
     gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .table-container {

@@ -52,6 +52,19 @@
     
     <!-- KPI Cards -->
     <div class="kpi-grid">
+        <!-- Resultado Líquido -->
+        <div class="kpi-card kpi-info" id="kpi-resultado">
+            <div class="kpi-content">
+                <p class="kpi-label">Resultado Líquido</p>
+                <p class="kpi-value" id="valor-resultado">-</p>
+                <p class="kpi-variation" id="var-resultado">-</p>
+            </div>
+            <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="nav-button">
+                <i class="mdi mdi-arrow-right"></i>
+                Ver detalhes
+            </a>
+        </div>
+        
         <!-- Faturamento Total -->
         <div class="kpi-card kpi-success" id="kpi-faturamento">
             <div class="kpi-content">
@@ -78,12 +91,12 @@
             </a>
         </div>
         
-        <!-- Resultado Líquido -->
-        <div class="kpi-card kpi-info" id="kpi-resultado">
+        <!-- Saldo de Caixa Acumulado -->
+        <div class="kpi-card kpi-primary" id="kpi-saldo-acumulado">
             <div class="kpi-content">
-                <p class="kpi-label">Resultado Líquido</p>
-                <p class="kpi-value" id="valor-resultado">-</p>
-                <p class="kpi-variation" id="var-resultado">-</p>
+                <p class="kpi-label">Saldo de Caixa Acumulado</p>
+                <p class="kpi-value" id="valor-saldo-acumulado">-</p>
+                <p class="kpi-variation" id="var-saldo-acumulado">-</p>
             </div>
             <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="nav-button">
                 <i class="mdi mdi-arrow-right"></i>
@@ -91,33 +104,27 @@
             </a>
         </div>
         
+        <!-- Progresso da Meta Anual -->
+        <div class="kpi-card kpi-warning" id="kpi-meta-progresso">
+            <div class="kpi-content">
+                <p class="kpi-label">Progresso da Meta Anual</p>
+                <p class="kpi-value" id="valor-meta-progresso">-</p>
+                <p class="kpi-variation" id="var-meta-progresso">-</p>
+            </div>
+        </div>
+        
         <!-- Margem Líquida -->
-        <div class="kpi-card kpi-warning">
+        <div class="kpi-card kpi-purple" id="kpi-margem-liquida">
             <div class="kpi-content">
                 <p class="kpi-label">Margem Líquida</p>
-                <p class="kpi-value" id="valor-margem">-</p>
-                <p class="kpi-variation" id="var-margem">-</p>
+                <p class="kpi-value" id="valor-margem-liquida">-</p>
+                <p class="kpi-variation" id="var-margem-liquida">-</p>
             </div>
         </div>
     </div>
     
     <!-- Charts Grid -->
     <div class="charts-grid">
-        <!-- Atingimento de Meta -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-target"></i>
-                    Atingimento de Meta de Faturamento
-                </h3>
-            </div>
-            <div class="chart-content">
-                <div id="meta-atingimento-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
-                    <p>Dados de meta serão carregados aqui</p>
-                </div>
-            </div>
-        </div>
-        
         <!-- Resultado Mensal -->
         <div class="chart-container">
             <div class="chart-header">
@@ -127,45 +134,65 @@
                 </h3>
             </div>
             <div class="chart-content">
-                <div id="resultado-mensal-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
-                    <p>Dados de resultado mensal serão carregados aqui</p>
-                </div>
+                <canvas id="chart-resultado-mensal"></canvas>
+            </div>
+        </div>
+        
+        <!-- Evolução do Saldo Acumulado -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Evolução do Saldo Acumulado
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-saldo-acumulado"></canvas>
+            </div>
+        </div>
+        
+        <!-- Proporção do Faturamento por Setor -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-donut"></i>
+                    Proporção do Faturamento por Setor
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-faturamento-setor"></canvas>
+            </div>
+        </div>
+        
+        <!-- Top 5 Categorias de Despesa -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-bar"></i>
+                    Top 5 Categorias de Despesa
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-top-despesas"></canvas>
             </div>
         </div>
     </div>
     
-    <!-- Faturamento por Setor -->
+    <!-- Projeção de Fluxo de Caixa -->
     <div class="chart-container">
         <div class="chart-header">
             <h3 class="chart-title">
-                <i class="mdi mdi-chart-donut"></i>
-                Faturamento por Setor
+                <i class="mdi mdi-chart-line"></i>
+                Projeção de Fluxo de Caixa
             </h3>
         </div>
         <div class="chart-content">
-            <div id="faturamento-setor-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
-                <p>Dados de faturamento por setor serão carregados aqui</p>
-            </div>
+            <canvas id="chart-projecao-fluxo-caixa"></canvas>
         </div>
     </div>
     
     <!-- Tables Section -->
     <div class="tables-section">
-        <!-- Top 5 Categorias de Despesa -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-format-list-bulleted"></i>
-                    Top 5 Categorias de Despesa
-                </h3>
-            </div>
-            <div class="table-content">
-                <div id="top-despesas-placeholder" style="display: flex; align-items: center; justify-content: center; height: 100%;">
-                    <p>Dados de top despesas serão carregados aqui</p>
-                </div>
-            </div>
-        </div>
-        
         <!-- Top 5 Clientes por Faturamento -->
         <div class="table-container">
             <div class="table-header">
@@ -197,5 +224,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('fin_dashboard_executivo.static', filename='js/dashboard_executivo.js') }}"></script>
 {% endblock %}

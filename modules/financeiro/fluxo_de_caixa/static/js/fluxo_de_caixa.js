@@ -516,21 +516,24 @@ class FluxoCaixaController {
             this.charts.saldoAcumulado.destroy();
         }
         
+        // Group data by month instead of daily
+        const monthlyData = this.groupByMonthForSaldo(data.datas, data.saldos);
+        
         // Find min and max values for proper scaling
-        const minValue = Math.min(...data.saldos);
-        const maxValue = Math.max(...data.saldos);
+        const minValue = Math.min(...monthlyData.saldos);
+        const maxValue = Math.max(...monthlyData.saldos);
         const range = maxValue - minValue;
         const minPadded = minValue - (range * 0.1);
         const maxPadded = maxValue + (range * 0.1);
         
-        // Create line chart for saldo acumulado
+        // Create line chart for saldo acumulado (monthly)
         this.charts.saldoAcumulado = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.datas,
+                labels: monthlyData.datas,
                 datasets: [{
                     label: 'Saldo Acumulado',
-                    data: data.saldos,
+                    data: monthlyData.saldos,
                     borderColor: 'rgba(23, 162, 184, 1)',
                     backgroundColor: 'rgba(23, 162, 184, 0.1)',
                     borderWidth: 3,
@@ -548,7 +551,7 @@ class FluxoCaixaController {
                     ...this.chartDefaults.plugins,
                     title: {
                         display: true,
-                        text: 'Saldo Acumulado por Período'
+                        text: 'Saldo Acumulado por Período (Mensal)'
                     }
                 },
                 scales: {
@@ -572,6 +575,48 @@ class FluxoCaixaController {
                 }
             }
         });
+    }
+
+    // Helper function to group daily data by month for saldo acumulado
+    groupByMonthForSaldo(dates, values) {
+        const monthlyData = {};
+        
+        // Group by month and keep the last value of each month (for saldo acumulado)
+        for (let i = 0; i < dates.length; i++) {
+            const date = dates[i];
+            const value = values[i];
+            
+            // Extract month from date (format: dd/MM)
+            const parts = date.split('/');
+            if (parts.length === 2) {
+                const monthKey = parts[1]; // Month part (MM)
+                
+                // For saldo acumulado, we want the last value of each month
+                monthlyData[monthKey] = {
+                    date: date,
+                    value: value
+                };
+            }
+        }
+        
+        // Convert to arrays and sort by month
+        const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+            return parseInt(a) - parseInt(b);
+        });
+        
+        const monthlyDates = sortedMonths.map(month => {
+            const monthNames = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                               'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            const monthNum = parseInt(month);
+            return monthNames[monthNum] || month;
+        });
+        
+        const monthlyValues = sortedMonths.map(month => monthlyData[month].value);
+        
+        return {
+            datas: monthlyDates,
+            saldos: monthlyValues
+        };
     }
     
     async loadDespesasCategoria() {
@@ -687,6 +732,15 @@ class FluxoCaixaController {
                     },
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        ...this.chartDefaults.plugins.tooltip,
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.parsed.x || context.parsed;
+                                return context.dataset.label + ': ' + formatCurrency(value);
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -696,12 +750,10 @@ class FluxoCaixaController {
                         },
                         ticks: {
                             callback: function(value) {
-                                // Don't show negative values in the axis labels
-                                return formatCurrencyShort(Math.abs(value));
+                                // Show formatted currency values in the axis labels
+                                return formatCurrencyShort(value);
                             }
-                        },
-                        // Invert the x-axis to show bars from right to left
-                        reverse: true
+                        }
                     },
                     y: {
                         grid: {

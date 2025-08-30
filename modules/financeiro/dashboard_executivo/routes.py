@@ -177,7 +177,7 @@ def api_resultado_mensal():
         
         # Buscar dados de fluxo de caixa mensal
         response_fluxo = supabase_admin.table('vw_fluxo_caixa') \
-            .select('data, valor_fluxo, tipo_movto') \
+            .select('data, valor, tipo') \
             .gte('data', f'{ano}-01-01') \
             .lte('data', f'{ano}-12-31') \
             .neq('classe', 'TRANSFERENCIA DE CONTAS') \
@@ -189,34 +189,78 @@ def api_resultado_mensal():
         for item in response_fluxo.data:
             data = datetime.strptime(item['data'], '%Y-%m-%d')
             mes = data.strftime('%Y-%m')
-            valor = float(item['valor_fluxo'])
+            valor = float(item['valor'])
             
-            if item['tipo_movto'] == 'Receita':
+            if item['tipo'] == 'Receita':
                 dados_mensais[mes]['receitas'] += valor
             else:
                 dados_mensais[mes]['despesas'] += valor
         
         # Calcular resultados mensais
         resultados = []
-        resultado_acumulado = 0
-        
-        for mes_num in range(1, 13):
-            mes_key = f"{ano}-{mes_num:02d}"
-            dados_mes = dados_mensais[mes_key]
-            resultado_mensal = dados_mes['receitas'] - dados_mes['despesas']
-            resultado_acumulado += resultado_mensal
+        for mes in sorted(dados_mensais.keys()):
+            receitas = dados_mensais[mes]['receitas']
+            despesas = dados_mensais[mes]['despesas']
+            resultado = receitas - despesas
             
             resultados.append({
-                'mes': mes_key,
-                'receitas': dados_mes['receitas'],
-                'despesas': dados_mes['despesas'],
-                'resultado_mensal': resultado_mensal,
-                'resultado_acumulado': resultado_acumulado
+                'mes': mes,
+                'receitas': receitas,
+                'despesas': despesas,
+                'resultado': resultado
             })
         
         return jsonify({
             'success': True,
             'data': resultados
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dashboard_executivo_financeiro_bp.route('/api/saldo-acumulado')
+@login_required
+@perfil_required('financeiro', 'fin_dashboard_executivo')
+def api_saldo_acumulado():
+    """API para evolução do saldo acumulado"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        
+        # Buscar dados de saldo acumulado mensal
+        response_saldo = supabase_admin.table('vw_fluxo_caixa') \
+            .select('data, saldo_acumulado') \
+            .gte('data', f'{ano}-01-01') \
+            .lte('data', f'{ano}-12-31') \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
+            .order('data') \
+            .execute()
+        
+        # Processar dados mensais
+        dados_mensais = defaultdict(list)
+        
+        for item in response_saldo.data:
+            data = datetime.strptime(item['data'], '%Y-%m-%d')
+            mes = data.strftime('%Y-%m')
+            saldo = float(item['saldo_acumulado'])
+            
+            dados_mensais[mes].append(saldo)
+        
+        # Calcular saldo acumulado final de cada mês
+        saldos_mensais = []
+        for mes in sorted(dados_mensais.keys()):
+            # Pegar o último saldo do mês
+            saldo_final = dados_mensais[mes][-1] if dados_mensais[mes] else 0
+            
+            saldos_mensais.append({
+                'mes': mes,
+                'saldo_acumulado': saldo_final
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': saldos_mensais
         })
     except Exception as e:
         return jsonify({
@@ -239,39 +283,38 @@ def api_faturamento_setor():
             .lte('data', f'{ano}-12-31') \
             .execute()
         
-        # Agrupar por setor
-        setores = {
-            'importacao': 0,
-            'consultoria': 0,
-            'exportacao': 0,
-            'outros': 0
-        }
+        # Calcular totais por setor
+        total_importacao = 0
+        total_consultoria = 0
+        total_exportacao = 0
         
         for item in response_faturamento.data:
-            classe = item['classe'].upper() if item['classe'] else ''
+            classe = item.get('classe', '').upper()
             valor = float(item['valor'])
             
             if 'IMP' in classe or 'IMPORT' in classe:
-                setores['importacao'] += valor
+                total_importacao += valor
             elif 'CONS' in classe or 'CONSULT' in classe:
-                setores['consultoria'] += valor
+                total_consultoria += valor
             elif 'EXP' in classe or 'EXPORT' in classe:
-                setores['exportacao'] += valor
-            else:
-                setores['outros'] += valor
-        
-        total = sum(setores.values())
-        
-        # Calcular percentuais
-        for setor in setores:
-            setores[setor] = {
-                'valor': setores[setor],
-                'percentual': round((setores[setor] / total * 100) if total > 0 else 0, 2)
-            }
+                total_exportacao += valor
         
         return jsonify({
             'success': True,
-            'data': setores
+            'data': {
+                'importacao': {
+                    'valor': total_importacao,
+                    'percentual': (total_importacao / (total_importacao + total_consultoria + total_exportacao) * 100) if (total_importacao + total_consultoria + total_exportacao) > 0 else 0
+                },
+                'consultoria': {
+                    'valor': total_consultoria,
+                    'percentual': (total_consultoria / (total_importacao + total_consultoria + total_exportacao) * 100) if (total_importacao + total_consultoria + total_exportacao) > 0 else 0
+                },
+                'exportacao': {
+                    'valor': total_exportacao,
+                    'percentual': (total_exportacao / (total_importacao + total_consultoria + total_exportacao) * 100) if (total_importacao + total_consultoria + total_exportacao) > 0 else 0
+                }
+            }
         })
     except Exception as e:
         return jsonify({
@@ -295,27 +338,99 @@ def api_top_despesas():
             .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .execute()
         
-        # Agrupar por categoria e somar valores
-        categorias = defaultdict(float)
+        # Agrupar por categoria
+        despesas_por_categoria = defaultdict(float)
         
         for item in response_despesas.data:
-            categoria = item['categoria'] if item['categoria'] else 'Não categorizado'
+            categoria = item.get('categoria', 'Não categorizado')
             valor = float(item['valor'])
-            categorias[categoria] += valor
+            
+            despesas_por_categoria[categoria] += valor
         
         # Ordenar e pegar top 5
-        top_categorias = sorted(categorias.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        # Calcular total para percentuais
-        total = sum(categorias.values())
+        top_despesas = sorted(despesas_por_categoria.items(), key=lambda x: x[1], reverse=True)[:5]
         
         # Formatar resultado
         resultado = []
-        for categoria, valor in top_categorias:
+        total_geral = sum(valor for _, valor in top_despesas)
+        
+        for categoria, total in top_despesas:
             resultado.append({
                 'categoria': categoria,
-                'valor': valor,
-                'percentual': round((valor / total * 100) if total > 0 else 0, 2)
+                'total': total,
+                'percentual': (total / total_geral * 100) if total_geral > 0 else 0
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': resultado
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dashboard_executivo_financeiro_bp.route('/api/projecao-fluxo-caixa')
+@login_required
+@perfil_required('financeiro', 'fin_dashboard_executivo')
+def api_projecao_fluxo_caixa():
+    """API para projeção de fluxo de caixa"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        
+        # Buscar dados históricos de fluxo de caixa
+        response_fluxo = supabase_admin.table('vw_fluxo_caixa') \
+            .select('data, valor') \
+            .gte('data', f'{ano}-01-01') \
+            .lte('data', f'{ano}-12-31') \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
+            .execute()
+        
+        # Processar dados mensais
+        dados_mensais = defaultdict(float)
+        
+        for item in response_fluxo.data:
+            data = datetime.strptime(item['data'], '%Y-%m-%d')
+            mes = data.strftime('%Y-%m')
+            valor = float(item['valor'])
+            
+            dados_mensais[mes] += valor
+        
+        # Criar projeção para os próximos 6 meses
+        resultado = []
+        
+        # Adicionar dados históricos
+        for mes in sorted(dados_mensais.keys()):
+            resultado.append({
+                'periodo': mes,
+                'valor': dados_mensais[mes]
+            })
+        
+        # Adicionar projeção para os próximos 6 meses
+        ultimo_mes = max(dados_mensais.keys()) if dados_mensais else f'{ano}-12'
+        ano_ultimo, mes_ultimo = map(int, ultimo_mes.split('-'))
+        
+        for i in range(1, 7):
+            mes_projecao = mes_ultimo + i
+            ano_projecao = ano_ultimo
+            
+            if mes_projecao > 12:
+                mes_projecao -= 12
+                ano_projecao += 1
+            
+            periodo = f'{ano_projecao}-{mes_projecao:02d}'
+            
+            # Para projeção, usar média dos últimos 3 meses ou 0 se não houver dados
+            if len(dados_mensais) > 0:
+                valores_recentes = list(dados_mensais.values())[-3:] if len(dados_mensais) >= 3 else list(dados_mensais.values())
+                valor_projecao = sum(valores_recentes) / len(valores_recentes)
+            else:
+                valor_projecao = 0
+            
+            resultado.append({
+                'periodo': periodo,
+                'valor': valor_projecao
             })
         
         return jsonify({
@@ -336,34 +451,35 @@ def api_top_clientes():
     try:
         ano = request.args.get('ano', datetime.now().year)
         
-        # Buscar dados de faturamento
+        # Buscar dados de faturamento por cliente
         response_faturamento = supabase_admin.table('fin_faturamento_anual') \
             .select('cliente, valor') \
             .gte('data', f'{ano}-01-01') \
             .lte('data', f'{ano}-12-31') \
             .execute()
         
-        # Agrupar por cliente e somar valores
-        clientes = defaultdict(float)
+        # Agrupar por cliente
+        faturamento_por_cliente = defaultdict(float)
         
         for item in response_faturamento.data:
-            cliente = item['cliente'] if item['cliente'] else 'Não identificado'
+            cliente = item.get('cliente', 'Não identificado')
             valor = float(item['valor'])
-            clientes[cliente] += valor
+            
+            faturamento_por_cliente[cliente] += valor
         
         # Ordenar e pegar top 5
-        top_clientes = sorted(clientes.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        # Calcular total para percentuais
-        total = sum(clientes.values())
+        top_clientes = sorted(faturamento_por_cliente.items(), key=lambda x: x[1], reverse=True)[:5]
         
         # Formatar resultado
         resultado = []
-        for cliente, valor in top_clientes:
+        total_geral = sum(valor for _, valor in top_clientes)
+        
+        for i, (cliente, total) in enumerate(top_clientes):
             resultado.append({
                 'cliente': cliente,
-                'total_faturado': valor,
-                'percentual': round((valor / total * 100) if total > 0 else 0, 2)
+                'total_faturado': total,
+                'percentual': (total / total_geral * 100) if total_geral > 0 else 0,
+                'rank': i + 1
             })
         
         return jsonify({
