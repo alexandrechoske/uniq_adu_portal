@@ -1,3 +1,4 @@
+```
 /* Fluxo de Caixa Styles */
 
 .fluxo-container {
@@ -80,14 +81,6 @@
 }
 
 /* KPI Grid Principal */
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);  /* 4 colunas iguais ocupando toda largura */
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-/* Nova estrutura de KPIs organizados */
 .kpi-section {
     margin-bottom: 2rem;
 }
@@ -110,15 +103,9 @@
 
 .kpi-grid-monthly {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.kpi-grid-period {
-    display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 /* KPI Cards */
@@ -175,7 +162,7 @@
 }
 
 .kpi-value {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #2c3e50;
     margin: 0;
@@ -217,6 +204,10 @@
 
 .kpi-orange {
     --kpi-color: #fd7e14;
+}
+
+.kpi-primary {
+    --kpi-color: #007bff;
 }
 
 /* Variation Colors */
@@ -431,7 +422,7 @@
     padding: 0;
     border: none;
     width: 90%;
-    max-width: 800px;
+    max-width: 500px;
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
@@ -512,16 +503,8 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
-    .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);  /* 2 colunas em telas médias */
-    }
-    
     .kpi-grid-monthly {
-        grid-template-columns: repeat(3, 1fr);  /* Manter 3 colunas para os mensais */
-    }
-    
-    .kpi-grid-period {
-        grid-template-columns: repeat(2, 1fr);  /* 2 colunas para os acumulados */
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -540,10 +523,8 @@
         flex-direction: column;
     }
     
-    .kpi-grid-monthly,
-    .kpi-grid-period,
-    .kpi-grid {
-        grid-template-columns: 1fr;  /* Uma coluna em mobile */
+    .kpi-grid-monthly {
+        grid-template-columns: 1fr;
         gap: 1rem;
     }
     
@@ -749,194 +730,6 @@
     gap: 1rem !important;
 }
 
-/* Modal de Informações da Projeção - Estilização Personalizada */
-#modal-info-projecao .modal-content {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    box-shadow: 0 15px 35px rgba(42, 108, 143, 0.2);
-    border: 2px solid rgba(42, 108, 143, 0.1);
-}
-
-#modal-info-projecao .modal-header {
-    background: linear-gradient(135deg, #2a6c8f 0%, #1e5f8b 100%);
-    border: none;
-    padding: 1.5rem 2rem;
-    position: relative;
-    overflow: hidden;
-}
-
-#modal-info-projecao .modal-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
-    opacity: 0.3;
-}
-
-#modal-info-projecao .modal-title {
-    position: relative;
-    z-index: 1;
-    font-size: 1.3rem;
-    letter-spacing: 0.5px;
-}
-
-#modal-info-projecao .info-section {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(42, 108, 143, 0.1);
-}
-
-#modal-info-projecao .info-section h6 {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 700;
-}
-
-#modal-info-projecao .component-item {
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-#modal-info-projecao .component-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
-}
-
-#modal-info-projecao .formula-box {
-    position: relative;
-    overflow: hidden;
-}
-
-#modal-info-projecao .formula-box::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(42, 108, 143, 0.1) 0%, transparent 70%);
-    animation: rotate 20s linear infinite;
-}
-
-@keyframes rotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-#modal-info-projecao .formula-item {
-    position: relative;
-    z-index: 1;
-    padding: 0.5rem 0;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.7);
-    margin-bottom: 0.5rem;
-    padding-left: 1rem;
-    border-left: 3px solid;
-}
-
-#modal-info-projecao .formula-item:nth-child(1) {
-    border-left-color: #28a745;
-}
-
-#modal-info-projecao .formula-item:nth-child(2) {
-    border-left-color: #dc3545;
-}
-
-#modal-info-projecao .formula-item:nth-child(3) {
-    border-left-color: #2a6c8f;
-}
-
-#modal-info-projecao .consideration-item {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-}
-
-#modal-info-projecao .consideration-item:last-child {
-    border-bottom: none;
-}
-
-#modal-info-projecao .modal-footer button {
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-#modal-info-projecao .modal-footer button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(42, 108, 143, 0.4);
-}
-
-#modal-info-projecao .modal-footer button::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    transition: all 0.3s ease;
-    transform: translate(-50%, -50%);
-}
-
-#modal-info-projecao .modal-footer button:hover::before {
-    width: 300px;
-    height: 300px;
-}
-
-/* Correção do backdrop */
-.modal-backdrop.show {
-    opacity: 0.5 !important;
-}
-
-.modal.fade .modal-dialog {
-    transition: transform 0.3s ease-out;
-}
-
-/* Animação suave */
-#modal-info-projecao.fade.show .modal-dialog {
-    animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-    from {
-        transform: translateY(-50px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    #modal-info-projecao .modal-dialog {
-        margin: 1rem;
-        max-width: calc(100% - 2rem);
-    }
-    
-    #modal-info-projecao .modal-body {
-        padding: 1rem;
-    }
-    
-    #modal-info-projecao .info-section {
-        padding: 1rem;
-    }
-    
-    #modal-info-projecao .component-item {
-        margin-bottom: 1rem;
-    }
-}
-
 /* Error Notification */
 #error-notification {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -954,3 +747,4 @@
 #error-notification strong {
     margin-right: 0.5rem;
 }
+```

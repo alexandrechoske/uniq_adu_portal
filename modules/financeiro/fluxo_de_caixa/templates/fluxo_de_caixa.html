@@ -20,7 +20,7 @@
             ], 'financeiro') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
-                <span id="filter-summary-text">Vendo dados do ano atual</span>
+                <span id="filter-summary-text">Vendo dados de {{ ano_atual }}</span>
             </div>
         </div>
         <div class="actions-right">
@@ -45,11 +45,11 @@
     
     <!-- KPI Cards Principais -->
     <div class="kpi-section">
-        <!-- KPIs Mensais -->
+        <!-- KPIs Mensais/Anuais -->
         <div class="kpi-group">
             <h5 class="kpi-group-title">
                 <i class="mdi mdi-calendar-month"></i>
-                Métricas do Mês Atual
+                Métricas
             </h5>
             <div class="kpi-grid-monthly">
                 <div class="kpi-card kpi-success" id="kpi-entradas-mes">
@@ -57,7 +57,7 @@
                         <i class="mdi mdi-trending-up"></i>
                     </div>
                     <div class="kpi-content">
-                        <p class="kpi-label">Entradas Este Mês</p>
+                        <p class="kpi-label">Entradas</p>
                         <p class="kpi-value" id="valor-entradas-mes">-</p>
                         <p class="kpi-variation" id="var-entradas-mes">-</p>
                     </div>
@@ -68,106 +68,73 @@
                         <i class="mdi mdi-trending-down"></i>
                     </div>
                     <div class="kpi-content">
-                        <p class="kpi-label">Saídas Este Mês</p>
+                        <p class="kpi-label">Saídas</p>
                         <p class="kpi-value" id="valor-saidas-mes">-</p>
                         <p class="kpi-variation" id="var-saidas-mes">-</p>
                     </div>
                 </div>
                 
-                <div class="kpi-card kpi-info" id="kpi-saldo-mes">
+                <div class="kpi-card kpi-info" id="kpi-resultado-mes">
                     <div class="kpi-icon">
-                        <i class="mdi mdi-wallet-outline"></i>
+                        <i class="mdi mdi-equal"></i>
                     </div>
                     <div class="kpi-content">
-                        <p class="kpi-label">Saldo Este Mês</p>
-                        <p class="kpi-value" id="valor-saldo-mes">-</p>
-                        <p class="kpi-variation" id="var-saldo-mes">-</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- KPIs Acumulados -->
-        <div class="kpi-group">
-            <h5 class="kpi-group-title">
-                <i class="mdi mdi-chart-timeline"></i>
-                Métricas Acumuladas do Período
-            </h5>
-            <div class="kpi-grid-period">
-                <div class="kpi-card kpi-primary" id="kpi-resultado">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-chart-line"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">Resultado Líquido</p>
-                        <p class="kpi-value" id="valor-resultado">-</p>
-                        <p class="kpi-variation" id="var-resultado">-</p>
+                        <p class="kpi-label">Resultado</p>
+                        <p class="kpi-value" id="valor-resultado-mes">-</p>
+                        <p class="kpi-variation" id="var-resultado-mes">-</p>
                     </div>
                 </div>
                 
-                <div class="kpi-card kpi-success" id="kpi-entradas">
+                <div class="kpi-card kpi-primary" id="kpi-saldo-acumulado">
                     <div class="kpi-icon">
-                        <i class="mdi mdi-trending-up"></i>
+                        <i class="mdi mdi-bank"></i>
                     </div>
                     <div class="kpi-content">
-                        <p class="kpi-label">Total de Entradas</p>
-                        <p class="kpi-value" id="valor-entradas">-</p>
-                        <p class="kpi-variation" id="var-entradas">-</p>
-                    </div>
-                </div>
-                
-                <div class="kpi-card kpi-warning" id="kpi-saidas">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-trending-down"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">Total de Saídas</p>
-                        <p class="kpi-value" id="valor-saidas">-</p>
-                        <p class="kpi-variation" id="var-saidas">-</p>
-                    </div>
-                </div>
-                
-                <div class="kpi-card kpi-purple" id="kpi-saldo">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-wallet"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">Saldo Final do Período</p>
-                        <p class="kpi-value" id="valor-saldo">-</p>
-                        <p class="kpi-variation" id="var-saldo">-</p>
+                        <p class="kpi-label">Saldo Acumulado Final</p>
+                        <p class="kpi-value" id="valor-saldo-acumulado">-</p>
+                        <p class="kpi-variation" id="var-saldo-acumulado">-</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Gráfico Principal em Destaque -->
-    <div class="chart-container" style="margin-bottom: 2rem;">
-        <div class="chart-header">
-            <h3 class="chart-title">
-                <i class="mdi mdi-chart-waterfall"></i>
-                Fluxo de Caixa Mês a Mês
-            </h3>
-        </div>
-        <div class="chart-content" style="min-height: 400px;">
-            <canvas id="chart-fluxo-mensal"></canvas>
-        </div>
-    </div>
-    
-    <!-- Outros Gráficos -->
+    <!-- Gráficos -->
     <div class="charts-grid">
-        <!-- Gráfico de Despesas por Categoria -->
+        <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (Gráfico de Cascata) -->
         <div class="chart-container">
             <div class="chart-header">
                 <h3 class="chart-title">
-                    <i class="mdi mdi-chart-donut"></i>
+                    <i class="mdi mdi-chart-waterfall"></i>
+                    Fluxo de Caixa Mês a Mês
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-fluxo-mensal"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 2: Evolução do Saldo Acumulado -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Evolução do Saldo Acumulado
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-saldo-acumulado"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 3: Despesas por Categoria -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-bar"></i>
                     <span id="chart-despesas-title">Despesas por Categoria</span>
                 </h3>
                 <div class="chart-actions">
-                    <button id="btn-toggle-admin" class="btn btn-sm btn-warning" title="Ocultar/Mostrar Despesas Administrativas">
-                        <i class="mdi mdi-eye-off"></i>
-                        <span id="btn-toggle-text">Ocultar Admin</span>
-                    </button>
                     <button id="btn-voltar-categorias" class="btn btn-sm btn-secondary" style="display: none;">
                         <i class="mdi mdi-arrow-left"></i>
                         Voltar
@@ -178,43 +145,9 @@
                 <canvas id="chart-despesas-categoria"></canvas>
             </div>
         </div>
-        
-        <!-- Gráfico de Análise Estrutural -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-bar-stacked"></i>
-                    Análise Estrutural (FCO, FCI, FCF)
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-fluxo-estrutural"></canvas>
-            </div>
-        </div>
     </div>
     
-    <!-- Gráfico de Projeção em Destaque -->
-    <div class="chart-container" style="margin-bottom: 2rem;">
-        <div class="chart-header">
-            <h3 class="chart-title">
-                <i class="mdi mdi-chart-timeline-variant"></i>
-                Projeção de Fluxo de Caixa
-            </h3>
-            <div class="chart-actions">
-                <button id="btn-info-projecao" class="btn btn-sm btn-info" title="Informações sobre o modelo de projeção" data-bs-toggle="modal" data-bs-target="#modal-info-projecao">
-                    <i class="mdi mdi-information"></i>
-                </button>
-            </div>
-        </div>
-        <div class="chart-content" style="min-height: 400px;">
-            <canvas id="chart-projecao"></canvas>
-        </div>
-    </div>
-    
-    <!-- Outros Gráficos -->
-    <div class="charts-grid">
-    
-    <!-- Tabela de Dados -->
+    <!-- Tabela de Registros Financeiros -->
     <div class="table-container">
         <div class="table-header">
             <h3 class="table-title">
@@ -234,7 +167,6 @@
                         <th>Classe</th>
                         <th>Código</th>
                         <th>Descrição</th>
-                        <th>Tipo</th>
                         <th>Valor</th>
                     </tr>
                 </thead>
@@ -266,7 +198,7 @@
         <div class="filter-modal-header">
             <h2 class="filter-modal-title">
                 <i class="mdi mdi-filter"></i>
-                Filtros de Período
+                Filtros
             </h2>
             <button class="filter-modal-close" id="close-modal">
                 <i class="mdi mdi-close"></i>
@@ -276,28 +208,28 @@
             <div class="filter-section">
                 <h3 class="filter-section-title">📅 Período</h3>
                 <div class="filter-input-group">
-                    <label for="periodo-select" class="form-label">Período Pré-definido</label>
-                    <select id="periodo-select" class="form-select">
-                        <option value="mes_atual">Mês Atual</option>
-                        <option value="ultimo_mes">Último Mês</option>
-                        <option value="trimestre_atual">Trimestre Atual</option>
-                        <option value="ultimos_12_meses">Últimos 12 Meses</option>
-                        <option value="ano_atual" selected>Ano Atual</option>
-                        <option value="ultimo_ano">Último Ano</option>
-                        <option value="personalizado">Período Personalizado</option>
+                    <label for="ano-select" class="form-label">Ano</label>
+                    <select id="ano-select" class="form-select">
+                        <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
-                <div id="periodo-personalizado" class="filter-input-group" style="display: none;">
-                    <div class="filter-date-inputs">
-                        <div class="filter-input-group">
-                            <label for="data-inicio" class="form-label">Data Início</label>
-                            <input type="date" id="data-inicio" class="form-control">
-                        </div>
-                        <div class="filter-input-group">
-                            <label for="data-fim" class="form-label">Data Fim</label>
-                            <input type="date" id="data-fim" class="form-control">
-                        </div>
-                    </div>
+                <div class="filter-input-group">
+                    <label for="mes-select" class="form-label">Mês (Opcional)</label>
+                    <select id="mes-select" class="form-select">
+                        <option value="">Todos os meses</option>
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -310,114 +242,6 @@
                 <i class="mdi mdi-check"></i>
                 Aplicar Filtros
             </button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de Informações sobre Projeção -->
-<div class="modal fade" id="modal-info-projecao" tabindex="-1" aria-labelledby="modalInfoProjecaoLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(42, 108, 143, 0.3);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #2a6c8f 0%, #1e5f8b 100%); color: white; border-radius: 15px 15px 0 0; border: none;">
-                <h5 class="modal-title fw-bold" id="modalInfoProjecaoLabel">
-                    <i class="mdi mdi-information-outline me-2"></i>
-                    Modelo de Projeção de Fluxo de Caixa
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="background-color: #f8f9fa; padding: 2rem;">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="info-section mb-4">
-                            <h6 class="fw-bold" style="color: #2a6c8f; border-bottom: 2px solid #2a6c8f; padding-bottom: 0.5rem;">
-                                <i class="mdi mdi-chart-line me-2"></i> Metodologia de Cálculo
-                            </h6>
-                            <p class="text-muted">A projeção utiliza uma análise estatística baseada nos últimos 24 meses de dados financeiros para estimar o comportamento futuro do fluxo de caixa, proporcionando maior assertividade nas previsões.</p>
-                        </div>
-                        
-                        <div class="info-section mb-4">
-                            <h6 class="fw-bold" style="color: #2a6c8f; border-bottom: 2px solid #2a6c8f; padding-bottom: 0.5rem;">
-                                <i class="mdi mdi-calculator me-2"></i> Componentes do Modelo
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="component-item p-3 mb-2" style="background: white; border-left: 4px solid #2a6c8f; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                                        <strong style="color: #2a6c8f;">Dados Históricos:</strong><br>
-                                        <small class="text-muted">Últimos 6 meses de movimentações reais exibidas</small>
-                                    </div>
-                                    <div class="component-item p-3 mb-2" style="background: white; border-left: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                                        <strong style="color: #28a745;">Médias Móveis:</strong><br>
-                                        <small class="text-muted">Cálculo baseado em 24 meses de dados para maior assertividade</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="component-item p-3 mb-2" style="background: white; border-left: 4px solid #ffc107; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                                        <strong style="color: #e67e22;">Tendência:</strong><br>
-                                        <small class="text-muted">Análise de crescimento/declínio baseada em 24 meses</small>
-                                    </div>
-                                    <div class="component-item p-3 mb-2" style="background: white; border-left: 4px solid #17a2b8; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                                        <strong style="color: #17a2b8;">Projeção:</strong><br>
-                                        <small class="text-muted">6 meses futuros com variação estatística</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="info-section mb-4">
-                            <h6 class="fw-bold" style="color: #2a6c8f; border-bottom: 2px solid #2a6c8f; padding-bottom: 0.5rem;">
-                                <i class="mdi mdi-formula me-2"></i> Fórmulas Utilizadas
-                            </h6>
-                            <div class="formula-box p-4" style="background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border-radius: 12px; border: 1px solid #2a6c8f;">
-                                <div class="formula-item mb-2" style="font-family: 'Courier New', monospace; color: #2a6c8f;">
-                                    <strong>Projeção Entradas</strong> = Média(Entradas_24m) × (1 + Taxa_Crescimento)
-                                </div>
-                                <div class="formula-item mb-2" style="font-family: 'Courier New', monospace; color: #dc3545;">
-                                    <strong>Projeção Saídas</strong> = Média(Saídas_24m) × (1 + Taxa_Crescimento)
-                                </div>
-                                <div class="formula-item" style="font-family: 'Courier New', monospace; color: #28a745;">
-                                    <strong>Saldo Projetado</strong> = Saldo_Atual + (Entradas_Proj - Saídas_Proj)
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="info-section">
-                            <h6 class="fw-bold" style="color: #2a6c8f; border-bottom: 2px solid #2a6c8f; padding-bottom: 0.5rem;">
-                                <i class="mdi mdi-alert-circle me-2"></i> Considerações Importantes
-                            </h6>
-                            <div class="alert" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border: 1px solid #ffc107; border-radius: 10px;">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="consideration-item mb-2">
-                                            <i class="mdi mdi-check-circle text-success me-2"></i>
-                                            <small>As projeções são estimativas baseadas em dados históricos</small>
-                                        </div>
-                                        <div class="consideration-item mb-2">
-                                            <i class="mdi mdi-alert-triangle text-warning me-2"></i>
-                                            <small>Eventos extraordinários não são considerados no modelo</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="consideration-item mb-2">
-                                            <i class="mdi mdi-calendar-refresh text-info me-2"></i>
-                                            <small>Recomenda-se revisar mensalmente as projeções</small>
-                                        </div>
-                                        <div class="consideration-item mb-2">
-                                            <i class="mdi mdi-transfer text-secondary me-2"></i>
-                                            <small>Transferências entre contas são excluídas do cálculo</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" style="background-color: #f8f9fa; border: none; border-radius: 0 0 15px 15px; padding: 1.5rem;">
-                <button type="button" class="btn" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #2a6c8f 0%, #1e5f8b 100%); color: white; border: none; border-radius: 8px; padding: 0.75rem 2rem; font-weight: 600;">
-                    <i class="mdi mdi-close me-2"></i>
-                    Fechar
-                </button>
-            </div>
         </div>
     </div>
 </div>
