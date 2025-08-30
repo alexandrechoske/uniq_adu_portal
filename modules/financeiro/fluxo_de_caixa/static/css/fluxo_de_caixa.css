@@ -1,8 +1,7 @@
-```
 /* Fluxo de Caixa Styles */
 
 .fluxo-container {
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -226,9 +225,17 @@
 /* Charts Grid */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    grid-template-columns: 1fr;
     gap: 2rem;
     margin-bottom: 2rem;
+}
+
+.wide-chart {
+    grid-column: 1;
+}
+
+.wide-chart .chart-content {
+    min-height: 400px;
 }
 
 /* Chart Container */
@@ -273,7 +280,7 @@
 }
 
 .chart-content canvas {
-    max-height: 300px;
+    max-height: 400px;
 }
 
 /* Table Container */
@@ -502,7 +509,17 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1200px) {
+@media (min-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .wide-chart {
+        grid-column: 1 / span 2;
+    }
+}
+
+@media (max-width: 1199px) {
     .kpi-grid-monthly {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -747,4 +764,3 @@
 #error-notification strong {
     margin-right: 0.5rem;
 }
-```

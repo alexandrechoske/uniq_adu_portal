@@ -101,33 +101,20 @@
     
     <!-- Gráficos -->
     <div class="charts-grid">
-        <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (Gráfico de Cascata) -->
-        <div class="chart-container">
+        <!-- Gráfico Unificado: Fluxo de Caixa Mês a Mês com Saldo Acumulado -->
+        <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-waterfall"></i>
-                    Fluxo de Caixa Mês a Mês
+                    Fluxo de Caixa Mês a Mês com Saldo Acumulado
                 </h3>
             </div>
             <div class="chart-content">
-                <canvas id="chart-fluxo-mensal"></canvas>
+                <canvas id="chart-fluxo-unificado"></canvas>
             </div>
         </div>
         
-        <!-- Gráfico 2: Evolução do Saldo Acumulado -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-line"></i>
-                    Evolução do Saldo Acumulado
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-saldo-acumulado"></canvas>
-            </div>
-        </div>
-        
-        <!-- Gráfico 3: Despesas por Categoria -->
+        <!-- Gráfico 2: Despesas por Categoria (Horizontal) -->
         <div class="chart-container">
             <div class="chart-header">
                 <h3 class="chart-title">
@@ -143,6 +130,19 @@
             </div>
             <div class="chart-content">
                 <canvas id="chart-despesas-categoria"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 3: Projeção de Fluxo de Caixa -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Projeção de Fluxo de Caixa (24 meses + 6 meses)
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-projecao"></canvas>
             </div>
         </div>
     </div>
