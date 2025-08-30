@@ -1,3 +1,48 @@
+// Funções utilitárias
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value);
+}
+
+function formatCurrencyShort(value) {
+    const absValue = Math.abs(value);
+    const prefix = value < 0 ? '-' : '';
+    
+    if (absValue >= 1000000) {
+        // Milhões: usar 2 casas decimais para maior precisão
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
+    } else if (absValue >= 1000) {
+        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
+        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
+    }
+    // Valores menores que 1000: formato completo
+    return formatCurrency(value);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+}
+
+// Debounce function
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function executedFunction() {
+        const context = this;
+        const args = arguments;
+        const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+}
+
 class FluxoCaixaController {
     constructor() {
         this.currentAno = new Date().getFullYear();
@@ -121,8 +166,13 @@ class FluxoCaixaController {
                 return null;
             });
             
-            const fluxoUnificadoPromise = this.loadFluxoUnificado().catch(error => {
-                console.error('Erro ao carregar fluxo unificado:', error);
+            const fluxoMensalPromise = this.loadFluxoMensal().catch(error => {
+                console.error('Erro ao carregar fluxo mensal:', error);
+                return null;
+            });
+            
+            const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
+                console.error('Erro ao carregar saldo acumulado:', error);
                 return null;
             });
             
@@ -144,7 +194,8 @@ class FluxoCaixaController {
             // Wait for all promises to complete
             await Promise.all([
                 kpisPromise,
-                fluxoUnificadoPromise,
+                fluxoMensalPromise,
+                saldoAcumuladoPromise,
                 despesasCategoriaPromise,
                 projecaoPromise,
                 tableDataPromise
@@ -268,39 +319,33 @@ class FluxoCaixaController {
         }
     }
     
-    async loadFluxoUnificado() {
+    async loadFluxoMensal() {
         try {
-            // Load both fluxo mensal and saldo acumulado data
-            const [fluxoResponse, saldoResponse] = await Promise.all([
-                fetch(`/financeiro/fluxo-de-caixa/api/fluxo-mensal?ano=${this.currentAno}`),
-                fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?ano=${this.currentAno}`)
-            ]);
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/fluxo-mensal?ano=${this.currentAno}`);
+            const data = await response.json();
             
-            const fluxoData = await fluxoResponse.json();
-            const saldoData = await saldoResponse.json();
-            
-            if (!fluxoResponse.ok || fluxoData.error || !saldoResponse.ok || saldoData.error) {
-                throw new Error(fluxoData.error || saldoData.error || 'Erro ao carregar dados unificados');
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Erro ao carregar fluxo mensal');
             }
             
-            this.renderFluxoUnificadoChart(fluxoData, saldoData);
+            this.renderFluxoMensalChart(data);
         } catch (error) {
-            console.error('Erro ao carregar fluxo unificado:', error);
-            this.showError('Erro ao carregar fluxo unificado: ' + (error.message || 'Erro desconhecido'));
+            console.error('Erro ao carregar fluxo mensal:', error);
+            this.showError('Erro ao carregar fluxo mensal: ' + (error.message || 'Erro desconhecido'));
             // Render error state in chart
-            this.renderFluxoUnificadoChartError();
+            this.renderFluxoMensalChartError();
         }
     }
 
-    renderFluxoUnificadoChartError() {
-        const ctx = document.getElementById('chart-fluxo-unificado').getContext('2d');
+    renderFluxoMensalChartError() {
+        const ctx = document.getElementById('chart-fluxo-mensal').getContext('2d');
         
-        if (this.charts.fluxoUnificado) {
-            this.charts.fluxoUnificado.destroy();
+        if (this.charts.fluxoMensal) {
+            this.charts.fluxoMensal.destroy();
         }
         
         // Create a simple error message chart
-        this.charts.fluxoUnificado = new Chart(ctx, {
+        this.charts.fluxoMensal = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Erro'],
@@ -334,49 +379,41 @@ class FluxoCaixaController {
         });
     }
     
-    renderFluxoUnificadoChart(fluxoData, saldoData) {
-        const ctx = document.getElementById('chart-fluxo-unificado').getContext('2d');
+    renderFluxoMensalChart(data) {
+        const ctx = document.getElementById('chart-fluxo-mensal').getContext('2d');
         
-        if (this.charts.fluxoUnificado) {
-            this.charts.fluxoUnificado.destroy();
+        if (this.charts.fluxoMensal) {
+            this.charts.fluxoMensal.destroy();
         }
         
         // Cores baseadas no valor do resultado líquido (verde para positivo, vermelho para negativo)
-        const backgroundColors = fluxoData.resultados.map(value => 
+        const backgroundColors = data.resultados.map(value => 
             value >= 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)'
         );
-        const borderColors = fluxoData.resultados.map(value => 
+        const borderColors = data.resultados.map(value => 
             value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
         );
         
-        // Create dual axis chart with bar and line
-        this.charts.fluxoUnificado = new Chart(ctx, {
+        // Find the min and max values for proper scaling
+        const minValue = Math.min(...data.resultados);
+        const maxValue = Math.max(...data.resultados);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
+        // Create bar chart for fluxo mensal
+        this.charts.fluxoMensal = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: fluxoData.meses,
+                labels: data.meses,
                 datasets: [{
                     label: 'Resultado Líquido',
-                    data: fluxoData.resultados,
+                    data: data.resultados,
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
                     borderWidth: 2,
                     borderRadius: 6,
-                    borderSkipped: false,
-                    yAxisID: 'y'
-                }, {
-                    label: 'Saldo Acumulado',
-                    data: saldoData.saldos,
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    type: 'line',
-                    yAxisID: 'y1'
+                    borderSkipped: false
                 }]
             },
             options: {
@@ -385,14 +422,13 @@ class FluxoCaixaController {
                     ...this.chartDefaults.plugins,
                     title: {
                         display: true,
-                        text: 'Fluxo de Caixa Mês a Mês com Saldo Acumulado'
+                        text: 'Fluxo de Caixa Mês a Mês'
                     }
                 },
                 scales: {
                     y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
+                        min: minPadded,
+                        max: maxPadded,
                         grid: {
                             display: false
                         },
@@ -402,12 +438,125 @@ class FluxoCaixaController {
                             }
                         }
                     },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
+                    x: {
                         grid: {
-                            drawOnChartArea: false,
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    async loadSaldoAcumulado() {
+        try {
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?ano=${this.currentAno}`);
+            const data = await response.json();
+            
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Erro ao carregar saldo acumulado');
+            }
+            
+            this.renderSaldoAcumuladoChart(data);
+        } catch (error) {
+            console.error('Erro ao carregar saldo acumulado:', error);
+            this.showError('Erro ao carregar saldo acumulado: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderSaldoAcumuladoChartError();
+        }
+    }
+
+    renderSaldoAcumuladoChartError() {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    renderSaldoAcumuladoChart(data) {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+        }
+        
+        // Find min and max values for proper scaling
+        const minValue = Math.min(...data.saldos);
+        const maxValue = Math.max(...data.saldos);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
+        // Create line chart for saldo acumulado
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.datas,
+                datasets: [{
+                    label: 'Saldo Acumulado',
+                    data: data.saldos,
+                    borderColor: 'rgba(23, 162, 184, 1)',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Saldo Acumulado por Período'
+                    }
+                },
+                scales: {
+                    y: {
+                        min: minPadded,
+                        max: maxPadded,
+                        grid: {
+                            display: false
                         },
                         ticks: {
                             callback: function(value) {
@@ -550,7 +699,9 @@ class FluxoCaixaController {
                                 // Don't show negative values in the axis labels
                                 return formatCurrencyShort(Math.abs(value));
                             }
-                        }
+                        },
+                        // Invert the x-axis to show bars from right to left
+                        reverse: true
                     },
                     y: {
                         grid: {
@@ -638,6 +789,14 @@ class FluxoCaixaController {
         // Split into past and future for different styling
         const pastCount = data.past_dates.length;
         
+        // Find min and max values for proper scaling
+        const allValues = [...allFluxos, ...allSaldos].filter(val => val !== null);
+        const minValue = Math.min(...allValues);
+        const maxValue = Math.max(...allValues);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
         this.charts.projecao = new Chart(ctx, {
             type: 'line',
             data: {
@@ -714,6 +873,8 @@ class FluxoCaixaController {
                 },
                 scales: {
                     y: {
+                        min: minPadded,
+                        max: maxPadded,
                         grid: {
                             display: false
                         },
@@ -939,52 +1100,7 @@ class FluxoCaixaController {
     }
 }
 
-// Funções utilitárias
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
-
-function formatCurrencyShort(value) {
-    const absValue = Math.abs(value);
-    const prefix = value < 0 ? '-' : '';
-    
-    if (absValue >= 1000000) {
-        // Milhões: usar 2 casas decimais para maior precisão
-        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
-    } else if (absValue >= 1000) {
-        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
-        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
-    }
-    // Valores menores que 1000: formato completo
-    return formatCurrency(value);
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Inicializar quando o documento estiver pronto
-$(document).ready(function() {
-    window.fluxoCaixa = new FluxoCaixaController();
-    
-    // Set current year in the summary text (year-only by default)
-    const now = new Date();
-    const anoAtual = now.getFullYear();
-    $('#filter-summary-text').text(`Vendo dados de ${anoAtual}`);
+// Initialize the controller when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    window.fluxoCaixaController = new FluxoCaixaController();
 });

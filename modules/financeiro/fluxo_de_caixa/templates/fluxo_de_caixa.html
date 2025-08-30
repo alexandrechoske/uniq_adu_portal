@@ -101,19 +101,20 @@
     
     <!-- Gráficos -->
     <div class="charts-grid">
-        <!-- Gráfico Unificado: Fluxo de Caixa Mês a Mês com Saldo Acumulado -->
+        <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (Cascata) -->
         <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-waterfall"></i>
-                    Fluxo de Caixa Mês a Mês com Saldo Acumulado
+                    Fluxo de Caixa Mês a Mês
                 </h3>
             </div>
             <div class="chart-content">
-                <canvas id="chart-fluxo-unificado"></canvas>
+                <canvas id="chart-fluxo-mensal"></canvas>
             </div>
         </div>
         
+        <!-- Second row: Despesas por Categoria and Projeção de Fluxo de Caixa side by side -->
         <!-- Gráfico 2: Despesas por Categoria (Horizontal) -->
         <div class="chart-container">
             <div class="chart-header">
@@ -143,6 +144,19 @@
             </div>
             <div class="chart-content">
                 <canvas id="chart-projecao"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 4: Saldo Acumulado por Período -->
+        <div class="chart-container wide-chart">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Saldo Acumulado por Período
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-saldo-acumulado"></canvas>
             </div>
         </div>
     </div>
@@ -251,5 +265,10 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Pass the current year to the template
+    var ano_atual = new Date().getFullYear();
+    document.getElementById('filter-summary-text').textContent = 'Vendo dados de ' + ano_atual;
+</script>
 <script src="{{ url_for('fin_fluxo_de_caixa.static', filename='js/fluxo_de_caixa.js') }}"></script>
 {% endblock %}

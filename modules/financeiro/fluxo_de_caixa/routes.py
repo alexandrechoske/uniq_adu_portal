@@ -18,6 +18,10 @@ fluxo_de_caixa_bp = Blueprint(
     static_url_path='/financeiro/static'
 )
 
+def _add_transferencia_filter(query):
+    """Add filter to exclude classes containing 'TRANSFERENCIA'"""
+    return query.not_.ilike('classe', '%TRANSFERENCIA%')
+
 @fluxo_de_caixa_bp.route('/')
 @login_required
 @perfil_required('financeiro', 'fluxo_caixa')
@@ -66,6 +70,7 @@ def api_kpis():
             query_entradas = supabase_admin.table(table_name).select('valor').eq('tipo', 'Receita')
             query_entradas = query_entradas.gte('data', inicio_mes.strftime('%Y-%m-%d'))
             query_entradas = query_entradas.lte('data', fim_mes.strftime('%Y-%m-%d'))
+            query_entradas = _add_transferencia_filter(query_entradas)
             response_entradas = query_entradas.execute()
             entradas_mes = sum(float(item['valor']) for item in response_entradas.data)
             
@@ -73,6 +78,7 @@ def api_kpis():
             query_entradas_anterior = supabase_admin.table(table_name).select('valor').eq('tipo', 'Receita')
             query_entradas_anterior = query_entradas_anterior.gte('data', inicio_mes_anterior.strftime('%Y-%m-%d'))
             query_entradas_anterior = query_entradas_anterior.lte('data', fim_mes_anterior.strftime('%Y-%m-%d'))
+            query_entradas_anterior = _add_transferencia_filter(query_entradas_anterior)
             response_entradas_anterior = query_entradas_anterior.execute()
             entradas_mes_anterior = sum(float(item['valor']) for item in response_entradas_anterior.data)
             
@@ -80,6 +86,7 @@ def api_kpis():
             query_saidas = supabase_admin.table(table_name).select('valor').eq('tipo', 'Despesa')
             query_saidas = query_saidas.gte('data', inicio_mes.strftime('%Y-%m-%d'))
             query_saidas = query_saidas.lte('data', fim_mes.strftime('%Y-%m-%d'))
+            query_saidas = _add_transferencia_filter(query_saidas)
             response_saidas = query_saidas.execute()
             saidas_mes = sum(float(item['valor']) for item in response_saidas.data) * -1  # Multiplicar por -1 para exibir como positivo
             
@@ -87,6 +94,7 @@ def api_kpis():
             query_saidas_anterior = supabase_admin.table(table_name).select('valor').eq('tipo', 'Despesa')
             query_saidas_anterior = query_saidas_anterior.gte('data', inicio_mes_anterior.strftime('%Y-%m-%d'))
             query_saidas_anterior = query_saidas_anterior.lte('data', fim_mes_anterior.strftime('%Y-%m-%d'))
+            query_saidas_anterior = _add_transferencia_filter(query_saidas_anterior)
             response_saidas_anterior = query_saidas_anterior.execute()
             saidas_mes_anterior = sum(float(item['valor']) for item in response_saidas_anterior.data) * -1
             
@@ -99,12 +107,14 @@ def api_kpis():
             # KPI 4: Saldo Acumulado Final
             query_saldo = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_mes.strftime('%Y-%m-%d'))
             query_saldo = query_saldo.order('data', desc=True).limit(1)
+            query_saldo = _add_transferencia_filter(query_saldo)
             response_saldo = query_saldo.execute()
             saldo_acumulado = float(response_saldo.data[0]['saldo_acumulado']) if response_saldo.data else 0
             
             # KPI 4 - Mês anterior para comparação
             query_saldo_anterior = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_mes_anterior.strftime('%Y-%m-%d'))
             query_saldo_anterior = query_saldo_anterior.order('data', desc=True).limit(1)
+            query_saldo_anterior = _add_transferencia_filter(query_saldo_anterior)
             response_saldo_anterior = query_saldo_anterior.execute()
             saldo_acumulado_anterior = float(response_saldo_anterior.data[0]['saldo_acumulado']) if response_saldo_anterior.data else 0
             
@@ -133,6 +143,7 @@ def api_kpis():
             query_entradas = supabase_admin.table(table_name).select('valor').eq('tipo', 'Receita')
             query_entradas = query_entradas.gte('data', inicio_ano.strftime('%Y-%m-%d'))
             query_entradas = query_entradas.lte('data', fim_ano.strftime('%Y-%m-%d'))
+            query_entradas = _add_transferencia_filter(query_entradas)
             response_entradas = query_entradas.execute()
             entradas_mes = sum(float(item['valor']) for item in response_entradas.data)
             
@@ -140,6 +151,7 @@ def api_kpis():
             query_entradas_anterior = supabase_admin.table(table_name).select('valor').eq('tipo', 'Receita')
             query_entradas_anterior = query_entradas_anterior.gte('data', inicio_ano_anterior.strftime('%Y-%m-%d'))
             query_entradas_anterior = query_entradas_anterior.lte('data', fim_ano_anterior.strftime('%Y-%m-%d'))
+            query_entradas_anterior = _add_transferencia_filter(query_entradas_anterior)
             response_entradas_anterior = query_entradas_anterior.execute()
             entradas_mes_anterior = sum(float(item['valor']) for item in response_entradas_anterior.data)
             
@@ -147,6 +159,7 @@ def api_kpis():
             query_saidas = supabase_admin.table(table_name).select('valor').eq('tipo', 'Despesa')
             query_saidas = query_saidas.gte('data', inicio_ano.strftime('%Y-%m-%d'))
             query_saidas = query_saidas.lte('data', fim_ano.strftime('%Y-%m-%d'))
+            query_saidas = _add_transferencia_filter(query_saidas)
             response_saidas = query_saidas.execute()
             saidas_mes = sum(float(item['valor']) for item in response_saidas.data) * -1  # Multiplicar por -1 para exibir como positivo
             
@@ -154,6 +167,7 @@ def api_kpis():
             query_saidas_anterior = supabase_admin.table(table_name).select('valor').eq('tipo', 'Despesa')
             query_saidas_anterior = query_saidas_anterior.gte('data', inicio_ano_anterior.strftime('%Y-%m-%d'))
             query_saidas_anterior = query_saidas_anterior.lte('data', fim_ano_anterior.strftime('%Y-%m-%d'))
+            query_saidas_anterior = _add_transferencia_filter(query_saidas_anterior)
             response_saidas_anterior = query_saidas_anterior.execute()
             saidas_mes_anterior = sum(float(item['valor']) for item in response_saidas_anterior.data) * -1
             
@@ -166,12 +180,14 @@ def api_kpis():
             # KPI 4: Saldo Acumulado Final
             query_saldo = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_ano.strftime('%Y-%m-%d'))
             query_saldo = query_saldo.order('data', desc=True).limit(1)
+            query_saldo = _add_transferencia_filter(query_saldo)
             response_saldo = query_saldo.execute()
             saldo_acumulado = float(response_saldo.data[0]['saldo_acumulado']) if response_saldo.data else 0
             
             # KPI 4 - Ano anterior para comparação
             query_saldo_anterior = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_ano_anterior.strftime('%Y-%m-%d'))
             query_saldo_anterior = query_saldo_anterior.order('data', desc=True).limit(1)
+            query_saldo_anterior = _add_transferencia_filter(query_saldo_anterior)
             response_saldo_anterior = query_saldo_anterior.execute()
             saldo_acumulado_anterior = float(response_saldo_anterior.data[0]['saldo_acumulado']) if response_saldo_anterior.data else 0
             
@@ -253,6 +269,7 @@ def api_fluxo_mensal():
         query = query.gte('data', f'{ano}-01-01')
         query = query.lte('data', f'{ano}-12-31')
         query = query.neq('categoria', 'SALDO INICIAL')
+        query = _add_transferencia_filter(query)
         response = query.execute()
         dados = response.data
         
@@ -324,12 +341,14 @@ def api_saldo_acumulado():
             query = query.gte('data', inicio_mes.strftime('%Y-%m-%d'))
             query = query.lte('data', fim_mes.strftime('%Y-%m-%d'))
             query = query.order('data')
+            query = _add_transferencia_filter(query)
         else:
             # Full year data
             query = supabase_admin.table(table_name).select('data, saldo_acumulado')
             query = query.gte('data', f'{ano}-01-01')
             query = query.lte('data', f'{ano}-12-31')
             query = query.order('data')
+            query = _add_transferencia_filter(query)
         
         response = query.execute()
         dados = response.data
@@ -401,6 +420,7 @@ def api_despesas_categoria():
             query = query.gte('data', f'{ano}-01-01')
             query = query.lte('data', f'{ano}-12-31')
         
+        query = _add_transferencia_filter(query)
         response = query.execute()
         dados = response.data
         
@@ -493,6 +513,8 @@ def api_tabela_dados():
             # Buscar em descrição, categoria, classe ou código
             query = query.or_(f'descricao.ilike.%{search}%,categoria.ilike.%{search}%,classe.ilike.%{search}%,codigo.ilike.%{search}%')
         
+        query = _add_transferencia_filter(query)
+        
         # Aplicar ordenação e paginação
         offset = (page - 1) * limit
         query = query.order('data', desc=True).range(offset, offset + limit - 1)
@@ -512,6 +534,7 @@ def api_tabela_dados():
         if search:
             count_query = count_query.or_(f'descricao.ilike.%{search}%,categoria.ilike.%{search}%,classe.ilike.%{search}%,codigo.ilike.%{search}%')
         
+        count_query = _add_transferencia_filter(count_query)
         count_response = count_query.execute()
         total_registros = count_response.count
         
@@ -578,6 +601,7 @@ def api_projecao():
         query = query.gte('data', past_start.strftime('%Y-%m-%d'))
         query = query.lte('data', now.strftime('%Y-%m-%d'))
         query = query.order('data')
+        query = _add_transferencia_filter(query)
         response = query.execute()
         dados = response.data
         
