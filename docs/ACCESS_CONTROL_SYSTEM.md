@@ -128,9 +128,9 @@ The Unique Aduaneira Portal implements a **3-tier hierarchical access control sy
 
 ## 🗄️ Database Schema
 
-### users_dev Table
+### users Table
 ```sql
-CREATE TABLE users_dev (
+CREATE TABLE users (
     id UUID PRIMARY KEY,
     name VARCHAR,
     email VARCHAR UNIQUE,
@@ -343,7 +343,7 @@ SELECT
         WHEN perfil_principal = 'basico' THEN 'Basic User'
         ELSE 'Check Configuration'
     END as admin_type
-FROM users_dev WHERE is_active = true;
+FROM users WHERE is_active = true;
 ```
 
 #### Admin Profile Lookup
@@ -395,7 +395,7 @@ Expected: Blocked with error message
 ```sql
 -- Users needing profile updates
 SELECT email, role, perfil_principal 
-FROM users_dev 
+FROM users 
 WHERE (role = 'interno_unique' AND perfil_principal NOT IN ('basico', 'admin_operacao', 'admin_financeiro'))
    OR (role = 'admin' AND perfil_principal != 'master_admin')
    OR (role = 'cliente_unique' AND perfil_principal != 'basico');
@@ -444,10 +444,10 @@ accessible_modules.add('export_relatorios')  # For direct access
 **Solution**:
 ```sql
 -- Update to new structure
-UPDATE users_dev SET perfil_principal = 'master_admin' 
+UPDATE users SET perfil_principal = 'master_admin' 
 WHERE role = 'admin' AND perfil_principal = 'admin_geral';
 
-UPDATE users_dev SET perfil_principal = 'admin_operacao'
+UPDATE users SET perfil_principal = 'admin_operacao'
 WHERE role = 'interno_unique' AND perfil_principal = 'admin_importacoes';
 ```
 
@@ -519,7 +519,7 @@ SELECT
     DATE(updated_at) as date,
     COUNT(*) as updates,
     COUNT(DISTINCT id) as users_updated
-FROM users_dev 
+FROM users 
 WHERE updated_at >= NOW() - INTERVAL '7 days'
 GROUP BY DATE(updated_at)
 ORDER BY date DESC;
@@ -621,7 +621,7 @@ INSERT INTO users_perfis VALUES
  '["dashboard_executivo", "relatorio", "agente"]', true, false);
 
 -- 2. Assign to user
-UPDATE users_dev SET perfil_principal = 'new_custom_profile' 
+UPDATE users SET perfil_principal = 'new_custom_profile' 
 WHERE email = 'user@company.com';
 
 -- 3. User automatically gets access to:

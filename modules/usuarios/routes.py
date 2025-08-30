@@ -12,14 +12,14 @@ import os
 
 # Função para determinar a tabela de usuários baseada no ambiente
 def get_users_table():
-    """Retorna 'users_dev' em desenvolvimento, 'users' em produção"""
+    """Retorna 'users' em desenvolvimento, 'users' em produção"""
     flask_env = os.getenv('FLASK_ENV', 'production')
     flask_debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     
-    # Usar users_dev se FLASK_ENV=development ou FLASK_DEBUG=True
+    # Usar users se FLASK_ENV=development ou FLASK_DEBUG=True
     if flask_env == 'development' or flask_debug:
-        print(f"[DEBUG] Usando users_dev (FLASK_ENV={flask_env}, FLASK_DEBUG={flask_debug})")
-        return 'users_dev'
+        print(f"[DEBUG] Usando users (FLASK_ENV={flask_env}, FLASK_DEBUG={flask_debug})")
+        return 'users'
     
     print(f"[DEBUG] Usando users (FLASK_ENV={flask_env}, FLASK_DEBUG={flask_debug})")
     return 'users'
@@ -3545,21 +3545,21 @@ def api_update_users_perfis(user_id):
                     
                     print(f"[PERFIS] 🔧 Tentando atualizar usuário {user_id} com dados: {update_data}")
                     
-                    # Atualizar na tabela users_dev (nome correto da tabela)
+                    # Atualizar na tabela users (nome correto da tabela)
                     result = supabase_admin.table(get_users_table()).update(update_data).eq('id', user_id).execute()
                     
                     print(f"[PERFIS] 🔧 Resultado da atualização: {result}")
                     
                     if result.data:
-                        print(f"[PERFIS] ✅ Perfis salvos na tabela users_dev: {update_data}")
+                        print(f"[PERFIS] ✅ Perfis salvos na tabela users: {update_data}")
                         print(f"[PERFIS] 📋 Dados retornados: {result.data}")
                     else:
-                        print(f"[PERFIS] ⚠️ Nenhum dado retornado na atualização da tabela users_dev")
+                        print(f"[PERFIS] ⚠️ Nenhum dado retornado na atualização da tabela users")
                         if hasattr(result, 'error') and result.error:
                             print(f"[PERFIS] ❌ Erro na atualização: {result.error}")
                         
                 except Exception as update_error:
-                    print(f"[PERFIS] ❌ Erro ao atualizar tabela users_dev: {str(update_error)}")
+                    print(f"[PERFIS] ❌ Erro ao atualizar tabela users: {str(update_error)}")
                     import traceback
                     traceback.print_exc()
                     

@@ -204,7 +204,7 @@ def query_supabase():
 @bp.route('/check-tables')
 def check_tables():
     """
-    Verifica a estrutura das tabelas users e users_dev
+    Verifica a estrutura das tabelas users e users
     """
     try:
         results = {}
@@ -223,16 +223,16 @@ def check_tables():
                 'error': str(e)
             }
         
-        # Verificar users_dev
+        # Verificar users
         try:
-            result_users_dev = supabase_admin.table('users_dev').select('*').limit(1).execute()
-            results['users_dev'] = {
+            result_users = supabase_admin.table('users').select('*').limit(1).execute()
+            results['users'] = {
                 'exists': True,
-                'columns': list(result_users_dev.data[0].keys()) if result_users_dev.data else [],
-                'sample_count': len(result_users_dev.data)
+                'columns': list(result_users.data[0].keys()) if result_users.data else [],
+                'sample_count': len(result_users.data)
             }
         except Exception as e:
-            results['users_dev'] = {
+            results['users'] = {
                 'exists': False,
                 'error': str(e)
             }
