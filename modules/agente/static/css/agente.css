@@ -101,9 +101,13 @@
     gap: 1rem;
     margin-bottom: 2rem;
     padding: 1rem;
-    background: white;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Apenas actions-bar SEM classe de módulo recebem fundo branco */
+.actions-bar:not([class*="module-header"]) {
+    background: white;
 }
 
 .actions-left {

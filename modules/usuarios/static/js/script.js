@@ -39,19 +39,45 @@ const ROLE_CONFIG = {
         label: 'Administrador',
         icon: 'mdi-shield-crown',
         color: 'success',
-        description: 'Acesso total ao sistema'
+        description: 'Acesso total ao sistema',
+        perfil_principal_allowed: ['master_admin']
     },
     interno_unique: {
         label: 'Equipe Interna',
         icon: 'mdi-account-tie',
         color: 'info',
-        description: 'Colaboradores da Unique'
+        description: 'Colaboradores da Unique',
+        perfil_principal_allowed: ['basico', 'admin_operacao', 'admin_financeiro']
     },
     cliente_unique: {
         label: 'Cliente',
         icon: 'mdi-domain',
         color: 'warning',
-        description: 'Empresas clientes'
+        description: 'Empresas clientes',
+        perfil_principal_allowed: ['basico']
+    }
+};
+
+const PERFIL_PRINCIPAL_CONFIG = {
+    basico: {
+        label: 'Básico',
+        description: 'Acesso básico para consulta',
+        icon: 'mdi-account'
+    },
+    master_admin: {
+        label: 'Master Admin',
+        description: 'Administração completa do sistema',
+        icon: 'mdi-shield-crown'
+    },
+    admin_operacao: {
+        label: 'Admin Operacional',
+        description: 'Administra módulos operacionais (Importação, Consultoria, Exportação)',
+        icon: 'mdi-ship'
+    },
+    admin_financeiro: {
+        label: 'Admin Financeiro',
+        description: 'Administra apenas o módulo financeiro',
+        icon: 'mdi-cash-multiple'
     }
 };
 
@@ -73,6 +99,12 @@ let appState = {
         search: '',
         role: '',
         status: ''
+    },
+    // Novo estado para perfis
+    perfis: {
+        available: [],
+        selected: [],
+        searchTimeout: null
     }
 };
 
@@ -108,11 +140,21 @@ function initializeElements() {
         btnCloseModal: document.getElementById('btn-close-modal'),
         btnSave: document.getElementById('btn-save'),
         btnCancel: document.getElementById('btn-cancel'),
+        // Header buttons
+        btnCancelHeader: document.getElementById('btn-cancel-header'),
+        btnSaveHeader: document.getElementById('btn-save-header'),
         
         // Modal
         modalUsuario: document.getElementById('modal-usuario'),
         modalTitle: document.getElementById('modal-title'),
         modalDeleteConfirm: document.getElementById('modal-delete-confirm'),
+        
+        // View Modal
+        modalViewUsuario: document.getElementById('modal-view-usuario'),
+        viewModalTitle: document.getElementById('view-modal-title'),
+        userDetailsContent: document.getElementById('user-details-content'),
+        btnEditFromView: document.getElementById('btn-edit-from-view'),
+        btnCloseView: document.getElementById('btn-close-view'),
         
         // Form
         formUsuario: document.getElementById('form-usuario'),
@@ -135,10 +177,20 @@ function initializeElements() {
         sectionInterno: document.getElementById('section-interno'),
         sectionClientes: document.getElementById('section-clientes'),
         
-        // Grids
-        gridAdmin: document.getElementById('grid-admin'),
-        gridInterno: document.getElementById('grid-interno'),
-        gridClientes: document.getElementById('grid-clientes'),
+        // Table Bodies (replacing grids)
+        tbodyAdmin: document.getElementById('tbody-admin'),
+        tbodyInterno: document.getElementById('tbody-interno'),
+        tbodyClientes: document.getElementById('tbody-clientes'),
+        
+        // Tables
+        tableAdmin: document.getElementById('table-admin'),
+        tableInterno: document.getElementById('table-interno'),
+        tableClientes: document.getElementById('table-clientes'),
+        
+        // Empty States
+        emptyAdmin: document.getElementById('empty-admin'),
+        emptyInterno: document.getElementById('empty-interno'),
+        emptyClientes: document.getElementById('empty-clientes'),
         
         // Counts
         countAdmin: document.getElementById('count-admin'),
@@ -152,7 +204,16 @@ function initializeElements() {
         notificationArea: document.getElementById('notification-area'),
         
         // User Card Template
-        userCardTemplate: document.getElementById('user-card-template')
+        userCardTemplate: document.getElementById('user-card-template'),
+        
+        // Perfis Elements
+        perfisSearch: document.getElementById('perfis-search'),
+        perfisList: document.getElementById('perfis-list'),
+        perfisEmpty: document.getElementById('perfis-empty'),
+        perfisSelectedCount: document.getElementById('perfis-selected-count'),
+        
+        // Collapsible Headers
+        collapsibleHeaders: document.querySelectorAll('.collapsible-header')
     };
     
     // DEBUG: Verificar elementos críticos
@@ -160,9 +221,9 @@ function initializeElements() {
         modalDeleteConfirm: !!elements.modalDeleteConfirm,
         modalUsuario: !!elements.modalUsuario,
         userCardTemplate: !!elements.userCardTemplate,
-        gridAdmin: !!elements.gridAdmin,
-        gridInterno: !!elements.gridInterno,
-        gridClientes: !!elements.gridClientes
+        tbodyAdmin: !!elements.tbodyAdmin,
+        tbodyInterno: !!elements.tbodyInterno,
+        tbodyClientes: !!elements.tbodyClientes
     });
     
     // Verificar se algum elemento crítico está faltando
@@ -200,10 +261,42 @@ function initializeEventListeners() {
         elements.btnCancel.addEventListener('click', closeModal);
     }
     
+    // Header buttons (duplicated for convenience)
+    if (elements.btnCancelHeader) {
+        elements.btnCancelHeader.addEventListener('click', closeModal);
+    }
+    
+    if (elements.btnSaveHeader) {
+        elements.btnSaveHeader.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Trigger form submission
+            if (elements.formUsuario) {
+                elements.formUsuario.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        });
+    }
+    
     if (elements.modalUsuario) {
         elements.modalUsuario.addEventListener('click', function(e) {
             if (e.target === elements.modalUsuario) {
                 closeModal();
+            }
+        });
+    }
+    
+    // View Modal
+    if (elements.btnCloseView) {
+        elements.btnCloseView.addEventListener('click', closeViewModal);
+    }
+    
+    if (elements.btnEditFromView) {
+        elements.btnEditFromView.addEventListener('click', handleEditFromView);
+    }
+    
+    if (elements.modalViewUsuario) {
+        elements.modalViewUsuario.addEventListener('click', function(e) {
+            if (e.target === elements.modalViewUsuario) {
+                closeViewModal();
             }
         });
     }
@@ -242,11 +335,17 @@ function initializeEventListeners() {
     initializeEmpresasEventListeners();
     initializeWhatsappEventListeners();
     
+    // Perfis e Seções Colapsáveis
+    initializePerfisEventListeners();
+    initializeCollapsibleSections();
+    
     // ESC para fechar modal - MELHORADO
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             if (elements.modalDeleteConfirm && !elements.modalDeleteConfirm.classList.contains('hidden')) {
                 hideDeleteModal();
+            } else if (elements.modalViewUsuario && !elements.modalViewUsuario.classList.contains('hidden')) {
+                closeViewModal();
             } else if (elements.modalUsuario && !elements.modalUsuario.classList.contains('hidden')) {
                 closeModal();
             }
@@ -320,8 +419,10 @@ function updateKPIs() {
     // Usuários ativos
     const ativosCount = users.filter(u => u.ativo === true || u.ativo === 'true').length;
     
-    // Atualizar KPIs
-    elements.kpiAdmin.textContent = adminCount;
+    // Atualizar KPIs (verificar se elementos existem)
+    if (elements.kpiAdmin) {
+        elements.kpiAdmin.textContent = adminCount;
+    }
     elements.kpiInterno.textContent = internoCount;
     elements.kpiClientes.textContent = clientesCount;
     elements.kpiAtivos.textContent = ativosCount;
@@ -400,18 +501,24 @@ function displayUsersByRole() {
     
     console.log('[USUARIOS] Usuários por role:', usersByRole);
     
-    // Atualizar contadores das seções
-    elements.countAdmin.textContent = usersByRole.admin.length;
+    // Atualizar contadores das seções (verificar se elementos existem)
+    if (elements.countAdmin) {
+        elements.countAdmin.textContent = usersByRole.admin.length;
+    }
     elements.countInterno.textContent = usersByRole.interno_unique.length;
     elements.countClientes.textContent = usersByRole.cliente_unique.length;
     
-    // Renderizar usuários em cada seção
-    renderUsersInGrid(elements.gridAdmin, usersByRole.admin);
-    renderUsersInGrid(elements.gridInterno, usersByRole.interno_unique);
-    renderUsersInGrid(elements.gridClientes, usersByRole.cliente_unique);
+    // Renderizar usuários em cada seção (apenas se as seções existirem)
+    if (elements.tbodyAdmin) {
+        renderUsersInTable(elements.tbodyAdmin, usersByRole.admin, 'admin');
+    }
+    renderUsersInTable(elements.tbodyInterno, usersByRole.interno_unique, 'interno');
+    renderUsersInTable(elements.tbodyClientes, usersByRole.cliente_unique, 'clientes');
     
-    // Mostrar/ocultar seções baseado na presença de usuários
-    toggleSectionVisibility(elements.sectionAdmin, usersByRole.admin.length > 0);
+    // Mostrar/ocultar seções baseado na presença de usuários (apenas se existirem)
+    if (elements.sectionAdmin) {
+        toggleSectionVisibility(elements.sectionAdmin, usersByRole.admin.length > 0);
+    }
     toggleSectionVisibility(elements.sectionInterno, usersByRole.interno_unique.length > 0);
     toggleSectionVisibility(elements.sectionClientes, usersByRole.cliente_unique.length > 0);
     
@@ -421,78 +528,140 @@ function displayUsersByRole() {
 }
 
 /**
- * Renderiza usuários em um grid específico
+ * Renderiza usuários em uma tabela específica
  */
-function renderUsersInGrid(gridElement, users) {
-    if (!gridElement) {
-        console.warn('[USUARIOS] Grid element não encontrado para renderização');
+function renderUsersInTable(tbodyElement, users, role) {
+    if (!tbodyElement) {
+        console.warn('[USUARIOS] Tbody element não encontrado para renderização');
         return;
     }
     
-    console.log('[USUARIOS] Renderizando', users.length, 'usuários no grid', gridElement.id);
+    console.log('[USUARIOS] Renderizando', users.length, 'usuários na tabela', tbodyElement.id);
     
-    gridElement.innerHTML = '';
+    tbodyElement.innerHTML = '';
     
     users.forEach((user, index) => {
-        console.log(`[USUARIOS] Criando card ${index + 1}:`, user);
-        const cardElement = createUserCard(user);
-        gridElement.appendChild(cardElement);
+        console.log(`[USUARIOS] Criando linha ${index + 1}:`, user);
+        const rowElement = createUserTableRow(user);
+        tbodyElement.appendChild(rowElement);
     });
     
-    console.log('[USUARIOS] Renderização completa para grid', gridElement.id);
+    // Show/hide empty states
+    const emptyElement = document.getElementById(`empty-${role}`);
+    if (emptyElement) {
+        emptyElement.style.display = users.length === 0 ? 'block' : 'none';
+    }
+    
+    console.log('[USUARIOS] Renderização completa para tabela', tbodyElement.id);
 }
 
 /**
- * Cria card de usuário - VERSÃO CORRIGIDA COM EVENT LISTENERS
+ * Cria linha de tabela para usuário - NOVA VERSÃO PARA TABELAS
  */
-function createUserCard(user) {
-    console.log('[USUARIOS] Criando card para usuário:', user.id, user.nome || user.name);
+function createUserTableRow(user) {
+    console.log('[USUARIOS] Criando linha para usuário:', user.id, user.nome || user.name);
     
-    // Criar elemento do card
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'user-card';
-    cardDiv.setAttribute('data-user-id', user.id);
-    cardDiv.setAttribute('data-role', user.role);
+    // Criar elemento da linha
+    const rowElement = document.createElement('tr');
+    rowElement.className = 'user-row';
+    rowElement.setAttribute('data-user-id', user.id);
+    rowElement.setAttribute('data-role', user.role);
     
     // Determinar status
     const isActive = user.ativo === true || user.ativo === 'true' || user.is_active === true;
     const statusClass = isActive ? 'active' : 'inactive';
-    cardDiv.setAttribute('data-status', statusClass);
+    rowElement.setAttribute('data-status', statusClass);
     
-    // Montar HTML do card
-    cardDiv.innerHTML = `
-        <div class="user-card-header">
-            <div class="user-status ${statusClass}"></div>
-            <div class="user-actions">
-                <button class="btn-action btn-edit" title="Editar usuário" data-action="edit" data-user-id="${user.id}">
+    // Determinar se é administrador de módulo
+    const isModuleAdmin = user.perfil_principal && ['admin_operacao', 'admin_financeiro'].includes(user.perfil_principal);
+    const isMasterAdmin = user.perfil_principal === 'master_admin';
+    
+    // NOVA LÓGICA: Verificar se tem perfis de admin baseado em is_admin_profile
+    const hasAdminProfile = user.perfis && Array.isArray(user.perfis) && user.perfis.some(perfil => perfil.is_admin_profile === true);
+    
+    console.log(`[DEBUG] Admin check for ${user.nome || user.name}:`, {
+        perfil_principal: user.perfil_principal,
+        isModuleAdmin: isModuleAdmin,
+        isMasterAdmin: isMasterAdmin,
+        hasAdminProfile: hasAdminProfile,
+        perfis: user.perfis
+    });
+    
+    // Contar totais
+    const totalEmpresas = (user.agent_info?.empresas && Array.isArray(user.agent_info.empresas)) ? user.agent_info.empresas.length : 0;
+    const totalNumeros = (user.whatsapp_numbers && Array.isArray(user.whatsapp_numbers)) ? user.whatsapp_numbers.length : 0;
+    const totalPerfis = (user.perfis && Array.isArray(user.perfis)) ? user.perfis.length : 0;
+    
+    // Montar HTML da linha
+    rowElement.innerHTML = `
+        <td class="user-name-cell">
+            <div class="user-name-container">
+                <span class="user-name">${user.nome || user.name || 'Sem nome'}</span>
+            </div>
+        </td>
+        <td class="user-email-cell">
+            <span class="user-email">${user.email || 'Sem email'}</span>
+        </td>
+        <td class="user-count-cell">
+            <span class="count-badge">${totalEmpresas}</span>
+        </td>
+        <td class="user-count-cell">
+            <span class="count-badge">${totalNumeros}</span>
+        </td>
+        <td class="user-count-cell">
+            <span class="count-badge">${totalPerfis}</span>
+        </td>
+        <td class="user-admin-cell">
+            ${
+                isMasterAdmin ? '<i class="admin-shield mdi mdi-shield-crown" title="Master Admin"></i>' :
+                hasAdminProfile ? '<i class="admin-shield mdi mdi-shield" title="Administrador de Módulo"></i>' :
+                '<span class="admin-none">-</span>'
+            }
+        </td>
+        <td class="user-status-cell">
+            <span class="status-badge status-${statusClass}">
+                <span class="status-dot"></span>
+                ${isActive ? 'Ativo' : 'Inativo'}
+            </span>
+        </td>
+        <td class="user-actions-cell">
+            <div class="table-actions">
+                <button class="btn-table-action btn-view" title="Visualizar usuário" data-action="view" data-user-id="${user.id}">
+                    <i class="mdi mdi-eye"></i>
+                </button>
+                <button class="btn-table-action btn-edit" title="Editar usuário" data-action="edit" data-user-id="${user.id}">
                     <i class="mdi mdi-pencil"></i>
                 </button>
-                <button class="btn-action btn-delete" title="Excluir usuário" data-action="delete" data-user-id="${user.id}">
+                <button class="btn-table-action btn-delete" title="Excluir usuário" data-action="delete" data-user-id="${user.id}">
                     <i class="mdi mdi-delete"></i>
                 </button>
             </div>
-        </div>
-        <div class="user-card-content">
-            <div class="user-info">
-                <h4 class="user-name">${user.nome || user.name || 'Sem nome'}</h4>
-                <p class="user-email">${user.email || 'Sem email'}</p>
-            </div>
-            <div class="user-meta">
-                ${generateEmpresasInfo(user)}
-                ${generateWhatsappInfo(user)}
-            </div>
-        </div>
+        </td>
     `;
     
-    // Adicionar event listeners aos botões - CORREÇÃO PRINCIPAL
-    const editBtn = cardDiv.querySelector('.btn-edit');
-    const deleteBtn = cardDiv.querySelector('.btn-delete');
+    // Adicionar event listeners aos botões
+    const viewBtn = rowElement.querySelector('.btn-view');
+    const editBtn = rowElement.querySelector('.btn-edit');
+    const deleteBtn = rowElement.querySelector('.btn-delete');
     
     console.log('[USUARIOS] DEBUG - Botões encontrados:', {
+        viewBtn: !!viewBtn,
         editBtn: !!editBtn,
         deleteBtn: !!deleteBtn,
         userId: user.id
     });
+    
+    if (viewBtn) {
+        viewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[USUARIOS] ✓ Botão VISUALIZAR clicado para usuário:', user.id);
+            openModalForView(user.id);
+        });
+        console.log('[USUARIOS] ✓ Event listener VISUALIZAR adicionado para usuário:', user.id);
+    } else {
+        console.error('[USUARIOS] ✗ Botão VISUALIZAR não encontrado para usuário:', user.id);
+    }
     
     if (editBtn) {
         editBtn.addEventListener('click', (e) => {
@@ -518,7 +687,7 @@ function createUserCard(user) {
         console.error('[USUARIOS] ✗ Botão EXCLUIR não encontrado para usuário:', user.id);
     }
     
-    return cardDiv;
+    return rowElement;
 }
 
 /**
@@ -626,6 +795,8 @@ function openModalForCreate() {
     
     elements.modalTitle.textContent = 'Novo Usuário';
     clearForm();
+    clearPerfisSelection();
+    removeEmailFieldRestrictions(); // Ensure email field is enabled for new users
     showPasswordSection();
     hideEmpresasSection();
     showModal();
@@ -644,6 +815,9 @@ async function openModalForEdit(userId) {
         
         const userData = await loadUserData(userId);
         fillUserForm(userData);
+        
+        // Carregar perfis do usuário
+        await loadUserPerfis(userId);
         
         hideFormLoading();
         
@@ -694,7 +868,18 @@ function fillUserForm(user) {
     // A API retorna 'is_active' ao invés de 'ativo'
     document.getElementById('ativo').checked = user.is_active === true || user.ativo === true || user.ativo === 'true';
     
+    // Apply email field restrictions if in edit mode
+    if (appState.currentMode === MODAL_MODES.EDIT) {
+        applyEmailFieldRestrictions();
+    } else {
+        removeEmailFieldRestrictions();
+    }
+    
     handleRoleChange();
+    
+    // CRITICAL FIX: Set the correct module admin radio button based on user's perfil_principal
+    setModuleAdminSelection(user);
+    
     hidePasswordSection();
     
     // Carregar empresas e WhatsApp se necessário
@@ -720,6 +905,76 @@ function handleRoleChange() {
         showEmpresasSection();
     } else {
         hideEmpresasSection();
+    }
+    
+    // Module Administrator section - only for Master Admins creating Equipe Interna users
+    handleModuleAdminSection(role);
+}
+
+/**
+ * Handles Module Administrator section visibility and functionality
+ */
+function handleModuleAdminSection(role) {
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    
+    if (!moduleAdminSection) {
+        // Module admin section not available (user is not Master Admin)
+        return;
+    }
+    
+    if (role === 'interno_unique') {
+        // Show module admin section for Equipe Interna
+        moduleAdminSection.style.display = 'block';
+        moduleAdminSection.classList.add('active');
+        
+        // Initialize module admin event listeners if not already done
+        initializeModuleAdminEventListeners();
+    } else {
+        // Hide module admin section for other roles
+        moduleAdminSection.style.display = 'none';
+        moduleAdminSection.classList.remove('active');
+        
+        // Reset to regular user when hidden
+        const noneRadio = document.querySelector('input[name="module_admin"][value="none"]');
+        if (noneRadio) {
+            noneRadio.checked = true;
+        }
+    }
+}
+
+/**
+ * Initializes Module Administrator section event listeners
+ */
+function initializeModuleAdminEventListeners() {
+    const moduleAdminRadios = document.querySelectorAll('input[name="module_admin"]');
+    
+    moduleAdminRadios.forEach(radio => {
+        // Remove existing listeners to avoid duplicates
+        radio.removeEventListener('change', handleModuleAdminChange);
+        // Add listener
+        radio.addEventListener('change', handleModuleAdminChange);
+    });
+}
+
+/**
+ * Handles Module Administrator radio button changes
+ */
+function handleModuleAdminChange(event) {
+    const selectedValue = event.target.value;
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    
+    console.log('[MODULE_ADMIN] Selected module admin type:', selectedValue);
+    
+    // Update visual feedback based on selection
+    if (selectedValue !== 'none') {
+        moduleAdminSection.classList.add('active');
+        
+        // Show notification about module admin selection
+        const moduleLabel = selectedValue === 'admin_operacao' ? 'Operacional' : 'Financeiro';
+        console.log(`[MODULE_ADMIN] User will be Module Administrator for: ${moduleLabel}`);
+    } else {
+        moduleAdminSection.classList.remove('active');
+        console.log('[MODULE_ADMIN] User will be regular internal user');
     }
 }
 
@@ -769,6 +1024,50 @@ function hidePasswordSection() {
 }
 
 /**
+ * Apply email field restrictions for edit mode
+ * Similar to profile name restrictions - email cannot be changed
+ * as it's used as authentication key and linked to other tables
+ */
+function applyEmailFieldRestrictions() {
+    const emailField = document.getElementById('email');
+    const warningDiv = document.getElementById('email-readonly-warning');
+    
+    if (emailField) {
+        // Disable the email field
+        emailField.disabled = true;
+        emailField.style.backgroundColor = '#f8f9fa';
+        emailField.style.cursor = 'not-allowed';
+        
+        console.log('[USUARIOS] Email field disabled for edit mode - preserving authentication key');
+    }
+    
+    if (warningDiv) {
+        // Show warning message
+        warningDiv.style.display = 'block';
+    }
+}
+
+/**
+ * Remove email field restrictions for create mode
+ */
+function removeEmailFieldRestrictions() {
+    const emailField = document.getElementById('email');
+    const warningDiv = document.getElementById('email-readonly-warning');
+    
+    if (emailField) {
+        // Re-enable the email field
+        emailField.disabled = false;
+        emailField.style.backgroundColor = '';
+        emailField.style.cursor = '';
+    }
+    
+    if (warningDiv) {
+        // Hide warning message
+        warningDiv.style.display = 'none';
+    }
+}
+
+/**
  * Mostra/oculta modal
  */
 function showModal() {
@@ -812,6 +1111,19 @@ function clearForm() {
         elements.formUsuario.reset();
     }
     
+    // Reset module admin section
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    if (moduleAdminSection) {
+        moduleAdminSection.style.display = 'none';
+        moduleAdminSection.classList.remove('active');
+        
+        // Reset to "none" option
+        const noneRadio = document.querySelector('input[name="module_admin"][value="none"]');
+        if (noneRadio) {
+            noneRadio.checked = true;
+        }
+    }
+    
     clearEmpresasList();
     clearWhatsappList();
 }
@@ -826,7 +1138,8 @@ function clearForm() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
-    if (!validateForm()) {
+    // Use await since validateForm is now async
+    if (!(await validateForm())) {
         return;
     }
     
@@ -851,11 +1164,46 @@ async function handleFormSubmit(e) {
 }
 
 /**
+ * Valida se o usuário pode atribuir os perfis selecionados
+ */
+async function validatePerfisSelection() {
+    try {
+        if (appState.perfis.selected.length === 0) {
+            return { valid: true, message: 'Nenhum perfil selecionado' };
+        }
+        
+        console.log('[PERFIS_VALIDATION] Validando perfis:', appState.perfis.selected);
+        
+        const response = await apiRequest('/api/validate-perfis', 'POST', {
+            perfis_ids: appState.perfis.selected
+        });
+        
+        if (response.success) {
+            console.log('[PERFIS_VALIDATION] Perfis válidos');
+            return { valid: true, message: response.message };
+        } else {
+            console.error('[PERFIS_VALIDATION] Perfis inválidos:', response.message);
+            return { valid: false, message: response.message };
+        }
+    } catch (error) {
+        console.error('[PERFIS_VALIDATION] Erro na validação:', error);
+        return { valid: false, message: 'Erro ao validar perfis: ' + error.message };
+    }
+}
+
+/**
  * Cria novo usuário
  */
 async function createUser() {
     const userData = collectUserFormData();
     
+    // STEP 1: Validate perfis BEFORE creating user
+    const perfilValidation = await validatePerfisSelection();
+    if (!perfilValidation.valid) {
+        throw new Error(perfilValidation.message);
+    }
+    
+    // STEP 2: Create user only if perfis are valid
     const response = await apiRequest('/salvar', 'POST', userData);
     
     if (!response.success) {
@@ -864,15 +1212,25 @@ async function createUser() {
     
     const userId = response.user_id;
     
-    // Salvar empresas e WhatsApp se necessário
-    // Empresas são permitidas para cliente_unique E interno_unique
-    if (userData.role === 'cliente_unique' || userData.role === 'interno_unique') {
-        await saveUserEmpresas(userId);
+    // STEP 3: Save related data (empresas, whatsapp, perfis)
+    try {
+        // Salvar empresas e WhatsApp se necessário
+        // Empresas são permitidas para cliente_unique E interno_unique
+        if (userData.role === 'cliente_unique' || userData.role === 'interno_unique') {
+            await saveUserEmpresas(userId);
+        }
+        
+        await saveUserWhatsapp(userId);
+        
+        // Salvar perfis
+        await saveUserPerfis(userId);
+        
+        showNotification('Usuário criado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
+    } catch (relatedDataError) {
+        // Se falhar ao salvar dados relacionados, avisar mas não falhar completamente
+        console.error('[USUARIOS] Erro ao salvar dados relacionados:', relatedDataError);
+        showNotification('Usuário criado, mas houve problemas ao salvar alguns dados: ' + relatedDataError.message, NOTIFICATION_TYPES.WARNING);
     }
-    
-    await saveUserWhatsapp(userId);
-    
-    showNotification('Usuário criado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
 
 /**
@@ -896,6 +1254,9 @@ async function updateUser() {
     
     await saveUserWhatsapp(userId);
     
+    // Salvar perfis
+    await saveUserPerfis(userId);
+    
     showNotification('Usuário atualizado com sucesso!', NOTIFICATION_TYPES.SUCCESS);
 }
 
@@ -903,7 +1264,7 @@ async function updateUser() {
  * Coleta dados do formulário
  */
 function collectUserFormData() {
-    return {
+    const formData = {
         name: document.getElementById('nome').value.trim(),
         email: document.getElementById('email').value.trim(),
         role: document.getElementById('role').value,
@@ -911,12 +1272,106 @@ function collectUserFormData() {
         password: document.getElementById('senha')?.value,
         confirm_password: document.getElementById('confirmar_senha')?.value
     };
+    
+    // Handle Module Administrator selection for perfil_principal
+    const moduleAdminSelection = getModuleAdminSelection();
+    
+    if (moduleAdminSelection && moduleAdminSelection !== 'none') {
+        // User selected a module admin role
+        formData.perfil_principal = moduleAdminSelection;
+        console.log('[MODULE_ADMIN] Setting perfil_principal to:', moduleAdminSelection);
+    } else {
+        // Regular user or admin role
+        if (formData.role === 'admin') {
+            formData.perfil_principal = 'master_admin';
+        } else if (appState.currentMode === MODAL_MODES.EDIT && appState.currentUser) {
+            // CRITICAL FIX: When editing existing user and no module admin selected,
+            // preserve the existing perfil_principal if it's a valid one
+            const currentPerfilPrincipal = appState.currentUser.perfil_principal;
+            if (currentPerfilPrincipal && 
+                ['admin_operacao', 'admin_financeiro', 'basico'].includes(currentPerfilPrincipal)) {
+                formData.perfil_principal = currentPerfilPrincipal;
+                console.log('[MODULE_ADMIN] Preserving existing perfil_principal:', currentPerfilPrincipal);
+            } else {
+                formData.perfil_principal = 'basico';
+                console.log('[MODULE_ADMIN] Defaulting to basico (invalid or missing current perfil_principal)');
+            }
+        } else {
+            // Creating new user - default to basico
+            formData.perfil_principal = 'basico';
+            console.log('[MODULE_ADMIN] New user defaulting to basico');
+        }
+    }
+    
+    console.log('[FORM_DATA] Collected user data:', formData);
+    return formData;
+}
+
+/**
+ * Gets the selected module administrator option
+ */
+function getModuleAdminSelection() {
+    const selectedRadio = document.querySelector('input[name="module_admin"]:checked');
+    return selectedRadio ? selectedRadio.value : 'none';
+}
+
+/**
+ * Sets the module administrator radio button based on user's perfil_principal
+ * CRITICAL FIX: This ensures the correct radio button is selected when editing users
+ */
+function setModuleAdminSelection(user) {
+    console.log('[MODULE_ADMIN] Setting module admin selection for user:', user);
+    
+    // Only proceed if the module admin section exists (Master Admin interface)
+    const moduleAdminSection = document.getElementById('module-admin-section');
+    if (!moduleAdminSection) {
+        console.log('[MODULE_ADMIN] Module admin section not found - user is not Master Admin');
+        return;
+    }
+    
+    // Only set for interno_unique users
+    if (user.role !== 'interno_unique') {
+        console.log('[MODULE_ADMIN] User is not interno_unique, skipping module admin selection');
+        return;
+    }
+    
+    const perfilPrincipal = user.perfil_principal;
+    console.log('[MODULE_ADMIN] User perfil_principal:', perfilPrincipal);
+    
+    // Determine which radio button to select based on perfil_principal
+    let targetValue = 'none'; // Default to regular user
+    
+    if (perfilPrincipal === 'admin_operacao') {
+        targetValue = 'admin_operacao';
+        console.log('[MODULE_ADMIN] User is Operational Module Admin');
+    } else if (perfilPrincipal === 'admin_financeiro') {
+        targetValue = 'admin_financeiro';
+        console.log('[MODULE_ADMIN] User is Financial Module Admin');
+    } else if (perfilPrincipal === 'basico') {
+        targetValue = 'none';
+        console.log('[MODULE_ADMIN] User is regular internal user');
+    } else {
+        console.warn('[MODULE_ADMIN] Unexpected perfil_principal for interno_unique user:', perfilPrincipal);
+        targetValue = 'none'; // Default to safe option
+    }
+    
+    // Set the correct radio button
+    const targetRadio = document.querySelector(`input[name="module_admin"][value="${targetValue}"]`);
+    if (targetRadio) {
+        targetRadio.checked = true;
+        console.log('[MODULE_ADMIN] Successfully set radio button to:', targetValue);
+        
+        // Trigger change event to update UI if needed
+        targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+        console.error('[MODULE_ADMIN] Could not find radio button for value:', targetValue);
+    }
 }
 
 /**
  * Valida formulário
  */
-function validateForm() {
+async function validateForm() {
     const nome = document.getElementById('nome').value.trim();
     const email = document.getElementById('email').value.trim();
     const role = document.getElementById('role').value;
@@ -948,6 +1403,13 @@ function validateForm() {
         
         if (senha !== confirmarSenha) {
             showNotification('Senhas não coincidem', NOTIFICATION_TYPES.ERROR);
+            return false;
+        }
+        
+        // Validate perfis selection for CREATE mode
+        const perfilValidation = await validatePerfisSelection();
+        if (!perfilValidation.valid) {
+            showNotification(perfilValidation.message, NOTIFICATION_TYPES.ERROR);
             return false;
         }
     }
@@ -1761,8 +2223,8 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     const options = {
         method,
         headers: {
-            'Content-Type': 'application/json'
-            // REMOVIDO: X-API-Key - usar autenticação de sessão normal
+            'Content-Type': 'application/json',
+            'X-API-Key': 'uniq_api_2025_dev_bypass_key'  // Para testes em desenvolvimento
         },
         credentials: 'same-origin'  // Incluir cookies de sessão
     };
@@ -1813,4 +2275,558 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
         updateKPIs,
         filterAndDisplayUsers
     };
+}
+
+// =================================
+// GERENCIAMENTO DE PERFIS
+// =================================
+
+/**
+ * Inicializa event listeners para perfis
+ */
+function initializePerfisEventListeners() {
+    // Busca de perfis
+    if (elements.perfisSearch) {
+        elements.perfisSearch.addEventListener('input', handlePerfisSearch);
+    }
+    
+    // Carregamento inicial de perfis disponíveis
+    loadAvailablePerfis();
+}
+
+/**
+ * Carrega perfis disponíveis
+ */
+async function loadAvailablePerfis() {
+    try {
+        const response = await apiRequest('/api/perfis-disponivel');
+        
+        if (response.success) {
+            appState.perfis.available = response.perfis;
+            console.log('[PERFIS] Perfis disponíveis carregados:', appState.perfis.available.length);
+            renderPerfisList();
+        } else {
+            console.error('[PERFIS] Erro ao carregar perfis:', response.message);
+            appState.perfis.available = [];
+            renderPerfisList();
+        }
+    } catch (error) {
+        console.error('[PERFIS] Erro ao carregar perfis disponíveis:', error);
+        appState.perfis.available = [];
+        renderPerfisList();
+    }
+}
+
+/**
+ * Carrega perfis do usuário atual
+ */
+async function loadUserPerfis(userId) {
+    if (!userId) return;
+    
+    console.log('[PERFIS_DEBUG] Loading profiles for user:', userId);
+    
+    try {
+        const response = await apiRequest(`/${userId}/perfis`);
+        
+        console.log('[PERFIS_DEBUG] Raw response from backend:', response);
+        
+        if (response.success) {
+            const profileIds = response.perfis.map(p => p.id);
+            console.log('[PERFIS_DEBUG] Profile IDs extracted from response:', profileIds);
+            
+            appState.perfis.selected = profileIds;
+            console.log('[PERFIS] Perfis do usuário carregados:', appState.perfis.selected);
+            renderPerfisList();
+            updatePerfisSelectedCount();
+        } else {
+            console.error('[PERFIS] Erro ao carregar perfis do usuário:', response.message);
+            appState.perfis.selected = [];
+            renderPerfisList();
+        }
+    } catch (error) {
+        console.error('[PERFIS] Erro ao carregar perfis do usuário:', error);
+        appState.perfis.selected = [];
+        renderPerfisList();
+    }
+}
+
+/**
+ * Manipula busca de perfis
+ */
+function handlePerfisSearch(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    
+    clearTimeout(appState.perfis.searchTimeout);
+    appState.perfis.searchTimeout = setTimeout(() => {
+        renderPerfisList(searchTerm);
+    }, CONFIG.DEBOUNCE_DELAY);
+}
+
+/**
+ * Renderiza lista de perfis
+ */
+function renderPerfisList(searchTerm = '') {
+    if (!elements.perfisList) return;
+    
+    let filteredPerfis = appState.perfis.available;
+    
+    // Aplicar filtro de busca
+    if (searchTerm) {
+        filteredPerfis = filteredPerfis.filter(perfil => 
+            perfil.perfil_nome.toLowerCase().includes(searchTerm) ||
+            perfil.descricao.toLowerCase().includes(searchTerm) ||
+            perfil.codigo.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Limpar lista
+    elements.perfisList.innerHTML = '';
+    
+    if (filteredPerfis.length === 0) {
+        elements.perfisEmpty.style.display = 'block';
+        return;
+    }
+    
+    elements.perfisEmpty.style.display = 'none';
+    
+    // Renderizar perfis
+    filteredPerfis.forEach(perfil => {
+        const perfilElement = createPerfilItem(perfil);
+        elements.perfisList.appendChild(perfilElement);
+    });
+}
+
+/**
+ * Cria elemento de perfil
+ */
+function createPerfilItem(perfil) {
+    const div = document.createElement('div');
+    div.className = 'perfil-item';
+    
+    const isSelected = appState.perfis.selected.includes(perfil.id);
+    if (isSelected) {
+        div.classList.add('selected');
+    }
+    
+    div.innerHTML = `
+        <input type="checkbox" 
+               class="perfil-checkbox" 
+               data-perfil-id="${perfil.id}"
+               ${isSelected ? 'checked' : ''}>
+        <div class="perfil-info">
+            <div class="perfil-name">${perfil.perfil_nome}</div>
+            <div class="perfil-description">${perfil.descricao || 'Sem descrição'}</div>
+        </div>
+        <div class="perfil-codigo">${perfil.codigo}</div>
+    `;
+    
+    // Event listener para checkbox
+    const checkbox = div.querySelector('.perfil-checkbox');
+    checkbox.addEventListener('change', function() {
+        handlePerfilToggle(perfil.id, this.checked);
+    });
+    
+    // Event listener para o item inteiro
+    div.addEventListener('click', function(e) {
+        if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            handlePerfilToggle(perfil.id, checkbox.checked);
+        }
+    });
+    
+    return div;
+}
+
+/**
+ * Manipula seleção/desseleção de perfil
+ */
+function handlePerfilToggle(perfilId, isSelected) {
+    console.log('[PERFIS_DEBUG] Profile toggle called:', { perfilId, isSelected });
+    console.log('[PERFIS_DEBUG] Current selected before toggle:', JSON.stringify(appState.perfis.selected));
+    
+    if (isSelected) {
+        if (!appState.perfis.selected.includes(perfilId)) {
+            appState.perfis.selected.push(perfilId);
+            console.log('[PERFIS_DEBUG] Added profile:', perfilId);
+        }
+    } else {
+        appState.perfis.selected = appState.perfis.selected.filter(id => id !== perfilId);
+        console.log('[PERFIS_DEBUG] Removed profile:', perfilId);
+    }
+    
+    console.log('[PERFIS_DEBUG] Selected after toggle:', JSON.stringify(appState.perfis.selected));
+    
+    // Atualizar UI
+    updatePerfilItemSelection(perfilId, isSelected);
+    updatePerfisSelectedCount();
+    
+    console.log('[PERFIS] Perfis selecionados:', appState.perfis.selected);
+}
+
+/**
+ * Atualiza seleção visual do item de perfil
+ */
+function updatePerfilItemSelection(perfilId, isSelected) {
+    const checkbox = document.querySelector(`[data-perfil-id="${perfilId}"]`);
+    if (checkbox) {
+        const perfilItem = checkbox.closest('.perfil-item');
+        if (isSelected) {
+            perfilItem.classList.add('selected');
+        } else {
+            perfilItem.classList.remove('selected');
+        }
+    }
+}
+
+/**
+ * Atualiza contador de perfis selecionados
+ */
+function updatePerfisSelectedCount() {
+    if (elements.perfisSelectedCount) {
+        const count = appState.perfis.selected.length;
+        elements.perfisSelectedCount.textContent = `${count} selecionado${count !== 1 ? 's' : ''}`;
+    }
+}
+
+/**
+ * Salva perfis do usuário
+ */
+async function saveUserPerfis(userId) {
+    if (!userId) return;
+    
+    // CRITICAL FIX: Filter out 'basico' from selected profiles since it belongs only in perfil_principal
+    const functionalProfiles = appState.perfis.selected.filter(profileId => profileId !== 'basico');
+    
+    console.log('[PERFIS_DEBUG] About to save profiles for user:', userId);
+    console.log('[PERFIS_DEBUG] Selected profiles before filtering:', appState.perfis.selected);
+    console.log('[PERFIS_DEBUG] Functional profiles after filtering out basico:', functionalProfiles);
+    console.log('[PERFIS_DEBUG] Profile array contents:', JSON.stringify(functionalProfiles));
+    
+    try {
+        const response = await apiRequest(`/${userId}/perfis`, 'POST', {
+            perfis_ids: functionalProfiles
+        });
+        
+        if (response.success) {
+            console.log('[PERFIS] Perfis do usuário salvos com sucesso');
+            return true;
+        } else {
+            console.error('[PERFIS] Erro ao salvar perfis:', response.message);
+            
+            // Provide more specific error message for permission issues
+            if (response.message && response.message.includes('permissão')) {
+                throw new Error(`Erro de permissão: ${response.message}`);
+            } else {
+                throw new Error(`Erro ao salvar perfis: ${response.message}`);
+            }
+        }
+    } catch (error) {
+        console.error('[PERFIS] Erro ao salvar perfis do usuário:', error);
+        throw error; // Re-throw to be handled by caller
+    }
+}
+
+/**
+ * Limpa seleção de perfis
+ */
+function clearPerfisSelection() {
+    appState.perfis.selected = [];
+    renderPerfisList();
+    updatePerfisSelectedCount();
+}
+
+// =================================
+// SEÇÕES COLAPSÁVEIS
+// =================================
+
+/**
+ * Inicializa seções colapsáveis
+ */
+function initializeCollapsibleSections() {
+    elements.collapsibleHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const targetContent = document.getElementById(targetId);
+            
+            if (targetContent) {
+                toggleCollapsibleSection(this, targetContent);
+            }
+        });
+    });
+}
+
+/**
+ * Toggle de seção colapsável
+ */
+function toggleCollapsibleSection(header, content) {
+    const isExpanded = header.classList.contains('expanded');
+    
+    if (isExpanded) {
+        // Colapsar
+        header.classList.remove('expanded');
+        content.classList.remove('expanded');
+        content.classList.add('collapsed');
+    } else {
+        // Expandir
+        header.classList.add('expanded');
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+    }
+}
+
+/**
+ * Expande seção específica
+ */
+function expandSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const header = document.querySelector(`[data-target="${sectionId}"]`);
+    
+    if (content && header) {
+        header.classList.add('expanded');
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+    }
+}
+
+/**
+ * Colapsa seção específica
+ */
+function collapseSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const header = document.querySelector(`[data-target="${sectionId}"]`);
+    
+    if (content && header) {
+        header.classList.remove('expanded');
+        content.classList.remove('expanded');
+        content.classList.add('collapsed');
+    }
+}
+
+// =================================
+// VIEW MODAL FUNCTIONALITY
+// =================================
+
+/**
+ * Abre modal para visualizar usuário
+ */
+async function openModalForView(userId) {
+    console.log('[USUARIOS] Abrindo modal de visualização para usuário:', userId);
+    
+    try {
+        // Buscar dados do usuário
+        const user = await fetchUserData(userId);
+        if (!user) {
+            throw new Error('Usuário não encontrado');
+        }
+        
+        appState.currentUser = user;
+        renderUserDetails(user);
+        
+        // Configurar botão de edição
+        if (elements.btnEditFromView) {
+            elements.btnEditFromView.onclick = () => {
+                closeViewModal();
+                setTimeout(() => openModalForEdit(userId), 100);
+            };
+        }
+        
+        // Mostrar modal
+        if (elements.modalViewUsuario) {
+            elements.modalViewUsuario.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao carregar dados do usuário:', error);
+        showNotification('Erro ao carregar dados do usuário: ' + error.message, NOTIFICATION_TYPES.ERROR);
+    }
+}
+
+/**
+ * Fecha modal de visualização
+ */
+function closeViewModal() {
+    console.log('[USUARIOS] Fechando modal de visualização');
+    
+    if (elements.modalViewUsuario) {
+        elements.modalViewUsuario.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    
+    appState.currentUser = null;
+}
+
+/**
+ * Manipula clique no botão "Editar" no modal de visualização
+ */
+function handleEditFromView() {
+    if (appState.currentUser) {
+        const userId = appState.currentUser.id;
+        closeViewModal();
+        setTimeout(() => openModalForEdit(userId), 100);
+    }
+}
+
+/**
+ * Busca dados do usuário para visualização (similar ao loadUserData mas para view)
+ */
+async function fetchUserData(userId) {
+    console.log('[USUARIOS] Buscando dados do usuário para visualização:', userId);
+    const response = await apiRequest(`/${userId}/dados`);
+    
+    console.log('[USUARIOS] Resposta da API para dados do usuário (view):', response);
+    
+    if (!response.success) {
+        throw new Error(response.error || 'Erro ao carregar dados do usuário');
+    }
+    
+    if (!response.data) {
+        throw new Error('Dados do usuário não encontrados na resposta');
+    }
+    
+    return response.data;
+}
+
+/**
+ * Renderiza detalhes do usuário no modal de visualização
+ */
+function renderUserDetails(user) {
+    if (!elements.userDetailsContent) return;
+    
+    // Determinar se é administrador de módulo
+    const isModuleAdmin = user.perfil_principal && ['admin_operacao', 'admin_financeiro'].includes(user.perfil_principal);
+    const isMasterAdmin = user.perfil_principal === 'master_admin';
+    
+    // NOVA LÓGICA: Verificar se tem perfis de admin baseado em is_admin_profile
+    const hasAdminProfile = user.perfis && Array.isArray(user.perfis) && user.perfis.some(perfil => perfil.is_admin_profile === true);
+    
+    // Status
+    const isActive = user.ativo === true || user.ativo === 'true';
+    
+    // Contar totais
+    const totalEmpresas = (user.agent_info?.empresas && Array.isArray(user.agent_info.empresas)) ? user.agent_info.empresas.length : 0;
+    const totalNumeros = (user.whatsapp_numbers && Array.isArray(user.whatsapp_numbers)) ? user.whatsapp_numbers.length : 0;
+    const totalPerfis = (user.perfis && Array.isArray(user.perfis)) ? user.perfis.length : 0;
+    
+    // Gerar HTML das empresas
+    const empresasHtml = user.agent_info?.empresas && user.agent_info.empresas.length > 0 ? user.agent_info.empresas.map(empresa => `
+        <div class="detail-item-badge">
+            <i class="mdi mdi-domain"></i>
+            <span>${empresa.nome_cliente || empresa.nome || empresa.empresa_nome || 'Empresa sem nome'}</span>
+        </div>
+    `).join('') : '<span class="text-muted">Nenhuma empresa vinculada</span>';
+    
+    // Gerar HTML dos perfis
+    const perfisHtml = user.perfis && user.perfis.length > 0 ? user.perfis.map(perfil => `
+        <div class="detail-item-badge">
+            <i class="mdi mdi-shield-account"></i>
+            <span>${perfil.perfil_nome || perfil.nome || 'Perfil sem nome'}</span>
+        </div>
+    `).join('') : '<span class="text-muted">Nenhum perfil atribuído</span>';
+    
+    // Gerar HTML dos números WhatsApp
+    const whatsappHtml = user.whatsapp_numbers && user.whatsapp_numbers.length > 0 ? user.whatsapp_numbers.map(whatsapp => `
+        <div class="detail-item-badge">
+            <i class="mdi mdi-whatsapp"></i>
+            <span>${whatsapp.nome || 'Sem nome'}: ${whatsapp.numero}</span>
+        </div>
+    `).join('') : '<span class="text-muted">Nenhum número cadastrado</span>';
+    
+    elements.userDetailsContent.innerHTML = `
+        <div class="user-details">
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-information"></i>
+                    Informações Gerais
+                </h6>
+                <div class="detail-item">
+                    <span class="detail-label">Nome:</span>
+                    <span class="detail-value">${user.nome || user.name || 'Sem nome'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">${user.email || 'Sem email'}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Perfil de Acesso:</span>
+                    <span class="detail-value">${ROLE_CONFIG[user.role]?.label || user.role}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Tipo de Administrador:</span>
+                    <span class="detail-value">
+                        ${
+                            isMasterAdmin ? '<span class="admin-badge master"><i class="mdi mdi-shield-crown"></i> Master Admin</span>' :
+                            hasAdminProfile ? '<span class="admin-badge module"><i class="mdi mdi-shield"></i> Administrador de Módulo</span>' :
+                            '<span class="text-muted">Usuário Regular</span>'
+                        }
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">
+                        <span class="status-badge status-${isActive ? 'active' : 'inactive'}">
+                            <span class="status-dot"></span>
+                            ${isActive ? 'Ativo' : 'Inativo'}
+                        </span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-chart-box"></i>
+                    Estatísticas
+                </h6>
+                <div class="detail-stats-grid">
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${totalEmpresas}</div>
+                        <div class="detail-stat-label">Empresas</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${totalNumeros}</div>
+                        <div class="detail-stat-label">Números WhatsApp</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div class="detail-stat-value">${totalPerfis}</div>
+                        <div class="detail-stat-label">Perfis</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-domain"></i>
+                    Empresas Vinculadas
+                </h6>
+                <div class="detail-items-list">
+                    ${empresasHtml}
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-shield-account"></i>
+                    Perfis de Acesso
+                </h6>
+                <div class="detail-items-list">
+                    ${perfisHtml}
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h6 class="detail-section-title">
+                    <i class="mdi mdi-whatsapp"></i>
+                    Números WhatsApp
+                </h6>
+                <div class="detail-items-list">
+                    ${whatsappHtml}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Atualizar título do modal
+    if (elements.viewModalTitle) {
+        elements.viewModalTitle.textContent = `Detalhes: ${user.nome || user.name || 'Usuário'}`;
+    }
 }

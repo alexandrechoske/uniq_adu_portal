@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, jsonify, request
 from extensions import supabase, supabase_admin
 from routes.auth import login_required, role_required
+from decorators.perfil_decorators import perfil_required
 from routes.api import get_user_companies
 from permissions import check_permission
 from datetime import datetime, timedelta
@@ -431,14 +432,27 @@ def user_can_view_materials(user_data):
 
 @bp.route('/')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def index():
-    """Página principal do Dashboard Executivo"""
+    """Página principal do Dashboard Executivo - APENAS para módulo de importações"""
+    print(f"[DASHBOARD_EXECUTIVO] Acesso autorizado ao dashboard executivo de importações")
+    
+    # Verificar se é cliente_unique sem empresas associadas
+    user_data = session.get('user', {})
+    user_role = user_data.get('role')
+    
+    if user_role == 'cliente_unique':
+        user_cnpjs = get_user_companies(user_data)
+        if not user_cnpjs:
+            print(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            # Passar flag para o template indicar que deve mostrar aviso
+            return render_template('dashboard_executivo.html', show_company_warning=True)
+    
     return render_template('dashboard_executivo.html')
 
 @bp.route('/api/load-data')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def load_data():
     """Carregar dados da tabela importacoes_processos_aberta"""
     try:
@@ -478,7 +492,7 @@ def load_data():
 
 @bp.route('/api/kpis')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def dashboard_kpis():
     """Calcular KPIs para o dashboard executivo"""
     try:
@@ -706,7 +720,7 @@ def dashboard_kpis():
 
 @bp.route('/api/charts')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def dashboard_charts():
     """Gerar dados para os gráficos do dashboard executivo"""
     try:
@@ -1005,7 +1019,7 @@ def monthly_chart():
 
 @bp.route('/api/recent-operations')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def recent_operations():
     """Obter operações recentes para a tabela"""
     try:
@@ -1109,7 +1123,7 @@ def recent_operations():
 
 @bp.route('/api/filter-options')
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def filter_options():
     """Obter opções para filtros"""
     try:
@@ -1176,7 +1190,7 @@ def filter_options():
 
 @bp.route('/api/force-refresh', methods=['POST'])
 @login_required
-@role_required(['admin', 'interno_unique', 'cliente_unique'])
+@perfil_required('importacoes', 'dashboard_executivo')
 def force_refresh_dashboard():
     """
     Force refresh específico para o Dashboard Executivo
@@ -1285,6 +1299,21 @@ def bootstrap_dashboard():
     """
     try:
         user_data = session.get('user', {})
+        user_role = user_data.get('role')
+        user_email = user_data.get('email')
+        
+        # SECURITY: Verificar se cliente_unique tem empresas associadas
+        if user_role == 'cliente_unique':
+            user_cnpjs = get_user_companies(user_data)
+            if not user_cnpjs:
+                print(f"[DASHBOARD_EXECUTIVO] Cliente {user_email} sem empresas vinculadas - bloqueando acesso aos dados")
+                return jsonify({
+                    'success': False, 
+                    'error': 'no_companies',
+                    'message': 'Usuário sem empresas vinculadas. Entre em contato com o administrador para associar empresas ao seu perfil.',
+                    'show_warning': True
+                }), 200
+        
         base_data = fetch_and_cache_dashboard_data(user_data)
         if not base_data:
             return jsonify({'success': False, 'error': 'Sem dados base.'}), 200
@@ -1603,15 +1632,49 @@ def get_paises_procedencia():
         # Ordenar por total de processos (decrescente)
         paises_stats = paises_stats.sort_values('total_processos', ascending=False)
         
-        # Converter para lista de dicionários
-        paises_data = []
-        for _, row in paises_stats.iterrows():
-            paises_data.append({
-                'pais_procedencia': str(row['pais_procedencia']),
-                'total_processos': int(row['total_processos']),
-                'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
-                'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
-            })
+        # LIMITAÇÃO PARA TOP 7 PAÍSES + OUTROS (para evitar quebra de layout)
+        if len(paises_stats) > 7:
+            print(f"[DASHBOARD_EXECUTIVO] Limitando exibição: {len(paises_stats)} -> 7 países + outros")
+            
+            # Top 7 países
+            top_7 = paises_stats.head(7)
+            
+            # Calcular "Outros" para países restantes
+            outros_stats = paises_stats.tail(len(paises_stats) - 7)
+            outros_processos = outros_stats['total_processos'].sum()
+            outros_custo = outros_stats['total_custo'].sum()
+            
+            # Converter top 7 para lista
+            paises_data = []
+            for _, row in top_7.iterrows():
+                paises_data.append({
+                    'pais_procedencia': str(row['pais_procedencia']),
+                    'total_processos': int(row['total_processos']),
+                    'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
+                    'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
+                })
+            
+            # Adicionar linha "Outros" se houver países excluídos
+            if len(outros_stats) > 0:
+                paises_data.append({
+                    'pais_procedencia': f'Outros ({len(outros_stats)} países)',
+                    'total_processos': int(outros_processos),
+                    'total_custo': float(outros_custo),
+                    'url_bandeira': None  # Sem bandeira para "Outros"
+                })
+                
+            print(f"[DASHBOARD_EXECUTIVO] Retornando 7 + 1 'Outros' = {len(paises_data)} itens")
+            
+        else:
+            # Manter lógica original se já tiver 7 ou menos países
+            paises_data = []
+            for _, row in paises_stats.iterrows():
+                paises_data.append({
+                    'pais_procedencia': str(row['pais_procedencia']),
+                    'total_processos': int(row['total_processos']),
+                    'total_custo': float(row['total_custo']) if not pd.isna(row['total_custo']) else 0.0,
+                    'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
+                })
         
         print(f"[DASHBOARD_EXECUTIVO] Retornando dados de {len(paises_data)} países")
         

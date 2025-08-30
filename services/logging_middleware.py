@@ -2,6 +2,7 @@
 Middleware para logging automático de acessos - Versão de produção
 IMPORTANTE: Este middleware NUNCA deve falhar ou impactar a aplicação
 """
+import os
 from flask import request, session, g
 import time
 from services.access_logger import access_logger
@@ -20,15 +21,23 @@ class RobustLoggingMiddleware:
     def __init__(self, app=None):
         self.app = app
         self.enabled = True
+        # Check if we're in development mode
+        self.flask_env = os.getenv('FLASK_ENV', 'production')
+        if self.flask_env == 'development':
+            self.enabled = False
+            print("[LOGGING_MIDDLEWARE] Middleware de logging desabilitado no ambiente de desenvolvimento")
         if app:
             self.init_app(app)
     
     def init_app(self, app):
         """Inicializa o middleware com a aplicação Flask"""
         try:
-            app.before_request(self.before_request)
-            app.after_request(self.after_request)
-            print("[LOGGING_MIDDLEWARE] Middleware de logging inicializado")
+            if self.enabled:
+                app.before_request(self.before_request)
+                app.after_request(self.after_request)
+                print("[LOGGING_MIDDLEWARE] Middleware de logging inicializado")
+            else:
+                print("[LOGGING_MIDDLEWARE] Middleware de logging não inicializado (desabilitado)")
         except Exception as e:
             print(f"[LOGGING_MIDDLEWARE_ERROR] Falha na inicialização: {e}")
             self.enabled = False
@@ -36,7 +45,7 @@ class RobustLoggingMiddleware:
     def before_request(self):
         """Executado antes de cada request - deve ser ultra rápido"""
         try:
-            if self.enabled:
+            if self.enabled and self.flask_env != 'development':
                 g.access_log_start_time = time.time()
                 g.access_log_should_log = self._should_log_request()
         except Exception:
@@ -48,7 +57,8 @@ class RobustLoggingMiddleware:
         try:
             if (self.enabled and 
                 hasattr(g, 'access_log_should_log') and 
-                g.access_log_should_log):
+                g.access_log_should_log and
+                self.flask_env != 'development'):
                 self._log_request_safe(response)
         except Exception:
             # Silenciosamente ignora erros - jamais afetar a resposta
@@ -222,9 +232,11 @@ def safe_log_route_access(page_name=None, module_name=None):
             
             # Tenta fazer log apenas APÓS sucesso, sem afetar resultado
             try:
-                final_page_name = page_name or func.__name__.replace('_', ' ').title()
-                final_module_name = module_name or 'unknown'
-                access_logger.log_page_access(final_page_name, final_module_name)
+                # Check if we're in development mode
+                if os.getenv('FLASK_ENV', 'production') != 'development':
+                    final_page_name = page_name or func.__name__.replace('_', ' ').title()
+                    final_module_name = module_name or 'unknown'
+                    access_logger.log_page_access(final_page_name, final_module_name)
             except Exception:
                 # Completamente silencioso
                 pass

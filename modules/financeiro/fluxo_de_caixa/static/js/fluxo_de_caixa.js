@@ -1,15 +1,55 @@
-/**
- * Fluxo de Caixa - JavaScript
- * Sistema de análise de fluxo de caixa com gráficos e KPIs
- */
+// Funções utilitárias
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value);
+}
+
+function formatCurrencyShort(value) {
+    const absValue = Math.abs(value);
+    const prefix = value < 0 ? '-' : '';
+    
+    if (absValue >= 1000000) {
+        // Milhões: usar 2 casas decimais para maior precisão
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
+    } else if (absValue >= 1000) {
+        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
+        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
+    }
+    // Valores menores que 1000: formato completo
+    return formatCurrency(value);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+}
+
+// Debounce function
+function debounce(func, wait, immediate) {
+    let timeout;
+    return function executedFunction() {
+        const context = this;
+        const args = arguments;
+        const later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+}
 
 class FluxoCaixaController {
     constructor() {
-        this.currentPeriodo = 'ultimos_12_meses';
-        this.currentCategoriaDrill = null;
+        this.currentAno = new Date().getFullYear();
+        this.currentMes = null; // Changed to null for year-only default
         this.currentPage = 1;
         this.pageLimit = 25;
-        this.excludeAdmin = false; // Controle para filtrar despesas administrativas
+        this.currentDrillCategoria = null; // For drill-down functionality
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -69,6 +109,8 @@ class FluxoCaixaController {
     
     init() {
         this.setupEventListeners();
+        this.populateYearSelect();
+        this.setInitialMonth();
         this.loadData();
     }
     
@@ -79,27 +121,15 @@ class FluxoCaixaController {
         $('#apply-filters').on('click', () => this.applyFilters());
         $('#clear-filters').on('click', () => this.resetFilters());
         
-        // Período personalizado
-        $('#periodo-select').on('change', (e) => {
-            if (e.target.value === 'personalizado') {
-                $('#periodo-personalizado').show();
-            } else {
-                $('#periodo-personalizado').hide();
-            }
-        });
-        
-        // Drill-down categorias
-        $('#btn-voltar-categorias').on('click', () => this.voltarCategorias());
-        
-        // Toggle despesas administrativas
-        $('#btn-toggle-admin').on('click', () => this.toggleDespesasAdmin());
-        
         // Paginação da tabela
         $('#btn-prev-page').on('click', () => this.changePage(this.currentPage - 1));
         $('#btn-next-page').on('click', () => this.changePage(this.currentPage + 1));
         
         // Busca na tabela
         $('#search-table').on('input', debounce(() => this.loadTableData(), 300));
+        
+        // Drill-down button for expenses chart
+        $('#btn-voltar-categorias').on('click', () => this.voltarCategorias());
         
         // Fechar modal ao clicar fora
         $('#filter-modal').on('click', (e) => {
@@ -109,72 +139,152 @@ class FluxoCaixaController {
         });
     }
     
-    async loadData() {
+    populateYearSelect() {
+        const currentYear = new Date().getFullYear();
+        const select = $('#ano-select');
+        
+        // Adicionar anos de 2015 até o ano atual
+        for (let year = 2015; year <= currentYear; year++) {
+            select.append(`<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`);
+        }
+    }
+    
+    setInitialMonth() {
+        // Set to empty (year-only) by default
+        $('#mes-select').val('');
+    }
+    
+    async loadData(retryCount = 0) {
         this.showLoading(true);
+        this.updateFilterSummary();
         
         try {
+            // Load data in parallel but handle errors individually
+            const kpisPromise = this.loadKPIs().catch(error => {
+                console.error('Erro ao carregar KPIs:', error);
+                this.showError('Erro ao carregar KPIs. Os valores serão exibidos como "Erro ao carregar".');
+                return null;
+            });
+            
+            const fluxoMensalPromise = this.loadFluxoMensal().catch(error => {
+                console.error('Erro ao carregar fluxo mensal:', error);
+                return null;
+            });
+            
+            const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
+                console.error('Erro ao carregar saldo acumulado:', error);
+                return null;
+            });
+            
+            const despesasCategoriaPromise = this.loadDespesasCategoria().catch(error => {
+                console.error('Erro ao carregar despesas por categoria:', error);
+                return null;
+            });
+            
+            const projecaoPromise = this.loadProjecao().catch(error => {
+                console.error('Erro ao carregar projeção:', error);
+                return null;
+            });
+            
+            const tableDataPromise = this.loadTableData().catch(error => {
+                console.error('Erro ao carregar dados da tabela:', error);
+                return null;
+            });
+            
+            // Wait for all promises to complete
             await Promise.all([
-                this.loadKPIs(),
-                this.loadDespesasCategoria(),
-                this.loadFluxoMensal(),
-                this.loadFluxoEstrutural(),
-                this.loadProjecao(),
-                this.loadTableData()
+                kpisPromise,
+                fluxoMensalPromise,
+                saldoAcumuladoPromise,
+                despesasCategoriaPromise,
+                projecaoPromise,
+                tableDataPromise
             ]);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            
+            // Retry logic for temporary failures
+            if (retryCount < 2) {
+                console.log(`Tentando novamente... (${retryCount + 1}/3)`);
+                setTimeout(() => {
+                    this.loadData(retryCount + 1);
+                }, 2000); // Wait 2 seconds before retry
+                return;
+            }
+            
             this.showError('Erro ao carregar dados. Tente novamente.');
         } finally {
             this.showLoading(false);
         }
     }
     
+    updateFilterSummary() {
+        let text = `Vendo dados de ${this.currentAno}`;
+        if (this.currentMes) {
+            const mesNames = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            text += `/${mesNames[this.currentMes]}`;
+        }
+        $('#filter-summary-text').text(text);
+    }
+    
     async loadKPIs() {
         try {
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/kpis?periodo=${this.currentPeriodo}`);
+            // For KPIs, when no month is selected, we show year-to-date data
+            const mesParam = this.currentMes ? `&mes=${this.currentMes}` : '';
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/kpis?ano=${this.currentAno}${mesParam}`);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar KPIs');
             }
             
             this.updateKPIs(data);
         } catch (error) {
             console.error('Erro ao carregar KPIs:', error);
+            this.showError('Erro ao carregar KPIs: ' + (error.message || 'Erro desconhecido'));
+            // Update KPIs with error message
+            this.updateKPIsWithError();
         }
+    }
+
+    updateKPIsWithError() {
+        // Show error state in KPIs
+        const errorText = 'Erro ao carregar';
+        
+        $('#valor-entradas-mes').text(errorText);
+        $('#var-entradas-mes').text('');
+        
+        $('#valor-saidas-mes').text(errorText);
+        $('#var-saidas-mes').text('');
+        
+        $('#valor-resultado-mes').text(errorText);
+        $('#var-resultado-mes').text('');
+        
+        $('#valor-saldo-acumulado').text(errorText);
+        $('#var-saldo-acumulado').text('');
     }
     
     updateKPIs(data) {
-        // Resultado Líquido
-        $('#valor-resultado').text(formatCurrencyShort(data.resultado_liquido.valor));
-        this.updateVariation('#var-resultado', data.resultado_liquido.variacao);
-        this.updateKPICardColor('#kpi-resultado', data.resultado_liquido.valor);
+        // KPI 1: Entradas no Mês/Ano
+        $('#valor-entradas-mes').text(formatCurrencyShort(data.entradas_mes.valor));
+        this.updateVariation('#var-entradas-mes', data.entradas_mes.variacao);
+        this.updateKPICardColor('#kpi-entradas-mes', data.entradas_mes.valor);
         
-        // Entradas
-        $('#valor-entradas').text(formatCurrencyShort(data.total_entradas.valor));
-        this.updateVariation('#var-entradas', data.total_entradas.variacao);
+        // KPI 2: Saídas no Mês/Ano
+        $('#valor-saidas-mes').text(formatCurrencyShort(data.saidas_mes.valor));
+        this.updateVariation('#var-saidas-mes', data.saidas_mes.variacao);
+        this.updateKPICardColor('#kpi-saidas-mes', -data.saidas_mes.valor); // Negative value for expenses
         
-        // Saídas
-        $('#valor-saidas').text(formatCurrencyShort(data.total_saidas.valor));
-        this.updateVariation('#var-saidas', data.total_saidas.variacao);
+        // KPI 3: Resultado do Mês/Ano
+        $('#valor-resultado-mes').text(formatCurrencyShort(data.resultado_mes.valor));
+        this.updateVariation('#var-resultado-mes', data.resultado_mes.variacao);
+        this.updateKPICardColor('#kpi-resultado-mes', data.resultado_mes.valor);
         
-        // Saldo Final
-        $('#valor-saldo').text(formatCurrencyShort(data.saldo_final.valor));
-        this.updateVariation('#var-saldo', data.saldo_final.variacao);
-        
-        // Burn Rate
-        $('#valor-burn-rate').text(data.burn_rate > 0 ? formatCurrencyShort(data.burn_rate) : 'N/A');
-        
-        // Runway
-        if (data.runway === Infinity || data.runway === null || data.runway === undefined) {
-            $('#valor-runway').text('∞ anos');
-        } else if (data.runway <= 0) {
-            $('#valor-runway').text('0 meses');
-        } else if (data.runway > 60) {
-            $('#valor-runway').text('5+ anos');
-        } else {
-            $('#valor-runway').text(`${Math.round(data.runway)} meses`);
-        }
+        // KPI 4: Saldo Acumulado Final
+        $('#valor-saldo-acumulado').text(formatCurrencyShort(data.saldo_acumulado.valor));
+        this.updateVariation('#var-saldo-acumulado', data.saldo_acumulado.variacao);
+        this.updateKPICardColor('#kpi-saldo-acumulado', data.saldo_acumulado.valor);
     }
     
     updateVariation(selector, variation) {
@@ -198,7 +308,7 @@ class FluxoCaixaController {
     
     updateKPICardColor(cardSelector, value) {
         const card = $(cardSelector);
-        card.removeClass('kpi-success kpi-danger kpi-warning');
+        card.removeClass('kpi-success kpi-danger kpi-warning kpi-primary');
         
         if (value > 0) {
             card.addClass('kpi-success');
@@ -209,155 +319,64 @@ class FluxoCaixaController {
         }
     }
     
-    async loadDespesasCategoria() {
-        try {
-            let url = `/financeiro/fluxo-de-caixa/api/despesas-categoria?periodo=${this.currentPeriodo}`;
-            
-            if (this.currentCategoriaDrill) {
-                url += `&categoria=${encodeURIComponent(this.currentCategoriaDrill)}`;
-            }
-            
-            if (this.excludeAdmin) {
-                url += `&exclude_admin=true`;
-            }
-            
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Erro ao carregar despesas por categoria');
-            }
-            
-            this.renderDespesasChart(data);
-        } catch (error) {
-            console.error('Erro ao carregar despesas por categoria:', error);
-        }
-    }
-    
-    renderDespesasChart(data) {
-        const ctx = document.getElementById('chart-despesas-categoria').getContext('2d');
-        
-        // Destruir gráfico anterior se existir
-        if (this.charts.despesas) {
-            this.charts.despesas.destroy();
-        }
-        
-        // Atualizar título
-        const title = data.drill_categoria ? 
-            `Classes em ${data.drill_categoria}` : 
-            'Despesas por Categoria';
-        $('#chart-despesas-title').text(title);
-        
-        // Mostrar/ocultar botões
-        if (data.drill_categoria) {
-            $('#btn-voltar-categorias').show();
-            $('#btn-toggle-admin').hide(); // Esconder toggle no drill-down
-        } else {
-            $('#btn-voltar-categorias').hide();
-            $('#btn-toggle-admin').show(); // Mostrar toggle na visão principal
-            
-            // Atualizar estado do botão toggle
-            if (this.excludeAdmin) {
-                $('#btn-toggle-admin').removeClass('btn-warning').addClass('btn-success');
-                $('#btn-toggle-admin i').removeClass('mdi-eye-off').addClass('mdi-eye');
-                $('#btn-toggle-text').text('Mostrar Admin');
-            } else {
-                $('#btn-toggle-admin').removeClass('btn-success').addClass('btn-warning');
-                $('#btn-toggle-admin i').removeClass('mdi-eye').addClass('mdi-eye-off');
-                $('#btn-toggle-text').text('Ocultar Admin');
-            }
-        }
-        
-        // Configurar cores para gráfico de barras
-        const colors = this.generateColors(data.labels.length);
-        
-        this.charts.despesas = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.labels,
-                datasets: [{
-                    label: 'Valor das Despesas',
-                    data: data.valores,
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    borderWidth: 2,
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                ...this.chartDefaults,
-                indexAxis: 'y', // Barras horizontais para melhor visualização de categorias
-                onClick: (event, elements) => {
-                    if (elements.length > 0 && !data.drill_categoria) {
-                        const index = elements[0].index;
-                        const categoria = data.labels[index];
-                        this.drillDownCategoria(categoria);
-                    }
-                },
-                plugins: {
-                    ...this.chartDefaults.plugins,
-                    tooltip: {
-                        ...this.chartDefaults.plugins.tooltip,
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.parsed.x;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${context.label}: ${formatCurrencyShort(value)} (${percentage}%)`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrencyShort(value);
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    async drillDownCategoria(categoria) {
-        this.currentCategoriaDrill = categoria;
-        await this.loadDespesasCategoria();
-    }
-    
-    async voltarCategorias() {
-        this.currentCategoriaDrill = null;
-        await this.loadDespesasCategoria();
-    }
-    
-    async toggleDespesasAdmin() {
-        this.excludeAdmin = !this.excludeAdmin;
-        await this.loadDespesasCategoria();
-    }
-    
     async loadFluxoMensal() {
         try {
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/fluxo-mensal?periodo=${this.currentPeriodo}`);
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/fluxo-mensal?ano=${this.currentAno}`);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar fluxo mensal');
             }
             
             this.renderFluxoMensalChart(data);
         } catch (error) {
             console.error('Erro ao carregar fluxo mensal:', error);
+            this.showError('Erro ao carregar fluxo mensal: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderFluxoMensalChartError();
         }
+    }
+
+    renderFluxoMensalChartError() {
+        const ctx = document.getElementById('chart-fluxo-mensal').getContext('2d');
+        
+        if (this.charts.fluxoMensal) {
+            this.charts.fluxoMensal.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.fluxoMensal = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
     }
     
     renderFluxoMensalChart(data) {
@@ -367,7 +386,7 @@ class FluxoCaixaController {
             this.charts.fluxoMensal.destroy();
         }
         
-        // Cores baseadas no valor (verde para positivo, vermelho para negativo)
+        // Cores baseadas no valor do resultado líquido (verde para positivo, vermelho para negativo)
         const backgroundColors = data.resultados.map(value => 
             value >= 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)'
         );
@@ -375,56 +394,43 @@ class FluxoCaixaController {
             value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
         );
         
+        // Find the min and max values for proper scaling
+        const minValue = Math.min(...data.resultados);
+        const maxValue = Math.max(...data.resultados);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
+        // Create bar chart for fluxo mensal
         this.charts.fluxoMensal = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.meses,
                 datasets: [{
-                    label: 'Resultado Mensal',
+                    label: 'Resultado Líquido',
                     data: data.resultados,
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
                     borderWidth: 2,
                     borderRadius: 6,
                     borderSkipped: false
-                }, {
-                    label: 'Saldo Acumulado',
-                    data: data.saldo_acumulado,
-                    type: 'line',
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    yAxisID: 'y1'
                 }]
             },
             options: {
                 ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Fluxo de Caixa Mês a Mês'
+                    }
+                },
                 scales: {
                     y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
+                        min: minPadded,
+                        max: maxPadded,
                         grid: {
                             display: false
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrencyShort(value);
-                            }
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        grid: {
-                            drawOnChartArea: false,
                         },
                         ticks: {
                             callback: function(value) {
@@ -442,63 +448,116 @@ class FluxoCaixaController {
         });
     }
     
-    async loadFluxoEstrutural() {
+    async loadSaldoAcumulado() {
         try {
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/fluxo-estrutural?periodo=${this.currentPeriodo}`);
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?ano=${this.currentAno}`);
             const data = await response.json();
             
-            if (!response.ok) {
-                throw new Error(data.error || 'Erro ao carregar fluxo estrutural');
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Erro ao carregar saldo acumulado');
             }
             
-            this.renderFluxoEstruturalChart(data);
+            this.renderSaldoAcumuladoChart(data);
         } catch (error) {
-            console.error('Erro ao carregar fluxo estrutural:', error);
+            console.error('Erro ao carregar saldo acumulado:', error);
+            this.showError('Erro ao carregar saldo acumulado: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderSaldoAcumuladoChartError();
         }
     }
-    
-    renderFluxoEstruturalChart(data) {
-        const ctx = document.getElementById('chart-fluxo-estrutural').getContext('2d');
+
+    renderSaldoAcumuladoChartError() {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
         
-        if (this.charts.fluxoEstrutural) {
-            this.charts.fluxoEstrutural.destroy();
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
         }
         
-        this.charts.fluxoEstrutural = new Chart(ctx, {
-            type: 'bar',
+        // Create a simple error message chart
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
             data: {
-                labels: data.meses,
+                labels: ['Erro'],
                 datasets: [{
-                    label: 'FCO (Operacional)',
-                    data: data.fco,
-                    backgroundColor: 'rgba(40, 167, 69, 0.8)',
-                    borderColor: 'rgba(40, 167, 69, 1)',
-                    borderWidth: 2
-                }, {
-                    label: 'FCI (Investimento)',
-                    data: data.fci,
-                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
-                    borderColor: 'rgba(255, 193, 7, 1)',
-                    borderWidth: 2
-                }, {
-                    label: 'FCF (Financiamento)',
-                    data: data.fcf,
-                    backgroundColor: 'rgba(23, 162, 184, 0.8)',
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    borderWidth: 2
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    borderWidth: 2,
+                    fill: true
                 }]
             },
             options: {
                 ...this.chartDefaults,
-                scales: {
-                    x: {
-                        stacked: true,
-                        grid: {
-                            display: false
-                        }
+                plugins: {
+                    legend: {
+                        display: false
                     },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
                     y: {
-                        stacked: true,
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    renderSaldoAcumuladoChart(data) {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+        }
+        
+        // Group data by month instead of daily
+        const monthlyData = this.groupByMonthForSaldo(data.datas, data.saldos);
+        
+        // Find min and max values for proper scaling
+        const minValue = Math.min(...monthlyData.saldos);
+        const maxValue = Math.max(...monthlyData.saldos);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
+        // Create line chart for saldo acumulado (monthly)
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthlyData.datas,
+                datasets: [{
+                    label: 'Saldo Acumulado',
+                    data: monthlyData.saldos,
+                    borderColor: 'rgba(23, 162, 184, 1)',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Saldo Acumulado por Período (Mensal)'
+                    }
+                },
+                scales: {
+                    y: {
+                        min: minPadded,
+                        max: maxPadded,
                         grid: {
                             display: false
                         },
@@ -506,6 +565,199 @@ class FluxoCaixaController {
                             callback: function(value) {
                                 return formatCurrencyShort(value);
                             }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Helper function to group daily data by month for saldo acumulado
+    groupByMonthForSaldo(dates, values) {
+        const monthlyData = {};
+        
+        // Group by month and keep the last value of each month (for saldo acumulado)
+        for (let i = 0; i < dates.length; i++) {
+            const date = dates[i];
+            const value = values[i];
+            
+            // Extract month from date (format: dd/MM)
+            const parts = date.split('/');
+            if (parts.length === 2) {
+                const monthKey = parts[1]; // Month part (MM)
+                
+                // For saldo acumulado, we want the last value of each month
+                monthlyData[monthKey] = {
+                    date: date,
+                    value: value
+                };
+            }
+        }
+        
+        // Convert to arrays and sort by month
+        const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+            return parseInt(a) - parseInt(b);
+        });
+        
+        const monthlyDates = sortedMonths.map(month => {
+            const monthNames = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                               'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            const monthNum = parseInt(month);
+            return monthNames[monthNum] || month;
+        });
+        
+        const monthlyValues = sortedMonths.map(month => monthlyData[month].value);
+        
+        return {
+            datas: monthlyDates,
+            saldos: monthlyValues
+        };
+    }
+    
+    async loadDespesasCategoria() {
+        try {
+            // When no month is selected, load full year data
+            const mesParam = this.currentMes ? `&mes=${this.currentMes}` : '';
+            const drillParam = this.currentDrillCategoria ? `&categoria=${encodeURIComponent(this.currentDrillCategoria)}` : '';
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/despesas-categoria?ano=${this.currentAno}${mesParam}${drillParam}`);
+            const data = await response.json();
+            
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Erro ao carregar despesas por categoria');
+            }
+            
+            this.renderDespesasCategoriaChart(data);
+        } catch (error) {
+            console.error('Erro ao carregar despesas por categoria:', error);
+            this.showError('Erro ao carregar despesas por categoria: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderDespesasCategoriaChartError();
+        }
+    }
+
+    renderDespesasCategoriaChartError() {
+        const ctx = document.getElementById('chart-despesas-categoria').getContext('2d');
+        
+        if (this.charts.despesasCategoria) {
+            this.charts.despesasCategoria.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.despesasCategoria = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    renderDespesasCategoriaChart(data) {
+        const ctx = document.getElementById('chart-despesas-categoria').getContext('2d');
+        
+        if (this.charts.despesasCategoria) {
+            this.charts.despesasCategoria.destroy();
+        }
+        
+        // Update chart title and drill-down button visibility
+        if (data.drill_categoria) {
+            $('#chart-despesas-title').text(`Despesas por Classe - ${data.drill_categoria}`);
+            $('#btn-voltar-categorias').show();
+        } else {
+            $('#chart-despesas-title').text('Despesas por Categoria');
+            $('#btn-voltar-categorias').hide();
+        }
+        
+        // For horizontal bar chart, we need to swap x and y axes
+        this.charts.despesasCategoria = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: data.drill_categoria ? 'Despesas por Classe' : 'Despesas por Categoria',
+                    data: data.valores,
+                    backgroundColor: data.valores.map(() => 'rgba(111, 66, 193, 0.8)'),
+                    borderColor: data.valores.map(() => 'rgba(111, 66, 193, 1)'),
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                indexAxis: 'y', // This makes it horizontal
+                onClick: (event, elements) => {
+                    // Add drill-down functionality when clicking on bars
+                    if (elements.length > 0 && !data.drill_categoria) {
+                        const elementIndex = elements[0].index;
+                        const categoria = data.labels[elementIndex];
+                        this.drillDownCategoria(categoria);
+                    }
+                },
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: data.drill_categoria ? `Despesas por Classe - ${data.drill_categoria}` : 'Despesas por Categoria'
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        ...this.chartDefaults.plugins.tooltip,
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.parsed.x || context.parsed;
+                                return context.dataset.label + ': ' + formatCurrency(value);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                // Show formatted currency values in the axis labels
+                                return formatCurrencyShort(value);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
                         }
                     }
                 }
@@ -515,17 +767,63 @@ class FluxoCaixaController {
     
     async loadProjecao() {
         try {
-            const response = await fetch('/financeiro/fluxo-de-caixa/api/projecao');
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/projecao`);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar projeção');
             }
             
             this.renderProjecaoChart(data);
         } catch (error) {
             console.error('Erro ao carregar projeção:', error);
+            this.showError('Erro ao carregar projeção: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderProjecaoChartError();
         }
+    }
+
+    renderProjecaoChartError() {
+        const ctx = document.getElementById('chart-projecao').getContext('2d');
+        
+        if (this.charts.projecao) {
+            this.charts.projecao.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.projecao = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
     }
     
     renderProjecaoChart(data) {
@@ -535,37 +833,73 @@ class FluxoCaixaController {
             this.charts.projecao.destroy();
         }
         
-        // Combinar dados históricos e projeção
-        const allLabels = [...data.meses_historicos, ...data.meses_projecao];
-        const historicoData = [...data.saldo_historico, ...Array(data.meses_projecao.length).fill(null)];
-        const projecaoData = [...Array(data.meses_historicos.length).fill(null), ...data.saldo_projetado];
+        // Combine past and future data
+        const allDates = [...data.past_dates, ...data.future_dates];
+        const allFluxos = [...data.past_fluxos, ...data.future_fluxos];
+        const allSaldos = [...data.past_saldos, ...data.future_saldos];
+        
+        // Split into past and future for different styling
+        const pastCount = data.past_dates.length;
+        
+        // Find min and max values for proper scaling
+        const allValues = [...allFluxos, ...allSaldos].filter(val => val !== null);
+        const minValue = Math.min(...allValues);
+        const maxValue = Math.max(...allValues);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
         
         this.charts.projecao = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: allLabels,
+                labels: allDates,
                 datasets: [{
-                    label: 'Saldo Histórico',
-                    data: historicoData,
+                    label: 'Fluxo de Caixa Real',
+                    data: allFluxos.map((value, index) => index < pastCount ? value : null),
                     borderColor: 'rgba(40, 167, 69, 1)',
                     backgroundColor: 'rgba(40, 167, 69, 0.1)',
                     borderWidth: 3,
-                    fill: true,
+                    fill: false,
                     tension: 0.4,
                     pointBackgroundColor: 'rgba(40, 167, 69, 1)',
                     pointBorderColor: 'white',
                     pointBorderWidth: 2,
                     pointRadius: 4
                 }, {
-                    label: 'Projeção',
-                    data: projecaoData,
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    label: 'Fluxo de Caixa Projetado',
+                    data: allFluxos.map((value, index) => index >= pastCount ? value : null),
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
                     borderWidth: 3,
-                    borderDash: [10, 5],
+                    borderDash: [5, 5], // Dashed line for projection
                     fill: false,
                     tension: 0.4,
-                    pointBackgroundColor: 'rgba(220, 53, 69, 1)',
+                    pointBackgroundColor: 'rgba(255, 193, 7, 1)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }, {
+                    label: 'Saldo Acumulado Real',
+                    data: allSaldos.map((value, index) => index < pastCount ? value : null),
+                    borderColor: 'rgba(23, 162, 184, 1)',
+                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }, {
+                    label: 'Saldo Acumulado Projetado',
+                    data: allSaldos.map((value, index) => index >= pastCount ? value : null),
+                    borderColor: 'rgba(111, 66, 193, 1)',
+                    backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                    borderWidth: 3,
+                    borderDash: [5, 5], // Dashed line for projection
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(111, 66, 193, 1)',
                     pointBorderColor: 'white',
                     pointBorderWidth: 2,
                     pointRadius: 4
@@ -573,8 +907,26 @@ class FluxoCaixaController {
             },
             options: {
                 ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Projeção de Fluxo de Caixa (24 meses + 6 meses)'
+                    },
+                    legend: {
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                },
                 scales: {
                     y: {
+                        min: minPadded,
+                        max: maxPadded,
                         grid: {
                             display: false
                         },
@@ -594,15 +946,32 @@ class FluxoCaixaController {
         });
     }
     
+    drillDownCategoria(categoria) {
+        this.currentDrillCategoria = categoria;
+        this.loadDespesasCategoria();
+    }
+    
+    voltarCategorias() {
+        this.currentDrillCategoria = null;
+        this.loadDespesasCategoria();
+    }
+    
     async loadTableData() {
         try {
             const searchTerm = $('#search-table').val();
-            const url = `/financeiro/fluxo-de-caixa/api/tabela-dados?periodo=${this.currentPeriodo}&page=${this.currentPage}&limit=${this.pageLimit}`;
+            // When no month is selected, load full year data
+            const mesParam = this.currentMes ? `&mes=${this.currentMes}` : '';
+            let url = `/financeiro/fluxo-de-caixa/api/tabela-dados?ano=${this.currentAno}${mesParam}&page=${this.currentPage}&limit=${this.pageLimit}`;
+            
+            // Adicionar parâmetro de busca se fornecido
+            if (searchTerm && searchTerm.trim() !== '') {
+                url += `&search=${encodeURIComponent(searchTerm.trim())}`;
+            }
             
             const response = await fetch(url);
             const data = await response.json();
             
-            if (!response.ok) {
+            if (!response.ok || data.error) {
                 throw new Error(data.error || 'Erro ao carregar dados da tabela');
             }
             
@@ -610,7 +979,25 @@ class FluxoCaixaController {
             this.updatePagination(data);
         } catch (error) {
             console.error('Erro ao carregar dados da tabela:', error);
+            this.showError('Erro ao carregar dados da tabela: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in table
+            this.renderTableError();
         }
+    }
+
+    renderTableError() {
+        const tbody = $('#tabela-dados tbody');
+        tbody.empty();
+        
+        tbody.append(`
+            <tr>
+                <td colspan="6" class="text-center text-danger">
+                    <i class="mdi mdi-alert-circle" style="font-size: 2rem;"></i>
+                    <div>Erro ao carregar dados da tabela</div>
+                    <small>Por favor, tente novamente mais tarde</small>
+                </td>
+            </tr>
+        `);
     }
     
     renderTable(data) {
@@ -620,7 +1007,7 @@ class FluxoCaixaController {
         if (data.dados.length === 0) {
             tbody.append(`
                 <tr>
-                    <td colspan="7" class="text-center text-muted">
+                    <td colspan="6" class="text-center text-muted">
                         Nenhum registro encontrado
                     </td>
                 </tr>
@@ -631,17 +1018,16 @@ class FluxoCaixaController {
         data.dados.forEach(row => {
             const tipoClass = row.tipo === 'Receita' ? 'text-success' : 'text-danger';
             const valorFormatted = row.tipo === 'Receita' ? 
-                formatCurrency(row.valor) : 
-                `-${formatCurrency(row.valor)}`;
+                formatCurrency(parseFloat(row.valor)) : 
+                `-${formatCurrency(parseFloat(row.valor))}`;
             
             tbody.append(`
                 <tr>
                     <td>${formatDate(row.data)}</td>
-                    <td>${row.categoria}</td>
-                    <td>${row.classe}</td>
-                    <td>${row.codigo}</td>
-                    <td>${row.descricao}</td>
-                    <td><span class="badge ${row.tipo === 'Receita' ? 'bg-success' : 'bg-danger'}">${row.tipo}</span></td>
+                    <td>${row.categoria || '-'}</td>
+                    <td>${row.classe || '-'}</td>
+                    <td>${row.codigo || '-'}</td>
+                    <td>${row.descricao || '-'}</td>
                     <td class="${tipoClass} fw-bold">${valorFormatted}</td>
                 </tr>
             `);
@@ -677,25 +1063,6 @@ class FluxoCaixaController {
         this.loadTableData();
     }
     
-    generateColors(count) {
-        const baseColors = [
-            '#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8',
-            '#6f42c1', '#fd7e14', '#20c997', '#6610f2', '#e83e8c',
-            '#495057', '#f8f9fa', '#e9ecef', '#dee2e6', '#ced4da'
-        ];
-        
-        const background = [];
-        const border = [];
-        
-        for (let i = 0; i < count; i++) {
-            const color = baseColors[i % baseColors.length];
-            background.push(color + 'CC'); // 80% opacity para barras
-            border.push(color);
-        }
-        
-        return { background, border };
-    }
-    
     openFiltersModal() {
         const modal = document.getElementById('filter-modal');
         if (modal) {
@@ -711,33 +1078,14 @@ class FluxoCaixaController {
     }
     
     applyFilters() {
-        const periodo = $('#periodo-select').val();
+        this.currentAno = parseInt($('#ano-select').val());
+        const mesValue = $('#mes-select').val();
+        this.currentMes = mesValue ? parseInt(mesValue) : null; // null when no month selected
         
-        if (periodo === 'personalizado') {
-            const dataInicio = $('#data-inicio').val();
-            const dataFim = $('#data-fim').val();
-            
-            if (!dataInicio || !dataFim) {
-                alert('Por favor, selecione as datas de início e fim');
-                return;
-            }
-            
-            this.currentPeriodo = `${dataInicio}|${dataFim}`;
-            $('#filter-summary-text').text(`Período: ${formatDate(dataInicio)} a ${formatDate(dataFim)}`);
-        } else {
-            this.currentPeriodo = periodo;
-            const periodNames = {
-                'mes_atual': 'Mês Atual',
-                'ultimo_mes': 'Último Mês',
-                'trimestre_atual': 'Trimestre Atual',
-                'ultimos_12_meses': 'Últimos 12 Meses',
-                'ano_atual': 'Ano Atual',
-                'ultimo_ano': 'Último Ano'
-            };
-            $('#filter-summary-text').text(`Período: ${periodNames[periodo]}`);
-        }
+        this.updateFilterSummary();
         
-        $('#reset-filters').show();
+        // Reset drill-down when applying new filters
+        this.currentDrillCategoria = null;
         
         // Fechar modal
         this.closeFiltersModal();
@@ -747,12 +1095,13 @@ class FluxoCaixaController {
     }
     
     resetFilters() {
-        this.currentPeriodo = 'ano_atual';
-        this.currentCategoriaDrill = null;
-        $('#filter-summary-text').text('Vendo dados do ano atual');
-        $('#reset-filters').hide();
-        $('#periodo-select').val('ano_atual');
-        $('#periodo-personalizado').hide();
+        this.currentAno = new Date().getFullYear();
+        this.currentMes = null; // Year-only by default
+        this.currentDrillCategoria = null;
+        
+        $('#ano-select').val(this.currentAno);
+        $('#mes-select').val('');
+        this.updateFilterSummary();
         
         this.loadData();
     }
@@ -766,50 +1115,44 @@ class FluxoCaixaController {
     }
     
     showError(message) {
-        // Implementar notificação de erro
-        console.error(message);
-        alert(message); // Temporário - substituir por toast/notification
+        // Create or update error notification
+        let errorContainer = document.getElementById('error-notification');
+        if (!errorContainer) {
+            errorContainer = document.createElement('div');
+            errorContainer.id = 'error-notification';
+            errorContainer.className = 'alert alert-danger alert-dismissible fade show';
+            errorContainer.role = 'alert';
+            errorContainer.style.position = 'fixed';
+            errorContainer.style.top = '20px';
+            errorContainer.style.right = '20px';
+            errorContainer.style.zIndex = '9999';
+            errorContainer.style.maxWidth = '400px';
+            errorContainer.innerHTML = `
+                <strong>Erro!</strong> <span class="error-message"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            document.body.appendChild(errorContainer);
+        }
+        
+        // Update error message
+        const messageElement = errorContainer.querySelector('.error-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+        
+        // Show the error
+        errorContainer.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (errorContainer) {
+                errorContainer.style.display = 'none';
+            }
+        }, 5000);
     }
 }
 
-// Funções utilitárias
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
-
-function formatCurrencyShort(value) {
-    const absValue = Math.abs(value);
-    const prefix = value < 0 ? '-' : '';
-    
-    if (absValue >= 1000000) {
-        return `${prefix}R$ ${(absValue / 1000000).toFixed(1)}M`;
-    } else if (absValue >= 1000) {
-        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
-    }
-    return formatCurrency(value);
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Inicializar quando o documento estiver pronto
-$(document).ready(function() {
-    window.fluxoCaixa = new FluxoCaixaController();
+// Initialize the controller when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    window.fluxoCaixaController = new FluxoCaixaController();
 });

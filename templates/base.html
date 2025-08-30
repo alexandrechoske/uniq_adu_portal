@@ -5,23 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Unique</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='medias/Logo_Unique.png') }}">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RQ01VC0TZN"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-RQ01VC0TZN');
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- CORES OFICIAIS DA UNIQUE ADUANEIRA -->
+    <link href="{{ url_for('static', filename='css/unique-colors.css') }}" rel="stylesheet">
+    
     <style>
-        /* Cores da Marca Unique Aduaneira */
-        :root {
-            --color-primary: #3498DB;
-            --color-secondary: #3498DB;
-            --color-white: #FFFFFF;
-            --color-primary-light: rgba(31, 64, 111, 0.1);
-            --color-secondary-light: rgba(52, 152, 219, 0.1);
-            --color-text-primary: #1f2937;
-            --color-text-secondary: #6b7280;
-            --color-text-muted: #9ca3af;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
@@ -34,7 +38,7 @@
             left: 0;
             right: 0;
             height: 4rem;
-            background: var(--color-primary) !important; /* Azul sólido consistente */
+            background: var(--unique-primary-dark) !important; /* Cor oficial Unique */
             z-index: 1000;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 2px 4px rgba(31, 64, 111, 0.1);
@@ -186,9 +190,9 @@
 
         /* Item de sidebar ativo - Usando cores da marca */
         .sidebar-item.active {
-            background-color: var(--color-secondary-light);
-            color: var(--color-primary);
-            border-left: 3px solid var(--color-secondary);
+            background-color: rgba(45, 107, 146, 0.1);
+            color: var(--unique-primary-medium);
+            border-left: 3px solid var(--unique-primary-medium);
         }
 
         @keyframes fadeIn {
@@ -200,7 +204,7 @@
             animation: fadeIn 0.5s ease-in-out;
         }
 
-        /* Estilos de recolhimento da sidebar */
+        /* Estilos da sidebar */
         .sidebar {
             transition: width 0.3s ease;
             width: 16rem; /* equivalente a w-64 */
@@ -216,6 +220,44 @@
             overflow-x: visible; /* Permitir que o submenu apareça fora da sidebar */
         }
 
+        /* Sidebar sections */
+        .sidebar-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .sidebar-section-title i {
+            color: var(--unique-primary-medium);
+        }
+
+        /* Page items dentro de seções */
+        .sidebar-page-item {
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .sidebar-page-item i {
+            font-size: 1rem;
+            width: 1.25rem;
+        }
+
         .sidebar.collapsed {
             width: 4rem; /* equivalente a w-16 */
         }
@@ -227,17 +269,31 @@
         .sidebar.collapsed .sidebar-item {
             justify-content: center;
             padding: 0.75rem 0.5rem;
+            margin: 0.25rem;
         }
 
-        /* Remover botão hambúrguer do cabeçalho da sidebar */
-        .sidebar-header {
+        /* Quando colapsada, esconder seções mas mostrar todos os itens como ícones simples */
+        .sidebar.collapsed .sidebar-section-title {
             display: none;
         }
 
+        .sidebar.collapsed .sidebar-page-item {
+            margin: 0.25rem;
+            padding: 0.75rem 0.5rem;
+            justify-content: center;
+        }
+
+        /* Garantir que todos os itens tenham title para tooltips */
         .sidebar.collapsed .sidebar-item {
             position: relative;
         }
 
+        /* Sidebar header (not used but maintained for compatibility) */
+        .sidebar-header {
+            display: none;
+        }
+
+        /* Tooltips para itens quando sidebar está colapsada */
         .sidebar.collapsed .sidebar-item:hover::after {
             content: attr(title);
             position: absolute;
@@ -254,142 +310,6 @@
             font-size: 0.875rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             pointer-events: none;
-        }
-
-        /* Estilos do submenu Analytics */
-        .sidebar-item-wrapper {
-            position: relative;
-            overflow: visible;
-        }
-
-        .analytics-submenu {
-            position: fixed;
-            left: 16rem;
-            top: auto;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-            min-width: 180px;
-            z-index: 50000;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateX(-10px);
-            transition: all 0.2s ease; /* Manter a transição suave */
-            pointer-events: none;
-        }
-
-        /* Submenu Financeiro - mesmo padrão do Analytics */
-        .financeiro-submenu {
-            position: fixed;
-            left: 16rem;
-            top: auto;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
-            min-width: 180px;
-            z-index: 50000;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateX(-10px);
-            transition: all 0.2s ease;
-            pointer-events: none;
-        }
-
-        /* Manter submenu aberto com delay para facilitar navegação */
-        /* REMOVIDO: transition-delay: 0ms !important; */
-        .sidebar-item-wrapper:hover .analytics-submenu,
-        .analytics-submenu:hover {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateX(0) !important;
-            pointer-events: auto !important;
-            /* Removida a linha transition-delay: 0ms !important; daqui */
-        }
-
-        /* Hover para submenu Financeiro */
-        .sidebar-item-wrapper:hover .financeiro-submenu,
-        .financeiro-submenu:hover {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: translateX(0) !important;
-            pointer-events: auto !important;
-        }
-
-        /* Criar uma "ponte" invisível entre o item e o submenu */
-        .sidebar-item-wrapper::before {
-            content: '';
-            position: absolute;
-            right: -8px;
-            top: 0;
-            width: 8px;
-            height: 100%;
-            background: transparent;
-            z-index: 49999;
-        }
-
-        .submenu-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            color: #374151;
-            text-decoration: none;
-            transition: background-color 0.2s ease;
-            white-space: nowrap;
-            border-radius: 0.375rem;
-            margin: 0.25rem;
-        }
-
-        .submenu-item:hover {
-            background-color: #f3f4f6;
-        }
-
-        .submenu-item.active {
-            background-color: var(--color-secondary-light);
-            color: var(--color-primary);
-        }
-
-        .submenu-item i {
-            font-size: 1rem;
-            width: 1rem;
-            height: 1rem;
-            flex-shrink: 0;
-        }
-
-        /* Quando sidebar está colapsada, mostrar submenu como tooltip */
-        .sidebar.collapsed .analytics-submenu {
-            left: 4rem;
-            top: auto;
-            transform: translateY(-50%) translateX(-15px);
-        }
-
-        .sidebar.collapsed .sidebar-item-wrapper:hover .analytics-submenu {
-            transform: translateY(-50%) translateX(0);
-            pointer-events: auto;
-        }
-
-        /* Financeiro submenu colapsado */
-        .sidebar.collapsed .financeiro-submenu {
-            left: 4rem;
-            top: auto;
-            transform: translateY(-50%) translateX(-15px);
-        }
-
-        .sidebar.collapsed .sidebar-item-wrapper:hover .financeiro-submenu {
-            transform: translateY(-50%) translateX(0);
-            pointer-events: auto;
-        }
-
-        /* Estilos de navegação da Sidebar */
-        #sidebar-nav {
-            overflow: visible !important;
-        }
-
-        /* JavaScript para posicionamento dinâmico */
-        .analytics-submenu-positioned {
-            position: fixed !important;
         }
 
         /* Responsividade para Mobile */
@@ -630,21 +550,22 @@
         }
 
         .breadcrumb-item:not(:last-child):hover {
-            color: var(--color-primary);
+            color: var(--unique-primary-medium);
         }
 
-        .breadcrumb-item a {
+        /* Breadcrumb genérico - menor especificidade para permitir override dos módulos */
+        .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a {
             color: inherit;
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s ease;
         }
 
-        .breadcrumb-item a:hover {
-            color: var(--color-primary);
+        .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a:hover {
+            color: var(--unique-primary-medium);
         }
 
-        .breadcrumb-item:last-child {
+        .breadcrumb:not(.module-breadcrumb) .breadcrumb-item:last-child {
             color: var(--color-text-primary);
             font-weight: 600;
         }
@@ -680,16 +601,16 @@
     {% for item in items %}
         <div class="breadcrumb-item">
             {% if item.icon %}
-                <i class="{{ item.icon }} breadcrumb-icon"></i>
+                <i class="{{ item.icon }} breadcrumb-icon" style="color: black !important;"></i>
             {% endif %}
             {% if item.url and not loop.last %}
-                <a href="{{ item.url }}">{{ item.name }}</a>
+                <a href="{{ item.url }}" style="color: black !important;">{{ item.name }}</a>
             {% else %}
-                <span>{{ item.name }}</span>
+                <span style="color: black !important;">{{ item.name }}</span>
             {% endif %}
         </div>
         {% if not loop.last %}
-            <span class="breadcrumb-separator">
+            <span class="breadcrumb-separator" style="color: black !important;">
                 <i class="mdi mdi-chevron-right"></i>
             </span>
         {% endif %}
@@ -747,6 +668,12 @@
                     <div class="flex items-center gap-3">
                         <!-- Avatar e informações do usuário -->
                         <div class="flex items-center gap-2">
+                            <!-- Shield icon for Module Administrators -->
+                            {% if session['user'].get('role') == 'interno_unique' and session['user'].get('perfil_principal', '').startswith('admin_') %}
+                            <div class="flex items-center justify-center w-8 h-8 bg-blue-700 rounded-full" title="Administrador de Módulo">
+                                <i class="mdi mdi-shield-account text-white text-lg"></i>
+                            </div>
+                            {% endif %}
 
                             <div class="flex flex-col text-left">
                                 <span class="text-sm font-medium">{{ session['user'].get('email', 'Usuário') }}</span>
@@ -755,6 +682,14 @@
                                         Cliente
                                     {% elif session['user'].get('role') == 'admin' %}
                                         Administrador
+                                    {% elif session['user'].get('role') == 'interno_unique' and session['user'].get('perfil_principal', '').startswith('admin_') %}
+                                        {% if session['user'].get('perfil_principal') == 'admin_operacao' %}
+                                            Admin Operacional
+                                        {% elif session['user'].get('perfil_principal') == 'admin_financeiro' %}
+                                            Admin Financeiro
+                                        {% else %}
+                                            Administrador de Módulo
+                                        {% endif %}
                                     {% else %}
                                         {{ session['user'].get('role', 'Usuário') }}
                                     {% endif %}
@@ -804,143 +739,263 @@
         <aside id="sidebar" class="sidebar hidden lg:block">
             <!-- Menu de navegação -->
             <nav class="h-full px-3 py-4 space-y-1" id="sidebar-nav">
-            <!-- Home/Menu -->
+            
+            {% set filtered_menu = get_filtered_menu_structure() %}
+            {% set accessible_modules = get_user_accessible_modules() %}
+            {% set user_role = session.get('user', {}).get('role') %}
+            {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
+            {% set is_system_user = (user_role == 'admin' and user_perfil_principal == 'master_admin') or (user_role == 'interno_unique' and user_perfil_principal.startswith('admin_')) %}
+            
+            <!-- Home/Menu Principal -->
             <a href="{{ url_for('menu.menu_home') }}"
-               class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}">
+               class="sidebar-item {% if request.endpoint == 'menu.menu_home' %}active{% endif %}"
+               title="Menu Principal">
                 <i class="mdi mdi-home text-xl"></i>
                 <span class="sidebar-text">Menu Principal</span>
             </a>
 
-            <!-- Dashboard -->
-            <a href="{{ url_for('dashboard_executivo.index') }}"
-               class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}">
-                <i class="mdi mdi-view-dashboard text-xl"></i>
-                <span class="sidebar-text">Dashboard Executivo</span>
-            </a>
-
-            <!-- Dashboard Importações -->
-            <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
-               class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}">
-                <i class="mdi mdi-ferry text-xl"></i>
-                <span class="sidebar-text">Dashboard Importações</span>
-            </a>
-
-            <!-- Exportação de Relatórios -->
-            <a href="{{ url_for('export_relatorios.index') }}"
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}">
-                <i class="mdi mdi-file-export text-xl"></i>
-                <span class="sidebar-text">Exportação</span>
-            </a>
-            
-            <!-- Financeiro (apenas para admin e interno_unique) -->
-            <!-- {% if session.get('user', {}).get('role') in ['admin'] %} -->
-            <!-- <div class="sidebar-item-wrapper" id="financeiro-wrapper">
-                <div class="sidebar-item {% if request.endpoint and (request.endpoint.startswith('fin_dashboard_executivo.') or request.endpoint.startswith('fin_fluxo_de_caixa.') or request.endpoint.startswith('fin_despesas.') or request.endpoint.startswith('fin_faturamento.')) %}active{% endif %}"
-                     title="Módulo Financeiro">
-                    <i class="mdi mdi-cash-multiple text-xl"></i>
-                    <span class="sidebar-text">Financeiro</span>
-                </div> -->
-
-                <!-- Submenu dropdown -->
-                <!-- <div class="financeiro-submenu">
+            {% if is_system_user %}
+                <!-- SEÇÕES PARA USUÁRIOS DO SISTEMA -->
+                
+                <!-- Seção Importações -->
+                {% if 'dashboard_executivo' in accessible_modules or 'importacoes' in accessible_modules or 'relatorios' in accessible_modules or 'conferencia' in accessible_modules or 'agente' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-ferry text-sm"></i>
+                        <span>Importações</span>
+                    </div>
+                    
+                    {% if 'dashboard_executivo' in accessible_modules %}
+                    <a href="{{ url_for('dashboard_executivo.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}"
+                       title="Dashboard Executivo">
+                        <i class="mdi mdi-view-dashboard"></i>
+                        <span class="sidebar-text">Dashboard Executivo</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'importacoes' in accessible_modules %}
+                    <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}"
+                       title="Dashboard Importações">
+                        <i class="mdi mdi-ferry"></i>
+                        <span class="sidebar-text">Dashboard Importações</span>
+                    </a>
+                    {% endif %}
+                    
+                    <!-- {% if 'conferencia' in accessible_modules %}
+                    <a href="{{ url_for('conferencia.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
+                       title="Conferência Documental">
+                        <i class="mdi mdi-file-check"></i>
+                        <span class="sidebar-text">Conferência Documental</span>
+                    </a>
+                    {% endif %} -->
+                    
+                    {% if 'relatorios' in accessible_modules %}
+                    <a href="{{ url_for('export_relatorios.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}"
+                       title="Exportação de Relatórios">
+                        <i class="mdi mdi-file-export"></i>
+                        <span class="sidebar-text">Exportação de Relatórios</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'agente' in accessible_modules %}
+                    <a href="{{ url_for('agente.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}"
+                       title="Agente Unique">
+                        <i class="mdi mdi-chat"></i>
+                        <span class="sidebar-text">Agente Unique</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Seção Financeiro -->
+                {% if 'financeiro' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-cash-multiple text-sm"></i>
+                        <span>Financeiro</span>
+                    </div>
+                    
+                    {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
+                    
+                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
+                       title="Dashboard Executivo Financeiro">
                         <i class="mdi mdi-chart-box"></i>
-                        <span>Dashboard Executivo</span>
+                        <span class="sidebar-text">Dashboard Executivo</span>
                     </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}"
+                       title="Fluxo de Caixa">
                         <i class="mdi mdi-chart-timeline-variant"></i>
-                        <span>Fluxo de Caixa</span>
+                        <span class="sidebar-text">Fluxo de Caixa</span>
                     </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}"
+                       title="Despesas">
                         <i class="mdi mdi-credit-card-minus"></i>
-                        <span>Despesas</span>
+                        <span class="sidebar-text">Despesas</span>
                     </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}"
-                       class="submenu-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}">
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}"
+                       title="Faturamento">
                         <i class="mdi mdi-receipt"></i>
-                        <span>Faturamento</span>
+                        <span class="sidebar-text">Faturamento</span>
                     </a>
+                    {% endif %}
                 </div>
-            </div> -->
-            <!-- {% endif %} -->
-
-            <!-- Conferência Documental (apenas para admin e interno_unique) -->
-            <!-- {% if session.get('user', {}).get('role') in ['admin', 'interno_unique'] %}
-            <a href="{{ url_for('conferencia.index') }}"
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}">
-                <i class="mdi mdi-file-check text-xl"></i>
-                <span class="sidebar-text">Conferência Documental</span>
-            </a>
-            {% endif %} -->
-
-            {% if session.get('user', {}).get('role') in ['cliente_unique'] %}
-            <a href="{{ url_for('agente.index') }}"
-               class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}">
-                <i class="mdi mdi-chat text-xl"></i>
-                <span class="sidebar-text">Agente Unique</span>
-            </a>
-            {% endif %}
-
-            <!-- Usuários (apenas para admins) -->
-            {% if session.get('user', {}).get('role') == 'admin' %}
-
-            <!-- Seção Configurações -->
-            <div class="sidebar-section" style="margin-top: 20px;">
-                <div class="sidebar-section-title" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
-                    Configurações
-                </div>
-
-                <!-- Usuários -->
-                <a href="{{ url_for('usuarios.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('usuarios.') %}active{% endif %}"
-                   title="Gerenciar Usuários">
-                    <i class="mdi mdi-account-group text-xl"></i>
-                    <span class="sidebar-text">Usuários</span>
-                </a>
-
-                <!-- Logos Clientes -->
-                <a href="{{ url_for('config.logos_clientes') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
-                   title="Gerenciar Logos de Clientes">
-                    <i class="mdi mdi-domain text-xl"></i>
-                    <span class="sidebar-text">Logos Clientes</span>
-                </a>
-
-                <!-- Ícones Materiais
-                <a href="{{ url_for('config.icones_materiais') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('config.icones') %}active{% endif %}"
-                   title="Gerenciar Ícones de Materiais">
-                    <i class="mdi mdi-image-multiple text-xl"></i>
-                    <span class="sidebar-text">Ícones Materiais</span>
-                </a> -->
-
-                <!-- Analytics Dashboard -->
-                <div class="sidebar-item-wrapper" id="analytics-wrapper">
+                {% endif %}
+                
+                <!-- Seção Configurações -->
+                {% if 'usuarios' in accessible_modules or 'config' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-cog text-sm"></i>
+                        <span>Configurações</span>
+                    </div>
+                    
+                    {% if 'usuarios' in accessible_modules %}
+                    <a href="{{ url_for('usuarios.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.') and not request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
+                       title="Usuários">
+                        <i class="mdi mdi-account-group"></i>
+                        <span class="sidebar-text">Usuários</span>
+                    </a>
+                    
+                    {% set user_role = session.get('user', {}).get('role') %}
+                    {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
+                    {# Only Master Admins (admin + master_admin) can see Perfis page #}
+                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
+                    <a href="{{ url_for('usuarios.perfis_home') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios.perfis') %}active{% endif %}"
+                       title="Perfis">
+                        <i class="mdi mdi-shield-account"></i>
+                        <span class="sidebar-text">Perfis</span>
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                    
+                    {% if 'config' in accessible_modules %}
+                    <a href="{{ url_for('config.logos_clientes') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('config.logos') %}active{% endif %}"
+                       title="Logos Clientes">
+                        <i class="mdi mdi-domain"></i>
+                        <span class="sidebar-text">Logos Clientes</span>
+                    </a>
+                    {% endif %}
+                    
                     <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                       class="sidebar-item {% if request.endpoint and request.endpoint.startswith('analytics.') %}active{% endif %}"
-                       title="Analytics Dashboard">
-                        <i class="mdi mdi-chart-line text-xl"></i>
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+                       title="Analytics">
+                        <i class="mdi mdi-chart-bar"></i>
                         <span class="sidebar-text">Analytics</span>
                     </a>
-
-                    <!-- Submenu dropdown -->
-                    <div class="analytics-submenu">
-                        <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                           class="submenu-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}">
-                            <i class="mdi mdi-chart-bar"></i>
-                            <span>Portal</span>
-                        </a>
-                        <a href="{{ url_for('analytics.analytics_agente') }}"
-                           class="submenu-item {% if request.endpoint == 'analytics.analytics_agente' %}active{% endif %}">
-                            <i class="mdi mdi-robot"></i>
-                            <span>Agente</span>
-                        </a>
-                    </div>
                 </div>
-            </div>
+                {% endif %}
+            
+            {% else %}
+                <!-- LISTA SIMPLES PARA USUÁRIOS COMUNS -->
+                
+                {% if 'dashboard_executivo' in accessible_modules %}
+                <a href="{{ url_for('dashboard_executivo.index') }}"
+                   class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}"
+                   title="Dashboard Executivo">
+                    <i class="mdi mdi-view-dashboard text-xl"></i>
+                    <span class="sidebar-text">Dashboard Executivo</span>
+                </a>
+                {% endif %}
+                
+                {% if 'importacoes' in accessible_modules %}
+                <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
+                   class="sidebar-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}"
+                   title="Dashboard Importações">
+                    <i class="mdi mdi-ferry text-xl"></i>
+                    <span class="sidebar-text">Dashboard Importações</span>
+                </a>
+                {% endif %}
+                
+                {% if 'conferencia' in accessible_modules %}
+                <a href="{{ url_for('conferencia.index') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
+                   title="Conferência Documental">
+                    <i class="mdi mdi-file-check text-xl"></i>
+                    <span class="sidebar-text">Conferência Documental</span>
+                </a>
+                {% endif %}
+                
+                {% if 'relatorios' in accessible_modules %}
+                <a href="{{ url_for('export_relatorios.index') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('export_relatorios.') %}active{% endif %}"
+                   title="Exportação de Relatórios">
+                    <i class="mdi mdi-file-export text-xl"></i>
+                    <span class="sidebar-text">Exportação de Relatórios</span>
+                </a>
+                {% endif %}
+                
+                {% if 'agente' in accessible_modules %}
+                <a href="{{ url_for('agente.index') }}"
+                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}"
+                   title="Agente Unique">
+                    <i class="mdi mdi-chat text-xl"></i>
+                    <span class="sidebar-text">Agente Unique</span>
+                </a>
+                {% endif %}
+                
+                <!-- Páginas do Financeiro (se tiver acesso) -->
+                {% if 'financeiro' in accessible_modules %}
+                    {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
+                    
+                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    <a href="{{ url_for('fin_dashboard_executivo.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
+                       title="Dashboard Executivo Financeiro">
+                        <i class="mdi mdi-chart-box text-xl"></i>
+                        <span class="sidebar-text">Dashboard Executivo Financeiro</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
+                    <a href="{{ url_for('fin_fluxo_de_caixa.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_fluxo_de_caixa.index' %}active{% endif %}"
+                       title="Fluxo de Caixa">
+                        <i class="mdi mdi-chart-timeline-variant text-xl"></i>
+                        <span class="sidebar-text">Fluxo de Caixa</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
+                    <a href="{{ url_for('fin_despesas.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_despesas.index' %}active{% endif %}"
+                       title="Despesas">
+                        <i class="mdi mdi-credit-card-minus text-xl"></i>
+                        <span class="sidebar-text">Despesas</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
+                    <a href="{{ url_for('fin_faturamento.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_faturamento.index' %}active{% endif %}"
+                       title="Faturamento">
+                        <i class="mdi mdi-receipt text-xl"></i>
+                        <span class="sidebar-text">Faturamento</span>
+                    </a>
+                    {% endif %}
+                {% endif %}
+                
             {% endif %}
             </nav>
         </aside>
@@ -953,12 +1008,31 @@
     {% block auth_content %}{% endblock %}
     {% endif %}
 
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
     {% block extra_js %}{% endblock %}
 
     <!-- Adicionar classe logged-in ao body quando usuário estiver logado -->
     {% if session.get('user') %}
     <script>
         document.body.classList.add('logged-in');
+        
+        // Auto-aplicar cores de módulo baseado na URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname.toLowerCase();
+            const actionsBar = document.querySelector('.actions-bar');
+            
+            if (actionsBar && !actionsBar.className.includes('module-header-')) {
+                if (currentPath.includes('/financeiro/')) {
+                    actionsBar.classList.add('module-header-financeiro');
+                } else if (currentPath.includes('/dashboard-executivo/') || currentPath.includes('/importac')) {
+                    actionsBar.classList.add('module-header-importacoes');
+                } else {
+                    actionsBar.classList.add('module-header-generic');
+                }
+            }
+        });
     </script>
       <!-- Script para gerenciamento de sessão -->
     <script src="{{ url_for('static', filename='js/session-handler.js') }}"></script>
@@ -1075,6 +1149,53 @@
 
                 financeiroSubmenu.addEventListener('mouseleave', hideFinanceiroSubmenu);
             }
+
+            // === SISTEMA DE CORES DINÂMICAS DO HEADER ===
+            function applyDynamicHeaderColor() {
+                const header = document.querySelector('.top-navbar');
+                if (!header) return;
+
+                const currentPath = window.location.pathname.toLowerCase();
+                
+                // Remover todas as classes de módulo do header
+                header.classList.remove('header-financeiro', 'header-importacoes', 'header-generic');
+                
+                // Detectar módulo baseado na URL e aplicar classe correspondente
+                if (currentPath.includes('/financeiro/')) {
+                    header.classList.add('header-financeiro');
+                    console.log('[HEADER] Aplicada cor financeiro (laranja)');
+                } else if (currentPath.includes('/importac') || currentPath.includes('/dashboard-exec')) {
+                    header.classList.add('header-importacoes');
+                    console.log('[HEADER] Aplicada cor importações (azul)');
+                } else {
+                    header.classList.add('header-generic');
+                    console.log('[HEADER] Aplicada cor genérica (azul claro)');
+                }
+            }
+
+            // Aplicar cor do header no carregamento da página
+            applyDynamicHeaderColor();
+
+            // Re-aplicar cor do header em mudanças de navegação (SPA behavior)
+            window.addEventListener('popstate', applyDynamicHeaderColor);
+
+            // Aplicar cores dinâmicas para módulos específicos no actions-bar também
+            function applyModuleHeaderColors() {
+                const currentPath = window.location.pathname.toLowerCase();
+                const actionsBars = document.querySelectorAll('.actions-bar');
+                
+                actionsBars.forEach(bar => {
+                    if (currentPath.includes('/financeiro/')) {
+                        if (!bar.classList.contains('module-header-financeiro')) {
+                            bar.classList.remove('module-header-importacoes', 'module-header-generic');
+                            bar.classList.add('module-header-financeiro');
+                        }
+                    }
+                });
+            }
+
+            // Aplicar cores dos actions-bars também
+            applyModuleHeaderColors();
         });
     </script>
 

@@ -11,26 +11,45 @@
 {% endblock %}
 
 {% block content %}
+<!-- Security Warning for clients without companies -->
+{% if show_company_warning %}
+<div class="alert alert-warning company-warning-alert" style="margin: 20px; padding: 20px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffeaa7; color: #856404;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #f39c12;"></i>
+        <div>
+            <h4 style="margin: 0 0 8px 0; color: #856404;">Acesso Restrito - Empresas Não Vinculadas</h4>
+            <p style="margin: 0; font-size: 14px; line-height: 1.4;">
+                Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o administrador do sistema para associar as empresas adequadas ao seu perfil.
+            </p>
+            <p style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d;">
+                <i class="mdi mdi-information"></i> Por questões de segurança e privacidade, o acesso aos dados é restrito às empresas associadas à sua conta.
+            </p>
+        </div>
+    </div>
+</div>
+<div class="dashboard-container" style="opacity: 0.3; pointer-events: none;">
+{% else %}
 <div class="dashboard-container">
+{% endif %}
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-importacoes">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
                 {'name': 'Dashboard Executivo', 'icon': 'mdi mdi-chart-line'}
-            ]) }}
+            ], 'importacoes') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
                 <span id="filter-summary-text">Vendo dados completos</span>
             </div>
         </div>
         <div class="actions-right">
-            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+            <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
                 Remover Filtros
             </button>
-            <button id="open-filters" class="btn btn-primary">
+            <button id="open-filters" class="btn btn-light">
                 <i class="mdi mdi-filter"></i>
                 Filtros
             </button>
@@ -727,11 +746,18 @@
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager
 window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
+window.showCompanyWarning = {{ 'true' if show_company_warning else 'false' }};
 
 // Mostrar seção de upload baseado na role - TODAS as roles podem fazer upload
 document.addEventListener('DOMContentLoaded', function() {
     const userRole = window.userRole;
     const uploadSection = document.getElementById('upload-section');
+    
+    // Check if user has company warning - if so, don't initialize dashboard
+    if (window.showCompanyWarning) {
+        console.log('[DASHBOARD_EXECUTIVO] Usuário sem empresas vinculadas - dashboard bloqueado');
+        return; // Don't initialize dashboard functionality
+    }
     
     if (uploadSection && ['admin', 'interno_unique', 'cliente_unique'].includes(userRole)) {
         uploadSection.style.display = 'block';

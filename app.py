@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, session, jsonify, request
+from flask import Flask, session, request, render_template, redirect, url_for, jsonify
 from config import Config
 import os
 import signal
@@ -52,9 +53,11 @@ except Exception as e:
 # Import session handler
 from session_handler import init_session_handler
 
+# Import module color helpers
+from utils.module_colors import register_module_color_helpers
+
 # Import routes after app initialization to avoid circular imports
 from routes import dashboard, api
-from routes import conferencia_pdf, debug, paginas
 from routes import background_tasks
 
 # Import modular dashboard blueprints
@@ -105,15 +108,8 @@ from modules.financeiro.routes import register_financeiro_blueprints
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
-# app.register_blueprint(relatorios.bp)  # Comentado - usando versão modular
-# app.register_blueprint(usuarios.bp)  # Comentado - usando versão modular
-# app.register_blueprint(agente.bp)  # Comentado - usando versão modular
+
 app.register_blueprint(api.bp, url_prefix='/api')  # Registrando o blueprint da API com prefixo
-# app.register_blueprint(conferencia.bp)  # Comentado - usando versão modular
-app.register_blueprint(conferencia_pdf.bp)  # Registrando o blueprint de PDF anotado para Conferência
-app.register_blueprint(debug.bp)  # Registrando o blueprint de Debug
-# app.register_blueprint(paginas.bp)  # Comentado - usando versão modular
-# app.register_blueprint(config.bp)  # Comentado - usando versão modular
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
 
 # Register modular dashboard blueprints
@@ -149,6 +145,14 @@ app.register_blueprint(documents_bp)  # Document management
 # Register modular menu blueprint
 app.register_blueprint(menu_bp)  # Menu modular
 
+# Register test API endpoints temporarily
+try:
+    from test_api_endpoints import test_api_bp
+    app.register_blueprint(test_api_bp)
+    print("✅ Test API endpoints registrados")
+except Exception as e:
+    print(f"⚠️ Não foi possível registrar test API endpoints: {e}")
+
 # Register modular analytics blueprint
 app.register_blueprint(analytics_bp)  # Analytics modular
 
@@ -161,8 +165,37 @@ app.register_blueprint(export_relatorios_bp)
 # Register financeiro blueprints (módulo financeiro completo)
 register_financeiro_blueprints(app)
 
+# Register module color helpers for templates
+register_module_color_helpers(app)
+
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)
+
+# -------------------------------------------------------------
+# Security Headers Middleware
+# -------------------------------------------------------------
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    # Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Prevent clickjacking attacks
+    response.headers['X-Frame-Options'] = 'DENY'
+    
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Strict Transport Security (HTTPS)
+    # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    # Content Security Policy (basic)
+    response.headers['Content-Security-Policy'] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https:; img-src 'self' data: https:; font-src 'self' data: https:;"
+    
+    # Referrer Policy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    return response
 
 # -------------------------------------------------------------
 # Global Client Branding Context
@@ -198,11 +231,47 @@ def _resolve_client_branding():
 def inject_client_branding():
     return {'client_branding': _resolve_client_branding()}
 
+@app.context_processor
+def inject_perfil_access_functions():
+    """Disponibiliza funções de controle de acesso baseado em perfis para templates"""
+    from services.perfil_access_service import PerfilAccessService
+    return {
+        'get_filtered_menu_structure': PerfilAccessService.get_filtered_menu_structure,
+        'get_user_accessible_modules': PerfilAccessService.get_user_accessible_modules,
+        'get_user_accessible_pages': PerfilAccessService.get_user_accessible_pages,
+        'user_can_access_module': PerfilAccessService.user_can_access_module,
+        'user_can_access_page': PerfilAccessService.user_can_access_page,
+        'get_user_admin_capabilities': PerfilAccessService.get_user_admin_capabilities
+    }
+
 # -------------------------------------------------------------
 # Debug route for client branding (para testes rápidos)
 # Pode ser acessada via bypass de API ou sessão autenticada.
 # -------------------------------------------------------------
 from services.client_branding import get_client_branding
+
+@app.route('/debug/admin-level')
+def debug_admin_level():
+    """Debug route to check admin level implementation"""
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    if not ('user' in session or (api_bypass_key and request_api_key == api_bypass_key)):
+        return jsonify({'error': 'Não autenticado'}), 401
+    
+    user = session.get('user', {})
+    
+    from services.perfil_access_service import PerfilAccessService
+    admin_capabilities = PerfilAccessService.get_user_admin_capabilities()
+    accessible_modules = PerfilAccessService.get_user_accessible_modules()
+    
+    return jsonify({
+        'success': True,
+        'user_email': user.get('email'),
+        'user_role': user.get('role'),
+        'perfil_principal': user.get('perfil_principal'),
+        'admin_capabilities': admin_capabilities,
+        'accessible_modules': accessible_modules
+    })
 
 @app.route('/debug/client-branding')
 def debug_client_branding():
@@ -272,5 +341,20 @@ def test_empresa_search():
         return "Arquivo de teste não encontrado", 404
 
 if __name__ == '__main__':   
-    # app.run(debug=True, host='192.168.0.75', port=5000)  # Forçando debug para true
-    app.run(debug=True)  # Forçando debug para true
+    # Registrar endpoints de teste de segurança em modo debug
+    if app.config['DEBUG']:
+        try:
+            from test_security_endpoints import register_test_security_blueprint
+            register_test_security_blueprint(app)
+            print("🔧 Endpoints de teste de segurança registrados")
+        except ImportError:
+            print("⚠️ Módulo test_security_endpoints não encontrado - pulando registro de endpoints de teste")
+        except Exception as e:
+            print(f"⚠️ Erro ao registrar endpoints de teste de segurança: {e}")
+
+    # Start server based on FLASK_ENV
+    flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
+    if flask_env == 'development':
+        app.run(debug=True, host='192.168.0.75', port=5000)
+    else:
+        app.run(debug=app.config.get('DEBUG', False))

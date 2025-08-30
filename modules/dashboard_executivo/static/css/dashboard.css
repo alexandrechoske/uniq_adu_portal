@@ -1,11 +1,28 @@
-/* Dashboard Executivo Styles - VERSÃO CORRIGIDA */
+/* Dashboard Executivo Styles - VERSÃO CORRIGIDA COM CORES UNIQUE */
 
 .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+    background-color: var(--unique-background-light);
+}
+
+/* === PADRONIZAÇÃO DE FONTES === */
+/* Forçar todas as tabelas, gráficos e componentes a usar a mesma fonte */
+.chart-section,
+.enhanced-table-section,
+.data-table,
+.enhanced-table-container,
+.mini-kpi-table,
+.chart-container,
+canvas {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Forçar fonte nos elementos Chart.js */
+.chart-canvas * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 
 /* Loading Overlay */
@@ -21,7 +38,7 @@
     width: 50px;
     height: 50px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid #007bff;
+    border-top: 4px solid var(--unique-primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 15px;
@@ -45,9 +62,13 @@
     gap: 1rem;
     margin-bottom: 2rem;
     padding: 1rem;
-    background: white;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Apenas actions-bar SEM classe de módulo recebem fundo branco */
+.actions-bar:not([class*="module-header"]) {
+    background: var(--unique-background-white);
 }
 
 .actions-left {
@@ -82,18 +103,21 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    border: 1px solid #e0e6ed;
+    background: var(--unique-background-white);
+    border: 1px solid var(--unique-border-light);
     border-radius: 6px;
     cursor: pointer;
-    color: #444;
+    color: var(--unique-text-secondary);
     font-size: 14px;
     line-height: 1;
     padding: 0;
     transition: all .15s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 }
-.kpi-mini-btn:hover { background:#f5f7fa; color:#000; }
+.kpi-mini-btn:hover { 
+    background: var(--unique-background-light); 
+    color: var(--unique-text-primary); 
+}
 .kpi-mini-btn:active { transform: scale(0.92); }
 
 /* Container do popup */
@@ -102,8 +126,8 @@
     z-index: 4000;
     width: 440px;
     max-width: calc(100vw - 24px);
-    background: #fff;
-    border: 1px solid #e0e6ed;
+    background: var(--unique-background-white);
+    border: 1px solid var(--unique-border-light);
     border-radius: 10px;
     box-shadow: 0 10px 28px -4px rgba(0,0,0,0.12), 0 4px 8px -2px rgba(0,0,0,0.06);
     overflow: hidden;
@@ -119,21 +143,58 @@
     align-items:center;
     justify-content:space-between;
     gap:10px;
-    background:#f8f9fa;
-    border-bottom:1px solid #e0e6ed;
+    background: var(--unique-background-light);
+    border-bottom:1px solid var(--unique-border-light);
     padding:10px 14px;
 }
-.mini-kpi-popup-title { margin:0; font-size:0.9rem; font-weight:600; color:#2c3e50; }
-.mini-kpi-popup-close { background:none; border:none; cursor:pointer; font-size:18px; line-height:1; color:#555; padding:2px 4px; }
-.mini-kpi-popup-close:hover { color:#000; }
+.mini-kpi-popup-title { 
+    margin:0; 
+    font-size:0.9rem; 
+    font-weight:600; 
+    color: var(--unique-primary); 
+}
+.mini-kpi-popup-close { 
+    background:none; 
+    border:none; 
+    cursor:pointer; 
+    font-size:18px; 
+    line-height:1; 
+    color: var(--unique-text-secondary); 
+    padding:2px 4px; 
+}
+.mini-kpi-popup-close:hover { 
+    color: var(--unique-text-primary); 
+}
 .mini-kpi-popup-body { padding:10px 14px 14px 14px; }
-.mini-kpi-table-wrapper { max-height:260px; overflow:auto; border:1px solid #e0e6ed; border-radius:6px; }
+.mini-kpi-table-wrapper { 
+    max-height:260px; 
+    overflow:auto; 
+    border:1px solid var(--unique-border-light); 
+    border-radius:6px; 
+}
 .mini-kpi-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
-.mini-kpi-table th { position:sticky; top:0; background:#f8f9fa; font-weight:600; text-align:left; padding:6px 8px; border-bottom:1px solid #e0e6ed; color:#495057; }
-.mini-kpi-table td { padding:5px 8px; border-bottom:1px solid #f1f3f5; white-space:nowrap; }
-.mini-kpi-table tbody tr:nth-child(even) { background:#fcfcfd; }
+.mini-kpi-table th { 
+    position:sticky; 
+    top:0; 
+    background: var(--unique-background-light); 
+    font-weight:600; 
+    text-align:left; 
+    padding:6px 8px; 
+    border-bottom:1px solid var(--unique-border-light); 
+    color: var(--unique-text-secondary); 
+}
+.mini-kpi-table td { 
+    padding:5px 8px; 
+    border-bottom:1px solid var(--unique-border-lighter); 
+    white-space:nowrap; 
+}
+.mini-kpi-table tbody tr:nth-child(even) { 
+    background: var(--unique-background-lighter); 
+}
 .mini-kpi-table tr:last-child td { border-bottom:none; }
-.mini-kpi-table tbody tr:hover { background:#f5f7fa; }
+.mini-kpi-table tbody tr:hover { 
+    background: var(--unique-background-light); 
+}
 .mini-kpi-empty { font-size:0.7rem; color:#6c757d; padding:12px 4px; text-align:center; }
 .mini-kpi-footer { margin-top:6px; font-size:0.65rem; color:#6c757d; display:flex; justify-content:space-between; align-items:center; }
 .mini-kpi-badge { display:inline-block; background:#e9f2ff; color:#1976d2; border:1px solid #b3d7ff; padding:2px 6px; border-radius:12px; font-size:0.55rem; font-weight:500; }
@@ -163,22 +224,22 @@
 }
 
 .btn-primary {
-    background: #007bff;
+    background: var(--unique-primary);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #0056b3;
+    background: var(--unique-primary-dark);
     transform: translateY(-1px);
 }
 
 .btn-secondary {
-    background: #6c757d;
+    background: var(--unique-text-secondary);
     color: white;
 }
 
 .btn-secondary:hover {
-    background: #545b62;
+    background: var(--unique-text-primary);
     transform: translateY(-1px);
 }
 
@@ -270,7 +331,7 @@
 
 /* Chart Section Base */
 .chart-section {
-    background: white;
+    background: var(--unique-background-white);
     border: none;
     border-radius: 10px;
     overflow: hidden;
@@ -556,6 +617,27 @@
 .badge-danger {
     background-color: #dc3545;
     color: white;
+}
+
+/* === CORREÇÃO: Badge Monocromático para Status === */
+/* Nova classe para pegada minimalista nos status da tabela */
+.badge-light-monochrome {
+    background-color: #f8f9fa !important;  /* Cinza muito claro */
+    color: #495057 !important;             /* Texto cinza escuro legível */
+    border: 1px solid #e9ecef !important;  /* Borda sutil */
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;             /* Transição suave */
+}
+
+/* Hover effect sutil para melhor UX */
+.badge-light-monochrome:hover {
+    background-color: #e9ecef !important;
+    color: #343a40 !important;
+    border-color: #dee2e6 !important;
 }
 
 .valor-custo {

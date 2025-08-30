@@ -1,0 +1,584 @@
+/* === CORES OFICIAIS DA UNIQUE ADUANEIRA === */
+:root {
+    /* Cores básicas essenciais */
+    --color-white: #ffffff;
+    --color-black: #000000;
+    
+    /* Cores principais */
+    --unique-primary-dark: #165672;
+    --unique-primary-medium: #2d6b92;
+    --unique-accent: #e2ba0a;
+    
+    /* Variações do azul */
+    --unique-primary-light: #4a8bb8;
+    --unique-primary-very-light: #7db3d3;
+    --unique-primary-hover: #1e5a7a;
+    
+    /* Variações do amarelo */
+    --unique-accent-light: #f4d03f;
+    --unique-accent-dark: #b7950b;
+    
+    /* Cores por módulo */
+    --unique-module-importacoes: #2d6b92;
+    --unique-module-financeiro: #e67e22;
+    
+    /* Cores neutras (manter compatibilidade) */
+    --unique-neutral-light: #f8f9fa;
+    --unique-neutral-medium: #6c757d;
+    --unique-neutral-dark: #343a40;
+    --unique-success: #28a745;
+    --unique-warning: #ffc107;
+    --unique-danger: #dc3545;
+    --unique-info: #17a2b8;
+    
+    /* Variáveis de background e superfície */
+    --unique-background-white: #ffffff;
+    --unique-background-light: #f8f9fa;
+    --unique-background-lighter: #fcfcfd;
+    
+    /* Variáveis de bordas */
+    --unique-border-light: #e0e6ed;
+    --unique-border-lighter: #f1f3f5;
+    
+    /* Variáveis de texto */
+    --unique-text-primary: #0f172a;
+    --unique-text-secondary: #475569;
+    --unique-text-muted: #64748b;
+    --unique-text-light: #94a3b8;
+    
+    /* Sobrescrever variáveis do Bootstrap com cores Unique */
+    --bs-primary: var(--unique-primary-medium);
+    --bs-info: var(--unique-primary-light);
+}
+
+/* === CLASSES UTILITÁRIAS DE CORES === */
+.unique-bg-primary { background-color: var(--unique-primary-medium) !important; color: white !important; }
+.unique-bg-primary-dark { background-color: var(--unique-primary-dark) !important; color: white !important; }
+.unique-bg-accent { background-color: var(--unique-accent) !important; color: var(--unique-primary-dark) !important; }
+.unique-bg-importacoes { background-color: var(--unique-module-importacoes) !important; color: white !important; }
+.unique-bg-financeiro { background-color: var(--unique-module-financeiro) !important; color: white !important; }
+
+.unique-text-primary { color: var(--unique-primary-medium) !important; }
+.unique-text-primary-dark { color: var(--unique-primary-dark) !important; }
+.unique-text-accent { color: var(--unique-accent) !important; }
+.unique-text-importacoes { color: var(--unique-module-importacoes) !important; }
+.unique-text-financeiro { color: var(--unique-module-financeiro) !important; }
+
+.unique-border-primary { border-color: var(--unique-primary-medium) !important; }
+.unique-border-accent { border-color: var(--unique-accent) !important; }
+
+/* === BOTÕES COM CORES UNIQUE === */
+.btn-unique-primary {
+    background-color: var(--unique-primary-medium);
+    border-color: var(--unique-primary-medium);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-unique-primary:hover,
+.btn-unique-primary:focus {
+    background-color: var(--unique-primary-hover);
+    border-color: var(--unique-primary-hover);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(22, 86, 114, 0.3);
+}
+
+.btn-unique-accent {
+    background-color: var(--unique-accent);
+    border-color: var(--unique-accent);
+    color: var(--unique-primary-dark);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-unique-accent:hover,
+.btn-unique-accent:focus {
+    background-color: var(--unique-accent-dark);
+    border-color: var(--unique-accent-dark);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(226, 186, 10, 0.3);
+}
+
+.btn-unique-importacoes {
+    background-color: var(--unique-module-importacoes);
+    border-color: var(--unique-module-importacoes);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-unique-importacoes:hover,
+.btn-unique-importacoes:focus {
+    background-color: var(--unique-primary-hover);
+    border-color: var(--unique-primary-hover);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(45, 107, 146, 0.3);
+}
+
+.btn-unique-financeiro {
+    background-color: var(--unique-module-financeiro);
+    border-color: var(--unique-module-financeiro);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-unique-financeiro:hover,
+.btn-unique-financeiro:focus {
+    background-color: #d35400;
+    border-color: #d35400;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(230, 126, 34, 0.3);
+}
+
+/* === OVERRIDE BOOTSTRAP PRIMARIES === */
+/* Substituir cores principais do Bootstrap pelas da Unique */
+.btn-primary {
+    background-color: var(--unique-primary-medium) !important;
+    border-color: var(--unique-primary-medium) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--unique-primary-hover) !important;
+    border-color: var(--unique-primary-hover) !important;
+}
+
+.bg-primary {
+    background-color: var(--unique-primary-medium) !important;
+}
+
+.text-primary {
+    color: var(--unique-primary-medium) !important;
+}
+
+.border-primary {
+    border-color: var(--unique-primary-medium) !important;
+}
+
+/* === OVERRIDE GLOBAL ULTRA-ESPECÍFICO PARA BREADCRUMB === */
+/* Força cor preta em TODOS os breadcrumbs com máxima especificidade */
+
+/* Regras ultra-específicas para garantir cor preta em qualquer contexto */
+body *[class*="breadcrumb"] a,
+body *[class*="breadcrumb"] span,
+body *[class*="breadcrumb"] *,
+body *[class*="breadcrumb"] i,
+body *[aria-label="breadcrumb"] a,
+body *[aria-label="breadcrumb"] span,
+body *[aria-label="breadcrumb"] *,
+body *[aria-label="breadcrumb"] i,
+body .actions-bar * a,
+body .actions-bar * span,
+body .actions-bar * i,
+body .actions-bar *[class*="breadcrumb"] *,
+body div[class*="module-header"] *[class*="breadcrumb"] *,
+body div[class*="module-header"] *[class*="breadcrumb"] i,
+body div[class*="module-header"] nav *,
+body div[class*="module-header"] nav i,
+body div[class*="module-header"] ol *,
+body div[class*="module-header"] ol i,
+body div[class*="actions-bar"] nav *,
+body div[class*="actions-bar"] nav i,
+body div[class*="actions-bar"] ol *,
+body div[class*="actions-bar"] ol i,
+.breadcrumb a,
+.breadcrumb span,
+.breadcrumb i,
+.breadcrumb-item a,
+.breadcrumb-item span,
+.breadcrumb-item i,
+.breadcrumb-item,
+.breadcrumb-item.active,
+nav[aria-label="breadcrumb"] a,
+nav[aria-label="breadcrumb"] span,
+nav[aria-label="breadcrumb"] i,
+nav[aria-label="breadcrumb"] .breadcrumb-item,
+nav[aria-label="breadcrumb"] .breadcrumb-item a,
+nav[aria-label="breadcrumb"] .breadcrumb-item span,
+nav[aria-label="breadcrumb"] .breadcrumb-item i,
+ol.breadcrumb a,
+ol.breadcrumb span,
+ol.breadcrumb i,
+ol.breadcrumb .breadcrumb-item,
+ol.breadcrumb .breadcrumb-item a,
+ol.breadcrumb .breadcrumb-item span,
+ol.breadcrumb .breadcrumb-item i {
+    color: black !important;
+}
+
+/* === CABEÇALHOS POR MÓDULO === */
+/* Identificação visual dos módulos através de cores */
+
+/* === OVERRIDE PARA BREADCRUMB COM ALTA ESPECIFICIDADE === */
+/* Para combater regras como .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a { color: black !important; } */
+div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item a,
+div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item,
+div.actions-bar.module-header-importacoes nav.breadcrumb .breadcrumb-item a,
+div.actions-bar.module-header-importacoes nav.breadcrumb .breadcrumb-item {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item.active,
+div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item:last-child,
+div.actions-bar.module-header-importacoes nav.breadcrumb .breadcrumb-item.active,
+div.actions-bar.module-header-importacoes nav.breadcrumb .breadcrumb-item:last-child {
+    color: white !important;
+}
+
+div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item a,
+div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item,
+div.actions-bar.module-header-financeiro nav.breadcrumb .breadcrumb-item a,
+div.actions-bar.module-header-financeiro nav.breadcrumb .breadcrumb-item {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item.active,
+div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item:last-child,
+div.actions-bar.module-header-financeiro nav.breadcrumb .breadcrumb-item.active,
+div.actions-bar.module-header-financeiro nav.breadcrumb .breadcrumb-item:last-child {
+    color: white !important;
+}
+
+div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item a,
+div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item,
+div.actions-bar.module-header-generic nav.breadcrumb .breadcrumb-item a,
+div.actions-bar.module-header-generic nav.breadcrumb .breadcrumb-item {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item.active,
+div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item:last-child,
+div.actions-bar.module-header-generic nav.breadcrumb .breadcrumb-item.active,
+div.actions-bar.module-header-generic nav.breadcrumb .breadcrumb-item:last-child {
+    color: white !important;
+}
+
+/* Header para módulo de Importações */
+.module-header-importacoes {
+    background: linear-gradient(135deg, var(--unique-module-importacoes), var(--unique-primary-hover));
+    color: white;
+    border-bottom: 3px solid var(--unique-primary-dark);
+}
+
+.module-header-importacoes .breadcrumb-item,
+.module-header-importacoes .breadcrumb-item *,
+.module-header-importacoes .breadcrumb-item a,
+.module-header-importacoes .breadcrumb .breadcrumb-item,
+.module-header-importacoes .breadcrumb .breadcrumb-item *,
+.module-header-importacoes .breadcrumb .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.module-header-importacoes .breadcrumb-item.active,
+.module-header-importacoes .breadcrumb-item.active *,
+.module-header-importacoes .breadcrumb .breadcrumb-item.active,
+.module-header-importacoes .breadcrumb .breadcrumb-item.active *,
+.module-header-importacoes .breadcrumb-item:last-child,
+.module-header-importacoes .breadcrumb-item:last-child *,
+.module-header-importacoes .breadcrumb .breadcrumb-item:last-child,
+.module-header-importacoes .breadcrumb .breadcrumb-item:last-child * {
+    color: white !important;
+}
+
+.module-header-importacoes .breadcrumb-item a:hover,
+.module-header-importacoes .breadcrumb-item a:hover *,
+.module-header-importacoes .breadcrumb .breadcrumb-item a:hover,
+.module-header-importacoes .breadcrumb .breadcrumb-item a:hover * {
+    color: white !important;
+}
+
+/* Header para módulo Financeiro */
+.module-header-financeiro {
+    background: linear-gradient(135deg, var(--unique-module-financeiro), #d35400);
+    color: white;
+    border-bottom: 3px solid #a0522d;
+}
+
+.module-header-financeiro .breadcrumb-item,
+.module-header-financeiro .breadcrumb-item *,
+.module-header-financeiro .breadcrumb-item a,
+.module-header-financeiro .breadcrumb .breadcrumb-item,
+.module-header-financeiro .breadcrumb .breadcrumb-item *,
+.module-header-financeiro .breadcrumb .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.module-header-financeiro .breadcrumb-item.active,
+.module-header-financeiro .breadcrumb-item.active *,
+.module-header-financeiro .breadcrumb .breadcrumb-item.active,
+.module-header-financeiro .breadcrumb .breadcrumb-item.active *,
+.module-header-financeiro .breadcrumb-item:last-child,
+.module-header-financeiro .breadcrumb-item:last-child *,
+.module-header-financeiro .breadcrumb .breadcrumb-item:last-child,
+.module-header-financeiro .breadcrumb .breadcrumb-item:last-child * {
+    color: white !important;
+}
+
+.module-header-financeiro .breadcrumb-item a:hover,
+.module-header-financeiro .breadcrumb-item a:hover *,
+.module-header-financeiro .breadcrumb .breadcrumb-item a:hover,
+.module-header-financeiro .breadcrumb .breadcrumb-item a:hover * {
+    color: white !important;
+}
+
+/* Header genérico (outros módulos) */
+.module-header-generic {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-light));
+    color: white;
+    border-bottom: 3px solid var(--unique-primary-dark);
+}
+
+.module-header-generic .breadcrumb-item,
+.module-header-generic .breadcrumb-item *,
+.module-header-generic .breadcrumb-item a,
+.module-header-generic .breadcrumb .breadcrumb-item,
+.module-header-generic .breadcrumb .breadcrumb-item *,
+.module-header-generic .breadcrumb .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.module-header-generic .breadcrumb-item.active,
+.module-header-generic .breadcrumb-item.active *,
+.module-header-generic .breadcrumb .breadcrumb-item.active,
+.module-header-generic .breadcrumb .breadcrumb-item.active *,
+.module-header-generic .breadcrumb-item:last-child,
+.module-header-generic .breadcrumb-item:last-child *,
+.module-header-generic .breadcrumb .breadcrumb-item:last-child,
+.module-header-generic .breadcrumb .breadcrumb-item:last-child * {
+    color: white !important;
+}
+
+.module-header-generic .breadcrumb-item a:hover,
+.module-header-generic .breadcrumb-item a:hover *,
+.module-header-generic .breadcrumb .breadcrumb-item a:hover,
+.module-header-generic .breadcrumb .breadcrumb-item a:hover * {
+    color: white !important;
+}
+
+/* Header para módulo Menu */
+.module-header-menu {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-light));
+    color: white;
+    border-bottom: 3px solid var(--unique-primary-dark);
+}
+
+.module-header-menu .breadcrumb-item,
+.module-header-menu .breadcrumb-item *,
+.module-header-menu .breadcrumb-item a,
+.module-header-menu .breadcrumb .breadcrumb-item,
+.module-header-menu .breadcrumb .breadcrumb-item *,
+.module-header-menu .breadcrumb .breadcrumb-item a {
+    color: black !important;
+}
+
+.module-header-menu .breadcrumb-item.active,
+.module-header-menu .breadcrumb-item.active *,
+.module-header-menu .breadcrumb .breadcrumb-item.active,
+.module-header-menu .breadcrumb .breadcrumb-item.active *,
+.module-header-menu .breadcrumb-item:last-child,
+.module-header-menu .breadcrumb-item:last-child *,
+.module-header-menu .breadcrumb .breadcrumb-item:last-child,
+.module-header-menu .breadcrumb .breadcrumb-item:last-child * {
+    color: black !important;
+}
+
+.module-header-menu .breadcrumb-item a:hover,
+.module-header-menu .breadcrumb-item a:hover *,
+.module-header-menu .breadcrumb .breadcrumb-item a:hover,
+.module-header-menu .breadcrumb .breadcrumb-item a:hover * {
+    color: black !important;
+}
+
+/* === CARDS E COMPONENTES === */
+.card-unique-primary {
+    border-top: 4px solid var(--unique-primary-medium);
+}
+
+.card-unique-accent {
+    border-top: 4px solid var(--unique-accent);
+}
+
+.card-unique-importacoes {
+    border-top: 4px solid var(--unique-module-importacoes);
+}
+
+.card-unique-financeiro {
+    border-top: 4px solid var(--unique-module-financeiro);
+}
+
+/* === NAVEGAÇÃO === */
+.navbar-unique {
+    background-color: var(--unique-primary-dark) !important;
+}
+
+.navbar-unique .navbar-brand,
+.navbar-unique .nav-link {
+    color: white !important;
+}
+
+.navbar-unique .nav-link:hover {
+    color: var(--unique-accent-light) !important;
+}
+
+/* === HEADER DINÂMICO POR MÓDULO === */
+/* Header padrão (importações/geral) */
+.top-navbar {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-dark));
+    transition: background 0.3s ease;
+}
+
+/* Header para módulo financeiro */
+.top-navbar.header-financeiro {
+    background: linear-gradient(135deg, var(--unique-module-financeiro), #d35400) !important;
+}
+
+/* Header para módulo importações (padrão) */
+.top-navbar.header-importacoes {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-dark)) !important;
+}
+
+/* Header genérico */
+.top-navbar.header-generic {
+    background: linear-gradient(135deg, var(--unique-primary-medium), var(--unique-primary-light)) !important;
+}
+
+/* === SIDEBAR === */
+.sidebar-unique {
+    background-color: var(--unique-primary-medium);
+    border-right: 1px solid var(--unique-primary-dark);
+}
+
+.sidebar-unique .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+}
+
+.sidebar-unique .nav-link:hover,
+.sidebar-unique .nav-link.active {
+    color: white;
+    background-color: var(--unique-primary-hover);
+}
+
+/* === BADGES UNIQUE === */
+.badge-unique-primary {
+    background-color: var(--unique-primary-medium);
+    color: white;
+}
+
+.badge-unique-accent {
+    background-color: var(--unique-accent);
+    color: var(--unique-primary-dark);
+    font-weight: 600;
+}
+
+.badge-unique-importacoes {
+    background-color: var(--unique-module-importacoes);
+    color: white;
+}
+
+.badge-unique-financeiro {
+    background-color: var(--unique-module-financeiro);
+    color: white;
+}
+
+/* === LINKS === */
+a.unique-link {
+    color: var(--unique-primary-medium);
+    transition: color 0.3s ease;
+}
+
+a.unique-link:hover {
+    color: var(--unique-primary-hover);
+    text-decoration: none;
+}
+
+/* === FORMULÁRIOS === */
+.form-control:focus {
+    border-color: var(--unique-primary-medium);
+    box-shadow: 0 0 0 0.2rem rgba(45, 107, 146, 0.25);
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--unique-primary-medium);
+    border-color: var(--unique-primary-medium);
+}
+
+/* === TABELAS === */
+.table-unique-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(45, 107, 146, 0.05);
+}
+
+.table-unique-hover tbody tr:hover {
+    background-color: rgba(45, 107, 146, 0.1);
+}
+
+/* === ALERTAS === */
+.alert-unique-primary {
+    background-color: rgba(45, 107, 146, 0.1);
+    border-color: var(--unique-primary-medium);
+    color: var(--unique-primary-dark);
+}
+
+.alert-unique-accent {
+    background-color: rgba(226, 186, 10, 0.1);
+    border-color: var(--unique-accent);
+    color: var(--unique-accent-dark);
+}
+
+/* === RESPONSIVIDADE === */
+@media (max-width: 768px) {
+    .module-header-importacoes,
+    .module-header-financeiro,
+    .module-header-generic {
+        padding: 1rem 0.5rem;
+    }
+}
+
+/* === OVERRIDE FINAL COM MÁXIMA ESPECIFICIDADE === */
+/* Este override deve vir por último para garantir precedência */
+/* Combate regras como .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a { color: black !important; } */
+
+/* Importações */
+div.dashboard-container div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item a,
+div.dashboard-container div.actions-bar.module-header-importacoes nav[aria-label="breadcrumb"] .breadcrumb .breadcrumb-item a,
+.dashboard-container .actions-bar.module-header-importacoes .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+div.dashboard-container div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item.active,
+div.dashboard-container div.actions-bar.module-header-importacoes .breadcrumb .breadcrumb-item:last-child,
+div.dashboard-container div.actions-bar.module-header-importacoes nav[aria-label="breadcrumb"] .breadcrumb .breadcrumb-item.active,
+.dashboard-container .actions-bar.module-header-importacoes .breadcrumb:not(.module-breadcrumb) .breadcrumb-item.active {
+    color: white !important;
+}
+
+/* Financeiro */
+div.dashboard-container div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item a,
+div.dashboard-container div.actions-bar.module-header-financeiro nav[aria-label="breadcrumb"] .breadcrumb .breadcrumb-item a,
+.dashboard-container .actions-bar.module-header-financeiro .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+div.dashboard-container div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item.active,
+div.dashboard-container div.actions-bar.module-header-financeiro .breadcrumb .breadcrumb-item:last-child,
+div.dashboard-container div.actions-bar.module-header-financeiro nav[aria-label="breadcrumb"] .breadcrumb .breadcrumb-item.active,
+.dashboard-container .actions-bar.module-header-financeiro .breadcrumb:not(.module-breadcrumb) .breadcrumb-item.active {
+    color: white !important;
+}
+
+/* Genérico */
+div.dashboard-container div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item a,
+div.dashboard-container div.actions-bar.module-header-generic nav[aria-label="breadcrumb"] .breadcrumb .breadcrumb-item a,
+.dashboard-container .actions-bar.module-header-generic .breadcrumb:not(.module-breadcrumb) .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+div.dashboard-container div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item.active,
+div.dashboard-container div.actions-bar.module-header-generic .breadcrumb .breadcrumb-item:last-child,
+div.dashboard-container div.actions-bar.module-header-generic nav[aria-label="breadcrumb"] .breadcrumb .breadcrumb-item.active,
+.dashboard-container .actions-bar.module-header-generic .breadcrumb:not(.module-breadcrumb) .breadcrumb-item.active {
+    color: white !important;
+}

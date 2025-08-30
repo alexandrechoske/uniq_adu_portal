@@ -11,16 +11,16 @@
 {% block content %}
 <div class="fluxo-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
-            {{ breadcrumb([
+            {{ get_breadcrumb_with_module_colors([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
                 {'name': 'Fluxo de Caixa', 'icon': 'mdi mdi-chart-waterfall'}
-            ]) }}
+            ], 'financeiro') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
-                <span id="filter-summary-text">Vendo dados dos últimos 12 meses</span>
+                <span id="filter-summary-text">Vendo dados de {{ ano_atual }}</span>
             </div>
         </div>
         <div class="actions-right">
@@ -44,104 +44,65 @@
     </div>
     
     <!-- KPI Cards Principais -->
-    <div class="kpi-grid">
-        <div class="kpi-card kpi-info" id="kpi-resultado">
-            <div class="kpi-icon">
-                <i class="mdi mdi-chart-line"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Resultado Líquido</p>
-                <p class="kpi-value" id="valor-resultado">-</p>
-                <p class="kpi-variation" id="var-resultado">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-success" id="kpi-entradas">
-            <div class="kpi-icon">
-                <i class="mdi mdi-trending-up"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Total de Entradas</p>
-                <p class="kpi-value" id="valor-entradas">-</p>
-                <p class="kpi-variation" id="var-entradas">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-warning" id="kpi-saidas">
-            <div class="kpi-icon">
-                <i class="mdi mdi-trending-down"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Total de Saídas</p>
-                <p class="kpi-value" id="valor-saidas">-</p>
-                <p class="kpi-variation" id="var-saidas">-</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-purple" id="kpi-saldo">
-            <div class="kpi-icon">
-                <i class="mdi mdi-wallet"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Saldo Final do Período</p>
-                <p class="kpi-value" id="valor-saldo">-</p>
-                <p class="kpi-variation" id="var-saldo">-</p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- KPI Cards Estratégicos -->
-    <div class="kpi-grid-secondary">
-        <div class="kpi-card kpi-danger" id="kpi-burn-rate">
-            <div class="kpi-icon">
-                <i class="mdi mdi-fire"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Burn Rate Mensal</p>
-                <p class="kpi-value" id="valor-burn-rate">-</p>
-                <p class="kpi-sub-value">Média de gastos líquidos</p>
-            </div>
-        </div>
-        
-        <div class="kpi-card kpi-orange" id="kpi-runway">
-            <div class="kpi-icon">
-                <i class="mdi mdi-runway"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Runway</p>
-                <p class="kpi-value" id="valor-runway">-</p>
-                <p class="kpi-sub-value">Meses de sobrevivência</p>
+    <div class="kpi-section">
+        <!-- KPIs Mensais/Anuais -->
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">
+                <i class="mdi mdi-calendar-month"></i>
+                Métricas
+            </h5>
+            <div class="kpi-grid-monthly">
+                <div class="kpi-card kpi-success" id="kpi-entradas-mes">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-trending-up"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Entradas</p>
+                        <p class="kpi-value" id="valor-entradas-mes">-</p>
+                        <p class="kpi-variation" id="var-entradas-mes">-</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-danger" id="kpi-saidas-mes">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-trending-down"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Saídas</p>
+                        <p class="kpi-value" id="valor-saidas-mes">-</p>
+                        <p class="kpi-variation" id="var-saidas-mes">-</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-info" id="kpi-resultado-mes">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-equal"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Resultado</p>
+                        <p class="kpi-value" id="valor-resultado-mes">-</p>
+                        <p class="kpi-variation" id="var-resultado-mes">-</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-primary" id="kpi-saldo-acumulado">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-bank"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Saldo Acumulado Final</p>
+                        <p class="kpi-value" id="valor-saldo-acumulado">-</p>
+                        <p class="kpi-variation" id="var-saldo-acumulado">-</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Gráficos -->
     <div class="charts-grid">
-        <!-- Gráfico de Despesas por Categoria -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-donut"></i>
-                    <span id="chart-despesas-title">Despesas por Categoria</span>
-                </h3>
-                <div class="chart-actions">
-                    <button id="btn-toggle-admin" class="btn btn-sm btn-warning" title="Ocultar/Mostrar Despesas Administrativas">
-                        <i class="mdi mdi-eye-off"></i>
-                        <span id="btn-toggle-text">Ocultar Admin</span>
-                    </button>
-                    <button id="btn-voltar-categorias" class="btn btn-sm btn-secondary" style="display: none;">
-                        <i class="mdi mdi-arrow-left"></i>
-                        Voltar
-                    </button>
-                </div>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-despesas-categoria"></canvas>
-            </div>
-        </div>
-        
-        <!-- Gráfico de Fluxo Mês a Mês -->
-        <div class="chart-container">
+        <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (Cascata) -->
+        <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-waterfall"></i>
@@ -153,34 +114,54 @@
             </div>
         </div>
         
-        <!-- Gráfico de Análise Estrutural -->
+        <!-- Second row: Despesas por Categoria and Projeção de Fluxo de Caixa side by side -->
+        <!-- Gráfico 2: Despesas por Categoria (Horizontal) -->
         <div class="chart-container">
             <div class="chart-header">
                 <h3 class="chart-title">
-                    <i class="mdi mdi-chart-bar-stacked"></i>
-                    Análise Estrutural (FCO, FCI, FCF)
+                    <i class="mdi mdi-chart-bar"></i>
+                    <span id="chart-despesas-title">Despesas por Categoria</span>
                 </h3>
+                <div class="chart-actions">
+                    <button id="btn-voltar-categorias" class="btn btn-sm btn-secondary" style="display: none;">
+                        <i class="mdi mdi-arrow-left"></i>
+                        Voltar
+                    </button>
+                </div>
             </div>
             <div class="chart-content">
-                <canvas id="chart-fluxo-estrutural"></canvas>
+                <canvas id="chart-despesas-categoria"></canvas>
             </div>
         </div>
         
-        <!-- Gráfico de Projeção -->
+        <!-- Gráfico 3: Projeção de Fluxo de Caixa -->
         <div class="chart-container">
             <div class="chart-header">
                 <h3 class="chart-title">
-                    <i class="mdi mdi-chart-timeline-variant"></i>
-                    Projeção de Fluxo de Caixa
+                    <i class="mdi mdi-chart-line"></i>
+                    Projeção de Fluxo de Caixa (24 meses + 6 meses)
                 </h3>
             </div>
             <div class="chart-content">
                 <canvas id="chart-projecao"></canvas>
             </div>
         </div>
+        
+        <!-- Gráfico 4: Saldo Acumulado por Período -->
+        <div class="chart-container wide-chart">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Saldo Acumulado por Período
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-saldo-acumulado"></canvas>
+            </div>
+        </div>
     </div>
     
-    <!-- Tabela de Dados -->
+    <!-- Tabela de Registros Financeiros -->
     <div class="table-container">
         <div class="table-header">
             <h3 class="table-title">
@@ -200,7 +181,6 @@
                         <th>Classe</th>
                         <th>Código</th>
                         <th>Descrição</th>
-                        <th>Tipo</th>
                         <th>Valor</th>
                     </tr>
                 </thead>
@@ -232,7 +212,7 @@
         <div class="filter-modal-header">
             <h2 class="filter-modal-title">
                 <i class="mdi mdi-filter"></i>
-                Filtros de Período
+                Filtros
             </h2>
             <button class="filter-modal-close" id="close-modal">
                 <i class="mdi mdi-close"></i>
@@ -242,28 +222,28 @@
             <div class="filter-section">
                 <h3 class="filter-section-title">📅 Período</h3>
                 <div class="filter-input-group">
-                    <label for="periodo-select" class="form-label">Período Pré-definido</label>
-                    <select id="periodo-select" class="form-select">
-                        <option value="mes_atual">Mês Atual</option>
-                        <option value="ultimo_mes">Último Mês</option>
-                        <option value="trimestre_atual">Trimestre Atual</option>
-                        <option value="ultimos_12_meses" selected>Últimos 12 Meses</option>
-                        <option value="ano_atual">Ano Atual</option>
-                        <option value="ultimo_ano">Último Ano</option>
-                        <option value="personalizado">Período Personalizado</option>
+                    <label for="ano-select" class="form-label">Ano</label>
+                    <select id="ano-select" class="form-select">
+                        <!-- Options will be populated by JavaScript -->
                     </select>
                 </div>
-                <div id="periodo-personalizado" class="filter-input-group" style="display: none;">
-                    <div class="filter-date-inputs">
-                        <div class="filter-input-group">
-                            <label for="data-inicio" class="form-label">Data Início</label>
-                            <input type="date" id="data-inicio" class="form-control">
-                        </div>
-                        <div class="filter-input-group">
-                            <label for="data-fim" class="form-label">Data Fim</label>
-                            <input type="date" id="data-fim" class="form-control">
-                        </div>
-                    </div>
+                <div class="filter-input-group">
+                    <label for="mes-select" class="form-label">Mês (Opcional)</label>
+                    <select id="mes-select" class="form-select">
+                        <option value="">Todos os meses</option>
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -285,5 +265,10 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Pass the current year to the template
+    var ano_atual = new Date().getFullYear();
+    document.getElementById('filter-summary-text').textContent = 'Vendo dados de ' + ano_atual;
+</script>
 <script src="{{ url_for('fin_fluxo_de_caixa.static', filename='js/fluxo_de_caixa.js') }}"></script>
 {% endblock %}

@@ -63,6 +63,12 @@ class AccessLogger:
         self.max_retries = 1  # Apenas 1 tentativa para não impactar performance
         self.timeout = 2  # Timeout de 2 segundos
         
+        # Skip logging in development mode
+        self.flask_env = os.getenv('FLASK_ENV', 'production')
+        if self.flask_env == 'development':
+            self.enabled = False
+            print("[ACCESS_LOG] Logging desabilitado no ambiente de desenvolvimento")
+        
         if not self.enabled:
             print("[ACCESS_LOG] Logging desabilitado via configuração")
         elif self.console_only:
@@ -143,15 +149,38 @@ class AccessLogger:
     def _get_user_info_safe(self):
         """Extrai informações do usuário da sessão de forma segura"""
         try:
-            user = session.get('user', {}) if session else {}
-            return {
-                'user_id': user.get('id'),
-                'user_email': str(user.get('email', ''))[:255] if user.get('email') else None,
-                'user_name': str(user.get('name', ''))[:255] if user.get('name') else None,
-                'user_role': str(user.get('role', ''))[:50] if user.get('role') else None,
-                'session_id': str(session.get('session_id', str(uuid.uuid4())))[:255] if session else str(uuid.uuid4())[:255]
-            }
-        except Exception:
+            # Check if we have a valid user session
+            if not session:
+                return {
+                    'user_id': None,
+                    'user_email': None,
+                    'user_name': None,
+                    'user_role': None,
+                    'session_id': str(uuid.uuid4())[:255]
+                }
+            
+            user = session.get('user', {})
+            
+            # If we have a user in session, extract info
+            if user and isinstance(user, dict):
+                return {
+                    'user_id': user.get('id') if user.get('id') else None,
+                    'user_email': str(user.get('email', ''))[:255] if user.get('email') else None,
+                    'user_name': str(user.get('name', ''))[:255] if user.get('name') else None,
+                    'user_role': str(user.get('role', ''))[:50] if user.get('role') else None,
+                    'session_id': str(session.get('session_id', str(uuid.uuid4())))[:255] if session else str(uuid.uuid4())[:255]
+                }
+            else:
+                # No valid user in session
+                return {
+                    'user_id': None,
+                    'user_email': None,
+                    'user_name': None,
+                    'user_role': None,
+                    'session_id': str(session.get('session_id', str(uuid.uuid4())))[:255] if session else str(uuid.uuid4())[:255]
+                }
+        except Exception as e:
+            print(f"[ACCESS_LOG] Error getting user info: {str(e)}")
             return {
                 'user_id': None,
                 'user_email': None,
@@ -225,6 +254,17 @@ class AccessLogger:
         # Informações básicas (sempre seguras)
         client_info = self._get_client_info_safe()
         user_info = self._get_user_info_safe()
+        
+        # Skip logging if we're in development mode
+        if self.flask_env == 'development':
+            return True
+        
+        # Skip logging if user info is completely empty and it's not a login/logout action
+        # This prevents logging anonymous access to public pages
+        if (not user_info['user_id'] and not user_info['user_email'] and 
+            action_type not in ['login', 'logout'] and
+            not session):  # If no session at all, it's likely a public access
+            return True
         
         # Timestamp brasileiro
         try:

@@ -200,3 +200,124 @@ def query_supabase():
             'status': 'error',
             'message': str(e)
         }), 500
+
+@bp.route('/check-tables')
+def check_tables():
+    """
+    Verifica a estrutura das tabelas users e users_dev
+    """
+    try:
+        results = {}
+        
+        # Verificar users
+        try:
+            result_users = supabase_admin.table('users').select('*').limit(1).execute()
+            results['users'] = {
+                'exists': True,
+                'columns': list(result_users.data[0].keys()) if result_users.data else [],
+                'sample_count': len(result_users.data)
+            }
+        except Exception as e:
+            results['users'] = {
+                'exists': False,
+                'error': str(e)
+            }
+        
+        # Verificar users_dev
+        try:
+            result_users_dev = supabase_admin.table('users_dev').select('*').limit(1).execute()
+            results['users_dev'] = {
+                'exists': True,
+                'columns': list(result_users_dev.data[0].keys()) if result_users_dev.data else [],
+                'sample_count': len(result_users_dev.data)
+            }
+        except Exception as e:
+            results['users_dev'] = {
+                'exists': False,
+                'error': str(e)
+            }
+        
+        # Verificar users_perfis
+        try:
+            result_users_perfis = supabase_admin.table('users_perfis').select('*').limit(1).execute()
+            results['users_perfis'] = {
+                'exists': True,
+                'columns': list(result_users_perfis.data[0].keys()) if result_users_perfis.data else [],
+                'sample_count': len(result_users_perfis.data)
+            }
+        except Exception as e:
+            results['users_perfis'] = {
+                'exists': False,
+                'error': str(e)
+            }
+        
+        return jsonify({
+            'status': 'success',
+            'tables': results
+        })
+        
+    except Exception as e:
+        print(f"[DEBUG] Erro ao verificar tabelas: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@bp.route('/test-table/<table_name>')
+def test_table_structure(table_name):
+    """
+    Testa se uma tabela existe e retorna informações sobre sua estrutura
+    """
+    try:
+        # Verificar se X-API-Key está presente para bypass de autenticação
+        api_bypass_key = os.environ.get('API_BYPASS_KEY')
+        if request.headers.get('X-API-Key') != api_bypass_key:
+            return jsonify({'error': 'API Key inválida'}), 401
+        
+        print(f"[DEBUG] Testando estrutura da tabela: {table_name}")
+        
+        # Tentar fazer uma consulta simples para verificar se a tabela existe
+        response = supabase_admin.table(table_name).select('*').limit(1).execute()
+        
+        if hasattr(response, 'data') and response.data is not None:
+            # Se retornou dados, tentar pegar mais informações
+            response_full = supabase_admin.table(table_name).select('*').limit(5).execute()
+            
+            result = {
+                'exists': True,
+                'sample_count': len(response_full.data) if response_full.data else 0,
+                'table_name': table_name
+            }
+            
+            # Se temos dados, extrair nomes das colunas
+            if response_full.data and len(response_full.data) > 0:
+                result['columns'] = list(response_full.data[0].keys())
+                result['sample_data'] = response_full.data
+            
+            print(f"[DEBUG] Tabela {table_name} encontrada com {result['sample_count']} registros de exemplo")
+            return jsonify(result)
+        else:
+            print(f"[DEBUG] Tabela {table_name} não encontrada ou vazia")
+            return jsonify({
+                'exists': False,
+                'table_name': table_name,
+                'error': 'Tabela não encontrada ou vazia'
+            }), 404
+            
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[DEBUG] Erro ao verificar tabela {table_name}: {error_msg}")
+        
+        # Se o erro menciona que a tabela não existe
+        if 'does not exist' in error_msg.lower() or 'relation' in error_msg.lower():
+            return jsonify({
+                'exists': False,
+                'table_name': table_name,
+                'error': f'Tabela não existe: {error_msg}'
+            }), 404
+        
+        return jsonify({
+            'exists': False,
+            'table_name': table_name,
+            'error': error_msg
+        }), 500

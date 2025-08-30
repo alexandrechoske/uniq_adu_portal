@@ -30,6 +30,10 @@ class PageValidator {
     
     detectPage() {
         const path = window.location.pathname;
+        
+        // Excluir páginas financeiras do PageValidator
+        if (path.includes('/financeiro/')) return 'financeiro_skip';
+        
         if (path.includes('/dashboard-executivo')) return 'dashboard_executivo';
         if (path.includes('/analytics')) return 'analytics';
         if (path.includes('/materiais')) return 'materiais';
@@ -38,6 +42,12 @@ class PageValidator {
     }
     
     startValidation() {
+        // Não iniciar validação para páginas financeiras
+        if (this.page === 'financeiro_skip') {
+            this.log('[PAGE_VALIDATOR] Página financeira detectada - validação desabilitada');
+            return;
+        }
+        
         // Aguardar um tempo antes de iniciar validação (para permitir carregamento inicial)
         setTimeout(() => {
             this.validatePage();

@@ -10,120 +10,490 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="faturamento-container">
     <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar">
+    <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
-            
-<nav class="breadcrumb">
-    
-        <div class="breadcrumb-item">
-            
-                <i class="mdi mdi-view-dashboard breadcrumb-icon"></i>
-            
-            
-                <span>Menu Principal</span>
-            
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
+                {'name': 'Faturamento', 'icon': 'mdi mdi-receipt'}
+            ], 'financeiro') }}
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados do ano atual</span>
+            </div>
         </div>
-        
-    
-</nav>
-
+        <div class="actions-right">
+            <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-primary">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
+            <!-- Button for Metas CRUD -->
+            <button id="open-metas-modal" class="btn btn-success">
+                <i class="mdi mdi-target"></i>
+                Inserir Metas
+            </button>
         </div>
     </div>
     
-    <!-- Conteúdo Principal -->
-    <div class="main-content">
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="mdi mdi-receipt"></i>
-                Gestão de Faturamento
-            </h1>
-            <p class="page-description">
-                Controle completo do faturamento, receitas e análise de vendas
-            </p>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Carregando dados de faturamento...</p>
+        </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="tab-button active" data-tab="visao-geral">Visão Geral</button>
+        <button class="tab-button" data-tab="analise-setor">Análise por Setor</button>
+    </div>
+    
+    <!-- Visão Geral Tab -->
+    <div class="tab-content active" id="visao-geral-tab">
+        <!-- Filter Summary (removed from here as it's now in the actions bar) -->
+        
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-success" id="kpi-total-faturado">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-currency-usd"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Total Faturado</p>
+                    <p class="kpi-value" id="valor-total-faturado">-</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-info" id="kpi-meta-anual">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-target"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Meta Anual</p>
+                    <p class="kpi-value" id="valor-meta-anual">-</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-warning" id="kpi-target-realizado">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-check-circle"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Target Realizado</p>
+                    <p class="kpi-value" id="valor-target-realizado">-</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-danger" id="kpi-target-a-realizar">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-clock-outline"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Target a Realizar</p>
+                    <p class="kpi-value" id="valor-target-a-realizar">-</p>
+                </div>
+            </div>
         </div>
         
-        <!-- Conteúdo será desenvolvido aqui -->
-        <div class="content-placeholder">
-            <div class="placeholder-card">
-                <i class="mdi mdi-receipt placeholder-icon"></i>
-                <h3>Gestão de Faturamento</h3>
-                <p>Esta página será desenvolvida com análise de faturamento, receitas e métricas de vendas.</p>
+        <!-- Charts Grid - Reorganized layout -->
+        <div class="charts-grid-full-width">
+            <!-- Tabela de Faturamento Mensal (Full Width) -->
+            <div class="chart-container-full">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-table"></i>
+                        Faturamento Mensal
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <table id="tabela-faturamento-mensal" class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>Ano</th>
+                                <th>Janeiro</th>
+                                <th>Fevereiro</th>
+                                <th>Março</th>
+                                <th>Abril</th>
+                                <th>Maio</th>
+                                <th>Junho</th>
+                                <th>Julho</th>
+                                <th>Agosto</th>
+                                <th>Setembro</th>
+                                <th>Outubro</th>
+                                <th>Novembro</th>
+                                <th>Dezembro</th>
+                                <th>Meta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gauge and Proporção Charts (Below the table) -->
+        <div class="charts-grid-two-elements">
+            <!-- Gráfico 1 - Proporção do Faturamento -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-donut"></i>
+                        Proporção do Faturamento
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="chart-proporcao-faturamento"></canvas>
+                </div>
+            </div>
+            
+            <!-- Gráfico 2 - A realizar e faturado -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-pie"></i>
+                        Meta Anual - Faturado vs A Realizar
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="chart-meta-realizacao"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Análise por Setor Tab -->
+    <div class="tab-content" id="analise-setor-tab">
+        <!-- Setor Filter -->
+        <div class="filter-section">
+            <div class="filter-input-group">
+                <label for="setor-select" class="form-label">Selecione o Setor</label>
+                <select id="setor-select" class="form-select">
+                    <option value="importacao">Importação</option>
+                    <option value="consultoria">Consultoria</option>
+                    <option value="exportacao">Exportação</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Filter Summary (keeping this one for setor-specific info) -->
+        <div class="filter-summary">
+            <span id="setor-filter-summary-text">Vendo dados do setor de Importação</span>
+        </div>
+        
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-success" id="kpi-faturamento-setor">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-domain"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Faturamento Total do Setor</p>
+                    <p class="kpi-value" id="valor-faturamento-setor">-</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-info" id="kpi-percentual-setor">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-percent"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">% Participação no Faturamento Total</p>
+                    <p class="kpi-value" id="valor-percentual-setor">-</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts and Tables Grid -->
+        <div class="charts-grid">
+            <!-- Gráfico de Faturamento Mensal do Setor -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-line"></i>
+                        Comparativo de Faturamento por Período
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="chart-faturamento-setor"></canvas>
+                </div>
+            </div>
+            
+            <!-- Tabela de Ranking de Clientes do Setor -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-account-multiple"></i>
+                        Ranking de Clientes do Setor
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <table id="tabela-ranking-clientes" class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Classe</th>
+                                <th>Valor Faturado</th>
+                                <th>% Participação no Setor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Filtros -->
+    <div id="filter-modal" class="filter-modal">
+        <div class="filter-modal-content">
+            <div class="filter-modal-header">
+                <h2 class="filter-modal-title">
+                    <i class="mdi mdi-filter"></i>
+                    Filtros de Ano
+                </h2>
+                <button class="filter-modal-close" id="close-modal">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="filter-modal-body">
+                <div class="filter-section">
+                    <h3 class="filter-section-title">📅 Ano</h3>
+                    <div class="year-month-selector" id="year-selector">
+                        <!-- Year buttons will be generated by JavaScript -->
+                    </div>
+                    <select id="ano-select" class="form-select" style="display: none;">
+                        <option value="2027">2027</option>
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2021">2021</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-modal-footer">
+                <button type="button" class="btn btn-secondary" id="clear-filters">
+                    <i class="mdi mdi-refresh"></i>
+                    Limpar Filtros
+                </button>
+                <button type="button" id="apply-filters" class="btn btn-primary">
+                    <i class="mdi mdi-check"></i>
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Metas -->
+    <div id="metas-modal" class="filter-modal metas-modal-wide" style="display: none;">
+        <div class="filter-modal-content metas-modal-content">
+            <div class="filter-modal-header">
+                <h2 class="filter-modal-title">
+                    <i class="mdi mdi-target"></i>
+                    Gerenciar Metas Financeiras
+                </h2>
+                <button class="filter-modal-close" id="close-metas-modal">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="filter-modal-body metas-modal-body">
+                <div class="filter-section">
+                    <h3 class="filter-section-title">🎯 Definir Meta</h3>
+                    <div class="filter-input-group">
+                        <label for="meta-ano" class="form-label">Ano</label>
+                        <div class="year-month-selector" id="meta-year-selector">
+                            <!-- Year buttons will be generated by JavaScript -->
+                        </div>
+                        <select id="meta-ano" class="form-select" style="display: none;">
+                            <option value="2027">2027</option>
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                        </select>
+                    </div>
+                    <div class="filter-input-group">
+                        <label for="meta-mes" class="form-label">Mês</label>
+                        <div class="year-month-selector" id="meta-month-selector">
+                            <!-- Month buttons will be generated by JavaScript -->
+                        </div>
+                        <select id="meta-mes" class="form-select" style="display: none;">
+                            <option value="">Anual</option>
+                            <option value="01">Janeiro</option>
+                            <option value="02">Fevereiro</option>
+                            <option value="03">Março</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Maio</option>
+                            <option value="06">Junho</option>
+                            <option value="07">Julho</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+                    <div class="filter-input-group">
+                        <label for="meta-valor" class="form-label">Valor da Meta (R$)</label>
+                        <input type="number" id="meta-valor" class="form-control" placeholder="Ex: 5000000">
+                    </div>
+                    <input type="hidden" id="meta-tipo" value="financeiro">
+                </div>
+                <div class="filter-section">
+                    <h3 class="filter-section-title">📋 Metas Cadastradas (2025)</h3>
+                    <div class="table-container-metas">
+                        <table class="enhanced-table" id="metas-table">
+                            <thead>
+                                <tr>
+                                    <th>Ano</th>
+                                    <th>Janeiro</th>
+                                    <th>Fevereiro</th>
+                                    <th>Março</th>
+                                    <th>Abril</th>
+                                    <th>Maio</th>
+                                    <th>Junho</th>
+                                    <th>Julho</th>
+                                    <th>Agosto</th>
+                                    <th>Setembro</th>
+                                    <th>Outubro</th>
+                                    <th>Novembro</th>
+                                    <th>Dezembro</th>
+                                    <th>Anual</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="metas-table-body">
+                                <!-- Data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+            <div class="filter-modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancel-metas">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="button" id="save-meta" class="btn btn-success">
+                    <i class="mdi mdi-content-save"></i>
+                    Salvar Meta
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.content-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px;
-    padding: 2rem;
-}
-
-.placeholder-card {
-    text-align: center;
-    background: white;
-    border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-}
-
-.placeholder-icon {
-    font-size: 4rem;
-    color: var(--color-primary);
-    margin-bottom: 1rem;
-}
-
-.placeholder-card h3 {
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.placeholder-card p {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.page-header {
-    margin-bottom: 2rem;
-}
-
-.page-title {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 1.875rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-bottom: 0.5rem;
-}
-
-.page-title i {
-    color: var(--color-primary);
-}
-
-.page-description {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    margin: 0;
-}
-</style>
+<script>
+// Generate year buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate year buttons for filter modal
+    const yearSelector = document.getElementById('year-selector');
+    if (yearSelector) {
+        const currentYear = new Date().getFullYear();
+        for (let year = 2027; year >= 2021; year--) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'year-month-btn' + (year === currentYear ? ' active' : '');
+            button.textContent = year;
+            button.dataset.value = year;
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                yearSelector.querySelectorAll('.year-month-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Add active class to clicked button
+                this.classList.add('active');
+                // Update hidden select
+                document.getElementById('ano-select').value = this.dataset.value;
+            });
+            yearSelector.appendChild(button);
+        }
+    }
+    
+    // Generate year buttons for metas modal
+    const metaYearSelector = document.getElementById('meta-year-selector');
+    if (metaYearSelector) {
+        const currentYear = new Date().getFullYear();
+        for (let year = 2027; year >= 2021; year--) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'year-month-btn' + (year === currentYear ? ' active' : '');
+            button.textContent = year;
+            button.dataset.value = year;
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                metaYearSelector.querySelectorAll('.year-month-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Add active class to clicked button
+                this.classList.add('active');
+                // Update hidden select
+                document.getElementById('meta-ano').value = this.dataset.value;
+            });
+            metaYearSelector.appendChild(button);
+        }
+    }
+    
+    // Generate month buttons for metas modal
+    const metaMonthSelector = document.getElementById('meta-month-selector');
+    if (metaMonthSelector) {
+        const months = [
+            { value: '', name: 'Anual' },
+            { value: '01', name: 'Jan' },
+            { value: '02', name: 'Fev' },
+            { value: '03', name: 'Mar' },
+            { value: '04', name: 'Abr' },
+            { value: '05', name: 'Mai' },
+            { value: '06', name: 'Jun' },
+            { value: '07', name: 'Jul' },
+            { value: '08', name: 'Ago' },
+            { value: '09', name: 'Set' },
+            { value: '10', name: 'Out' },
+            { value: '11', name: 'Nov' },
+            { value: '12', name: 'Dez' }
+        ];
+        
+        months.forEach((month, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'year-month-btn' + (index === 0 ? ' active' : ''); // Anual is active by default
+            button.textContent = month.name;
+            button.dataset.value = month.value;
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                metaMonthSelector.querySelectorAll('.year-month-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Add active class to clicked button
+                this.classList.add('active');
+                // Update hidden select
+                document.getElementById('meta-mes').value = this.dataset.value;
+            });
+            metaMonthSelector.appendChild(button);
+        });
+    }
+});
+</script>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script src="{{ url_for('fin_faturamento.static', filename='js/faturamento.js') }}"></script>
-<script>
-// JavaScript específico da gestão de faturamento será desenvolvido aqui
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Página Gestão de Faturamento carregada');
-});
-</script>
 {% endblock %}
