@@ -95,7 +95,6 @@ function loadData() {
         loadSaldoAcumulado(year),
         loadFaturamentoPorSetor(year),
         loadTopDespesas(year),
-        loadProjecaoFluxoCaixa(year),
         loadTopClientes(year)
     ]).then(() => {
         hideLoading();
@@ -187,20 +186,6 @@ function loadTopDespesas(year) {
                 updateTopDespesasChart(data.data);
             } else {
                 throw new Error(data.error || 'Erro ao carregar top despesas');
-            }
-        });
-}
-
-function loadProjecaoFluxoCaixa(year) {
-    console.log(`Loading projecao fluxo de caixa for year: ${year}`);
-    
-    return fetch(`/financeiro/dashboard-executivo/api/projecao-fluxo-caixa?ano=${year}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateProjecaoFluxoCaixaChart(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar projeção de fluxo de caixa');
             }
         });
 }
@@ -479,70 +464,6 @@ function updateTopDespesasChart(data) {
     });
 }
 
-function updateProjecaoFluxoCaixaChart(data) {
-    console.log('Updating projecao fluxo de caixa chart:', data);
-    
-    const ctx = document.getElementById('chart-projecao-fluxo-caixa').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.projecaoFluxoCaixaChart) {
-        window.projecaoFluxoCaixaChart.destroy();
-    }
-    
-    // Prepare data
-    const labels = data.map(item => item.periodo);
-    const valores = data.map(item => item.valor);
-    
-    // Determine colors based on values (positive = green, negative = red)
-    const backgroundColors = valores.map(value => 
-        value >= 0 ? 'rgba(25, 135, 84, 0.7)' : 'rgba(220, 53, 69, 0.7)'
-    );
-    
-    const borderColors = valores.map(value => 
-        value >= 0 ? 'rgba(25, 135, 84, 1)' : 'rgba(220, 53, 69, 1)'
-    );
-    
-    window.projecaoFluxoCaixaChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Projeção de Fluxo de Caixa',
-                    data: valores,
-                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    ticks: {
-                        callback: function(value) {
-                            return 'R$ ' + formatCompactNumber(value);
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
 function updateTopClientes(data) {
     console.log('Updating top clientes:', data);
     
@@ -551,13 +472,22 @@ function updateTopClientes(data) {
     if (tableBody) {
         tableBody.innerHTML = '';
         
+        if (data.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td colspan="4" class="text-center text-muted">Nenhum cliente encontrado</td>
+            `;
+            tableBody.appendChild(row);
+            return;
+        }
+        
         data.forEach((cliente, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${index + 1}</td>
+                <td class="text-center">${index + 1}</td>
                 <td>${cliente.cliente}</td>
                 <td>R$ ${formatCompactNumber(cliente.total_faturado)}</td>
-                <td>${cliente.percentual.toFixed(2)}%</td>
+                <td class="text-right">${cliente.percentual.toFixed(2)}%</td>
             `;
             tableBody.appendChild(row);
         });
@@ -603,6 +533,7 @@ function formatNumber(value) {
     }).format(value);
 }
 
+// Add this helper function for text alignment
 function formatCompactNumber(value) {
     // Convert to number if it's a string
     const num = typeof value === 'string' ? parseFloat(value) : value;

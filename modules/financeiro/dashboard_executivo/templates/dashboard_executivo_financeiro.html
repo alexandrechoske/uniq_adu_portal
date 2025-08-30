@@ -125,8 +125,8 @@
     
     <!-- Charts Grid -->
     <div class="charts-grid">
-        <!-- Resultado Mensal -->
-        <div class="chart-container">
+        <!-- Resultado Mensal (60%) -->
+        <div class="chart-container large-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-bar"></i>
@@ -138,8 +138,21 @@
             </div>
         </div>
         
-        <!-- Evolução do Saldo Acumulado -->
-        <div class="chart-container">
+        <!-- Proporção do Faturamento (40%) -->
+        <div class="chart-container small-chart">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-donut"></i>
+                    Proporção do Faturamento
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-faturamento-setor"></canvas>
+            </div>
+        </div>
+        
+        <!-- Evolução do Saldo Acumulado (40%) -->
+        <div class="chart-container medium-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-line"></i>
@@ -151,21 +164,8 @@
             </div>
         </div>
         
-        <!-- Proporção do Faturamento por Setor -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-donut"></i>
-                    Proporção do Faturamento por Setor
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-faturamento-setor"></canvas>
-            </div>
-        </div>
-        
-        <!-- Top 5 Categorias de Despesa -->
-        <div class="chart-container">
+        <!-- Top 5 Categorias de Despesa (40%) -->
+        <div class="chart-container medium-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-bar"></i>
@@ -176,40 +176,24 @@
                 <canvas id="chart-top-despesas"></canvas>
             </div>
         </div>
-    </div>
-    
-    <!-- Projeção de Fluxo de Caixa -->
-    <div class="chart-container">
-        <div class="chart-header">
-            <h3 class="chart-title">
-                <i class="mdi mdi-chart-line"></i>
-                Projeção de Fluxo de Caixa
-            </h3>
-        </div>
-        <div class="chart-content">
-            <canvas id="chart-projecao-fluxo-caixa"></canvas>
-        </div>
-    </div>
-    
-    <!-- Tables Section -->
-    <div class="tables-section">
-        <!-- Top 5 Clientes por Faturamento -->
-        <div class="table-container">
-            <div class="table-header">
+        
+        <!-- Top 5 Clientes por Faturamento (20%) -->
+        <div class="chart-container small-table">
+            <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-account-multiple"></i>
-                    Top 5 Clientes por Faturamento
+                    Top 5 Clientes
                 </h3>
             </div>
-            <div class="table-content">
-                <div class="enhanced-table-container">
-                    <table id="table-clientes" class="enhanced-table">
+            <div class="chart-content">
+                <div class="table-responsive">
+                    <table id="table-clientes" class="dashboard-table">
                         <thead>
                             <tr>
                                 <th>#</th>
                                 <th>Cliente</th>
-                                <th>Faturamento Total</th>
-                                <th>% do Total</th>
+                                <th>Faturamento</th>
+                                <th>%</th>
                             </tr>
                         </thead>
                         <tbody>

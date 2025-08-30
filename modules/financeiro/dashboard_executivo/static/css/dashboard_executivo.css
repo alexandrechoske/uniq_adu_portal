@@ -3,6 +3,8 @@
 .dashboard-executivo-container {
     padding: 1rem;
     background-color: #f8f9fa;
+    max-width: 100%;
+    margin: 0 auto;
 }
 
 .page-header {
@@ -196,14 +198,82 @@
     color: #dc3545;
 }
 
-/* Charts Grid */
+/* Charts Grid - Updated for correct layout */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    grid-template-columns: 60% 40%;
+    grid-template-rows: auto auto auto auto;
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
+/* Line 2: Resultado Mensal (60%) and Proporção do Faturamento (40%) */
+.large-chart {
+    grid-row: 1;
+    grid-column: 1;
+}
+
+.small-chart {
+    grid-row: 1;
+    grid-column: 2;
+}
+
+/* Line 3: Evolução Saldo Acumulado (40%), Top 5 Categorias de Despesa (40%), Top 5 Clientes (20%) */
+.medium-chart:first-of-type {
+    /* This is the "Evolução do Saldo Acumulado" */
+    grid-row: 2;
+    grid-column: 1;
+}
+
+.medium-chart:last-of-type {
+    /* This is the "Top 5 Categorias de Despesa" */
+    grid-row: 2;
+    grid-column: 2;
+}
+
+.small-table {
+    /* This is the "Top 5 Clientes" */
+    grid-row: 3;
+    grid-column: 1 / span 2;
+}
+
+/* For large screens, we want a 3-column layout for line 3 */
+@media (min-width: 1200px) {
+    .charts-grid {
+        grid-template-columns: 40% 40% 20%;
+        grid-template-rows: auto auto;
+    }
+    
+    .large-chart {
+        grid-row: 1;
+        grid-column: 1 / span 2;
+    }
+    
+    .small-chart {
+        grid-row: 1;
+        grid-column: 3;
+    }
+    
+    .medium-chart:first-of-type {
+        /* This is the "Evolução do Saldo Acumulado" */
+        grid-row: 2;
+        grid-column: 1;
+    }
+    
+    .medium-chart:last-of-type {
+        /* This is the "Top 5 Categorias de Despesa" */
+        grid-row: 2;
+        grid-column: 2;
+    }
+    
+    .small-table {
+        /* This is the "Top 5 Clientes" */
+        grid-row: 2;
+        grid-column: 3;
+    }
+}
+
+/* Default layout for smaller screens (stacked) */
 .chart-container {
     background: white;
     border-radius: 8px;
@@ -235,40 +305,88 @@
     position: relative;
 }
 
+.large-chart .chart-content {
+    min-height: 400px;
+}
+
+.medium-chart .chart-content {
+    min-height: 350px;
+}
+
+.small-chart .chart-content {
+    min-height: 200px;
+}
+
+.small-table .chart-content {
+    min-height: 350px;
+}
+
 .chart-content canvas {
     width: 100% !important;
     height: 100% !important;
 }
 
-/* Tables Section */
-.tables-section {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+/* Dashboard Table Styles */
+.table-responsive {
+    overflow-x: auto;
+    height: 100%;
 }
 
-.table-container {
-    background: white;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
 }
 
-.table-header {
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
+.dashboard-table th,
+.dashboard-table td {
+    padding: 0.75rem;
+    text-align: left;
     border-bottom: 1px solid #e9ecef;
 }
 
-.table-header h3 {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 1.125rem;
+.dashboard-table th {
+    background: #f8f9fa;
     font-weight: 600;
-    color: #212529;
-    margin: 0;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.dashboard-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.dashboard-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.dashboard-table tbody tr:nth-child(odd) {
+    background: white;
+}
+
+.dashboard-table tbody tr:nth-child(even):hover {
+    background: #e9ecef;
+}
+
+.dashboard-table tbody tr:nth-child(odd):hover {
+    background: #f8f9fa;
+}
+
+.dashboard-table th:first-child,
+.dashboard-table td:first-child {
+    width: 5%;
+    text-align: center;
+}
+
+.dashboard-table th:last-child,
+.dashboard-table td:last-child {
+    text-align: right;
+}
+
+.dashboard-table td:last-child {
+    font-weight: 500;
 }
 
 /* Loading Overlay */
@@ -305,6 +423,55 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1199px) and (min-width: 992px) {
+    .charts-grid {
+        grid-template-columns: 50% 50%;
+    }
+    
+    .large-chart {
+        grid-row: 1;
+        grid-column: 1;
+    }
+    
+    .small-chart {
+        grid-row: 1;
+        grid-column: 2;
+    }
+    
+    .medium-chart:first-of-type {
+        grid-row: 2;
+        grid-column: 1;
+    }
+    
+    .medium-chart:last-of-type {
+        grid-row: 2;
+        grid-column: 2;
+    }
+    
+    .small-table {
+        grid-row: 3;
+        grid-column: 1 / span 2;
+    }
+}
+
+@media (max-width: 991px) and (min-width: 768px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-container {
+        padding: 1rem;
+    }
+    
+    .large-chart,
+    .small-chart,
+    .medium-chart,
+    .small-table {
+        grid-row: auto;
+        grid-column: auto;
+    }
+}
+
 @media (max-width: 768px) {
     .filter-row {
         flex-direction: column;
@@ -319,14 +486,25 @@
         grid-template-columns: 1fr;
     }
     
-    .charts-grid,
-    .tables-section {
+    .charts-grid {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
     }
     
-    .chart-container,
-    .table-container {
+    .chart-container {
         padding: 1rem;
+    }
+    
+    .large-chart,
+    .small-chart,
+    .medium-chart,
+    .small-table {
+        grid-row: auto;
+        grid-column: auto;
+    }
+    
+    .dashboard-executivo-container {
+        padding: 0.5rem;
     }
 }
 
@@ -351,8 +529,4 @@
     background-color: #0b5ed7;
     color: white;
     text-decoration: none;
-}
-
-.nav-button i {
-    font-size: 0.75rem;
 }
