@@ -31,7 +31,7 @@ def load_user_perfis(user_id, supabase_client=None):
             print("[PERFIS_LOADER] ❌ Cliente Supabase não disponível")
             return []
         
-        # Buscar perfis do usuário na tabela users_dev
+        # Buscar perfis do usuário na tabela users
         from modules.usuarios.routes import get_users_table
         user_response = client.table(get_users_table()).select('perfis_json').eq('id', user_id).execute()
         
