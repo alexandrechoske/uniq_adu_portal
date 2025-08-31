@@ -58,18 +58,6 @@
                     </div>
                 </a>
                 
-                {% if session.user.role == 'admin' %}
-                <a href="{{ url_for('analytics.analytics_dashboard') }}" class="menu-card config">
-                    <div class="card-icon">
-                        <i class="mdi mdi-chart-line"></i>
-                    </div>
-                    <div class="card-content">
-                        <h4 class="card-title">Analytics Dashboard</h4>
-                        <p class="card-description">Relatórios de acesso e uso do sistema</p>
-                    </div>
-                </a>
-                {% endif %}
-                
                 <!-- Placeholder para futuras configurações -->
                 <div class="menu-card placeholder">
                     <div class="card-icon">
