@@ -69,6 +69,9 @@ class AccessLogger:
             self.enabled = False
             print("[ACCESS_LOG] Logging desabilitado no ambiente de desenvolvimento")
         
+        # Production URL configuration
+        self.production_url = os.getenv('PRODUCTION_URL', 'https://portalunique.com.br')
+        
         if not self.enabled:
             print("[ACCESS_LOG] Logging desabilitado via configuração")
         elif self.console_only:
@@ -288,7 +291,15 @@ class AccessLogger:
             log_data['page_url'] = str(kwargs['page_url'])[:500]
         elif request and hasattr(request, 'url'):
             try:
-                log_data['page_url'] = str(request.url)[:500]
+                # Use the correct production URL
+                if self.flask_env == 'production':
+                    # Extract path from request.url and prepend production URL
+                    request_path = request.path
+                    if request.query_string:
+                        request_path += '?' + request.query_string.decode('utf-8')
+                    log_data['page_url'] = f"{self.production_url}{request_path}"[:500]
+                else:
+                    log_data['page_url'] = str(request.url)[:500]
             except:
                 pass
         
