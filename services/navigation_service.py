@@ -183,25 +183,6 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                 'url': 'config.logos_clientes',
                 'active_endpoints': ['config.logos_clientes'],
                 'roles': ['admin']
-            },
-            {
-                'title': 'Analytics',
-                'icon': 'mdi-chart-line',
-                'url': 'analytics.analytics_dashboard',
-                'active_endpoints': ['analytics.analytics_dashboard', 'analytics.analytics_agente'],
-                'roles': ['admin'],
-                'submenu': [
-                    {
-                        'title': 'Portal',
-                        'icon': 'mdi-chart-bar',
-                        'url': 'analytics.analytics_dashboard'
-                    },
-                    {
-                        'title': 'Agente',
-                        'icon': 'mdi-robot',
-                        'url': 'analytics.analytics_agente'
-                    }
-                ]
             }
         ]
         

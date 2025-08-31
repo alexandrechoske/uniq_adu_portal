@@ -347,13 +347,7 @@
             }
 
             /* Submenu em mobile */
-            .analytics-submenu {
-                position: absolute !important;
-                left: calc(100% + 8px) !important;
-                top: 0 !important;
-                z-index: 50001 !important;
-            }
-
+            /* REMOVED ANALYTICS SUBMENU */
             .financeiro-submenu {
                 position: absolute !important;
                 left: calc(100% + 8px) !important;
@@ -898,12 +892,7 @@
                     </a>
                     {% endif %}
                     
-                    <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
-                       title="Analytics">
-                        <i class="mdi mdi-chart-bar"></i>
-                        <span class="sidebar-text">Analytics</span>
-                    </a>
+                    <!-- REMOVED ANALYTICS FROM SIDEBAR -->
                 </div>
                 {% endif %}
             
@@ -1046,58 +1035,6 @@
     <!-- Script para posicionamento dinâmico do submenu Analytics -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Analytics submenu
-            const analyticsWrapper = document.getElementById('analytics-wrapper');
-            const analyticsSubmenu = document.querySelector('.analytics-submenu');
-            let analyticsHoverTimeout;
-
-            if (analyticsWrapper && analyticsSubmenu) {
-                // Função para mostrar submenu Analytics
-                function showAnalyticsSubmenu() {
-                    clearTimeout(analyticsHoverTimeout);
-                    const rect = analyticsWrapper.getBoundingClientRect();
-                    const sidebar = document.getElementById('sidebar');
-                    const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
-
-                    if (isCollapsed) {
-                        // Sidebar colapsada: posicionar como tooltip
-                        analyticsSubmenu.style.left = '4rem';
-                        analyticsSubmenu.style.top = rect.top + 'px';
-                    } else {
-                        // Sidebar expandida: posicionar ao lado
-                        analyticsSubmenu.style.left = '16rem';
-                        analyticsSubmenu.style.top = rect.top + 'px';
-                    }
-
-                    analyticsSubmenu.style.opacity = '1';
-                    analyticsSubmenu.style.visibility = 'visible';
-                    analyticsSubmenu.style.pointerEvents = 'auto';
-                    analyticsSubmenu.style.transform = 'translateX(0)';
-                }
-
-                // Função para esconder submenu Analytics com delay
-                function hideAnalyticsSubmenu() {
-                    analyticsHoverTimeout = setTimeout(() => {
-                        analyticsSubmenu.style.opacity = '0';
-                        analyticsSubmenu.style.visibility = 'hidden';
-                        analyticsSubmenu.style.pointerEvents = 'none';
-                        analyticsSubmenu.style.transform = 'translateX(-10px)';
-                    }, 150); // Delay de 150ms para dar tempo de mover o mouse
-                }
-
-                // Event listeners para o wrapper do Analytics
-                analyticsWrapper.addEventListener('mouseenter', showAnalyticsSubmenu);
-                analyticsWrapper.addEventListener('mouseleave', hideAnalyticsSubmenu);
-
-                // Event listeners para o submenu (cancelar ocultação)
-                analyticsSubmenu.addEventListener('mouseenter', function() {
-                    clearTimeout(analyticsHoverTimeout);
-                    showAnalyticsSubmenu();
-                });
-
-                analyticsSubmenu.addEventListener('mouseleave', hideAnalyticsSubmenu);
-            }
-
             // Financeiro submenu
             const financeiroWrapper = document.getElementById('financeiro-wrapper');
             const financeiroSubmenu = document.querySelector('.financeiro-submenu');
