@@ -278,7 +278,7 @@ def api_faturamento_setor():
         
         # Buscar dados de faturamento
         response_faturamento = supabase_admin.table('fin_faturamento_anual') \
-            .select('classe, valor') \
+            .select('categoria, valor') \
             .gte('data', f'{ano}-01-01') \
             .lte('data', f'{ano}-12-31') \
             .execute()
@@ -289,14 +289,14 @@ def api_faturamento_setor():
         total_exportacao = 0
         
         for item in response_faturamento.data:
-            classe = item.get('classe', '').upper()
+            categoria = item.get('categoria', '').upper()
             valor = float(item['valor'])
             
-            if 'IMP' in classe or 'IMPORT' in classe:
+            if 'IMP' in categoria or 'IMPORT' in categoria:
                 total_importacao += valor
-            elif 'CONS' in classe or 'CONSULT' in classe:
+            elif 'CONS' in categoria or 'CONSULT' in categoria:
                 total_consultoria += valor
-            elif 'EXP' in classe or 'EXPORT' in classe:
+            elif 'EXP' in categoria or 'EXPORT' in categoria:
                 total_exportacao += valor
         
         return jsonify({
@@ -375,7 +375,7 @@ def api_top_despesas():
 @login_required
 @perfil_required('financeiro', 'fin_dashboard_executivo')
 def api_top_clientes():
-    """API para top 5 clientes por faturamento"""
+    """API para top 10 clientes por faturamento"""
     try:
         ano = request.args.get('ano', datetime.now().year)
         
@@ -395,8 +395,8 @@ def api_top_clientes():
             
             faturamento_por_cliente[cliente] += valor
         
-        # Ordenar e pegar top 5
-        top_clientes = sorted(faturamento_por_cliente.items(), key=lambda x: x[1], reverse=True)[:5]
+        # Ordenar e pegar top 10 (instead of top 5)
+        top_clientes = sorted(faturamento_por_cliente.items(), key=lambda x: x[1], reverse=True)[:10]
         
         # Formatar resultado
         resultado = []
@@ -413,6 +413,68 @@ def api_top_clientes():
         return jsonify({
             'success': True,
             'data': resultado
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dashboard_executivo_financeiro_bp.route('/api/faturamento-classe')
+@login_required
+@perfil_required('financeiro', 'fin_dashboard_executivo')
+def api_faturamento_classe():
+    """API para faturamento por classe dentro de um setor específico"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        setor = request.args.get('setor', 'importacao')
+        
+        # Definir filtro de categoria com base no setor
+        filtro_categoria = ''
+        if setor == 'importacao':
+            filtro_categoria = 'IMPORTAÇÃO'
+        elif setor == 'consultoria':
+            filtro_categoria = 'CONSULTORIA'
+        elif setor == 'exportacao':
+            filtro_categoria = 'EXPORTAÇÃO'
+        
+        # Buscar dados de faturamento com filtro de categoria
+        response_faturamento = supabase_admin.table('fin_faturamento_anual') \
+            .select('categoria, classe, valor') \
+            .eq('categoria', filtro_categoria) \
+            .gte('data', f'{ano}-01-01') \
+            .lte('data', f'{ano}-12-31') \
+            .execute()
+        
+        # Agrupar por classe específica
+        faturamento_por_classe = defaultdict(float)
+        
+        for item in response_faturamento.data:
+            classe = item.get('classe', 'Não especificado')
+            valor = float(item['valor'])
+            
+            faturamento_por_classe[classe] += valor
+        
+        # Converter para lista e ordenar
+        classe_data = []
+        total_setor = sum(faturamento_por_classe.values())
+        
+        for classe, valor in faturamento_por_classe.items():
+            percentual = (valor / total_setor * 100) if total_setor > 0 else 0
+            classe_data.append({
+                'classe': classe,
+                'valor': valor,
+                'percentual': percentual
+            })
+        
+        # Ordenar por valor (decrescente)
+        classe_data.sort(key=lambda x: x['valor'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'data': classe_data,
+            'setor': setor,
+            'total': total_setor
         })
     except Exception as e:
         return jsonify({

@@ -145,6 +145,12 @@
                     <i class="mdi mdi-chart-donut"></i>
                     Proporção do Faturamento
                 </h3>
+                <div id="drill-down-back" style="display: none;">
+                    <button id="back-to-sectors" class="nav-button">
+                        <i class="mdi mdi-arrow-left"></i>
+                        Voltar para Setores
+                    </button>
+                </div>
             </div>
             <div class="chart-content">
                 <canvas id="chart-faturamento-setor"></canvas>
@@ -182,7 +188,7 @@
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-account-multiple"></i>
-                    Top 5 Clientes
+                    Top 10 Clientes
                 </h3>
             </div>
             <div class="chart-content">
@@ -209,5 +215,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Add Chart.js Data Labels Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script src="{{ url_for('fin_dashboard_executivo.static', filename='js/dashboard_executivo.js') }}"></script>
 {% endblock %}
