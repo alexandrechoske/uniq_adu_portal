@@ -3,28 +3,28 @@
 (function(){
     const STATUS_GROUPS = {
         'processos_abertos': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum !== 6; // ≠ 6. Finalizado
+            const t = getTimelineNumber(op.status_timeline);
+            return t && t >= 1 && t <= 5;
         },
         'AG EMBARQUE': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 1; // 1. Aberto
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 1; // Apenas Aberto
         },
         'AG CHEGADA': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 2; // 2. Embarque
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 2; // Apenas Embarcado
         },
         'AG LIBERACAO': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 3; // 3. Chegada  
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 3; // Apenas Chegada
         },
         'AGD_ENTREGA': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return [4, 5].includes(timelineNum); // 4. Registro + 5. Desembaraço
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 4; // Apenas Registro - CORRIGIDO: removido timeline 5
         },
         'AG FECHAMENTO': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 5; // 5. Desembaraço
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 5; // Apenas Desembaraço - MANTIDO: apenas timeline 5
         },
         'chegando_mes': (op, ctx) => inPeriodoChegada(op, 'mes'),
         'chegando_semana': (op, ctx) => inPeriodoChegada(op, 'semana')

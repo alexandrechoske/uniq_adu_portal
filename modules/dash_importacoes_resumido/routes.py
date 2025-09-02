@@ -176,7 +176,11 @@ def get_dashboard_data():
             try:
                 query = supabase.table('vw_importacoes_6_meses_abertos_dash').select('*')
 
-                if user_role in ['cliente_unique', 'interno_unique']:
+                # Verificar se usuário tem perfil admin_operacao - se sim, pode ver todos os dados
+                perfil_principal = user.get('perfil_principal', '')
+                is_admin_operacao = perfil_principal == 'admin_operacao'
+
+                if user_role in ['cliente_unique', 'interno_unique'] and not is_admin_operacao:
                     user_cnpjs = get_user_companies(user)
                     print(f"[DEBUG] Role: {user_role}, CNPJs encontrados: {user_cnpjs}")
                     if user_cnpjs:
@@ -202,6 +206,10 @@ def get_dashboard_data():
                             'data': [],
                             'pagination': {'total': 0, 'pages': 0, 'current_page': 1, 'per_page': per_page}
                         })
+                elif is_admin_operacao:
+                    print(f"[DEBUG] Usuário admin_operacao -> carregando TODOS os dados")
+                elif user_role == 'admin':
+                    print(f"[DEBUG] Usuário admin -> carregando TODOS os dados")
 
                 def _run_query():
                     return query.limit(100).execute()

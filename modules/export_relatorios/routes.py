@@ -89,6 +89,8 @@ def build_base_query(user):
     # SEGURANÇA OBRIGATÓRIA: Sempre filtrar por CNPJs do usuário
     user_role = user.get('role', '')
     user_companies = user.get('user_companies') or []
+    perfil_principal = user.get('perfil_principal', '')
+    is_admin_operacao = perfil_principal == 'admin_operacao'
     
     # Para clientes, SEMPRE restringir aos CNPJs associados
     if user_role == 'cliente_unique':
@@ -100,7 +102,11 @@ def build_base_query(user):
             print(f"[EXPORT_REL][SECURITY] Cliente {user.get('id')} sem CNPJs - bloqueando acesso")
             q = q.limit(0)
     
-    # Para usuários internos, aplicar filtro se tiverem CNPJs específicos
+    # Para usuários internos com perfil admin_operacao, permitir ver todos os dados
+    elif user_role == 'interno_unique' and is_admin_operacao:
+        print(f"[EXPORT_REL][SECURITY] Usuário admin_operacao {user.get('id')} - acesso completo a todos os dados")
+    
+    # Para usuários internos normais, aplicar filtro se tiverem CNPJs específicos
     elif user_role == 'interno_unique' and user_companies:
         print(f"[EXPORT_REL][SECURITY] Usuário interno {user.get('id')} filtrado por CNPJs: {user_companies}")
         q = q.in_('cnpj_importador', user_companies)
@@ -172,6 +178,8 @@ def validate_user_data_access(rows, user):
     """
     user_role = user.get('role', '')
     user_companies = user.get('user_companies') or []
+    perfil_principal = user.get('perfil_principal', '')
+    is_admin_operacao = perfil_principal == 'admin_operacao'
     
     # Para clientes, verificar se TODOS os registros pertencem aos CNPJs permitidos
     if user_role == 'cliente_unique':
@@ -194,6 +202,11 @@ def validate_user_data_access(rows, user):
             print(f"[EXPORT_REL][SECURITY_VALIDATION] Total de {blocked_count} registros bloqueados por segurança")
         
         return valid_rows
+    
+    # Para usuários internos com perfil admin_operacao, permitir ver todos os dados
+    elif user_role == 'interno_unique' and is_admin_operacao:
+        print(f"[EXPORT_REL][SECURITY_VALIDATION] Usuário admin_operacao {user.get('id')} - acesso a todos os registros")
+        return rows
     
     # Para usuários internos com CNPJs específicos, aplicar mesma validação
     elif user_role == 'interno_unique' and user_companies:

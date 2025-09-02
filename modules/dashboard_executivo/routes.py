@@ -44,14 +44,24 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
             return existing_inside
         print(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
-        if role in ['cliente_unique', 'interno_unique']:
+        
+        # Verificar se usuário tem perfil admin_operacao - se sim, pode ver todos os dados
+        perfil_principal = user_data.get('perfil_principal', '')
+        is_admin_operacao = perfil_principal == 'admin_operacao'
+        
+        if role in ['cliente_unique', 'interno_unique'] and not is_admin_operacao:
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 query = query.in_('cnpj_importador', user_cnpjs)
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Filtrando por CNPJs do usuário: {len(user_cnpjs)} empresas")
             else:
                 print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário sem CNPJs vinculados -> dados vazios")
                 data_cache.set_cache(user_id, 'dashboard_v2_data', [])
                 return []
+        elif is_admin_operacao:
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin_operacao -> carregando TODOS os dados")
+        elif role == 'admin':
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin -> carregando TODOS os dados")
         def _run_main_query():
             return query.execute()
         result = run_with_retries('dashboard_executivo.helper_load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
@@ -608,14 +618,14 @@ def dashboard_kpis():
             aguardando_embarque = len(df[df['timeline_number'] == 1])  # 1. Aberto (aguardando embarque)
             aguardando_chegada = len(df[df['timeline_number'] == 2])   # 2. Embarque (aguardando chegada)
             aguardando_liberacao = len(df[df['timeline_number'] == 3]) # 3. Chegada (aguardando liberação/registro)
-            agd_entrega = len(df[df['timeline_number'].isin([4, 5])])  # 4. Registro + 5. Desembaraço (aguardando entrega)
+            agd_entrega = len(df[df['timeline_number'] == 4])  # 4. Registro (aguardando entrega) - CORRIGIDO: removido timeline 5
             aguardando_fechamento = len(df[df['timeline_number'] == 5]) # 5. Desembaraço (aguardando fechamento)
             
             print(f"[DEBUG_KPI] Status Timeline counts:")
             print(f"[DEBUG_KPI] 1. Aberto (Aguardando Embarque): {aguardando_embarque}")
             print(f"[DEBUG_KPI] 2. Embarque (Aguardando Chegada): {aguardando_chegada}")
             print(f"[DEBUG_KPI] 3. Chegada (Aguardando Liberação): {aguardando_liberacao}")
-            print(f"[DEBUG_KPI] 4+5. Registro+Desembaraço (Agd Entrega): {agd_entrega}")
+            print(f"[DEBUG_KPI] 4. Registro (Agd Entrega): {agd_entrega} - CORRIGIDO: removido timeline 5")
             print(f"[DEBUG_KPI] 5. Desembaraço (Aguardando Fechamento): {aguardando_fechamento}")
         else:
             aguardando_embarque = 0
