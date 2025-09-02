@@ -608,14 +608,14 @@ def dashboard_kpis():
             aguardando_embarque = len(df[df['timeline_number'] == 1])  # 1. Aberto (aguardando embarque)
             aguardando_chegada = len(df[df['timeline_number'] == 2])   # 2. Embarque (aguardando chegada)
             aguardando_liberacao = len(df[df['timeline_number'] == 3]) # 3. Chegada (aguardando liberação/registro)
-            agd_entrega = len(df[df['timeline_number'].isin([4, 5])])  # 4. Registro + 5. Desembaraço (aguardando entrega)
+            agd_entrega = len(df[df['timeline_number'] == 4])  # 4. Registro (aguardando entrega) - CORRIGIDO: removido timeline 5
             aguardando_fechamento = len(df[df['timeline_number'] == 5]) # 5. Desembaraço (aguardando fechamento)
             
             print(f"[DEBUG_KPI] Status Timeline counts:")
             print(f"[DEBUG_KPI] 1. Aberto (Aguardando Embarque): {aguardando_embarque}")
             print(f"[DEBUG_KPI] 2. Embarque (Aguardando Chegada): {aguardando_chegada}")
             print(f"[DEBUG_KPI] 3. Chegada (Aguardando Liberação): {aguardando_liberacao}")
-            print(f"[DEBUG_KPI] 4+5. Registro+Desembaraço (Agd Entrega): {agd_entrega}")
+            print(f"[DEBUG_KPI] 4. Registro (Agd Entrega): {agd_entrega} - CORRIGIDO: removido timeline 5")
             print(f"[DEBUG_KPI] 5. Desembaraço (Aguardando Fechamento): {aguardando_fechamento}")
         else:
             aguardando_embarque = 0
