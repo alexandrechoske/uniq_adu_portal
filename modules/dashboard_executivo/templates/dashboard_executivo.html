@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/document-manager.css') }}">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard-customization.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -742,6 +743,7 @@
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/kpi-mini-popup.js') }}"></script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
 
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager

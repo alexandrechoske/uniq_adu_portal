@@ -21,11 +21,20 @@ class RobustLoggingMiddleware:
     def __init__(self, app=None):
         self.app = app
         self.enabled = True
-        # Check if we're in development mode
+        
+        # Configurações de ambiente
         self.flask_env = os.getenv('FLASK_ENV', 'production')
-        if self.flask_env == 'development':
-            self.enabled = False
-            print("[LOGGING_MIDDLEWARE] Middleware de logging desabilitado no ambiente de desenvolvimento")
+        self.is_development = self.flask_env == 'development'
+        
+        # Log de inicialização
+        print(f"[LOGGING_MIDDLEWARE_INIT] Inicializando RobustLoggingMiddleware")
+        print(f"[LOGGING_MIDDLEWARE_INIT] ├─ FLASK_ENV: {self.flask_env}")
+        print(f"[LOGGING_MIDDLEWARE_INIT] ├─ is_development: {self.is_development}")
+        print(f"[LOGGING_MIDDLEWARE_INIT] └─ enabled: {self.enabled}")
+        
+        if self.is_development:
+            print("[LOGGING_MIDDLEWARE_INIT] ⚠️ Ambiente de desenvolvimento - logging pode ser limitado")
+            
         if app:
             self.init_app(app)
     
@@ -45,7 +54,9 @@ class RobustLoggingMiddleware:
     def before_request(self):
         """Executado antes de cada request - deve ser ultra rápido"""
         try:
-            if self.enabled and self.flask_env != 'development':
+            # Pular em desenvolvimento se não forçado
+            if (self.enabled and 
+                not (self.is_development and not os.getenv('FORCE_LOGGING_IN_DEV'))):
                 g.access_log_start_time = time.time()
                 g.access_log_should_log = self._should_log_request()
         except Exception:
@@ -58,7 +69,7 @@ class RobustLoggingMiddleware:
             if (self.enabled and 
                 hasattr(g, 'access_log_should_log') and 
                 g.access_log_should_log and
-                self.flask_env != 'development'):
+                not (self.is_development and not os.getenv('FORCE_LOGGING_IN_DEV'))):
                 self._log_request_safe(response)
         except Exception:
             # Silenciosamente ignora erros - jamais afetar a resposta
