@@ -752,10 +752,8 @@ canvas {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.chegada-proxima-icon {
-    width: 16px;
-    height: 16px;
-    filter: brightness(0) invert(1);
+.chegada-proxima i {
+    font-size: 14px;
 }
 
 /* === FILTROS === */

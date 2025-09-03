@@ -2690,17 +2690,14 @@ function formatDataChegada(dateString) {
     
     if (!chegadaDate) return formatDate(dateString);
     
-    // Calcular diferença em dias
-    const diffMs = chegadaDate - hoje;
-    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    // Zerar horários para comparação apenas da data
+    chegadaDate.setHours(0, 0, 0, 0);
+    hoje.setHours(0, 0, 0, 0);
     
-    // Se chegada for futuro e dentro de 5 dias, mostrar indicador de urgência
-    const isUrgente = diffDias > 0 && diffDias <= 5;
-    
-    if (isUrgente) {
+    // Se a data de chegada é exatamente hoje, mostrar indicador
+    if (chegadaDate.getTime() === hoje.getTime()) {
         return `<span class="chegada-proxima">
-            <img src="https://cdn-icons-png.flaticon.com/512/6198/6198499.png" 
-                 alt="Chegada próxima" class="chegada-proxima-icon">
+            <i class="mdi mdi-clock"></i>
             ${formatDate(dateString)}
         </span>`;
     }
