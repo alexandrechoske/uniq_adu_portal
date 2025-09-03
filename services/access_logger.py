@@ -23,22 +23,55 @@ except ImportError:
                 self.is_tablet = False
         return FakeAgent()
 
-try:
-    from extensions import supabase_admin
-    SUPABASE_AVAILABLE = True
-except ImportError:
-    SUPABASE_AVAILABLE = False
+def _get_supabase_admin():
+    """Lazy loading do supabase_admin para evitar problemas de import circular"""
+    try:
+        # Estratégia 1: Tentar importar do extensions (dentro do contexto Flask)
+        from extensions import supabase_admin
+        if supabase_admin is not None:
+            print(f"[ACCESS_LOG_LAZY] supabase_admin carregado via extensions: ✅")
+            return supabase_admin
+        else:
+            print(f"[ACCESS_LOG_LAZY] supabase_admin é None no extensions - tentando estratégia 2")
+    except ImportError as e:
+        print(f"[ACCESS_LOG_LAZY] Erro ao importar do extensions: {e}")
+    except Exception as e:
+        print(f"[ACCESS_LOG_LAZY] Erro no extensions: {e}")
+    
+    # Estratégia 2: Criar cliente direto com as credenciais
+    try:
+        # Garantir que .env está carregado
+        from dotenv import load_dotenv
+        load_dotenv()
+        
+        from supabase import create_client
+        
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+        
+        if supabase_url and supabase_key:
+            print(f"[ACCESS_LOG_LAZY] Criando cliente direto com credenciais do .env")
+            client = create_client(supabase_url, supabase_key)
+            print(f"[ACCESS_LOG_LAZY] Cliente direto criado: ✅")
+            return client
+        else:
+            print(f"[ACCESS_LOG_LAZY] Credenciais não encontradas no ambiente")
+            return None
+            
+    except Exception as e:
+        print(f"[ACCESS_LOG_LAZY] Erro ao criar cliente direto: {e}")
+        return None
     print("[ACCESS_LOG_WARNING] Supabase não disponível - logs serão apenas no console")
 
 # Verificação robusta da disponibilidade do Supabase
 def _check_supabase_availability():
     """Verifica se o Supabase está realmente disponível e funcional"""
     try:
-        from extensions import supabase_admin
+        supabase_admin = _get_supabase_admin()
         
         # Verificar se não é None e se tem as credenciais
         if supabase_admin is None:
-            print("[ACCESS_LOG_DEBUG] supabase_admin é None")
+            print("[ACCESS_LOG_DEBUG] supabase_admin é None após lazy loading")
             return False
             
         # Verificar credenciais básicas
@@ -250,10 +283,10 @@ class AccessLogger:
             
             # Tentar inserir no Supabase
             try:
-                from extensions import supabase_admin
+                supabase_admin = _get_supabase_admin()
                 
                 if supabase_admin is None:
-                    print("[ACCESS_LOG_WARNING] supabase_admin é None, fallback para console-only")
+                    print("[ACCESS_LOG_WARNING] supabase_admin é None após lazy loading, fallback para console-only")
                     self.console_only = True
                     return True
                 
@@ -364,12 +397,7 @@ class AccessLogger:
                 response_time = int((time.time() - start_time) * 1000)
                 
                 # Tentar usar o mesmo cliente que foi usado para inserir
-                client = None
-                try:
-                    from extensions import supabase_admin
-                    client = supabase_admin
-                except ImportError:
-                    pass
+                client = _get_supabase_admin()
                 
                 if client is None:
                     client = _create_direct_supabase()
