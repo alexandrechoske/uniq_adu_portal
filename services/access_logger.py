@@ -30,6 +30,35 @@ except ImportError:
     SUPABASE_AVAILABLE = False
     print("[ACCESS_LOG_WARNING] Supabase não disponível - logs serão apenas no console")
 
+# Verificação robusta da disponibilidade do Supabase
+def _check_supabase_availability():
+    """Verifica se o Supabase está realmente disponível e funcional"""
+    try:
+        from extensions import supabase_admin
+        
+        # Verificar se não é None e se tem as credenciais
+        if supabase_admin is None:
+            print("[ACCESS_LOG_DEBUG] supabase_admin é None")
+            return False
+            
+        # Verificar credenciais básicas
+        if not os.getenv('SUPABASE_URL') or not os.getenv('SUPABASE_SERVICE_KEY'):
+            print("[ACCESS_LOG_DEBUG] Credenciais Supabase não encontradas")
+            return False
+        
+        print("[ACCESS_LOG_DEBUG] Supabase disponível e funcional")
+        return True
+        
+    except ImportError as e:
+        print(f"[ACCESS_LOG_DEBUG] Falha no import do Supabase: {e}")
+        return False
+    except Exception as e:
+        print(f"[ACCESS_LOG_DEBUG] Erro na verificação do Supabase: {e}")
+        return False
+
+# Verificação real da disponibilidade
+SUPABASE_AVAILABLE = _check_supabase_availability()
+
 # Fallback: criar cliente direto se extensions não funcionar
 def _create_direct_supabase():
     """Cria cliente Supabase diretamente em caso de falha de import"""
@@ -58,21 +87,37 @@ class AccessLogger:
     
     def __init__(self):
         self.timezone_br = timezone(timedelta(hours=-3))  # UTC-3 (Brasília)
+        
+        # Configurações de ambiente
+        self.flask_env = os.getenv('FLASK_ENV', 'production')
+        self.is_development = self.flask_env == 'development'
+        
+        # Logging habilitado por padrão, pode ser desabilitado via env
         self.enabled = os.getenv('ACCESS_LOGGING_ENABLED', 'true').lower() == 'true'
-        self.console_only = not SUPABASE_AVAILABLE
+        
+        # Verificar disponibilidade do Supabase de forma mais robusta
+        self.supabase_available = SUPABASE_AVAILABLE
+        self.console_only = not self.supabase_available
+        
+        # Configurações de performance
         self.max_retries = 1  # Apenas 1 tentativa para não impactar performance
         self.timeout = 2  # Timeout de 2 segundos
         
-        # Skip logging in development mode
-        self.flask_env = os.getenv('FLASK_ENV', 'production')
-        if self.flask_env == 'development':
-            self.enabled = False
-            print("[ACCESS_LOG] Logging desabilitado no ambiente de desenvolvimento")
+        # Log de inicialização mais detalhado
+        print(f"[ACCESS_LOG_INIT] Inicializando AccessLogger")
+        print(f"[ACCESS_LOG_INIT] ├─ FLASK_ENV: {self.flask_env}")
+        print(f"[ACCESS_LOG_INIT] ├─ is_development: {self.is_development}")
+        print(f"[ACCESS_LOG_INIT] ├─ enabled: {self.enabled}")
+        print(f"[ACCESS_LOG_INIT] ├─ supabase_available: {self.supabase_available}")
+        print(f"[ACCESS_LOG_INIT] └─ console_only: {self.console_only}")
         
+        # Decisão final sobre logging
         if not self.enabled:
-            print("[ACCESS_LOG] Logging desabilitado via configuração")
+            print("[ACCESS_LOG_INIT] ❌ Logging desabilitado via ACCESS_LOGGING_ENABLED")
         elif self.console_only:
-            print("[ACCESS_LOG] Modo console-only ativado")
+            print("[ACCESS_LOG_INIT] ⚠️ Modo console-only ativado (Supabase indisponível)")
+        else:
+            print("[ACCESS_LOG_INIT] ✅ Logging completo ativado (Supabase + console)")
     
     def _safe_execute(self, func, *args, **kwargs):
         """
@@ -190,48 +235,46 @@ class AccessLogger:
             }
     
     def _insert_log_safe(self, log_data):
-        """Insere log de forma segura com fallback"""
+        """Insere log de forma segura com fallback robusto"""
         try:
-            # Verificar se supabase_admin está disponível
-            client = None
+            # Log sempre no console primeiro (para debug e fallback)
+            print(f"[ACCESS_LOG] {log_data.get('action_type', 'unknown')} | "
+                  f"user: {log_data.get('user_email', 'anonymous')} | "
+                  f"path: {log_data.get('page_url', 'unknown')} | "
+                  f"ip: {log_data.get('ip_address', 'unknown')}")
             
-            if self.console_only or not SUPABASE_AVAILABLE:
-                client = None
-            else:
-                # Tentar usar supabase_admin das extensions
-                try:
-                    from extensions import supabase_admin
-                    client = supabase_admin
-                except ImportError:
-                    client = None
-                
-                # Se ainda for None, tentar criar cliente direto
-                if client is None:
-                    client = _create_direct_supabase()
-            
-            if client is None:
-                # Fallback para console
-                action = log_data.get('action_type', 'unknown')
-                user = log_data.get('user_email', 'Anonymous')
-                page = log_data.get('page_name', 'Unknown')
-                print(f"[ACCESS_LOG] {action} - {user} - {page}")
+            # Se console_only, não tentar Supabase
+            if self.console_only:
+                print("[ACCESS_LOG_DEBUG] Console-only mode - log salvo apenas no console")
                 return True
             
-            # Tentar inserir no Supabase com timeout
-            result = client.table('access_logs').insert(log_data).execute()
-            
-            if result.data and len(result.data) > 0:
-                log_id = result.data[0].get('id')
-                print(f"[ACCESS_LOG] ✅ {log_data.get('action_type', 'unknown')} - {log_data.get('user_email', 'Anonymous')} - {log_data.get('page_name', 'Unknown')} - ID: {log_id}")
-                return log_id
-            return True
-            
+            # Tentar inserir no Supabase
+            try:
+                from extensions import supabase_admin
+                
+                if supabase_admin is None:
+                    print("[ACCESS_LOG_WARNING] supabase_admin é None, fallback para console-only")
+                    self.console_only = True
+                    return True
+                
+                # Inserir no banco
+                response = supabase_admin.table('access_logs').insert(log_data).execute()
+                
+                if response.data:
+                    print(f"[ACCESS_LOG_DEBUG] ✅ Log inserido no Supabase com sucesso")
+                    return True
+                else:
+                    print(f"[ACCESS_LOG_WARNING] Resposta vazia do Supabase")
+                    return True
+                    
+            except Exception as e:
+                print(f"[ACCESS_LOG_WARNING] Falha no Supabase, usando console-only: {e}")
+                # Marcar como console_only para próximas tentativas
+                self.console_only = True
+                return True
+                
         except Exception as e:
-            # Fallback para console em caso de erro
-            action = log_data.get('action_type', 'unknown')
-            user = log_data.get('user_email', 'Anonymous')
-            page = log_data.get('page_name', 'Unknown')
-            print(f"[ACCESS_LOG_FALLBACK] {action} - {user} - {page} (Error: {str(e)[:100]})")
+            print(f"[ACCESS_LOG_ERROR] Erro crítico no logging: {e}")
             return True
     
     def log_access(self, action_type, **kwargs):
@@ -255,8 +298,9 @@ class AccessLogger:
         client_info = self._get_client_info_safe()
         user_info = self._get_user_info_safe()
         
-        # Skip logging if we're in development mode
-        if self.flask_env == 'development':
+        # Pular logging em desenvolvimento apenas se explicitamente configurado
+        if self.is_development and not os.getenv('FORCE_LOGGING_IN_DEV'):
+            print(f"[ACCESS_LOG_DEBUG] Pulando log em desenvolvimento: {action_type}")
             return True
         
         # Skip logging if user info is completely empty and it's not a login/logout action
