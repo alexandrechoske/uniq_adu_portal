@@ -652,4 +652,69 @@ def test_logging():
             'traceback': traceback.format_exc()
         }), 500
 
+@bp.route('/test-supabase-insert', methods=['POST'])
+def test_supabase_insert():
+    """Endpoint específico para testar insert na access_logs"""
+    
+    # Verificar API bypass
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    
+    if not (api_bypass_key and request_api_key == api_bypass_key):
+        return jsonify({'error': 'API key required'}), 401
+    
+    try:
+        from extensions import supabase_admin
+        
+        # Dados de teste
+        test_data = {
+            'user_email': 'teste@debug.com',
+            'user_role': 'debug',
+            'action_type': 'debug_insert_test',
+            'page_url': 'https://debug.com/test',
+            'ip_address': '127.0.0.1',
+            'success': True,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        print(f"[DEBUG_INSERT] Tentando inserir: {test_data}")
+        
+        # Testar conexão primeiro
+        if supabase_admin is None:
+            return jsonify({'error': 'supabase_admin is None'}), 500
+        
+        print(f"[DEBUG_INSERT] supabase_admin está disponível: {supabase_admin}")
+        
+        # Tentar insert
+        result = supabase_admin.table('access_logs').insert(test_data).execute()
+        
+        print(f"[DEBUG_INSERT] Resultado: {result}")
+        
+        if result.data:
+            return jsonify({
+                'success': True,
+                'message': 'Insert realizado com sucesso!',
+                'data': result.data,
+                'test_data': test_data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Insert não retornou dados',
+                'result': str(result),
+                'test_data': test_data
+            })
+            
+    except Exception as e:
+        print(f"[DEBUG_INSERT] Erro: {type(e).__name__}: {e}")
+        import traceback
+        print(f"[DEBUG_INSERT] Traceback: {traceback.format_exc()}")
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'type': type(e).__name__,
+            'traceback': traceback.format_exc()
+        }), 500
+
 # Any other API endpoints can go here
