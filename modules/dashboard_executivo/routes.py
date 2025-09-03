@@ -178,28 +178,40 @@ def enrich_data_with_despesas_view(data):
                     batch = ref_uniques[i:i + batch_size]
                     print(f"[DESPESAS_VIEW] Processando lote {i//batch_size + 1}: {len(batch)} registros")
                     
-                    # Consulta batch
-                    query = supabase_admin.table('vw_despesas_6_meses').select('ref_unique, valor_custo').in_('ref_unique', batch)
-                    result = query.execute()
-                    
-                    if result.data:
-                        # Agrupar por ref_unique e somar custos
-                        for despesa in result.data:
-                            ref_unique = despesa.get('ref_unique')
-                            valor_custo = despesa.get('valor_custo', 0)
-                            
-                            if ref_unique:
-                                if ref_unique not in despesas_map:
-                                    despesas_map[ref_unique] = 0
+                    try:
+                        # Consulta batch
+                        query = supabase_admin.table('vw_despesas_6_meses').select('ref_unique, valor_custo').in_('ref_unique', batch)
+                        result = query.execute()
+                        
+                        if result.data:
+                            # Agrupar por ref_unique e somar custos
+                            for despesa in result.data:
+                                ref_unique = despesa.get('ref_unique')
+                                valor_custo = despesa.get('valor_custo', 0)
                                 
-                                # Somar valor_custo
-                                if valor_custo is not None and valor_custo != '':
-                                    try:
-                                        valor_float = float(valor_custo)
-                                        if not pd.isna(valor_float) and not np.isinf(valor_float):
-                                            despesas_map[ref_unique] += valor_float
-                                    except (ValueError, TypeError):
-                                        continue
+                                if ref_unique:
+                                    if ref_unique not in despesas_map:
+                                        despesas_map[ref_unique] = 0
+                                    
+                                    # Somar valor_custo
+                                    if valor_custo is not None and valor_custo != '':
+                                        try:
+                                            valor_float = float(valor_custo)
+                                            if not pd.isna(valor_float) and not np.isinf(valor_float):
+                                                despesas_map[ref_unique] += valor_float
+                                        except (ValueError, TypeError):
+                                            continue
+                    
+                    except Exception as batch_error:
+                        # Tratar erro específico de view não encontrada
+                        error_str = str(batch_error)
+                        if '42P01' in error_str or 'does not exist' in error_str.lower():
+                            print(f"[DESPESAS_VIEW] ⚠️ View vw_despesas_6_meses não existe - usando fallback para JSON")
+                            # Marcar que a view não existe para evitar tentativas futuras
+                            break
+                        else:
+                            print(f"[DESPESAS_VIEW] Erro na consulta batch: {batch_error}")
+                            continue
                 
                 print(f"[DESPESAS_VIEW] Encontrados custos para {len(despesas_map)} processos")
                 
@@ -525,12 +537,12 @@ def dashboard_kpis():
         if 'custo_total_original' not in df.columns:
             df['custo_total_original'] = 0.0
         
-        # Construir custo_calculado com fallback
-        df['custo_calculado'] = df['custo_total_view']
+        # Construir custo_calculado com fallback (com cast explícito para evitar warning)
+        df['custo_calculado'] = df['custo_total_view'].astype(float)
         mask_view_zero = df['custo_calculado'] <= 0
-        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total']
+        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total'].astype(float)
         mask_total_zero = df['custo_calculado'] <= 0
-        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original']
+        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original'].astype(float)
         
         # Fallback final: recalcular a partir de despesas_processo quando ainda zero
         if 'despesas_processo' in df.columns:
@@ -752,11 +764,11 @@ def dashboard_charts():
         if 'custo_total_original' not in df.columns:
             df['custo_total_original'] = 0.0
         
-        df['custo_calculado'] = df['custo_total_view']
+        df['custo_calculado'] = df['custo_total_view'].astype(float)
         mask_view_zero = df['custo_calculado'] <= 0
-        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total']
+        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total'].astype(float)
         mask_total_zero = df['custo_calculado'] <= 0
-        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original']
+        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original'].astype(float)
         if 'despesas_processo' in df.columns:
             for idx in df.index[df['custo_calculado'] <= 0]:
                 v = calculate_custo_from_despesas_processo(df.at[idx, 'despesas_processo'])
@@ -982,11 +994,11 @@ def monthly_chart():
             print("[MONTHLY_CHART] ERRO: Campo custo_total_view não encontrado! Usando fallback.")
             df['custo_total_view'] = 0.0
         
-        df['custo_calculado'] = df['custo_total_view']
+        df['custo_calculado'] = df['custo_total_view'].astype(float)
         mask_view_zero = df['custo_calculado'] <= 0
-        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total']
+        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total'].astype(float)
         mask_total_zero = df['custo_calculado'] <= 0
-        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original']
+        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original'].astype(float)
         if 'despesas_processo' in df.columns:
             for idx in df.index[df['custo_calculado'] <= 0]:
                 v = calculate_custo_from_despesas_processo(df.at[idx, 'despesas_processo'])
