@@ -441,17 +441,22 @@
     font-weight: 600;
 }
 
-/* Ícone de data de chegada próxima */
+/* Indicador de data de chegada = hoje */
 .data-chegada-proxima {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    font-weight: 500;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.flag-icon {
-    color: #FF9800;
-    font-size: 1rem;
-    animation: flagWave 2s ease-in-out infinite;
+.data-chegada-proxima i {
+    font-size: 14px;
 }
 
 /* Imagens das bandeiras dos países */

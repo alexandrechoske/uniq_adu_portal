@@ -2830,3 +2830,43 @@ function renderUserDetails(user) {
         elements.viewModalTitle.textContent = `Detalhes: ${user.nome || user.name || 'Usuário'}`;
     }
 }
+
+/**
+ * Inicializa seções colapsáveis
+ */
+function initializeCollapsibleSections() {
+    console.log('[USUARIOS] Inicializando seções colapsáveis...');
+    
+    const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+    
+    collapsibleHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetContent = document.getElementById(targetId);
+            
+            if (!targetContent) {
+                console.warn('[USUARIOS] Elemento alvo não encontrado:', targetId);
+                return;
+            }
+            
+            // Toggle classes
+            this.classList.toggle('expanded');
+            targetContent.classList.toggle('collapsed');
+            targetContent.classList.toggle('expanded');
+            
+            // Update icon
+            const icon = this.querySelector('.collapse-icon');
+            if (icon) {
+                if (this.classList.contains('expanded')) {
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            }
+            
+            console.log('[USUARIOS] Seção toggled:', targetId, this.classList.contains('expanded'));
+        });
+    });
+    
+    console.log('[USUARIOS] Seções colapsáveis inicializadas:', collapsibleHeaders.length);
+}
