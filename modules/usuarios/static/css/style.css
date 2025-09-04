@@ -508,16 +508,11 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-}
-
-.section-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--border-radius);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0.5rem 0;
 }
 
 .section-icon.kpi-success {
@@ -542,10 +537,12 @@
     margin: 0 0 0.25rem 0;
 }
 
-.section-info p {
+.section-subtitle {
     font-size: 0.875rem;
     color: var(--text-secondary);
-    margin: 0;
+    margin: 0.25rem 0 0 0;
+    line-height: 1.4;
+    padding: 0;
 }
 
 .section-count {
@@ -1094,7 +1091,7 @@
 .form-sections-container {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 0.5rem;
     padding: 2rem;
 }
 
@@ -1110,6 +1107,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: 2rem;
+    margin-bottom: 0.25rem;
 }
 
 .form-section-perfis,
@@ -1117,16 +1115,17 @@
     background: var(--bg-white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 2rem;
-    min-height: 400px;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .form-section-whatsapp {
-    grid-column: 1 / -1; /* Ocupa largura total */
     background: var(--bg-white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 /* Section Headers */
@@ -1813,7 +1812,6 @@
     overflow: hidden;
 }
 
-/* Cabeçalho das seções */
 .user-form .form-section .section-header,
 .user-form .form-section-informacoes .section-header,
 .user-form .form-section-empresas .section-header,
@@ -1821,6 +1819,8 @@
     padding: 1rem 1.5rem;
     background: var(--bg-gray-50);
     border-bottom: 1px solid var(--border-color);
+    margin: 0;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
 /* Conteúdo das seções */
@@ -2544,8 +2544,8 @@
     transition: var(--transition);
     user-select: none;
     border-radius: var(--border-radius-sm);
-    margin: -0.5rem -0.5rem 1rem -0.5rem;
-    padding: 0.5rem;
+    margin: 0;
+    padding: 0;
 }
 
 .collapsible-header:hover {
@@ -2557,6 +2557,8 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    padding: 0;
+    margin: 0;
 }
 
 .collapse-icon {
@@ -2579,15 +2581,13 @@
     transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
     max-height: 0;
     opacity: 0;
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 1.5rem;
 }
 
 .collapsible-content.expanded {
     max-height: 2000px;
     opacity: 1;
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
+    padding: 1.5rem;
 }
 
 /* =================================
