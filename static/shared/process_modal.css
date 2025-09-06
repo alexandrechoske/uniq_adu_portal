@@ -108,6 +108,9 @@
     border: 3px solid #e9ecef !important;
     background: white !important;
     color: #6c757d !important;
+    /* Fix para alinhamento dos ícones */
+    box-sizing: border-box !important;
+    line-height: 1 !important;
 }
 
 #process-modal .timeline-label {
@@ -135,6 +138,8 @@
     border-color: #007bff !important;
     color: white !important;
     animation: pulse 2s infinite !important;
+    /* Fix específico para ícones ativos */
+    transform: scale(1) !important;
 }
 
 #process-modal .timeline-step.active .timeline-label {
@@ -142,10 +147,28 @@
     font-weight: 600 !important;
 }
 
+/* Fix específico para ícones Material Design */
+#process-modal .timeline-icon i {
+    vertical-align: middle !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
 @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
+    0% { 
+        transform: scale(1) !important;
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7) !important;
+    }
+    50% { 
+        transform: scale(1.05) !important;
+        box-shadow: 0 0 0 10px rgba(0, 123, 255, 0) !important;
+    }
+    100% { 
+        transform: scale(1) !important;
+        box-shadow: 0 0 0 0 rgba(0, 123, 255, 0) !important;
+    }
 }
 
 /* Modal Cards */
