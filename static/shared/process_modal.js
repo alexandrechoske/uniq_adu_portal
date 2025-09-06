@@ -36,10 +36,10 @@ function openProcessModal(operationIndex) {
         console.log('[PROCESS_MODAL] Título do modal atualizado para:', operation.ref_unique);
     }
     
-    // Update timeline - extract numeric value from status_macro like "5 - AG REGISTRO"
-    const statusMacroNumber = extractStatusMacroNumber(operation.status_macro);
-    console.log('[MODAL_DEBUG] Status macro extraído:', statusMacroNumber);
-    updateProcessTimeline(statusMacroNumber);
+    // Update timeline - extract numeric value from status_timeline like "2 - Agd Chegada"
+    const statusTimelineNumber = extractTimelineNumber(operation.status_timeline);
+    console.log('[MODAL_DEBUG] Status timeline extraído:', statusTimelineNumber);
+    updateProcessTimeline(statusTimelineNumber);
     
     // Update general information
     updateElementValue('detail-ref-unique', operation.ref_unique);
@@ -101,7 +101,25 @@ function closeProcessModal() {
 }
 
 /**
- * Extract numeric value from status_macro like "5 - AG REGISTRO"
+ * Extract numeric value from status_timeline like "2 - Agd Chegada"
+ */
+function extractTimelineNumber(statusTimeline) {
+    if (!statusTimeline) return 1;
+    
+    try {
+        // Extract the first number from strings like "2 - Agd Chegada"
+        const status_str = String(statusTimeline).trim();
+        if (/^[1-9]/.test(status_str)) {
+            return parseInt(status_str.split(' ')[0].replace('-', '').trim());
+        }
+        return 1;
+    } catch {
+        return 1;
+    }
+}
+
+/**
+ * Extract numeric value from status_macro like "5 - AG REGISTRO" (LEGACY - mantido para compatibilidade)
  */
 function extractStatusMacroNumber(statusMacro) {
     if (!statusMacro) return 1;
