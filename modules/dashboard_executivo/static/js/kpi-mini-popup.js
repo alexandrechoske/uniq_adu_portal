@@ -43,7 +43,8 @@
         // Tentar extrair número do início da string
         try {
             const status_str = String(status_timeline).trim();
-            if (status_str.startsWith(('1', '2', '3', '4', '5', '6'))) {
+            // Verificar se começa com um dígito de 1-9
+            if (/^[1-9]/.test(status_str)) {
                 return parseInt(status_str.split(' ')[0].replace('-', '').trim());
             }
             return 0;
