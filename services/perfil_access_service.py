@@ -29,6 +29,10 @@ class PerfilAccessService:
         'fluxo_caixa': 'fluxo_de_caixa',  # Fluxo de Caixa
         'despesas': 'despesas_anual',  # Despesas
         'faturamento': 'faturamento_anual',  # Faturamento
+        # Novas páginas do módulo Financeiro
+        'conciliacao_lancamentos': 'fin_conciliacao_lancamentos',  # Conciliação de Lançamentos
+        'categorizacao_clientes': 'fin_categorizacao_clientes',  # Categorização de Clientes
+        'projecoes_metas': 'fin_projecoes_metas',  # Projeções e Metas
         # 'dashboard_executivo' já mapeado acima (compartilhado)
     }
     

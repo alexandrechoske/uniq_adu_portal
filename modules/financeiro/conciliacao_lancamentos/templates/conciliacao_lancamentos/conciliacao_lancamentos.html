@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Conciliação de Lançamentos{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/materialize.min.css') }}" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+    .status-pendente {
+        color: #ff9800 !important;
+    }
+    .status-conciliado {
+        color: #4caf50 !important;
+    }
+    .status-divergente {
+        color: #f44336 !important;
+    }
+    
+    .card-conciliacao {
+        margin: 10px 0;
+        border-left: 4px solid #2196f3;
+    }
+    
+    .valor-positivo {
+        color: #4caf50;
+        font-weight: bold;
+    }
+    
+    .valor-negativo {
+        color: #f44336;
+        font-weight: bold;
+    }
+    
+    .item-conciliacao {
+        padding: 10px;
+        border: 1px solid #e0e0e0;
+        margin: 5px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .item-conciliacao:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .item-selecionado {
+        background-color: #e3f2fd !important;
+        border-color: #2196f3 !important;
+    }
+    
+    .resumo-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col s12">
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">
+                        <i class="material-icons left">account_balance</i>
+                        Conciliação de Lançamentos
+                    </span>
+                    <p class="grey-text">Concilie lançamentos financeiros com extratos bancários</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row">
+        <div class="col s12">
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">Filtros</span>
+                    <div class="row">
+                        <div class="input-field col s12 m3">
+                            <input type="date" id="data_inicio" class="datepicker">
+                            <label for="data_inicio">Data Início</label>
+                        </div>
+                        <div class="input-field col s12 m3">
+                            <input type="date" id="data_fim" class="datepicker">
+                            <label for="data_fim">Data Fim</label>
+                        </div>
+                        <div class="input-field col s12 m4">
+                            <select id="conta_bancaria">
+                                <option value="" disabled selected>Selecione uma conta</option>
+                                <option value="conta_corrente">Conta Corrente</option>
+                                <option value="poupanca">Poupança</option>
+                                <option value="investimento">Investimento</option>
+                            </select>
+                            <label>Conta Bancária</label>
+                        </div>
+                        <div class="col s12 m2">
+                            <button class="btn waves-effect waves-light blue" onclick="buscarDados()" style="margin-top: 25px;">
+                                <i class="material-icons left">search</i>
+                                Buscar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="row" id="resumo-section" style="display: none;">
+        <div class="col s12">
+            <div class="card resumo-card">
+                <div class="card-content white-text">
+                    <span class="card-title">Resumo da Conciliação</span>
+                    <div class="row">
+                        <div class="col s6 m3">
+                            <div class="center-align">
+                                <h4 id="total-pendentes">0</h4>
+                                <p>Lançamentos Pendentes</p>
+                            </div>
+                        </div>
+                        <div class="col s6 m3">
+                            <div class="center-align">
+                                <h4 id="total-conciliados">0</h4>
+                                <p>Conciliados</p>
+                            </div>
+                        </div>
+                        <div class="col s6 m3">
+                            <div class="center-align">
+                                <h4 id="valor-pendente">R$ 0,00</h4>
+                                <p>Valor Pendente</p>
+                            </div>
+                        </div>
+                        <div class="col s6 m3">
+                            <div class="center-align">
+                                <h4 id="diferenca">R$ 0,00</h4>
+                                <p>Diferença</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dados de Conciliação -->
+    <div class="row" id="dados-section" style="display: none;">
+        <div class="col s12 m6">
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">
+                        <i class="material-icons left">list</i>
+                        Lançamentos Financeiros
+                    </span>
+                    <div id="lista-lancamentos">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col s12 m6">
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">
+                        <i class="material-icons left">account_balance_wallet</i>
+                        Extrato Bancário
+                    </span>
+                    <div id="lista-extratos">
+                        <!-- Lista será preenchida via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão de Conciliação -->
+    <div class="row" id="conciliar-section" style="display: none;">
+        <div class="col s12 center-align">
+            <button class="btn-large waves-effect waves-light green" onclick="realizarConciliacao()" id="btn-conciliar" disabled>
+                <i class="material-icons left">check_circle</i>
+                Conciliar Selecionados
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="loading" class="center-align" style="display: none; margin: 50px 0;">
+    <div class="preloader-wrapper big active">
+        <div class="spinner-layer spinner-blue-only">
+            <div class="circle-clipper left">
+                <div class="circle"></div>
+            </div>
+            <div class="gap-patch">
+                <div class="circle"></div>
+            </div>
+            <div class="circle-clipper right">
+                <div class="circle"></div>
+            </div>
+        </div>
+    </div>
+    <p>Carregando dados...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
+<script>
+    // Variáveis globais
+    let dadosLancamentos = [];
+    let dadosExtratos = [];
+    let lancamentoSelecionado = null;
+    let extratoSelecionado = null;
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function() {
+        M.AutoInit();
+        
+        // Definir datas padrão (últimos 30 dias)
+        const hoje = new Date();
+        const umMesAtras = new Date();
+        umMesAtras.setMonth(hoje.getMonth() - 1);
+        
+        document.getElementById('data_fim').value = hoje.toISOString().split('T')[0];
+        document.getElementById('data_inicio').value = umMesAtras.toISOString().split('T')[0];
+        
+        M.updateTextFields();
+    });
+
+    function buscarDados() {
+        const dataInicio = document.getElementById('data_inicio').value;
+        const dataFim = document.getElementById('data_fim').value;
+        const contaBancaria = document.getElementById('conta_bancaria').value;
+
+        if (!dataInicio || !dataFim) {
+            M.toast({html: 'Por favor, selecione o período', classes: 'orange'});
+            return;
+        }
+
+        mostrarLoading(true);
+
+        const params = new URLSearchParams({
+            data_inicio: dataInicio,
+            data_fim: dataFim,
+            conta_bancaria: contaBancaria || ''
+        });
+
+        fetch(`/financeiro/conciliacao-lancamentos/api/dados-conciliacao?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    dadosLancamentos = data.data.lancamentos_pendentes || [];
+                    dadosExtratos = data.data.extrato_bancario || [];
+                    
+                    atualizarResumo(data.data.resumo);
+                    renderizarLancamentos();
+                    renderizarExtratos();
+                    
+                    document.getElementById('resumo-section').style.display = 'block';
+                    document.getElementById('dados-section').style.display = 'block';
+                    document.getElementById('conciliar-section').style.display = 'block';
+                } else {
+                    M.toast({html: data.error || 'Erro ao buscar dados', classes: 'red'});
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
+            })
+            .finally(() => {
+                mostrarLoading(false);
+            });
+    }
+
+    function atualizarResumo(resumo) {
+        document.getElementById('total-pendentes').textContent = resumo.total_pendentes || 0;
+        document.getElementById('total-conciliados').textContent = resumo.total_conciliados || 0;
+        document.getElementById('valor-pendente').textContent = formatarMoeda(resumo.valor_pendente || 0);
+        document.getElementById('diferenca').textContent = formatarMoeda(resumo.diferenca || 0);
+    }
+
+    function renderizarLancamentos() {
+        const container = document.getElementById('lista-lancamentos');
+        container.innerHTML = '';
+
+        if (dadosLancamentos.length === 0) {
+            container.innerHTML = '<p class="grey-text center-align">Nenhum lançamento pendente</p>';
+            return;
+        }
+
+        dadosLancamentos.forEach(lancamento => {
+            const item = document.createElement('div');
+            item.className = 'item-conciliacao';
+            item.onclick = () => selecionarLancamento(lancamento.id, item);
+            
+            const valorClass = lancamento.valor >= 0 ? 'valor-positivo' : 'valor-negativo';
+            
+            item.innerHTML = `
+                <div class="row no-margin">
+                    <div class="col s8">
+                        <strong>${lancamento.descricao}</strong>
+                        <br>
+                        <small class="grey-text">${formatarData(lancamento.data)}</small>
+                    </div>
+                    <div class="col s4 right-align">
+                        <span class="${valorClass}">${formatarMoeda(lancamento.valor)}</span>
+                        <br>
+                        <small class="status-pendente">
+                            <i class="material-icons tiny">schedule</i>
+                            Pendente
+                        </small>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(item);
+        });
+    }
+
+    function renderizarExtratos() {
+        const container = document.getElementById('lista-extratos');
+        container.innerHTML = '';
+
+        if (dadosExtratos.length === 0) {
+            container.innerHTML = '<p class="grey-text center-align">Nenhum item no extrato</p>';
+            return;
+        }
+
+        dadosExtratos.forEach(extrato => {
+            const item = document.createElement('div');
+            item.className = 'item-conciliacao';
+            item.onclick = () => selecionarExtrato(extrato.id, item);
+            
+            const valorClass = extrato.valor >= 0 ? 'valor-positivo' : 'valor-negativo';
+            
+            item.innerHTML = `
+                <div class="row no-margin">
+                    <div class="col s8">
+                        <strong>${extrato.descricao}</strong>
+                        <br>
+                        <small class="grey-text">${formatarData(extrato.data)}</small>
+                    </div>
+                    <div class="col s4 right-align">
+                        <span class="${valorClass}">${formatarMoeda(extrato.valor)}</span>
+                        <br>
+                        <small class="status-pendente">
+                            <i class="material-icons tiny">info</i>
+                            Não Conciliado
+                        </small>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(item);
+        });
+    }
+
+    function selecionarLancamento(id, elemento) {
+        // Remover seleção anterior
+        document.querySelectorAll('#lista-lancamentos .item-conciliacao').forEach(item => {
+            item.classList.remove('item-selecionado');
+        });
+        
+        // Selecionar atual
+        elemento.classList.add('item-selecionado');
+        lancamentoSelecionado = id;
+        
+        verificarConciliacao();
+    }
+
+    function selecionarExtrato(id, elemento) {
+        // Remover seleção anterior
+        document.querySelectorAll('#lista-extratos .item-conciliacao').forEach(item => {
+            item.classList.remove('item-selecionado');
+        });
+        
+        // Selecionar atual
+        elemento.classList.add('item-selecionado');
+        extratoSelecionado = id;
+        
+        verificarConciliacao();
+    }
+
+    function verificarConciliacao() {
+        const btnConciliar = document.getElementById('btn-conciliar');
+        btnConciliar.disabled = !(lancamentoSelecionado && extratoSelecionado);
+    }
+
+    function realizarConciliacao() {
+        if (!lancamentoSelecionado || !extratoSelecionado) {
+            M.toast({html: 'Selecione um lançamento e um item do extrato', classes: 'orange'});
+            return;
+        }
+
+        mostrarLoading(true);
+
+        fetch('/financeiro/conciliacao-lancamentos/api/conciliar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                lancamento_id: lancamentoSelecionado,
+                extrato_id: extratoSelecionado
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                M.toast({html: data.message, classes: 'green'});
+                buscarDados(); // Recarregar dados
+            } else {
+                M.toast({html: data.error || 'Erro ao conciliar', classes: 'red'});
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
+        })
+        .finally(() => {
+            mostrarLoading(false);
+        });
+    }
+
+    function mostrarLoading(mostrar) {
+        document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
+    }
+
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(valor);
+    }
+
+    function formatarData(data) {
+        return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+    }
+</script>
+{% endblock %}

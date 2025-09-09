@@ -13,6 +13,11 @@ from .fluxo_de_caixa.routes import fluxo_de_caixa_bp
 from .despesas.routes import despesas_bp
 from .faturamento.routes import faturamento_bp
 
+# Importar novos blueprints
+from .conciliacao_lancamentos.routes import conciliacao_lancamentos_bp
+from .categorizacao_clientes.routes import categorizacao_clientes_bp
+from .projecoes_metas.routes import projecoes_metas_bp
+
 # Criar blueprint principal do módulo financeiro
 financeiro_bp = Blueprint('financeiro', __name__, url_prefix='/financeiro')
 
@@ -21,7 +26,11 @@ FINANCEIRO_BLUEPRINTS = [
     dashboard_executivo_financeiro_bp,
     fluxo_de_caixa_bp,
     despesas_bp,
-    faturamento_bp
+    faturamento_bp,
+    # Novos módulos
+    conciliacao_lancamentos_bp,
+    categorizacao_clientes_bp,
+    projecoes_metas_bp
 ]
 
 def register_financeiro_blueprints(app):
