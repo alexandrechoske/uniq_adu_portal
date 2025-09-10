@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import json
 from collections import defaultdict
+from services.data_cache import data_cache
 
 # Blueprint para Categorização de Clientes
 categorizacao_clientes_bp = Blueprint(
@@ -272,7 +273,7 @@ def api_estatisticas():
             total_result = supabase_admin.table('vw_clientes_distintos').select('*', count='exact').execute()
             total = total_result.count if hasattr(total_result, 'count') else len(total_result.data)
             
-            categorizados_result = supabase_admin.table('fin_clientes_mapeamento').select('*', count='exact').neq('nome_padronizado', '').execute()
+            categorizados_result = supabase_admin.table('fin_clientes_mapeamento').select('*', count='exact').neq('nome_padronizado', None).neq('nome_padronizado', '').execute()
             categorizados = categorizados_result.count if hasattr(categorizados_result, 'count') else len(categorizados_result.data)
             
             nao_categorizados = total - categorizados
@@ -306,79 +307,103 @@ def api_estatisticas():
 @login_required
 @perfil_required('financeiro', 'categorizacao_clientes')
 def api_clientes_nao_categorizados():
-    """API para obter lista de clientes não categorizados"""
+    """API para obter lista de clientes com filtro de status e paginação (cache-first)."""
     try:
-        # Obter parâmetros de paginação
+        # Params
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 50))
-        busca = request.args.get('busca', '')
-        
+        busca = (request.args.get('busca', '') or '').strip()
+        status = (request.args.get('status', '') or '').strip()  # '', 'nao_categorizado', 'categorizado'
+
         offset = (page - 1) * per_page
-        
-        print(f"[CATEGORIZACAO_API] Buscando clientes não categorizados - Página: {page}, Busca: '{busca}'")
-        
-        # Query para clientes não categorizados ou com nome padronizado diferente do original
-        query = """
-        SELECT 
-            m.nome_original,
-            m.nome_padronizado,
-            COUNT(f.cliente) as total_ocorrencias,
-            MAX(f.data) as ultima_ocorrencia,
-            SUM(f.valor) as valor_total
-        FROM fin_clientes_mapeamento m
-        LEFT JOIN fin_faturamento_anual f ON f.cliente = m.nome_original
-        WHERE 
-            (m.nome_padronizado IS NULL OR m.nome_padronizado = '' OR m.nome_padronizado != m.nome_original)
-            AND m.nome_original ILIKE %s
-        GROUP BY m.nome_original, m.nome_padronizado
-        ORDER BY COUNT(f.cliente) DESC, MAX(f.data) DESC
-        LIMIT %s OFFSET %s
-        """
-        
-        # Executar query
-        result = supabase_admin.table('fin_clientes_mapeamento').select('*').execute()
-        
-        # Simular dados por enquanto (até ter a tabela criada)
-        clientes_mock = [
-            {
-                'nome_original': 'EMPRESA ABC LTDA - ME',
-                'nome_padronizado': None,
-                'total_ocorrencias': 25,
-                'ultima_ocorrencia': '2024-08-15',
-                'valor_total': 150000.00,
-                'status': 'nao_categorizado'
-            },
-            {
-                'nome_original': 'COMERCIO XYZ S.A',
-                'nome_padronizado': 'COMÉRCIO XYZ S.A.',
-                'total_ocorrencias': 18,
-                'ultima_ocorrencia': '2024-08-10',
-                'valor_total': 95000.00,
-                'status': 'categorizado'
-            },
-            {
-                'nome_original': 'INDUSTRIA 123 LTDA',
-                'nome_padronizado': None,
-                'total_ocorrencias': 12,
-                'ultima_ocorrencia': '2024-08-05',
-                'valor_total': 75000.00,
-                'status': 'nao_categorizado'
-            }
-        ]
-        
-        # Filtrar por busca se necessário
-        if busca:
-            clientes_mock = [c for c in clientes_mock if busca.lower() in c['nome_original'].lower()]
-        
-        # Paginação
-        total = len(clientes_mock)
-        start_idx = offset
-        end_idx = offset + per_page
-        clientes_paginados = clientes_mock[start_idx:end_idx]
-        
+
+        print(f"[CATEGORIZACAO_API] Clientes - page={page} per_page={per_page} busca='{busca}' status='{status}'")
+
+        # Load cache usando serviço em memória (evitar cookies gigantes)
+        base_data = []
+        try:
+            user_id = (session.get('user') or {}).get('id') or 'global'
+            cached = data_cache.get_cache(user_id, 'fin_clientes_mapeamento')
+            if cached is not None:
+                base_data = cached
+            else:
+                res = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+                base_data = res.data or []
+                data_cache.set_cache(user_id, 'fin_clientes_mapeamento', base_data)
+                print(f"[CATEGORIZACAO_API] Cache recarregado (memória) - {len(base_data)} registros")
+        except Exception as e:
+            print(f"[CATEGORIZACAO_API] Falha ao carregar cache/base: {e}")
+            base_data = []
+
+        # Normalizer
+        try:
+            from utils.text_normalizer import normalize_string_for_code as _norm
+        except Exception:
+            def _norm(s):
+                return (s or '').strip().lower()
+
+        def compute_status(nome_original, nome_padronizado):
+            if nome_padronizado is None:
+                return 'nao_categorizado'
+            if isinstance(nome_padronizado, str) and nome_padronizado.strip() == '':
+                return 'nao_categorizado'
+            if _norm(nome_padronizado) == _norm(nome_original):
+                return 'nao_categorizado'
+            return 'categorizado'
+
+        # Filter in-memory
+        termo = busca.lower()
+        filtrados = []
+        for c in base_data:
+            nome_original = c.get('nome_original')
+            nome_padronizado = c.get('nome_padronizado')
+            st = compute_status(nome_original, nome_padronizado)
+            if termo and termo not in (nome_original or '').lower():
+                continue
+            if status and st != status:
+                continue
+            filtrados.append({'nome_original': nome_original, 'nome_padronizado': nome_padronizado, 'status': st})
+
+        total = len(filtrados)
+        page_slice = filtrados[offset: offset + per_page]
+
+        # Batch faturamento for page slice
+        clientes_nomes = [c['nome_original'] for c in page_slice]
+        faturamento_map = {}
+        if clientes_nomes:
+            try:
+                fat_res = supabase_admin.table('fin_faturamento_anual').select('*').in_('cliente', clientes_nomes).execute()
+                for f in (fat_res.data or []):
+                    cli = f.get('cliente')
+                    faturamento_map.setdefault(cli, []).append(f)
+            except Exception as e:
+                print(f"[CATEGORIZACAO_API] Erro faturamento lote: {e}")
+                faturamento_map = {}
+
+        # Compose response
+        clientes = []
+        for c in page_slice:
+            nome_original = c['nome_original']
+            nome_padronizado = c['nome_padronizado']
+            status_cliente = c['status']
+            fat_list = faturamento_map.get(nome_original, [])
+            total_ocorrencias = len(fat_list)
+            valor_total = sum([f.get('valor', 0) for f in fat_list]) if fat_list else 0
+            datas = [f.get('data') for f in fat_list if f.get('data')]
+            ultima_ocorrencia = max(datas) if datas else None
+
+            clientes.append({
+                'nome_original': nome_original,
+                'nome_padronizado': nome_padronizado if status_cliente == 'categorizado' else None,
+                'total_ocorrencias': total_ocorrencias,
+                'valor_total': float(valor_total) if valor_total else 0.0,
+                'ultima_ocorrencia': ultima_ocorrencia,
+                'status': status_cliente
+            })
+
         return jsonify({
             'success': True,
-            'data': clientes_paginados,
+            'data': clientes,
             'pagination': {
                 'page': page,
                 'per_page': per_page,
@@ -386,92 +411,65 @@ def api_clientes_nao_categorizados():
                 'total_pages': (total + per_page - 1) // per_page
             }
         })
-        
+
     except Exception as e:
         print(f"[CATEGORIZACAO_API] Erro na API nao categorizados: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Erro ao buscar clientes não categorizados'
-        }), 500
+        return jsonify({'success': False, 'error': 'Erro ao buscar clientes não categorizados'}), 500
 
 @categorizacao_clientes_bp.route('/api/salvar-categorizacoes', methods=['POST'])
 @login_required
 @perfil_required('financeiro', 'categorizacao_clientes')
 def api_salvar_categorizacoes():
-    """API para salvar categorizações em lote"""
+    """API para salvar categorizações em lote (upsert)."""
     try:
-        dados = request.get_json()
-        categorizacoes = dados.get('categorizacoes', [])
-        
+        payload = request.get_json(silent=True) or {}
+        categorizacoes = payload.get('categorizacoes', [])
+
         print(f"[CATEGORIZACAO_API] Salvando {len(categorizacoes)} categorizações")
-        
-        # Validar dados
+
         if not categorizacoes:
-            return jsonify({
-                'success': False,
-                'error': 'Nenhuma categorização fornecida'
-            }), 400
-        
-        # Processar cada categorização
+            return jsonify({'success': False, 'error': 'Nenhuma categorização fornecida'}), 400
+
         salvos = 0
         erros = []
-        
         for cat in categorizacoes:
+            nome_original = (cat or {}).get('nome_original')
+            nome_padronizado = ((cat or {}).get('nome_padronizado') or '').strip()
+            if not nome_original:
+                erros.append('Nome original vazio')
+                continue
+            if not nome_padronizado:
+                erros.append(f"Nome padronizado vazio para: {nome_original}")
+                continue
             try:
-                nome_original = cat.get('nome_original')
-                nome_padronizado = cat.get('nome_padronizado', '').strip()
-                
-                if not nome_original:
-                    erros.append(f"Nome original vazio")
-                    continue
-                
-                if not nome_padronizado:
-                    erros.append(f"Nome padronizado vazio para: {nome_original}")
-                    continue
-                
-                # TODO: Implementar update no banco
-                # Por enquanto apenas simular
-                print(f"   ✅ {nome_original} -> {nome_padronizado}")
+                # Tenta update; se não existir, faz insert
+                upd = supabase_admin.table('fin_clientes_mapeamento').update({
+                    'nome_padronizado': nome_padronizado
+                }).eq('nome_original', nome_original).execute()
+                if not upd.data:
+                    supabase_admin.table('fin_clientes_mapeamento').insert({
+                        'nome_original': nome_original,
+                        'nome_padronizado': nome_padronizado
+                    }).execute()
                 salvos += 1
-                
-            except Exception as e:
-                erros.append(f"Erro ao processar {cat.get('nome_original', 'desconhecido')}: {str(e)}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'{salvos} categorizações salvas com sucesso',
-            'salvos': salvos,
-            'erros': erros
-        })
-        
-    except Exception as e:
-        print(f"[CATEGORIZACAO_API] Erro ao salvar categorizações: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Erro ao salvar categorizações'
-        }), 500
+            except Exception as db_err:
+                erros.append(f"{nome_original}: {db_err}")
 
-@categorizacao_clientes_bp.route('/api/popular-tabela')
-@login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
-def api_popular_tabela():
-    """API para popular a tabela de mapeamento com clientes da view"""
-    try:
-        print("[CATEGORIZACAO_API] Populando tabela de mapeamento...")
-        
-        # TODO: Implementar lógica de popular tabela
-        # Por enquanto apenas simular
-        
-        return jsonify({
-            'success': True,
-            'message': 'Tabela populada com sucesso',
-            'novos_clientes': 150,
-            'clientes_atualizados': 25
-        })
-        
+        # Invalida cache para refletir atualizações (cache em memória)
+        try:
+            user_id = (session.get('user') or {}).get('id') or 'global'
+            # Limpar apenas a chave específica
+            from services.data_cache import data_cache as _dc
+            cache_key = _dc.get_cache_key(user_id, 'fin_clientes_mapeamento')
+            if cache_key in _dc.cache:
+                del _dc.cache[cache_key]
+            if cache_key in _dc.cache_timestamp:
+                del _dc.cache_timestamp[cache_key]
+            print("[CATEGORIZACAO_API] Cache de mapeamento invalidado")
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'salvos': salvos, 'erros': erros})
     except Exception as e:
-        print(f"[CATEGORIZACAO_API] Erro ao popular tabela: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Erro ao popular tabela de mapeamento'
-        }), 500
+        print(f"[CATEGORIZACAO_API] Erro ao salvar categorizações: {e}")
+        return jsonify({'success': False, 'error': 'Erro ao salvar categorização'}), 500
