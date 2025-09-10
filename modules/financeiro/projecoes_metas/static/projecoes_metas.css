@@ -245,19 +245,19 @@
     color: #f57c00;
 }
 
-.valor-meta {
+.valor-financeira {
     font-weight: 600;
     color: #2196f3;
+}
+
+.valor-operacional {
+    font-weight: 600;
+    color: #ff9800;
 }
 
 .valor-projecao {
     font-weight: 600;
     color: #4caf50;
-}
-
-.valor-mensal {
-    font-weight: 600;
-    color: #ff9800;
 }
 
 .input-edit {
@@ -336,24 +336,35 @@
 .toast-error { background: #f44336; }
 .toast-warning { background: #ff9800; }
 
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.4);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10001;
+/* Modal personalizado (sobrescrever o padrão se necessário) */
+#meta-modal.modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    display: none !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 10000 !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
 }
 
-.modal {
-    background: #fff;
-    width: min(520px, 92vw);
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    overflow: hidden;
-    display: block;
-    margin: auto;
+#meta-modal.modal-overlay.active {
+    display: flex !important;
+}
+
+#meta-modal .modal-container {
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+    max-width: 600px !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    position: relative !important;
 }
 
 .modal-header {

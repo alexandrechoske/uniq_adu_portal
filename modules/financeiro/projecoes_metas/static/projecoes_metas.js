@@ -4,7 +4,7 @@ console.log('[PROJECOES] Script carregado');
 let dados = [];
 let editandoItem = null;
 let tipoEdicao = null;
-let tabAtiva = 'metas-anuais';
+let tabAtiva = 'metas-financeiras';
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
@@ -69,9 +69,9 @@ function configurarEventos() {
         document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
         
         // Botões de nova meta/projeção
-        document.getElementById('btn-nova-meta').addEventListener('click', () => abrirModal('meta'));
+        document.getElementById('btn-nova-meta-financeira').addEventListener('click', () => abrirModal('financeiro'));
+        document.getElementById('btn-nova-meta-operacional').addEventListener('click', () => abrirModal('operacional'));
         document.getElementById('btn-nova-projecao').addEventListener('click', () => abrirModal('projecao'));
-        document.getElementById('btn-nova-meta-mensal').addEventListener('click', () => abrirModal('financeiro'));
         
         // Modais
         configurarModais();
@@ -85,22 +85,14 @@ function configurarEventos() {
 function configurarModais() {
     console.log('[PROJECOES] Configurando modais...');
     
-    // Modal Meta/Projeção Anual
-    document.getElementById('modal-close-meta').addEventListener('click', () => fecharModal('meta'));
-    document.getElementById('modal-cancel-meta').addEventListener('click', () => fecharModal('meta'));
-    document.getElementById('modal-save-meta').addEventListener('click', salvarItem);
-    
-    // Modal Meta Mensal
-    document.getElementById('modal-close-mensal').addEventListener('click', () => fecharModal('mensal'));
-    document.getElementById('modal-cancel-mensal').addEventListener('click', () => fecharModal('mensal'));
-    document.getElementById('modal-save-mensal').addEventListener('click', salvarItem);
+    // Modal centralizado
+    document.getElementById('meta-modal-close').addEventListener('click', fecharModal);
+    document.getElementById('meta-modal-cancel').addEventListener('click', fecharModal);
+    document.getElementById('meta-modal-save').addEventListener('click', salvarItem);
     
     // Fechar modal ao clicar no overlay
-    document.getElementById('modal-overlay-meta').addEventListener('click', function(e) {
-        if (e.target === this) fecharModal('meta');
-    });
-    document.getElementById('modal-overlay-mensal').addEventListener('click', function(e) {
-        if (e.target === this) fecharModal('mensal');
+    document.getElementById('meta-modal').addEventListener('click', function(e) {
+        if (e.target === this) fecharModal();
     });
 }
 
@@ -154,24 +146,24 @@ function buscarDados() {
 
 function renderizarDados() {
     console.log('[PROJECOES] Renderizando dados:', dados.length, 'itens');
-    renderizarMetasAnuais();
-    renderizarProjecoesAnuais();
-    renderizarMetasMensais();
+    renderizarMetasFinanceiras();
+    renderizarMetasOperacionais();
+    renderizarProjecoes();
 }
 
-function renderizarMetasAnuais() {
-    const tbody = document.getElementById('table-metas-anuais-tbody');
-    const metas = dados.filter(item => item.tipo === 'meta' && !item.mes);
+function renderizarMetasFinanceiras() {
+    const tbody = document.getElementById('table-metas-financeiras-tbody');
+    const metas = dados.filter(item => item.tipo === 'financeiro');
     
-    console.log('[PROJECOES] Metas anuais:', metas.length);
+    console.log('[PROJECOES] Metas financeiras:', metas.length);
     tbody.innerHTML = '';
     
     if (metas.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
-                    <i class="mdi mdi-target" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                    Nenhuma meta anual encontrada
+                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                    <i class="mdi mdi-cash-multiple" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
+                    Nenhuma meta financeira encontrada
                 </td>
             </tr>
         `;
@@ -182,10 +174,11 @@ function renderizarMetasAnuais() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${meta.ano}</td>
-            <td><span class="valor-meta">${formatarMoeda(meta.meta)}</span></td>
+            <td>${formatarMes(meta.mes)}</td>
+            <td><span class="valor-financeira">${formatarMoeda(meta.meta)}</span></td>
             <td>${formatarData(meta.created_at)}</td>
             <td>
-                <button class="btn btn-primary btn-sm" onclick="editarItem(${meta.id}, 'meta')">
+                <button class="btn btn-primary btn-sm" onclick="editarItem(${meta.id}, 'financeiro')">
                     <i class="mdi mdi-pencil"></i>
                 </button>
                 <button class="btn btn-warning btn-sm" onclick="excluirItem(${meta.id})" style="margin-left: 5px;">
@@ -197,19 +190,58 @@ function renderizarMetasAnuais() {
     });
 }
 
-function renderizarProjecoesAnuais() {
-    const tbody = document.getElementById('table-projecoes-anuais-tbody');
-    const projecoes = dados.filter(item => item.tipo === 'projecao' && !item.mes);
+function renderizarMetasOperacionais() {
+    const tbody = document.getElementById('table-metas-operacionais-tbody');
+    const metas = dados.filter(item => item.tipo === 'operacional');
     
-    console.log('[PROJECOES] Projeções anuais:', projecoes.length);
+    console.log('[PROJECOES] Metas operacionais:', metas.length);
+    tbody.innerHTML = '';
+    
+    if (metas.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                    <i class="mdi mdi-chart-timeline-variant" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
+                    Nenhuma meta operacional encontrada
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    metas.forEach(meta => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${meta.ano}</td>
+            <td>${formatarMes(meta.mes)}</td>
+            <td><span class="valor-operacional">${formatarMoeda(meta.meta)}</span></td>
+            <td>${formatarData(meta.created_at)}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="editarItem(${meta.id}, 'operacional')">
+                    <i class="mdi mdi-pencil"></i>
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="excluirItem(${meta.id})" style="margin-left: 5px;">
+                    <i class="mdi mdi-delete"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function renderizarProjecoes() {
+    const tbody = document.getElementById('table-projecoes-tbody');
+    const projecoes = dados.filter(item => item.tipo === 'projecao');
+    
+    console.log('[PROJECOES] Projeções:', projecoes.length);
     tbody.innerHTML = '';
     
     if (projecoes.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" style="text-align: center; padding: 40px; color: #666;">
+                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
                     <i class="mdi mdi-trending-up" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                    Nenhuma projeção anual encontrada
+                    Nenhuma projeção encontrada
                 </td>
             </tr>
         `;
@@ -220,6 +252,7 @@ function renderizarProjecoesAnuais() {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${projecao.ano}</td>
+            <td>${formatarMes(projecao.mes)}</td>
             <td><span class="valor-projecao">${formatarMoeda(projecao.meta)}</span></td>
             <td>${formatarData(projecao.created_at)}</td>
             <td>
@@ -235,55 +268,16 @@ function renderizarProjecoesAnuais() {
     });
 }
 
-function renderizarMetasMensais() {
-    const tbody = document.getElementById('table-metas-mensais-tbody');
-    const mensais = dados.filter(item => item.tipo === 'financeiro' && item.mes);
-    
-    console.log('[PROJECOES] Metas mensais:', mensais.length);
-    tbody.innerHTML = '';
-    
-    if (mensais.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
-                    <i class="mdi mdi-calendar-month" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
-                    Nenhuma meta mensal encontrada
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    mensais.forEach(meta => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${meta.ano}</td>
-            <td>${formatarMes(meta.mes)}</td>
-            <td><span class="valor-mensal">${formatarMoeda(meta.meta)}</span></td>
-            <td>${formatarData(meta.created_at)}</td>
-            <td>
-                <button class="btn btn-warning btn-sm" onclick="editarItem(${meta.id}, 'financeiro')">
-                    <i class="mdi mdi-pencil"></i>
-                </button>
-                <button class="btn btn-warning btn-sm" onclick="excluirItem(${meta.id})" style="margin-left: 5px;">
-                    <i class="mdi mdi-delete"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
 function atualizarEstatisticas() {
-    const metas = dados.filter(item => item.tipo === 'meta' && !item.mes).length;
-    const projecoes = dados.filter(item => item.tipo === 'projecao' && !item.mes).length;
-    const mensais = dados.filter(item => item.tipo === 'financeiro' && item.mes).length;
+    const financeiras = dados.filter(item => item.tipo === 'financeiro').length;
+    const operacionais = dados.filter(item => item.tipo === 'operacional').length;
+    const projecoes = dados.filter(item => item.tipo === 'projecao').length;
     
-    console.log('[PROJECOES] Estatísticas - Metas:', metas, 'Projeções:', projecoes, 'Mensais:', mensais);
+    console.log('[PROJECOES] Estatísticas - Financeiras:', financeiras, 'Operacionais:', operacionais, 'Projeções:', projecoes);
     
-    document.getElementById('total-metas').textContent = metas;
+    document.getElementById('total-financeiras').textContent = financeiras;
+    document.getElementById('total-operacionais').textContent = operacionais;
     document.getElementById('total-projecoes').textContent = projecoes;
-    document.getElementById('total-mensais').textContent = mensais;
 }
 
 function abrirModal(tipo) {
@@ -292,21 +286,22 @@ function abrirModal(tipo) {
     tipoEdicao = tipo;
     editandoItem = null;
     
-    if (tipo === 'financeiro') {
-        // Modal mensal
-        document.getElementById('modal-title-mensal').textContent = 'Nova Meta Mensal';
-        document.getElementById('meta-mensal-ano').value = '2025';
-        document.getElementById('meta-mensal-mes').value = '01';
-        document.getElementById('meta-mensal-valor').value = '';
-        document.getElementById('modal-overlay-mensal').style.display = 'flex';
-    } else {
-        // Modal anual
-        const titulo = tipo === 'meta' ? 'Nova Meta Anual' : 'Nova Projeção Anual';
-        document.getElementById('modal-title-anual').textContent = titulo;
-        document.getElementById('meta-ano').value = '2025';
-        document.getElementById('meta-valor').value = '';
-        document.getElementById('modal-overlay-meta').style.display = 'flex';
-    }
+    // Definir título baseado no tipo
+    const titulos = {
+        'financeiro': 'Nova Meta Financeira',
+        'operacional': 'Nova Meta Operacional',
+        'projecao': 'Nova Projeção'
+    };
+    
+    document.getElementById('meta-modal-title').textContent = titulos[tipo];
+    document.getElementById('meta-modal-ano').value = '2025';
+    document.getElementById('meta-modal-mes').value = '01';
+    document.getElementById('meta-modal-valor').value = '';
+    
+    // Mostrar modal com classe active para animação
+    const modal = document.getElementById('meta-modal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
 }
 
 // Funções globais para os botões
@@ -322,21 +317,22 @@ window.editarItem = function(itemId, tipo) {
     tipoEdicao = tipo;
     editandoItem = item;
     
-    if (tipo === 'financeiro') {
-        // Modal mensal
-        document.getElementById('modal-title-mensal').textContent = 'Editar Meta Mensal';
-        document.getElementById('meta-mensal-ano').value = item.ano;
-        document.getElementById('meta-mensal-mes').value = item.mes;
-        document.getElementById('meta-mensal-valor').value = item.meta;
-        document.getElementById('modal-overlay-mensal').style.display = 'flex';
-    } else {
-        // Modal anual
-        const titulo = tipo === 'meta' ? 'Editar Meta Anual' : 'Editar Projeção Anual';
-        document.getElementById('modal-title-anual').textContent = titulo;
-        document.getElementById('meta-ano').value = item.ano;
-        document.getElementById('meta-valor').value = item.meta;
-        document.getElementById('modal-overlay-meta').style.display = 'flex';
-    }
+    // Definir título baseado no tipo
+    const titulos = {
+        'financeiro': 'Editar Meta Financeira',
+        'operacional': 'Editar Meta Operacional',
+        'projecao': 'Editar Projeção'
+    };
+    
+    document.getElementById('meta-modal-title').textContent = titulos[tipo];
+    document.getElementById('meta-modal-ano').value = item.ano;
+    document.getElementById('meta-modal-mes').value = item.mes;
+    document.getElementById('meta-modal-valor').value = item.meta;
+    
+    // Mostrar modal
+    const modal = document.getElementById('meta-modal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
 };
 
 window.excluirItem = function(itemId) {
@@ -369,12 +365,10 @@ window.excluirItem = function(itemId) {
     });
 };
 
-function fecharModal(modalTipo) {
-    if (modalTipo === 'mensal') {
-        document.getElementById('modal-overlay-mensal').style.display = 'none';
-    } else {
-        document.getElementById('modal-overlay-meta').style.display = 'none';
-    }
+function fecharModal() {
+    const modal = document.getElementById('meta-modal');
+    modal.classList.remove('active');
+    setTimeout(() => modal.style.display = 'none', 300);
     editandoItem = null;
     tipoEdicao = null;
 }
@@ -382,25 +376,15 @@ function fecharModal(modalTipo) {
 function salvarItem() {
     console.log('[PROJECOES] Salvando item - Tipo:', tipoEdicao, 'Editando:', editandoItem?.id);
     
-    let dadosItem;
-    
-    if (tipoEdicao === 'financeiro') {
-        dadosItem = {
-            ano: document.getElementById('meta-mensal-ano').value,
-            mes: document.getElementById('meta-mensal-mes').value,
-            meta: parseFloat(document.getElementById('meta-mensal-valor').value),
-            tipo: 'financeiro'
-        };
-    } else {
-        dadosItem = {
-            ano: document.getElementById('meta-ano').value,
-            meta: parseFloat(document.getElementById('meta-valor').value),
-            tipo: tipoEdicao
-        };
-    }
+    let dadosItem = {
+        ano: document.getElementById('meta-modal-ano').value,
+        mes: document.getElementById('meta-modal-mes').value,
+        meta: parseFloat(document.getElementById('meta-modal-valor').value),
+        tipo: tipoEdicao
+    };
     
     // Validação
-    if (!dadosItem.ano || !dadosItem.meta || !dadosItem.tipo) {
+    if (!dadosItem.ano || !dadosItem.mes || !dadosItem.meta || !dadosItem.tipo) {
         mostrarToast('Preencha todos os campos obrigatórios', 'warning');
         return;
     }
@@ -430,7 +414,7 @@ function salvarItem() {
         console.log('[PROJECOES] Resposta do servidor:', data);
         if (data.success !== false) {
             mostrarToast(data.message || 'Salvo com sucesso', 'success');
-            fecharModal(tipoEdicao === 'financeiro' ? 'mensal' : 'meta');
+            fecharModal();
             buscarDados(); // Recarregar dados
         } else {
             mostrarToast(data.error || 'Erro ao salvar', 'error');
