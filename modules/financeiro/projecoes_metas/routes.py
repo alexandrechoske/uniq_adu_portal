@@ -38,173 +38,174 @@ def index():
         print(f"[PROJECOES] Erro ao carregar página: {str(e)}")
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
-@projecoes_metas_bp.route('/api/metas')
+@projecoes_metas_bp.route('/api/dados')
 @login_required
 @perfil_required('financeiro', 'projecoes_metas')
-def api_metas():
-    """API para obter metas financeiras"""
+def api_dados():
+    """API para obter dados de metas e projeções da tabela fin_metas_projecoes"""
     try:
-        # Obter parâmetros de período
-        ano = request.args.get('ano', datetime.now().year)
-        categoria = request.args.get('categoria')
+        ano = request.args.get('ano', str(datetime.now().year))
+        tipo = request.args.get('tipo', '')
         
-        print(f"[PROJECOES_API] Buscando metas - Ano: {ano}, Categoria: {categoria}")
+        print(f"[PROJECOES_API] Buscando dados - Ano: {ano}, Tipo: {tipo}")
         
-        # TODO: Implementar lógica de busca de metas
-        # Por enquanto retornando dados mockados
-        metas_mock = [
-            {
-                'id': 1,
-                'nome': 'Receita Anual 2024',
-                'categoria': 'receita',
-                'valor_meta': 1200000.00,
-                'valor_realizado': 800000.00,
-                'periodo_inicio': '2024-01-01',
-                'periodo_fim': '2024-12-31',
-                'status': 'em_andamento',
-                'percentual_atingido': 66.67
-            },
-            {
-                'id': 2,
-                'nome': 'Redução de Custos',
-                'categoria': 'despesa',
-                'valor_meta': 100000.00,
-                'valor_realizado': 75000.00,
-                'periodo_inicio': '2024-01-01',
-                'periodo_fim': '2024-12-31',
-                'status': 'atingida',
-                'percentual_atingido': 75.0
-            }
-        ]
+        # Query base
+        query = supabase_admin.table('fin_metas_projecoes').select('*')
+        
+        # Filtros
+        if ano:
+            query = query.eq('ano', ano)
+        if tipo:
+            query = query.eq('tipo', tipo)
+        
+        # Executar query
+        result = query.order('created_at', desc=True).execute()
+        
+        dados = result.data if result.data else []
         
         return jsonify({
             'success': True,
-            'data': metas_mock
+            'data': dados
         })
         
     except Exception as e:
-        print(f"[PROJECOES_API] Erro na API metas: {str(e)}")
+        print(f"[PROJECOES_API] Erro na API dados: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Erro ao buscar metas'
+            'error': 'Erro ao buscar dados'
         }), 500
 
-@projecoes_metas_bp.route('/api/projecoes')
+@projecoes_metas_bp.route('/api/criar', methods=['POST'])
 @login_required
 @perfil_required('financeiro', 'projecoes_metas')
-def api_projecoes():
-    """API para obter projeções financeiras"""
+def api_criar():
+    """API para criar nova meta/projeção"""
     try:
-        # Obter parâmetros de período
-        meses_futuro = request.args.get('meses', 12)
-        categoria = request.args.get('categoria')
+        dados = request.get_json()
         
-        print(f"[PROJECOES_API] Buscando projeções - Meses: {meses_futuro}")
+        # Validar dados obrigatórios
+        if not dados.get('ano') or not dados.get('meta') or not dados.get('tipo'):
+            return jsonify({
+                'success': False,
+                'error': 'Campos obrigatórios: ano, meta, tipo'
+            }), 400
         
-        # TODO: Implementar lógica de cálculo de projeções
-        # Por enquanto retornando dados mockados
-        projecoes_mock = {
-            'receita': [
-                {'mes': '2024-02', 'valor_projetado': 95000.00, 'valor_realizado': 92000.00},
-                {'mes': '2024-03', 'valor_projetado': 105000.00, 'valor_realizado': None},
-                {'mes': '2024-04', 'valor_projetado': 110000.00, 'valor_realizado': None},
-            ],
-            'despesa': [
-                {'mes': '2024-02', 'valor_projetado': 65000.00, 'valor_realizado': 67000.00},
-                {'mes': '2024-03', 'valor_projetado': 70000.00, 'valor_realizado': None},
-                {'mes': '2024-04', 'valor_projetado': 72000.00, 'valor_realizado': None},
-            ],
-            'resultado': [
-                {'mes': '2024-02', 'valor_projetado': 30000.00, 'valor_realizado': 25000.00},
-                {'mes': '2024-03', 'valor_projetado': 35000.00, 'valor_realizado': None},
-                {'mes': '2024-04', 'valor_projetado': 38000.00, 'valor_realizado': None},
-            ]
+        # Preparar dados para inserção
+        item_data = {
+            'ano': dados.get('ano'),
+            'meta': int(dados.get('meta')),
+            'mes': dados.get('mes'),  # Pode ser None para metas/projeções anuais
+            'tipo': dados.get('tipo')
         }
         
-        return jsonify({
-            'success': True,
-            'data': projecoes_mock
-        })
+        print(f"[PROJECOES_API] Criando item: {item_data}")
+        
+        # Inserir no banco
+        result = supabase_admin.table('fin_metas_projecoes').insert(item_data).execute()
+        
+        if result.data:
+            tipo_desc = {
+                'meta': 'Meta anual',
+                'projecao': 'Projeção anual', 
+                'financeiro': 'Meta mensal'
+            }.get(dados.get('tipo'), 'Item')
+            
+            return jsonify({
+                'success': True,
+                'message': f'{tipo_desc} criada com sucesso',
+                'data': result.data[0]
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Erro ao inserir dados'
+            }), 500
         
     except Exception as e:
-        print(f"[PROJECOES_API] Erro na API projeções: {str(e)}")
+        print(f"[PROJECOES_API] Erro ao criar: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Erro ao buscar projeções'
+            'error': 'Erro ao criar item'
         }), 500
 
-@projecoes_metas_bp.route('/api/criar-meta', methods=['POST'])
+@projecoes_metas_bp.route('/api/atualizar/<int:item_id>', methods=['PUT'])
 @login_required
 @perfil_required('financeiro', 'projecoes_metas')
-def api_criar_meta():
-    """API para criar nova meta"""
+def api_atualizar(item_id):
+    """API para atualizar meta/projeção existente"""
     try:
         dados = request.get_json()
         
-        print(f"[PROJECOES_API] Criando nova meta: {dados.get('nome')}")
+        # Validar dados obrigatórios
+        if not dados.get('ano') or not dados.get('meta') or not dados.get('tipo'):
+            return jsonify({
+                'success': False,
+                'error': 'Campos obrigatórios: ano, meta, tipo'
+            }), 400
         
-        # TODO: Implementar lógica de criação de meta
-        # Por enquanto apenas confirmando
+        # Preparar dados para atualização
+        update_data = {
+            'ano': dados.get('ano'),
+            'meta': int(dados.get('meta')),
+            'mes': dados.get('mes'),
+            'tipo': dados.get('tipo')
+        }
         
-        return jsonify({
-            'success': True,
-            'message': 'Meta criada com sucesso'
-        })
+        print(f"[PROJECOES_API] Atualizando item {item_id}: {update_data}")
+        
+        # Atualizar no banco
+        result = supabase_admin.table('fin_metas_projecoes').update(update_data).eq('id', item_id).execute()
+        
+        if result.data:
+            tipo_desc = {
+                'meta': 'Meta anual',
+                'projecao': 'Projeção anual',
+                'financeiro': 'Meta mensal'
+            }.get(dados.get('tipo'), 'Item')
+            
+            return jsonify({
+                'success': True,
+                'message': f'{tipo_desc} atualizada com sucesso',
+                'data': result.data[0]
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Item não encontrado'
+            }), 404
         
     except Exception as e:
-        print(f"[PROJECOES_API] Erro ao criar meta: {str(e)}")
+        print(f"[PROJECOES_API] Erro ao atualizar: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Erro ao criar meta'
+            'error': 'Erro ao atualizar item'
         }), 500
 
-@projecoes_metas_bp.route('/api/atualizar-meta', methods=['POST'])
+@projecoes_metas_bp.route('/api/excluir/<int:item_id>', methods=['DELETE'])
 @login_required
 @perfil_required('financeiro', 'projecoes_metas')
-def api_atualizar_meta():
-    """API para atualizar meta existente"""
+def api_excluir(item_id):
+    """API para excluir meta/projeção"""
     try:
-        dados = request.get_json()
-        meta_id = dados.get('meta_id')
+        print(f"[PROJECOES_API] Excluindo item {item_id}")
         
-        print(f"[PROJECOES_API] Atualizando meta {meta_id}")
+        # Excluir do banco
+        result = supabase_admin.table('fin_metas_projecoes').delete().eq('id', item_id).execute()
         
-        # TODO: Implementar lógica de atualização de meta
-        # Por enquanto apenas confirmando
-        
-        return jsonify({
-            'success': True,
-            'message': 'Meta atualizada com sucesso'
-        })
+        if result.data:
+            return jsonify({
+                'success': True,
+                'message': 'Item excluído com sucesso'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Item não encontrado'
+            }), 404
         
     except Exception as e:
-        print(f"[PROJECOES_API] Erro ao atualizar meta: {str(e)}")
+        print(f"[PROJECOES_API] Erro ao excluir: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Erro ao atualizar meta'
-        }), 500
-
-@projecoes_metas_bp.route('/api/calcular-projecoes', methods=['POST'])
-@login_required
-@perfil_required('financeiro', 'projecoes_metas')
-def api_calcular_projecoes():
-    """API para recalcular projeções baseadas em novos parâmetros"""
-    try:
-        dados = request.get_json()
-        
-        print(f"[PROJECOES_API] Recalculando projeções com parâmetros: {dados}")
-        
-        # TODO: Implementar lógica de recálculo de projeções
-        # Por enquanto apenas confirmando
-        
-        return jsonify({
-            'success': True,
-            'message': 'Projeções recalculadas com sucesso'
-        })
-        
-    except Exception as e:
-        print(f"[PROJECOES_API] Erro ao calcular projeções: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Erro ao calcular projeções'
+            'error': 'Erro ao excluir item'
         }), 500

@@ -2,702 +2,299 @@
 
 {% block title %}Projeções e Metas{% endblock %}
 
-{% block head %}
-<link href="{{ url_for('static', filename='css/materialize.min.css') }}" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-    .meta-card {
-        margin: 10px 0;
-        border-radius: 8px;
-    }
-    
-    .status-em-andamento {
-        border-left: 4px solid #ff9800;
-    }
-    
-    .status-atingida {
-        border-left: 4px solid #4caf50;
-    }
-    
-    .status-nao-atingida {
-        border-left: 4px solid #f44336;
-    }
-    
-    .progresso-bar {
-        height: 20px;
-        background-color: #e0e0e0;
-        border-radius: 10px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-    
-    .progresso-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #4caf50, #8bc34a);
-        transition: width 0.3s ease;
-    }
-    
-    .progresso-fill.baixo {
-        background: linear-gradient(90deg, #f44336, #ff5722);
-    }
-    
-    .progresso-fill.medio {
-        background: linear-gradient(90deg, #ff9800, #ffc107);
-    }
-    
-    .valor-meta {
-        font-size: 1.5em;
-        font-weight: bold;
-        color: #2196f3;
-    }
-    
-    .valor-realizado {
-        font-size: 1.2em;
-        color: #4caf50;
-    }
-    
-    .charts-container {
-        background-color: #f5f5f5;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
-    }
-    
-    .chart-wrapper {
-        position: relative;
-        height: 400px;
-        margin: 20px 0;
-    }
-    
-    .tab-content {
-        display: none;
-        padding: 20px 0;
-    }
-    
-    .tab-content.active {
-        display: block;
-    }
-    
-    .resumo-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .meta-badge {
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 0.8em;
-        font-weight: bold;
-        color: white;
-    }
-    
-    .badge-receita { background-color: #4caf50; }
-    .badge-despesa { background-color: #f44336; }
-    .badge-resultado { background-color: #2196f3; }
-</style>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link href="{{ url_for('fin_projecoes_metas.static', filename='projecoes_metas.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col s12">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title">
-                        <i class="material-icons left">trending_up</i>
-                        Projeções e Metas Financeiras
-                    </span>
-                    <p class="grey-text">Planeje e monitore o desempenho financeiro através de metas e projeções</p>
-                </div>
-            </div>
+<div class="projecoes-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-financeiro">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-chart-line'},
+                {'name': 'Projeções e Metas', 'icon': 'mdi mdi-trending-up'}
+            ], 'financeiro') }}
         </div>
     </div>
 
-    <!-- Resumo Geral -->
-    <div class="row">
-        <div class="col s12">
-            <div class="card resumo-card">
-                <div class="card-content white-text">
-                    <span class="card-title">Resumo de Metas</span>
-                    <div class="row">
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="total-metas">0</h4>
-                                <p>Total de Metas</p>
-                            </div>
-                        </div>
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="metas-atingidas">0</h4>
-                                <p>Atingidas</p>
-                            </div>
-                        </div>
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="metas-andamento">0</h4>
-                                <p>Em Andamento</p>
-                            </div>
-                        </div>
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="percentual-medio">0%</h4>
-                                <p>Atingimento Médio</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="row">
-        <div class="col s12">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title">Filtros</span>
-                    <div class="row">
-                        <div class="input-field col s12 m3">
-                            <select id="ano-filtro">
-                                <option value="2024" selected>2024</option>
-                                <option value="2023">2023</option>
-                                <option value="2025">2025</option>
-                            </select>
-                            <label>Ano</label>
-                        </div>
-                        <div class="input-field col s12 m3">
-                            <select id="categoria-filtro">
-                                <option value="" selected>Todas as categorias</option>
-                                <option value="receita">Receita</option>
-                                <option value="despesa">Despesa</option>
-                                <option value="resultado">Resultado</option>
-                            </select>
-                            <label>Categoria</label>
-                        </div>
-                        <div class="col s12 m3">
-                            <button class="btn waves-effect waves-light blue" onclick="buscarMetas()" style="margin-top: 25px;">
-                                <i class="material-icons left">search</i>
-                                Buscar
-                            </button>
-                        </div>
-                        <div class="col s12 m3">
-                            <button class="btn waves-effect waves-light green right" onclick="abrirModalNovaMeta()" style="margin-top: 25px;">
-                                <i class="material-icons left">add</i>
-                                Nova Meta
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="row">
-        <div class="col s12">
-            <ul class="tabs">
-                <li class="tab col s4"><a href="#tab-metas" class="active">Metas</a></li>
-                <li class="tab col s4"><a href="#tab-projecoes">Projeções</a></li>
-                <li class="tab col s4"><a href="#tab-analise">Análise</a></li>
-            </ul>
-        </div>
-    </div>
-
-    <!-- Tab Metas -->
-    <div id="tab-metas" class="tab-content active">
-        <div class="row">
-            <div class="col s12">
-                <div id="lista-metas">
-                    <!-- Lista será preenchida via JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tab Projeções -->
-    <div id="tab-projecoes" class="tab-content">
-        <div class="row">
-            <div class="col s12">
-                <div class="card">
-                    <div class="card-content">
-                        <span class="card-title">
-                            <i class="material-icons left">timeline</i>
-                            Projeções Financeiras
-                        </span>
-                        <div class="charts-container">
-                            <div class="chart-wrapper">
-                                <canvas id="chart-projecoes"></canvas>
-                            </div>
-                        </div>
-                        <div class="center-align">
-                            <button class="btn waves-effect waves-light orange" onclick="recalcularProjecoes()">
-                                <i class="material-icons left">refresh</i>
-                                Recalcular Projeções
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tab Análise -->
-    <div id="tab-analise" class="tab-content">
-        <div class="row">
-            <div class="col s12 m6">
-                <div class="card">
-                    <div class="card-content">
-                        <span class="card-title">Desempenho por Categoria</span>
-                        <div class="chart-wrapper">
-                            <canvas id="chart-categorias"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col s12 m6">
-                <div class="card">
-                    <div class="card-content">
-                        <span class="card-title">Evolução das Metas</span>
-                        <div class="chart-wrapper">
-                            <canvas id="chart-evolucao"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Nova Meta -->
-<div id="modal-nova-meta" class="modal modal-fixed-footer">
-    <div class="modal-content">
-        <h4>Nova Meta Financeira</h4>
-        <div class="row">
-            <div class="input-field col s12 m6">
-                <input type="text" id="nova-meta-nome">
-                <label for="nova-meta-nome">Nome da Meta</label>
-            </div>
-            <div class="input-field col s12 m6">
-                <select id="nova-meta-categoria">
-                    <option value="" disabled selected>Selecione</option>
-                    <option value="receita">Receita</option>
-                    <option value="despesa">Despesa</option>
-                    <option value="resultado">Resultado</option>
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="ano-filtro">Ano</label>
+                <select id="ano-filtro" class="form-select">
+                    <option value="2024">2024</option>
+                    <option value="2025" selected>2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
                 </select>
-                <label>Categoria</label>
             </div>
-            <div class="input-field col s12 m6">
-                <input type="number" id="nova-meta-valor" step="0.01">
-                <label for="nova-meta-valor">Valor Meta (R$)</label>
-            </div>
-            <div class="input-field col s12 m6">
-                <select id="nova-meta-periodo">
-                    <option value="" disabled selected>Selecione</option>
-                    <option value="mensal">Mensal</option>
-                    <option value="trimestral">Trimestral</option>
-                    <option value="anual">Anual</option>
+            <div class="filter-group">
+                <label for="tipo-filtro">Tipo</label>
+                <select id="tipo-filtro" class="form-select">
+                    <option value="" selected>Todos os tipos</option>
+                    <option value="meta">Metas Anuais</option>
+                    <option value="projecao">Projeções Anuais</option>
+                    <option value="financeiro">Metas Mensais</option>
                 </select>
-                <label>Período</label>
             </div>
-            <div class="input-field col s12 m6">
-                <input type="date" id="nova-meta-inicio">
-                <label for="nova-meta-inicio">Data Início</label>
-            </div>
-            <div class="input-field col s12 m6">
-                <input type="date" id="nova-meta-fim">
-                <label for="nova-meta-fim">Data Fim</label>
-            </div>
-            <div class="input-field col s12">
-                <textarea id="nova-meta-descricao" class="materialize-textarea"></textarea>
-                <label for="nova-meta-descricao">Descrição (opcional)</label>
+            <div class="filter-actions">
+                <button id="btn-buscar" class="btn btn-primary">
+                    <i class="mdi mdi-magnify"></i>
+                    Buscar
+                </button>
+                <button id="btn-limpar-filtros" class="btn">
+                    <i class="mdi mdi-filter-remove"></i>
+                    Limpar filtros
+                </button>
             </div>
         </div>
     </div>
-    <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
-        <a href="#!" class="waves-effect waves-green btn green" onclick="criarMeta()">Criar Meta</a>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <div class="stats-icon primary">
+                <i class="mdi mdi-target"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-metas">0</h3>
+                <p>Total de Metas</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon success">
+                <i class="mdi mdi-trending-up"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-projecoes">0</h3>
+                <p>Projeções</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon warning">
+                <i class="mdi mdi-calendar-month"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-mensais">0</h3>
+                <p>Metas Mensais</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <button id="tab-metas-anuais" class="btn btn-primary tab-button active" data-tab="metas-anuais">
+                <i class="mdi mdi-target"></i>
+                Metas Anuais
+            </button>
+            <button id="tab-projecoes-anuais" class="btn btn-primary tab-button" data-tab="projecoes-anuais">
+                <i class="mdi mdi-trending-up"></i>
+                Projeções Anuais
+            </button>
+            <button id="tab-metas-mensais" class="btn btn-primary tab-button" data-tab="metas-mensais">
+                <i class="mdi mdi-calendar-month"></i>
+                Metas Mensais
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab Metas Anuais -->
+    <div id="content-metas-anuais" class="tab-content active">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Metas Anuais</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-meta" class="btn btn-primary">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Meta
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Valor da Meta</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-metas-anuais-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Projeções Anuais -->
+    <div id="content-projecoes-anuais" class="tab-content">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Projeções Anuais</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-projecao" class="btn btn-success">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Projeção
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Valor da Projeção</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-projecoes-anuais-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Metas Mensais -->
+    <div id="content-metas-mensais" class="tab-content">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Metas Mensais</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-meta-mensal" class="btn btn-warning">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Meta Mensal
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Mês</th>
+                        <th>Valor da Meta</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-metas-mensais-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<!-- Loading -->
-<div id="loading" class="center-align" style="display: none; margin: 50px 0;">
-    <div class="preloader-wrapper big active">
-        <div class="spinner-layer spinner-blue-only">
-            <div class="circle-clipper left">
-                <div class="circle"></div>
-            </div>
-            <div class="gap-patch">
-                <div class="circle"></div>
-            </div>
-            <div class="circle-clipper right">
-                <div class="circle"></div>
+<!-- Toast Notifications -->
+<div id="toast-container"></div>
+
+<!-- Modal Meta/Projeção Anual -->
+<div id="modal-overlay-meta" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="modal-title-anual">Nova Meta Anual</div>
+            <button class="modal-close" id="modal-close-meta" title="Fechar">×</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Ano</label>
+                    <select id="meta-ano" class="modal-input">
+                        <option value="2024">2024</option>
+                        <option value="2025" selected>2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Valor (R$)</label>
+                    <input type="number" id="meta-valor" class="modal-input" step="1" placeholder="Ex: 1000000">
+                </div>
             </div>
         </div>
+        <div class="modal-footer">
+            <button id="modal-cancel-meta" class="btn">Cancelar</button>
+            <button id="modal-save-meta" class="btn btn-primary">Salvar</button>
+        </div>
     </div>
-    <p>Carregando dados...</p>
 </div>
+
+<!-- Modal Meta Mensal -->
+<div id="modal-overlay-mensal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="modal-title-mensal">Nova Meta Mensal</div>
+            <button class="modal-close" id="modal-close-mensal" title="Fechar">×</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Ano</label>
+                    <select id="meta-mensal-ano" class="modal-input">
+                        <option value="2024">2024</option>
+                        <option value="2025" selected>2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Mês</label>
+                    <select id="meta-mensal-mes" class="modal-input">
+                        <option value="01">Janeiro</option>
+                        <option value="02">Fevereiro</option>
+                        <option value="03">Março</option>
+                        <option value="04">Abril</option>
+                        <option value="05">Maio</option>
+                        <option value="06">Junho</option>
+                        <option value="07">Julho</option>
+                        <option value="08">Agosto</option>
+                        <option value="09">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Valor (R$)</label>
+                    <input type="number" id="meta-mensal-valor" class="modal-input" step="1" placeholder="Ex: 100000">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="modal-cancel-mensal" class="btn">Cancelar</button>
+            <button id="modal-save-mensal" class="btn btn-warning">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Carregando...</p>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
-<script>
-    // Variáveis globais
-    let metas = [];
-    let projecoes = {};
-    let chartProjecoes = null;
-    let chartCategorias = null;
-    let chartEvolucao = null;
-
-    // Inicialização
-    document.addEventListener('DOMContentLoaded', function() {
-        M.AutoInit();
-        
-        buscarMetas();
-        buscarProjecoes();
-        
-        // Tab switching
-        const tabs = document.querySelectorAll('.tabs .tab a');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function(e) {
-                e.preventDefault();
-                switchTab(this.getAttribute('href').substring(1));
-            });
-        });
-    });
-
-    function switchTab(tabId) {
-        // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        
-        // Show selected tab
-        document.getElementById(tabId).classList.add('active');
-        
-        // Update tab indicators
-        document.querySelectorAll('.tabs .tab a').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelector(`a[href="#${tabId}"]`).classList.add('active');
-        
-        // Load specific data based on tab
-        if (tabId === 'tab-projecoes') {
-            renderizarGraficoProjecoes();
-        } else if (tabId === 'tab-analise') {
-            renderizarGraficosAnalise();
-        }
-    }
-
-    function buscarMetas() {
-        const ano = document.getElementById('ano-filtro').value;
-        const categoria = document.getElementById('categoria-filtro').value;
-
-        mostrarLoading(true);
-
-        const params = new URLSearchParams({
-            ano: ano,
-            categoria: categoria || ''
-        });
-
-        fetch(`/financeiro/projecoes-metas/api/metas?${params}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    metas = data.data;
-                    renderizarMetas();
-                    atualizarResumo();
-                } else {
-                    M.toast({html: data.error || 'Erro ao buscar metas', classes: 'red'});
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
-            })
-            .finally(() => {
-                mostrarLoading(false);
-            });
-    }
-
-    function buscarProjecoes() {
-        const meses = 12;
-        const categoria = document.getElementById('categoria-filtro').value;
-
-        const params = new URLSearchParams({
-            meses: meses,
-            categoria: categoria || ''
-        });
-
-        fetch(`/financeiro/projecoes-metas/api/projecoes?${params}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    projecoes = data.data;
-                } else {
-                    M.toast({html: data.error || 'Erro ao buscar projeções', classes: 'red'});
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
-            });
-    }
-
-    function renderizarMetas() {
-        const container = document.getElementById('lista-metas');
-        container.innerHTML = '';
-
-        if (metas.length === 0) {
-            container.innerHTML = '<div class="card"><div class="card-content center-align grey-text">Nenhuma meta encontrada</div></div>';
-            return;
-        }
-
-        metas.forEach(meta => {
-            const card = document.createElement('div');
-            card.className = `card meta-card status-${meta.status.replace('_', '-')}`;
-            
-            const progressoClass = meta.percentual_atingido >= 80 ? '' : 
-                                  meta.percentual_atingido >= 50 ? 'medio' : 'baixo';
-            
-            card.innerHTML = `
-                <div class="card-content">
-                    <div class="row">
-                        <div class="col s12 m8">
-                            <span class="card-title">${meta.nome}</span>
-                            <span class="meta-badge badge-${meta.categoria}">${meta.categoria.toUpperCase()}</span>
-                            <p class="grey-text">
-                                Período: ${formatarData(meta.periodo_inicio)} a ${formatarData(meta.periodo_fim)}
-                            </p>
-                            <div class="progresso-bar">
-                                <div class="progresso-fill ${progressoClass}" style="width: ${meta.percentual_atingido}%"></div>
-                            </div>
-                            <p><strong>${meta.percentual_atingido.toFixed(1)}%</strong> atingido</p>
-                        </div>
-                        <div class="col s12 m4 right-align">
-                            <div class="valor-meta">${formatarMoeda(meta.valor_meta)}</div>
-                            <div class="valor-realizado">Realizado: ${formatarMoeda(meta.valor_realizado)}</div>
-                            <div style="margin-top: 20px;">
-                                <button class="btn-small waves-effect waves-light orange" onclick="editarMeta(${meta.id})">
-                                    <i class="material-icons left">edit</i>
-                                    Editar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(card);
-        });
-    }
-
-    function renderizarGraficoProjecoes() {
-        const ctx = document.getElementById('chart-projecoes');
-        if (!ctx || !projecoes.receita) return;
-
-        if (chartProjecoes) {
-            chartProjecoes.destroy();
-        }
-
-        const meses = projecoes.receita.map(item => item.mes);
-        
-        chartProjecoes = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: meses,
-                datasets: [{
-                    label: 'Receita Projetada',
-                    data: projecoes.receita.map(item => item.valor_projetado),
-                    borderColor: '#4caf50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                    tension: 0.4
-                }, {
-                    label: 'Despesa Projetada',
-                    data: projecoes.despesa.map(item => item.valor_projetado),
-                    borderColor: '#f44336',
-                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                    tension: 0.4
-                }, {
-                    label: 'Resultado Projetado',
-                    data: projecoes.resultado.map(item => item.valor_projetado),
-                    borderColor: '#2196f3',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return formatarMoeda(value);
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    function renderizarGraficosAnalise() {
-        // Gráfico de categorias
-        const ctxCategorias = document.getElementById('chart-categorias');
-        if (ctxCategorias && metas.length > 0) {
-            if (chartCategorias) {
-                chartCategorias.destroy();
-            }
-
-            const categorias = {};
-            metas.forEach(meta => {
-                if (!categorias[meta.categoria]) {
-                    categorias[meta.categoria] = { total: 0, atingido: 0 };
-                }
-                categorias[meta.categoria].total++;
-                if (meta.status === 'atingida') {
-                    categorias[meta.categoria].atingido++;
-                }
-            });
-
-            chartCategorias = new Chart(ctxCategorias, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(categorias),
-                    datasets: [{
-                        data: Object.values(categorias).map(cat => cat.atingido),
-                        backgroundColor: ['#4caf50', '#f44336', '#2196f3']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-        }
-    }
-
-    function atualizarResumo() {
-        const totalMetas = metas.length;
-        const metasAtingidas = metas.filter(m => m.status === 'atingida').length;
-        const metasAndamento = metas.filter(m => m.status === 'em_andamento').length;
-        const percentualMedio = metas.length > 0 ? 
-            metas.reduce((acc, meta) => acc + meta.percentual_atingido, 0) / metas.length : 0;
-
-        document.getElementById('total-metas').textContent = totalMetas;
-        document.getElementById('metas-atingidas').textContent = metasAtingidas;
-        document.getElementById('metas-andamento').textContent = metasAndamento;
-        document.getElementById('percentual-medio').textContent = percentualMedio.toFixed(1) + '%';
-    }
-
-    function abrirModalNovaMeta() {
-        const modal = M.Modal.getInstance(document.getElementById('modal-nova-meta'));
-        modal.open();
-    }
-
-    function criarMeta() {
-        const nome = document.getElementById('nova-meta-nome').value;
-        const categoria = document.getElementById('nova-meta-categoria').value;
-        const valor = document.getElementById('nova-meta-valor').value;
-        const periodo = document.getElementById('nova-meta-periodo').value;
-        const inicio = document.getElementById('nova-meta-inicio').value;
-        const fim = document.getElementById('nova-meta-fim').value;
-        const descricao = document.getElementById('nova-meta-descricao').value;
-
-        if (!nome || !categoria || !valor || !inicio || !fim) {
-            M.toast({html: 'Preencha todos os campos obrigatórios', classes: 'orange'});
-            return;
-        }
-
-        mostrarLoading(true);
-
-        fetch('/financeiro/projecoes-metas/api/criar-meta', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                nome: nome,
-                categoria: categoria,
-                valor_meta: parseFloat(valor),
-                periodo: periodo,
-                periodo_inicio: inicio,
-                periodo_fim: fim,
-                descricao: descricao
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                M.toast({html: data.message, classes: 'green'});
-                const modal = M.Modal.getInstance(document.getElementById('modal-nova-meta'));
-                modal.close();
-                buscarMetas(); // Recarregar metas
-            } else {
-                M.toast({html: data.error || 'Erro ao criar meta', classes: 'red'});
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
-        })
-        .finally(() => {
-            mostrarLoading(false);
-        });
-    }
-
-    function editarMeta(metaId) {
-        // TODO: Implementar modal de edição
-        M.toast({html: 'Funcionalidade de edição em desenvolvimento', classes: 'orange'});
-    }
-
-    function recalcularProjecoes() {
-        mostrarLoading(true);
-
-        fetch('/financeiro/projecoes-metas/api/calcular-projecoes', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                base_dados: 'historico',
-                algoritmo: 'media_movel',
-                meses: 12
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                M.toast({html: data.message, classes: 'green'});
-                buscarProjecoes();
-            } else {
-                M.toast({html: data.error || 'Erro ao recalcular projeções', classes: 'red'});
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
-        })
-        .finally(() => {
-            mostrarLoading(false);
-        });
-    }
-
-    function mostrarLoading(mostrar) {
-        document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
-    }
-
-    function formatarMoeda(valor) {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(valor);
-    }
-
-    function formatarData(data) {
-        return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
-    }
-</script>
+<script src="{{ url_for('fin_projecoes_metas.static', filename='projecoes_metas.js') }}"></script>
 {% endblock %}
