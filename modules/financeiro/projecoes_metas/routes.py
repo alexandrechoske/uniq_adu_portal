@@ -15,8 +15,7 @@ projecoes_metas_bp = Blueprint(
     __name__,
     url_prefix='/financeiro/projecoes-metas',
     template_folder='templates',
-    static_folder='static',
-    static_url_path='/financeiro/projecoes/static'
+    static_folder='static'
 )
 
 @projecoes_metas_bp.route('/')
@@ -83,17 +82,18 @@ def api_criar():
     try:
         dados = request.get_json()
         
-        # Validar dados obrigatórios
-        if not dados.get('ano') or not dados.get('meta') or not dados.get('tipo'):
+        # Validar dados obrigatórios - aceitar tanto 'meta' quanto 'valor_meta'
+        meta_value = dados.get('meta') or dados.get('valor_meta')
+        if not dados.get('ano') or not meta_value or not dados.get('tipo'):
             return jsonify({
                 'success': False,
-                'error': 'Campos obrigatórios: ano, meta, tipo'
+                'error': 'Campos obrigatórios: ano, meta/valor_meta, tipo'
             }), 400
         
         # Preparar dados para inserção
         item_data = {
             'ano': dados.get('ano'),
-            'meta': int(dados.get('meta')),
+            'meta': int(meta_value),
             'mes': dados.get('mes'),  # Pode ser None para metas/projeções anuais
             'tipo': dados.get('tipo')
         }
@@ -136,17 +136,18 @@ def api_atualizar(item_id):
     try:
         dados = request.get_json()
         
-        # Validar dados obrigatórios
-        if not dados.get('ano') or not dados.get('meta') or not dados.get('tipo'):
+        # Validar dados obrigatórios - aceitar tanto 'meta' quanto 'valor_meta'
+        meta_value = dados.get('meta') or dados.get('valor_meta')
+        if not dados.get('ano') or not meta_value or not dados.get('tipo'):
             return jsonify({
                 'success': False,
-                'error': 'Campos obrigatórios: ano, meta, tipo'
+                'error': 'Campos obrigatórios: ano, meta/valor_meta, tipo'
             }), 400
         
         # Preparar dados para atualização
         update_data = {
             'ano': dados.get('ano'),
-            'meta': int(dados.get('meta')),
+            'meta': int(meta_value),
             'mes': dados.get('mes'),
             'tipo': dados.get('tipo')
         }

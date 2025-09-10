@@ -1,8 +1,11 @@
 /* Projeções e Metas - Estilos baseados na página de Categorização de Clientes */
 
 .projecoes-container {
+    max-width: 1400px;
+    margin: 0 auto;
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
 }
 
 .filter-section {
