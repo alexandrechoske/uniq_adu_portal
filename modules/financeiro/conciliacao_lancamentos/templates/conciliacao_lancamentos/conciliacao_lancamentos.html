@@ -2,441 +2,308 @@
 
 {% block title %}Conciliação de Lançamentos{% endblock %}
 
-{% block head %}
-<link href="{{ url_for('static', filename='css/materialize.min.css') }}" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<style>
-    .status-pendente {
-        color: #ff9800 !important;
-    }
-    .status-conciliado {
-        color: #4caf50 !important;
-    }
-    .status-divergente {
-        color: #f44336 !important;
-    }
-    
-    .card-conciliacao {
-        margin: 10px 0;
-        border-left: 4px solid #2196f3;
-    }
-    
-    .valor-positivo {
-        color: #4caf50;
-        font-weight: bold;
-    }
-    
-    .valor-negativo {
-        color: #f44336;
-        font-weight: bold;
-    }
-    
-    .item-conciliacao {
-        padding: 10px;
-        border: 1px solid #e0e0e0;
-        margin: 5px 0;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    
-    .item-conciliacao:hover {
-        background-color: #f5f5f5;
-    }
-    
-    .item-selecionado {
-        background-color: #e3f2fd !important;
-        border-color: #2196f3 !important;
-    }
-    
-    .resumo-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-</style>
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link href="{{ url_for('fin_conciliacao_lancamentos.static', filename='conciliacao_lancamentos.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col s12">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title">
-                        <i class="material-icons left">account_balance</i>
-                        Conciliação de Lançamentos
-                    </span>
-                    <p class="grey-text">Concilie lançamentos financeiros com extratos bancários</p>
-                </div>
-            </div>
+<div class="conciliacao-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-financeiro">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-chart-line'},
+                {'name': 'Conciliação de Lançamentos', 'icon': 'mdi mdi-bank-transfer'}
+            ], 'financeiro') }}
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="row">
-        <div class="col s12">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title">Filtros</span>
-                    <div class="row">
-                        <div class="input-field col s12 m3">
-                            <input type="date" id="data_inicio" class="datepicker">
-                            <label for="data_inicio">Data Início</label>
-                        </div>
-                        <div class="input-field col s12 m3">
-                            <input type="date" id="data_fim" class="datepicker">
-                            <label for="data_fim">Data Fim</label>
-                        </div>
-                        <div class="input-field col s12 m4">
-                            <select id="conta_bancaria">
-                                <option value="" disabled selected>Selecione uma conta</option>
-                                <option value="conta_corrente">Conta Corrente</option>
-                                <option value="poupanca">Poupança</option>
-                                <option value="investimento">Investimento</option>
-                            </select>
-                            <label>Conta Bancária</label>
-                        </div>
-                        <div class="col s12 m2">
-                            <button class="btn waves-effect waves-light blue" onclick="buscarDados()" style="margin-top: 25px;">
-                                <i class="material-icons left">search</i>
-                                Buscar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Processando conciliação...</p>
         </div>
     </div>
 
-    <!-- Resumo -->
-    <div class="row" id="resumo-section" style="display: none;">
-        <div class="col s12">
-            <div class="card resumo-card">
-                <div class="card-content white-text">
-                    <span class="card-title">Resumo da Conciliação</span>
-                    <div class="row">
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="total-pendentes">0</h4>
-                                <p>Lançamentos Pendentes</p>
-                            </div>
-                        </div>
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="total-conciliados">0</h4>
-                                <p>Conciliados</p>
-                            </div>
-                        </div>
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="valor-pendente">R$ 0,00</h4>
-                                <p>Valor Pendente</p>
-                            </div>
-                        </div>
-                        <div class="col s6 m3">
-                            <div class="center-align">
-                                <h4 id="diferenca">R$ 0,00</h4>
-                                <p>Diferença</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Upload Section -->
+    <div class="upload-section">
+        <div class="section-header">
+            <h3><i class="mdi mdi-upload"></i> Upload de Extratos Bancários</h3>
+            <p>Selecione arquivos Excel (.xlsx, .xls) com extratos bancários para conciliação</p>
         </div>
-    </div>
-
-    <!-- Dados de Conciliação -->
-    <div class="row" id="dados-section" style="display: none;">
-        <div class="col s12 m6">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title">
-                        <i class="material-icons left">list</i>
-                        Lançamentos Financeiros
-                    </span>
-                    <div id="lista-lancamentos">
-                        <!-- Lista será preenchida via JavaScript -->
-                    </div>
-                </div>
+        
+        <div class="upload-area" id="upload-area">
+            <div class="upload-content">
+                <i class="mdi mdi-cloud-upload upload-icon"></i>
+                <h4>Arraste arquivos aqui ou <a href="#" id="upload-link">clique para selecionar</a></h4>
+                <p>Formatos aceitos: .xlsx, .xls (máx. 10MB por arquivo)</p>
             </div>
+            <input type="file" id="file-input" multiple accept=".xlsx,.xls" style="display: none;">
         </div>
-        <div class="col s12 m6">
-            <div class="card">
-                <div class="card-content">
-                    <span class="card-title">
-                        <i class="material-icons left">account_balance_wallet</i>
-                        Extrato Bancário
-                    </span>
-                    <div id="lista-extratos">
-                        <!-- Lista será preenchida via JavaScript -->
-                    </div>
-                </div>
-            </div>
+        
+        <div id="files-list" style="display: none;">
+            <h4>Arquivos Selecionados</h4>
+            <div id="files-container"></div>
         </div>
-    </div>
-
-    <!-- Botão de Conciliação -->
-    <div class="row" id="conciliar-section" style="display: none;">
-        <div class="col s12 center-align">
-            <button class="btn-large waves-effect waves-light green" onclick="realizarConciliacao()" id="btn-conciliar" disabled>
-                <i class="material-icons left">check_circle</i>
-                Conciliar Selecionados
+        
+        <div class="upload-actions">
+            <button id="btn-processar" class="btn btn-primary" disabled>
+                <i class="mdi mdi-cog"></i> Processar Conciliação
+            </button>
+            <button id="btn-limpar" class="btn btn-secondary">
+                <i class="mdi mdi-delete"></i> Limpar Tudo
             </button>
         </div>
     </div>
-</div>
 
-<!-- Loading -->
-<div id="loading" class="center-align" style="display: none; margin: 50px 0;">
-    <div class="preloader-wrapper big active">
-        <div class="spinner-layer spinner-blue-only">
-            <div class="circle-clipper left">
-                <div class="circle"></div>
+    <!-- KPI Section -->
+    <div id="kpi-section" class="kpi-section" style="display: none;">
+        <div class="section-header">
+            <h3><i class="mdi mdi-chart-box"></i> Resumo da Conciliação</h3>
+        </div>
+        
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-total">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="total-sistema">0</div>
+                    <div class="kpi-label">Movimentos Sistema</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-database"></i>
+                </div>
             </div>
-            <div class="gap-patch">
-                <div class="circle"></div>
+            
+            <div class="kpi-card kpi-extratos">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="total-extratos">0</div>
+                    <div class="kpi-label">Movimentos Extratos</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-bank"></i>
+                </div>
             </div>
-            <div class="circle-clipper right">
-                <div class="circle"></div>
+            
+            <div class="kpi-card kpi-conciliados">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="total-conciliados">0</div>
+                    <div class="kpi-label">Conciliados</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-check-circle"></i>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-pendentes">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="total-pendentes">0</div>
+                    <div class="kpi-label">Pendentes</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-clock-outline"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-valor-sistema">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="valor-sistema">R$ 0,00</div>
+                    <div class="kpi-label">Valor Sistema</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-currency-usd"></i>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-valor-extratos">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="valor-extratos">R$ 0,00</div>
+                    <div class="kpi-label">Valor Extratos</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-currency-usd"></i>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-valor-conciliados">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="valor-conciliados">R$ 0,00</div>
+                    <div class="kpi-label">Valor Conciliado</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-check-circle"></i>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-valor-pendentes">
+                <div class="kpi-content">
+                    <div class="kpi-number" id="valor-pendentes">R$ 0,00</div>
+                    <div class="kpi-label">Valor Pendente</div>
+                </div>
+                <div class="kpi-icon">
+                    <i class="mdi mdi-alert-circle"></i>
+                </div>
             </div>
         </div>
     </div>
-    <p>Carregando dados...</p>
+    <!-- Conciliação Section -->
+    <div id="conciliacao-section" class="conciliacao-section" style="display: none;">
+        <div class="section-header">
+            <h3><i class="mdi mdi-compare"></i> Conciliação Manual</h3>
+            <div class="section-actions">
+                <button id="btn-conciliar-selecionados" class="btn btn-success" disabled>
+                    <i class="mdi mdi-link"></i> Conciliar Selecionados
+                </button>
+            </div>
+        </div>
+        
+        <div class="selection-summary">
+            <div class="summary-item">
+                <span id="summary-sistema">Sistema: R$ 0,00 (0 selecionados)</span>
+            </div>
+            <div class="summary-item">
+                <span id="summary-banco">Banco: R$ 0,00 (0 selecionados)</span>
+            </div>
+            <div class="summary-item">
+                <span id="summary-diferenca" class="diferenca">Diferença: R$ 0,00</span>
+            </div>
+        </div>
+        
+        <div class="conciliacao-grid">
+            <!-- Tabela Sistema -->
+            <div class="conciliacao-panel">
+                <div class="panel-header">
+                    <h4><i class="mdi mdi-database"></i> Movimentos do Sistema</h4>
+                    <div class="panel-controls">
+                        <input type="text" id="filter-sistema" placeholder="Filtrar..." class="filter-input">
+                        <select id="status-sistema" class="filter-select">
+                            <option value="">Todos os Status</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="conciliado">Conciliado</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="select-all-sistema">
+                                </th>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Ref</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-sistema-tbody">
+                            <!-- Dados serão carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tabela Banco -->
+            <div class="conciliacao-panel">
+                <div class="panel-header">
+                    <h4><i class="mdi mdi-bank"></i> Movimentos Bancários</h4>
+                    <div class="panel-controls">
+                        <input type="text" id="filter-banco" placeholder="Filtrar..." class="filter-input">
+                        <select id="status-banco" class="filter-select">
+                            <option value="">Todos os Status</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="conciliado">Conciliado</option>
+                        </select>
+                        <select id="banco-origem" class="filter-select">
+                            <option value="">Todos os Bancos</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="enhanced-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="select-all-banco">
+                                </th>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Banco</th>
+                                <th>Status</th>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirmation-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="mdi mdi-link"></i> Confirmar Conciliação</h3>
+                <button class="modal-close" id="confirmation-modal-close">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="confirmation-summary">
+                    <div class="summary-row">
+                        <span class="summary-label">Sistema:</span>
+                        <span class="summary-value">
+                            <span id="conf-sistema-count">0</span> itens • 
+                            <span id="conf-sistema-valor">R$ 0,00</span>
+                        </span>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span class="summary-label">Banco:</span>
+                        <span class="summary-value">
+                            <span id="conf-banco-count">0</span> itens • 
+                            <span id="conf-banco-valor">R$ 0,00</span>
+                        </span>
+                    </div>
+                    
+                    <div class="summary-row total">
+                        <span class="summary-label">Diferença:</span>
+                        <span class="summary-value" id="conf-diferenca">R$ 0,00</span>
+                    </div>
+                </div>
+                
+                <div id="conf-warning" class="warning-message" style="display: none;">
+                    <i class="mdi mdi-alert"></i>
+                    <span>Atenção: Os valores não conferem exatamente. Deseja continuar?</span>
+                </div>
+                
+                <p>Esta ação irá conciliar os movimentos selecionados. Deseja continuar?</p>
+            </div>
+            
+            <div class="modal-footer">
+                <button id="confirmation-cancel" class="btn btn-secondary">
+                    <i class="mdi mdi-close"></i> Cancelar
+                </button>
+                <button id="confirmation-confirm" class="btn btn-primary">
+                    <i class="mdi mdi-check"></i> Confirmar Conciliação
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
-<script>
-    // Variáveis globais
-    let dadosLancamentos = [];
-    let dadosExtratos = [];
-    let lancamentoSelecionado = null;
-    let extratoSelecionado = null;
-
-    // Inicialização
-    document.addEventListener('DOMContentLoaded', function() {
-        M.AutoInit();
-        
-        // Definir datas padrão (últimos 30 dias)
-        const hoje = new Date();
-        const umMesAtras = new Date();
-        umMesAtras.setMonth(hoje.getMonth() - 1);
-        
-        document.getElementById('data_fim').value = hoje.toISOString().split('T')[0];
-        document.getElementById('data_inicio').value = umMesAtras.toISOString().split('T')[0];
-        
-        M.updateTextFields();
-    });
-
-    function buscarDados() {
-        const dataInicio = document.getElementById('data_inicio').value;
-        const dataFim = document.getElementById('data_fim').value;
-        const contaBancaria = document.getElementById('conta_bancaria').value;
-
-        if (!dataInicio || !dataFim) {
-            M.toast({html: 'Por favor, selecione o período', classes: 'orange'});
-            return;
-        }
-
-        mostrarLoading(true);
-
-        const params = new URLSearchParams({
-            data_inicio: dataInicio,
-            data_fim: dataFim,
-            conta_bancaria: contaBancaria || ''
-        });
-
-        fetch(`/financeiro/conciliacao-lancamentos/api/dados-conciliacao?${params}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    dadosLancamentos = data.data.lancamentos_pendentes || [];
-                    dadosExtratos = data.data.extrato_bancario || [];
-                    
-                    atualizarResumo(data.data.resumo);
-                    renderizarLancamentos();
-                    renderizarExtratos();
-                    
-                    document.getElementById('resumo-section').style.display = 'block';
-                    document.getElementById('dados-section').style.display = 'block';
-                    document.getElementById('conciliar-section').style.display = 'block';
-                } else {
-                    M.toast({html: data.error || 'Erro ao buscar dados', classes: 'red'});
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
-            })
-            .finally(() => {
-                mostrarLoading(false);
-            });
-    }
-
-    function atualizarResumo(resumo) {
-        document.getElementById('total-pendentes').textContent = resumo.total_pendentes || 0;
-        document.getElementById('total-conciliados').textContent = resumo.total_conciliados || 0;
-        document.getElementById('valor-pendente').textContent = formatarMoeda(resumo.valor_pendente || 0);
-        document.getElementById('diferenca').textContent = formatarMoeda(resumo.diferenca || 0);
-    }
-
-    function renderizarLancamentos() {
-        const container = document.getElementById('lista-lancamentos');
-        container.innerHTML = '';
-
-        if (dadosLancamentos.length === 0) {
-            container.innerHTML = '<p class="grey-text center-align">Nenhum lançamento pendente</p>';
-            return;
-        }
-
-        dadosLancamentos.forEach(lancamento => {
-            const item = document.createElement('div');
-            item.className = 'item-conciliacao';
-            item.onclick = () => selecionarLancamento(lancamento.id, item);
-            
-            const valorClass = lancamento.valor >= 0 ? 'valor-positivo' : 'valor-negativo';
-            
-            item.innerHTML = `
-                <div class="row no-margin">
-                    <div class="col s8">
-                        <strong>${lancamento.descricao}</strong>
-                        <br>
-                        <small class="grey-text">${formatarData(lancamento.data)}</small>
-                    </div>
-                    <div class="col s4 right-align">
-                        <span class="${valorClass}">${formatarMoeda(lancamento.valor)}</span>
-                        <br>
-                        <small class="status-pendente">
-                            <i class="material-icons tiny">schedule</i>
-                            Pendente
-                        </small>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(item);
-        });
-    }
-
-    function renderizarExtratos() {
-        const container = document.getElementById('lista-extratos');
-        container.innerHTML = '';
-
-        if (dadosExtratos.length === 0) {
-            container.innerHTML = '<p class="grey-text center-align">Nenhum item no extrato</p>';
-            return;
-        }
-
-        dadosExtratos.forEach(extrato => {
-            const item = document.createElement('div');
-            item.className = 'item-conciliacao';
-            item.onclick = () => selecionarExtrato(extrato.id, item);
-            
-            const valorClass = extrato.valor >= 0 ? 'valor-positivo' : 'valor-negativo';
-            
-            item.innerHTML = `
-                <div class="row no-margin">
-                    <div class="col s8">
-                        <strong>${extrato.descricao}</strong>
-                        <br>
-                        <small class="grey-text">${formatarData(extrato.data)}</small>
-                    </div>
-                    <div class="col s4 right-align">
-                        <span class="${valorClass}">${formatarMoeda(extrato.valor)}</span>
-                        <br>
-                        <small class="status-pendente">
-                            <i class="material-icons tiny">info</i>
-                            Não Conciliado
-                        </small>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(item);
-        });
-    }
-
-    function selecionarLancamento(id, elemento) {
-        // Remover seleção anterior
-        document.querySelectorAll('#lista-lancamentos .item-conciliacao').forEach(item => {
-            item.classList.remove('item-selecionado');
-        });
-        
-        // Selecionar atual
-        elemento.classList.add('item-selecionado');
-        lancamentoSelecionado = id;
-        
-        verificarConciliacao();
-    }
-
-    function selecionarExtrato(id, elemento) {
-        // Remover seleção anterior
-        document.querySelectorAll('#lista-extratos .item-conciliacao').forEach(item => {
-            item.classList.remove('item-selecionado');
-        });
-        
-        // Selecionar atual
-        elemento.classList.add('item-selecionado');
-        extratoSelecionado = id;
-        
-        verificarConciliacao();
-    }
-
-    function verificarConciliacao() {
-        const btnConciliar = document.getElementById('btn-conciliar');
-        btnConciliar.disabled = !(lancamentoSelecionado && extratoSelecionado);
-    }
-
-    function realizarConciliacao() {
-        if (!lancamentoSelecionado || !extratoSelecionado) {
-            M.toast({html: 'Selecione um lançamento e um item do extrato', classes: 'orange'});
-            return;
-        }
-
-        mostrarLoading(true);
-
-        fetch('/financeiro/conciliacao-lancamentos/api/conciliar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                lancamento_id: lancamentoSelecionado,
-                extrato_id: extratoSelecionado
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                M.toast({html: data.message, classes: 'green'});
-                buscarDados(); // Recarregar dados
-            } else {
-                M.toast({html: data.error || 'Erro ao conciliar', classes: 'red'});
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            M.toast({html: 'Erro de comunicação com o servidor', classes: 'red'});
-        })
-        .finally(() => {
-            mostrarLoading(false);
-        });
-    }
-
-    function mostrarLoading(mostrar) {
-        document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
-    }
-
-    function formatarMoeda(valor) {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(valor);
-    }
-
-    function formatarData(data) {
-        return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
-    }
-</script>
+{% block extra_js %}
+<script src="{{ url_for('fin_conciliacao_lancamentos.static', filename='conciliacao_lancamentos.js') }}"></script>
 {% endblock %}
