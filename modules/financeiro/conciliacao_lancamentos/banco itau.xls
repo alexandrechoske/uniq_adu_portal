@@ -1,0 +1,743 @@
+<html xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns="http://www.w3.org/TR/REC-html40"><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252" /><meta name="ProgId" content="Excel.Sheet" /><!--[if !mso]>
+        <style>
+        v\:* {behavior:url(#default#VML);}
+        o\:* {behavior:url(#default#VML);}
+        x\:* {behavior:url(#default#VML);}
+        .shape {behavior:url(#default#VML);}
+        </style>
+        <![endif]--> <!--[if gte mso 9]><xml>
+ <o:OfficeDocumentSettings>
+  <o:Colors>
+   <o:Color>
+    <o:Index>39</o:Index>
+    <o:RGB>#E3E3E3</o:RGB>
+   </o:Color>
+  </o:Colors>
+ </o:OfficeDocumentSettings>
+</xml><![endif]--> <style><!--table
+	{mso-displayed-decimal-separator:"\,";
+	mso-displayed-thousand-separator:"\.";} 
+
+ .DataHeader
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:center;
+	vertical-align:bottom;
+	border-top:.5pt solid #808080;
+	border-right:none;
+	border-bottom:.5pt solid #808080;
+	border-left:.5pt solid #808080;
+	background:silver;
+	mso-pattern:black none;
+	white-space:nowrap;}
+  
+.DataLinhaImpar
+	{padding:0px;
+	mso-ignore:padding;
+	color:black;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:center;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid silver;
+	border-left:none;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+  
+ .DataLinhaPar
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:center;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid silver;
+	border-left:none;
+	background:#E3E3E3;
+	mso-pattern:black none;
+	white-space:nowrap;}
+
+.HistoricoHeader
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:general;
+	vertical-align:bottom;
+	border-top:.5pt solid #808080;
+	border-right:none;
+	border-bottom:.5pt solid #808080;
+	border-left:none;
+	background:silver;
+	mso-pattern:black none;
+	white-space:nowrap;}
+  
+.HistoricoLinhaImpar
+	{padding:0px;
+	mso-ignore:padding;
+	color:black;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:general;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid silver;
+	border-left:none;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+
+.HistoricoLinhaPar
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:general;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid silver;
+	border-left:none;
+	background:#E3E3E3;
+	mso-pattern:black none;
+	white-space:nowrap;}
+
+.ValorHeader
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:right;
+	vertical-align:bottom;
+	border-top:.5pt solid #808080;
+	border-right:none;
+	border-bottom:.5pt solid #808080;
+	border-left:none;
+	background:silver;
+	mso-pattern:black none;
+	white-space:nowrap;}
+  
+.ValorLinhaImpar
+	{padding:0px;
+	mso-ignore:padding;
+	color:black;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+  mso-number-format:"\#\,\#\#0\.00\;\[Red\]\0022-\0022\\ \#\,\#\#0\.00";  
+	text-align:right;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid silver;
+	border-left:none;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+  
+.ValorLinhaPar
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:"\#\,\#\#0\.00\;\[Red\]\0022-\0022\\ \#\,\#\#0\.00";
+	text-align:right;
+	vertical-align:bottom;
+	border-top:none;
+	border-right:none;
+	border-bottom:.5pt solid silver;
+	border-left:none;
+	background:#E3E3E3;
+	mso-pattern:black none;
+	white-space:nowrap;}
+
+.SaldoHeader
+	{padding:0px;
+	mso-ignore:padding;
+	color:windowtext;
+	font-size:8.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:right;
+	vertical-align:bottom;
+  border-top:.5pt solid #808080;
+	border-right:.5pt solid #808080;
+	border-bottom:.5pt solid #808080;
+	border-left:none;
+	background:silver;
+	mso-pattern:black none;
+	white-space:nowrap;}
+  
+.Titulo
+	{padding:0px;
+	mso-ignore:padding;
+	color:black;
+	font-size:8.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:Verdana, sans-serif;
+	mso-font-charset:0;
+	mso-number-format:General;
+	text-align:general;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+
+.Dados
+	{padding:0px;
+	mso-ignore:padding;
+	color:black;
+	font-size:8.0pt;
+	font-weight:190;
+	font-style:normal;
+	text-decoration:none;
+	font-family:"";
+	mso-generic-font-family:auto;
+	mso-font-charset:0;
+	mso-number-format:Standard;
+	text-align:general;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+--></style></head><body><table border="0" cellpadding="0" cellspacing="0" width="554" class="xl020228" style="border-collapse:collapse;table-layout:fixed;width:417pt"><tr height="17" style="mso-height-source:userset;height:12.75pt"><td height="17" width="20" style="height:12.75pt;width:15pt" align="left" valign="top"><![if !vml]><span style='mso-ignore:vglayout;
+  position:absolute;z-index:1;margin-left:1px;margin-top:0px;width:553px;
+  height:70px'><img width="553" height="70" src="https://itaubankline.itau.com.brplusHeaderExtratoExcel.jpg" v:shapes="_x0000_s2055" /></span><![endif]><span style="mso-ignore:vglayout2"><table cellpadding="0" cellspacing="0"><tr><td height="17" width="20" style="height:12.75pt;width:15pt"></td></tr></table></span></td><td width="56" style="width:42pt"></td><td width="11" style="width:8pt"></td><td width="11" style="width:8pt"></td><td width="202" style="width:152pt"></td><td width="112" style="width:84pt"></td><td width="113" style="width:85pt"></td><td width="30" style="width:23pt"></td></tr><tr height="17" style="height:12.75pt"><td height="17" style="height:12.75pt"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr height="17" style="height:12.75pt"><td height="17" style="height:12.75pt"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr height="23" style="mso-height-source:userset;height:17.25pt"><td height="23" style="height:17.25pt"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr height="17" style="height:12.75pt"><td height="17" style="height:12.75pt"></td><td class="Titulo">Nome:</td><td></td><td></td><td class="Dados">UNIQUE CONSULTORIA ADUANE LTDA</td><td class="Titulo">Agência/Conta: </td><td class="Dados">1295/
+              98880-0</td><td></td></tr><tr height="9" style="mso-height-source:userset;height:6.75pt"><td height="9" style="height:6.75pt"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr height="17" style="height:12.75pt"><td height="17" style="height:12.75pt"></td><td class="Titulo">Data:</td><td></td><td></td><td class="Dados">05/09/2025
+			 
+        </td><td class="Titulo">Horário:</td><td class="Dados">11:52:33h</td><td></td></tr><tr height="12" style="mso-height-source:userset;height:9.0pt"><td height="12" style="height:9.0pt"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr height="28" style="mso-height-source:userset;height:21.0pt"><td height="28" style="height:21.0pt"></td><td class="Titulo" colspan="6">Extrato de Conta Corrente e Conta Investimento
+        </td><td></td></tr><tr height="21" style="mso-height-source:userset;height:15.75pt"><td height="21" style="height:15.75pt" align="left" valign="top"><span style="mso-ignore:vglayout2"><table cellpadding="0" cellspacing="0"><tr><td height="21" width="20" style="height:15.75pt;width:15pt"></td></tr></table></span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr height="17" style="height:12.75pt"><td height="17" style="height:12.75pt"></td><td class="DataHeader">Data</td><td class="HistoricoHeader"></td><td class="HistoricoHeader"></td><td class="HistoricoHeader">Lançamento</td><td class="ValorHeader">Valor (R$)</td><td class="SaldoHeader">Saldo (R$)</td><td></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">01/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SALDO ANTERIOR</td><td class="ValorLinhaImpar" /><td class="ValorLinhaImpar" x:num="1.00" style="">1.00</td><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG</td><td class="ValorLinhaPar" x:num="-3,924.00" style="">-3,924.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  un257069</td><td class="ValorLinhaImpar" x:num="-2,344.97" style="">-2,344.97</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6577</td><td class="ValorLinhaPar" x:num="-2,884.15" style="">-2,884.15</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6802</td><td class="ValorLinhaImpar" x:num="-315.43" style="">-315.43</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6802</td><td class="ValorLinhaPar" x:num="-44,888.59" style="">-44,888.59</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6802</td><td class="ValorLinhaImpar" x:num="-1,100.58" style="">-1,100.58</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6869</td><td class="ValorLinhaPar" x:num="-4,966.19" style="">-4,966.19</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.7014</td><td class="ValorLinhaImpar" x:num="-210.00" style="">-210.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.7014</td><td class="ValorLinhaPar" x:num="-361.56" style="">-361.56</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.7035</td><td class="ValorLinhaImpar" x:num="-847.40" style="">-847.40</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">IOF</td><td class="ValorLinhaPar" x:num="-34.66" style="">-34.66</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">APLICACAO COMPROMISSADA</td><td class="ValorLinhaImpar" x:num="-269,962.44" style="">-269,962.44</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO Estorno</td><td class="ValorLinhaPar" x:num="-77,232.81" style="">-77,232.81</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN 256939</td><td class="ValorLinhaImpar" x:num="-150.00" style="">-150.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6140</td><td class="ValorLinhaPar" x:num="-346.68" style="">-346.68</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6659</td><td class="ValorLinhaImpar" x:num="-1,977.97" style="">-1,977.97</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6870</td><td class="ValorLinhaPar" x:num="-500.00" style="">-500.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6890</td><td class="ValorLinhaImpar" x:num="-750.00" style="">-750.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.7057</td><td class="ValorLinhaPar" x:num="-30,925.92" style="">-30,925.92</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN256744</td><td class="ValorLinhaImpar" x:num="-60.72" style="">-60.72</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN256846</td><td class="ValorLinhaPar" x:num="-2,683.06" style="">-2,683.06</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.5854</td><td class="ValorLinhaImpar" x:num="-4,531.00" style="">-4,531.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6047</td><td class="ValorLinhaPar" x:num="-3,310.28" style="">-3,310.28</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6205</td><td class="ValorLinhaImpar" x:num="-505.00" style="">-505.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6205</td><td class="ValorLinhaPar" x:num="-275.00" style="">-275.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6205</td><td class="ValorLinhaImpar" x:num="-275.00" style="">-275.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6205</td><td class="ValorLinhaPar" x:num="-275.00" style="">-275.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6205</td><td class="ValorLinhaImpar" x:num="-275.00" style="">-275.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6119</td><td class="ValorLinhaPar" x:num="-7,093.40" style="">-7,093.40</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6327</td><td class="ValorLinhaImpar" x:num="-7,546.54" style="">-7,546.54</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6335</td><td class="ValorLinhaPar" x:num="-9,333.71" style="">-9,333.71</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6472</td><td class="ValorLinhaImpar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6497</td><td class="ValorLinhaPar" x:num="-4,157.50" style="">-4,157.50</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6507</td><td class="ValorLinhaImpar" x:num="-6,674.96" style="">-6,674.96</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6518</td><td class="ValorLinhaPar" x:num="-3,664.59" style="">-3,664.59</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6577</td><td class="ValorLinhaImpar" x:num="-5,949.74" style="">-5,949.74</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6638</td><td class="ValorLinhaPar" x:num="-46,904.34" style="">-46,904.34</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6925</td><td class="ValorLinhaImpar" x:num="-3,774.90" style="">-3,774.90</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.7035</td><td class="ValorLinhaPar" x:num="-1,038.46" style="">-1,038.46</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.7057</td><td class="ValorLinhaImpar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/5944</td><td class="ValorLinhaPar" x:num="-250.00" style="">-250.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6473</td><td class="ValorLinhaImpar" x:num="-500.00" style="">-500.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6577</td><td class="ValorLinhaPar" x:num="-860.42" style="">-860.42</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6659</td><td class="ValorLinhaImpar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6870</td><td class="ValorLinhaPar" x:num="-200.00" style="">-200.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6936</td><td class="ValorLinhaImpar" x:num="-600.00" style="">-600.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6939</td><td class="ValorLinhaPar" x:num="-100.00" style="">-100.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  EASY SOLUTION LO</td><td class="ValorLinhaImpar" x:num="1,515.35" style="">1,515.35</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  ES BRASIL LOGIST</td><td class="ValorLinhaPar" x:num="396.95" style="">396.95</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  SEMCON BR SERV E</td><td class="ValorLinhaImpar" x:num="15,491.64" style="">15,491.64</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX TRANSF  LABOR M02/09</td><td class="ValorLinhaPar" x:num="86,000.00" style="">86,000.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX TRANSF  PALMEIR02/09</td><td class="ValorLinhaImpar" x:num="67,000.00" style="">67,000.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX TRANSF  UNIQUE 02/09</td><td class="ValorLinhaPar" x:num="30,000.00" style="">30,000.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX TRANSF  UNIQUE 02/09</td><td class="ValorLinhaImpar" x:num="100,000.00" style="">100,000.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TAR MANUT CONTA    08/25</td><td class="ValorLinhaPar" x:num="-79.00" style="">-79.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">RES APLIC AUT MAIS</td><td class="ValorLinhaImpar" x:num="213,783.77" style="">213,783.77</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">REND PAGO APLIC AUT MAIS</td><td class="ValorLinhaPar" x:num="0.20" style="">0.20</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">MOV TIT COB DISP  02/09S</td><td class="ValorLinhaImpar" x:num="40,910.12" style="">40,910.12</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">02/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SALDO APLIC AUT MAIS</td><td class="ValorLinhaPar" x:num="26,770.00" style="">26,770.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">02/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">S A L D O</td><td class="ValorLinhaImpar" /><td class="ValorLinhaImpar" x:num="1.00" style="">1.00</td><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG</td><td class="ValorLinhaPar" x:num="-5,611.64" style="">-5,611.64</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  un255784</td><td class="ValorLinhaImpar" x:num="-4,465.00" style="">-4,465.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6209</td><td class="ValorLinhaPar" x:num="-17,284.82" style="">-17,284.82</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6974</td><td class="ValorLinhaImpar" x:num="-127.61" style="">-127.61</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6974</td><td class="ValorLinhaPar" x:num="-370.21" style="">-370.21</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6974</td><td class="ValorLinhaImpar" x:num="-3,255.96" style="">-3,255.96</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6984</td><td class="ValorLinhaPar" x:num="-4,499.36" style="">-4,499.36</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6985</td><td class="ValorLinhaImpar" x:num="-4,499.36" style="">-4,499.36</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6986</td><td class="ValorLinhaPar" x:num="-4,499.36" style="">-4,499.36</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6989</td><td class="ValorLinhaImpar" x:num="-4,499.36" style="">-4,499.36</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6990</td><td class="ValorLinhaPar" x:num="-4,499.36" style="">-4,499.36</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO AGOSTO</td><td class="ValorLinhaImpar" x:num="-840.00" style="">-840.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UNIQUE SOLUC</td><td class="ValorLinhaPar" x:num="-15,000.00" style="">-15,000.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN23.3286</td><td class="ValorLinhaImpar" x:num="-4,036.13" style="">-4,036.13</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN23.3286</td><td class="ValorLinhaPar" x:num="-4,001.63" style="">-4,001.63</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6047</td><td class="ValorLinhaImpar" x:num="-2,180.00" style="">-2,180.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6200</td><td class="ValorLinhaPar" x:num="-3,428.86" style="">-3,428.86</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6669</td><td class="ValorLinhaImpar" x:num="-150.00" style="">-150.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6683</td><td class="ValorLinhaPar" x:num="-150.00" style="">-150.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6770</td><td class="ValorLinhaImpar" x:num="-150.00" style="">-150.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6801</td><td class="ValorLinhaPar" x:num="-3,950.00" style="">-3,950.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN256548</td><td class="ValorLinhaImpar" x:num="-2,475.72" style="">-2,475.72</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6185</td><td class="ValorLinhaPar" x:num="-7,065.26" style="">-7,065.26</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6398</td><td class="ValorLinhaImpar" x:num="-1,026.45" style="">-1,026.45</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6423</td><td class="ValorLinhaPar" x:num="-395.00" style="">-395.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN18.0852 -</td><td class="ValorLinhaImpar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN18.0852 -</td><td class="ValorLinhaPar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN18.0852 -</td><td class="ValorLinhaImpar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN18.0852 -</td><td class="ValorLinhaPar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6060</td><td class="ValorLinhaImpar" x:num="-7,250.01" style="">-7,250.01</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6200</td><td class="ValorLinhaPar" x:num="-21,488.14" style="">-21,488.14</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6286</td><td class="ValorLinhaImpar" x:num="-14,241.48" style="">-14,241.48</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6387</td><td class="ValorLinhaPar" x:num="-30,583.43" style="">-30,583.43</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6388</td><td class="ValorLinhaImpar" x:num="-19,244.12" style="">-19,244.12</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6391</td><td class="ValorLinhaPar" x:num="-30,008.30" style="">-30,008.30</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6455</td><td class="ValorLinhaImpar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6455</td><td class="ValorLinhaPar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6455</td><td class="ValorLinhaImpar" x:num="-53.53" style="">-53.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6589</td><td class="ValorLinhaPar" x:num="-11,046.35" style="">-11,046.35</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6596</td><td class="ValorLinhaImpar" x:num="-56,962.24" style="">-56,962.24</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6758</td><td class="ValorLinhaPar" x:num="-210.86" style="">-210.86</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/5854</td><td class="ValorLinhaImpar" x:num="-170.54" style="">-170.54</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/5997</td><td class="ValorLinhaPar" x:num="-170.54" style="">-170.54</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6130</td><td class="ValorLinhaImpar" x:num="-300.00" style="">-300.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6131</td><td class="ValorLinhaPar" x:num="-1,538.86" style="">-1,538.86</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6140</td><td class="ValorLinhaImpar" x:num="-860.42" style="">-860.42</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6269</td><td class="ValorLinhaPar" x:num="-860.42" style="">-860.42</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6338</td><td class="ValorLinhaImpar" x:num="-170.54" style="">-170.54</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6381</td><td class="ValorLinhaPar" x:num="-300.00" style="">-300.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6497</td><td class="ValorLinhaImpar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6518</td><td class="ValorLinhaPar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6660</td><td class="ValorLinhaImpar" x:num="-80.00" style="">-80.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6675</td><td class="ValorLinhaPar" x:num="-80.00" style="">-80.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6680</td><td class="ValorLinhaImpar" x:num="-400.00" style="">-400.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6692</td><td class="ValorLinhaPar" x:num="-80.00" style="">-80.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6817</td><td class="ValorLinhaImpar" x:num="-600.00" style="">-600.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6863</td><td class="ValorLinhaPar" x:num="-950.00" style="">-950.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6869</td><td class="ValorLinhaImpar" x:num="-600.00" style="">-600.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6925</td><td class="ValorLinhaPar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/7014</td><td class="ValorLinhaImpar" x:num="-300.00" style="">-300.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  ESTALEIRO SCHAEF</td><td class="ValorLinhaPar" x:num="67,913.54" style="">67,913.54</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX TRANSF  LABOR M03/09</td><td class="ValorLinhaImpar" x:num="74,300.00" style="">74,300.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX TRANSF  UNIQUE 03/09</td><td class="ValorLinhaPar" x:num="50,000.00" style="">50,000.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">RESGATE COMPROMISSADA</td><td class="ValorLinhaImpar" x:num="101,120.70" style="">101,120.70</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">RES APLIC AUT MAIS</td><td class="ValorLinhaPar" x:num="5,047.80" style="">5,047.80</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">REND PAGO APLIC AUT MAIS</td><td class="ValorLinhaImpar" x:num="0.01" style="">0.01</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">03/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SALDO APLIC AUT MAIS</td><td class="ValorLinhaPar" x:num="21,722.20" style="">21,722.20</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">03/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">S A L D O</td><td class="ValorLinhaImpar" /><td class="ValorLinhaImpar" x:num="1.00" style="">1.00</td><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG</td><td class="ValorLinhaPar" x:num="-3,506.92" style="">-3,506.92</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  un25.7069</td><td class="ValorLinhaImpar" x:num="-3,608.47" style="">-3,608.47</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6639</td><td class="ValorLinhaPar" x:num="-20.88" style="">-20.88</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6862</td><td class="ValorLinhaImpar" x:num="-270.16" style="">-270.16</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6865</td><td class="ValorLinhaPar" x:num="-421.82" style="">-421.82</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6865</td><td class="ValorLinhaImpar" x:num="-210.00" style="">-210.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6874</td><td class="ValorLinhaPar" x:num="-210.00" style="">-210.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6874</td><td class="ValorLinhaImpar" x:num="-496.28" style="">-496.28</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6885</td><td class="ValorLinhaPar" x:num="-126.00" style="">-126.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6885</td><td class="ValorLinhaImpar" x:num="-86.87" style="">-86.87</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6965</td><td class="ValorLinhaPar" x:num="-90.76" style="">-90.76</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6970</td><td class="ValorLinhaImpar" x:num="-400.08" style="">-400.08</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6984</td><td class="ValorLinhaPar" x:num="-297.64" style="">-297.64</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6984</td><td class="ValorLinhaImpar" x:num="-126.00" style="">-126.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6985</td><td class="ValorLinhaPar" x:num="-297.64" style="">-297.64</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6985</td><td class="ValorLinhaImpar" x:num="-126.00" style="">-126.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6986</td><td class="ValorLinhaPar" x:num="-126.00" style="">-126.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6986</td><td class="ValorLinhaImpar" x:num="-297.64" style="">-297.64</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6989</td><td class="ValorLinhaPar" x:num="-297.64" style="">-297.64</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6989</td><td class="ValorLinhaImpar" x:num="-126.00" style="">-126.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6990</td><td class="ValorLinhaPar" x:num="-297.64" style="">-297.64</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6990</td><td class="ValorLinhaImpar" x:num="-126.00" style="">-126.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.7013</td><td class="ValorLinhaPar" x:num="-884.00" style="">-884.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.7013</td><td class="ValorLinhaImpar" x:num="-464.88" style="">-464.88</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UNIQUE CONSU</td><td class="ValorLinhaPar" x:num="-130,000.00" style="">-130,000.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UNIQUE CONSU</td><td class="ValorLinhaImpar" x:num="-500,000.00" style="">-500,000.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6222</td><td class="ValorLinhaPar" x:num="-998.56" style="">-998.56</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6222</td><td class="ValorLinhaImpar" x:num="-50,166.09" style="">-50,166.09</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6582</td><td class="ValorLinhaPar" x:num="-3,520.00" style="">-3,520.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6638</td><td class="ValorLinhaImpar" x:num="-12,415.77" style="">-12,415.77</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6638</td><td class="ValorLinhaPar" x:num="-12,415.77" style="">-12,415.77</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6779</td><td class="ValorLinhaImpar" x:num="-100.00" style="">-100.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6791</td><td class="ValorLinhaPar" x:num="-1,904.66" style="">-1,904.66</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6802</td><td class="ValorLinhaImpar" x:num="-633.43" style="">-633.43</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6874</td><td class="ValorLinhaPar" x:num="-3,224.48" style="">-3,224.48</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6974</td><td class="ValorLinhaImpar" x:num="-9,299.22" style="">-9,299.22</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN256784</td><td class="ValorLinhaPar" x:num="-3,869.65" style="">-3,869.65</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN256820</td><td class="ValorLinhaImpar" x:num="-2,455.94" style="">-2,455.94</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UNIQUE SOLUC</td><td class="ValorLinhaPar" x:num="-35,000.00" style="">-35,000.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6176</td><td class="ValorLinhaImpar" x:num="-103,800.27" style="">-103,800.27</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6330</td><td class="ValorLinhaPar" x:num="-68,146.62" style="">-68,146.62</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6693</td><td class="ValorLinhaImpar" x:num="-4,189.70" style="">-4,189.70</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6734</td><td class="ValorLinhaPar" x:num="-3,599.48" style="">-3,599.48</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6865</td><td class="ValorLinhaImpar" x:num="-2,880.00" style="">-2,880.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX ENVIADO UN25.6965</td><td class="ValorLinhaPar" x:num="-1,318.54" style="">-1,318.54</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.6817</td><td class="ValorLinhaImpar" x:num="-11,897.62" style="">-11,897.62</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/5595</td><td class="ValorLinhaPar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/5784</td><td class="ValorLinhaImpar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6058</td><td class="ValorLinhaPar" x:num="-170.54" style="">-170.54</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6165</td><td class="ValorLinhaImpar" x:num="-250.00" style="">-250.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6199</td><td class="ValorLinhaPar" x:num="-300.00" style="">-300.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6200</td><td class="ValorLinhaImpar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6444</td><td class="ValorLinhaPar" x:num="-450.00" style="">-450.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6507</td><td class="ValorLinhaImpar" x:num="-170.54" style="">-170.54</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6552</td><td class="ValorLinhaPar" x:num="-600.00" style="">-600.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/6589</td><td class="ValorLinhaImpar" x:num="-860.42" style="">-860.42</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25/6802</td><td class="ValorLinhaPar" x:num="-350.00" style="">-350.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25/7035</td><td class="ValorLinhaImpar" x:num="-600.00" style="">-600.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  NEXOFOUR COMERCI</td><td class="ValorLinhaPar" x:num="2,003.30" style="">2,003.30</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  NEXOFOUR COMERCI</td><td class="ValorLinhaImpar" x:num="1,969.80" style="">1,969.80</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  NEXOFOUR IMPORTA</td><td class="ValorLinhaPar" x:num="1,674.64" style="">1,674.64</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  NEXOFOUR IMPORTA</td><td class="ValorLinhaImpar" x:num="1,540.30" style="">1,540.30</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  PALMEIRA IMPLEME</td><td class="ValorLinhaPar" x:num="4,248.00" style="">4,248.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX TRANSF  KINGSPA04/09</td><td class="ValorLinhaImpar" x:num="527,993.92" style="">527,993.92</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">PIX TRANSF  Montice04/09</td><td class="ValorLinhaPar" x:num="19,501.61" style="">19,501.61</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 102.0001.UNIQUE C A</td><td class="ValorLinhaImpar" x:num="300,000.00" style="">300,000.00</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="3,303.48" style="">3,303.48</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="1,790.94" style="">1,790.94</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="392.97" style="">392.97</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="38.06" style="">38.06</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="362.03" style="">362.03</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="16,250.61" style="">16,250.61</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="15,909.40" style="">15,909.40</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="3,426.88" style="">3,426.88</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="361.68" style="">361.68</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="257.35" style="">257.35</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">RESGATE COMPROMISSADA</td><td class="ValorLinhaPar" x:num="70,318.25" style="">70,318.25</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">APL APLIC AUT MAIS AP</td><td class="ValorLinhaImpar" x:num="-5,634.60" style="">-5,634.60</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">MOV TIT COB DISP  04/09S</td><td class="ValorLinhaPar" x:num="13,844.00" style="">13,844.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">04/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SDO APLIC AUT MAIS AP</td><td class="ValorLinhaImpar" x:num="27,356.80" style="">27,356.80</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">04/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">S A L D O</td><td class="ValorLinhaPar" /><td class="ValorLinhaPar" x:num="1.00" style="">1.00</td><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="1,590.52" style="">1,590.52</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="479,315.49" style="">479,315.49</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="16,873.40" style="">16,873.40</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="17,093.40" style="">17,093.40</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="9,897.91" style="">9,897.91</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="6,573.40" style="">6,573.40</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">BOLETO PAGO UN25.5735</td><td class="ValorLinhaImpar" x:num="-4,556.53" style="">-4,556.53</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="4,645.86" style="">4,645.86</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaImpar" x:num="4,150.29" style="">4,150.29</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">TED 237.2374.AGUAS A C N</td><td class="ValorLinhaPar" x:num="3,186.73" style="">3,186.73</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">PIX ENVIADO UN25.6755</td><td class="ValorLinhaImpar" x:num="-117.48" style="">-117.48</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6604</td><td class="ValorLinhaPar" x:num="-23,157.48" style="">-23,157.48</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  25.7069</td><td class="ValorLinhaImpar" x:num="-168.15" style="">-168.15</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">BOLETO PAGO UN25.6577</td><td class="ValorLinhaPar" x:num="-26,193.34" style="">-26,193.34</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6693</td><td class="ValorLinhaImpar" x:num="-225.16" style="">-225.16</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6693</td><td class="ValorLinhaPar" x:num="-558.97" style="">-558.97</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6693</td><td class="ValorLinhaImpar" x:num="-24,046.54" style="">-24,046.54</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  UN25.6791</td><td class="ValorLinhaPar" x:num="-210.00" style="">-210.00</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  UN25.6791</td><td class="ValorLinhaImpar" x:num="-356.50" style="">-356.50</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaPar" style="">05/09
+	   
+    </td><td class="DataLinhaPar" /><td class="DataLinhaPar" /><td class="HistoricoLinhaPar">SISPAG  NEXOFOUR IMPORTA</td><td class="ValorLinhaPar" x:num="1,062.60" style="">1,062.60</td><td class="ValorLinhaPar" /><td class=""></td></tr><tr height="17" style="height:12.75pt" xmlns=""><td height="17" style="height:12.75pt"></td><td class="DataLinhaImpar" style="font-weight:700;">05/09
+	   
+    </td><td class="DataLinhaImpar" /><td class="DataLinhaImpar" /><td class="HistoricoLinhaImpar">SISPAG  NEXOFOUR IMPORTA</td><td class="ValorLinhaImpar" x:num="2,802.90" style="font-weight:700;">2,802.90</td><td class="ValorLinhaImpar" /><td class=""></td></tr><tr height="17" style="height:12.75pt"><td height="17" style="height:12.75pt"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></body></html>
