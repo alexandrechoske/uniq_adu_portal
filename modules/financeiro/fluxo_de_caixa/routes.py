@@ -690,9 +690,9 @@ def api_projecao():
         
         return jsonify({
             'past_dates': past_dates,
-            'past_fluxos': past_fluxos,
+            'past_values': past_fluxos,  # Renamed for consistency with frontend
             'future_dates': future_dates,
-            'future_fluxos': future_fluxos
+            'future_values': future_fluxos  # Renamed for consistency with frontend
         })
         
     except Exception as e:
@@ -707,8 +707,8 @@ def api_projecao():
         # Return default/fallback values instead of failing completely
         return jsonify({
             'past_dates': [],
-            'past_fluxos': [],
+            'past_values': [],  # Renamed for consistency with frontend
             'future_dates': [],
-            'future_fluxos': [],
+            'future_values': [],  # Renamed for consistency with frontend
             'error': 'Connection error - using fallback values'
         }), 200  # Return 200 instead of 500 to prevent frontend errors

@@ -681,8 +681,16 @@ class FluxoCaixaController {
     renderSaldoAcumuladoChartError() {
         const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
         
+        // Ensure proper cleanup before creating new chart
         if (this.charts.saldoAcumulado) {
             this.charts.saldoAcumulado.destroy();
+            delete this.charts.saldoAcumulado;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
         // Create a simple error message chart
@@ -723,8 +731,16 @@ class FluxoCaixaController {
     renderSaldoAcumuladoChart(data) {
         const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
         
+        // Ensure proper cleanup before creating new chart
         if (this.charts.saldoAcumulado) {
             this.charts.saldoAcumulado.destroy();
+            delete this.charts.saldoAcumulado;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
         // Find min and max values for proper scaling
@@ -770,7 +786,41 @@ class FluxoCaixaController {
                         display: false
                     },
                     datalabels: {
-                        display: false // Hide data labels for cleaner look
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value, context) {
+                            // Validate input data
+                            if (value === null || value === undefined || isNaN(value)) {
+                                return '';
+                            }
+                            
+                            // Show labels for every 3rd point, first point, and last point to avoid clutter
+                            const dataIndex = context.dataIndex;
+                            const totalPoints = context.dataset.data.length;
+                            
+                            if (dataIndex === 0 || 
+                                dataIndex === totalPoints - 1 || 
+                                dataIndex % 3 === 0) {
+                                return formatCurrencyShort(value);
+                            }
+                            return '';
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 2,
+                            bottom: 2,
+                            left: 4,
+                            right: 4
+                        },
+                        font: {
+                            size: 9,
+                            weight: 'bold'
+                        }
                     }
                 },
                 scales: {
@@ -822,8 +872,16 @@ class FluxoCaixaController {
     renderProjecaoChartError() {
         const ctx = document.getElementById('chart-projecao').getContext('2d');
         
+        // Ensure proper cleanup before creating new chart
         if (this.charts.projecao) {
             this.charts.projecao.destroy();
+            delete this.charts.projecao;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
         // Create a simple error message chart
@@ -865,13 +923,21 @@ class FluxoCaixaController {
     renderProjecaoChart(data) {
         const ctx = document.getElementById('chart-projecao').getContext('2d');
         
+        // Ensure proper cleanup before creating new chart
         if (this.charts.projecao) {
             this.charts.projecao.destroy();
+            delete this.charts.projecao;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
         // Combine past and future data
         const allDates = [...data.past_dates, ...data.future_dates];
-        const allFluxos = [...data.past_fluxos, ...data.future_fluxos];
+        const allFluxos = [...data.past_values, ...data.future_values];
         
         // Split into past and future for different styling
         const pastCount = data.past_dates.length;
@@ -933,15 +999,41 @@ class FluxoCaixaController {
                         }
                     },
                     datalabels: {
-                        display: true,
+                        display: function(context) {
+                            // Safe check for valid data points
+                            if (!context || !context.parsed) return false;
+                            const value = context.parsed.y;
+                            return value !== null && value !== undefined && !isNaN(value);
+                        },
                         anchor: 'end',
                         align: 'top',
                         formatter: function(value, context) {
-                            // Show labels for every 4th point to reduce clutter, but ensure we show some labels
-                            // Also check if value is not null and not exactly 0 (to avoid showing "R$ 0,00")
-                            if (value !== null && value !== 0 && (context.dataIndex % 4 === 0 || context.dataIndex === context.dataset.data.length - 1)) {
+                            // Check if this is a valid point with data
+                            if (value === null || value === undefined) {
+                                return '';
+                            }
+                            
+                            // Show labels for every 4th point, first point, and last point of the dataset
+                            const datasetIndex = context.datasetIndex;
+                            const dataIndex = context.dataIndex;
+                            const dataset = context.dataset;
+                            
+                            // Find the actual data points (not null) for this dataset
+                            const validDataPoints = dataset.data.map((val, idx) => ({ value: val, index: idx }))
+                                .filter(item => item.value !== null && item.value !== undefined);
+                            
+                            // Check if this is a valid data point
+                            const currentPointIndex = validDataPoints.findIndex(item => item.index === dataIndex);
+                            
+                            if (currentPointIndex === -1) return ''; // Not a valid point
+                            
+                            // Show label if it's every 3rd valid point, first valid point, or last valid point
+                            if (currentPointIndex === 0 || 
+                                currentPointIndex === validDataPoints.length - 1 || 
+                                currentPointIndex % 3 === 0) {
                                 return formatCurrencyShort(value);
                             }
+                            
                             return '';
                         },
                         color: '#212529',
