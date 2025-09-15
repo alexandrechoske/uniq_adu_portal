@@ -49,7 +49,9 @@ class FluxoCaixaController {
         this.currentMes = null; // Changed to null for year-only default
         this.currentPage = 1;
         this.pageLimit = 25;
-        this.currentDrillCategoria = null; // For drill-down functionality
+        this.currentDrillCentro = null; // For drill-down level 1
+        this.currentDrillCategoria = null; // For drill-down level 2
+        this.drillLevel = 1; // Track current drill level (1=Centro, 2=Categoria, 3=Classe)
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -108,6 +110,11 @@ class FluxoCaixaController {
     }
     
     init() {
+        // Register ChartJS plugins
+        if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+        
         this.setupEventListeners();
         this.populateYearSelect();
         this.setInitialMonth();
@@ -129,7 +136,7 @@ class FluxoCaixaController {
         $('#search-table').on('input', debounce(() => this.loadTableData(), 300));
         
         // Drill-down button for expenses chart
-        $('#btn-voltar-categorias').on('click', () => this.voltarCategorias());
+        $('#btn-voltar-categorias').on('click', () => this.voltarNivelAnterior());
         
         // Fechar modal ao clicar fora
         $('#filter-modal').on('click', (e) => {
@@ -467,10 +474,25 @@ class FluxoCaixaController {
     
     async loadDespesasCategoria() {
         try {
-            // When no month is selected, load full year data
-            const mesParam = this.currentMes ? `&mes=${this.currentMes}` : '';
-            const drillParam = this.currentDrillCategoria ? `&categoria=${encodeURIComponent(this.currentDrillCategoria)}` : '';
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/despesas-categoria?ano=${this.currentAno}${mesParam}${drillParam}`);
+            // Build parameters for drill-down levels
+            const params = {
+                ano: this.currentAno
+            };
+            
+            if (this.currentMes) {
+                params.mes = this.currentMes;
+            }
+            
+            if (this.currentDrillCentro) {
+                params.centro_resultado = this.currentDrillCentro;
+            }
+            
+            if (this.currentDrillCategoria) {
+                params.categoria = this.currentDrillCategoria;
+            }
+            
+            const queryString = new URLSearchParams(params).toString();
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/despesas-categoria?${queryString}`);
             const data = await response.json();
             
             if (!response.ok || data.error) {
@@ -535,12 +557,14 @@ class FluxoCaixaController {
             this.charts.despesasCategoria.destroy();
         }
         
-        // Update chart title and drill-down button visibility
-        if (data.drill_categoria) {
-            $('#chart-despesas-title').text(`Despesas por Classe - ${data.drill_categoria}`);
+        // Update chart title and drill-down button visibility based on drill level
+        const chartTitle = data.drill_title || 'Despesas por Centro de Resultado';
+        $('#chart-despesas-title').text(chartTitle);
+        
+        // Show/hide back button based on drill level
+        if (data.drill_level > 1) {
             $('#btn-voltar-categorias').show();
         } else {
-            $('#chart-despesas-title').text('Despesas por Categoria');
             $('#btn-voltar-categorias').hide();
         }
         
@@ -553,7 +577,7 @@ class FluxoCaixaController {
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: data.drill_categoria ? 'Despesas por Classe' : 'Despesas por Categoria',
+                    label: chartTitle,
                     data: valoresPositivos,
                     backgroundColor: valoresPositivos.map(() => 'rgba(111, 66, 193, 0.8)'),
                     borderColor: valoresPositivos.map(() => 'rgba(111, 66, 193, 1)'),
@@ -567,20 +591,43 @@ class FluxoCaixaController {
                 indexAxis: 'y', // This makes it horizontal
                 onClick: (event, elements) => {
                     // Add drill-down functionality when clicking on bars
-                    if (elements.length > 0 && !data.drill_categoria) {
+                    if (elements.length > 0) {
                         const elementIndex = elements[0].index;
-                        const categoria = data.labels[elementIndex];
-                        this.drillDownCategoria(categoria);
+                        const selectedItem = data.labels[elementIndex];
+                        this.handleDrillDown(selectedItem, data.drill_level);
                     }
                 },
                 plugins: {
                     ...this.chartDefaults.plugins,
                     title: {
                         display: true,
-                        text: data.drill_categoria ? `Despesas por Classe - ${data.drill_categoria}` : 'Despesas por Categoria'
+                        text: chartTitle
                     },
                     legend: {
                         display: false
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'right',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        }
                     },
                     tooltip: {
                         ...this.chartDefaults.plugins.tooltip,
@@ -685,13 +732,12 @@ class FluxoCaixaController {
         // Combine past and future data
         const allDates = [...data.past_dates, ...data.future_dates];
         const allFluxos = [...data.past_fluxos, ...data.future_fluxos];
-        const allSaldos = [...data.past_saldos, ...data.future_saldos];
         
         // Split into past and future for different styling
         const pastCount = data.past_dates.length;
         
         // Find min and max values for proper scaling
-        const allValues = [...allFluxos, ...allSaldos].filter(val => val !== null);
+        const allValues = [...allFluxos].filter(val => val !== null);
         const minValue = Math.min(...allValues);
         const maxValue = Math.max(...allValues);
         const range = maxValue - minValue;
@@ -727,31 +773,6 @@ class FluxoCaixaController {
                     pointBorderColor: 'white',
                     pointBorderWidth: 2,
                     pointRadius: 4
-                }, {
-                    label: 'Saldo Acumulado Real',
-                    data: allSaldos.map((value, index) => index < pastCount ? value : null),
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }, {
-                    label: 'Saldo Acumulado Projetado',
-                    data: allSaldos.map((value, index) => index >= pastCount ? value : null),
-                    borderColor: 'rgba(111, 66, 193, 1)',
-                    backgroundColor: 'rgba(111, 66, 193, 0.1)',
-                    borderWidth: 3,
-                    borderDash: [5, 5], // Dashed line for projection
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(111, 66, 193, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
                 }]
             },
             options: {
@@ -760,7 +781,7 @@ class FluxoCaixaController {
                     ...this.chartDefaults.plugins,
                     title: {
                         display: true,
-                        text: 'Projeção de Fluxo de Caixa (24 meses + 6 meses)'
+                        text: 'Projeção de Fluxo de Caixa - Resultado Líquido'
                     },
                     legend: {
                         labels: {
@@ -769,6 +790,33 @@ class FluxoCaixaController {
                             font: {
                                 size: 11
                             }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value, context) {
+                            // Only show labels for every 3rd point to avoid clutter
+                            if (context.dataIndex % 3 === 0 && value !== null) {
+                                return formatCurrencyShort(value);
+                            }
+                            return '';
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 2,
+                            bottom: 2,
+                            left: 4,
+                            right: 4
+                        },
+                        font: {
+                            size: 9,
+                            weight: 'bold'
                         }
                     }
                 },
@@ -795,14 +843,43 @@ class FluxoCaixaController {
         });
     }
     
-    drillDownCategoria(categoria) {
-        this.currentDrillCategoria = categoria;
+    handleDrillDown(selectedItem, currentLevel) {
+        if (currentLevel === 1) {
+            // Drill down from Centro de Resultado to Categoria
+            this.currentDrillCentro = selectedItem;
+            this.drillLevel = 2;
+        } else if (currentLevel === 2) {
+            // Drill down from Categoria to Classe
+            this.currentDrillCategoria = selectedItem;
+            this.drillLevel = 3;
+        }
+        // Level 3 (Classe) is the deepest level, no further drill-down
+        
         this.loadDespesasCategoria();
     }
     
-    voltarCategorias() {
-        this.currentDrillCategoria = null;
+    voltarNivelAnterior() {
+        if (this.drillLevel === 3) {
+            // Go back from Classe to Categoria
+            this.currentDrillCategoria = null;
+            this.drillLevel = 2;
+        } else if (this.drillLevel === 2) {
+            // Go back from Categoria to Centro de Resultado
+            this.currentDrillCentro = null;
+            this.drillLevel = 1;
+        }
+        
         this.loadDespesasCategoria();
+    }
+    
+    drillDownCategoria(categoria) {
+        // Legacy function - redirect to new drill-down system
+        this.handleDrillDown(categoria, 1);
+    }
+    
+    voltarCategorias() {
+        // Legacy function - redirect to new system
+        this.voltarNivelAnterior();
     }
     
     async loadTableData() {

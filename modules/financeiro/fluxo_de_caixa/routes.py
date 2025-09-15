@@ -320,11 +320,12 @@ def api_fluxo_mensal():
 @login_required
 @perfil_required('financeiro', 'fluxo_caixa')
 def api_despesas_categoria():
-    """API para gráfico de despesas por categoria com drill-down"""
+    """API para gráfico de despesas por centro de resultado/categoria/classe com drill-down triplo"""
     try:
         ano = request.args.get('ano', datetime.now().year)
         mes = request.args.get('mes', None)  # None means full year
-        categoria_drill = request.args.get('categoria')  # Para drill-down
+        centro_drill = request.args.get('centro_resultado')  # Para drill-down nível 1
+        categoria_drill = request.args.get('categoria')  # Para drill-down nível 2
         
         ano = int(ano)
         if mes:
@@ -332,20 +333,19 @@ def api_despesas_categoria():
         
         table_name = 'vw_fluxo_caixa'
         
-        # Query para despesas
-        query = supabase_admin.table(table_name).select('data, valor, categoria, classe').eq('tipo', 'Despesa')
+        # Query para despesas (incluir centro_resultado na seleção)
+        query = supabase_admin.table(table_name).select('data, valor, centro_resultado, categoria, classe').eq('tipo', 'Despesa')
         
         if mes:
-            # Filter by specific month
             inicio_mes = datetime(ano, mes, 1)
             if mes == 12:
                 fim_mes = datetime(ano + 1, 1, 1) - timedelta(days=1)
             else:
                 fim_mes = datetime(ano, mes + 1, 1) - timedelta(days=1)
+            
             query = query.gte('data', inicio_mes.strftime('%Y-%m-%d'))
             query = query.lte('data', fim_mes.strftime('%Y-%m-%d'))
         else:
-            # Full year data
             query = query.gte('data', f'{ano}-01-01')
             query = query.lte('data', f'{ano}-12-31')
         
@@ -353,25 +353,37 @@ def api_despesas_categoria():
         response = query.execute()
         dados = response.data
         
-        if categoria_drill:
-            # Drill-down: agrupar por classe dentro da categoria
-            dados_filtrados = [item for item in dados if item['categoria'] == categoria_drill]
-            agrupamento = defaultdict(float)
-            for item in dados_filtrados:
-                classe = item.get('classe', 'Sem Classe')
-                valor = float(item['valor'])  # Usar valor que é sempre positivo
-                agrupamento[classe] += valor
-        else:
-            # Visão principal: agrupar por categoria
+        # Determinar o nível de drill-down
+        if categoria_drill and centro_drill:
+            # Nível 3: Drill-down para classes dentro de uma categoria específica de um centro de resultado
             agrupamento = defaultdict(float)
             for item in dados:
-                categoria = item.get('categoria', 'Sem Categoria')
-                valor = float(item['valor'])  # Usar valor que é sempre positivo
-                agrupamento[categoria] += valor
+                if item['centro_resultado'] == centro_drill and item['categoria'] == categoria_drill:
+                    agrupamento[item['classe']] += abs(float(item['valor']))  # Usar valor absoluto para despesas
+            drill_level = 3
+            drill_title = f"Classes - {categoria_drill}"
+        elif centro_drill:
+            # Nível 2: Drill-down para categorias dentro de um centro de resultado
+            agrupamento = defaultdict(float)
+            for item in dados:
+                if item['centro_resultado'] == centro_drill:
+                    agrupamento[item['categoria']] += abs(float(item['valor']))  # Usar valor absoluto para despesas
+            drill_level = 2
+            drill_title = f"Categorias - {centro_drill}"
+        else:
+            # Nível 1: Visão principal por centro de resultado
+            agrupamento = defaultdict(float)
+            for item in dados:
+                agrupamento[item['centro_resultado']] += abs(float(item['valor']))  # Usar valor absoluto para despesas
+            drill_level = 1
+            drill_title = "Despesas por Centro de Resultado"
         
         # Converter para listas e ordenar do maior para menor
         items = list(agrupamento.items())
         items.sort(key=lambda x: x[1], reverse=True)  # Ordenação do maior para menor
+        
+        # Limitar a 10 itens para melhor visualização
+        items = items[:10]
         
         labels = [item[0] for item in items]
         valores = [item[1] for item in items]
@@ -379,12 +391,15 @@ def api_despesas_categoria():
         return jsonify({
             'labels': labels,
             'valores': valores,
-            'drill_categoria': categoria_drill
+            'drill_level': drill_level,
+            'drill_title': drill_title,
+            'centro_drill': centro_drill,
+            'categoria_drill': categoria_drill
         })
         
     except Exception as e:
         # Log the error for debugging
-        import traceback
+        print(f"Erro na API de despesas por categoria: {str(e)}")
         error_details = {
             'error': str(e),
             'traceback': traceback.format_exc(),
@@ -395,11 +410,13 @@ def api_despesas_categoria():
         
         # Return default/fallback values instead of failing completely
         return jsonify({
-            'labels': [],
-            'valores': [],
-            'drill_categoria': categoria_drill if 'categoria_drill' in locals() else None,
-            'error': 'Connection error - using fallback values'
-        }), 200  # Return 200 instead of 500 to prevent frontend errors
+            'labels': [], 
+            'valores': [], 
+            'drill_level': 1,
+            'drill_title': 'Despesas por Centro de Resultado',
+            'centro_drill': None,
+            'categoria_drill': None
+        })
 
 @fluxo_de_caixa_bp.route('/api/tabela-dados')
 @login_required
@@ -526,7 +543,7 @@ def api_projecao():
         past_start = now.replace(day=1) - timedelta(days=30*24)
         
         # Query data for past 24 months
-        query = supabase_admin.table(table_name).select('data, valor, saldo_acumulado')
+        query = supabase_admin.table(table_name).select('data, valor')
         query = query.gte('data', past_start.strftime('%Y-%m-%d'))
         query = query.lte('data', now.strftime('%Y-%m-%d'))
         query = query.order('data')
@@ -534,23 +551,18 @@ def api_projecao():
         response = query.execute()
         dados = response.data
         
-        # Group data by month for past data
-        fluxo_mensal = defaultdict(lambda: {'valor': 0, 'saldo': 0, 'count': 0})
+        # Group data by month for past data (resultado líquido mensal)
+        fluxo_mensal = defaultdict(float)
         
         for item in dados:
             data_item = datetime.strptime(item['data'], '%Y-%m-%d')
             mes_key = data_item.strftime('%Y-%m')
             valor = float(item['valor'])
-            saldo = float(item['saldo_acumulado'])
-            
-            fluxo_mensal[mes_key]['valor'] += valor
-            fluxo_mensal[mes_key]['saldo'] = saldo  # Use last saldo of the month
-            fluxo_mensal[mes_key]['count'] += 1
+            fluxo_mensal[mes_key] += valor
         
         # Convert to lists for past data
         past_months = sorted(fluxo_mensal.keys())
-        past_fluxos = [fluxo_mensal[mes]['valor'] for mes in past_months]
-        past_saldos = [fluxo_mensal[mes]['saldo'] for mes in past_months]
+        past_fluxos = [fluxo_mensal[mes] for mes in past_months]
         
         # Format dates for past data
         past_dates = []
@@ -568,11 +580,8 @@ def api_projecao():
         # Process future projections from database
         future_dates = []
         future_fluxos = []
-        future_saldos = []
         
-        # Get last saldo for projection base
-        last_saldo = past_saldos[-1] if past_saldos else 0
-        current_saldo = last_saldo
+        # Get last saldo for projection base (removed saldo tracking)
         
         # Group projections by year-month
         projecoes_dict = {}
@@ -599,18 +608,12 @@ def api_projecao():
             
             future_dates.append(mes_formatado)
             future_fluxos.append(projecoes_dict[mes_key])
-            
-            # Calculate accumulated saldo
-            current_saldo += projecoes_dict[mes_key]
-            future_saldos.append(current_saldo)
         
         return jsonify({
             'past_dates': past_dates,
             'past_fluxos': past_fluxos,
-            'past_saldos': past_saldos,
             'future_dates': future_dates,
-            'future_fluxos': future_fluxos,
-            'future_saldos': future_saldos
+            'future_fluxos': future_fluxos
         })
         
     except Exception as e:
@@ -626,9 +629,7 @@ def api_projecao():
         return jsonify({
             'past_dates': [],
             'past_fluxos': [],
-            'past_saldos': [],
             'future_dates': [],
             'future_fluxos': [],
-            'future_saldos': [],
             'error': 'Connection error - using fallback values'
         }), 200  # Return 200 instead of 500 to prevent frontend errors
