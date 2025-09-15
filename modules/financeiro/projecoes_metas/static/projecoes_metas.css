@@ -526,3 +526,254 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Novos estilos para modal melhorado */
+
+/* Tabs de modo de criação */
+.modo-criacao-tabs {
+    display: flex;
+    gap: 0;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid #e0e6ed;
+}
+
+.modo-tab {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.modo-tab.active {
+    background: #2196f3;
+    color: white;
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.modo-tab:hover:not(.active) {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+/* Seções do formulário */
+.form-section {
+    display: none;
+}
+
+.form-section.active {
+    display: block;
+}
+
+/* Grid do formulário */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+
+.form-grid-lote {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+/* Input de dinheiro com formatação */
+.money-input {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+/* Container para meses e valores */
+.meses-valores-container {
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    padding: 16px;
+    background: #f8f9fa;
+}
+
+.meses-valores-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 80px;
+    gap: 15px;
+    padding: 12px 0;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #37474f;
+    font-size: 14px;
+}
+
+.header-mes,
+.header-valor,
+.header-acao {
+    text-align: center;
+}
+
+.meses-valores-lista {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+}
+
+.mes-valor-linha {
+    display: grid;
+    grid-template-columns: 1fr 2fr 80px;
+    gap: 15px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.mes-valor-linha:last-child {
+    border-bottom: none;
+}
+
+.mes-valor-linha select,
+.mes-valor-linha input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.mes-valor-linha select:focus,
+.mes-valor-linha input:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.btn-remover-linha {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-remover-linha:hover {
+    background: #c82333;
+    transform: scale(1.05);
+}
+
+.btn-adicionar-mes-valor {
+    background: #2196f3 !important;
+    color: white !important;
+    border: none !important;
+}
+
+.btn-adicionar-mes-valor:hover {
+    background: #1976d2 !important;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-sm:hover {
+    background: #f8f9fa;
+    border-color: #2196f3;
+    color: #1976d2;
+}
+
+/* Footer do modal */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e6ed;
+    margin-top: 20px;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* Responsividade do modal */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .form-grid-lote {
+        grid-template-columns: 1fr;
+    }
+
+    .meses-valores-header {
+        grid-template-columns: 1fr 1.5fr 60px;
+        gap: 10px;
+        font-size: 12px;
+    }
+
+    .mes-valor-linha {
+        grid-template-columns: 1fr 1.5fr 60px;
+        gap: 10px;
+    }
+
+    .mes-valor-linha select,
+    .mes-valor-linha input {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+
+    .btn-remover-linha {
+        padding: 4px 6px;
+        font-size: 11px;
+    }
+
+    .modo-criacao-tabs {
+        flex-direction: column;
+    }
+
+    .modo-tab {
+        text-align: center;
+    }
+
+    .modal-container {
+        margin: 10px;
+        max-height: 95vh;
+    }
+}

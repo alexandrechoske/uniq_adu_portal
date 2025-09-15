@@ -84,18 +84,52 @@ def api_criar():
         
         # Validar dados obrigatórios - aceitar tanto 'meta' quanto 'valor_meta'
         meta_value = dados.get('meta') or dados.get('valor_meta')
-        if not dados.get('ano') or not meta_value or not dados.get('tipo'):
+        tipo = dados.get('tipo')
+        ano = dados.get('ano')
+        mes = dados.get('mes')
+        
+        if not ano or not meta_value or not tipo:
             return jsonify({
                 'success': False,
                 'error': 'Campos obrigatórios: ano, meta/valor_meta, tipo'
             }), 400
         
+        # Validação de tipos aceitos
+        tipos_validos = ['financeiro', 'operacional', 'projecao']
+        if tipo not in tipos_validos:
+            return jsonify({
+                'success': False,
+                'error': f'Tipo deve ser um dos seguintes: {", ".join(tipos_validos)}'
+            }), 400
+        
+        # Para todos os tipos, mês é obrigatório
+        if not mes:
+            return jsonify({
+                'success': False,
+                'error': 'Mês é obrigatório'
+            }), 400
+        
+        # Normalizar mês para 2 dígitos
+        try:
+            mes_int = int(mes)
+            if mes_int < 1 or mes_int > 12:
+                return jsonify({
+                    'success': False,
+                    'error': 'Mês deve estar entre 1 e 12'
+                }), 400
+            mes_normalizado = f"{mes_int:02d}"
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': 'Mês deve ser um número válido'
+            }), 400
+        
         # Preparar dados para inserção
         item_data = {
-            'ano': dados.get('ano'),
+            'ano': int(ano),
             'meta': int(meta_value),
-            'mes': dados.get('mes'),  # Pode ser None para metas/projeções anuais
-            'tipo': dados.get('tipo')
+            'mes': mes_normalizado,
+            'tipo': tipo
         }
         
         print(f"[PROJECOES_API] Criando item: {item_data}")
@@ -105,9 +139,9 @@ def api_criar():
         
         if result.data:
             tipo_desc = {
-                'meta': 'Meta anual',
-                'projecao': 'Projeção anual', 
-                'financeiro': 'Meta mensal'
+                'financeiro': 'Meta financeira',
+                'operacional': 'Meta operacional', 
+                'projecao': 'Projeção'
             }.get(dados.get('tipo'), 'Item')
             
             return jsonify({
@@ -128,6 +162,142 @@ def api_criar():
             'error': 'Erro ao criar item'
         }), 500
 
+@projecoes_metas_bp.route('/api/criar-lote', methods=['POST'])
+@login_required
+@perfil_required('financeiro', 'projecoes_metas')
+def api_criar_lote():
+    """API para criar múltiplas metas/projeções de uma vez"""
+    try:
+        dados = request.get_json()
+        
+        # Opção 1: Lista de itens completos
+        if 'itens' in dados and isinstance(dados['itens'], list):
+            itens_para_inserir = []
+            
+            for item in dados['itens']:
+                # Validação de cada item
+                meta_value = item.get('meta') or item.get('valor_meta')
+                tipo = item.get('tipo')
+                ano = item.get('ano')
+                mes = item.get('mes')
+                
+                if not ano or not meta_value or not tipo or not mes:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Cada item deve ter: ano, mes, meta/valor_meta, tipo'
+                    }), 400
+                
+                # Validação de tipos aceitos
+                tipos_validos = ['financeiro', 'operacional', 'projecao']
+                if tipo not in tipos_validos:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Tipo deve ser um dos seguintes: {", ".join(tipos_validos)}'
+                    }), 400
+                
+                # Normalizar mês
+                try:
+                    mes_int = int(mes)
+                    if mes_int < 1 or mes_int > 12:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Mês deve estar entre 1 e 12'
+                        }), 400
+                    mes_normalizado = f"{mes_int:02d}"
+                except ValueError:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Mês deve ser um número válido'
+                    }), 400
+                
+                itens_para_inserir.append({
+                    'ano': int(ano),
+                    'meta': int(meta_value),
+                    'mes': mes_normalizado,
+                    'tipo': tipo
+                })
+        
+        # Opção 2: Ano + meses + meta + tipo (para criar vários meses do mesmo ano/tipo/valor)
+        elif all(key in dados for key in ['ano', 'meses', 'meta', 'tipo']):
+            ano = dados.get('ano')
+            meses = dados.get('meses')  # Lista de meses
+            meta_value = dados.get('meta')
+            tipo = dados.get('tipo')
+            
+            if not isinstance(meses, list) or len(meses) == 0:
+                return jsonify({
+                    'success': False,
+                    'error': 'Meses deve ser uma lista não vazia'
+                }), 400
+            
+            # Validação de tipos aceitos
+            tipos_validos = ['financeiro', 'operacional', 'projecao']
+            if tipo not in tipos_validos:
+                return jsonify({
+                    'success': False,
+                    'error': f'Tipo deve ser um dos seguintes: {", ".join(tipos_validos)}'
+                }), 400
+            
+            itens_para_inserir = []
+            for mes in meses:
+                # Normalizar mês
+                try:
+                    mes_int = int(mes)
+                    if mes_int < 1 or mes_int > 12:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Mês deve estar entre 1 e 12'
+                        }), 400
+                    mes_normalizado = f"{mes_int:02d}"
+                except ValueError:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Mês deve ser um número válido'
+                    }), 400
+                
+                itens_para_inserir.append({
+                    'ano': int(ano),
+                    'meta': int(meta_value),
+                    'mes': mes_normalizado,
+                    'tipo': tipo
+                })
+        
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Envie "itens" (lista) ou "ano", "meses", "meta", "tipo"'
+            }), 400
+        
+        if not itens_para_inserir:
+            return jsonify({
+                'success': False,
+                'error': 'Nenhum item válido para inserir'
+            }), 400
+        
+        print(f"[PROJECOES_API] Criando {len(itens_para_inserir)} itens em lote")
+        
+        # Inserir todos os itens de uma vez
+        result = supabase_admin.table('fin_metas_projecoes').insert(itens_para_inserir).execute()
+        
+        if result.data:
+            return jsonify({
+                'success': True,
+                'message': f'{len(result.data)} itens criados com sucesso',
+                'data': result.data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Erro ao inserir dados em lote'
+            }), 500
+        
+    except Exception as e:
+        print(f"[PROJECOES_API] Erro ao criar lote: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Erro ao criar itens em lote'
+        }), 500
+
 @projecoes_metas_bp.route('/api/atualizar/<int:item_id>', methods=['PUT'])
 @login_required
 @perfil_required('financeiro', 'projecoes_metas')
@@ -138,18 +308,52 @@ def api_atualizar(item_id):
         
         # Validar dados obrigatórios - aceitar tanto 'meta' quanto 'valor_meta'
         meta_value = dados.get('meta') or dados.get('valor_meta')
-        if not dados.get('ano') or not meta_value or not dados.get('tipo'):
+        tipo = dados.get('tipo')
+        ano = dados.get('ano')
+        mes = dados.get('mes')
+        
+        if not ano or not meta_value or not tipo:
             return jsonify({
                 'success': False,
                 'error': 'Campos obrigatórios: ano, meta/valor_meta, tipo'
             }), 400
         
+        # Validação de tipos aceitos
+        tipos_validos = ['financeiro', 'operacional', 'projecao']
+        if tipo not in tipos_validos:
+            return jsonify({
+                'success': False,
+                'error': f'Tipo deve ser um dos seguintes: {", ".join(tipos_validos)}'
+            }), 400
+        
+        # Para todos os tipos, mês é obrigatório
+        if not mes:
+            return jsonify({
+                'success': False,
+                'error': 'Mês é obrigatório'
+            }), 400
+        
+        # Normalizar mês para 2 dígitos
+        try:
+            mes_int = int(mes)
+            if mes_int < 1 or mes_int > 12:
+                return jsonify({
+                    'success': False,
+                    'error': 'Mês deve estar entre 1 e 12'
+                }), 400
+            mes_normalizado = f"{mes_int:02d}"
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': 'Mês deve ser um número válido'
+            }), 400
+        
         # Preparar dados para atualização
         update_data = {
-            'ano': dados.get('ano'),
+            'ano': int(ano),
             'meta': int(meta_value),
-            'mes': dados.get('mes'),
-            'tipo': dados.get('tipo')
+            'mes': mes_normalizado,
+            'tipo': tipo
         }
         
         print(f"[PROJECOES_API] Atualizando item {item_id}: {update_data}")
@@ -159,9 +363,9 @@ def api_atualizar(item_id):
         
         if result.data:
             tipo_desc = {
-                'meta': 'Meta anual',
-                'projecao': 'Projeção anual',
-                'financeiro': 'Meta mensal'
+                'financeiro': 'Meta financeira',
+                'operacional': 'Meta operacional',
+                'projecao': 'Projeção'
             }.get(dados.get('tipo'), 'Item')
             
             return jsonify({
