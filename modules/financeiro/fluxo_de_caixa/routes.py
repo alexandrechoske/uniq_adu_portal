@@ -316,77 +316,6 @@ def api_fluxo_mensal():
             'error': 'Connection error - using fallback values'
         }), 200  # Return 200 instead of 500 to prevent frontend errors
 
-@fluxo_de_caixa_bp.route('/api/saldo-acumulado')
-@login_required
-@perfil_required('financeiro', 'fluxo_caixa')
-def api_saldo_acumulado():
-    """API para gráfico de evolução do saldo acumulado"""
-    try:
-        ano = request.args.get('ano', datetime.now().year)
-        mes = request.args.get('mes', None)  # None means full year
-        ano = int(ano)
-        
-        table_name = 'vw_fluxo_caixa'
-        
-        if mes:
-            # Filter by specific month
-            mes = int(mes)
-            inicio_mes = datetime(ano, mes, 1)
-            if mes == 12:
-                fim_mes = datetime(ano + 1, 1, 1) - timedelta(days=1)
-            else:
-                fim_mes = datetime(ano, mes + 1, 1) - timedelta(days=1)
-            
-            query = supabase_admin.table(table_name).select('data, saldo_acumulado')
-            query = query.gte('data', inicio_mes.strftime('%Y-%m-%d'))
-            query = query.lte('data', fim_mes.strftime('%Y-%m-%d'))
-            query = query.order('data')
-            query = _add_transferencia_filter(query)
-        else:
-            # Full year data
-            query = supabase_admin.table(table_name).select('data, saldo_acumulado')
-            query = query.gte('data', f'{ano}-01-01')
-            query = query.lte('data', f'{ano}-12-31')
-            query = query.order('data')
-            query = _add_transferencia_filter(query)
-        
-        response = query.execute()
-        dados = response.data
-        
-        # Converter para formato do gráfico
-        datas = [item['data'] for item in dados]
-        saldos = [float(item['saldo_acumulado']) for item in dados]
-        
-        # Formatar datas
-        datas_formatadas = []
-        for data_str in datas:
-            data_temp = datetime.strptime(data_str, '%Y-%m-%d')
-            data_formatada = data_temp.strftime('%d/%m')
-            datas_formatadas.append(data_formatada)
-        
-        return jsonify({
-            'datas': datas_formatadas,
-            'saldos': saldos
-        })
-        
-    except Exception as e:
-        # Log the error for debugging
-        import traceback
-        error_details = {
-            'error': str(e),
-            'traceback': traceback.format_exc(),
-            'ano': ano if 'ano' in locals() else 'Not defined',
-            'mes': mes if 'mes' in locals() else 'Not defined'
-        }
-        print(f"Error in api_saldo_acumulado: {error_details}")  # Simple logging
-        
-        # Return default/fallback values instead of failing completely
-        return jsonify({
-            'datas': [],
-            'saldos': [],
-            'error': 'Connection error - using fallback values'
-        }), 200  # Return 200 instead of 500 to prevent frontend errors
-
 @fluxo_de_caixa_bp.route('/api/despesas-categoria')
 @login_required
 @perfil_required('financeiro', 'fluxo_caixa')
@@ -587,7 +516,7 @@ def _calcular_variacao_percentual(valor_atual, valor_anterior):
 @login_required
 @perfil_required('financeiro', 'fluxo_caixa')
 def api_projecao():
-    """API para gráfico de projeção de fluxo de caixa (24 meses passados + 6 meses futuros)"""
+    """API para gráfico de projeção de fluxo de caixa (24 meses passados + projeções da tabela fin_metas_projecoes)"""
     try:
         # Get current date
         now = datetime.now()
@@ -631,35 +560,49 @@ def api_projecao():
             mes_formatado = data_temp.strftime('%b/%Y')
             past_dates.append(mes_formatado)
         
-        # Simple projection for next 6 months (using average of last 6 months)
-        if len(past_fluxos) >= 6:
-            # Calculate average of last 6 months for projection
-            last_6_months = past_fluxos[-6:]
-            avg_fluxo = sum(last_6_months) / len(last_6_months)
+        # Query projeções from fin_metas_projecoes table
+        projecoes_query = supabase_admin.table('fin_metas_projecoes').select('ano, mes, meta').eq('tipo', 'projecao').order('ano, mes')
+        projecoes_response = projecoes_query.execute()
+        projecoes_dados = projecoes_response.data
+        
+        # Process future projections from database
+        future_dates = []
+        future_fluxos = []
+        future_saldos = []
+        
+        # Get last saldo for projection base
+        last_saldo = past_saldos[-1] if past_saldos else 0
+        current_saldo = last_saldo
+        
+        # Group projections by year-month
+        projecoes_dict = {}
+        for proj in projecoes_dados:
+            ano = int(proj['ano'])
+            mes = int(proj['mes'])
+            meta = float(proj['meta'])
             
-            # Generate next 6 months dates
-            future_dates = []
-            future_fluxos = []
+            # Create date key
+            data_proj = datetime(ano, mes, 1)
             
-            for i in range(1, 7):  # Next 6 months
-                future_date = now + timedelta(days=30*i)
-                mes_formatado = future_date.strftime('%b/%Y')
-                future_dates.append(mes_formatado)
-                future_fluxos.append(avg_fluxo)  # Simple projection
+            # Only include future projections (after current month)
+            if data_proj > now.replace(day=1):
+                mes_key = f"{ano}-{mes:02d}"
+                projecoes_dict[mes_key] = meta
+        
+        # Sort and convert projections
+        future_months = sorted(projecoes_dict.keys())
+        
+        for mes_key in future_months:
+            ano, mes_num = mes_key.split('-')
+            data_temp = datetime.strptime(f"{ano}-{mes_num}-01", '%Y-%m-%d')
+            mes_formatado = data_temp.strftime('%b/%Y')
             
-            # For saldo projection, continue from last saldo
-            last_saldo = past_saldos[-1] if past_saldos else 0
-            future_saldos = []
-            current_saldo = last_saldo
+            future_dates.append(mes_formatado)
+            future_fluxos.append(projecoes_dict[mes_key])
             
-            for fluxo in future_fluxos:
-                current_saldo += fluxo
-                future_saldos.append(current_saldo)
-        else:
-            # Not enough data for projection
-            future_dates = []
-            future_fluxos = []
-            future_saldos = []
+            # Calculate accumulated saldo
+            current_saldo += projecoes_dict[mes_key]
+            future_saldos.append(current_saldo)
         
         return jsonify({
             'past_dates': past_dates,

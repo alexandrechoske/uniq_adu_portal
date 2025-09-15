@@ -171,11 +171,6 @@ class FluxoCaixaController {
                 return null;
             });
             
-            const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
-                console.error('Erro ao carregar saldo acumulado:', error);
-                return null;
-            });
-            
             const despesasCategoriaPromise = this.loadDespesasCategoria().catch(error => {
                 console.error('Erro ao carregar despesas por categoria:', error);
                 return null;
@@ -195,7 +190,6 @@ class FluxoCaixaController {
             await Promise.all([
                 kpisPromise,
                 fluxoMensalPromise,
-                saldoAcumuladoPromise,
                 despesasCategoriaPromise,
                 projecaoPromise,
                 tableDataPromise
@@ -423,135 +417,29 @@ class FluxoCaixaController {
                     title: {
                         display: true,
                         text: 'Fluxo de Caixa Mês a Mês'
-                    }
-                },
-                scales: {
-                    y: {
-                        min: minPadded,
-                        max: maxPadded,
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrencyShort(value);
-                            }
-                        }
                     },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    async loadSaldoAcumulado() {
-        try {
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?ano=${this.currentAno}`);
-            const data = await response.json();
-            
-            if (!response.ok || data.error) {
-                throw new Error(data.error || 'Erro ao carregar saldo acumulado');
-            }
-            
-            this.renderSaldoAcumuladoChart(data);
-        } catch (error) {
-            console.error('Erro ao carregar saldo acumulado:', error);
-            this.showError('Erro ao carregar saldo acumulado: ' + (error.message || 'Erro desconhecido'));
-            // Render error state in chart
-            this.renderSaldoAcumuladoChartError();
-        }
-    }
-
-    renderSaldoAcumuladoChartError() {
-        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
-        
-        if (this.charts.saldoAcumulado) {
-            this.charts.saldoAcumulado.destroy();
-        }
-        
-        // Create a simple error message chart
-        this.charts.saldoAcumulado = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Erro'],
-                datasets: [{
-                    label: 'Erro ao carregar dados',
-                    data: [1],
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    borderWidth: 2,
-                    fill: true
-                }]
-            },
-            options: {
-                ...this.chartDefaults,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        enabled: false
-                    }
-                },
-                scales: {
-                    y: {
-                        display: false
-                    },
-                    x: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-    
-    renderSaldoAcumuladoChart(data) {
-        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
-        
-        if (this.charts.saldoAcumulado) {
-            this.charts.saldoAcumulado.destroy();
-        }
-        
-        // Group data by month instead of daily
-        const monthlyData = this.groupByMonthForSaldo(data.datas, data.saldos);
-        
-        // Find min and max values for proper scaling
-        const minValue = Math.min(...monthlyData.saldos);
-        const maxValue = Math.max(...monthlyData.saldos);
-        const range = maxValue - minValue;
-        const minPadded = minValue - (range * 0.1);
-        const maxPadded = maxValue + (range * 0.1);
-        
-        // Create line chart for saldo acumulado (monthly)
-        this.charts.saldoAcumulado = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: monthlyData.datas,
-                datasets: [{
-                    label: 'Saldo Acumulado',
-                    data: monthlyData.saldos,
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                ...this.chartDefaults,
-                plugins: {
-                    ...this.chartDefaults.plugins,
-                    title: {
+                    datalabels: {
                         display: true,
-                        text: 'Saldo Acumulado por Período (Mensal)'
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 11,
+                            weight: 'bold'
+                        }
                     }
                 },
                 scales: {
@@ -575,48 +463,6 @@ class FluxoCaixaController {
                 }
             }
         });
-    }
-
-    // Helper function to group daily data by month for saldo acumulado
-    groupByMonthForSaldo(dates, values) {
-        const monthlyData = {};
-        
-        // Group by month and keep the last value of each month (for saldo acumulado)
-        for (let i = 0; i < dates.length; i++) {
-            const date = dates[i];
-            const value = values[i];
-            
-            // Extract month from date (format: dd/MM)
-            const parts = date.split('/');
-            if (parts.length === 2) {
-                const monthKey = parts[1]; // Month part (MM)
-                
-                // For saldo acumulado, we want the last value of each month
-                monthlyData[monthKey] = {
-                    date: date,
-                    value: value
-                };
-            }
-        }
-        
-        // Convert to arrays and sort by month
-        const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
-            return parseInt(a) - parseInt(b);
-        });
-        
-        const monthlyDates = sortedMonths.map(month => {
-            const monthNames = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                               'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            const monthNum = parseInt(month);
-            return monthNames[monthNum] || month;
-        });
-        
-        const monthlyValues = sortedMonths.map(month => monthlyData[month].value);
-        
-        return {
-            datas: monthlyDates,
-            saldos: monthlyValues
-        };
     }
     
     async loadDespesasCategoria() {
@@ -698,6 +544,9 @@ class FluxoCaixaController {
             $('#btn-voltar-categorias').hide();
         }
         
+        // Convert negative values to positive for better visualization
+        const valoresPositivos = data.valores.map(valor => Math.abs(valor));
+        
         // For horizontal bar chart, we need to swap x and y axes
         this.charts.despesasCategoria = new Chart(ctx, {
             type: 'bar',
@@ -705,9 +554,9 @@ class FluxoCaixaController {
                 labels: data.labels,
                 datasets: [{
                     label: data.drill_categoria ? 'Despesas por Classe' : 'Despesas por Categoria',
-                    data: data.valores,
-                    backgroundColor: data.valores.map(() => 'rgba(111, 66, 193, 0.8)'),
-                    borderColor: data.valores.map(() => 'rgba(111, 66, 193, 1)'),
+                    data: valoresPositivos,
+                    backgroundColor: valoresPositivos.map(() => 'rgba(111, 66, 193, 0.8)'),
+                    borderColor: valoresPositivos.map(() => 'rgba(111, 66, 193, 1)'),
                     borderWidth: 2,
                     borderRadius: 6,
                     borderSkipped: false

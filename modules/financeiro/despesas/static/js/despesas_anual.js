@@ -1,6 +1,7 @@
 /**
- * Despesas Anuais - JavaScript
+ * Despesas Anuais - JavaScript Atualizado
  * Sistema de análise de despesas com gráficos e KPIs
+ * Versão com suporte a Centro de Resultado
  */
 
 class DespesasController {
@@ -15,9 +16,13 @@ class DespesasController {
         }
         
         this.currentPeriodo = 'ano_atual';
+        this.currentCentroResultado = '';
+        this.currentCategoria = '';
+        this.currentClasse = '';
         this.currentCategoriaDrill = null;
         this.currentPage = 1;
         this.pageLimit = 25;
+        this.currentMode = 'centro_resultado'; // 'centro_resultado' ou 'categoria'
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -78,6 +83,7 @@ class DespesasController {
     init() {
         this.setupEventListeners();
         this.initializeLayout();
+        this.loadFilterOptions();
         this.loadData();
     }
     
@@ -95,17 +101,30 @@ class DespesasController {
         $('#apply-filters').on('click', () => this.applyFilters());
         $('#clear-filters').on('click', () => this.resetFilters());
         
+        // Alternar modo entre categoria e centro de resultado
+        $('input[name="chart-mode"]').on('change', (e) => {
+            this.currentMode = e.target.value;
+            this.updateChartTitle();
+            this.loadCategoriasData();
+        });
+        
+        $('input[name="table-mode"]').on('change', (e) => {
+            this.currentMode = e.target.value;
+            this.updateTableTitle();
+            this.loadCategoriasData();
+        });
+        
         // Modal de detalhes
         $('#close-detalhes-modal, #modal-close-btn').on('click', () => this.closeDetalhesModal());
         $('#modal-export-btn').on('click', () => this.exportarDetalhes());
         
         // Paginação do modal
-        $('#modal-btn-prev-page').on('click', () => this.changePage(this.currentPage - 1));
-        $('#modal-btn-next-page').on('click', () => this.changePage(this.currentPage + 1));
+        $('#modal-btn-prev-page').on('click', () => this.prevPageModal());
+        $('#modal-btn-next-page').on('click', () => this.nextPageModal());
         
-        // Filtros do modal
-        $('#modal-search').on('input', () => this.applyModalFilters());
-        $('#modal-classe-filter').on('change', () => this.applyModalFilters());
+        // Busca no modal
+        $('#modal-search').on('input', debounce(() => this.searchDetalhes(), 500));
+        $('#modal-classe-filter').on('change', () => this.filterDetalhes());
         
         // Período personalizado
         $('#periodo-select').on('change', (e) => {
@@ -116,47 +135,92 @@ class DespesasController {
             }
         });
         
-        // Fechar modais ao clicar no backdrop
+        // Fechar modal ao clicar fora
         $(document).on('click', '.modal-backdrop', (e) => {
             if (e.target === e.currentTarget) {
                 this.closeFiltersModal();
                 this.closeDetalhesModal();
             }
         });
-        
-        // Esc key para fechar modais
-        $(document).on('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.closeFiltersModal();
-                this.closeDetalhesModal();
+    }
+    
+    async loadFilterOptions() {
+        try {
+            const response = await fetch('/financeiro/despesas/api/filtros-opcoes');
+            const result = await response.json();
+            
+            if (result.success) {
+                this.populateFilterOptions(result.data);
             }
+        } catch (error) {
+            console.error('Erro ao carregar opções de filtros:', error);
+        }
+    }
+    
+    populateFilterOptions(data) {
+        // Limpar e popular centro de resultado
+        const centroSelect = $('#centro-resultado-select');
+        centroSelect.html('<option value="">Todos os Centros de Resultado</option>');
+        data.centros_resultado.forEach(centro => {
+            centroSelect.append(`<option value="${centro}">${centro}</option>`);
+        });
+        
+        // Limpar e popular categoria
+        const categoriaSelect = $('#categoria-select');
+        categoriaSelect.html('<option value="">Todas as Categorias</option>');
+        data.categorias.forEach(categoria => {
+            categoriaSelect.append(`<option value="${categoria}">${categoria}</option>`);
+        });
+        
+        // Limpar e popular classe
+        const classeSelect = $('#classe-select');
+        classeSelect.html('<option value="">Todas as Classes</option>');
+        data.classes.forEach(classe => {
+            classeSelect.append(`<option value="${classe}">${classe}</option>`);
         });
     }
     
+    updateChartTitle() {
+        const title = this.currentMode === 'centro_resultado' ? 
+            'Despesas por Centro de Resultado' : 
+            'Despesas por Categoria';
+        $('#chart-title').text(title);
+    }
+    
+    updateTableTitle() {
+        const title = this.currentMode === 'centro_resultado' ? 
+            'Análise por Centro de Resultado' : 
+            'Análise por Categoria';
+        $('#table-title').text(title);
+        
+        // Atualizar cabeçalho da coluna
+        const headerText = this.currentMode === 'centro_resultado' ? 
+            'Centro de Resultado' : 
+            'Categoria';
+        $('#col-header-name').text(headerText);
+    }
+    
     showLoading() {
-        $('#loading-overlay').show();
+        $('#loading-overlay').fadeIn(300);
     }
     
     hideLoading() {
-        $('#loading-overlay').hide();
+        $('#loading-overlay').fadeOut(300);
     }
     
     async loadData() {
         this.showLoading();
         
         try {
-            // Carregar todos os dados em paralelo
             await Promise.all([
                 this.loadKPIs(),
-                this.loadCategorias(),
+                this.loadCategoriasData(),
                 this.loadTendencias(),
                 this.loadFornecedores()
             ]);
-            
-            this.updateFilterSummary();
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
-            this.showError('Erro ao carregar dados de despesas');
+            this.showError('Erro ao carregar dados das despesas');
         } finally {
             this.hideLoading();
         }
@@ -164,76 +228,132 @@ class DespesasController {
     
     async loadKPIs() {
         try {
-            const response = await fetch(`/financeiro/despesas/api/kpis?periodo=${this.currentPeriodo}`);
+            const params = new URLSearchParams({
+                periodo: this.currentPeriodo,
+                centro_resultado: this.currentCentroResultado,
+                categoria: this.currentCategoria,
+                classe: this.currentClasse
+            });
+            
+            const response = await fetch(`/financeiro/despesas/api/kpis?${params}`);
             const result = await response.json();
             
             if (result.success) {
                 this.updateKPIs(result.data);
             } else {
-                throw new Error(result.error);
+                throw new Error(result.error || 'Erro ao carregar KPIs');
             }
         } catch (error) {
             console.error('Erro ao carregar KPIs:', error);
-            throw error;
+            this.showError('Erro ao carregar indicadores principais');
+        }
+    }
+    
+    async loadCategoriasData() {
+        try {
+            const endpoint = this.currentMode === 'centro_resultado' ? 
+                '/financeiro/despesas/api/centro-resultado' : 
+                '/financeiro/despesas/api/categorias';
+            
+            const params = new URLSearchParams({
+                periodo: this.currentPeriodo,
+                centro_resultado: this.currentCentroResultado,
+                categoria: this.currentCategoria,
+                classe: this.currentClasse
+            });
+            
+            const response = await fetch(`${endpoint}?${params}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.updateCategoriasChart(result.data);
+                this.updateCategoriasTable(result.data);
+            } else {
+                throw new Error(result.error || 'Erro ao carregar dados de categorias');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar categorias:', error);
+            this.showError('Erro ao carregar análise por categoria/centro de resultado');
+        }
+    }
+    
+    async loadTendencias() {
+        try {
+            const response = await fetch('/financeiro/despesas/api/tendencias');
+            const result = await response.json();
+            
+            if (result.success) {
+                this.updateTendenciasChart(result.data, result.combinacoes || result.categorias);
+            } else {
+                throw new Error(result.error || 'Erro ao carregar tendências');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar tendências:', error);
+            this.showError('Erro ao carregar tendências mensais');
+        }
+    }
+    
+    async loadFornecedores() {
+        try {
+            const params = new URLSearchParams({
+                periodo: this.currentPeriodo,
+                centro_resultado: this.currentCentroResultado,
+                categoria: this.currentCategoria,
+                classe: this.currentClasse
+            });
+            
+            const response = await fetch(`/financeiro/despesas/api/fornecedores?${params}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.updateFornecedoresTable(result.data);
+            } else {
+                throw new Error(result.error || 'Erro ao carregar fornecedores');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar fornecedores:', error);
+            this.showError('Erro ao carregar ranking de fornecedores');
         }
     }
     
     updateKPIs(data) {
-        // Total de Despesas
-        $('#valor-total-despesas').text(formatCurrencyShort(data.total_despesas));
-        this.updateVariacao('#var-total-despesas', data.variacoes.total_despesas);
+        // Atualizar valores
+        $('#valor-total-despesas').text(formatCurrency(data.total_despesas || 0));
+        $('#valor-funcionarios').text(formatCurrency(data.despesas_funcionarios || 0));
+        $('#valor-folha-liquida').text(formatCurrency(data.folha_liquida || 0));
+        $('#valor-impostos').text(formatCurrency(data.impostos || 0));
+        $('#valor-percentual-folha').text(formatPercentage(data.percentual_folha_faturamento || 0));
         
-        // Despesas com Funcionários
-        $('#valor-funcionarios').text(formatCurrencyShort(data.despesas_funcionarios));
-        this.updateVariacao('#var-funcionarios', data.variacoes.despesas_funcionarios);
-        
-        // Folha Líquida
-        $('#valor-folha-liquida').text(formatCurrencyShort(data.folha_liquida));
-        this.updateVariacao('#var-folha-liquida', data.variacoes.folha_liquida);
-        
-        // Impostos
-        $('#valor-impostos').text(formatCurrencyShort(data.impostos));
-        this.updateVariacao('#var-impostos', data.variacoes.impostos);
-        
-        // Percentual Folha sobre Faturamento
-        $('#valor-percentual-folha').text(data.percentual_folha_faturamento.toFixed(1) + '%');
-    }
-    
-    updateVariacao(selector, variacao) {
-        const element = $(selector);
-        
-        if (variacao === undefined || variacao === null) {
-            element.text('-').removeClass('positive negative neutral');
-            return;
+        // Atualizar variações se disponível
+        if (data.variacoes) {
+            this.updateVariacoes(data.variacoes);
         }
-        
-        const icon = variacao > 0 ? '▲' : variacao < 0 ? '▼' : '●';
-        const className = variacao > 0 ? 'positive' : variacao < 0 ? 'negative' : 'neutral';
-        
-        element
-            .html(`${icon} ${Math.abs(variacao).toFixed(1)}% vs. período anterior`)
-            .removeClass('positive negative neutral')
-            .addClass(className);
     }
     
-    async loadCategorias() {
-        try {
-            const response = await fetch(`/financeiro/despesas/api/categorias?periodo=${this.currentPeriodo}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                this.updateGraficoCategorias(result.data);
-                this.updateTabelaCategorias(result.data);
-            } else {
-                throw new Error(result.error);
+    updateVariacoes(variacoes) {
+        const kpis = [
+            { element: '#var-total-despesas', value: variacoes.total_despesas },
+            { element: '#var-funcionarios', value: variacoes.despesas_funcionarios },
+            { element: '#var-folha-liquida', value: variacoes.folha_liquida },
+            { element: '#var-impostos', value: variacoes.impostos }
+        ];
+        
+        kpis.forEach(kpi => {
+            if (kpi.value !== undefined) {
+                const element = $(kpi.element);
+                const isPositive = kpi.value > 0;
+                const icon = isPositive ? 'mdi-trending-up' : 'mdi-trending-down';
+                const className = isPositive ? 'variation-up' : 'variation-down';
+                
+                element.html(`
+                    <i class="mdi ${icon}"></i>
+                    ${Math.abs(kpi.value).toFixed(1)}%
+                `).removeClass('variation-up variation-down').addClass(className);
             }
-        } catch (error) {
-            console.error('Erro ao carregar categorias:', error);
-            throw error;
-        }
+        });
     }
     
-    updateGraficoCategorias(data) {
+    updateCategoriasChart(data) {
         const ctx = document.getElementById('chart-categorias').getContext('2d');
         
         // Destruir gráfico anterior se existir
@@ -241,28 +361,23 @@ class DespesasController {
             this.charts.categorias.destroy();
         }
         
-        // Preparar dados para o gráfico
-        const labels = data.map(item => item.categoria);
+        const labels = data.map(item => 
+            this.currentMode === 'centro_resultado' ? 
+                (item.centro_resultado || 'Não informado') : 
+                (item.categoria || 'Não informado')
+        );
         const valores = data.map(item => item.valor);
-        
-        // Cores para as barras
-        const backgroundColors = [
-            '#dc3545', '#fd7e14', '#ffc107', '#198754', '#0dcaf0',
-            '#6f42c1', '#d63384', '#20c997', '#0d6efd', '#6610f2'
-        ];
         
         this.charts.categorias = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Valor',
+                    label: 'Valor das Despesas',
                     data: valores,
-                    backgroundColor: backgroundColors.slice(0, data.length),
-                    borderColor: backgroundColors.slice(0, data.length),
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    borderSkipped: false
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -270,104 +385,32 @@ class DespesasController {
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
-                        const categoria = labels[index];
-                        this.openDetalhesModal(categoria);
+                        const label = labels[index];
+                        this.openDetalhesModal(label);
                     }
-                },
-                plugins: {
-                    ...this.chartDefaults.plugins,
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        ...this.chartDefaults.plugins.tooltip,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${formatCurrencyShort(context.parsed.y)}`;
-                            },
-                            afterLabel: function(context) {
-                                return 'Clique para ver detalhes';
-                            }
-                        }
-                    },
-                    datalabels: {
-                        display: true,
-                        anchor: 'end',
-                        align: 'top',
-                        offset: 4,
-                        color: '#495057',
-                        font: {
-                            weight: 'bold',
-                            size: 11
-                        },
-                        formatter: function(value) {
-                            return formatCurrencyShort(value);
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        display: false, // Ocultar eixo Y
-                        beginAtZero: true
-                    },
-                    x: {
-                        ...this.chartDefaults.scales.x,
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 0,
-                            color: '#495057',
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                hover: {
-                    animationDuration: 200
                 }
-            },
-            plugins: [{
-                // Plugin customizado para rótulos nas barras
-                id: 'barLabels',
-                afterDatasetsDraw: function(chart) {
-                    const ctx = chart.ctx;
-                    chart.data.datasets.forEach((dataset, i) => {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach((bar, index) => {
-                            const data = dataset.data[index];
-                            
-                            ctx.fillStyle = '#495057';
-                            ctx.font = 'bold 11px Inter, sans-serif';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            
-                            const label = formatCurrencyShort(data);
-                            ctx.fillText(label, bar.x, bar.y - 5);
-                        });
-                    });
-                }
-            }]
+            }
         });
     }
     
-    updateTabelaCategorias(data) {
+    updateCategoriasTable(data) {
         const tbody = $('#table-categorias tbody');
         tbody.empty();
         
-        data.forEach((item, index) => {
+        data.forEach(item => {
+            const nome = this.currentMode === 'centro_resultado' ? 
+                (item.centro_resultado || 'Não informado') : 
+                (item.categoria || 'Não informado');
+            
             const row = `
                 <tr>
-                    <td>${item.categoria}</td>
-                    <td class="currency">${formatCurrency(item.valor)}</td>
-                    <td class="percentage">${item.percentual.toFixed(1)}%</td>
+                    <td>${nome}</td>
+                    <td>${formatCurrency(item.valor)}</td>
+                    <td>${formatPercentage(item.percentual)}</td>
                     <td>
-                        <button class="action-btn" onclick="despesasController.openDetalhesModal('${item.categoria}')">
-                            <i class="mdi mdi-magnify"></i>
-                            Detalhes
+                        <button class="btn btn-sm btn-primary" onclick="window.despesasController.openDetalhesModal('${nome}')">
+                            <i class="mdi mdi-eye"></i>
+                            Ver Detalhes
                         </button>
                     </td>
                 </tr>
@@ -376,23 +419,7 @@ class DespesasController {
         });
     }
     
-    async loadTendencias() {
-        try {
-            const response = await fetch(`/financeiro/despesas/api/tendencias`);
-            const result = await response.json();
-            
-            if (result.success) {
-                this.updateGraficoTendencias(result.data, result.categorias);
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar tendências:', error);
-            throw error;
-        }
-    }
-    
-    updateGraficoTendencias(data, categorias) {
+    updateTendenciasChart(data, series) {
         const ctx = document.getElementById('chart-tendencias').getContext('2d');
         
         // Destruir gráfico anterior se existir
@@ -400,42 +427,35 @@ class DespesasController {
             this.charts.tendencias.destroy();
         }
         
-        if (categorias.length === 0) {
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-            return;
-        }
-        
-        // Preparar dados para o gráfico de linhas
+        // Preparar dados para o gráfico de linha
         const allLabels = new Set();
-        categorias.forEach(categoria => {
-            if (data[categoria] && data[categoria].labels) {
-                data[categoria].labels.forEach(label => allLabels.add(label));
-            }
+        Object.values(data).forEach(item => {
+            item.labels.forEach(label => allLabels.add(label));
         });
         
         const sortedLabels = Array.from(allLabels).sort();
         
-        const datasets = categorias.map((categoria, index) => {
-            const categoryData = data[categoria] || { labels: [], valores: [] };
-            
-            // Mapear valores para os labels ordenados
-            const mappedValues = sortedLabels.map(label => {
-                const labelIndex = categoryData.labels.indexOf(label);
-                return labelIndex >= 0 ? categoryData.valores[labelIndex] : 0;
+        const datasets = series.map((serie, index) => {
+            const serieData = data[serie] || { labels: [], valores: [] };
+            const valores = sortedLabels.map(label => {
+                const labelIndex = serieData.labels.indexOf(label);
+                return labelIndex >= 0 ? serieData.valores[labelIndex] : 0;
             });
             
             const colors = [
-                '#dc3545', '#fd7e14', '#198754', '#0dcaf0', '#6f42c1'
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 205, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)'
             ];
             
             return {
-                label: categoria,
-                data: mappedValues,
+                label: serie,
+                data: valores,
                 borderColor: colors[index % colors.length],
-                backgroundColor: colors[index % colors.length] + '20',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.4
+                backgroundColor: colors[index % colors.length].replace('0.8', '0.2'),
+                tension: 0.1
             };
         });
         
@@ -445,377 +465,242 @@ class DespesasController {
                 labels: sortedLabels,
                 datasets: datasets
             },
-            options: {
-                ...this.chartDefaults,
-                scales: {
-                    ...this.chartDefaults.scales,
-                    x: {
-                        ...this.chartDefaults.scales.x,
-                        ticks: {
-                            maxTicksLimit: 12
-                        }
-                    }
-                }
-            }
+            options: this.chartDefaults
         });
     }
     
-    async loadFornecedores() {
-        try {
-            const response = await fetch(`/financeiro/despesas/api/fornecedores?periodo=${this.currentPeriodo}`);
-            const result = await response.json();
-            
-            if (result.success) {
-                this.updateTabelaFornecedores(result.data);
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error) {
-            console.error('Erro ao carregar fornecedores:', error);
-            throw error;
-        }
-    }
-    
-    updateTabelaFornecedores(data) {
+    updateFornecedoresTable(data) {
         const tbody = $('#table-fornecedores tbody');
         tbody.empty();
         
         data.forEach((item, index) => {
             const row = `
                 <tr>
-                    <td>${index + 1}º</td>
+                    <td>${index + 1}</td>
                     <td>${item.descricao}</td>
-                    <td class="currency">${formatCurrency(item.valor)}</td>
-                    <td class="percentage">${item.percentual.toFixed(1)}%</td>
+                    <td>${formatCurrency(item.valor)}</td>
+                    <td>${formatPercentage(item.percentual)}</td>
                 </tr>
             `;
             tbody.append(row);
         });
     }
     
+    // Continua com os métodos restantes...
     async openDetalhesModal(categoria) {
         this.currentCategoriaDrill = categoria;
         this.currentPage = 1;
         
-        try {
-            this.showLoading();
-            
-            // Carregar dados da categoria
-            await this.loadDetalhesCategoria();
-            
-            // Configurar modal
-            $('#modal-categoria-selecionada').text(categoria);
-            $('#modal-search').val('');
-            $('#modal-classe-filter').val('');
-            
-            // Mostrar modal
-            $('#detalhes-modal').show();
-            
-        } catch (error) {
-            console.error('Erro ao abrir modal de detalhes:', error);
-            this.showError('Erro ao carregar detalhes da categoria');
-        } finally {
-            this.hideLoading();
-        }
+        $('#modal-categoria-selecionada').text(categoria);
+        $('#detalhes-modal').fadeIn(300);
+        
+        await this.loadDetalhesData();
     }
     
-    closeDetalhesModal() {
-        $('#detalhes-modal').hide();
-        this.currentCategoriaDrill = null;
-        this.currentPage = 1;
-    }
-    
-    async loadDetalhesCategoria() {
+    async loadDetalhesData() {
         try {
-            const response = await fetch(
-                `/financeiro/despesas/api/detalhes/${encodeURIComponent(this.currentCategoriaDrill)}?periodo=${this.currentPeriodo}&page=${this.currentPage}&limit=${this.pageLimit}`
-            );
+            const params = new URLSearchParams({
+                periodo: this.currentPeriodo,
+                page: this.currentPage,
+                limit: this.pageLimit
+            });
+            
+            // Adicionar parâmetro para indicar que estamos filtrando por centro de resultado
+            if (this.currentMode === 'centro_resultado') {
+                params.append('centro_resultado', 'true');
+            }
+            
+            const response = await fetch(`/financeiro/despesas/api/detalhes/${encodeURIComponent(this.currentCategoriaDrill)}?${params}`);
             const result = await response.json();
             
             if (result.success) {
-                this.updateModalDetalhes(result.data, result.pagination);
-                this.updateModalStats(result.data);
-                this.updateModalFilters(result.data);
+                this.updateDetalhesModal(result.data, result.pagination, result.totals);
             } else {
-                throw new Error(result.error);
+                throw new Error(result.error || 'Erro ao carregar detalhes');
             }
         } catch (error) {
             console.error('Erro ao carregar detalhes:', error);
-            throw error;
+            this.showError('Erro ao carregar detalhes da categoria');
         }
     }
     
-    updateModalDetalhes(data, pagination) {
+    updateDetalhesModal(data, pagination, totals) {
+        // Atualizar estatísticas
+        if (totals) {
+            $('#modal-total-categoria').text(formatCurrency(totals.total_valor || 0));
+            $('#modal-num-transacoes').text(totals.num_transacoes || 0);
+            $('#modal-valor-medio').text(formatCurrency(totals.valor_medio || 0));
+        }
+        
+        // Atualizar tabela
         const tbody = $('#modal-table-detalhes tbody');
         tbody.empty();
         
-        if (data.length === 0) {
-            tbody.append(`
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem; color: #6c757d;">
-                        <i class="mdi mdi-information-outline" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-                        Nenhum registro encontrado para esta categoria no período selecionado
-                    </td>
-                </tr>
-            `);
-            $('#modal-pagination-info').text('Nenhum registro');
-            $('#modal-btn-prev-page, #modal-btn-next-page').prop('disabled', true);
-            return;
-        }
-        
         data.forEach(item => {
-            const dataFormatada = new Date(item.data).toLocaleDateString('pt-BR');
             const row = `
                 <tr>
-                    <td>${dataFormatada}</td>
-                    <td title="${item.descricao}">${item.descricao}</td>
-                    <td>${item.classe || '-'}</td>
-                    <td>${item.codigo || '-'}</td>
-                    <td class="currency">${formatCurrency(item.valor)}</td>
+                    <td>${formatDate(item.data)}</td>
+                    <td>${item.descricao}</td>
+                    <td>${item.classe}</td>
+                    <td>${item.codigo}</td>
+                    <td>${formatCurrency(item.valor)}</td>
                 </tr>
             `;
             tbody.append(row);
         });
         
-        // Atualizar informações de paginação
-        const info = `Página ${pagination.current_page} de ${pagination.total_pages} (${pagination.total_records} registros)`;
-        $('#modal-pagination-info').text(info);
+        // Atualizar paginação
+        this.updateModalPagination(pagination);
+    }
+    
+    updateModalPagination(pagination) {
+        $('#modal-pagination-info').text(
+            `Página ${pagination.current_page} de ${pagination.total_pages} (${pagination.total_records} registros)`
+        );
         
-        // Controlar botões de paginação
         $('#modal-btn-prev-page').prop('disabled', !pagination.has_prev);
         $('#modal-btn-next-page').prop('disabled', !pagination.has_next);
     }
     
-    updateModalStats(data) {
-        if (data.length === 0) {
-            $('#modal-total-categoria').text('R$ 0,00');
-            $('#modal-num-transacoes').text('0');
-            $('#modal-valor-medio').text('R$ 0,00');
-            return;
-        }
-        
-        const total = data.reduce((sum, item) => sum + item.valor, 0);
-        const numTransacoes = data.length;
-        const valorMedio = total / numTransacoes;
-        
-        $('#modal-total-categoria').text(formatCurrencyShort(total));
-        $('#modal-num-transacoes').text(numTransacoes.toLocaleString('pt-BR'));
-        $('#modal-valor-medio').text(formatCurrencyShort(valorMedio));
-    }
-    
-    updateModalFilters(data) {
-        // Atualizar filtro de classes
-        const classes = [...new Set(data.map(item => item.classe).filter(classe => classe))];
-        const classeSelect = $('#modal-classe-filter');
-        
-        // Limpar opções existentes (exceto a primeira)
-        classeSelect.find('option:not(:first)').remove();
-        
-        // Adicionar novas opções
-        classes.forEach(classe => {
-            classeSelect.append(`<option value="${classe}">${classe}</option>`);
-        });
-    }
-    
-    applyModalFilters() {
-        // Por simplicidade, recarregar dados quando filtros mudarem
-        // Em uma implementação mais sofisticada, filtraria localmente
-        const search = $('#modal-search').val();
-        const classe = $('#modal-classe-filter').val();
-        
-        if (search || classe) {
-            // Implementar filtros locais ou via API
-            console.log('Aplicando filtros:', { search, classe });
-        }
-    }
-    
-    exportarDetalhes() {
-        // Implementar exportação dos dados
-        console.log('Exportando detalhes da categoria:', this.currentCategoriaDrill);
-        this.showError('Funcionalidade de exportação será implementada em breve');
-    }
-    
-    modalPreviousPage() {
-        if (this.currentPage > 1) {
-            this.currentPage--;
-            this.loadDetalhesCategoria();
-        }
-    }
-    
-    modalNextPage() {
-        this.currentPage++;
-        this.loadDetalhesCategoria();
-    }
-    
-    changePage(newPage) {
-        if (newPage >= 1) {
-            this.currentPage = newPage;
-            this.loadDetalhesCategoria();
-        }
-    }
-    
-    async changePage(newPage) {
-        if (newPage < 1 || !this.currentCategoriaDrill) return;
-        
-        this.currentPage = newPage;
-        
-        try {
-            this.showLoading();
-            await this.loadDetalhesCategoria();
-        } catch (error) {
-            console.error('Erro ao mudar página:', error);
-            this.showError('Erro ao carregar página');
-        } finally {
-            this.hideLoading();
-        }
+    closeDetalhesModal() {
+        $('#detalhes-modal').fadeOut(300);
+        this.currentCategoriaDrill = null;
     }
     
     openFiltersModal() {
-        $('#filters-modal').show();
+        // Carregar valores atuais nos filtros
         $('#periodo-select').val(this.currentPeriodo);
+        $('#centro-resultado-select').val(this.currentCentroResultado);
+        $('#categoria-select').val(this.currentCategoria);
+        $('#classe-select').val(this.currentClasse);
         
-        if (this.currentPeriodo === 'personalizado') {
-            $('#periodo-personalizado').show();
-        } else {
-            $('#periodo-personalizado').hide();
-        }
+        $('#filters-modal').fadeIn(300);
     }
     
     closeFiltersModal() {
-        $('#filters-modal').hide();
+        $('#filters-modal').fadeOut(300);
     }
     
     async applyFilters() {
-        const periodo = $('#periodo-select').val();
-        let dataInicio = '';
-        let dataFim = '';
+        // Obter valores dos filtros
+        this.currentPeriodo = $('#periodo-select').val();
+        this.currentCentroResultado = $('#centro-resultado-select').val();
+        this.currentCategoria = $('#categoria-select').val();
+        this.currentClasse = $('#classe-select').val();
         
-        if (periodo === 'personalizado') {
-            dataInicio = $('#data-inicio').val();
-            dataFim = $('#data-fim').val();
-            
-            if (!dataInicio || !dataFim) {
-                this.showError('Por favor, selecione as datas de início e fim');
-                return;
-            }
-            
-            if (new Date(dataInicio) > new Date(dataFim)) {
-                this.showError('A data de início deve ser anterior à data de fim');
-                return;
-            }
-        }
+        // Atualizar resumo de filtros
+        this.updateFilterSummary();
         
-        this.currentPeriodo = periodo;
-        this.currentCategoriaDrill = null;
-        this.currentPage = 1;
-        
+        // Recarregar dados
         this.closeFiltersModal();
         await this.loadData();
     }
     
     resetFilters() {
         this.currentPeriodo = 'ano_atual';
-        this.currentCategoriaDrill = null;
-        this.currentPage = 1;
+        this.currentCentroResultado = '';
+        this.currentCategoria = '';
+        this.currentClasse = '';
         
-        $('#periodo-select').val('ano_atual');
-        $('#periodo-personalizado').hide();
-        $('#data-inicio').val('');
-        $('#data-fim').val('');
-        
+        this.updateFilterSummary();
         this.closeFiltersModal();
         this.loadData();
     }
     
     updateFilterSummary() {
-        let texto = '';
+        let summary = '';
         
-        switch (this.currentPeriodo) {
-            case 'mes_atual':
-                texto = 'Vendo dados do mês atual';
-                break;
-            case 'trimestre_atual':
-                texto = 'Vendo dados do trimestre atual';
-                break;
-            case 'ano_atual':
-                texto = 'Vendo dados do ano atual';
-                break;
-            case 'ultimos_12_meses':
-                texto = 'Vendo dados dos últimos 12 meses';
-                break;
-            case 'personalizado':
-                const inicio = $('#data-inicio').val();
-                const fim = $('#data-fim').val();
-                if (inicio && fim) {
-                    texto = `Período: ${new Date(inicio).toLocaleDateString('pt-BR')} a ${new Date(fim).toLocaleDateString('pt-BR')}`;
-                } else {
-                    texto = 'Período personalizado';
-                }
-                break;
-            default:
-                texto = 'Vendo dados do ano atual';
+        // Período
+        const periodoText = {
+            'mes_atual': 'mês atual',
+            'trimestre_atual': 'trimestre atual',
+            'ano_atual': 'ano atual',
+            'ultimos_12_meses': 'últimos 12 meses'
+        };
+        summary += `Vendo dados do ${periodoText[this.currentPeriodo] || this.currentPeriodo}`;
+        
+        // Filtros adicionais
+        const filtros = [];
+        if (this.currentCentroResultado) filtros.push(`Centro: ${this.currentCentroResultado}`);
+        if (this.currentCategoria) filtros.push(`Categoria: ${this.currentCategoria}`);
+        if (this.currentClasse) filtros.push(`Classe: ${this.currentClasse}`);
+        
+        if (filtros.length > 0) {
+            summary += ` | Filtros: ${filtros.join(', ')}`;
+            $('#reset-filters').show();
+        } else {
+            $('#reset-filters').hide();
         }
         
-        $('#filter-summary-text').text(texto);
+        $('#filter-summary-text').text(summary);
+    }
+    
+    prevPageModal() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.loadDetalhesData();
+        }
+    }
+    
+    nextPageModal() {
+        this.currentPage++;
+        this.loadDetalhesData();
     }
     
     showError(message) {
-        // Implementar notificação de erro
         console.error(message);
-        alert(message); // Substituir por sistema de notificação mais elegante
+        // Implementar notificação de erro conforme o sistema
+    }
+    
+    exportarDetalhes() {
+        // Implementar exportação
+        console.log('Exportar detalhes não implementado ainda');
+    }
+    
+    searchDetalhes() {
+        // Implementar busca
+        console.log('Busca em detalhes não implementada ainda');
+    }
+    
+    filterDetalhes() {
+        // Implementar filtro
+        console.log('Filtro de detalhes não implementado ainda');
     }
 }
 
 // Funções utilitárias
 function formatCurrency(value) {
-    if (value === null || value === undefined || isNaN(value)) {
-        return 'R$ 0,00';
-    }
-    
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
-        currency: 'BRL',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(value);
+        currency: 'BRL'
+    }).format(value || 0);
 }
 
 function formatCurrencyShort(value) {
-    if (value === null || value === undefined || isNaN(value)) {
-        return 'R$ 0';
+    if (value >= 1000000) {
+        return `R$ ${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+        return `R$ ${(value / 1000).toFixed(1)}K`;
     }
-    
-    const absValue = Math.abs(value);
-    let suffix = '';
-    let divisor = 1;
-    let maxDecimals = 0;
-    
-    if (absValue >= 1000000000) {
-        suffix = 'B';
-        divisor = 1000000000;
-        maxDecimals = 2; // Bilhões com 2 casas decimais
-    } else if (absValue >= 1000000) {
-        suffix = 'M';
-        divisor = 1000000;
-        maxDecimals = 2; // Milhões com 2 casas decimais
-    } else if (absValue >= 1000) {
-        suffix = 'K';
-        divisor = 1000;
-        maxDecimals = 1; // Milhares com 1 casa decimal
-    }
-    
-    const shortValue = value / divisor;
-    
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-        minimumFractionDigits: suffix ? maxDecimals : 0,
-        maximumFractionDigits: suffix ? maxDecimals : 0
-    }).format(shortValue) + suffix;
+    return formatCurrency(value);
 }
 
-// Inicializar quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', function() {
-    // A instância será criada no template HTML
-    console.log('DespesasController módulo carregado');
-});
+function formatPercentage(value) {
+    return `${(value || 0).toFixed(1)}%`;
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}

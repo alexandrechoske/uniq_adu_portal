@@ -298,10 +298,71 @@ def api_categorias():
         print(f"Erro ao buscar categorias de despesas: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@despesas_bp.route('/api/centro-resultado')
+@login_required
+def api_centro_resultado():
+    """API para análise por centro de resultado"""
+    user = session.get('user', {})
+    user_role = user.get('role', '')
+    
+    if user_role not in ['admin', 'interno_unique']:
+        return jsonify({'error': 'Acesso negado'}), 403
+    
+    try:
+        periodo = request.args.get('periodo', 'ano_atual')
+        centro_resultado_filter = request.args.get('centro_resultado', '')
+        categoria_filter = request.args.get('categoria', '')
+        classe_filter = request.args.get('classe', '')
+        
+        data_inicio, data_fim = _get_periodo_dates(periodo)
+        
+        query = supabase_admin.table('fin_despesa_anual') \
+            .select('centro_resultado, categoria, classe, valor') \
+            .gte('data', data_inicio) \
+            .lte('data', data_fim) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS')
+        
+        # Aplicar filtros opcionais
+        if centro_resultado_filter:
+            query = query.eq('centro_resultado', centro_resultado_filter)
+        if categoria_filter:
+            query = query.eq('categoria', categoria_filter)
+        if classe_filter:
+            query = query.eq('classe', classe_filter)
+        
+        response = query.execute()
+        
+        if response.data:
+            df = pd.DataFrame(response.data)
+            
+            # Agrupar por centro de resultado
+            centros = df.groupby('centro_resultado')['valor'].sum().reset_index()
+            centros = centros.sort_values('valor', ascending=False)
+            
+            # Calcular percentuais
+            total = centros['valor'].sum()
+            centros['percentual'] = (centros['valor'] / total * 100) if total > 0 else 0
+            
+            return jsonify({
+                'success': True,
+                'data': centros.to_dict('records'),
+                'total': float(total)
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'data': [],
+                'total': 0
+            })
+            
+    except Exception as e:
+        print(f"Erro ao buscar centros de resultado: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @despesas_bp.route('/api/tendencias')
 @login_required
 def api_tendencias():
-    """API para gráfico de tendências mensais"""
+    """API para gráfico de tendências mensais - Top 5 Centro de Resultado -> Categoria"""
     user = session.get('user', {})
     user_role = user.get('role', '')
     
@@ -314,7 +375,7 @@ def api_tendencias():
         data_inicio = data_fim - timedelta(days=365)
         
         response = supabase_admin.table('fin_despesa_anual') \
-            .select('data, categoria, valor') \
+            .select('data, centro_resultado, categoria, valor') \
             .gte('data', data_inicio.strftime('%Y-%m-%d')) \
             .lte('data', data_fim.strftime('%Y-%m-%d')) \
             .neq('classe', 'TRANSFERENCIA DE CONTAS') \
@@ -325,43 +386,53 @@ def api_tendencias():
             df['data'] = pd.to_datetime(df['data'])
             df['mes_ano'] = df['data'].dt.to_period('M')
             
-            # Encontrar top 5 categorias por valor total
-            top_categorias = df.groupby('categoria')['valor'].sum() \
+            # Encontrar top 5 centros de resultado por valor total
+            top_centros = df.groupby('centro_resultado')['valor'].sum() \
                 .sort_values(ascending=False).head(5).index.tolist()
             
-            # Filtrar apenas as top 5 categorias
-            df_top = df[df['categoria'].isin(top_categorias)]
+            # Filtrar apenas os top 5 centros de resultado
+            df_top = df[df['centro_resultado'].isin(top_centros)]
             
-            # Agrupar por mês e categoria
-            tendencias = df_top.groupby(['mes_ano', 'categoria'])['valor'].sum().reset_index()
+            # Criar combinação centro_resultado -> categoria
+            df_top['centro_categoria'] = df_top['centro_resultado'] + ' -> ' + df_top['categoria']
+            
+            # Encontrar top 5 combinações centro->categoria
+            top_combinacoes = df_top.groupby('centro_categoria')['valor'].sum() \
+                .sort_values(ascending=False).head(5).index.tolist()
+            
+            # Filtrar apenas as top 5 combinações
+            df_final = df_top[df_top['centro_categoria'].isin(top_combinacoes)]
+            
+            # Agrupar por mês e combinação centro->categoria
+            tendencias = df_final.groupby(['mes_ano', 'centro_categoria'])['valor'].sum().reset_index()
             tendencias['mes_ano_str'] = tendencias['mes_ano'].astype(str)
             
             # Reorganizar dados para o gráfico
             resultado = {}
-            for categoria in top_categorias:
-                dados_categoria = tendencias[tendencias['categoria'] == categoria]
-                resultado[categoria] = {
-                    'labels': dados_categoria['mes_ano_str'].tolist(),
-                    'valores': dados_categoria['valor'].tolist()
+            for combinacao in top_combinacoes:
+                dados_combinacao = tendencias[tendencias['centro_categoria'] == combinacao]
+                resultado[combinacao] = {
+                    'labels': dados_combinacao['mes_ano_str'].tolist(),
+                    'valores': dados_combinacao['valor'].tolist()
                 }
             
             return jsonify({
                 'success': True,
                 'data': resultado,
-                'categorias': top_categorias
+                'combinacoes': top_combinacoes
             })
         else:
             return jsonify({
                 'success': True,
                 'data': {},
-                'categorias': []
+                'combinacoes': []
             })
             
     except Exception as e:
         print(f"Erro ao buscar tendências de despesas: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@despesas_bp.route('/api/detalhes/<categoria>')
+@despesas_bp.route('/api/detalhes/<path:categoria>')
 @login_required
 def api_detalhes_categoria(categoria):
     """API para detalhes de uma categoria específica"""
@@ -375,31 +446,66 @@ def api_detalhes_categoria(categoria):
         periodo = request.args.get('periodo', 'ano_atual')
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 25))
+        centro_resultado_mode = request.args.get('centro_resultado', '').lower() == 'true'
         
         data_inicio, data_fim = _get_periodo_dates(periodo)
         offset = (page - 1) * limit
         
-        # Buscar detalhes da categoria
-        response = supabase_admin.table('fin_despesa_anual') \
-            .select('data, descricao, valor, classe, codigo') \
-            .eq('categoria', categoria) \
+        # Query base para detalhes paginados
+        query = supabase_admin.table('fin_despesa_anual') \
+            .select('data, descricao, valor, classe, codigo, centro_resultado') \
             .gte('data', data_inicio) \
             .lte('data', data_fim) \
             .neq('classe', 'TRANSFERENCIA DE CONTAS') \
-            .order('data', desc=True) \
-            .range(offset, offset + limit - 1) \
-            .execute()
+            .order('data', desc=True)
         
-        # Contar total de registros
-        count_response = supabase_admin.table('fin_despesa_anual') \
-            .select('id', count='exact') \
-            .eq('categoria', categoria) \
+        # Query base para totais (sem paginação)
+        totals_query = supabase_admin.table('fin_despesa_anual') \
+            .select('valor') \
             .gte('data', data_inicio) \
             .lte('data', data_fim) \
-            .execute()
+            .neq('classe', 'TRANSFERENCIA DE CONTAS')
+        
+        # Aplicar filtros
+        if centro_resultado_mode:
+            # Se filtrado por centro de resultado
+            query = query.eq('centro_resultado', categoria)
+            totals_query = totals_query.eq('centro_resultado', categoria)
+        else:
+            # Se filtrado por categoria tradicional
+            query = query.eq('categoria', categoria)
+            totals_query = totals_query.eq('categoria', categoria)
+        
+        # Buscar detalhes paginados
+        response = query.range(offset, offset + limit - 1).execute()
+        
+        # Buscar totais de toda a categoria/centro de resultado
+        totals_response = totals_query.execute()
+        
+        # Contar total de registros
+        count_query = supabase_admin.table('fin_despesa_anual') \
+            .select('id', count='exact') \
+            .gte('data', data_inicio) \
+            .lte('data', data_fim) \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS')
+        
+        if centro_resultado_mode:
+            count_query = count_query.eq('centro_resultado', categoria)
+        else:
+            count_query = count_query.eq('categoria', categoria)
+        
+        count_response = count_query.execute()
         
         total_records = count_response.count if count_response.count else 0
         total_pages = (total_records + limit - 1) // limit
+        
+        # Calcular estatísticas totais (não apenas da página atual)
+        total_valor = 0
+        valor_medio = 0
+        if totals_response.data:
+            valores = [float(item['valor']) for item in totals_response.data]
+            total_valor = sum(valores)
+            valor_medio = total_valor / len(valores) if len(valores) > 0 else 0
         
         return jsonify({
             'success': True,
@@ -410,6 +516,11 @@ def api_detalhes_categoria(categoria):
                 'total_records': total_records,
                 'has_next': page < total_pages,
                 'has_prev': page > 1
+            },
+            'totals': {
+                'total_valor': total_valor,
+                'num_transacoes': total_records,
+                'valor_medio': valor_medio
             }
         })
         
@@ -461,6 +572,53 @@ def api_fornecedores():
             
     except Exception as e:
         print(f"Erro ao buscar ranking de fornecedores: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@despesas_bp.route('/api/filtros-opcoes')
+@login_required
+def api_filtros_opcoes():
+    """API para obter opções de filtros (centro de resultado, categoria, classe)"""
+    user = session.get('user', {})
+    user_role = user.get('role', '')
+    
+    if user_role not in ['admin', 'interno_unique']:
+        return jsonify({'error': 'Acesso negado'}), 403
+    
+    try:
+        # Buscar todos os valores únicos para os filtros
+        response = supabase_admin.table('fin_despesa_anual') \
+            .select('centro_resultado, categoria, classe') \
+            .neq('classe', 'TRANSFERENCIA DE CONTAS') \
+            .execute()
+        
+        if response.data:
+            df = pd.DataFrame(response.data)
+            
+            # Obter valores únicos para cada campo
+            centros_resultado = sorted(df['centro_resultado'].dropna().unique().tolist())
+            categorias = sorted(df['categoria'].dropna().unique().tolist())
+            classes = sorted(df['classe'].dropna().unique().tolist())
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'centros_resultado': centros_resultado,
+                    'categorias': categorias,
+                    'classes': classes
+                }
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'centros_resultado': [],
+                    'categorias': [],
+                    'classes': []
+                }
+            })
+            
+    except Exception as e:
+        print(f"Erro ao buscar opções de filtros: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Funções auxiliares
