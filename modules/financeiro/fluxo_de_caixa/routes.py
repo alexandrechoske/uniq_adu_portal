@@ -227,26 +227,105 @@ def api_kpis():
         }
         print(f"Error in api_kpis: {error_details}")  # Simple logging
         
+                # Return default/fallback values instead of failing completely
+        return jsonify({
+            'dados': [], 
+            'total': 0, 
+            'page': page, 
+            'limit': limit, 
+            'total_pages': 0
+        })
+
+@fluxo_de_caixa_bp.route('/api/saldo-acumulado')
+@login_required
+@perfil_required('financeiro', 'fluxo_caixa')
+def api_saldo_acumulado():
+    """API para gráfico de evolução do saldo acumulado"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        mes = request.args.get('mes', None)  # None means full year
+        
+        ano = int(ano)
+        if mes:
+            mes = int(mes)
+        
+        table_name = 'vw_fluxo_caixa'
+        
+        if mes:
+            # Para um mês específico - evolução dia a dia
+            query = supabase_admin.table(table_name).select('data, saldo_acumulado')
+            query = query.gte('data', f'{ano}-{mes:02d}-01')
+            # Calculate last day of month
+            import calendar
+            last_day = calendar.monthrange(ano, mes)[1]
+            query = query.lte('data', f'{ano}-{mes:02d}-{last_day}')
+        else:
+            # Para um ano completo - evolução mensal (último saldo de cada mês)
+            query = supabase_admin.table(table_name).select('data, saldo_acumulado')
+            query = query.gte('data', f'{ano}-01-01')
+            query = query.lte('data', f'{ano}-12-31')
+        
+        query = query.order('data')
+        response = query.execute()
+        dados = response.data
+        
+        if mes:
+            # Para mês específico, mostrar evolução diária
+            datas = []
+            saldos = []
+            
+            for item in dados:
+                data_formatada = datetime.strptime(item['data'], '%Y-%m-%d').strftime('%d/%m')
+                datas.append(data_formatada)
+                saldos.append(float(item['saldo_acumulado']) if item['saldo_acumulado'] else 0)
+        else:
+            # Para ano completo, agregar por mês (último saldo de cada mês)
+            from collections import defaultdict
+            saldos_mensais = defaultdict(float)
+            
+            for item in dados:
+                data_obj = datetime.strptime(item['data'], '%Y-%m-%d')
+                mes_key = data_obj.strftime('%Y-%m')
+                # Keep the last (highest date) saldo for each month
+                if mes_key not in saldos_mensais or data_obj.day > saldos_mensais[mes_key]['day']:
+                    saldos_mensais[mes_key] = {
+                        'saldo': float(item['saldo_acumulado']) if item['saldo_acumulado'] else 0,
+                        'day': data_obj.day
+                    }
+            
+            # Convert to lists and sort
+            meses_ordenados = sorted(saldos_mensais.keys())
+            datas = []
+            saldos = []
+            
+            for mes_key in meses_ordenados:
+                data_obj = datetime.strptime(mes_key, '%Y-%m')
+                datas.append(data_obj.strftime('%b/%y'))
+                saldos.append(saldos_mensais[mes_key]['saldo'])
+        
+        return jsonify({
+            'datas': datas,
+            'saldos': saldos
+        })
+        
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Erro na API de saldo acumulado: {str(e)}")
+        error_details = {
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'ano': ano if 'ano' in locals() else 'Not defined',
+            'mes': mes if 'mes' in locals() else 'Not defined'
+        }
+        print(f"Error in api_saldo_acumulado: {error_details}")  # Simple logging
+        
         # Return default/fallback values instead of failing completely
         return jsonify({
-            'entradas_mes': {
-                'valor': 0,
-                'variacao': 0
-            },
-            'saidas_mes': {
-                'valor': 0,
-                'variacao': 0
-            },
-            'resultado_mes': {
-                'valor': 0,
-                'variacao': 0
-            },
-            'saldo_acumulado': {
-                'valor': 0,
-                'variacao': 0
-            },
-            'error': 'Connection error - using fallback values'
-        }), 200  # Return 200 instead of 500 to prevent frontend errors
+            'datas': [], 
+            'saldos': []
+        })
+
+# Funções auxiliares
 
 @fluxo_de_caixa_bp.route('/api/fluxo-mensal')
 @login_required

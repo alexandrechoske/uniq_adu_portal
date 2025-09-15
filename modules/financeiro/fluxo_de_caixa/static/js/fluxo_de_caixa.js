@@ -188,6 +188,11 @@ class FluxoCaixaController {
                 return null;
             });
             
+            const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
+                console.error('Erro ao carregar saldo acumulado:', error);
+                return null;
+            });
+            
             const tableDataPromise = this.loadTableData().catch(error => {
                 console.error('Erro ao carregar dados da tabela:', error);
                 return null;
@@ -199,6 +204,7 @@ class FluxoCaixaController {
                 fluxoMensalPromise,
                 despesasCategoriaPromise,
                 projecaoPromise,
+                saldoAcumuladoPromise,
                 tableDataPromise
             ]);
         } catch (error) {
@@ -289,22 +295,10 @@ class FluxoCaixaController {
     }
     
     updateVariation(selector, variation) {
+        // Remove variation display as requested - we don't have previous period data
         const element = $(selector);
-        const isPositive = variation > 0;
-        const isNegative = variation < 0;
-        
+        element.text('');
         element.removeClass('variation-positive variation-negative variation-neutral');
-        
-        if (isPositive) {
-            element.addClass('variation-positive');
-            element.html(`<i class="mdi mdi-trending-up"></i> +${variation.toFixed(1)}% vs. período anterior`);
-        } else if (isNegative) {
-            element.addClass('variation-negative');
-            element.html(`<i class="mdi mdi-trending-down"></i> ${variation.toFixed(1)}% vs. período anterior`);
-        } else {
-            element.addClass('variation-neutral');
-            element.html(`<i class="mdi mdi-minus"></i> Sem variação`);
-        }
     }
     
     updateKPICardColor(cardSelector, value) {
@@ -661,6 +655,152 @@ class FluxoCaixaController {
         });
     }
     
+    async loadSaldoAcumulado() {
+        try {
+            const queryString = new URLSearchParams({
+                ano: this.currentAno,
+                ...(this.currentMes && { mes: this.currentMes })
+            });
+            
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?${queryString}`);
+            const data = await response.json();
+            
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Erro ao carregar evolução do saldo acumulado');
+            }
+            
+            this.renderSaldoAcumuladoChart(data);
+        } catch (error) {
+            console.error('Erro ao carregar saldo acumulado:', error);
+            this.showError('Erro ao carregar evolução do saldo acumulado: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderSaldoAcumuladoChartError();
+        }
+    }
+
+    renderSaldoAcumuladoChartError() {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    renderSaldoAcumuladoChart(data) {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+        }
+        
+        // Find min and max values for proper scaling
+        const allValues = data.saldos.filter(val => val !== null);
+        const minValue = Math.min(...allValues);
+        const maxValue = Math.max(...allValues);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
+        // Define colors based on positive/negative values
+        const borderColors = data.saldos.map(value => 
+            value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
+        );
+        
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.datas,
+                datasets: [{
+                    label: 'Saldo Acumulado',
+                    data: data.saldos,
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: borderColors,
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Evolução do Saldo Acumulado'
+                    },
+                    legend: {
+                        display: false
+                    },
+                    datalabels: {
+                        display: false // Hide data labels for cleaner look
+                    }
+                },
+                scales: {
+                    y: {
+                        min: minPadded,
+                        max: maxPadded,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyShort(value);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 10 // Limit number of x-axis labels
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
     async loadProjecao() {
         try {
             const response = await fetch(`/financeiro/fluxo-de-caixa/api/projecao`);
@@ -797,8 +937,9 @@ class FluxoCaixaController {
                         anchor: 'end',
                         align: 'top',
                         formatter: function(value, context) {
-                            // Only show labels for every 3rd point to avoid clutter
-                            if (context.dataIndex % 3 === 0 && value !== null) {
+                            // Show labels for every 4th point to reduce clutter, but ensure we show some labels
+                            // Also check if value is not null and not exactly 0 (to avoid showing "R$ 0,00")
+                            if (value !== null && value !== 0 && (context.dataIndex % 4 === 0 || context.dataIndex === context.dataset.data.length - 1)) {
                                 return formatCurrencyShort(value);
                             }
                             return '';
