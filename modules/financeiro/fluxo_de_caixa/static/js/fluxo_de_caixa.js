@@ -789,22 +789,8 @@ class FluxoCaixaController {
                         display: true,
                         anchor: 'end',
                         align: 'top',
-                        formatter: function(value, context) {
-                            // Validate input data
-                            if (value === null || value === undefined || isNaN(value)) {
-                                return '';
-                            }
-                            
-                            // Show labels for every 3rd point, first point, and last point to avoid clutter
-                            const dataIndex = context.dataIndex;
-                            const totalPoints = context.dataset.data.length;
-                            
-                            if (dataIndex === 0 || 
-                                dataIndex === totalPoints - 1 || 
-                                dataIndex % 3 === 0) {
-                                return formatCurrencyShort(value);
-                            }
-                            return '';
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
                         },
                         color: '#212529',
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -812,13 +798,13 @@ class FluxoCaixaController {
                         borderWidth: 1,
                         borderRadius: 4,
                         padding: {
-                            top: 2,
-                            bottom: 2,
-                            left: 4,
-                            right: 4
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
                         },
                         font: {
-                            size: 9,
+                            size: 11,
                             weight: 'bold'
                         }
                     }
@@ -999,42 +985,11 @@ class FluxoCaixaController {
                         }
                     },
                     datalabels: {
-                        display: function(context) {
-                            // Safe check for valid data points
-                            if (!context || !context.parsed) return false;
-                            const value = context.parsed.y;
-                            return value !== null && value !== undefined && !isNaN(value);
-                        },
+                        display: true,
                         anchor: 'end',
                         align: 'top',
-                        formatter: function(value, context) {
-                            // Check if this is a valid point with data
-                            if (value === null || value === undefined) {
-                                return '';
-                            }
-                            
-                            // Show labels for every 4th point, first point, and last point of the dataset
-                            const datasetIndex = context.datasetIndex;
-                            const dataIndex = context.dataIndex;
-                            const dataset = context.dataset;
-                            
-                            // Find the actual data points (not null) for this dataset
-                            const validDataPoints = dataset.data.map((val, idx) => ({ value: val, index: idx }))
-                                .filter(item => item.value !== null && item.value !== undefined);
-                            
-                            // Check if this is a valid data point
-                            const currentPointIndex = validDataPoints.findIndex(item => item.index === dataIndex);
-                            
-                            if (currentPointIndex === -1) return ''; // Not a valid point
-                            
-                            // Show label if it's every 3rd valid point, first valid point, or last valid point
-                            if (currentPointIndex === 0 || 
-                                currentPointIndex === validDataPoints.length - 1 || 
-                                currentPointIndex % 3 === 0) {
-                                return formatCurrencyShort(value);
-                            }
-                            
-                            return '';
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
                         },
                         color: '#212529',
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -1042,13 +997,13 @@ class FluxoCaixaController {
                         borderWidth: 1,
                         borderRadius: 4,
                         padding: {
-                            top: 2,
-                            bottom: 2,
-                            left: 4,
-                            right: 4
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
                         },
                         font: {
-                            size: 9,
+                            size: 11,
                             weight: 'bold'
                         }
                     }
