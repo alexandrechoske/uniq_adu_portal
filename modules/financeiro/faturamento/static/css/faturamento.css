@@ -261,6 +261,18 @@
     margin-bottom: 2rem;
 }
 
+.charts-grid-single {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.charts-grid-single .chart-container {
+    max-width: 600px;
+    width: 100%;
+}
+
 /* Chart Container */
 .chart-container {
     background: white;
@@ -1227,4 +1239,33 @@
 .year-toggle.active:hover {
     background: #0056b3;
     border-color: #0056b3;
+}
+
+/* Labels Toggle */
+.labels-toggle {
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    color: #6c757d;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.labels-toggle:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+}
+
+.labels-toggle.active {
+    background: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.labels-toggle.active:hover {
+    background: #1e7e34;
+    border-color: #1e7e34;
 }

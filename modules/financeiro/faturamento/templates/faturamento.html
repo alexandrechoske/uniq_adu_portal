@@ -107,34 +107,19 @@
                         Comparativo Anual de Faturamento
                     </h3>
                     <div class="chart-controls">
-                        <div id="year-toggles" class="year-toggles">
-                            <!-- Anos serão carregados dinamicamente -->
-                        </div>
+                        <button id="toggle-data-labels" class="btn btn-outline-secondary btn-sm">
+                            <i class="mdi mdi-tag-text"></i>
+                            Rótulos de Dados
+                        </button>
                     </div>
                 </div>
                 <div class="chart-content">
                     <canvas id="comparativo-chart"></canvas>
                 </div>
             </div>
-        </div>
-        
-        <!-- Segunda linha de gráficos -->
-        <div class="charts-grid-two-elements">
-            <!-- Gráfico Sunburst - Proporção Hierárquica -->
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h3 class="chart-title">
-                        <i class="mdi mdi-chart-donut"></i>
-                        Distribuição por Centro de Resultado
-                    </h3>
-                </div>
-                <div class="chart-content">
-                    <canvas id="sunburst-chart"></canvas>
-                </div>
-            </div>
             
-            <!-- Tabela de Faturamento Mensal -->
-            <div class="chart-container">
+            <!-- Tabela de Faturamento Mensal (embaixo do gráfico) -->
+            <div class="chart-container-full">
                 <div class="chart-header">
                     <h3 class="chart-title">
                         <i class="mdi mdi-table"></i>
@@ -145,25 +130,30 @@
                     <table id="resumo-mensal" class="enhanced-table compact">
                         <thead>
                             <tr>
-                                <th>Ano</th>
-                                <th>Jan</th>
-                                <th>Fev</th>
-                                <th>Mar</th>
-                                <th>Abr</th>
-                                <th>Mai</th>
-                                <th>Jun</th>
-                                <th>Jul</th>
-                                <th>Ago</th>
-                                <th>Set</th>
-                                <th>Out</th>
-                                <th>Nov</th>
-                                <th>Dez</th>
+                                <th>Mês</th>
+                                <!-- Anos serão adicionados dinamicamente -->
                             </tr>
                         </thead>
                         <tbody>
                             <!-- Dados carregados via JavaScript -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Segunda linha - apenas sunburst -->
+        <div class="charts-grid-single">
+            <!-- Gráfico Sunburst - Proporção Hierárquica -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-donut"></i>
+                        Distribuição por Centro de Resultado
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="sunburst-chart"></canvas>
                 </div>
             </div>
         </div>

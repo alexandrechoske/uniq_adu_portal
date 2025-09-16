@@ -9,13 +9,19 @@ class FaturamentoController {
         this.currentSetor = 'importacao';
         this.activeTab = 'visao-geral';
         
-        // Initialize filters with default values - incluir anos anteriores
+        // Initialize filters with default values - buscar todos os anos desde 2015
         this.filters = {
-            start_date: '2023-01-01',  // Começar de 2023 para mostrar histórico
+            start_date: '2015-01-01',  // Buscar desde 2015 para ter todos os anos
             end_date: `${this.currentAno}-12-31`,
             empresa: '',
             centro_resultado: ''
         };
+        
+        // Controle de visualização de anos (padrão: últimos 5 anos)
+        this.defaultYearsToShow = 5;
+        this.allYears = [];
+        this.visibleYears = [];
+        this.dataLabelsEnabled = true; // Controle dos rótulos de dados
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -245,10 +251,15 @@ class FaturamentoController {
             this.comparativoChart.destroy();
         }
 
-        const anos = Object.keys(data).sort();
+        // Armazenar todos os anos disponíveis (sem controle de visibilidade)
+        this.allYears = Object.keys(data).sort();
+        
+        console.log('📅 Anos disponíveis:', this.allYears);
+        
         const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
         
-        const datasets = anos.map((ano, index) => {
+        // Criar datasets para todos os anos (sem filtro)
+        const datasets = this.allYears.map((ano, index) => {
             const anoData = data[ano] || [];
             const valores = meses.map(mes => {
                 const item = anoData.find(d => d.mes === mes);
@@ -292,7 +303,7 @@ class FaturamentoController {
                         position: 'top'
                     },
                     datalabels: {
-                        display: true,
+                        display: this.dataLabelsEnabled, // Usar propriedade dinâmica
                         align: 'top',
                         anchor: 'end',
                         color: '#666',
@@ -300,7 +311,7 @@ class FaturamentoController {
                             size: 10,
                             weight: 'bold'
                         },
-                        formatter: function(value) {
+                        formatter: (value) => {
                             // Garantir que value é um número válido
                             if (typeof value === 'object' || value === null || value === undefined) {
                                 return '';
@@ -337,8 +348,8 @@ class FaturamentoController {
             }
         });
 
-        // Setup year toggles
-        this.setupYearToggles(anos);
+        // Setup apenas toggle de rótulos (funcionalidade nativa Chart.js para anos)
+        this.setupDataLabelsToggle();
     }
 
     renderSunburstChart(data) {
@@ -467,33 +478,69 @@ class FaturamentoController {
     renderResumoMensal(data) {
         console.log('📊 Renderizando resumo mensal com dados:', data);
         
-        const tbody = $('#resumo-mensal tbody');
-        if (!tbody.length) {
-            console.error('❌ Elemento resumo-mensal tbody não encontrado');
+        const table = $('#resumo-mensal');
+        const thead = table.find('thead tr');
+        const tbody = table.find('tbody');
+        
+        if (!table.length) {
+            console.error('❌ Elemento resumo-mensal não encontrado');
             return;
         }
         
+        // Limpar conteúdo
+        thead.empty();
         tbody.empty();
 
         // Organizar dados por ano
         const anos = Object.keys(data).sort();
         
         if (anos.length === 0) {
-            tbody.append('<tr><td colspan="13" class="text-center">Nenhum dado encontrado</td></tr>');
+            tbody.append('<tr><td colspan="100%" class="text-center">Nenhum dado encontrado</td></tr>');
             return;
         }
 
-        anos.forEach(ano => {
-            const anoData = data[ano] || [];
+        // Definir meses
+        const meses = [
+            {num: '01', nome: 'Jan'},
+            {num: '02', nome: 'Fev'},
+            {num: '03', nome: 'Mar'},
+            {num: '04', nome: 'Abr'},
+            {num: '05', nome: 'Mai'},
+            {num: '06', nome: 'Jun'},
+            {num: '07', nome: 'Jul'},
+            {num: '08', nome: 'Ago'},
+            {num: '09', nome: 'Set'},
+            {num: '10', nome: 'Out'},
+            {num: '11', nome: 'Nov'},
+            {num: '12', nome: 'Dez'}
+        ];
+
+        // Criar cabeçalho dinâmico: Ano + Meses + Colunas calculadas
+        thead.append('<th>Ano</th>');
+        meses.forEach(mes => {
+            thead.append(`<th>${mes.nome}</th>`);
+        });
+        // Adicionar colunas calculadas
+        thead.append('<th class="text-info">TOTAL</th>');
+        thead.append('<th class="text-warning">MÉDIA MÊS</th>');
+        thead.append('<th class="text-success">% AUMENTO</th>');
+        
+        // Criar linhas para cada ano
+        anos.forEach((ano, anoIndex) => {
             const row = $('<tr></tr>');
             row.append(`<td class="fw-bold">${ano}</td>`);
             
-            // Criar array com dados dos meses
-            const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+            const anoData = data[ano] || [];
+            let totalAno = 0;
+            const valoresAno = [];
             
+            // Adicionar dados de cada mês para este ano
             meses.forEach(mes => {
-                const item = anoData.find(d => d.mes === mes);
+                const item = anoData.find(d => d.mes === mes.num);
                 const valor = item ? item.total_valor : 0;
+                
+                totalAno += valor;
+                valoresAno.push(valor);
                 
                 const cell = $('<td></td>');
                 cell.text(formatCurrencyShort(valor));
@@ -501,10 +548,44 @@ class FaturamentoController {
                 row.append(cell);
             });
             
+            // Calcular colunas adicionais
+            const mediaAno = valoresAno.length > 0 ? totalAno / valoresAno.filter(v => v > 0).length : 0;
+            
+            // % aumento (comparar com ano anterior)
+            let percentualAumento = 0;
+            if (anoIndex > 0) {
+                const anoAnterior = anos[anoIndex - 1];
+                const anoAnteriorData = data[anoAnterior] || [];
+                const totalAnoAnterior = anoAnteriorData.reduce((sum, item) => sum + (item.total_valor || 0), 0);
+                
+                if (totalAnoAnterior > 0 && totalAno > 0) {
+                    percentualAumento = ((totalAno - totalAnoAnterior) / totalAnoAnterior) * 100;
+                }
+            }
+            
+            // Adicionar colunas calculadas
+            const totalCell = $('<td class="text-info fw-bold"></td>');
+            totalCell.text(formatCurrencyShort(totalAno));
+            row.append(totalCell);
+            
+            const mediaCell = $('<td class="text-warning fw-bold"></td>');
+            mediaCell.text(formatCurrencyShort(mediaAno));
+            row.append(mediaCell);
+            
+            const percentCell = $('<td class="fw-bold"></td>');
+            if (anoIndex === 0) {
+                percentCell.text('-');
+                percentCell.addClass('text-muted');
+            } else {
+                percentCell.text(percentualAumento.toFixed(1) + '%');
+                percentCell.addClass(percentualAumento > 0 ? 'text-success' : percentualAumento < 0 ? 'text-danger' : 'text-muted');
+            }
+            row.append(percentCell);
+            
             tbody.append(row);
         });
         
-        console.log('✅ Tabela resumo renderizada com', anos.length, 'anos');
+        console.log('✅ Tabela resumo renderizada:', anos.length, 'anos x 12 meses + colunas calculadas');
     }
     
     updateGeralKPIs(data) {
@@ -1452,36 +1533,31 @@ FaturamentoController.prototype.getCenterColor = function(index, alpha = 1) {
     return colors[index % colors.length];
 };
 
-FaturamentoController.prototype.setupYearToggles = function(anos) {
-    const toggleContainer = document.getElementById('year-toggles');
-    if (!toggleContainer) return;
+FaturamentoController.prototype.setupDataLabelsToggle = function() {
+    const toggleButton = document.getElementById('toggle-data-labels');
+    if (!toggleButton) return;
 
-    toggleContainer.innerHTML = '';
+    // Configurar estado inicial
+    toggleButton.classList.toggle('active', this.dataLabelsEnabled);
     
-    anos.forEach((ano, index) => {
-        const toggle = document.createElement('button');
-        toggle.className = 'btn btn-sm btn-outline-primary me-2 year-toggle active';
-        toggle.textContent = ano;
-        toggle.dataset.year = ano;
-        toggle.dataset.index = index;
+    // Adicionar listener
+    toggleButton.addEventListener('click', () => {
+        this.dataLabelsEnabled = !this.dataLabelsEnabled;
+        toggleButton.classList.toggle('active', this.dataLabelsEnabled);
+        this.updateDataLabels();
         
-        toggle.addEventListener('click', () => {
-            toggle.classList.toggle('active');
-            this.toggleYearData(ano, index, toggle.classList.contains('active'));
-        });
-        
-        toggleContainer.appendChild(toggle);
+        console.log('🏷️ Toggle rótulos:', this.dataLabelsEnabled ? 'Ativado' : 'Desativado');
     });
 };
 
-FaturamentoController.prototype.toggleYearData = function(ano, index, show) {
+FaturamentoController.prototype.updateDataLabels = function() {
     if (!this.comparativoChart) return;
     
-    const dataset = this.comparativoChart.data.datasets[index];
-    if (dataset) {
-        dataset.hidden = !show;
-        this.comparativoChart.update();
-    }
+    // Atualizar configuração dos datalabels
+    this.comparativoChart.options.plugins.datalabels.display = this.dataLabelsEnabled;
+    this.comparativoChart.update();
+    
+    console.log('🏷️ Rótulos de dados:', this.dataLabelsEnabled ? 'Habilitados' : 'Desabilitados');
 };
 
 FaturamentoController.prototype.getMonthName = function(mes) {
