@@ -202,56 +202,20 @@ def api_kpis():
             
             # Buscar faturamento para % Folha sobre Faturamento
             try:
-                # First try the standard table
+                # Buscar dados de faturamento da tabela correta
                 response_faturamento = supabase_admin.table('fin_faturamento_anual') \
-                    .select('valor_total') \
+                    .select('valor') \
                     .gte('data', data_inicio) \
                     .lte('data', data_fim) \
                     .execute()
                 
                 faturamento_total = 0
                 if response_faturamento.data:
-                    df_faturamento = pd.DataFrame(response_faturamento.data)
-                    print(f"Debug - Faturamento data columns: {df_faturamento.columns.tolist()}")
-                    print(f"Debug - Faturamento data sample: {df_faturamento.head()}")
-                    faturamento_total = df_faturamento['valor_total'].sum()
-                    print(f"Debug - Faturamento total from fin_faturamento_anual: {faturamento_total}")
-                
-                # If no data found, try alternative table names
-                if faturamento_total == 0:
-                    print("Trying alternative faturamento table names...")
-                    # Try other possible table names
-                    for table_name in ['faturamento_consolidado', 'vw_fluxo_caixa']:
-                        try:
-                            # Try different column names based on table
-                            column_name = 'valor_total'
-                            alt_query = supabase_admin.table(table_name).select(column_name) \
-                                .gte('data', data_inicio) \
-                                .lte('data', data_fim)
-                            
-                            # For vw_fluxo_caixa, only get receitas
-                            if table_name == 'vw_fluxo_caixa':
-                                column_name = 'valor_fluxo'
-                                alt_query = alt_query.eq('tipo_movto', 'Receita')
-                            
-                            alt_response = alt_query.execute()
-                            if alt_response.data:
-                                df_alt = pd.DataFrame(alt_response.data)
-                                print(f"Debug - Alternative table {table_name} data columns: {df_alt.columns.tolist()}")
-                                print(f"Debug - Alternative table {table_name} data sample: {df_alt.head()}")
-                                # Use the appropriate column name
-                                column_name = 'valor_total'
-                                if table_name == 'vw_fluxo_caixa':
-                                    column_name = 'valor_fluxo'
-                                alt_total = df_alt[column_name].sum()
-                                print(f"Debug - Alternative table {table_name} total: {alt_total}")
-                                if alt_total > 0:
-                                    faturamento_total = alt_total
-                                    print(f"Found faturamento data in {table_name}: {faturamento_total}")
-                                    break
-                        except Exception as alt_error:
-                            print(f"Alternative table {table_name} not found: {str(alt_error)}")
-                            continue
+                    # Somar todos os valores de faturamento do período
+                    faturamento_total = sum(float(item['valor']) for item in response_faturamento.data)
+                    print(f"Debug - Faturamento total found: {faturamento_total}")
+                else:
+                    print("Debug - No faturamento data found")
                 
                 percentual_folha = (folha_liquida / faturamento_total * 100) if faturamento_total > 0 else 0
                 

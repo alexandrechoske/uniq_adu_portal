@@ -550,6 +550,9 @@ class DespesasController {
                 ...this.chartDefaults,
                 plugins: {
                     ...this.chartDefaults.plugins,
+                    datalabels: {
+                        display: false  // Desabilitar rótulos de dados para reduzir poluição visual
+                    },
                     legend: {
                         position: 'bottom',
                         labels: {
