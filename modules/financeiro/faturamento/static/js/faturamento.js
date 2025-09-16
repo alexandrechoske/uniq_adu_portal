@@ -9,8 +9,20 @@ class FaturamentoController {
         this.currentSetor = 'importacao';
         this.activeTab = 'visao-geral';
         
+        // Initialize filters with default values - incluir anos anteriores
+        this.filters = {
+            start_date: '2023-01-01',  // Começar de 2023 para mostrar histórico
+            end_date: `${this.currentAno}-12-31`,
+            empresa: '',
+            centro_resultado: ''
+        };
+        
         // Armazenar instâncias dos gráficos
         this.charts = {};
+        
+        // New chart instances for enhanced dashboard
+        this.comparativoChart = null;
+        this.sunburstChart = null;
         
         // Configurações padrão do Chart.js
         this.chartDefaults = {
@@ -68,7 +80,6 @@ class FaturamentoController {
     init() {
         this.setupEventListeners();
         this.loadData();
-        this.loadMetas(); // Load metas on initialization
     }
     
     setupEventListeners() {
@@ -84,29 +95,22 @@ class FaturamentoController {
         $('#apply-filters').on('click', () => this.applyFilters());
         $('#clear-filters').on('click', () => this.resetFilters());
         
-        // Metas
-        $('#open-metas-modal').on('click', () => this.openMetasModal());
-        $('#close-metas-modal, #cancel-metas').on('click', () => this.closeMetasModal());
-        $('#save-meta').on('click', () => this.saveMeta());
-        
-        // Setor filter
-        $('#setor-select').on('change', (e) => {
-            this.currentSetor = e.target.value;
-            const setorNames = {
-                'importacao': 'Importação',
-                'consultoria': 'Consultoria',
-                'exportacao': 'Exportação'
-            };
-            $('#setor-filter-summary-text').text(`Vendo dados do setor de ${setorNames[this.currentSetor]}`);
-            this.loadSetorData();
-        });
+        // Setor filter - Removed as we now load all sectors at once
+        // $('#setor-select').on('change', (e) => {
+        //     this.currentSetor = e.target.value;
+        //     const setorNames = {
+        //         'importacao': 'Importação',
+        //         'consultoria': 'Consultoria',
+        //         'exportacao': 'Exportação'
+        //     };
+        //     $('#setor-filter-summary-text').text(`Vendo dados do setor de ${setorNames[this.currentSetor]}`);
+        //     this.loadSetorData();
+        // });
         
         // Fechar modal ao clicar fora
-        $('#filter-modal, #metas-modal').on('click', (e) => {
+        $('#filter-modal').on('click', (e) => {
             if (e.target.id === 'filter-modal') {
                 this.closeFiltersModal();
-            } else if (e.target.id === 'metas-modal') {
-                this.closeMetasModal();
             }
         });
     }
@@ -130,12 +134,14 @@ class FaturamentoController {
         try {
             if (this.activeTab === 'visao-geral') {
                 await Promise.all([
-                    this.loadGeralKPIs(),
-                    this.loadGeralMensal(),
-                    this.loadGeralProporcao()
+                    this.loadEnhancedKPIs(),
+                    this.loadComparativoAnos(),
+                    this.loadSunburstData(),
+                    this.loadResumoMensal()
                 ]);
             } else if (this.activeTab === 'analise-setor') {
-                await this.loadSetorData();
+                // Load all sectors data for onepage layout
+                await this.loadAllSetoresData();
             }
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
@@ -145,19 +151,360 @@ class FaturamentoController {
         }
     }
     
-    async loadGeralKPIs() {
+    // Enhanced KPIs for new dashboard
+    async loadEnhancedKPIs() {
         try {
-            const response = await fetch(`/financeiro/faturamento/api/geral/kpis?ano=${this.currentAno}`);
-            const data = await response.json();
+            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}`);
             
-            if (!response.ok) {
-                throw new Error(data.error || 'Erro ao carregar KPIs');
+            if (response.success && response.data) {
+                const anos = Object.keys(response.data);
+                const anoAtual = Math.max(...anos.map(a => parseInt(a)));
+                const anoAnterior = anoAtual - 1;
+                
+                const dadosAtual = response.data[anoAtual] || [];
+                const dadosAnterior = response.data[anoAnterior] || [];
+                
+                // Totais
+                const totalAtual = dadosAtual.reduce((sum, item) => sum + (item.total_valor || 0), 0);
+                const totalAnterior = dadosAnterior.reduce((sum, item) => sum + (item.total_valor || 0), 0);
+                
+                // Growth rate
+                const crescimento = totalAnterior > 0 ? ((totalAtual - totalAnterior) / totalAnterior * 100) : 0;
+                
+                // Mês com maior/menor faturamento
+                const melhorMes = dadosAtual.length > 0 ? 
+                    dadosAtual.reduce((max, item) => (item.total_valor || 0) > (max.total_valor || 0) ? item : max) : null;
+                
+                const piorMes = dadosAtual.length > 0 ? 
+                    dadosAtual.reduce((min, item) => (item.total_valor || 0) < (min.total_valor || 0) ? item : min) : null;
+                
+                // Update KPIs
+                $('#kpi-total-faturamento').text(formatCurrencyShort(totalAtual));
+                $('#kpi-crescimento-anual').text(`${crescimento >= 0 ? '+' : ''}${crescimento.toFixed(1)}%`);
+                $('#kpi-crescimento-anual').closest('.kpi-card').removeClass('negative positive').addClass(crescimento >= 0 ? 'positive' : 'negative');
+                
+                $('#kpi-melhor-mes').text(melhorMes ? this.getMonthName(melhorMes.mes) : 'N/A');
+                $('#kpi-pior-mes').text(piorMes ? this.getMonthName(piorMes.mes) : 'N/A');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar KPIs:', error);
+        }
+    }
+
+    async loadComparativoAnos() {
+        try {
+            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}`);
+            
+            if (response.success && response.data) {
+                this.renderComparativoChart(response.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar comparativo anos:', error);
+        }
+    }
+
+    async loadSunburstData() {
+        console.log('🌅 Carregando dados do sunburst...');
+        try {
+            const url = `/financeiro/faturamento/api/geral/sunburst_data?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}`;
+            console.log('📍 URL da requisição:', url);
+            
+            const response = await $.get(url);
+            console.log('📥 Resposta recebida:', response);
+            
+            if (response.success && response.data) {
+                console.log('✅ Chamando renderSunburstChart com dados:', response.data.length, 'registros');
+                this.renderSunburstChart(response.data);
+            } else {
+                console.error('❌ Dados do sunburst inválidos:', response);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados sunburst:', error);
+        }
+    }
+
+    async loadResumoMensal() {
+        try {
+            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}`);
+            
+            if (response.success && response.data) {
+                this.renderResumoMensal(response.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar resumo mensal:', error);
+        }
+    }
+
+    // New Chart Rendering Functions
+    renderComparativoChart(data) {
+        const ctx = document.getElementById('comparativo-chart');
+        if (!ctx) return;
+
+        // Destroy existing chart
+        if (this.comparativoChart) {
+            this.comparativoChart.destroy();
+        }
+
+        const anos = Object.keys(data).sort();
+        const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+        
+        const datasets = anos.map((ano, index) => {
+            const anoData = data[ano] || [];
+            const valores = meses.map(mes => {
+                const item = anoData.find(d => d.mes === mes);
+                return item ? item.total_valor : 0;
+            });
+
+            return {
+                label: ano,
+                data: valores,
+                borderColor: this.getYearColor(index),
+                backgroundColor: this.getYearColor(index, 0.1),
+                borderWidth: 3,
+                fill: false,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 8
+            };
+        });
+
+        this.comparativoChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: meses.map(mes => this.getMonthName(mes)),
+                datasets: datasets
+            },
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Comparativo Mensal por Ano',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    datalabels: {
+                        display: true,
+                        align: 'top',
+                        anchor: 'end',
+                        color: '#666',
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        },
+                        formatter: function(value) {
+                            // Garantir que value é um número válido
+                            if (typeof value === 'object' || value === null || value === undefined) {
+                                return '';
+                            }
+                            const numValue = typeof value === 'number' ? value : (isNaN(parseFloat(value)) ? 0 : parseFloat(value));
+                            if (numValue > 0) {
+                                return formatCurrencyShort(numValue);
+                            }
+                            return '';
+                        },
+                        backgroundColor: function(context) {
+                            return context.dataset.borderColor;
+                        },
+                        borderColor: '#fff',
+                        borderRadius: 4,
+                        borderWidth: 1,
+                        padding: 2
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => formatCurrencyShort(value)
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverBackgroundColor: '#fff',
+                        hoverBorderWidth: 3
+                    }
+                }
+            }
+        });
+
+        // Setup year toggles
+        this.setupYearToggles(anos);
+    }
+
+    renderSunburstChart(data) {
+        console.log('🌅 Renderizando sunburst chart com dados:', data);
+        
+        const ctx = document.getElementById('sunburst-chart');
+        if (!ctx) {
+            console.error('❌ Elemento sunburst-chart não encontrado!');
+            return;
+        }
+
+        // Destroy existing chart
+        if (this.sunburstChart) {
+            this.sunburstChart.destroy();
+        }
+
+        // Transform data for Chart.js doughnut (simulating sunburst)
+        const centerData = {};
+        
+        data.forEach(item => {
+            const centro = item.centro_resultado || 'Outros';
+            const categoria = item.categoria || 'Não Categorizado';
+            const valor = item.total_valor || 0;
+            
+            if (!centerData[centro]) {
+                centerData[centro] = { total: 0, categorias: {} };
             }
             
-            this.updateGeralKPIs(data);
-        } catch (error) {
-            console.error('Erro ao carregar KPIs gerais:', error);
+            centerData[centro].total += valor;
+            centerData[centro].categorias[categoria] = (centerData[centro].categorias[categoria] || 0) + valor;
+        });
+
+        console.log('📊 Dados processados para sunburst:', centerData);
+
+        const labels = [];
+        const values = [];
+        const colors = [];
+        
+        Object.entries(centerData).forEach(([centro, info], centerIndex) => {
+            // Add center level
+            labels.push(centro);
+            values.push(info.total);
+            colors.push(this.getCenterColor(centerIndex));
+            
+            // Add category levels (as separate segments)
+            Object.entries(info.categorias).forEach(([categoria, valor], catIndex) => {
+                labels.push(`${centro} - ${categoria}`);
+                values.push(valor);
+                colors.push(this.getCenterColor(centerIndex, 0.6 + (catIndex * 0.1)));
+            });
+        });
+
+        console.log('🎨 Labels:', labels);
+        console.log('📈 Values:', values);
+        console.log('🌈 Colors:', colors);
+
+        this.sunburstChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Proporção por Centro de Resultado → Categoria',
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            generateLabels: function(chart) {
+                                const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                const labels = original.call(this, chart);
+                                
+                                // Filter to show only main centers
+                                return labels.filter(label => label && label.text && !label.text.includes(' - '));
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                return `${context.label}: ${formatCurrency(context.parsed)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const elementIndex = elements[0].index;
+                        const label = labels[elementIndex];
+                        const value = values[elementIndex];
+                        
+                        console.log('🎯 Clique no sunburst:', label, formatCurrency(value));
+                        
+                        // Mostrar detalhes ou filtrar dados
+                        this.showSunburstDetails(label, value);
+                    }
+                }
+            }
+        });
+    }
+    
+    showSunburstDetails(label, value) {
+        // Implementar modal ou área de detalhes
+        const message = `Detalhes de ${label}:\nValor: ${formatCurrency(value)}`;
+        
+        // Por enquanto, mostrar alert (pode ser substituído por modal)
+        if (confirm(`${message}\n\nDeseja filtrar dados por "${label}"?`)) {
+            console.log('🔍 Filtrando por:', label);
+            // Aqui pode implementar filtro específico
         }
+    }
+
+    renderResumoMensal(data) {
+        console.log('📊 Renderizando resumo mensal com dados:', data);
+        
+        const tbody = $('#resumo-mensal tbody');
+        if (!tbody.length) {
+            console.error('❌ Elemento resumo-mensal tbody não encontrado');
+            return;
+        }
+        
+        tbody.empty();
+
+        // Organizar dados por ano
+        const anos = Object.keys(data).sort();
+        
+        if (anos.length === 0) {
+            tbody.append('<tr><td colspan="13" class="text-center">Nenhum dado encontrado</td></tr>');
+            return;
+        }
+
+        anos.forEach(ano => {
+            const anoData = data[ano] || [];
+            const row = $('<tr></tr>');
+            row.append(`<td class="fw-bold">${ano}</td>`);
+            
+            // Criar array com dados dos meses
+            const meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+            
+            meses.forEach(mes => {
+                const item = anoData.find(d => d.mes === mes);
+                const valor = item ? item.total_valor : 0;
+                
+                const cell = $('<td></td>');
+                cell.text(formatCurrencyShort(valor));
+                cell.addClass(valor > 0 ? 'text-success fw-bold' : 'text-muted');
+                row.append(cell);
+            });
+            
+            tbody.append(row);
+        });
+        
+        console.log('✅ Tabela resumo renderizada com', anos.length, 'anos');
     }
     
     updateGeralKPIs(data) {
@@ -226,106 +573,38 @@ class FaturamentoController {
         ];
         
         // Get metas for the current year
-        this.loadMetasForYear(this.currentAno).then(metas => {
-            Object.keys(monthData).forEach(ano => {
-                const row = $('<tr></tr>');
-                row.append(`<td>${ano}</td>`);
-                
-                let totalFaturamento = 0;
-                
-                // Add data for each month
-                for (let mes = 1; mes <= 12; mes++) {
-                    if (monthData[ano] && monthData[ano][mes]) {
-                        const mesData = monthData[ano][mes];
-                        const faturamento = typeof mesData.faturamento === 'object' ? 0 : (mesData.faturamento || 0);
-                        totalFaturamento += faturamento;
-                        const variacao = typeof mesData.variacao === 'object' ? 0 : (mesData.variacao || 0);
-                        const variacaoClass = variacao > 0 ? 'text-success' : variacao < 0 ? 'text-danger' : '';
-                        const variacaoIcon = variacao > 0 ? 'mdi mdi-trending-up' : variacao < 0 ? 'mdi mdi-trending-down' : 'mdi mdi-minus';
-                        
-                        row.append(`
-                            <td>
-                                <div class="fw-bold">${formatCurrency(faturamento)}</div>
-                                <div class="${variacaoClass}">
-                                    <i class="${variacaoIcon}"></i>
-                                    ${Math.abs(variacao).toFixed(1)}%
-                                </div>
-                            </td>
-                        `);
-                    } else {
-                        row.append(`<td>-</td>`);
-                    }
+        Object.keys(monthData).forEach(ano => {
+            const row = $('<tr></tr>');
+            row.append(`<td>${ano}</td>`);
+            
+            let totalFaturamento = 0;
+            
+            // Add data for each month
+            for (let mes = 1; mes <= 12; mes++) {
+                if (monthData[ano] && monthData[ano][mes]) {
+                    const mesData = monthData[ano][mes];
+                    const faturamento = typeof mesData.faturamento === 'object' ? 0 : (mesData.faturamento || 0);
+                    totalFaturamento += faturamento;
+                    const variacao = typeof mesData.variacao === 'object' ? 0 : (mesData.variacao || 0);
+                    const variacaoClass = variacao > 0 ? 'text-success' : variacao < 0 ? 'text-danger' : '';
+                    const variacaoIcon = variacao > 0 ? 'mdi mdi-trending-up' : variacao < 0 ? 'mdi mdi-trending-down' : 'mdi mdi-minus';
+                    
+                    row.append(`
+                        <td>
+                            <div class="fw-bold">${formatCurrency(faturamento)}</div>
+                            <div class="${variacaoClass}">
+                                <i class="${variacaoIcon}"></i>
+                                ${Math.abs(variacao).toFixed(1)}%
+                            </div>
+                        </td>
+                    `);
+                } else {
+                    row.append(`<td>-</td>`);
                 }
-                
-                // Add meta column
-                const metaValue = metas && metas.anual ? (metas.anual.meta || 0) : 0;
-                const numericMeta = typeof metaValue === 'object' ? 0 : metaValue;
-                row.append(`<td class="fw-bold">${formatCurrency(numericMeta)}</td>`);
-                
-                tbody.append(row);
-            });
-        }).catch(error => {
-            console.error('Error loading metas:', error);
-            // Render table without metas if there's an error
-            Object.keys(monthData).forEach(ano => {
-                const row = $('<tr></tr>');
-                row.append(`<td>${ano}</td>`);
-                
-                // Add data for each month
-                for (let mes = 1; mes <= 12; mes++) {
-                    if (monthData[ano] && monthData[ano][mes]) {
-                        const mesData = monthData[ano][mes];
-                        const faturamento = typeof mesData.faturamento === 'object' ? 0 : (mesData.faturamento || 0);
-                        const variacao = typeof mesData.variacao === 'object' ? 0 : (mesData.variacao || 0);
-                        const variacaoClass = variacao > 0 ? 'text-success' : variacao < 0 ? 'text-danger' : '';
-                        const variacaoIcon = variacao > 0 ? 'mdi mdi-trending-up' : variacao < 0 ? 'mdi mdi-trending-down' : 'mdi mdi-minus';
-                        
-                        row.append(`
-                            <td>
-                                <div class="fw-bold">${formatCurrency(faturamento)}</div>
-                                <div class="${variacaoClass}">
-                                    <i class="${variacaoIcon}"></i>
-                                    ${Math.abs(variacao).toFixed(1)}%
-                                </div>
-                            </td>
-                        `);
-                    } else {
-                        row.append(`<td>-</td>`);
-                    }
-                }
-                
-                // Add meta column with 0 if there's an error
-                row.append(`<td class="fw-bold">${formatCurrency(0)}</td>`);
-                
-                tbody.append(row);
-            });
+            }
+            
+            tbody.append(row);
         });
-    }
-    
-    async loadMetasForYear(ano) {
-        try {
-            const response = await fetch(`/financeiro/faturamento/api/metas?ano=${ano}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            
-            // Process metas data
-            const metas = {};
-            if (Array.isArray(data)) {
-                data.forEach(meta => {
-                    if (meta && meta.tipo === 'financeiro') {
-                        const key = meta.mes || 'anual';
-                        metas[key] = meta;
-                    }
-                });
-            }
-            
-            return metas;
-        } catch (error) {
-            console.error('Erro ao carregar metas:', error);
-            return null;
-        }
     }
     
     async loadGeralProporcao() {
@@ -338,16 +617,15 @@ class FaturamentoController {
             }
             
             this.renderChartProporcao(data.setores);
-            this.renderChartMetaRealizacao(data.meta);
         } catch (error) {
             console.error('Erro ao carregar gráficos de proporção:', error);
         }
     }
     
     renderChartProporcao(setores) {
-        const ctx = document.getElementById('chart-proporcao-faturamento');
+        const ctx = document.getElementById('chart-proporcao-setores');
         if (!ctx) {
-            console.error('Chart context not found');
+            console.error('Chart context not found: chart-proporcao-setores');
             return;
         }
         
@@ -455,122 +733,6 @@ class FaturamentoController {
                                 return `${numericPercent.toFixed(1)}%\n${formatCurrencyShort(numericValue)}`;
                             }
                             return formatCurrencyShort(numericValue);
-                        },
-                        color: '#fff',
-                        font: {
-                            weight: 'bold',
-                            size: 12
-                        },
-                        textAlign: 'center'
-                    }
-                }
-            },
-            plugins: [ChartDataLabels] // Add the data labels plugin
-        });
-    }
-    
-    renderChartMetaRealizacao(meta) {
-        const ctx = document.getElementById('chart-meta-realizacao');
-        if (!ctx) {
-            console.error('Chart context not found');
-            return;
-        }
-        
-        const ctx2d = ctx.getContext('2d');
-        if (!ctx2d) {
-            console.error('Unable to get 2D context');
-            return;
-        }
-        
-        // Destruir gráfico anterior se existir
-        if (this.charts.meta) {
-            this.charts.meta.destroy();
-        }
-        
-        // Check if meta data exists
-        if (!meta) {
-            console.error('Meta data is missing');
-            return;
-        }
-        
-        // Calculate percentages
-        const faturadoValor = (meta.faturado && meta.faturado.valor) || 0;
-        const aRealizarValor = (meta.a_realizar && meta.a_realizar.valor) || 0;
-        // Ensure values are numbers
-        const numericFaturado = typeof faturadoValor === 'object' ? 0 : faturadoValor;
-        const numericARealizar = typeof aRealizarValor === 'object' ? 0 : aRealizarValor;
-        const total = numericFaturado + numericARealizar;
-        const faturadoPercent = total > 0 ? (numericFaturado / total * 100) : 0;
-        const aRealizarPercent = total > 0 ? (numericARealizar / total * 100) : 0;
-        
-        // Create a gauge chart instead of pie chart
-        this.charts.meta = new Chart(ctx2d, {
-            type: 'doughnut',
-            data: {
-                labels: ['Faturado', 'A Realizar'],
-                datasets: [{
-                    data: [numericFaturado, numericARealizar],
-                    backgroundColor: [
-                        numericFaturado > 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)',
-                        numericARealizar > 0 ? 'rgba(255, 193, 7, 0.8)' : 'rgba(200, 200, 200, 0.8)'
-                    ],
-                    borderColor: [
-                        numericFaturado > 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)',
-                        numericARealizar > 0 ? 'rgba(255, 193, 7, 1)' : 'rgba(200, 200, 200, 1)'
-                    ],
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                rotation: 270, // Start from top
-                circumference: 180, // Half circle
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                // Ensure value is a number
-                                const numericValue = typeof value === 'object' ? 0 : value;
-                                const total = context.dataset.data.reduce((a, b) => {
-                                    const aValue = typeof a === 'object' ? 0 : a;
-                                    const bValue = typeof b === 'object' ? 0 : b;
-                                    return (aValue || 0) + (bValue || 0);
-                                }, 0);
-                                const percent = total > 0 ? ((numericValue / total) * 100).toFixed(1) : '0.0';
-                                return `${label}: ${formatCurrency(numericValue)} (${percent}%)`;
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: `Meta: ${formatCurrency(numericFaturado + numericARealizar)}`,
-                        font: {
-                            size: 14
-                        }
-                    },
-                    // Add data labels plugin
-                    datalabels: {
-                        formatter: (value, ctx) => {
-                            // Ensure value is a number
-                            const numericValue = typeof value === 'object' ? 0 : value;
-                            if (numericValue === null || numericValue === undefined || numericValue === 0) return '';
-                            const total = ctx.dataset.data.reduce((a, b) => {
-                                const aValue = typeof a === 'object' ? 0 : a;
-                                const bValue = typeof b === 'object' ? 0 : b;
-                                return (aValue || 0) + (bValue || 0);
-                            }, 0);
-                            const percent = total > 0 ? ((numericValue / total) * 100).toFixed(1) : '0.0';
-                            return `${formatCurrencyShort(numericValue)}\n${percent}%`;
                         },
                         color: '#fff',
                         font: {
@@ -701,6 +863,29 @@ class FaturamentoController {
                                 return context.dataset.label + ': ' + formatCurrency(value);
                             }
                         }
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        }
                     }
                 },
                 scales: {
@@ -736,7 +921,8 @@ class FaturamentoController {
                         }
                     }
                 }
-            }
+            },
+            plugins: [ChartDataLabels] // Add the data labels plugin
         });
     }
     
@@ -747,7 +933,7 @@ class FaturamentoController {
         if (data.length === 0) {
             tbody.append(`
                 <tr>
-                    <td colspan="4" class="text-center text-muted">
+                    <td colspan="3" class="text-center text-muted">
                         Nenhum cliente encontrado
                     </td>
                 </tr>
@@ -759,7 +945,6 @@ class FaturamentoController {
             tbody.append(`
                 <tr>
                     <td>${row.cliente}</td>
-                    <td>${row.classe}</td>
                     <td class="fw-bold">${formatCurrency(row.valor)}</td>
                     <td>${row.pct_gt.toFixed(1)}%</td>
                 </tr>
@@ -767,6 +952,160 @@ class FaturamentoController {
         });
     }
     
+    // OnePage Layout Functions for Setores Analysis
+    async loadAllSetoresData() {
+        try {
+            // Load data for all sectors in parallel
+            const setores = ['importacao', 'exportacao', 'consultoria'];
+            const promises = setores.map(setor => this.loadSetorEspecificoData(setor));
+            await Promise.all(promises);
+        } catch (error) {
+            console.error('Erro ao carregar dados de todos os setores:', error);
+            this.showError('Erro ao carregar dados dos setores: ' + error.message);
+        }
+    }
+    
+    async loadSetorEspecificoData(setor) {
+        try {
+            const response = await fetch(`/financeiro/faturamento/api/setor/dados_completos?setor=${setor}`);
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao carregar dados do setor');
+            }
+            
+            this.updateSetorEspecificoKPIs(setor, data.kpis);
+            this.renderSetorEspecificoChart(setor, data.grafico_mensal);
+            this.renderSetorEspecificoTable(setor, data.ranking_clientes);
+        } catch (error) {
+            console.error(`Erro ao carregar dados do setor ${setor}:`, error);
+            // Don't show error for individual sectors, just log it
+        }
+    }
+    
+    updateSetorEspecificoKPIs(setor, kpis) {
+        // Update specific setor KPIs
+        $(`#valor-faturamento-${setor}`).text(formatCurrencyShort(kpis.faturamento_total));
+        $(`#valor-percentual-${setor}`).text(`${kpis.percentual_participacao.toFixed(1)}%`);
+    }
+    
+    renderSetorEspecificoChart(setor, data) {
+        const ctx = document.getElementById(`chart-faturamento-${setor}`).getContext('2d');
+        
+        // Destroy previous chart if exists
+        if (this.charts[`setor-${setor}`]) {
+            this.charts[`setor-${setor}`].destroy();
+        }
+        
+        // Prepare data for chart
+        const months = [];
+        const currentPeriodData = [];
+        const previousPeriodData = [];
+        
+        // Extract unique months and sort them
+        const monthKeys = [...new Set(data.map(item => item.mes))].sort();
+        
+        // Create month labels and populate data arrays
+        monthKeys.forEach(monthKey => {
+            const monthData = data.find(item => item.mes === monthKey);
+            if (monthData) {
+                const [year, month] = monthKey.split('-');
+                const monthName = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'short' });
+                months.push(`${monthName}/${year.slice(2)}`);
+                
+                currentPeriodData.push(monthData.faturamento || 0);
+                previousPeriodData.push(monthData.faturamento_anterior || 0);
+            }
+        });
+        
+        // Set colors based on setor
+        const setorColors = {
+            'importacao': { primary: 'rgba(5, 150, 105, 1)', secondary: 'rgba(17, 94, 89, 1)' },
+            'exportacao': { primary: 'rgba(245, 158, 11, 1)', secondary: 'rgba(217, 119, 6, 1)' },
+            'consultoria': { primary: 'rgba(124, 58, 237, 1)', secondary: 'rgba(109, 40, 217, 1)' }
+        };
+        
+        const colors = setorColors[setor] || setorColors['importacao'];
+        
+        this.charts[`setor-${setor}`] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Período Atual',
+                    data: currentPeriodData,
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary.replace('1)', '0.1)'),
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: colors.primary,
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
+                }, {
+                    label: 'Mesmo Período Anterior',
+                    data: previousPeriodData,
+                    borderColor: colors.secondary,
+                    backgroundColor: colors.secondary.replace('1)', '0.1)'),
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointBackgroundColor: colors.secondary,
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value, context) {
+                            return formatCurrencyShort(value);
+                        },
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        },
+                        color: '#333'
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+    }
+    
+    renderSetorEspecificoTable(setor, data) {
+        const tbody = $(`#tabela-ranking-${setor} tbody`);
+        tbody.empty();
+        
+        if (data.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="3" class="text-center text-muted">
+                        Nenhum cliente encontrado
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+        
+        data.forEach((row, index) => {
+            tbody.append(`
+                <tr>
+                    <td>${row.cliente}</td>
+                    <td class="fw-bold">${formatCurrency(row.valor)}</td>
+                    <td>${row.pct_gt.toFixed(1)}%</td>
+                </tr>
+            `);
+        });
+    }
+
     // Metas Management Functions
     async loadMetas() {
         try {
@@ -1086,7 +1425,108 @@ const ChartDataLabels = {
     }
 };
 
+// Auxiliary functions for new charts
+FaturamentoController.prototype.getYearColor = function(index, alpha = 1) {
+    const colors = [
+        `rgba(54, 162, 235, ${alpha})`,   // Blue
+        `rgba(255, 99, 132, ${alpha})`,   // Red
+        `rgba(75, 192, 192, ${alpha})`,   // Teal
+        `rgba(255, 206, 86, ${alpha})`,   // Yellow
+        `rgba(153, 102, 255, ${alpha})`,  // Purple
+        `rgba(255, 159, 64, ${alpha})`    // Orange
+    ];
+    return colors[index % colors.length];
+};
+
+FaturamentoController.prototype.getCenterColor = function(index, alpha = 1) {
+    const colors = [
+        `rgba(75, 192, 192, ${alpha})`,   // Teal
+        `rgba(255, 99, 132, ${alpha})`,   // Red
+        `rgba(54, 162, 235, ${alpha})`,   // Blue
+        `rgba(255, 206, 86, ${alpha})`,   // Yellow
+        `rgba(153, 102, 255, ${alpha})`,  // Purple
+        `rgba(255, 159, 64, ${alpha})`,   // Orange
+        `rgba(199, 199, 199, ${alpha})`,  // Gray
+        `rgba(83, 102, 147, ${alpha})`    // Dark Blue
+    ];
+    return colors[index % colors.length];
+};
+
+FaturamentoController.prototype.setupYearToggles = function(anos) {
+    const toggleContainer = document.getElementById('year-toggles');
+    if (!toggleContainer) return;
+
+    toggleContainer.innerHTML = '';
+    
+    anos.forEach((ano, index) => {
+        const toggle = document.createElement('button');
+        toggle.className = 'btn btn-sm btn-outline-primary me-2 year-toggle active';
+        toggle.textContent = ano;
+        toggle.dataset.year = ano;
+        toggle.dataset.index = index;
+        
+        toggle.addEventListener('click', () => {
+            toggle.classList.toggle('active');
+            this.toggleYearData(ano, index, toggle.classList.contains('active'));
+        });
+        
+        toggleContainer.appendChild(toggle);
+    });
+};
+
+FaturamentoController.prototype.toggleYearData = function(ano, index, show) {
+    if (!this.comparativoChart) return;
+    
+    const dataset = this.comparativoChart.data.datasets[index];
+    if (dataset) {
+        dataset.hidden = !show;
+        this.comparativoChart.update();
+    }
+};
+
+FaturamentoController.prototype.getMonthName = function(mes) {
+    const months = {
+        '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
+        '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+        '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez'
+    };
+    return months[mes] || mes;
+};
+
+// Funções utilitárias
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(value);
+}
+
+function formatCurrencyShort(value) {
+    if (value >= 1000000000) {
+        return 'R$ ' + (value / 1000000000).toFixed(2) + 'B';
+    } else if (value >= 1000000) {
+        return 'R$ ' + (value / 1000000).toFixed(2) + 'M';
+    } else if (value >= 1000) {
+        return 'R$ ' + (value / 1000).toFixed(2) + 'K';
+    } else {
+        return 'R$ ' + value.toFixed(2);
+    }
+}
+
 // Inicializar controlador após o carregamento do DOM
 document.addEventListener('DOMContentLoaded', function() {
-    window.faturamentoController = new FaturamentoController();
+    // Garantir que jQuery esteja disponível
+    if (typeof $ !== 'undefined') {
+        window.faturamentoController = new FaturamentoController();
+        console.log('FaturamentoController inicializado com sucesso');
+    } else {
+        console.error('jQuery não está disponível');
+        // Tentar novamente após um pequeno delay
+        setTimeout(() => {
+            if (typeof $ !== 'undefined') {
+                window.faturamentoController = new FaturamentoController();
+                console.log('FaturamentoController inicializado com sucesso (retry)');
+            }
+        }, 100);
+    }
 });

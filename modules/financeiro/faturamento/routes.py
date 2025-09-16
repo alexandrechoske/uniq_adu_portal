@@ -13,8 +13,7 @@ faturamento_bp = Blueprint(
     __name__,
     url_prefix='/financeiro/faturamento',
     template_folder='templates',
-    static_folder='static',
-    static_url_path='/financeiro/faturamento/static'
+    static_folder='static'
 )
 
 @faturamento_bp.route('/')
@@ -39,19 +38,8 @@ def api_geral_kpis():
         # Calcular total faturado
         total_faturado = sum(float(item['valor']) for item in dados_faturamento)
         
-        # Buscar meta do ano
-        meta_response = supabase_admin.table('fin_metas_financeiras').select('meta').eq('ano', str(ano)).execute()
-        meta_anual = sum(item['meta'] for item in meta_response.data) if meta_response.data else 0
-        
-        # Calcular valores
-        target_realizado = total_faturado
-        target_a_realizar = meta_anual - total_faturado if meta_anual > 0 else 0
-        
         return jsonify({
-            'total_faturado': total_faturado,
-            'meta_anual': meta_anual,
-            'target_realizado': target_realizado,
-            'target_a_realizar': target_a_realizar
+            'total_faturado': total_faturado
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -149,14 +137,6 @@ def api_geral_proporcao():
         pct_consultoria = (total_consultoria / total_geral * 100) if total_geral > 0 else 0
         pct_exportacao = (total_exportacao / total_geral * 100) if total_geral > 0 else 0
         
-        # Buscar meta do ano
-        meta_response = supabase_admin.table('fin_metas_financeiras').select('meta').eq('ano', str(ano)).execute()
-        meta_anual = sum(item['meta'] for item in meta_response.data) if meta_response.data else 0
-        
-        # Calcular percentual faturado vs meta
-        pct_faturado = (total_geral / meta_anual * 100) if meta_anual > 0 else 0
-        pct_a_realizar = 100 - pct_faturado if meta_anual > 0 else 0
-        
         return jsonify({
             'setores': {
                 'importacao': {
@@ -171,20 +151,131 @@ def api_geral_proporcao():
                     'valor': total_exportacao,
                     'percentual': pct_exportacao
                 }
-            },
-            'meta': {
-                'faturado': {
-                    'valor': total_geral,
-                    'percentual': pct_faturado
-                },
-                'a_realizar': {
-                    'valor': meta_anual - total_geral if meta_anual > 0 else 0,
-                    'percentual': pct_a_realizar
-                }
             }
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/comparativo_anos')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_comparativo_anos():
+    """API para comparativo anual usando dados de faturamento"""
+    try:
+        start_date = request.args.get('start_date', '2023-01-01')
+        end_date = request.args.get('end_date', '2024-12-31')
+        empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        
+        # Buscar dados de faturamento para o período
+        query = supabase_admin.table('fin_faturamento_anual').select('*')
+        
+        # Aplicar filtros de data
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+            
+        # Aplicar filtros opcionais
+        if empresa and empresa.strip():
+            query = query.eq('empresa', empresa)
+        if centro_resultado and centro_resultado.strip():
+            query = query.eq('centro_resultado', centro_resultado)
+        
+        response = query.order('data', desc=False).execute()
+        dados = response.data
+        
+        # Organizar dados por ano e mês
+        anos_data = defaultdict(list)
+        
+        for item in dados:
+            data_str = item.get('data')
+            if not data_str:
+                continue
+                
+            try:
+                data_obj = datetime.strptime(data_str, '%Y-%m-%d')
+                ano = str(data_obj.year)
+                mes = data_obj.strftime('%m')
+                valor = float(item.get('valor', 0))
+                
+                # Encontrar ou criar entrada para o mês
+                mes_existente = None
+                for mes_data in anos_data[ano]:
+                    if mes_data['mes'] == mes:
+                        mes_existente = mes_data
+                        break
+                
+                if mes_existente:
+                    mes_existente['total_valor'] += valor
+                else:
+                    anos_data[ano].append({
+                        'mes': mes,
+                        'total_valor': valor
+                    })
+                    
+            except ValueError:
+                continue
+        
+        return jsonify({
+            'success': True,
+            'data': dict(anos_data)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@faturamento_bp.route('/api/geral/sunburst_data')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_sunburst_data():
+    """API para dados do gráfico sunburst: Centro Resultado -> Categoria"""
+    try:
+        start_date = request.args.get('start_date', '2024-01-01')
+        end_date = request.args.get('end_date', '2024-12-31')
+        empresa = request.args.get('empresa', '')
+        
+        # Buscar dados com centro_resultado e categoria
+        query = supabase_admin.table('fin_faturamento_anual').select('centro_resultado, categoria, valor')
+        
+        # Aplicar filtros
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+        if empresa and empresa.strip():
+            query = query.eq('empresa', empresa)
+            
+        response = query.execute()
+        dados = response.data
+        
+        # Organizar dados para o sunburst
+        resultado = []
+        
+        for item in dados:
+            centro = item.get('centro_resultado') or 'Não Classificado'
+            categoria = item.get('categoria') or 'Outros'
+            valor = float(item.get('valor', 0))
+            
+            resultado.append({
+                'centro_resultado': centro,
+                'categoria': categoria,
+                'total_valor': valor
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': resultado
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @faturamento_bp.route('/api/setor/dados_completos')
 @login_required
@@ -271,12 +362,21 @@ def api_setor_dados_completos():
                 'faturamento_anterior': faturamento_mensal_anterior.get(mes_anterior_key, 0)
             })
         
-        # Ranking de clientes
+        # Buscar mapeamento de clientes
+        mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+        mapeamento_clientes = {}
+        if mapeamento_response.data:
+            for item in mapeamento_response.data:
+                mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+        
+        # Ranking de clientes com nomes padronizados
         clientes_ranking = defaultdict(lambda: {'valor': 0, 'classe': ''})
         for item in dados_faturamento:
-            cliente = item.get('cliente', 'Não identificado')
-            clientes_ranking[cliente]['valor'] += float(item['valor'])
-            clientes_ranking[cliente]['classe'] = item.get('classe', '')
+            cliente_original = item.get('cliente', 'Não identificado')
+            # Usar nome padronizado se existir, senão usar o original
+            cliente_padronizado = mapeamento_clientes.get(cliente_original, cliente_original)
+            clientes_ranking[cliente_padronizado]['valor'] += float(item['valor'])
+            clientes_ranking[cliente_padronizado]['classe'] = item.get('classe', '')
         
         # Converter para lista e ordenar
         ranking_lista = []
@@ -299,82 +399,5 @@ def api_setor_dados_completos():
             'grafico_mensal': meses_data,
             'ranking_clientes': ranking_lista
         })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# API endpoints for Metas management
-@faturamento_bp.route('/api/metas', methods=['GET'])
-@login_required
-@perfil_required('financeiro', 'faturamento')
-def api_get_metas():
-    """API para obter todas as metas financeiras"""
-    try:
-        # Only get financeiro type metas
-        response = supabase_admin.table('fin_metas_financeiras').select('*').eq('tipo', 'financeiro').order('ano', desc=True).order('mes').execute()
-        return jsonify(response.data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@faturamento_bp.route('/api/metas', methods=['POST'])
-@login_required
-@perfil_required('financeiro', 'faturamento')
-def api_create_meta():
-    """API para criar ou atualizar uma meta financeira"""
-    try:
-        data = request.get_json()
-        ano = data.get('ano')
-        mes = data.get('mes')  # New field
-        meta = data.get('meta')
-        tipo = data.get('tipo', 'financeiro')  # Default to financeiro
-        
-        if not ano or meta is None:
-            return jsonify({'error': 'Ano e meta são obrigatórios'}), 400
-        
-        # Verificar se já existe uma meta para este ano e mês e tipo
-        query = supabase_admin.table('fin_metas_financeiras').select('*').eq('ano', str(ano)).eq('tipo', tipo)
-        if mes:
-            query = query.eq('mes', mes)
-        else:
-            query = query.is_('mes', 'null')
-        
-        existing_response = query.execute()
-        
-        if existing_response.data:
-            # Atualizar meta existente
-            meta_id = existing_response.data[0]['id']
-            update_data = {
-                'meta': meta,
-                'tipo': tipo
-            }
-            # Only include mes in update if it was provided
-            if mes is not None:
-                update_data['mes'] = mes
-            
-            update_response = supabase_admin.table('fin_metas_financeiras').update(update_data).eq('id', meta_id).execute()
-            return jsonify(update_response.data[0])
-        else:
-            # Criar nova meta
-            create_data = {
-                'ano': str(ano),
-                'meta': meta,
-                'tipo': tipo
-            }
-            # Only include mes in creation if it was provided
-            if mes is not None:
-                create_data['mes'] = mes
-                
-            create_response = supabase_admin.table('fin_metas_financeiras').insert(create_data).execute()
-            return jsonify(create_response.data[0])
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@faturamento_bp.route('/api/metas/<int:meta_id>', methods=['DELETE'])
-@login_required
-@perfil_required('financeiro', 'faturamento')
-def api_delete_meta(meta_id):
-    """API para excluir uma meta financeira"""
-    try:
-        response = supabase_admin.table('fin_metas_financeiras').delete().eq('id', meta_id).execute()
-        return jsonify({'message': 'Meta excluída com sucesso'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

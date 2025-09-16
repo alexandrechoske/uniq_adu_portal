@@ -378,6 +378,50 @@
     font-size: 0.875rem;
 }
 
+/* Tabela de Faturamento Mensal - fonte menor para caber dezembro */
+#tabela-faturamento-mensal {
+    font-size: 0.75rem; /* Reduzido de 0.875rem para 0.75rem */
+}
+
+#tabela-faturamento-mensal th,
+#tabela-faturamento-mensal td {
+    padding: 0.5rem 0.4rem; /* Reduzido padding para economizar espaço */
+    white-space: nowrap;
+    font-size: 0.75rem;
+}
+
+#tabela-faturamento-mensal th {
+    font-size: 0.7rem; /* Headers ainda menores */
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Tabela de Ranking de Clientes - otimização de larguras */
+#tabela-ranking-clientes {
+    table-layout: fixed; /* Força o controle de larguras */
+    width: 100%;
+}
+
+#tabela-ranking-clientes th:nth-child(1),
+#tabela-ranking-clientes td:nth-child(1) {
+    width: 50%; /* Cliente - 50% da largura */
+    text-align: left;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+#tabela-ranking-clientes th:nth-child(2),
+#tabela-ranking-clientes td:nth-child(2) {
+    width: 30%; /* Valor Faturado - 30% da largura */
+    text-align: right;
+}
+
+#tabela-ranking-clientes th:nth-child(3),
+#tabela-ranking-clientes td:nth-child(3) {
+    width: 20%; /* % Participação - 20% da largura */
+    text-align: center;
+}
+
 .enhanced-table th,
 .enhanced-table td {
     padding: 0.75rem;
@@ -895,4 +939,292 @@
 
 .gap-3 {
     gap: 1rem !important;
+}
+
+/* Setor Analysis - OnePage Layout */
+.setor-section {
+    margin-bottom: 60px;
+    border-bottom: 2px solid #f0f4f8;
+    padding-bottom: 40px;
+}
+
+.setor-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.setor-header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 12px;
+    border-left: 5px solid #4f46e5;
+}
+
+.setor-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.setor-title i {
+    font-size: 32px;
+    color: #4f46e5;
+}
+
+.setor-description {
+    font-size: 16px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.kpi-grid-setor {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* Color variants for different sectors */
+#setor-importacao .setor-header {
+    border-left-color: #059669;
+}
+
+#setor-importacao .setor-title i {
+    color: #059669;
+}
+
+#setor-exportacao .setor-header {
+    border-left-color: #f59e0b;
+}
+
+#setor-exportacao .setor-title i {
+    color: #f59e0b;
+}
+
+#setor-consultoria .setor-header {
+    border-left-color: #7c3aed;
+}
+
+#setor-consultoria .setor-title i {
+    color: #7c3aed;
+}
+
+/* KPI card color variants */
+.kpi-card.kpi-purple {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+    border-left-color: #7c3aed !important;
+    color: white !important;
+}
+
+.kpi-card.kpi-purple .kpi-icon {
+    background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.kpi-card.kpi-purple .kpi-value,
+.kpi-card.kpi-purple .kpi-label {
+    color: white !important;
+}
+
+/* Responsive adjustments for setor layout */
+@media (max-width: 768px) {
+    .setor-section {
+        margin-bottom: 40px;
+        padding-bottom: 30px;
+    }
+    
+    .setor-title {
+        font-size: 24px;
+    }
+    
+    .setor-title i {
+        font-size: 28px;
+    }
+    
+    .kpi-grid-setor {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+
+/* Setor ranking tables - Column width optimization */
+#tabela-ranking-importacao th:nth-child(1),
+#tabela-ranking-exportacao th:nth-child(1),
+#tabela-ranking-consultoria th:nth-child(1) {
+    width: 40%;
+}
+
+#tabela-ranking-importacao th:nth-child(2),
+#tabela-ranking-exportacao th:nth-child(2),
+#tabela-ranking-consultoria th:nth-child(2) {
+    width: 35%;
+}
+
+#tabela-ranking-importacao th:nth-child(3),
+#tabela-ranking-exportacao th:nth-child(3),
+#tabela-ranking-consultoria th:nth-child(3) {
+    width: 25%;
+}
+
+/* Ensure text wrapping in client names for better fit */
+#tabela-ranking-importacao td:nth-child(1),
+#tabela-ranking-exportacao td:nth-child(1),
+#tabela-ranking-consultoria td:nth-child(1) {
+    word-wrap: break-word;
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Enhanced KPI Grid for more cards */
+.kpi-grid-enhanced {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* Enhanced Charts Grid */
+.charts-grid-enhanced {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+/* Chart Controls */
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.anos-toggle {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ano-toggle-btn {
+    padding: 4px 12px;
+    border: 1px solid #dee2e6;
+    background: white;
+    color: #495057;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.ano-toggle-btn:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.ano-toggle-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.ano-toggle-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #e9ecef;
+}
+
+/* KPI Subtitle for additional info */
+.kpi-subtitle {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 2px 0 0 0;
+    font-weight: 400;
+}
+
+/* Compact table styles */
+.enhanced-table.compact {
+    font-size: 11px;
+}
+
+.enhanced-table.compact th,
+.enhanced-table.compact td {
+    padding: 6px 8px;
+}
+
+/* Responsive adjustments for enhanced layout */
+@media (max-width: 1200px) {
+    .kpi-grid-enhanced {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .kpi-grid-enhanced {
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .chart-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .anos-toggle {
+        gap: 5px;
+    }
+    
+    .ano-toggle-btn {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .kpi-grid-enhanced {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Year Toggles */
+.year-toggles {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.year-toggle {
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    color: #6c757d;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.year-toggle:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+}
+
+.year-toggle.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.year-toggle.active:hover {
+    background: #0056b3;
+    border-color: #0056b3;
 }
