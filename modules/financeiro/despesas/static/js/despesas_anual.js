@@ -81,6 +81,11 @@ class DespesasController {
     }
     
     init() {
+        // Registrar plugins do ChartJS se disponíveis
+        if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+        
         this.setupEventListeners();
         this.initializeLayout();
         this.loadFilterOptions();
@@ -317,11 +322,11 @@ class DespesasController {
     }
     
     updateKPIs(data) {
-        // Atualizar valores
-        $('#valor-total-despesas').text(formatCurrency(data.total_despesas || 0));
-        $('#valor-funcionarios').text(formatCurrency(data.despesas_funcionarios || 0));
-        $('#valor-folha-liquida').text(formatCurrency(data.folha_liquida || 0));
-        $('#valor-impostos').text(formatCurrency(data.impostos || 0));
+        // Atualizar valores usando formatação resumida para valores grandes
+        $('#valor-total-despesas').text(formatCurrencyShort(data.total_despesas || 0));
+        $('#valor-funcionarios').text(formatCurrencyShort(data.despesas_funcionarios || 0));
+        $('#valor-folha-liquida').text(formatCurrencyShort(data.folha_liquida || 0));
+        $('#valor-impostos').text(formatCurrencyShort(data.impostos || 0));
         $('#valor-percentual-folha').text(formatPercentage(data.percentual_folha_faturamento || 0));
         
         // Atualizar variações se disponível
@@ -377,16 +382,82 @@ class DespesasController {
                     data: valores,
                     backgroundColor: 'rgba(54, 162, 235, 0.8)',
                     borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderSkipped: false
                 }]
             },
             options: {
                 ...this.chartDefaults,
+                indexAxis: 'y', // Barras horizontais
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const label = labels[index];
                         this.openDetalhesModal(label);
+                    }
+                },
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    legend: {
+                        display: false
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'right',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyShort(value);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            },
+                            maxRotation: 0,
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(value);
+                                // Quebrar linha se texto for muito longo
+                                if (label && label.length > 15) {
+                                    const words = label.split(' ');
+                                    if (words.length > 1) {
+                                        const mid = Math.ceil(words.length / 2);
+                                        return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+                                    }
+                                }
+                                return label;
+                            }
+                        }
                     }
                 }
             }
@@ -450,8 +521,18 @@ class DespesasController {
                 'rgba(153, 102, 255, 0.8)'
             ];
             
+            // Quebrar linha no nome da série se for muito longo
+            let labelFormatted = serie;
+            if (serie.length > 20) {
+                const words = serie.split(' ');
+                if (words.length > 1) {
+                    const mid = Math.ceil(words.length / 2);
+                    labelFormatted = words.slice(0, mid).join(' ') + '\n' + words.slice(mid).join(' ');
+                }
+            }
+            
             return {
-                label: serie,
+                label: labelFormatted,
                 data: valores,
                 borderColor: colors[index % colors.length],
                 backgroundColor: colors[index % colors.length].replace('0.8', '0.2'),
@@ -465,7 +546,52 @@ class DespesasController {
                 labels: sortedLabels,
                 datasets: datasets
             },
-            options: this.chartDefaults
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true,
+                            font: {
+                                size: 10
+                            },
+                            boxWidth: 12,
+                            boxHeight: 12,
+                            generateLabels: function(chart) {
+                                const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                const labels = original.call(this, chart);
+                                
+                                // Quebrar linha em labels muito longos
+                                labels.forEach(label => {
+                                    if (label.text && label.text.length > 20) {
+                                        const words = label.text.split(' ');
+                                        if (words.length > 1) {
+                                            const mid = Math.ceil(words.length / 2);
+                                            label.text = words.slice(0, mid).join(' ') + '\n' + words.slice(mid).join(' ');
+                                        }
+                                    }
+                                });
+                                
+                                return labels;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    ...this.chartDefaults.scales,
+                    y: {
+                        ...this.chartDefaults.scales.y,
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyShort(value);
+                            }
+                        }
+                    }
+                }
+            }
         });
     }
     
@@ -677,11 +803,17 @@ function formatCurrency(value) {
 }
 
 function formatCurrencyShort(value) {
-    if (value >= 1000000) {
-        return `R$ ${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-        return `R$ ${(value / 1000).toFixed(1)}K`;
+    const absValue = Math.abs(value);
+    const prefix = value < 0 ? '-' : '';
+    
+    if (absValue >= 1000000) {
+        // Milhões: usar 2 casas decimais para maior precisão
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(2)}M`;
+    } else if (absValue >= 1000) {
+        // Milhares: usar 1 casa decimal (exemplo: 8.9K)
+        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
     }
+    // Valores menores que 1000: formato completo
     return formatCurrency(value);
 }
 

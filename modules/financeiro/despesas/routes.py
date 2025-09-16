@@ -57,10 +57,62 @@ def api_kpis():
             # Calcular KPIs
             total_despesas = df_atual['valor'].sum()
             
-            # Despesas com Funcionários
-            despesas_funcionarios = df_atual[
-                df_atual['categoria'] == 'Despesas com Funcionários'
-            ]['valor'].sum()
+            # Despesas com Funcionários - buscar por várias categorias possíveis
+            despesas_funcionarios_categorias = [
+                'Despesas com Funcionários',
+                'Funcionários',
+                'Folha de Pagamento',
+                'Salários',
+                'Pessoal'
+            ]
+            
+            despesas_funcionarios = 0
+            for categoria in despesas_funcionarios_categorias:
+                categoria_data = df_atual[
+                    df_atual['categoria'].str.upper().str.contains(categoria.upper(), na=False)
+                ]
+                if not categoria_data.empty:
+                    despesas_funcionarios += categoria_data['valor'].sum()
+                    print(f"Debug - Categoria '{categoria}': {categoria_data['valor'].sum()}")
+            
+            # Se ainda não encontrou, mostrar todas as categorias disponíveis
+            if despesas_funcionarios == 0:
+                print(f"Debug - Available categories: {sorted(df_atual['categoria'].unique())}")
+                # Buscar qualquer categoria que contenha 'funcionario', 'pessoal', 'salario'
+                func_data = df_atual[
+                    df_atual['categoria'].str.upper().str.contains('FUNCIONARIO|PESSOAL|SALARIO|FOLHA', na=False)
+                ]
+                if not func_data.empty:
+                    despesas_funcionarios = func_data['valor'].sum()
+                    print(f"Debug - Funcionários (fallback): {despesas_funcionarios}")
+                    print(f"Debug - Categorias encontradas: {func_data['categoria'].unique()}")
+            
+            # Impostos - buscar por várias categorias possíveis
+            impostos_categorias = [
+                'Imposto sobre faturamento',
+                'Impostos',
+                'Tributos',
+                'Taxas'
+            ]
+            
+            impostos = 0
+            for categoria in impostos_categorias:
+                categoria_data = df_atual[
+                    df_atual['categoria'].str.upper().str.contains(categoria.upper(), na=False)
+                ]
+                if not categoria_data.empty:
+                    impostos += categoria_data['valor'].sum()
+                    print(f"Debug - Categoria impostos '{categoria}': {categoria_data['valor'].sum()}")
+            
+            # Se ainda não encontrou, buscar por patterns
+            if impostos == 0:
+                impostos_data = df_atual[
+                    df_atual['categoria'].str.upper().str.contains('IMPOSTO|TRIBUTO|TAXA|ICMS|IPI|ISS|PIS|COFINS', na=False)
+                ]
+                if not impostos_data.empty:
+                    impostos = impostos_data['valor'].sum()
+                    print(f"Debug - Impostos (fallback): {impostos}")
+                    print(f"Debug - Categorias de impostos encontradas: {impostos_data['categoria'].unique()}")
             
             # Folha Líquida (classe específica)
             print(f"Debug - Available classes in data: {df_atual['classe'].unique()}")
@@ -90,10 +142,7 @@ def api_kpis():
                         folha_liquida = folha_liquida_data['valor'].sum()
                         print(f"Debug - Using all SALARIO classes: {len(folha_liquida_data)}, Valor total: {folha_liquida}")
             
-            # Impostos
-            impostos = df_atual[
-                df_atual['categoria'] == 'Imposto sobre faturamento'
-            ]['valor'].sum()
+            print(f"Debug - Final KPIs: Total={total_despesas}, Funcionários={despesas_funcionarios}, Folha={folha_liquida}, Impostos={impostos}")
             
             # Buscar período anterior para comparação
             data_inicio_anterior, data_fim_anterior = _get_periodo_anterior_dates(periodo)

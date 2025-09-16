@@ -250,7 +250,7 @@
 /* Charts Section */
 .charts-section {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 30% 70%;
     gap: 2rem;
     margin-bottom: 2rem;
 }
