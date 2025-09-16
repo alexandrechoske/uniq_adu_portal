@@ -350,6 +350,8 @@ class FaturamentoController {
 
         // Setup apenas toggle de rótulos (funcionalidade nativa Chart.js para anos)
         this.setupDataLabelsToggle();
+        
+        console.log('✅ Gráfico comparativo renderizado com toggle de rótulos configurado');
     }
 
     renderSunburstChart(data) {
@@ -1462,6 +1464,12 @@ function formatCurrencyShort(value) {
 const ChartDataLabels = {
     id: 'ChartDataLabels',
     afterDatasetsDraw(chart) {
+        // Verificar se os datalabels devem ser exibidos
+        const datalabelsOptions = chart.options.plugins && chart.options.plugins.datalabels;
+        if (!datalabelsOptions || datalabelsOptions.display === false) {
+            return; // Não desenhar se display for false
+        }
+        
         const { ctx, data, chartArea: { top, bottom, left, right, width, height }, scales: { x, y } } = chart;
         
         ctx.save();
@@ -1480,9 +1488,9 @@ const ChartDataLabels = {
                 
                 // Check if there's a custom formatter in the options
                 let formattedValue = numericValue;
-                if (chart.options.plugins && chart.options.plugins.datalabels && chart.options.plugins.datalabels.formatter) {
+                if (datalabelsOptions && datalabelsOptions.formatter) {
                     try {
-                        formattedValue = chart.options.plugins.datalabels.formatter(numericValue, { dataIndex: index, dataset });
+                        formattedValue = datalabelsOptions.formatter(numericValue, { dataIndex: index, dataset });
                     } catch (e) {
                         formattedValue = formatCurrencyShort(numericValue);
                     }
@@ -1491,9 +1499,11 @@ const ChartDataLabels = {
                 }
                 
                 // Style
-                ctx.font = 'bold 12px sans-serif';
-                ctx.fillStyle = chart.options.plugins && chart.options.plugins.datalabels && chart.options.plugins.datalabels.color ? 
-                    chart.options.plugins.datalabels.color : '#fff';
+                ctx.font = datalabelsOptions && datalabelsOptions.font ? 
+                    `${datalabelsOptions.font.weight || 'bold'} ${datalabelsOptions.font.size || 12}px sans-serif` : 
+                    'bold 12px sans-serif';
+                ctx.fillStyle = datalabelsOptions && datalabelsOptions.color ? 
+                    datalabelsOptions.color : '#666';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
@@ -1535,29 +1545,56 @@ FaturamentoController.prototype.getCenterColor = function(index, alpha = 1) {
 
 FaturamentoController.prototype.setupDataLabelsToggle = function() {
     const toggleButton = document.getElementById('toggle-data-labels');
-    if (!toggleButton) return;
+    if (!toggleButton) {
+        console.warn('Botão toggle-data-labels não encontrado');
+        return;
+    }
 
-    // Configurar estado inicial
-    toggleButton.classList.toggle('active', this.dataLabelsEnabled);
-    
-    // Adicionar listener
-    toggleButton.addEventListener('click', () => {
+    // Remover listeners anteriores para evitar duplicação
+    const newButton = toggleButton.cloneNode(true);
+    toggleButton.parentNode.replaceChild(newButton, toggleButton);
+
+    // Configurar estado inicial baseado na propriedade da classe
+    newButton.classList.toggle('active', this.dataLabelsEnabled);
+
+    // Adicionar listener para toggle
+    newButton.addEventListener('click', () => {
         this.dataLabelsEnabled = !this.dataLabelsEnabled;
-        toggleButton.classList.toggle('active', this.dataLabelsEnabled);
-        this.updateDataLabels();
+        newButton.classList.toggle('active', this.dataLabelsEnabled);
         
         console.log('🏷️ Toggle rótulos:', this.dataLabelsEnabled ? 'Ativado' : 'Desativado');
+        
+        this.updateDataLabels();
     });
+
+    console.log('✅ Toggle de rótulos configurado com sucesso');
 };
 
 FaturamentoController.prototype.updateDataLabels = function() {
-    if (!this.comparativoChart) return;
+    if (!this.comparativoChart) {
+        console.warn('Gráfico comparativo não encontrado para atualização');
+        return;
+    }
     
-    // Atualizar configuração dos datalabels
-    this.comparativoChart.options.plugins.datalabels.display = this.dataLabelsEnabled;
-    this.comparativoChart.update();
-    
-    console.log('🏷️ Rótulos de dados:', this.dataLabelsEnabled ? 'Habilitados' : 'Desabilitados');
+    try {
+        // Atualizar configuração dos datalabels no gráfico
+        if (this.comparativoChart.options.plugins && this.comparativoChart.options.plugins.datalabels) {
+            this.comparativoChart.options.plugins.datalabels.display = this.dataLabelsEnabled;
+        }
+        
+        // Forçar atualização do gráfico
+        this.comparativoChart.update();
+        
+        console.log('🏷️ Rótulos de dados:', this.dataLabelsEnabled ? 'Habilitados' : 'Desabilitados');
+        
+        // Verificar se a atualização foi aplicada
+        setTimeout(() => {
+            console.log('🔍 Verificação - datalabels.display:', this.comparativoChart.options.plugins.datalabels.display);
+        }, 100);
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar rótulos de dados:', error);
+    }
 };
 
 FaturamentoController.prototype.getMonthName = function(mes) {
