@@ -452,14 +452,18 @@ def api_geral_centro_resultado():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_categoria_operacao():
-    """API para gráfico de rosca - Faturamento por Categoria (usando campo 'categoria')"""
+    """API para gráfico de rosca - Faturamento por Categoria (usando campo 'categoria_operacao')"""
     try:
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
         
-        # Buscar dados de faturamento usando campo 'categoria' em vez de 'categoria_operacao'
-        query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor')
+        # Tentar usar a view tratada que tem categoria_operacao
+        try:
+            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria_operacao, valor')
+        except:
+            # Fallback para tabela original usando campo 'categoria'
+            query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor')
         
         # Aplicar filtros
         if start_date:
@@ -472,12 +476,13 @@ def api_geral_categoria_operacao():
         response = query.execute()
         dados = response.data
         
-        # Agrupar por categoria
+        # Agrupar por categoria_operacao (ou categoria se for fallback)
         categoria_data = defaultdict(float)
         total_geral = 0
         
         for item in dados:
-            categoria = item.get('categoria', 'Não Classificado')
+            # Tentar categoria_operacao primeiro, depois categoria
+            categoria = item.get('categoria_operacao') or item.get('categoria', 'Não Classificado')
             valor = float(item.get('valor', 0))
             categoria_data[categoria] += valor
             total_geral += valor

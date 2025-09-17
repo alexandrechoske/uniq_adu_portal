@@ -486,29 +486,47 @@
 
 /* Estilos para destacar top 3 clientes */
 .enhanced-table tbody tr.top-1 {
-    background: linear-gradient(135deg, #ffd700, #ffed4e) !important;
-    color: #333;
+    background: linear-gradient(135deg, #ffd700 0%, #fff3cd 100%) !important;
     font-weight: bold;
 }
 
 .enhanced-table tbody tr.top-2 {
-    background: linear-gradient(135deg, #c0c0c0, #e5e5e5) !important;
-    color: #333;
+    background: linear-gradient(135deg, #c0c0c0 0%, #f8f9fa 100%) !important;
     font-weight: bold;
 }
 
 .enhanced-table tbody tr.top-3 {
-    background: linear-gradient(135deg, #cd7f32, #d4a574) !important;
-    color: #333;
+    background: linear-gradient(135deg, #cd7f32 0%, #fff3cd 100%) !important;
     font-weight: bold;
 }
 
 .enhanced-table tbody tr.top-1:hover,
 .enhanced-table tbody tr.top-2:hover,
 .enhanced-table tbody tr.top-3:hover {
-    opacity: 0.9;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Estilo para nomes de clientes longos na tabela Top 10 */
+#top-clientes-table td:nth-child(1) {
+    max-width: 120px; /* Limitar largura da coluna cliente */
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.2;
+    font-size: 0.85em;
+}
+
+#top-clientes-table th:nth-child(1) {
+    width: 40%; /* Cliente */
+}
+
+#top-clientes-table th:nth-child(2) {
+    width: 35%; /* Valor */
+}
+
+#top-clientes-table th:nth-child(3) {
+    width: 25%; /* Percentual */
 }
 
 .table-pagination {
@@ -1198,12 +1216,41 @@
 
 /* Compact table styles */
 .enhanced-table.compact {
-    font-size: 11px;
+    font-size: 0.85em;
 }
 
 .enhanced-table.compact th,
 .enhanced-table.compact td {
-    padding: 6px 8px;
+    padding: 8px 6px;
+}
+
+/* Cores mais suaves para a tabela de faturamento */
+.enhanced-table .bg-info {
+    background-color: #cce7ff !important; /* Azul mais suave */
+    color: #0066cc !important;
+}
+
+.enhanced-table .bg-warning {
+    background-color: #fff3cd !important; /* Laranja/amarelo mais suave */
+    color: #856404 !important;
+}
+
+.enhanced-table .bg-success {
+    background-color: #d4edda !important; /* Verde mais suave */
+    color: #155724 !important;
+}
+
+/* Cores condicionais para crescimento */
+.enhanced-table .text-success {
+    color: #28a745 !important; /* Verde para crescimento positivo */
+}
+
+.enhanced-table .text-danger {
+    color: #dc3545 !important; /* Vermelho para crescimento negativo */
+}
+
+.enhanced-table .text-muted {
+    color: #6c757d !important; /* Cinza para N/A */
 }
 
 /* Responsive adjustments for enhanced layout */
