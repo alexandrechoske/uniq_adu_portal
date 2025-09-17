@@ -163,67 +163,53 @@ def api_geral_proporcao():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_comparativo_anos():
-    """API para comparativo anual usando dados de faturamento"""
+    """API para comparativo anual usando view vw_fin_fat_anualizado"""
     try:
-        start_date = request.args.get('start_date', '2023-01-01')
-        end_date = request.args.get('end_date', '2024-12-31')
-        empresa = request.args.get('empresa', '')
-        centro_resultado = request.args.get('centro_resultado', '')
-        
-        # Buscar dados de faturamento para o período
-        query = supabase_admin.table('fin_faturamento_anual').select('*')
-        
-        # Aplicar filtros de data
-        if start_date:
-            query = query.gte('data', start_date)
-        if end_date:
-            query = query.lte('data', end_date)
-            
-        # Aplicar filtros opcionais
-        if empresa and empresa.strip():
-            query = query.eq('empresa', empresa)
-        if centro_resultado and centro_resultado.strip():
-            query = query.eq('centro_resultado', centro_resultado)
-        
-        response = query.order('data', desc=False).execute()
+        # Buscar todos os dados da view (desde 2015)
+        response = supabase_admin.table('vw_fin_fat_anualizado').select('*').order('ano, mes').execute()
         dados = response.data
         
-        # Organizar dados por ano e mês
+        # Filtrar dados válidos (remover registros com ano/mês null)
+        dados_validos = [item for item in dados if item.get('ano') and item.get('mes')]
+        
+        # Organizar dados por ano
         anos_data = defaultdict(list)
         
-        for item in dados:
-            data_str = item.get('data')
-            if not data_str:
-                continue
-                
-            try:
-                data_obj = datetime.strptime(data_str, '%Y-%m-%d')
-                ano = str(data_obj.year)
-                mes = data_obj.strftime('%m')
-                valor = float(item.get('valor', 0))
-                
-                # Encontrar ou criar entrada para o mês
-                mes_existente = None
-                for mes_data in anos_data[ano]:
-                    if mes_data['mes'] == mes:
-                        mes_existente = mes_data
-                        break
-                
-                if mes_existente:
-                    mes_existente['total_valor'] += valor
-                else:
+        for item in dados_validos:
+            ano = str(item['ano'])
+            mes = item['mes'].zfill(2)  # Garantir formato 01, 02, etc.
+            valor = float(item.get('valor_faturamento', 0))
+            
+            anos_data[ano].append({
+                'mes': mes,
+                'total_valor': valor
+            })
+        
+        # Garantir que todos os anos tenham 12 meses
+        for ano in anos_data:
+            meses_existentes = {item['mes'] for item in anos_data[ano]}
+            for mes in range(1, 13):
+                mes_str = str(mes).zfill(2)
+                if mes_str not in meses_existentes:
                     anos_data[ano].append({
-                        'mes': mes,
-                        'total_valor': valor
+                        'mes': mes_str,
+                        'total_valor': 0
                     })
-                    
-            except ValueError:
-                continue
+            
+            # Ordenar por mês
+            anos_data[ano] = sorted(anos_data[ano], key=lambda x: x['mes'])
         
         return jsonify({
             'success': True,
             'data': dict(anos_data)
         })
+        
+    except Exception as e:
+        print(f"Erro no comparativo_anos: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
         
     except Exception as e:
         return jsonify({

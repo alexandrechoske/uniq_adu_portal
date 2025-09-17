@@ -29,10 +29,39 @@ class FaturamentoControllerNovo {
         console.log('Inicializando FaturamentoControllerNovo...');
         
         try {
+            this.setupToggleLabels();
             await this.buscarAnosDisponiveis();
             await this.carregarTodosOsDados();
         } catch (error) {
             console.error('Erro na inicialização:', error);
+        }
+    }
+    
+    setupToggleLabels() {
+        const toggleButton = document.getElementById('toggle-data-labels');
+        if (toggleButton) {
+            toggleButton.addEventListener('click', () => {
+                this.toggleDataLabels();
+            });
+            console.log('✅ Toggle de rótulos configurado');
+        } else {
+            console.warn('⚠️ Botão toggle-data-labels não encontrado');
+        }
+    }
+    
+    toggleDataLabels() {
+        if (this.charts.comparativo) {
+            const datalabelsPlugin = this.charts.comparativo.options.plugins.datalabels;
+            datalabelsPlugin.display = !datalabelsPlugin.display;
+            this.charts.comparativo.update();
+            
+            const button = document.getElementById('toggle-data-labels');
+            if (button) {
+                button.classList.toggle('btn-outline-secondary');
+                button.classList.toggle('btn-secondary');
+            }
+            
+            console.log(`🏷️ Rótulos ${datalabelsPlugin.display ? 'ativados' : 'desativados'}`);
         }
     }
     
@@ -361,7 +390,20 @@ class FaturamentoControllerNovo {
                             }
                         }
                     },
-                    datalabels: { display: false }
+                    datalabels: {
+                        display: true,
+                        align: 'top',
+                        anchor: 'end',
+                        color: '#333',
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        },
+                        formatter: (value) => {
+                            if (value === 0) return '';
+                            return this.formatarMoedaCompacta(value);
+                        }
+                    }
                 }
             }
         });
@@ -608,7 +650,7 @@ class FaturamentoControllerNovo {
     async carregarTabelaComparativa() {
         try {
             console.log('🔄 Carregando tabela comparativa...');
-            const response = await fetch('/financeiro/faturamento/api/geral/mensal');
+            const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
             console.log('📡 Response tabela:', response.status);
             const data = await response.json();
             console.log('📊 Data tabela:', data);
@@ -616,9 +658,6 @@ class FaturamentoControllerNovo {
             if (data.success && data.data) {
                 console.log('✅ Renderizando tabela comparativa');
                 this.renderizarTabelaComparativa(data.data);
-            } else if (data.anos_disponiveis && data.meses) {
-                console.log('📋 Usando formato antigo para tabela');
-                this.renderizarTabelaFormatoAntigo(data);
             } else {
                 console.warn('⚠️ Dados de tabela vazios ou inválidos:', data);
             }
@@ -628,62 +667,83 @@ class FaturamentoControllerNovo {
     }
     
     renderizarTabelaComparativa(dados) {
-        const tbody = document.querySelector('#resumo-mensal tbody');
-        if (!tbody) {
-            console.error('Tbody da tabela resumo-mensal não encontrado');
+        const table = document.querySelector('#resumo-mensal');
+        if (!table) {
+            console.error('Tabela resumo-mensal não encontrada');
             return;
         }
         
+        // Obter todos os anos disponíveis
+        const anos = Object.keys(dados).sort((a, b) => parseInt(a) - parseInt(b));
+        const mesesNomes = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 
+                           'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+        
+        // Criar cabeçalho
+        const thead = table.querySelector('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Ano</th>
+                ${mesesNomes.map(mes => `<th class="text-center">${mes}</th>`).join('')}
+                <th class="text-center bg-info text-white">TOTAL</th>
+                <th class="text-center bg-warning text-dark">MÉDIA</th>
+                <th class="text-center bg-success text-white">% AUMENTO</th>
+            </tr>
+        `;
+        
+        // Criar corpo da tabela
+        const tbody = table.querySelector('tbody');
         tbody.innerHTML = '';
         
-        // Organizar dados por mês e ano
-        const dadosPorMes = {};
-        const anos = new Set();
+        let totalAnoAnterior = 0;
         
-        dados.forEach(item => {
-            const mes = item.mes;
-            const ano = item.ano;
-            anos.add(ano);
-            
-            if (!dadosPorMes[mes]) {
-                dadosPorMes[mes] = {};
-            }
-            dadosPorMes[mes][ano] = item.resultado_mensal;
-        });
-        
-        const anosOrdenados = [...anos].sort((a, b) => b - a);
-        
-        // Atualizar cabeçalho
-        const thead = document.querySelector('#tabela-comparativo-mensal thead tr');
-        if (thead) {
-            thead.innerHTML = '<th>Mês</th>';
-            anosOrdenados.forEach(ano => {
-                thead.innerHTML += `<th class="text-center year-column-${ano}">${ano}</th>`;
-            });
-        }
-        
-        // Criar linhas para cada mês
-        const meses = [
-            { num: 1, nome: 'Janeiro' }, { num: 2, nome: 'Fevereiro' }, { num: 3, nome: 'Março' },
-            { num: 4, nome: 'Abril' }, { num: 5, nome: 'Maio' }, { num: 6, nome: 'Junho' },
-            { num: 7, nome: 'Julho' }, { num: 8, nome: 'Agosto' }, { num: 9, nome: 'Setembro' },
-            { num: 10, nome: 'Outubro' }, { num: 11, nome: 'Novembro' }, { num: 12, nome: 'Dezembro' }
-        ];
-        
-        meses.forEach(mes => {
+        anos.forEach((ano, index) => {
+            const dadosAno = dados[ano];
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${mes.nome}</td>`;
             
-            anosOrdenados.forEach(ano => {
-                const valor = dadosPorMes[mes.num] && dadosPorMes[mes.num][ano] || 0;
-                const classe = valor >= 0 ? 'text-success' : 'text-danger';
-                row.innerHTML += `<td class="text-end ${classe} year-column-${ano}">${this.formatarMoeda(valor)}</td>`;
-            });
+            // Coluna do ano
+            row.innerHTML = `<td class="fw-bold">${ano}</td>`;
+            
+            // Colunas dos meses
+            let totalAno = 0;
+            let mesesComDados = 0;
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const mesStr = mes.toString().padStart(2, '0');
+                const dadoMes = dadosAno.find(item => item.mes === mesStr);
+                const valor = dadoMes ? dadoMes.total_valor : 0;
+                
+                if (valor > 0) mesesComDados++;
+                totalAno += valor;
+                
+                const classe = valor > 0 ? 'text-success' : 'text-muted';
+                const valorFormatado = valor > 0 ? this.formatarMoedaCompacta(valor) : '-';
+                row.innerHTML += `<td class="text-end ${classe}">${valorFormatado}</td>`;
+            }
+            
+            // Coluna TOTAL
+            row.innerHTML += `<td class="text-end fw-bold bg-info text-white">${this.formatarMoeda(totalAno)}</td>`;
+            
+            // Coluna MÉDIA
+            const media = mesesComDados > 0 ? totalAno / mesesComDados : 0;
+            row.innerHTML += `<td class="text-end fw-bold bg-warning text-dark">${this.formatarMoeda(media)}</td>`;
+            
+            // Coluna % AUMENTO
+            let percentualAumento = 'N/A';
+            let classeAumento = 'text-muted';
+            
+            if (totalAnoAnterior > 0) {
+                const aumento = ((totalAno - totalAnoAnterior) / totalAnoAnterior) * 100;
+                percentualAumento = `${aumento >= 0 ? '+' : ''}${aumento.toFixed(1)}%`;
+                classeAumento = aumento >= 0 ? 'text-success' : 'text-danger';
+            }
+            
+            row.innerHTML += `<td class="text-end fw-bold bg-success text-white ${classeAumento}">${percentualAumento}</td>`;
             
             tbody.appendChild(row);
+            totalAnoAnterior = totalAno;
         });
         
-        console.log('Tabela comparativa renderizada');
+        console.log('✅ Tabela comparativa completa renderizada');
     }
     
     renderizarTabelaFormatoAntigo(data) {
