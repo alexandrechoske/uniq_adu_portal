@@ -29,10 +29,10 @@
                 <i class="mdi mdi-filter-off"></i>
                 Remover Filtros
             </button>
-            <!-- <button id="open-filters" class="btn btn-primary">
+            <button id="open-filters" class="btn btn-primary">
                 <i class="mdi mdi-filter"></i>
                 Filtros
-            </button> -->
+            </button>
         </div>
     </div>
     
@@ -81,6 +81,7 @@
                 <div class="kpi-content">
                     <p class="kpi-label">Crescimento vs Ano Anterior</p>
                     <p class="kpi-value" id="kpi-crescimento-anual">-</p>
+                    <p class="kpi-sub-value" id="kpi-crescimento-contexto" style="margin-top:4px;font-size:0.75rem;color:#666;">Acumulado até o mês atual</p>
                 </div>
             </div>
             
@@ -101,6 +102,17 @@
                 <div class="kpi-content">
                     <p class="kpi-label">Pior Mês</p>
                     <p class="kpi-value" id="kpi-pior-mes">-</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-aderencia-meta" id="kpi-aderencia-meta-card">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-target"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Aderência à Meta</p>
+                    <p class="kpi-value" id="kpi-aderencia-meta">-</p>
+                    <p class="kpi-sub-value" id="kpi-aderencia-meta-contexto" style="margin-top:4px;font-size:0.75rem;color:#666;">Realizado vs Meta acumulada</p>
                 </div>
             </div>
         </div>

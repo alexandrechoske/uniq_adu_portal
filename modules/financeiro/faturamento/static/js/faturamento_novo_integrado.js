@@ -384,8 +384,8 @@ class FaturamentoControllerNovo {
         
         const nomesMeses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
         if (melhorMes.mes > 0) {
-            this.atualizarElemento('kpi-melhor-mes', nomesMeses[melhorMes.mes]);
-            this.atualizarElemento('kpi-melhor-mes-valor', this.formatarMoeda(melhorMes.valor));
+            const textoMelhor = `${nomesMeses[melhorMes.mes]} - ${this.formatarMoeda(melhorMes.valor)}`;
+            this.atualizarElemento('kpi-melhor-mes', textoMelhor);
         }
         
         // KPI 4: Pior mês do ano atual (com dados > 0)
@@ -398,11 +398,67 @@ class FaturamentoControllerNovo {
         });
         
         if (piorMes.mes > 0 && piorMes.valor < Infinity) {
-            this.atualizarElemento('kpi-pior-mes', nomesMeses[piorMes.mes]);
-            this.atualizarElemento('kpi-pior-mes-valor', this.formatarMoeda(piorMes.valor));
+            const textoPior = `${nomesMeses[piorMes.mes]} - ${this.formatarMoeda(piorMes.valor)}`;
+            this.atualizarElemento('kpi-pior-mes', textoPior);
         }
         
+        // KPI Aderência Meta (usar dadosAnoAtual para realizado)
+        this.calcularAderenciaMeta(anoAtual, mesAtual, dadosAnoAtual);
+        
         console.log('✅ KPIs comparativos calculados e atualizados');
+    }
+
+    async calcularAderenciaMeta(anoAtual, mesAtual, dadosAnoAtual) {
+        try {
+            // Evitar múltiplas chamadas se já armazenado
+            if (!this._cacheMetas || this._cacheMetas.ano !== anoAtual) {
+                const resp = await fetch('/financeiro/faturamento/api/geral/metas_mensais');
+                const metaJson = await resp.json();
+                if (metaJson.success) {
+                    this._cacheMetas = { ano: metaJson.ano || anoAtual, data: metaJson.data };
+                } else {
+                    console.warn('⚠️ Não foi possível carregar metas para KPI Aderência');
+                    return;
+                }
+            }
+            const metas = this._cacheMetas.data || [];
+            // Acumulados até mês atual
+            const realizadoAcumulado = dadosAnoAtual
+                .filter(item => parseInt(item.mes) <= mesAtual)
+                .reduce((acc, item) => acc + (parseFloat(item.total_valor || item.faturamento_total) || 0), 0);
+            const metaAcumulada = metas
+                .filter(m => parseInt(m.mes) <= mesAtual)
+                .reduce((acc, m) => acc + (parseFloat(m.meta) || 0), 0);
+            if (metaAcumulada > 0) {
+                const aderencia = (realizadoAcumulado / metaAcumulada) * 100;
+                const texto = `${aderencia.toFixed(1)}%`;
+                this.atualizarElemento('kpi-aderencia-meta', texto);
+                
+                // Aplicar classe CSS dinâmica baseada no valor
+                const cardElement = document.getElementById('kpi-aderencia-meta-card');
+                if (cardElement) {
+                    // Remover classes anteriores
+                    cardElement.classList.remove('positive', 'negative');
+                    // Adicionar classe baseada no valor (>= 100% = positive, < 100% = negative)
+                    if (aderencia >= 100) {
+                        cardElement.classList.add('positive');
+                    } else {
+                        cardElement.classList.add('negative');
+                    }
+                }
+                
+                console.log(`🎯 Aderência Meta: Realizado ${realizadoAcumulado} / Meta ${metaAcumulada} = ${texto}`);
+            } else {
+                this.atualizarElemento('kpi-aderencia-meta', 'N/A');
+                // Remover classes quando não há dados
+                const cardElement = document.getElementById('kpi-aderencia-meta-card');
+                if (cardElement) {
+                    cardElement.classList.remove('positive', 'negative');
+                }
+            }
+        } catch (e) {
+            console.error('Erro calcularAderenciaMeta:', e);
+        }
     }
     
     calcularKPIsFormatoAntigo(data) {
