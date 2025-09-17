@@ -9,6 +9,8 @@ class FaturamentoControllerNovo {
         this.anosDisponiveis = [];
         this.anosAtivos = new Set();
         this.charts = {};
+        this.exibindoMeta = false; // Estado do toggle Meta vs Realizado
+        this.dataLabelsAtivos = false; // Estado dos rótulos de dados
         
         // Configurações globais
         Chart.register(ChartDataLabels);
@@ -19,7 +21,8 @@ class FaturamentoControllerNovo {
             despesa: '#dc3545',
             resultado: '#007bff',
             neutro: '#6c757d',
-            anos: ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6c757d', '#17a2b8']
+            anos: ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6c757d', '#17a2b8'],
+            meta: '#ff6b35' // Cor para a linha de meta
         };
         
         this.init();
@@ -47,22 +50,72 @@ class FaturamentoControllerNovo {
         } else {
             console.warn('⚠️ Botão toggle-data-labels não encontrado');
         }
+        
+        // Configurar toggle para Meta vs Realizado
+        const toggleMetaButton = document.getElementById('toggle-meta-comparativo');
+        if (toggleMetaButton) {
+            toggleMetaButton.addEventListener('click', () => {
+                this.toggleMetaComparativo();
+            });
+            console.log('✅ Toggle Meta vs Realizado configurado');
+        } else {
+            console.warn('⚠️ Botão toggle-meta-comparativo não encontrado');
+        }
     }
     
     toggleDataLabels() {
+        this.dataLabelsAtivos = !this.dataLabelsAtivos;
+        
         if (this.charts.comparativo) {
             const datalabelsPlugin = this.charts.comparativo.options.plugins.datalabels;
-            datalabelsPlugin.display = !datalabelsPlugin.display;
+            datalabelsPlugin.display = this.dataLabelsAtivos;
             this.charts.comparativo.update();
             
             const button = document.getElementById('toggle-data-labels');
             if (button) {
-                button.classList.toggle('btn-outline-secondary');
-                button.classList.toggle('btn-secondary');
+                if (this.dataLabelsAtivos) {
+                    button.classList.remove('btn-outline-secondary');
+                    button.classList.add('btn-secondary');
+                } else {
+                    button.classList.remove('btn-secondary');
+                    button.classList.add('btn-outline-secondary');
+                }
             }
             
-            console.log(`🏷️ Rótulos ${datalabelsPlugin.display ? 'ativados' : 'desativados'}`);
+            console.log(`🏷️ Rótulos ${this.dataLabelsAtivos ? 'ativados' : 'desativados'}`);
         }
+    }
+    
+    async toggleMetaComparativo() {
+        this.exibindoMeta = !this.exibindoMeta;
+        
+        const button = document.getElementById('toggle-meta-comparativo');
+        const title = document.getElementById('comparativo-chart-title');
+        
+        if (button) {
+            if (this.exibindoMeta) {
+                button.classList.remove('btn-outline-primary');
+                button.classList.add('btn-primary');
+                button.innerHTML = '<i class="mdi mdi-chart-timeline-variant"></i> Comparativo Anos';
+            } else {
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-outline-primary');
+                button.innerHTML = '<i class="mdi mdi-target"></i> Meta vs Realizado';
+            }
+        }
+        
+        if (title) {
+            title.textContent = this.exibindoMeta ? 'Meta vs Realizado' : 'Comparativo Anual de Faturamento';
+        }
+        
+        // Recarregar o gráfico com os dados apropriados
+        if (this.exibindoMeta) {
+            await this.carregarGraficoMeta();
+        } else {
+            await this.carregarGraficoComparativo();
+        }
+        
+        console.log(`🎯 ${this.exibindoMeta ? 'Exibindo Meta vs Realizado' : 'Exibindo Comparativo Anos'}`);
     }
     
     formatarMoeda(valor) {
@@ -483,7 +536,7 @@ class FaturamentoControllerNovo {
                         }
                     },
                     datalabels: {
-                        display: true,
+                        display: this.dataLabelsAtivos,
                         align: 'top',
                         anchor: 'end',
                         color: '#333',
@@ -501,6 +554,137 @@ class FaturamentoControllerNovo {
         });
         
         console.log('Gráfico comparativo renderizado');
+    }
+    
+    async carregarGraficoMeta() {
+        try {
+            console.log('🎯 Carregando gráfico Meta vs Realizado...');
+            
+            // Buscar dados do ano atual
+            const responseRealizado = await fetch('/financeiro/faturamento/api/geral/mensal');
+            const dataRealizado = await responseRealizado.json();
+            
+            // Buscar dados da meta
+            const responseMeta = await fetch('/financeiro/faturamento/api/geral/metas_mensais');
+            const dataMeta = await responseMeta.json();
+            
+            console.log('📊 Data realizado:', dataRealizado);
+            console.log('🎯 Data meta:', dataMeta);
+            
+            if (dataRealizado.success && dataMeta.success) {
+                console.log('✅ Renderizando gráfico Meta vs Realizado');
+                this.renderizarGraficoMeta(dataRealizado.data, dataMeta.data);
+            } else {
+                console.warn('⚠️ Dados de meta ou realizado vazios ou inválidos');
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar gráfico meta:', error);
+        }
+    }
+    
+    renderizarGraficoMeta(dadosRealizado, dadosMeta) {
+        const canvas = document.getElementById('comparativo-chart');
+        if (!canvas) {
+            console.error('Canvas comparativo-chart não encontrado');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Destruir gráfico anterior
+        if (this.charts.comparativo) {
+            this.charts.comparativo.destroy();
+        }
+        
+        const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        
+        // Preparar dados do realizado (do endpoint mensal)
+        const valoresRealizado = new Array(12).fill(0);
+        dadosRealizado.forEach(item => {
+            const mesIndex = parseInt(item.mes) - 1;
+            valoresRealizado[mesIndex] = item.faturamento_total || 0; // Campo correto
+        });
+        
+        // Preparar dados da meta (do endpoint metas_mensais)
+        const valoresMeta = new Array(12).fill(0);
+        dadosMeta.forEach(item => {
+            const mesIndex = parseInt(item.mes) - 1;
+            valoresMeta[mesIndex] = item.meta || 0; // Campo correto
+        });
+        
+        const datasets = [
+            {
+                label: `Realizado ${this.currentAno}`,
+                data: valoresRealizado,
+                borderColor: this.coresGraficos.anos[0],
+                backgroundColor: this.coresGraficos.anos[0] + '20',
+                borderWidth: 3,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            },
+            {
+                label: `Meta ${this.currentAno}`,
+                data: valoresMeta,
+                borderColor: this.coresGraficos.meta,
+                backgroundColor: this.coresGraficos.meta + '20',
+                borderWidth: 3,
+                borderDash: [5, 5], // Linha tracejada para meta
+                fill: false,
+                tension: 0.1,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }
+        ];
+        
+        this.charts.comparativo = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: meses,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => this.formatarMoedaCompacta(value)
+                        },
+                        title: { display: true, text: 'Faturamento' }
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `${context.dataset.label}: ${this.formatarMoeda(context.parsed.y)}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: this.dataLabelsAtivos,
+                        align: 'top',
+                        anchor: 'end',
+                        color: '#333',
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        },
+                        formatter: (value) => {
+                            if (value === 0) return '';
+                            return this.formatarMoedaCompacta(value);
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('✅ Gráfico Meta vs Realizado renderizado');
     }
     
     async carregarGraficoCentroResultado() {

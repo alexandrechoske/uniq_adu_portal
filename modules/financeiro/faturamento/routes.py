@@ -652,3 +652,43 @@ def api_geral_top_clientes():
     except Exception as e:
         print(f"Erro em api_geral_top_clientes: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/metas_mensais')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_metas_mensais():
+    """API para buscar metas mensais de faturamento"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        
+        # Buscar metas financeiras do ano
+        query = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro').order('mes')
+        response = query.execute()
+        dados_metas = response.data
+        
+        # Organizar dados por mês (garantir 12 meses)
+        metas_por_mes = {}
+        for item in dados_metas:
+            mes = int(item.get('mes', 0))
+            meta = float(item.get('meta', 0))
+            metas_por_mes[mes] = meta
+        
+        # Garantir que todos os 12 meses existam
+        metas_completas = []
+        for mes in range(1, 13):
+            metas_completas.append({
+                'mes': mes,
+                'meta': metas_por_mes.get(mes, 0),
+                'mes_nome': ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                           'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mes]
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': metas_completas,
+            'ano': ano
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_geral_metas_mensais: {str(e)}")
+        return jsonify({'error': str(e)}), 500
