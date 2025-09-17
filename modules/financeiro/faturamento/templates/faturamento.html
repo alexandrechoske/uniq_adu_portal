@@ -237,15 +237,24 @@
         <div class="setor-filter-header">
             <div class="filter-row">
                 <div class="filter-group">
-                    <label for="sector-select" class="filter-label">
+                    <label class="filter-label">
                         <i class="mdi mdi-filter"></i>
                         Selecionar Setor:
                     </label>
-                    <select id="sector-select" class="sector-filter">
-                        <option value="importacao">Importação</option>
-                        <option value="exportacao">Exportação</option>
-                        <option value="consultoria">Consultoria</option>
-                    </select>
+                    <div class="sector-buttons">
+                        <button class="sector-btn active" data-setor="importacao">
+                            <i class="mdi mdi-import"></i>
+                            Importação
+                        </button>
+                        <button class="sector-btn" data-setor="exportacao">
+                            <i class="mdi mdi-export"></i>
+                            Exportação
+                        </button>
+                        <button class="sector-btn" data-setor="consultoria">
+                            <i class="mdi mdi-account-tie"></i>
+                            Consultoria
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -327,20 +336,22 @@
                         </h3>
                     </div>
                     <div class="chart-content">
-                        <table id="tabela-ranking-setor" class="enhanced-table">
-                            <thead>
-                                <tr>
-                                    <th>Posição</th>
-                                    <th>Cliente</th>
-                                    <th>Valor Faturado</th>
-                                    <th>% Participação</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dados carregados via JavaScript -->
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table id="tabela-ranking-setor" class="enhanced-table setor-table">
+                                <thead>
+                                    <tr>
+                                        <th class="col-pos">#</th>
+                                        <th class="col-cliente">Cliente</th>
+                                        <th class="col-valor">Valor Faturado</th>
+                                        <th class="col-perc">% Part.</th>
+                                        <th class="col-acao">Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dados carregados via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -384,6 +395,84 @@
                 <button type="button" id="apply-filters" class="btn btn-primary">
                     <i class="mdi mdi-check"></i>
                     Aplicar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Drill-Down do Cliente -->
+    <div id="cliente-drill-modal" class="drill-modal">
+        <div class="drill-modal-content">
+            <div class="drill-modal-header">
+                <h2 class="drill-modal-title">
+                    <i class="mdi mdi-account-details"></i>
+                    <span id="drill-cliente-nome">Detalhes do Cliente</span>
+                </h2>
+                <button type="button" class="drill-modal-close" id="close-drill-modal">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            
+            <div class="drill-modal-body">
+                <!-- KPIs do Cliente -->
+                <div class="drill-kpis">
+                    <div class="drill-kpi-card">
+                        <div class="drill-kpi-icon">
+                            <i class="mdi mdi-currency-usd"></i>
+                        </div>
+                        <div class="drill-kpi-content">
+                            <p class="drill-kpi-label">Faturamento Total</p>
+                            <p class="drill-kpi-value" id="drill-faturamento-total">-</p>
+                        </div>
+                    </div>
+                    
+                    <div class="drill-kpi-card">
+                        <div class="drill-kpi-icon">
+                            <i class="mdi mdi-percent"></i>
+                        </div>
+                        <div class="drill-kpi-content">
+                            <p class="drill-kpi-label">% do Setor</p>
+                            <p class="drill-kpi-value" id="drill-participacao-setor">-</p>
+                        </div>
+                    </div>
+                    
+                    <div class="drill-kpi-card">
+                        <div class="drill-kpi-icon">
+                            <i class="mdi mdi-trending-up"></i>
+                        </div>
+                        <div class="drill-kpi-content">
+                            <p class="drill-kpi-label">Crescimento</p>
+                            <p class="drill-kpi-value" id="drill-crescimento">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gráfico e Detalhamento -->
+                <div class="drill-content-grid">
+                    <div class="drill-chart-container">
+                        <h3 class="drill-section-title">
+                            <i class="mdi mdi-chart-line"></i>
+                            Faturamento Mensal
+                        </h3>
+                        <canvas id="drill-chart-mensal"></canvas>
+                    </div>
+                    
+                    <div class="drill-breakdown-container">
+                        <h3 class="drill-section-title">
+                            <i class="mdi mdi-format-list-bulleted"></i>
+                            Breakdown por Centro de Resultado
+                        </h3>
+                        <div id="drill-breakdown-content">
+                            <!-- Conteúdo carregado dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="drill-modal-footer">
+                <button type="button" class="btn btn-secondary" id="drill-close-btn">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
                 </button>
             </div>
         </div>

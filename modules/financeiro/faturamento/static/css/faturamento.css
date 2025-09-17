@@ -1571,3 +1571,367 @@
     background: #007bff;
     color: white;
 }
+
+/* Sector Buttons */
+.sector-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sector-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: 2px solid #dee2e6;
+    background: white;
+    color: #495057;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-width: 130px;
+    justify-content: center;
+}
+
+.sector-btn:hover {
+    border-color: #007bff;
+    background: #f8f9fa;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+}
+
+.sector-btn.active {
+    background: #007bff;
+    border-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+.sector-btn.active:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+.sector-btn i {
+    font-size: 1.1rem;
+}
+
+/* Responsive Table */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.setor-table {
+    width: 100%;
+    table-layout: fixed;
+    margin: 0;
+}
+
+.setor-table .col-pos {
+    width: 8%;
+    text-align: center;
+}
+
+.setor-table .col-cliente {
+    width: 40%;
+    text-align: left;
+}
+
+.setor-table .col-valor {
+    width: 22%;
+    text-align: right;
+}
+
+.setor-table .col-perc {
+    width: 15%;
+    text-align: center;
+}
+
+.setor-table .col-acao {
+    width: 15%;
+    text-align: center;
+}
+
+.setor-table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 8px 12px;
+}
+
+.setor-table .col-cliente td {
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.3;
+    max-height: 2.6em;
+    overflow: hidden;
+}
+
+/* Improved drill button */
+.btn-drill-cliente {
+    padding: 4px 10px;
+    border: 1px solid #007bff;
+    background: transparent;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.btn-drill-cliente:hover {
+    background: #007bff;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sector-buttons {
+        width: 100%;
+    }
+    
+    .sector-btn {
+        flex: 1;
+        min-width: auto;
+    }
+    
+    .setor-table .col-cliente {
+        width: 35%;
+    }
+    
+    .setor-table .col-valor {
+        width: 25%;
+    }
+    
+    .setor-table .col-perc {
+        width: 15%;
+    }
+    
+    .setor-table .col-acao {
+        width: 15%;
+    }
+}
+
+/* Drill-Down Modal */
+.drill-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s ease;
+}
+
+.drill-modal-content {
+    background-color: white;
+    margin: 2% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.drill-modal-header {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.drill-modal-title {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drill-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.drill-modal-close:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.drill-modal-body {
+    padding: 25px;
+}
+
+.drill-modal-footer {
+    padding: 15px 25px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Drill KPIs */
+.drill-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.drill-kpi-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.drill-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.drill-kpi-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.3rem;
+}
+
+.drill-kpi-content {
+    flex: 1;
+}
+
+.drill-kpi-label {
+    margin: 0 0 5px 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.drill-kpi-value {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Drill Content Grid */
+.drill-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.drill-chart-container,
+.drill-breakdown-container {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.drill-section-title {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drill-section-title i {
+    color: #007bff;
+}
+
+#drill-chart-mensal {
+    max-height: 300px;
+}
+
+/* Breakdown Content */
+.drill-breakdown-item {
+    margin-bottom: 15px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.drill-breakdown-header {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.drill-breakdown-value {
+    font-weight: 700;
+    color: #007bff;
+}
+
+.drill-breakdown-details {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+    .drill-modal-content {
+        width: 95%;
+        margin: 5% auto;
+        max-height: 85vh;
+    }
+    
+    .drill-content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .drill-kpis {
+        grid-template-columns: 1fr;
+    }
+    
+    .drill-modal-header {
+        padding: 15px;
+    }
+    
+    .drill-modal-title {
+        font-size: 1.1rem;
+    }
+}

@@ -828,3 +828,175 @@ def api_geral_setor_dinamico(setor):
     except Exception as e:
         print(f"Erro em api_geral_setor_dinamico: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/cliente/<cliente_id>/detalhes')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_cliente_detalhes(cliente_id):
+    """API para dados detalhados de um cliente específico"""
+    try:
+        setor = request.args.get('setor', 'importacao')
+        ano = request.args.get('ano', datetime.now().year)
+        ano = int(ano)
+        
+        # Definir filtro de classe com base no setor
+        filtro_classe = ''
+        if setor == 'importacao':
+            filtro_classe = 'IMP'
+        elif setor == 'consultoria':
+            filtro_classe = 'CONS'
+        elif setor == 'exportacao':
+            filtro_classe = 'EXP'
+        
+        # Buscar mapeamento de clientes para encontrar o nome real
+        mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+        mapeamento_clientes = {}
+        nome_cliente = None
+        
+        if mapeamento_response.data:
+            for item in mapeamento_response.data:
+                mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+                # Encontrar o nome do cliente baseado no ID
+                if item['nome_padronizado'].lower().replace(' ', '_') == cliente_id:
+                    nome_cliente = item['nome_padronizado']
+        
+        if not nome_cliente:
+            # Se não encontrar no mapeamento, tentar encontrar diretamente
+            nome_cliente = cliente_id.replace('_', ' ').title()
+        
+        # Período do ano especificado
+        inicio = f'{ano}-01-01'
+        fim = f'{ano}-12-31'
+        
+        # Buscar dados de faturamento do cliente no setor
+        query = supabase_admin.table('fin_faturamento_anual').select('*')
+        if filtro_classe:
+            query = query.ilike('classe', f'%{filtro_classe}%')
+        query = query.gte('data', inicio).lte('data', fim)
+        # Buscar por nome original ou padronizado
+        query = query.or_(f'cliente.ilike.%{nome_cliente}%')
+        
+        response = query.execute()
+        dados_cliente = response.data
+        
+        # Calcular faturamento total do cliente
+        total_cliente = sum(float(item['valor']) for item in dados_cliente)
+        
+        # Buscar total do setor para calcular participação
+        query_setor = supabase_admin.table('fin_faturamento_anual').select('valor')
+        if filtro_classe:
+            query_setor = query_setor.ilike('classe', f'%{filtro_classe}%')
+        query_setor = query_setor.gte('data', inicio).lte('data', fim)
+        
+        response_setor = query_setor.execute()
+        total_setor = sum(float(item['valor']) for item in response_setor.data)
+        
+        # Calcular participação
+        participacao_setor = (total_cliente / total_setor * 100) if total_setor > 0 else 0
+        
+        # Dados do ano anterior para calcular crescimento
+        inicio_anterior = f'{ano-1}-01-01'
+        fim_anterior = f'{ano-1}-12-31'
+        
+        query_anterior = supabase_admin.table('fin_faturamento_anual').select('valor')
+        if filtro_classe:
+            query_anterior = query_anterior.ilike('classe', f'%{filtro_classe}%')
+        query_anterior = query_anterior.gte('data', inicio_anterior).lte('data', fim_anterior)
+        query_anterior = query_anterior.or_(f'cliente.ilike.%{nome_cliente}%')
+        
+        response_anterior = query_anterior.execute()
+        total_anterior = sum(float(item['valor']) for item in response_anterior.data)
+        
+        # Calcular crescimento
+        crescimento = 0
+        if total_anterior > 0:
+            crescimento = ((total_cliente - total_anterior) / total_anterior) * 100
+        
+        # Agrupar faturamento mensal
+        faturamento_mensal = defaultdict(float)
+        
+        for item in dados_cliente:
+            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
+            mes_nome = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                       'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][data_item.month]
+            faturamento_mensal[mes_nome] += float(item['valor'])
+        
+        # Preparar dados mensais para o gráfico
+        dados_mensais = []
+        for mes_nome in ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']:
+            dados_mensais.append({
+                'mes': mes_nome,
+                'valor': faturamento_mensal.get(mes_nome, 0)
+            })
+        
+        # Breakdown por Centro de Resultado → Categoria → Classe
+        breakdown_centro = defaultdict(lambda: {
+            'valor': 0,
+            'categorias': defaultdict(lambda: {
+                'valor': 0,
+                'classes': defaultdict(float)
+            })
+        })
+        
+        for item in dados_cliente:
+            centro = item.get('centro_resultado', 'Não identificado')
+            categoria = item.get('categoria', 'Não identificada')
+            classe = item.get('classe', 'Não identificada')
+            valor = float(item['valor'])
+            
+            breakdown_centro[centro]['valor'] += valor
+            breakdown_centro[centro]['categorias'][categoria]['valor'] += valor
+            breakdown_centro[centro]['categorias'][categoria]['classes'][classe] += valor
+        
+        # Converter para estrutura mais amigável
+        breakdown_final = []
+        for centro, dados in breakdown_centro.items():
+            centro_item = {
+                'centro_resultado': centro,
+                'valor': dados['valor'],
+                'participacao': (dados['valor'] / total_cliente * 100) if total_cliente > 0 else 0,
+                'categorias': []
+            }
+            
+            for categoria, cat_dados in dados['categorias'].items():
+                categoria_item = {
+                    'categoria': categoria,
+                    'valor': cat_dados['valor'],
+                    'participacao': (cat_dados['valor'] / dados['valor'] * 100) if dados['valor'] > 0 else 0,
+                    'classes': []
+                }
+                
+                for classe, valor in cat_dados['classes'].items():
+                    categoria_item['classes'].append({
+                        'classe': classe,
+                        'valor': valor,
+                        'participacao': (valor / cat_dados['valor'] * 100) if cat_dados['valor'] > 0 else 0
+                    })
+                
+                # Ordenar classes por valor
+                categoria_item['classes'].sort(key=lambda x: x['valor'], reverse=True)
+                centro_item['categorias'].append(categoria_item)
+            
+            # Ordenar categorias por valor
+            centro_item['categorias'].sort(key=lambda x: x['valor'], reverse=True)
+            breakdown_final.append(centro_item)
+        
+        # Ordenar centros por valor
+        breakdown_final.sort(key=lambda x: x['valor'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'cliente_nome': nome_cliente,
+                'faturamento_total': total_cliente,
+                'participacao_setor': participacao_setor,
+                'crescimento_percentual': crescimento,
+                'dados_mensais': dados_mensais,
+                'breakdown_centro_resultado': breakdown_final
+            }
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_cliente_detalhes: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500

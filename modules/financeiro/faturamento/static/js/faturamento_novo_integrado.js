@@ -1233,17 +1233,27 @@ class FaturamentoControllerNovo {
     
     // ============ FUNCIONALIDADE DINÂMICA DO SETOR ============
     setupSectorFunctionality() {
-        const sectorSelect = document.getElementById('sector-select');
+        const sectorButtons = document.querySelectorAll('.sector-btn');
         const togglePrevYear = document.getElementById('toggle-prev-year-setor');
         
         // Setup tab listeners
         this.setupTabListeners();
         
-        if (sectorSelect) {
-            sectorSelect.addEventListener('change', (e) => {
-                this.carregarDadosSetor(e.target.value);
+        // Setup sector buttons
+        if (sectorButtons.length > 0) {
+            sectorButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const setor = e.currentTarget.getAttribute('data-setor');
+                    
+                    // Atualizar visual dos botões
+                    sectorButtons.forEach(btn => btn.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    
+                    // Carregar dados do setor
+                    this.carregarDadosSetor(setor);
+                });
             });
-            console.log('✅ Filtro de setor configurado');
+            console.log('✅ Botões de setor configurados');
         }
         
         if (togglePrevYear) {
@@ -1290,10 +1300,11 @@ class FaturamentoControllerNovo {
     }
     
     inicializarDadosSetor() {
-        const sectorSelect = document.getElementById('sector-select');
-        if (sectorSelect && sectorSelect.value) {
-            console.log(`🚀 Inicializando dados do setor: ${sectorSelect.value}`);
-            this.carregarDadosSetor(sectorSelect.value);
+        const activeButton = document.querySelector('.sector-btn.active');
+        if (activeButton) {
+            const setor = activeButton.getAttribute('data-setor');
+            console.log(`🚀 Inicializando dados do setor: ${setor}`);
+            this.carregarDadosSetor(setor);
         } else {
             console.log('🚀 Carregando dados do setor padrão: importacao');
             this.carregarDadosSetor('importacao');
@@ -1427,13 +1438,13 @@ class FaturamentoControllerNovo {
             
             row.innerHTML = `
                 <td><strong>#${index + 1}</strong></td>
-                <td>${cliente.nome}</td>
+                <td title="${cliente.nome}">${cliente.nome}</td>
                 <td>${this.formatarMoeda(cliente.valor)}</td>
                 <td>${cliente.participacao?.toFixed(1) || 0}%</td>
                 <td>
                     <button class="btn-drill-cliente" 
                             onclick="window.faturamentoNovo.drillDownCliente('${cliente.id}', '${cliente.nome}')">
-                        Ver Detalhes
+                        <i class="mdi mdi-eye"></i>
                     </button>
                 </td>
             `;
@@ -1477,8 +1488,8 @@ class FaturamentoControllerNovo {
     }
     
     async adicionarAnoAnteriorGraficoSetor() {
-        const sectorSelect = document.getElementById('sector-select');
-        const setor = sectorSelect?.value || 'importacao';
+        const activeButton = document.querySelector('.sector-btn.active');
+        const setor = activeButton?.getAttribute('data-setor') || 'importacao';
         const anoAnterior = this.currentAno - 1;
         
         try {
@@ -1513,11 +1524,217 @@ class FaturamentoControllerNovo {
         }
     }
     
-    drillDownCliente(clienteId, nomeCliente) {
+    async drillDownCliente(clienteId, nomeCliente) {
         console.log(`🔍 Drill-down para cliente: ${nomeCliente} (ID: ${clienteId})`);
         
-        // Implementar modal ou navegação para detalhes do cliente
-        alert(`Funcionalidade de drill-down para o cliente "${nomeCliente}" será implementada em breve.`);
+        try {
+            // Mostrar modal
+            this.mostrarDrillModal(nomeCliente);
+            
+            // Buscar dados detalhados do cliente
+            await this.carregarDadosCliente(clienteId, nomeCliente);
+            
+        } catch (error) {
+            console.error('Erro no drill-down:', error);
+            alert('Erro ao carregar dados do cliente. Tente novamente.');
+        }
+    }
+    
+    mostrarDrillModal(nomeCliente) {
+        const modal = document.getElementById('cliente-drill-modal');
+        const clienteNome = document.getElementById('drill-cliente-nome');
+        
+        if (modal && clienteNome) {
+            clienteNome.textContent = `Detalhes - ${nomeCliente}`;
+            modal.style.display = 'block';
+            
+            // Setup close listeners
+            this.setupDrillModalListeners();
+            
+            console.log('✅ Modal de drill-down exibido');
+        }
+    }
+    
+    setupDrillModalListeners() {
+        const modal = document.getElementById('cliente-drill-modal');
+        const closeBtn = document.getElementById('close-drill-modal');
+        const closeFooterBtn = document.getElementById('drill-close-btn');
+        
+        const fecharModal = () => {
+            if (modal) {
+                modal.style.display = 'none';
+                
+                // Destruir gráfico se existir
+                if (this.charts.drillMensal) {
+                    this.charts.drillMensal.destroy();
+                    delete this.charts.drillMensal;
+                }
+            }
+        };
+        
+        if (closeBtn) {
+            closeBtn.onclick = fecharModal;
+        }
+        
+        if (closeFooterBtn) {
+            closeFooterBtn.onclick = fecharModal;
+        }
+        
+        // Fechar ao clicar fora do modal
+        window.onclick = (event) => {
+            if (event.target == modal) {
+                fecharModal();
+            }
+        };
+    }
+    
+    async carregarDadosCliente(clienteId, nomeCliente) {
+        try {
+            // Obter setor ativo
+            const activeButton = document.querySelector('.sector-btn.active');
+            const setor = activeButton?.getAttribute('data-setor') || 'importacao';
+            
+            // Chamar API
+            const response = await fetch(`/financeiro/faturamento/api/geral/cliente/${clienteId}/detalhes?setor=${setor}&ano=${this.currentAno}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Erro ao carregar dados do cliente');
+            }
+            
+            const clienteData = data.data;
+            
+            // Atualizar KPIs
+            this.atualizarKPIsCliente(clienteData);
+            
+            // Atualizar gráfico mensal
+            this.atualizarGraficoMensalCliente(clienteData);
+            
+            // Atualizar breakdown
+            this.atualizarBreakdownCliente(clienteData);
+            
+            console.log('✅ Dados do cliente carregados');
+            
+        } catch (error) {
+            console.error('Erro ao carregar dados do cliente:', error);
+            this.mostrarErroCliente();
+        }
+    }
+    
+    atualizarKPIsCliente(data) {
+        // Faturamento Total
+        document.getElementById('drill-faturamento-total').textContent = 
+            this.formatarMoeda(data.faturamento_total || 0);
+        
+        // Participação no Setor
+        document.getElementById('drill-participacao-setor').textContent = 
+            `${(data.participacao_setor || 0).toFixed(1)}%`;
+        
+        // Crescimento
+        const crescimento = data.crescimento_percentual || 0;
+        const crescimentoElement = document.getElementById('drill-crescimento');
+        crescimentoElement.textContent = `${crescimento >= 0 ? '+' : ''}${crescimento.toFixed(1)}%`;
+        
+        // Atualizar cor baseado no crescimento
+        const kpiCard = crescimentoElement.closest('.drill-kpi-card');
+        if (kpiCard) {
+            const icon = kpiCard.querySelector('.drill-kpi-icon');
+            if (crescimento >= 0) {
+                icon.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            } else {
+                icon.style.background = 'linear-gradient(135deg, #dc3545 0%, #e74c3c 100%)';
+            }
+        }
+    }
+    
+    atualizarGraficoMensalCliente(data) {
+        const ctx = document.getElementById('drill-chart-mensal');
+        if (!ctx) return;
+        
+        // Destruir gráfico existente
+        if (this.charts.drillMensal) {
+            this.charts.drillMensal.destroy();
+        }
+        
+        const dadosMensais = data.dados_mensais || [];
+        const meses = dadosMensais.map(item => item.mes);
+        const valores = dadosMensais.map(item => item.valor);
+        
+        this.charts.drillMensal = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: 'Faturamento Mensal',
+                    data: valores,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0,123,255,0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => this.formatarMoeda(value)
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    atualizarBreakdownCliente(data) {
+        const container = document.getElementById('drill-breakdown-content');
+        if (!container) return;
+        
+        const breakdown = data.breakdown_centro_resultado || [];
+        
+        container.innerHTML = '';
+        
+        breakdown.forEach(centro => {
+            const centroDiv = document.createElement('div');
+            centroDiv.className = 'drill-breakdown-item';
+            
+            centroDiv.innerHTML = `
+                <div class="drill-breakdown-header">
+                    <span>${centro.centro_resultado}</span>
+                    <span class="drill-breakdown-value">${this.formatarMoeda(centro.valor)}</span>
+                </div>
+                <div class="drill-breakdown-details">
+                    ${centro.participacao.toFixed(1)}% do total • ${centro.categorias.length} categoria(s)
+                </div>
+            `;
+            
+            container.appendChild(centroDiv);
+        });
+        
+        console.log(`✅ Breakdown atualizado: ${breakdown.length} centros de resultado`);
+    }
+    
+    mostrarErroCliente() {
+        // Reset KPIs
+        document.getElementById('drill-faturamento-total').textContent = 'Erro';
+        document.getElementById('drill-participacao-setor').textContent = 'Erro';
+        document.getElementById('drill-crescimento').textContent = 'Erro';
+        
+        // Limpar breakdown
+        const container = document.getElementById('drill-breakdown-content');
+        if (container) {
+            container.innerHTML = '<p style="color: #dc3545; text-align: center;">Erro ao carregar dados</p>';
+        }
+        
+        console.error('❌ Erro exibido na interface do cliente');
     }
     
     mostrarErroSetor() {
