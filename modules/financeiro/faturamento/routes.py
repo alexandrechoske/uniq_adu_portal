@@ -514,7 +514,7 @@ def api_geral_categoria_operacao():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_centro_resultado_detalhado():
-    """API para drill-down do centro de resultado - mostra clientes dentro do centro"""
+    """API para drill-down do centro de resultado - mostra categorias dentro do centro (hierarquia correta)"""
     try:
         centro_resultado = request.args.get('centro_resultado', '')
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
@@ -523,12 +523,12 @@ def api_geral_centro_resultado_detalhado():
         if not centro_resultado:
             return jsonify({'error': 'Centro de resultado é obrigatório'}), 400
         
-        # Tentar usar a view tratada primeiro
+        # Usar a view tratada que tem a hierarquia correta
         try:
-            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('cliente, valor, centro_resultado')
+            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria, valor, centro_resultado')
         except:
             # Fallback para tabela original
-            query = supabase_admin.table('fin_faturamento_anual').select('cliente, valor, centro_resultado')
+            query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor, centro_resultado')
         
         # Filtrar por centro de resultado
         query = query.eq('centro_resultado', centro_resultado)
@@ -542,29 +542,28 @@ def api_geral_centro_resultado_detalhado():
         response = query.execute()
         dados = response.data
         
-        # Agrupar por cliente
-        cliente_data = defaultdict(float)
+        # Agrupar por categoria (hierarquia correta: centro_resultado -> categoria)
+        categoria_data = defaultdict(float)
         total_geral = 0
         
         for item in dados:
-            cliente = item.get('cliente', 'Não Informado')
+            categoria = item.get('categoria', 'Não Classificado')
             valor = float(item.get('valor', 0))
-            cliente_data[cliente] += valor
+            categoria_data[categoria] += valor
             total_geral += valor
         
         # Preparar dados para o gráfico
         resultado = []
-        for cliente, valor in cliente_data.items():
+        for categoria, valor in categoria_data.items():
             percentual = (valor / total_geral * 100) if total_geral > 0 else 0
             resultado.append({
-                'cliente': cliente,
+                'cliente': categoria,  # Mantendo o campo 'cliente' para compatibilidade com o frontend
                 'valor_faturamento': valor,
                 'percentual': percentual
             })
         
-        # Ordenar por valor decrescente e pegar top 10
+        # Ordenar por valor decrescente
         resultado.sort(key=lambda x: x['valor_faturamento'], reverse=True)
-        resultado = resultado[:10]  # Top 10 clientes
         
         return jsonify({
             'sucesso': True,

@@ -186,17 +186,15 @@ class FaturamentoControllerNovo {
     async carregarKPIs() {
         try {
             console.log('🔄 Carregando KPIs...');
-            const response = await fetch('/financeiro/faturamento/api/geral/mensal');
+            // Usar o endpoint comparativo que tem todos os anos
+            const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
             console.log('📡 Response KPIs:', response.status);
             const data = await response.json();
             console.log('📊 Data KPIs:', data);
             
-            if (data.success && data.data && data.data.length > 0) {
-                console.log('✅ Calculando KPIs com', data.data.length, 'registros');
-                this.calcularKPIs(data.data);
-            } else if (data.anos_disponiveis && data.meses) {
-                console.log('📋 Usando formato antigo de dados');
-                this.calcularKPIsFormatoAntigo(data);
+            if (data.success && data.data) {
+                console.log('✅ Calculando KPIs com dados comparativos');
+                this.calcularKPIsComparativo(data.data);
             } else {
                 console.warn('⚠️ Dados de KPIs vazios ou inválidos:', data);
             }
@@ -222,18 +220,25 @@ class FaturamentoControllerNovo {
         this.atualizarElemento('kpi-total-faturamento', this.formatarMoeda(totalFaturadoAno));
         console.log('💰 Total faturado ano:', totalFaturadoAno);
         
-        // KPI 2: Comparação com ano anterior
-        const totalAnoAnterior = dadosAnoAnterior.reduce((acc, item) => acc + (item.faturamento_total || 0), 0);
+        // KPI 2: Comparação inteligente com ano anterior (mesmo período)
+        // Filtrar ano atual até o mês atual
+        const dadosAnoAtualAteMesAtual = dadosAnoAtual.filter(item => item.mes <= mesAtual);
+        const totalAnoAtualAteMesAtual = dadosAnoAtualAteMesAtual.reduce((acc, item) => acc + (item.faturamento_total || 0), 0);
+        
+        // Filtrar ano anterior até o mesmo mês do ano atual
+        const dadosAnoAnteriorAteMesAtual = dadosAnoAnterior.filter(item => item.mes <= mesAtual);
+        const totalAnoAnteriorAteMesAtual = dadosAnoAnteriorAteMesAtual.reduce((acc, item) => acc + (item.faturamento_total || 0), 0);
+        
         let crescimento = 0;
         let crescimentoTexto = 'N/A';
         
-        if (totalAnoAnterior > 0) {
-            crescimento = ((totalFaturadoAno - totalAnoAnterior) / totalAnoAnterior) * 100;
+        if (totalAnoAnteriorAteMesAtual > 0) {
+            crescimento = ((totalAnoAtualAteMesAtual - totalAnoAnteriorAteMesAtual) / totalAnoAnteriorAteMesAtual) * 100;
             const sinal = crescimento >= 0 ? '+' : '';
             crescimentoTexto = `${sinal}${crescimento.toFixed(1)}%`;
         }
         this.atualizarElemento('kpi-crescimento-anual', crescimentoTexto);
-        console.log('📈 Crescimento anual:', crescimentoTexto);
+        console.log(`📈 Crescimento até mês ${mesAtual}: ${totalAnoAtualAteMesAtual} vs ${totalAnoAnteriorAteMesAtual} = ${crescimentoTexto}`);
         
         // KPI 3: Melhor mês do ano atual
         let melhorMes = { mes: 0, faturamento_total: -Infinity };
@@ -265,6 +270,86 @@ class FaturamentoControllerNovo {
         }
         
         console.log('✅ KPIs calculados e atualizados');
+    }
+
+    calcularKPIsComparativo(dados) {
+        console.log('🧮 Calculando KPIs com dados comparativos:', dados);
+        const anoAtual = new Date().getFullYear();
+        const mesAtual = new Date().getMonth() + 1;
+        
+        // Acessar dados dos anos específicos
+        const dadosAnoAtual = dados[anoAtual.toString()] || [];
+        const dadosAnoAnterior = dados[(anoAtual - 1).toString()] || [];
+        
+        console.log(`📅 Dados ${anoAtual}:`, dadosAnoAtual.length, 'meses');
+        console.log(`📅 Dados ${anoAtual - 1}:`, dadosAnoAnterior.length, 'meses');
+        
+        // KPI 1: Total faturado do ano atual (todos os meses)
+        const totalFaturadoAno = dadosAnoAtual.reduce((acc, item) => {
+            return acc + (parseFloat(item.total_valor) || 0);
+        }, 0);
+        this.atualizarElemento('kpi-total-faturamento', this.formatarMoeda(totalFaturadoAno));
+        console.log('💰 Total faturado ano:', totalFaturadoAno);
+        
+        // KPI 2: Comparação inteligente (até mês atual)
+        const dadosAtualAteMes = dadosAnoAtual.filter(item => {
+            const mes = parseInt(item.mes);
+            return mes <= mesAtual;
+        });
+        
+        const dadosAnteriorAteMes = dadosAnoAnterior.filter(item => {
+            const mes = parseInt(item.mes);
+            return mes <= mesAtual;
+        });
+        
+        const totalAtualAteMes = dadosAtualAteMes.reduce((acc, item) => {
+            return acc + (parseFloat(item.total_valor) || 0);
+        }, 0);
+        
+        const totalAnteriorAteMes = dadosAnteriorAteMes.reduce((acc, item) => {
+            return acc + (parseFloat(item.total_valor) || 0);
+        }, 0);
+        
+        let crescimentoTexto = 'N/A';
+        if (totalAnteriorAteMes > 0) {
+            const crescimento = ((totalAtualAteMes - totalAnteriorAteMes) / totalAnteriorAteMes) * 100;
+            const sinal = crescimento >= 0 ? '+' : '';
+            crescimentoTexto = `${sinal}${crescimento.toFixed(1)}%`;
+        }
+        
+        this.atualizarElemento('kpi-crescimento-anual', crescimentoTexto);
+        console.log('Crescimento ate mes ' + mesAtual + ': R$ ' + totalAtualAteMes.toLocaleString('pt-BR') + ' vs R$ ' + totalAnteriorAteMes.toLocaleString('pt-BR') + ' = ' + crescimentoTexto);
+        
+        // KPI 3: Melhor mês do ano atual
+        let melhorMes = { mes: 0, valor: -Infinity };
+        dadosAnoAtual.forEach(item => {
+            const valor = parseFloat(item.total_valor) || 0;
+            if (valor > melhorMes.valor) {
+                melhorMes = { mes: parseInt(item.mes), valor: valor };
+            }
+        });
+        
+        const nomesMeses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        if (melhorMes.mes > 0) {
+            this.atualizarElemento('kpi-melhor-mes', nomesMeses[melhorMes.mes]);
+            this.atualizarElemento('kpi-melhor-mes-valor', this.formatarMoeda(melhorMes.valor));
+        }
+        
+        // KPI 4: Pior mês do ano atual (com dados > 0)
+        let piorMes = { mes: 0, valor: Infinity };
+        dadosAnoAtual.forEach(item => {
+            const valor = parseFloat(item.total_valor) || 0;
+            if (valor > 0 && valor < piorMes.valor) {
+                piorMes = { mes: parseInt(item.mes), valor: valor };
+            }
+        });
+        
+        if (piorMes.mes > 0 && piorMes.valor < Infinity) {
+            this.atualizarElemento('kpi-pior-mes', nomesMeses[piorMes.mes]);
+            this.atualizarElemento('kpi-pior-mes-valor', this.formatarMoeda(piorMes.valor));
+        }
+        
+        console.log('✅ KPIs comparativos calculados e atualizados');
     }
     
     calcularKPIsFormatoAntigo(data) {
@@ -647,8 +732,13 @@ class FaturamentoControllerNovo {
             else if (index === 1) row.classList.add('top-2');
             else if (index === 2) row.classList.add('top-3');
             
+            // Truncar nome do cliente para 15 caracteres
+            const nomeCliente = cliente.cliente || 'N/A';
+            const nomeClienteTruncado = nomeCliente.length > 15 ? 
+                nomeCliente.substring(0, 15) + '...' : nomeCliente;
+            
             row.innerHTML = `
-                <td class="fw-bold">${cliente.cliente}</td>
+                <td class="fw-bold" title="${nomeCliente}">${nomeClienteTruncado}</td>
                 <td class="text-end">${this.formatarMoeda(cliente.valor)}</td>
                 <td class="text-center">
                     <span class="badge bg-primary">${cliente.percentual.toFixed(1)}%</span>
@@ -769,17 +859,25 @@ class FaturamentoControllerNovo {
         try {
             console.log(`🔍 Carregando drill-down para Centro de Resultado: ${centroResultado}`);
             
-            // Mostrar info de drill-down
+            // Mostrar info de drill-down (usar IDs corretos do HTML)
             const infoElement = document.getElementById('centro-resultado-info');
-            const btnVoltar = document.getElementById('btn-voltar-centro-resultado');
+            const btnVoltar = document.getElementById('centro-resultado-voltar');
+            const titleElement = document.getElementById('centro-resultado-title');
             
             if (infoElement) {
-                infoElement.textContent = `Detalhamento: ${centroResultado}`;
+                infoElement.textContent = `💡 Categorias dentro de: ${centroResultado}`;
                 infoElement.style.display = 'block';
             }
             
             if (btnVoltar) {
                 btnVoltar.style.display = 'inline-block';
+                console.log('✅ Botão voltar mostrado');
+            } else {
+                console.warn('⚠️ Botão voltar não encontrado');
+            }
+            
+            if (titleElement) {
+                titleElement.textContent = `${centroResultado} - Categorias`;
             }
             
             // Buscar dados detalhados
@@ -869,16 +967,23 @@ class FaturamentoControllerNovo {
     voltarCentroResultadoGeral() {
         console.log('🔙 Voltando para visão geral do Centro de Resultado');
         
-        // Esconder info de drill-down
+        // Esconder info de drill-down (usar IDs corretos)
         const infoElement = document.getElementById('centro-resultado-info');
-        const btnVoltar = document.getElementById('btn-voltar-centro-resultado');
+        const btnVoltar = document.getElementById('centro-resultado-voltar');
+        const titleElement = document.getElementById('centro-resultado-title');
         
         if (infoElement) {
-            infoElement.style.display = 'none';
+            infoElement.textContent = '💡 Clique em uma fatia do gráfico para ver mais detalhes';
+            infoElement.style.display = 'block';
         }
         
         if (btnVoltar) {
             btnVoltar.style.display = 'none';
+            console.log('✅ Botão voltar escondido');
+        }
+        
+        if (titleElement) {
+            titleElement.textContent = 'Centro de Resultado';
         }
         
         // Recarregar gráfico geral
@@ -889,13 +994,16 @@ class FaturamentoControllerNovo {
 // Inicializar quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
     // Event listener para o botão voltar do drill-down
-    const btnVoltar = document.getElementById('btn-voltar-centro-resultado');
+    const btnVoltar = document.getElementById('centro-resultado-voltar');
     if (btnVoltar) {
         btnVoltar.addEventListener('click', function() {
             if (window.faturamentoNovo) {
                 window.faturamentoNovo.voltarCentroResultadoGeral();
             }
         });
+        console.log('✅ Event listener do botão voltar configurado');
+    } else {
+        console.warn('⚠️ Botão voltar não encontrado');
     }
 
     // Verificar se os novos elementos existem antes de inicializar

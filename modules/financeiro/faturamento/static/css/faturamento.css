@@ -354,6 +354,24 @@
     min-height: 400px;
 }
 
+/* Gráfico de categoria com altura reduzida */
+#categoria-operacao-chart {
+    max-height: 300px !important;
+}
+
+#categoria-operacao-container .chart-content {
+    height: 320px;
+}
+
+/* Gráfico Centro de Resultado com padding para rosca menor */
+#centro-resultado-chart {
+    padding: 20px !important;
+}
+
+#centro-resultado-container .chart-content {
+    padding: 15px;
+}
+
 /* Table Container */
 .table-container {
     background: white;
@@ -525,19 +543,28 @@
 /* Estilo para nomes de clientes longos na tabela Top 10 */
 #top-clientes-table td:nth-child(1) {
     max-width: 120px; /* Limitar largura da coluna cliente */
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-size: 0.85em;
+    position: relative;
+}
+
+/* Tooltip para mostrar nome completo no hover */
+#top-clientes-table td:nth-child(1):hover {
+    overflow: visible;
+    white-space: normal;
+    background-color: #f8f9fa;
+    z-index: 10;
+    position: relative;
 }
 
 #top-clientes-table th:nth-child(1) {
-    width: 40%; /* Cliente */
+    width: 35%; /* Cliente - reduzido para dar mais espaço ao valor */
 }
 
 #top-clientes-table th:nth-child(2) {
-    width: 35%; /* Valor */
+    width: 40%; /* Valor - aumentado */
 }
 
 #top-clientes-table th:nth-child(3) {
