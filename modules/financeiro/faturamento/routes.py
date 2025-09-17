@@ -692,3 +692,139 @@ def api_geral_metas_mensais():
     except Exception as e:
         print(f"Erro em api_geral_metas_mensais: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/setor/<setor>')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_setor_dinamico(setor):
+    """API dinâmica para dados completos de um setor específico"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        ano = int(ano)
+        
+        # Definir filtro de classe com base no setor
+        filtro_classe = ''
+        if setor == 'importacao':
+            filtro_classe = 'IMP'
+        elif setor == 'consultoria':
+            filtro_classe = 'CONS'
+        elif setor == 'exportacao':
+            filtro_classe = 'EXP'
+        else:
+            return jsonify({'success': False, 'message': 'Setor inválido'}), 400
+        
+        # Período do ano especificado
+        inicio = f'{ano}-01-01'
+        fim = f'{ano}-12-31'
+        
+        # Buscar dados de faturamento do setor no ano
+        query = supabase_admin.table('fin_faturamento_anual').select('*')
+        if filtro_classe:
+            query = query.ilike('classe', f'%{filtro_classe}%')
+        query = query.gte('data', inicio).lte('data', fim)
+        
+        response = query.execute()
+        dados_faturamento = response.data
+        
+        # Calcular faturamento total do setor
+        total_setor = sum(float(item['valor']) for item in dados_faturamento)
+        
+        # Buscar faturamento total da empresa no mesmo período
+        total_query = supabase_admin.table('fin_faturamento_anual').select('valor')
+        total_query = total_query.gte('data', inicio).lte('data', fim)
+        total_response = total_query.execute()
+        total_empresa = sum(float(item['valor']) for item in total_response.data)
+        
+        # Calcular participação percentual
+        pct_participacao = (total_setor / total_empresa * 100) if total_empresa > 0 else 0
+        
+        # Buscar dados do ano anterior para calcular crescimento
+        inicio_anterior = f'{ano-1}-01-01'
+        fim_anterior = f'{ano-1}-12-31'
+        
+        query_anterior = supabase_admin.table('fin_faturamento_anual').select('valor')
+        if filtro_classe:
+            query_anterior = query_anterior.ilike('classe', f'%{filtro_classe}%')
+        query_anterior = query_anterior.gte('data', inicio_anterior).lte('data', fim_anterior)
+        
+        response_anterior = query_anterior.execute()
+        total_anterior = sum(float(item['valor']) for item in response_anterior.data)
+        
+        # Calcular crescimento
+        crescimento = 0
+        if total_anterior > 0:
+            crescimento = ((total_setor - total_anterior) / total_anterior) * 100
+        
+        # Agrupar faturamento mensal
+        faturamento_mensal = defaultdict(float)
+        melhor_mes_valor = 0
+        melhor_mes_nome = ''
+        
+        for item in dados_faturamento:
+            data_item = datetime.strptime(item['data'], '%Y-%m-%d')
+            mes_num = data_item.month
+            mes_nome = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                       'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][mes_num]
+            
+            faturamento_mensal[mes_nome] += float(item['valor'])
+            
+            # Identificar melhor mês
+            if faturamento_mensal[mes_nome] > melhor_mes_valor:
+                melhor_mes_valor = faturamento_mensal[mes_nome]
+                melhor_mes_nome = mes_nome
+        
+        # Preparar dados mensais para o gráfico
+        dados_mensais = []
+        for mes_nome in ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']:
+            dados_mensais.append({
+                'mes': mes_nome,
+                'valor': faturamento_mensal.get(mes_nome, 0)
+            })
+        
+        # Buscar mapeamento de clientes
+        mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+        mapeamento_clientes = {}
+        if mapeamento_response.data:
+            for item in mapeamento_response.data:
+                mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+        
+        # Ranking de clientes
+        clientes_ranking = defaultdict(float)
+        for item in dados_faturamento:
+            cliente_original = item.get('cliente', 'Não identificado')
+            cliente_padronizado = mapeamento_clientes.get(cliente_original, cliente_original)
+            clientes_ranking[cliente_padronizado] += float(item['valor'])
+        
+        # Converter para lista e ordenar (top 10)
+        ranking_lista = []
+        for cliente, valor in clientes_ranking.items():
+            participacao = (valor / total_setor * 100) if total_setor > 0 else 0
+            ranking_lista.append({
+                'id': cliente.lower().replace(' ', '_'),  # ID simples para drill-down
+                'nome': cliente,
+                'valor': valor,
+                'participacao': participacao
+            })
+        
+        ranking_lista.sort(key=lambda x: x['valor'], reverse=True)
+        ranking_lista = ranking_lista[:10]  # Top 10
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'faturamento_total': total_setor,
+                'participacao_percentual': pct_participacao,
+                'crescimento_percentual': crescimento,
+                'melhor_mes': {
+                    'mes': melhor_mes_nome,
+                    'valor': melhor_mes_valor
+                },
+                'dados_mensais': dados_mensais,
+                'ranking_clientes': ranking_lista
+            }
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_geral_setor_dinamico: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500

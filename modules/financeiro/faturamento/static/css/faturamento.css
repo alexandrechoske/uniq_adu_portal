@@ -1438,3 +1438,136 @@
     background: #1e7e34;
     border-color: #1e7e34;
 }
+
+/* Setor Filter Header */
+.setor-filter-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.filter-label i {
+    color: #007bff;
+    font-size: 1.1rem;
+}
+
+.sector-filter {
+    padding: 8px 16px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    color: #495057;
+    font-size: 0.95rem;
+    font-weight: 500;
+    min-width: 150px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sector-filter:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+}
+
+.sector-filter:hover {
+    border-color: #007bff;
+}
+
+/* Dynamic Sector Content */
+#dynamic-sector-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Chart Controls */
+.chart-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-toggle-prev-year {
+    padding: 6px 12px;
+    border: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    color: #6c757d;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-toggle-prev-year:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+}
+
+.btn-toggle-prev-year.active {
+    background: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-toggle-prev-year.active:hover {
+    background: #138496;
+    border-color: #117a8b;
+}
+
+/* Action Button in Table */
+.btn-drill-cliente {
+    padding: 4px 8px;
+    border: 1px solid #007bff;
+    background: transparent;
+    color: #007bff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.btn-drill-cliente:hover {
+    background: #007bff;
+    color: white;
+}

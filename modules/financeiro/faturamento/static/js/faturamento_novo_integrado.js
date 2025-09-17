@@ -33,6 +33,7 @@ class FaturamentoControllerNovo {
         
         try {
             this.setupToggleLabels();
+            this.setupSectorFunctionality(); // Configurar funcionalidade do setor
             await this.buscarAnosDisponiveis();
             await this.carregarTodosOsDados();
         } catch (error) {
@@ -1228,6 +1229,311 @@ class FaturamentoControllerNovo {
         
         // Recarregar gráfico geral
         this.carregarGraficoCentroResultado();
+    }
+    
+    // ============ FUNCIONALIDADE DINÂMICA DO SETOR ============
+    setupSectorFunctionality() {
+        const sectorSelect = document.getElementById('sector-select');
+        const togglePrevYear = document.getElementById('toggle-prev-year-setor');
+        
+        // Setup tab listeners
+        this.setupTabListeners();
+        
+        if (sectorSelect) {
+            sectorSelect.addEventListener('change', (e) => {
+                this.carregarDadosSetor(e.target.value);
+            });
+            console.log('✅ Filtro de setor configurado');
+        }
+        
+        if (togglePrevYear) {
+            togglePrevYear.addEventListener('click', () => {
+                this.toggleComparacaoAnoAnteriorSetor();
+            });
+            console.log('✅ Toggle ano anterior setor configurado');
+        }
+    }
+    
+    setupTabListeners() {
+        // Listener para detectar quando a aba "Análise por Setor" é clicada
+        const tabButtons = document.querySelectorAll('.tab-button');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tabName = e.target.getAttribute('data-tab');
+                
+                // Atualizar visual das abas
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Mostrar/esconder conteúdo das abas
+                const allTabContents = document.querySelectorAll('.tab-content');
+                allTabContents.forEach(content => content.classList.remove('active'));
+                
+                const targetTab = document.getElementById(`${tabName}-tab`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                }
+                
+                if (tabName === 'analise-setor') {
+                    console.log('🔍 Aba Análise por Setor ativada');
+                    
+                    // Pequeno delay para garantir que a aba seja exibida
+                    setTimeout(() => {
+                        this.inicializarDadosSetor();
+                    }, 100);
+                }
+            });
+        });
+        
+        console.log('✅ Listeners das abas configurados');
+    }
+    
+    inicializarDadosSetor() {
+        const sectorSelect = document.getElementById('sector-select');
+        if (sectorSelect && sectorSelect.value) {
+            console.log(`🚀 Inicializando dados do setor: ${sectorSelect.value}`);
+            this.carregarDadosSetor(sectorSelect.value);
+        } else {
+            console.log('🚀 Carregando dados do setor padrão: importacao');
+            this.carregarDadosSetor('importacao');
+        }
+    }
+    
+    async carregarDadosSetor(setor) {
+        console.log(`📊 Carregando dados do setor: ${setor}`);
+        
+        try {
+            // Buscar dados do setor específico
+            const response = await fetch(`/financeiro/faturamento/api/geral/setor/${setor}?ano=${this.currentAno}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Erro ao carregar dados do setor');
+            }
+            
+            // Atualizar KPIs
+            this.atualizarKPIsSetor(data.data, setor);
+            
+            // Atualizar gráfico mensal
+            this.atualizarGraficoMensalSetor(data.data, setor);
+            
+            // Atualizar ranking de clientes
+            this.atualizarRankingClientesSetor(data.data, setor);
+            
+            // Atualizar títulos
+            this.atualizarTitulosSetor(setor);
+            
+        } catch (error) {
+            console.error('Erro ao carregar dados do setor:', error);
+            this.mostrarErroSetor();
+        }
+    }
+    
+    atualizarKPIsSetor(data, setor) {
+        const setorNomes = {
+            'importacao': 'Importação',
+            'exportacao': 'Exportação',
+            'consultoria': 'Consultoria'
+        };
+        
+        // Faturamento Total
+        const valorFaturamento = data.faturamento_total || 0;
+        document.getElementById('valor-faturamento-setor').textContent = 
+            this.formatarMoeda(valorFaturamento);
+        document.getElementById('desc-faturamento-setor').textContent = 
+            `${setorNomes[setor]} em ${this.currentAno}`;
+        
+        // Participação
+        const participacao = data.participacao_percentual || 0;
+        document.getElementById('valor-participacao-setor').textContent = 
+            `${participacao.toFixed(1)}%`;
+        
+        // Crescimento
+        const crescimento = data.crescimento_percentual || 0;
+        const valorCrescimento = document.getElementById('valor-crescimento-setor');
+        valorCrescimento.textContent = `${crescimento >= 0 ? '+' : ''}${crescimento.toFixed(1)}%`;
+        
+        // Atualizar cor baseado no crescimento
+        const kpiCrescimento = document.getElementById('kpi-crescimento-setor');
+        kpiCrescimento.className = 'kpi-card ' + (crescimento >= 0 ? 'kpi-success' : 'kpi-danger');
+        
+        // Melhor Mês
+        const melhorMes = data.melhor_mes || {};
+        document.getElementById('valor-melhor-mes-setor').textContent = 
+            melhorMes.mes || 'N/A';
+        document.getElementById('desc-melhor-mes-setor').textContent = 
+            melhorMes.valor ? this.formatarMoeda(melhorMes.valor) : 'Sem dados';
+    }
+    
+    atualizarGraficoMensalSetor(data, setor) {
+        const ctx = document.getElementById('chart-mensal-setor');
+        if (!ctx) return;
+        
+        // Destruir gráfico existente
+        if (this.charts.setorMensal) {
+            this.charts.setorMensal.destroy();
+        }
+        
+        const dadosMensais = data.dados_mensais || [];
+        const meses = dadosMensais.map(item => item.mes);
+        const valores = dadosMensais.map(item => item.valor);
+        
+        this.charts.setorMensal = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: `Faturamento ${this.currentAno}`,
+                    data: valores,
+                    backgroundColor: this.coresGraficos.receita,
+                    borderColor: this.coresGraficos.receita,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => this.formatarMoeda(value)
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    atualizarRankingClientesSetor(data, setor) {
+        const tbody = document.querySelector('#tabela-ranking-setor tbody');
+        if (!tbody) return;
+        
+        const clientes = data.ranking_clientes || [];
+        
+        tbody.innerHTML = '';
+        
+        clientes.forEach((cliente, index) => {
+            const row = tbody.insertRow();
+            
+            row.innerHTML = `
+                <td><strong>#${index + 1}</strong></td>
+                <td>${cliente.nome}</td>
+                <td>${this.formatarMoeda(cliente.valor)}</td>
+                <td>${cliente.participacao?.toFixed(1) || 0}%</td>
+                <td>
+                    <button class="btn-drill-cliente" 
+                            onclick="window.faturamentoNovo.drillDownCliente('${cliente.id}', '${cliente.nome}')">
+                        Ver Detalhes
+                    </button>
+                </td>
+            `;
+        });
+        
+        console.log(`✅ Ranking de clientes atualizado para setor ${setor}: ${clientes.length} clientes`);
+    }
+    
+    atualizarTitulosSetor(setor) {
+        const setorNomes = {
+            'importacao': 'Importação',
+            'exportacao': 'Exportação',
+            'consultoria': 'Consultoria'
+        };
+        
+        const chartTitle = document.getElementById('chart-title-setor');
+        const tableTitle = document.getElementById('table-title-setor');
+        
+        if (chartTitle) {
+            chartTitle.textContent = `Faturamento Mensal - ${setorNomes[setor]}`;
+        }
+        
+        if (tableTitle) {
+            tableTitle.textContent = `Ranking de Clientes - ${setorNomes[setor]}`;
+        }
+    }
+    
+    toggleComparacaoAnoAnteriorSetor() {
+        const button = document.getElementById('toggle-prev-year-setor');
+        const isActive = button.classList.contains('active');
+        
+        if (isActive) {
+            button.classList.remove('active');
+            // Remover dados do ano anterior
+            this.removerAnoAnteriorGraficoSetor();
+        } else {
+            button.classList.add('active');
+            // Adicionar dados do ano anterior
+            this.adicionarAnoAnteriorGraficoSetor();
+        }
+    }
+    
+    async adicionarAnoAnteriorGraficoSetor() {
+        const sectorSelect = document.getElementById('sector-select');
+        const setor = sectorSelect?.value || 'importacao';
+        const anoAnterior = this.currentAno - 1;
+        
+        try {
+            const response = await fetch(`/financeiro/faturamento/api/geral/setor/${setor}?ano=${anoAnterior}`);
+            const data = await response.json();
+            
+            if (data.success && this.charts.setorMensal) {
+                const dadosMensais = data.data.dados_mensais || [];
+                const valores = dadosMensais.map(item => item.valor);
+                
+                this.charts.setorMensal.data.datasets.push({
+                    label: `Faturamento ${anoAnterior}`,
+                    data: valores,
+                    backgroundColor: this.coresGraficos.anos[1] + '80', // Transparência
+                    borderColor: this.coresGraficos.anos[1],
+                    borderWidth: 1
+                });
+                
+                this.charts.setorMensal.update();
+                console.log(`✅ Adicionado ano anterior (${anoAnterior}) ao gráfico do setor`);
+            }
+        } catch (error) {
+            console.error('Erro ao adicionar ano anterior:', error);
+        }
+    }
+    
+    removerAnoAnteriorGraficoSetor() {
+        if (this.charts.setorMensal && this.charts.setorMensal.data.datasets.length > 1) {
+            this.charts.setorMensal.data.datasets.pop();
+            this.charts.setorMensal.update();
+            console.log('✅ Removido ano anterior do gráfico do setor');
+        }
+    }
+    
+    drillDownCliente(clienteId, nomeCliente) {
+        console.log(`🔍 Drill-down para cliente: ${nomeCliente} (ID: ${clienteId})`);
+        
+        // Implementar modal ou navegação para detalhes do cliente
+        alert(`Funcionalidade de drill-down para o cliente "${nomeCliente}" será implementada em breve.`);
+    }
+    
+    mostrarErroSetor() {
+        // Resetar KPIs
+        document.getElementById('valor-faturamento-setor').textContent = 'Erro';
+        document.getElementById('valor-participacao-setor').textContent = 'Erro';
+        document.getElementById('valor-crescimento-setor').textContent = 'Erro';
+        document.getElementById('valor-melhor-mes-setor').textContent = 'Erro';
+        
+        // Limpar tabela
+        const tbody = document.querySelector('#tabela-ranking-setor tbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Erro ao carregar dados</td></tr>';
+        }
+        
+        console.error('❌ Erro exibido na interface do setor');
     }
 }
 

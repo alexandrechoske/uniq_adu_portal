@@ -233,126 +233,89 @@
     
     <!-- Análise por Setor Tab - Layout OnePage -->
     <div class="tab-content" id="analise-setor-tab">
-        <!-- Seção Importação -->
-        <div class="setor-section" id="setor-importacao">
-            <div class="setor-header">
-                <h2 class="setor-title">
-                    <i class="mdi mdi-import"></i>
-                    Importação
-                </h2>
-                <div class="setor-description">
-                    Análise de faturamento do setor de importação
-                </div>
-            </div>
-            
-            <!-- KPI Cards do Setor -->
-            <div class="kpi-grid-setor">
-                <div class="kpi-card kpi-success" id="kpi-faturamento-importacao">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-currency-usd"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">Faturamento Total</p>
-                        <p class="kpi-value" id="valor-faturamento-importacao">-</p>
-                    </div>
-                </div>
-                
-                <div class="kpi-card kpi-info" id="kpi-percentual-importacao">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-percent"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">% Participação Total</p>
-                        <p class="kpi-value" id="valor-percentual-importacao">-</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Charts e Tables da Importação -->
-            <div class="charts-grid">
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">
-                            <i class="mdi mdi-chart-line"></i>
-                            Comparativo de Faturamento - Importação
-                        </h3>
-                    </div>
-                    <div class="chart-content">
-                        <canvas id="chart-faturamento-importacao"></canvas>
-                    </div>
-                </div>
-                
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">
-                            <i class="mdi mdi-account-multiple"></i>
-                            Ranking de Clientes - Importação
-                        </h3>
-                    </div>
-                    <div class="chart-content">
-                        <table id="tabela-ranking-importacao" class="enhanced-table">
-                            <thead>
-                                <tr>
-                                    <th>Cliente</th>
-                                    <th>Valor Faturado</th>
-                                    <th>% Participação</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dados carregados via JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- Header com Filtro de Setor -->
+        <div class="setor-filter-header">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="sector-select" class="filter-label">
+                        <i class="mdi mdi-filter"></i>
+                        Selecionar Setor:
+                    </label>
+                    <select id="sector-select" class="sector-filter">
+                        <option value="importacao">Importação</option>
+                        <option value="exportacao">Exportação</option>
+                        <option value="consultoria">Consultoria</option>
+                    </select>
                 </div>
             </div>
         </div>
         
-        <!-- Seção Exportação -->
-        <div class="setor-section" id="setor-exportacao">
-            <div class="setor-header">
-                <h2 class="setor-title">
-                    <i class="mdi mdi-export"></i>
-                    Exportação
-                </h2>
-                <div class="setor-description">
-                    Análise de faturamento do setor de exportação
-                </div>
-            </div>
-            
-            <!-- KPI Cards do Setor -->
+        <!-- Container Dinâmico - Setor Selecionado -->
+        <div id="dynamic-sector-content">
+            <!-- KPIs Dinâmicos -->
             <div class="kpi-grid-setor">
-                <div class="kpi-card kpi-warning" id="kpi-faturamento-exportacao">
+                <div class="kpi-card kpi-primary" id="kpi-faturamento-setor">
                     <div class="kpi-icon">
                         <i class="mdi mdi-currency-usd"></i>
                     </div>
                     <div class="kpi-content">
                         <p class="kpi-label">Faturamento Total</p>
-                        <p class="kpi-value" id="valor-faturamento-exportacao">-</p>
+                        <p class="kpi-value" id="valor-faturamento-setor">-</p>
+                        <p class="kpi-description" id="desc-faturamento-setor">Carregando...</p>
                     </div>
                 </div>
                 
-                <div class="kpi-card kpi-info" id="kpi-percentual-exportacao">
+                <div class="kpi-card kpi-info" id="kpi-participacao-setor">
                     <div class="kpi-icon">
                         <i class="mdi mdi-percent"></i>
                     </div>
                     <div class="kpi-content">
-                        <p class="kpi-label">% Participação Total</p>
-                        <p class="kpi-value" id="valor-percentual-exportacao">-</p>
+                        <p class="kpi-label">% Participação</p>
+                        <p class="kpi-value" id="valor-participacao-setor">-</p>
+                        <p class="kpi-description" id="desc-participacao-setor">Do total geral</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-warning" id="kpi-crescimento-setor">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-trending-up"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Crescimento</p>
+                        <p class="kpi-value" id="valor-crescimento-setor">-</p>
+                        <p class="kpi-description" id="desc-crescimento-setor">vs ano anterior</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-success" id="kpi-melhor-mes-setor">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-trophy"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Melhor Mês</p>
+                        <p class="kpi-value" id="valor-melhor-mes-setor">-</p>
+                        <p class="kpi-description" id="desc-melhor-mes-setor">Maior faturamento</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Charts e Tables da Exportação -->
+            <!-- Charts e Tables Dinâmicos -->
             <div class="charts-grid">
                 <div class="chart-container">
                     <div class="chart-header">
                         <h3 class="chart-title">
-                            <i class="mdi mdi-chart-line"></i>
-                            Comparativo de Faturamento - Exportação
+                            <i class="mdi mdi-chart-bar"></i>
+                            <span id="chart-title-setor">Faturamento Mensal - Importação</span>
                         </h3>
+                        <div class="chart-controls">
+                            <button class="btn-toggle-prev-year" id="toggle-prev-year-setor">
+                                <i class="mdi mdi-compare"></i>
+                                Ano Anterior
+                            </button>
+                        </div>
                     </div>
                     <div class="chart-content">
-                        <canvas id="chart-faturamento-exportacao"></canvas>
+                        <canvas id="chart-mensal-setor"></canvas>
                     </div>
                 </div>
                 
@@ -360,90 +323,18 @@
                     <div class="chart-header">
                         <h3 class="chart-title">
                             <i class="mdi mdi-account-multiple"></i>
-                            Ranking de Clientes - Exportação
+                            <span id="table-title-setor">Ranking de Clientes - Importação</span>
                         </h3>
                     </div>
                     <div class="chart-content">
-                        <table id="tabela-ranking-exportacao" class="enhanced-table">
+                        <table id="tabela-ranking-setor" class="enhanced-table">
                             <thead>
                                 <tr>
+                                    <th>Posição</th>
                                     <th>Cliente</th>
                                     <th>Valor Faturado</th>
                                     <th>% Participação</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dados carregados via JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Seção Consultoria -->
-        <div class="setor-section" id="setor-consultoria">
-            <div class="setor-header">
-                <h2 class="setor-title">
-                    <i class="mdi mdi-account-tie"></i>
-                    Consultoria
-                </h2>
-                <div class="setor-description">
-                    Análise de faturamento do setor de consultoria
-                </div>
-            </div>
-            
-            <!-- KPI Cards do Setor -->
-            <div class="kpi-grid-setor">
-                <div class="kpi-card kpi-purple" id="kpi-faturamento-consultoria">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-currency-usd"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">Faturamento Total</p>
-                        <p class="kpi-value" id="valor-faturamento-consultoria">-</p>
-                    </div>
-                </div>
-                
-                <div class="kpi-card kpi-info" id="kpi-percentual-consultoria">
-                    <div class="kpi-icon">
-                        <i class="mdi mdi-percent"></i>
-                    </div>
-                    <div class="kpi-content">
-                        <p class="kpi-label">% Participação Total</p>
-                        <p class="kpi-value" id="valor-percentual-consultoria">-</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Charts e Tables da Consultoria -->
-            <div class="charts-grid">
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">
-                            <i class="mdi mdi-chart-line"></i>
-                            Comparativo de Faturamento - Consultoria
-                        </h3>
-                    </div>
-                    <div class="chart-content">
-                        <canvas id="chart-faturamento-consultoria"></canvas>
-                    </div>
-                </div>
-                
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">
-                            <i class="mdi mdi-account-multiple"></i>
-                            Ranking de Clientes - Consultoria
-                        </h3>
-                    </div>
-                    <div class="chart-content">
-                        <table id="tabela-ranking-consultoria" class="enhanced-table">
-                            <thead>
-                                <tr>
-                                    <th>Cliente</th>
-                                    <th>Valor Faturado</th>
-                                    <th>% Participação</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
