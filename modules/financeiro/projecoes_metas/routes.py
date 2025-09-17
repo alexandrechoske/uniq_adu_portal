@@ -48,19 +48,35 @@ def api_dados():
         
         print(f"[PROJECOES_API] Buscando dados - Ano: {ano}, Tipo: {tipo}")
         
-        # Query base
+        # Query base - tentar sem limite explícito
         query = supabase_admin.table('fin_metas_projecoes').select('*')
         
         # Filtros
         if ano:
-            query = query.eq('ano', ano)
+            try:
+                # Tentar converter para int para garantir compatibilidade
+                ano_int = int(ano)
+                query = query.eq('ano', ano_int)
+                print(f"[PROJECOES_API] Filtrando por ano (int): {ano_int}")
+            except ValueError:
+                # Se não conseguir converter, usar como string
+                query = query.eq('ano', ano)
+                print(f"[PROJECOES_API] Filtrando por ano (str): {ano}")
+        
         if tipo:
             query = query.eq('tipo', tipo)
+            print(f"[PROJECOES_API] Filtrando por tipo: {tipo}")
         
-        # Executar query
-        result = query.order('created_at', desc=True).execute()
+        # Executar query sem limite explícito
+        result = query.execute()
         
         dados = result.data if result.data else []
+        
+        print(f"[PROJECOES_API] Query executada - Retornados: {len(dados)} registros")
+        
+        # Reordenar por created_at desc no Python se necessário
+        if dados:
+            dados.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         
         return jsonify({
             'success': True,

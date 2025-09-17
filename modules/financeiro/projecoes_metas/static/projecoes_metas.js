@@ -12,7 +12,13 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         configurarTabs();
         configurarEventos();
-        buscarDados();
+        
+        // Aguardar um pouco para garantir que todos os elementos estejam prontos
+        setTimeout(function() {
+            console.log('[PROJECOES] Iniciando busca de dados...');
+            buscarDados();
+        }, 100);
+        
         console.log('[PROJECOES] Inicialização completa');
     } catch (error) {
         console.error('[PROJECOES] Erro na inicialização:', error);
@@ -56,6 +62,10 @@ function configurarEventos() {
         document.getElementById('btn-buscar').addEventListener('click', buscarDados);
         document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
         
+        // Eventos para mudança automática dos filtros
+        document.getElementById('ano-filtro').addEventListener('change', buscarDados);
+        document.getElementById('tipo-filtro').addEventListener('change', buscarDados);
+        
         document.getElementById('btn-nova-meta-financeira').addEventListener('click', function() { abrirModal('financeiro'); });
         document.getElementById('btn-nova-meta-operacional').addEventListener('click', function() { abrirModal('operacional'); });
         document.getElementById('btn-nova-projecao').addEventListener('click', function() { abrirModal('projecao'); });
@@ -89,16 +99,29 @@ function configurarModais() {
 }
 
 function buscarDados() {
-    const ano = document.getElementById('ano-filtro').value;
-    const tipo = document.getElementById('tipo-filtro').value;
+    const anoSelect = document.getElementById('ano-filtro');
+    const tipoSelect = document.getElementById('tipo-filtro');
+    
+    const ano = anoSelect ? anoSelect.value : '';
+    const tipo = tipoSelect ? tipoSelect.value : '';
     
     console.log('[PROJECOES] Buscando dados - Ano:', ano, 'Tipo:', tipo);
+    console.log('[PROJECOES] Elementos encontrados - Ano select:', !!anoSelect, 'Tipo select:', !!tipoSelect);
+    
+    if (!anoSelect || !tipoSelect) {
+        console.error('[PROJECOES] Elementos de filtro não encontrados!');
+        return;
+    }
     
     mostrarLoading(true);
     
     const params = new URLSearchParams();
-    if (ano) params.append('ano', ano);
-    if (tipo) params.append('tipo', tipo);
+    if (ano && ano !== '') {
+        params.append('ano', ano);
+    }
+    if (tipo && tipo !== '') {
+        params.append('tipo', tipo);
+    }
     
     const url = '/financeiro/projecoes-metas/api/dados?' + params.toString();
     console.log('[PROJECOES] URL da requisição:', url);
