@@ -98,7 +98,10 @@ def api_geral_mensal():
                 'variacao': variacao
             })
         
-        return jsonify(meses)
+        return jsonify({
+            'success': True,
+            'data': meses
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -400,4 +403,195 @@ def api_setor_dados_completos():
             'ranking_clientes': ranking_lista
         })
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/centro_resultado')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_centro_resultado():
+    """API para gráfico de rosca - Faturamento por Centro de Resultado"""
+    try:
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        empresa = request.args.get('empresa', '')
+        
+        # Buscar dados de faturamento
+        query = supabase_admin.table('fin_faturamento_anual').select('centro_resultado, valor')
+        
+        # Aplicar filtros
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+        if empresa and empresa.strip():
+            query = query.eq('empresa', empresa)
+            
+        response = query.execute()
+        dados = response.data
+        
+        # Agrupar por centro de resultado
+        centro_resultado_data = defaultdict(float)
+        total_geral = 0
+        
+        for item in dados:
+            centro = item.get('centro_resultado', 'Não Classificado')
+            valor = float(item.get('valor', 0))
+            centro_resultado_data[centro] += valor
+            total_geral += valor
+        
+        # Preparar dados para o gráfico de rosca
+        resultado = []
+        for centro, valor in centro_resultado_data.items():
+            percentual = (valor / total_geral * 100) if total_geral > 0 else 0
+            resultado.append({
+                'centro_resultado': centro,
+                'valor': valor,
+                'percentual': percentual
+            })
+        
+        # Ordenar por valor decrescente
+        resultado.sort(key=lambda x: x['valor'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'data': resultado,
+            'total': total_geral
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_geral_centro_resultado: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/categoria_operacao')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_categoria_operacao():
+    """API para gráfico de rosca - Faturamento por Categoria (usando campo 'categoria')"""
+    try:
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        empresa = request.args.get('empresa', '')
+        
+        # Buscar dados de faturamento usando campo 'categoria' em vez de 'categoria_operacao'
+        query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor')
+        
+        # Aplicar filtros
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+        if empresa and empresa.strip():
+            query = query.eq('empresa', empresa)
+            
+        response = query.execute()
+        dados = response.data
+        
+        # Agrupar por categoria
+        categoria_data = defaultdict(float)
+        total_geral = 0
+        
+        for item in dados:
+            categoria = item.get('categoria', 'Não Classificado')
+            valor = float(item.get('valor', 0))
+            categoria_data[categoria] += valor
+            total_geral += valor
+        
+        # Preparar dados para o gráfico de rosca
+        resultado = []
+        for categoria, valor in categoria_data.items():
+            percentual = (valor / total_geral * 100) if total_geral > 0 else 0
+            resultado.append({
+                'categoria': categoria,
+                'valor': valor,
+                'percentual': percentual
+            })
+        
+        # Ordenar por valor decrescente
+        resultado.sort(key=lambda x: x['valor'], reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'data': resultado,
+            'total': total_geral
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_geral_categoria_operacao: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/top_clientes')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_top_clientes():
+    """API para tabela de top clientes usando campo 'cliente'"""
+    try:
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        empresa = request.args.get('empresa', '')
+        limit = int(request.args.get('limit', 10))
+        
+        # Buscar dados de faturamento
+        query = supabase_admin.table('fin_faturamento_anual').select('cliente, valor')
+        
+        # Aplicar filtros
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+        if empresa and empresa.strip():
+            query = query.eq('empresa', empresa)
+            
+        response = query.execute()
+        dados = response.data
+        
+        # Buscar mapeamento de clientes para padronização (se existir)
+        try:
+            mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+            mapeamento_clientes = {}
+            if mapeamento_response.data:
+                for item in mapeamento_response.data:
+                    mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+        except:
+            # Se a tabela de mapeamento não existir, usar lista vazia
+            mapeamento_clientes = {}
+        
+        # Agrupar por cliente
+        clientes_data = defaultdict(float)
+        total_geral = 0
+        
+        for item in dados:
+            cliente_original = item.get('cliente', '').strip()
+            
+            # Usar mapeamento se disponível, senão usar o cliente original
+            if cliente_original in mapeamento_clientes:
+                nome_final = mapeamento_clientes[cliente_original]
+            else:
+                nome_final = cliente_original
+                
+            valor = float(item.get('valor', 0))
+            clientes_data[nome_final] += valor
+            total_geral += valor
+        
+        # Preparar dados para a tabela
+        resultado = []
+        for cliente, valor in clientes_data.items():
+            percentual = (valor / total_geral * 100) if total_geral > 0 else 0
+            resultado.append({
+                'cliente': cliente,
+                'valor': valor,
+                'percentual': percentual
+            })
+        
+        # Ordenar por valor decrescente e pegar top N
+        resultado.sort(key=lambda x: x['valor'], reverse=True)
+        resultado = resultado[:limit]
+        
+        return jsonify({
+            'success': True,
+            'data': resultado,
+            'total': total_geral
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_geral_top_clientes: {str(e)}")
         return jsonify({'error': str(e)}), 500

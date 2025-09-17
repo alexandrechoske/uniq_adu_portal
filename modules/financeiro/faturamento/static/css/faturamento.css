@@ -268,6 +268,14 @@
     margin-bottom: 2rem;
 }
 
+/* Grid de três colunas para Centro de Resultado, Categoria de Operação e Top Clientes */
+.charts-grid-three-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
 .charts-grid-single .chart-container {
     max-width: 600px;
     width: 100%;
@@ -474,6 +482,33 @@
 
 .enhanced-table tbody tr:nth-child(odd):hover {
     background: #f8f9fa;
+}
+
+/* Estilos para destacar top 3 clientes */
+.enhanced-table tbody tr.top-1 {
+    background: linear-gradient(135deg, #ffd700, #ffed4e) !important;
+    color: #333;
+    font-weight: bold;
+}
+
+.enhanced-table tbody tr.top-2 {
+    background: linear-gradient(135deg, #c0c0c0, #e5e5e5) !important;
+    color: #333;
+    font-weight: bold;
+}
+
+.enhanced-table tbody tr.top-3 {
+    background: linear-gradient(135deg, #cd7f32, #d4a574) !important;
+    color: #333;
+    font-weight: bold;
+}
+
+.enhanced-table tbody tr.top-1:hover,
+.enhanced-table tbody tr.top-2:hover,
+.enhanced-table tbody tr.top-3:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .table-pagination {
@@ -1176,12 +1211,26 @@
     .kpi-grid-enhanced {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
+    
+    .charts-grid-three-cols {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    .charts-grid-three-cols .chart-container:last-child {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (max-width: 768px) {
     .kpi-grid-enhanced {
         grid-template-columns: 1fr 1fr;
         gap: 15px;
+    }
+    
+    .charts-grid-three-cols {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
     .chart-controls {

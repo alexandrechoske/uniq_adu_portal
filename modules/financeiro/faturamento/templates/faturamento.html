@@ -44,6 +44,14 @@
         </div>
     </div>
     
+    <!-- Elementos de loading específicos -->
+    <div id="loading-kpis" style="display: none;"></div>
+    <div id="loading-comparativo" style="display: none;"></div>
+    <div id="loading-centro-resultado" style="display: none;"></div>
+    <div id="loading-categoria-operacao" style="display: none;"></div>
+    <div id="loading-top-clientes" style="display: none;"></div>
+    <div id="loading-tabela" style="display: none;"></div>
+    
     <!-- Navigation Tabs -->
     <div class="nav-tabs">
         <button class="tab-button active" data-tab="visao-geral">Visão Geral</button>
@@ -142,18 +150,57 @@
             </div>
         </div>
         
-        <!-- Segunda linha - apenas sunburst -->
-        <div class="charts-grid-single">
-            <!-- Gráfico Sunburst - Proporção Hierárquica -->
+        <!-- Segunda linha - Gráficos de Rosca e Tabela de Clientes -->
+        <div class="charts-grid-three-cols">
+            <!-- Gráfico de Rosca - Centro de Resultado -->
             <div class="chart-container">
                 <div class="chart-header">
                     <h3 class="chart-title">
                         <i class="mdi mdi-chart-donut"></i>
-                        Distribuição por Centro de Resultado
+                        Centro de Resultado
                     </h3>
                 </div>
                 <div class="chart-content">
-                    <canvas id="sunburst-chart"></canvas>
+                    <canvas id="centro-resultado-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Gráfico de Rosca - Categoria -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-pie"></i>
+                        Categoria
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <canvas id="categoria-operacao-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Tabela Top 10 Clientes -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-account-star"></i>
+                        Top 10 Clientes
+                    </h3>
+                </div>
+                <div class="chart-content">
+                    <table id="top-clientes-table" class="enhanced-table compact">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Valor (R$)</th>
+                                <th>% do Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="3" class="text-center">Carregando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -433,5 +480,5 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-<script src="{{ url_for('fin_faturamento.static', filename='js/faturamento.js') }}"></script>
+<script src="{{ url_for('fin_faturamento.static', filename='js/faturamento_novo_integrado.js') }}"></script>
 {% endblock %}

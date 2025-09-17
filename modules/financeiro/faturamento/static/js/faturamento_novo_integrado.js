@@ -60,17 +60,31 @@ class FaturamentoControllerNovo {
     
     async buscarAnosDisponiveis() {
         try {
+            console.log('🔄 Buscando anos disponíveis...');
             const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
+            console.log('📡 Response anos:', response.status);
             const data = await response.json();
+            console.log('📊 Data anos:', data);
             
-            if (data.success) {
-                this.anosDisponiveis = [...new Set(data.data.map(item => item.ano))].sort((a, b) => b - a);
+            if (data.success && data.data) {
+                // data.data é um objeto onde as chaves são os anos
+                this.anosDisponiveis = Object.keys(data.data).map(ano => parseInt(ano)).sort((a, b) => b - a);
                 this.anosAtivos = new Set(this.anosDisponiveis.slice(0, 3));
                 this.renderizarToggleAnos();
-                console.log('Anos disponíveis:', this.anosDisponiveis);
+                console.log('✅ Anos disponíveis:', this.anosDisponiveis);
+            } else {
+                console.warn('⚠️ Dados de anos vazios ou inválidos:', data);
+                // Fallback para ano atual
+                this.anosDisponiveis = [new Date().getFullYear()];
+                this.anosAtivos = new Set(this.anosDisponiveis);
+                this.renderizarToggleAnos();
             }
         } catch (error) {
-            console.error('Erro ao buscar anos disponíveis:', error);
+            console.error('❌ Erro ao buscar anos disponíveis:', error);
+            // Fallback para ano atual em caso de erro
+            this.anosDisponiveis = [new Date().getFullYear()];
+            this.anosAtivos = new Set(this.anosDisponiveis);
+            this.renderizarToggleAnos();
         }
     }
     
@@ -109,8 +123,9 @@ class FaturamentoControllerNovo {
         const loadingElements = [
             'loading-kpis',
             'loading-comparativo', 
-            'loading-sunburst',
-            'loading-tabela'
+            'loading-centro-resultado',
+            'loading-categoria-operacao',
+            'loading-top-clientes'
         ];
         
         // Mostrar loadings
@@ -123,7 +138,9 @@ class FaturamentoControllerNovo {
             await Promise.all([
                 this.carregarKPIs(),
                 this.carregarGraficoComparativo(),
-                this.carregarGraficoSunburst(),
+                this.carregarGraficoCentroResultado(),
+                this.carregarGraficoCategoriaOperacao(),
+                this.carregarTopClientes(),
                 this.carregarTabelaComparativa()
             ]);
         } catch (error) {
@@ -139,22 +156,28 @@ class FaturamentoControllerNovo {
     
     async carregarKPIs() {
         try {
-            console.log('Carregando KPIs...');
+            console.log('🔄 Carregando KPIs...');
             const response = await fetch('/financeiro/faturamento/api/geral/mensal');
+            console.log('📡 Response KPIs:', response.status);
             const data = await response.json();
+            console.log('📊 Data KPIs:', data);
             
-            if (data.success && data.data.length > 0) {
+            if (data.success && data.data && data.data.length > 0) {
+                console.log('✅ Calculando KPIs com', data.data.length, 'registros');
                 this.calcularKPIs(data.data);
             } else if (data.anos_disponiveis && data.meses) {
-                // Formato antigo - converter
+                console.log('📋 Usando formato antigo de dados');
                 this.calcularKPIsFormatoAntigo(data);
+            } else {
+                console.warn('⚠️ Dados de KPIs vazios ou inválidos:', data);
             }
         } catch (error) {
-            console.error('Erro ao carregar KPIs:', error);
+            console.error('❌ Erro ao carregar KPIs:', error);
         }
     }
     
     calcularKPIs(dados) {
+        console.log('🧮 Calculando KPIs com dados:', dados);
         const anoAtual = new Date().getFullYear();
         const mesAtual = new Date().getMonth() + 1;
         
@@ -162,36 +185,57 @@ class FaturamentoControllerNovo {
         const dadosAnoAtual = dados.filter(item => item.ano === anoAtual);
         const dadosAnoAnterior = dados.filter(item => item.ano === anoAtual - 1);
         
-        // KPI 1: Resultado do mês atual
-        const resultadoMesAtual = dadosAnoAtual.find(item => item.mes === mesAtual)?.resultado_mensal || 0;
-        this.atualizarElemento('resultado-mes-atual', this.formatarMoeda(resultadoMesAtual));
+        console.log(`📅 Dados ano atual (${anoAtual}):`, dadosAnoAtual.length);
+        console.log(`📅 Dados ano anterior (${anoAtual - 1}):`, dadosAnoAnterior.length);
         
-        // KPI 2: Resultado acumulado do ano
-        const resultadoAcumulado = dadosAnoAtual.reduce((acc, item) => acc + item.resultado_mensal, 0);
-        this.atualizarElemento('resultado-acumulado-ano', this.formatarMoeda(resultadoAcumulado));
+        // KPI 1: Total faturado do ano atual (soma de todos os meses)
+        const totalFaturadoAno = dadosAnoAtual.reduce((acc, item) => acc + (item.faturamento_total || 0), 0);
+        this.atualizarElemento('kpi-total-faturamento', this.formatarMoeda(totalFaturadoAno));
+        console.log('💰 Total faturado ano:', totalFaturadoAno);
         
-        // KPI 3: Comparação com ano anterior
-        const resultadoAnoAnteriorTotal = dadosAnoAnterior.reduce((acc, item) => acc + item.resultado_mensal, 0);
-        const variacaoAnual = resultadoAnoAnteriorTotal ? 
-            ((resultadoAcumulado - resultadoAnoAnteriorTotal) / Math.abs(resultadoAnoAnteriorTotal)) * 100 : 0;
+        // KPI 2: Comparação com ano anterior
+        const totalAnoAnterior = dadosAnoAnterior.reduce((acc, item) => acc + (item.faturamento_total || 0), 0);
+        let crescimento = 0;
+        let crescimentoTexto = 'N/A';
         
-        const elementoVariacao = document.getElementById('variacao-ano-anterior');
-        if (elementoVariacao) {
-            elementoVariacao.textContent = `${variacaoAnual >= 0 ? '+' : ''}${variacaoAnual.toFixed(1)}%`;
-            elementoVariacao.className = `badge ${variacaoAnual >= 0 ? 'bg-success' : 'bg-danger'}`;
+        if (totalAnoAnterior > 0) {
+            crescimento = ((totalFaturadoAno - totalAnoAnterior) / totalAnoAnterior) * 100;
+            const sinal = crescimento >= 0 ? '+' : '';
+            crescimentoTexto = `${sinal}${crescimento.toFixed(1)}%`;
         }
+        this.atualizarElemento('kpi-crescimento-anual', crescimentoTexto);
+        console.log('📈 Crescimento anual:', crescimentoTexto);
         
-        // KPI 4: Melhor mês do ano
-        const melhorMes = dadosAnoAtual.reduce((melhor, atual) => {
-            return atual.resultado_mensal > melhor.resultado_mensal ? atual : melhor;
-        }, { resultado_mensal: -Infinity, mes: 0 });
+        // KPI 3: Melhor mês do ano atual
+        let melhorMes = { mes: 0, faturamento_total: -Infinity };
+        dadosAnoAtual.forEach(item => {
+            if (item.faturamento_total > melhorMes.faturamento_total) {
+                melhorMes = item;
+            }
+        });
         
         const nomesMeses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
         if (melhorMes.mes > 0) {
-            this.atualizarElemento('melhor-mes', `${nomesMeses[melhorMes.mes]} (${this.formatarMoeda(melhorMes.resultado_mensal)})`);
+            const melhorMesTexto = `${nomesMeses[melhorMes.mes]} - ${this.formatarMoeda(melhorMes.faturamento_total)}`;
+            this.atualizarElemento('kpi-melhor-mes', melhorMesTexto);
+            console.log('🏆 Melhor mês:', melhorMesTexto);
         }
         
-        console.log('KPIs calculados e atualizados');
+        // KPI 4: Pior mês do ano atual (apenas meses com dados > 0)
+        let piorMes = { mes: 0, faturamento_total: Infinity };
+        dadosAnoAtual.forEach(item => {
+            if (item.faturamento_total > 0 && item.faturamento_total < piorMes.faturamento_total) {
+                piorMes = item;
+            }
+        });
+        
+        if (piorMes.mes > 0 && piorMes.faturamento_total < Infinity) {
+            const piorMesTexto = `${nomesMeses[piorMes.mes]} - ${this.formatarMoeda(piorMes.faturamento_total)}`;
+            this.atualizarElemento('kpi-pior-mes', piorMesTexto);
+            console.log('📉 Pior mês:', piorMesTexto);
+        }
+        
+        console.log('✅ KPIs calculados e atualizados');
     }
     
     calcularKPIsFormatoAntigo(data) {
@@ -216,32 +260,39 @@ class FaturamentoControllerNovo {
     }
     
     atualizarElemento(id, valor) {
+        console.log(`📝 Atualizando elemento ${id} com valor: ${valor}`);
         const elemento = document.getElementById(id);
         if (elemento) {
             elemento.textContent = valor;
+            console.log(`✅ Elemento ${id} atualizado com sucesso`);
         } else {
-            console.warn(`Elemento ${id} não encontrado`);
+            console.warn(`❌ Elemento ${id} não encontrado no DOM`);
         }
     }
     
     async carregarGraficoComparativo() {
         try {
-            console.log('Carregando gráfico comparativo...');
+            console.log('🔄 Carregando gráfico comparativo...');
             const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
+            console.log('📡 Response comparativo:', response.status);
             const data = await response.json();
+            console.log('📊 Data comparativo:', data);
             
-            if (data.success) {
+            if (data.success && data.data) {
+                console.log('✅ Renderizando gráfico comparativo');
                 this.renderizarGraficoComparativo(data.data);
+            } else {
+                console.warn('⚠️ Dados de comparativo vazios ou inválidos:', data);
             }
         } catch (error) {
-            console.error('Erro ao carregar gráfico comparativo:', error);
+            console.error('❌ Erro ao carregar gráfico comparativo:', error);
         }
     }
     
     renderizarGraficoComparativo(dados) {
-        const canvas = document.getElementById('grafico-comparativo-anos');
+        const canvas = document.getElementById('comparativo-chart');
         if (!canvas) {
-            console.error('Canvas grafico-comparativo-anos não encontrado');
+            console.error('Canvas comparativo-chart não encontrado');
             return;
         }
         
@@ -252,57 +303,53 @@ class FaturamentoControllerNovo {
             this.charts.comparativo.destroy();
         }
         
-        // Filtrar dados pelos anos ativos
-        const dadosFiltrados = dados.filter(item => this.anosAtivos.has(item.ano));
+        // Processar dados do endpoint comparativo (formato por ano)
+        console.log('Dados recebidos para comparativo:', dados);
         
-        // Preparar datasets por ano
         const datasets = [];
-        const anosOrdenados = [...this.anosAtivos].sort((a, b) => b - a);
+        const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         
-        anosOrdenados.forEach((ano, index) => {
-            const dadosAno = dadosFiltrados.filter(item => item.ano === ano);
+        let corIndex = 0;
+        
+        for (const [ano, dadosAno] of Object.entries(dados)) {
+            const valoresMensais = new Array(12).fill(0);
+            
+            dadosAno.forEach(item => {
+                const mesIndex = parseInt(item.mes) - 1;
+                // Usar total_valor que é o campo correto no endpoint comparativo
+                valoresMensais[mesIndex] = item.total_valor || 0;
+            });
             
             datasets.push({
-                label: ano.toString(),
-                data: dadosAno.map(item => ({
-                    x: item.mes,
-                    y: item.resultado_mensal
-                })),
-                borderColor: this.coresGraficos.anos[index % this.coresGraficos.anos.length],
-                backgroundColor: this.coresGraficos.anos[index % this.coresGraficos.anos.length] + '20',
+                label: ano,
+                data: valoresMensais,
+                borderColor: this.coresGraficos.anos[corIndex % this.coresGraficos.anos.length],
+                backgroundColor: this.coresGraficos.anos[corIndex % this.coresGraficos.anos.length] + '20',
                 borderWidth: 2,
                 fill: false,
                 tension: 0.1
             });
-        });
+            
+            corIndex++;
+        }
 
         this.charts.comparativo = new Chart(ctx, {
             type: 'line',
-            data: { datasets: datasets },
+            data: {
+                labels: meses,
+                datasets: datasets
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        min: 1,
-                        max: 12,
-                        ticks: {
-                            stepSize: 1,
-                            callback: function(value) {
-                                const meses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-                                             'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                                return meses[value] || '';
-                            }
-                        },
-                        title: { display: true, text: 'Mês' }
-                    },
                     y: {
+                        beginAtZero: true,
                         ticks: {
                             callback: (value) => this.formatarMoedaCompacta(value)
                         },
-                        title: { display: true, text: 'Resultado Mensal' }
+                        title: { display: true, text: 'Faturamento' }
                     }
                 },
                 plugins: {
@@ -310,9 +357,7 @@ class FaturamentoControllerNovo {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                                             'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-                                return `${context.dataset.label} - ${meses[context.parsed.x]}: ${this.formatarMoeda(context.parsed.y)}`;
+                                return `${context.dataset.label}: ${this.formatarMoeda(context.parsed.y)}`;
                             }
                         }
                     },
@@ -324,68 +369,59 @@ class FaturamentoControllerNovo {
         console.log('Gráfico comparativo renderizado');
     }
     
-    async carregarGraficoSunburst() {
+    async carregarGraficoCentroResultado() {
         try {
-            console.log('Carregando gráfico sunburst...');
-            const response = await fetch('/financeiro/faturamento/api/geral/proporcao');
+            console.log('🔄 Carregando gráfico centro resultado...');
+            const response = await fetch('/financeiro/faturamento/api/geral/centro_resultado');
+            console.log('📡 Response centro resultado:', response.status);
             const data = await response.json();
+            console.log('📊 Data centro resultado:', data);
             
-            if (data.success) {
-                this.renderizarGraficoSunburst(data.data);
+            if (data.success && data.data && data.data.length > 0) {
+                console.log('✅ Renderizando gráfico centro resultado com', data.data.length, 'itens');
+                this.renderizarGraficoCentroResultado(data.data);
+            } else {
+                console.warn('⚠️ Dados de centro resultado vazios ou inválidos:', data);
             }
         } catch (error) {
-            console.error('Erro ao carregar sunburst:', error);
+            console.error('❌ Erro ao carregar centro resultado:', error);
         }
     }
     
-    renderizarGraficoSunburst(dados) {
-        const canvas = document.getElementById('grafico-sunburst');
+    renderizarGraficoCentroResultado(dados) {
+        console.log('🎨 Iniciando renderização centro resultado...');
+        const canvas = document.getElementById('centro-resultado-chart');
         if (!canvas) {
-            console.error('Canvas grafico-sunburst não encontrado');
+            console.error('❌ Canvas centro-resultado-chart não encontrado');
             return;
         }
+        console.log('✅ Canvas centro resultado encontrado:', canvas);
         
         const ctx = canvas.getContext('2d');
         
         // Destruir gráfico anterior
-        if (this.charts.sunburst) {
-            this.charts.sunburst.destroy();
+        if (this.charts.centroResultado) {
+            this.charts.centroResultado.destroy();
         }
         
-        // Processar dados para sunburst
-        const resultados = {};
-        dados.forEach(item => {
-            if (!resultados[item.resultado]) {
-                resultados[item.resultado] = { total: 0, categorias: {} };
-            }
-            resultados[item.resultado].total += Math.abs(item.valor_total);
-            resultados[item.resultado].categorias[item.categoria] = Math.abs(item.valor_total);
-        });
-
-        // Criar datasets
-        const labels = [];
-        const data = [];
-        const backgroundColor = [];
+        // Preparar dados
+        const labels = dados.map(item => item.centro_resultado);
+        const valores = dados.map(item => item.valor);
+        const percentuais = dados.map(item => item.percentual);
         
-        Object.keys(resultados).forEach((resultado, resultadoIndex) => {
-            const corBase = resultado === 'Receita' ? '#28a745' : '#dc3545';
-            
-            Object.keys(resultados[resultado].categorias).forEach((categoria, categoriaIndex) => {
-                labels.push(`${resultado} - ${categoria}`);
-                data.push(resultados[resultado].categorias[categoria]);
-                
-                const opacity = 0.6 + (categoriaIndex * 0.1);
-                backgroundColor.push(corBase + Math.floor(opacity * 255).toString(16).padStart(2, '0'));
-            });
-        });
-
-        this.charts.sunburst = new Chart(ctx, {
+        // Cores para diferentes centros de resultado
+        const cores = [
+            '#007bff', '#28a745', '#dc3545', '#ffc107', 
+            '#6c757d', '#17a2b8', '#e83e8c', '#fd7e14'
+        ];
+        
+        this.charts.centroResultado = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
-                    data: data,
-                    backgroundColor: backgroundColor,
+                    data: valores,
+                    backgroundColor: cores.slice(0, dados.length),
                     borderWidth: 2,
                     borderColor: '#fff'
                 }]
@@ -396,46 +432,205 @@ class FaturamentoControllerNovo {
                 plugins: {
                     legend: {
                         display: true,
-                        position: 'right'
+                        position: 'bottom'
                     },
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                return `${context.label}: ${this.formatarMoeda(context.parsed)} (${percentage}%)`;
+                                const valor = context.parsed;
+                                const percentual = percentuais[context.dataIndex];
+                                return `${context.label}: ${this.formatarMoeda(valor)} (${percentual.toFixed(1)}%)`;
                             }
                         }
                     },
-                    datalabels: { display: false }
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: (value, context) => {
+                            const percentual = percentuais[context.dataIndex];
+                            return percentual > 5 ? `${percentual.toFixed(1)}%` : '';
+                        }
+                    }
                 }
             }
         });
         
-        console.log('Gráfico sunburst renderizado');
+        console.log('Gráfico centro resultado renderizado');
+    }
+    
+    async carregarGraficoCategoriaOperacao() {
+        try {
+            console.log('🔄 Carregando gráfico categoria operação...');
+            const response = await fetch('/financeiro/faturamento/api/geral/categoria_operacao');
+            console.log('📡 Response categoria:', response.status);
+            const data = await response.json();
+            console.log('📊 Data categoria:', data);
+            
+            if (data.success && data.data && data.data.length > 0) {
+                console.log('✅ Renderizando gráfico categoria com', data.data.length, 'itens');
+                this.renderizarGraficoCategoriaOperacao(data.data);
+            } else {
+                console.warn('⚠️ Dados de categoria vazios ou inválidos:', data);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar categoria operação:', error);
+        }
+    }
+    
+    renderizarGraficoCategoriaOperacao(dados) {
+        const canvas = document.getElementById('categoria-operacao-chart');
+        if (!canvas) {
+            console.error('Canvas categoria-operacao-chart não encontrado');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Destruir gráfico anterior
+        if (this.charts.categoriaOperacao) {
+            this.charts.categoriaOperacao.destroy();
+        }
+        
+        // Preparar dados
+        const labels = dados.map(item => item.categoria);
+        const valores = dados.map(item => item.valor);
+        const percentuais = dados.map(item => item.percentual);
+        
+        // Cores para diferentes categorias de operação
+        const cores = [
+            '#28a745', '#007bff', '#dc3545', '#ffc107', 
+            '#6c757d', '#17a2b8', '#e83e8c', '#fd7e14'
+        ];
+        
+        this.charts.categoriaOperacao = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: cores.slice(0, dados.length),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const valor = context.parsed;
+                                const percentual = percentuais[context.dataIndex];
+                                return `${context.label}: ${this.formatarMoeda(valor)} (${percentual.toFixed(1)}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: (value, context) => {
+                            const percentual = percentuais[context.dataIndex];
+                            return percentual > 5 ? `${percentual.toFixed(1)}%` : '';
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('Gráfico categoria operação renderizado');
+    }
+    
+    async carregarTopClientes() {
+        try {
+            console.log('🔄 Carregando top clientes...');
+            const response = await fetch('/financeiro/faturamento/api/geral/top_clientes?limit=10');
+            console.log('📡 Response top clientes:', response.status);
+            const data = await response.json();
+            console.log('📊 Data top clientes:', data);
+            
+            if (data.success && data.data && data.data.length > 0) {
+                console.log('✅ Renderizando top clientes com', data.data.length, 'itens');
+                this.renderizarTopClientes(data.data);
+            } else {
+                console.warn('⚠️ Dados de top clientes vazios ou inválidos:', data);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar top clientes:', error);
+        }
+    }
+    
+    renderizarTopClientes(dados) {
+        console.log('🎨 Iniciando renderização top clientes...');
+        const tbody = document.querySelector('#top-clientes-table tbody');
+        if (!tbody) {
+            console.error('❌ Tabela top-clientes-table não encontrada');
+            return;
+        }
+        console.log('✅ Tabela top clientes encontrada:', tbody);
+        
+        tbody.innerHTML = '';
+        
+        dados.forEach((cliente, index) => {
+            const row = document.createElement('tr');
+            
+            // Aplicar classes de destaque para o top 3
+            if (index === 0) row.classList.add('top-1');
+            else if (index === 1) row.classList.add('top-2');
+            else if (index === 2) row.classList.add('top-3');
+            
+            row.innerHTML = `
+                <td class="fw-bold">${cliente.cliente}</td>
+                <td class="text-end">${this.formatarMoeda(cliente.valor)}</td>
+                <td class="text-center">
+                    <span class="badge bg-primary">${cliente.percentual.toFixed(1)}%</span>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+        console.log('Top clientes renderizado');
     }
     
     async carregarTabelaComparativa() {
         try {
-            console.log('Carregando tabela comparativa...');
+            console.log('🔄 Carregando tabela comparativa...');
             const response = await fetch('/financeiro/faturamento/api/geral/mensal');
+            console.log('📡 Response tabela:', response.status);
             const data = await response.json();
+            console.log('📊 Data tabela:', data);
             
-            if (data.success) {
+            if (data.success && data.data) {
+                console.log('✅ Renderizando tabela comparativa');
                 this.renderizarTabelaComparativa(data.data);
             } else if (data.anos_disponiveis && data.meses) {
-                // Formato antigo
+                console.log('📋 Usando formato antigo para tabela');
                 this.renderizarTabelaFormatoAntigo(data);
+            } else {
+                console.warn('⚠️ Dados de tabela vazios ou inválidos:', data);
             }
         } catch (error) {
-            console.error('Erro ao carregar tabela:', error);
+            console.error('❌ Erro ao carregar tabela:', error);
         }
     }
     
     renderizarTabelaComparativa(dados) {
-        const tbody = document.querySelector('#tabela-comparativo-mensal tbody');
+        const tbody = document.querySelector('#resumo-mensal tbody');
         if (!tbody) {
-            console.error('Tbody da tabela não encontrado');
+            console.error('Tbody da tabela resumo-mensal não encontrado');
             return;
         }
         
@@ -502,7 +697,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verificar se os novos elementos existem antes de inicializar
     if (document.getElementById('year-toggles') || 
         document.getElementById('grafico-comparativo-anos') ||
-        document.getElementById('grafico-sunburst')) {
+        document.getElementById('centro-resultado-chart')) {
         
         console.log('Detectados novos componentes - inicializando FaturamentoControllerNovo');
         window.faturamentoNovo = new FaturamentoControllerNovo();
