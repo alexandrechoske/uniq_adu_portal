@@ -510,6 +510,73 @@ def api_geral_categoria_operacao():
         print(f"Erro em api_geral_categoria_operacao: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@faturamento_bp.route('/api/geral/centro_resultado_detalhado')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_centro_resultado_detalhado():
+    """API para drill-down do centro de resultado - mostra clientes dentro do centro"""
+    try:
+        centro_resultado = request.args.get('centro_resultado', '')
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        
+        if not centro_resultado:
+            return jsonify({'error': 'Centro de resultado é obrigatório'}), 400
+        
+        # Tentar usar a view tratada primeiro
+        try:
+            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('cliente, valor, centro_resultado')
+        except:
+            # Fallback para tabela original
+            query = supabase_admin.table('fin_faturamento_anual').select('cliente, valor, centro_resultado')
+        
+        # Filtrar por centro de resultado
+        query = query.eq('centro_resultado', centro_resultado)
+        
+        # Aplicar filtros de data
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+            
+        response = query.execute()
+        dados = response.data
+        
+        # Agrupar por cliente
+        cliente_data = defaultdict(float)
+        total_geral = 0
+        
+        for item in dados:
+            cliente = item.get('cliente', 'Não Informado')
+            valor = float(item.get('valor', 0))
+            cliente_data[cliente] += valor
+            total_geral += valor
+        
+        # Preparar dados para o gráfico
+        resultado = []
+        for cliente, valor in cliente_data.items():
+            percentual = (valor / total_geral * 100) if total_geral > 0 else 0
+            resultado.append({
+                'cliente': cliente,
+                'valor_faturamento': valor,
+                'percentual': percentual
+            })
+        
+        # Ordenar por valor decrescente e pegar top 10
+        resultado.sort(key=lambda x: x['valor_faturamento'], reverse=True)
+        resultado = resultado[:10]  # Top 10 clientes
+        
+        return jsonify({
+            'sucesso': True,
+            'dados': resultado,
+            'total': total_geral,
+            'centro_resultado_pai': centro_resultado
+        })
+        
+    except Exception as e:
+        print(f"Erro em api_geral_centro_resultado_detalhado: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @faturamento_bp.route('/api/geral/top_clientes')
 @login_required
 @perfil_required('financeiro', 'faturamento')

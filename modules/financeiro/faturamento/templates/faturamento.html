@@ -157,10 +157,19 @@
                 <div class="chart-header">
                     <h3 class="chart-title">
                         <i class="mdi mdi-chart-donut"></i>
-                        Centro de Resultado
+                        <span id="centro-resultado-title">Centro de Resultado</span>
                     </h3>
+                    <div class="chart-actions">
+                        <button id="centro-resultado-voltar" class="btn btn-sm btn-outline-secondary" style="display: none;">
+                            <i class="mdi mdi-arrow-left"></i>
+                            Voltar
+                        </button>
+                    </div>
                 </div>
                 <div class="chart-content">
+                    <p id="centro-resultado-info" class="text-muted mb-2" style="font-size: 0.875rem;">
+                        💡 Clique em uma fatia do gráfico para ver mais detalhes
+                    </p>
                     <canvas id="centro-resultado-chart"></canvas>
                 </div>
             </div>

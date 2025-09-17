@@ -330,13 +330,28 @@
     padding: 1.5rem;
     position: relative;
     min-height: 300px;
-    max-height: 400px; /* Limit the height */
+    max-height: 500px; /* Aumentado para 500px para permitir mais conteúdo */
+    overflow-y: auto; /* Permitir scroll vertical se necessário */
 }
 
 .chart-content canvas {
-    max-height: 300px;
+    max-height: 450px; /* Aumentado para gráficos maiores */
     width: 100% !important;
     height: 100% !important;
+}
+
+/* Altura específica para o gráfico comparativo */
+#comparativo-chart {
+    height: 450px !important;
+}
+
+/* Altura específica para a tabela de faturamento mensal */
+.chart-content table {
+    max-height: none; /* Remover limitação de altura para tabelas */
+}
+
+#resumo-mensal {
+    min-height: 400px;
 }
 
 /* Table Container */

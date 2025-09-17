@@ -350,14 +350,21 @@ class FaturamentoControllerNovo {
                 valoresMensais[mesIndex] = item.total_valor || 0;
             });
             
+            // Destacar o ano atual
+            const anoAtual = new Date().getFullYear();
+            const isAnoAtual = parseInt(ano) === anoAtual;
+            
             datasets.push({
                 label: ano,
                 data: valoresMensais,
                 borderColor: this.coresGraficos.anos[corIndex % this.coresGraficos.anos.length],
                 backgroundColor: this.coresGraficos.anos[corIndex % this.coresGraficos.anos.length] + '20',
-                borderWidth: 2,
+                borderWidth: isAnoAtual ? 4 : 2, // Linha mais grossa para ano atual
                 fill: false,
-                tension: 0.1
+                tension: 0.1,
+                pointRadius: isAnoAtual ? 6 : 4, // Pontos maiores para ano atual
+                pointHoverRadius: isAnoAtual ? 8 : 6,
+                borderOpacity: isAnoAtual ? 1 : 0.7 // Mais opaco para ano atual
             });
             
             corIndex++;
@@ -471,6 +478,13 @@ class FaturamentoControllerNovo {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const dataIndex = elements[0].index;
+                        const centroResultado = labels[dataIndex];
+                        this.renderCentroResultadoDetalhado(centroResultado);
+                    }
+                },
                 plugins: {
                     legend: {
                         display: true,
@@ -750,10 +764,140 @@ class FaturamentoControllerNovo {
         // Implementar renderização para formato antigo se necessário
         console.log('Renderizando tabela formato antigo...');
     }
+
+    async renderCentroResultadoDetalhado(centroResultado) {
+        try {
+            console.log(`🔍 Carregando drill-down para Centro de Resultado: ${centroResultado}`);
+            
+            // Mostrar info de drill-down
+            const infoElement = document.getElementById('centro-resultado-info');
+            const btnVoltar = document.getElementById('btn-voltar-centro-resultado');
+            
+            if (infoElement) {
+                infoElement.textContent = `Detalhamento: ${centroResultado}`;
+                infoElement.style.display = 'block';
+            }
+            
+            if (btnVoltar) {
+                btnVoltar.style.display = 'inline-block';
+            }
+            
+            // Buscar dados detalhados
+            const response = await fetch(`/financeiro/faturamento/api/geral/centro_resultado_detalhado?centro_resultado=${encodeURIComponent(centroResultado)}`);
+            const data = await response.json();
+            
+            if (data.sucesso && data.dados.length > 0) {
+                // Renderizar gráfico detalhado
+                this.renderGraficoCentroResultadoDetalhado(data.dados, centroResultado);
+            } else {
+                console.warn('Nenhum dado detalhado encontrado para:', centroResultado);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao carregar drill-down:', error);
+        }
+    }
+
+    renderGraficoCentroResultadoDetalhado(dados, centroResultado) {
+        const ctx = document.getElementById('centro-resultado-chart');
+        if (!ctx) return;
+
+        // Destruir gráfico anterior se existir
+        if (this.charts.centroResultado) {
+            this.charts.centroResultado.destroy();
+        }
+
+        const labels = dados.map(item => item.cliente || item.subcategoria || 'Não informado');
+        const valores = dados.map(item => parseFloat(item.valor_faturamento) || 0);
+        const total = valores.reduce((acc, val) => acc + val, 0);
+        const percentuais = valores.map(val => (val / total) * 100);
+
+        // Cores para o gráfico detalhado
+        const cores = [
+            '#28a745', '#007bff', '#dc3545', '#ffc107', 
+            '#6c757d', '#17a2b8', '#e83e8c', '#fd7e14',
+            '#20c997', '#6f42c1', '#e83e8c', '#fd7e14'
+        ];
+
+        this.charts.centroResultado = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: cores.slice(0, dados.length),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const valor = context.parsed;
+                                const percentual = percentuais[context.dataIndex];
+                                return `${context.label}: ${this.formatarMoeda(valor)} (${percentual.toFixed(1)}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: (value, context) => {
+                            const percentual = percentuais[context.dataIndex];
+                            return percentual > 3 ? `${percentual.toFixed(1)}%` : '';
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log(`✅ Gráfico detalhado renderizado para: ${centroResultado}`);
+    }
+
+    voltarCentroResultadoGeral() {
+        console.log('🔙 Voltando para visão geral do Centro de Resultado');
+        
+        // Esconder info de drill-down
+        const infoElement = document.getElementById('centro-resultado-info');
+        const btnVoltar = document.getElementById('btn-voltar-centro-resultado');
+        
+        if (infoElement) {
+            infoElement.style.display = 'none';
+        }
+        
+        if (btnVoltar) {
+            btnVoltar.style.display = 'none';
+        }
+        
+        // Recarregar gráfico geral
+        this.carregarGraficoCentroResultado();
+    }
 }
 
 // Inicializar quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
+    // Event listener para o botão voltar do drill-down
+    const btnVoltar = document.getElementById('btn-voltar-centro-resultado');
+    if (btnVoltar) {
+        btnVoltar.addEventListener('click', function() {
+            if (window.faturamentoNovo) {
+                window.faturamentoNovo.voltarCentroResultadoGeral();
+            }
+        });
+    }
+
     // Verificar se os novos elementos existem antes de inicializar
     if (document.getElementById('year-toggles') || 
         document.getElementById('grafico-comparativo-anos') ||
