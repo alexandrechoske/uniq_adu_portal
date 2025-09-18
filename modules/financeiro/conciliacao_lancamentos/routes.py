@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 # Configurações de upload
 UPLOAD_FOLDER = '/tmp/conciliacao_uploads'
-ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
+ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv', 'txt'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Criar pasta de upload se não existir
@@ -140,28 +140,46 @@ class ProcessadorBancos:
             logger.error(f"[BANCO] Erro ao identificar banco: {e}")
             return 'desconhecido'
     
-    def extrair_referencia(self, texto: str) -> str:
-        """Extrai referência UN do texto"""
+    def normalize_ref(self, texto: str) -> str:
+        """
+        Normaliza referência UN conforme especificação do plano:
+        - Procura padrões UN[0-9]{2}[./]?[0-9]{4} ou UN [0-9]{2}[./]?[0-9]{4}
+        - Remove todos os caracteres não numéricos
+        - Retorna padrão limpo (ex: UN257093, UN257020, UN257069)
+        - Se ref_unique já for um número, mantém como está
+        - Se nenhum padrão UN for encontrado, retorna null
+        """
         if not texto:
-            return ''
+            return None
         
+        texto_str = str(texto).strip()
+        
+        # Se já é um número puro, mantém como está (dados do sistema)
+        if texto_str.isdigit():
+            return texto_str
+            
+        # Padrões UN conforme especificação
         padroes = [
-            r'UN\s*\d{2}/\d{4,5}',
-            r'UN\s*\d{2}\.\d{4,5}',
-            r'UN\s*\d{6,7}',
-            r'UN\s*\d{2}\s*\d{4,5}',
+            r'UN\s*\d{2}[./]?\d{4,5}',  # UN25/7093, UN25.7020, UN257069
+            r'UN\s*\d{2}\s+\d{4,5}',    # UN 25 7093
+            r'UN\s*\d{6,7}',            # UN257093, UN 257093
         ]
         
         for padrao in padroes:
-            match = re.search(padrao, texto, re.IGNORECASE)
+            match = re.search(padrao, texto_str, re.IGNORECASE)
             if match:
-                ref = match.group().replace(' ', '')
-                if '/' not in ref and '.' not in ref:
-                    if len(ref) >= 7:
-                        ref = f"{ref[:4]}/{ref[4:]}"
-                return ref.upper()
-        
-        return ''
+                found = match.group()
+                # Remove todos os caracteres não numéricos, mantém apenas UN + números
+                numeros = re.sub(r'[^0-9]', '', found)
+                if len(numeros) >= 6:  # Pelo menos UN + 4 dígitos
+                    return f"UN{numeros}"
+                
+        return None
+    
+    def extrair_referencia(self, texto: str) -> str:
+        """Extrai referência UN do texto (mantido para compatibilidade)"""
+        normalized = self.normalize_ref(texto)
+        return normalized if normalized else ''
     
     def processar_banco_brasil(self, arquivo_path: str) -> List[Dict]:
         """Processa arquivo do Banco do Brasil"""
@@ -279,17 +297,26 @@ class ProcessadorBancos:
                     historico = str(row[historico_col]).strip() if historico_col else ''
                     detalhamento = str(row[detalhamento_col]).strip() if detalhamento_col else ''
                     
-                    # Extrair referência UN
-                    ref_unique = self.extrair_referencia(historico + ' ' + detalhamento)
+                    # Extrair e normalizar referência UN
+                    texto_completo = f"{historico} {detalhamento}".strip()
+                    ref_unique = self.extrair_referencia(texto_completo)
+                    ref_unique_norm = self.normalize_ref(texto_completo)
                     
                     lancamento = {
                         'data': data.isoformat(),
+                        'data_lancamento': data.isoformat(),
                         'valor': valor,
-                        'historico': f"{historico} {detalhamento}".strip(),
+                        'tipo_lancamento': 'DESPESA' if valor < 0 else 'RECEITA',
+                        'descricao_original': texto_completo,
+                        'historico': texto_completo,
                         'ref_unique': ref_unique,
+                        'ref_unique_norm': ref_unique_norm,
+                        'banco_origem': 'BANCO_BRASIL',
                         'banco': 'Banco do Brasil',
                         'documento': str(row[documento_col]).strip() if documento_col else '',
-                        'cod_historico': str(row[cod_historico_col]).strip() if cod_historico_col else ''
+                        'cod_historico': str(row[cod_historico_col]).strip() if cod_historico_col else '',
+                        'status': 'PENDENTE',
+                        'id_conciliacao': None
                     }
                     
                     lancamentos.append(lancamento)
@@ -404,15 +431,24 @@ class ProcessadorBancos:
                     historico = str(row.get('Historico', '')).strip()
                     documento = str(row.get('Documento', '')).strip()
                     
+                    # Extrair e normalizar referência UN
                     ref_unique = self.extrair_referencia(historico)
+                    ref_unique_norm = self.normalize_ref(historico)
                     
                     lancamento = {
                         'data': data.isoformat(),
+                        'data_lancamento': data.isoformat(),
                         'valor': valor,
+                        'tipo_lancamento': 'DESPESA' if valor < 0 else 'RECEITA',
+                        'descricao_original': historico,
                         'historico': historico,
                         'ref_unique': ref_unique,
+                        'ref_unique_norm': ref_unique_norm,
+                        'banco_origem': 'SANTANDER',
                         'banco': 'Santander',
-                        'documento': documento
+                        'documento': documento,
+                        'status': 'PENDENTE',
+                        'id_conciliacao': None
                     }
                     
                     lancamentos.append(lancamento)
@@ -440,13 +476,108 @@ class ProcessadorBancos:
             return []
     
     def processar_itau(self, arquivo_path: str) -> List[Dict]:
-        """Processa arquivo do Itaú"""
+        """Processa arquivo do Itaú - novo formato CSV com separador ponto e vírgula"""
         logger.info(f"[ITAU] Iniciando processamento de arquivo: {arquivo_path}")
+        
+        try:
+            # Tentar ler como CSV primeiro (novo formato)
+            try:
+                # Novo formato: data;descrição;valor
+                if arquivo_path.lower().endswith('.txt') or arquivo_path.lower().endswith('.csv'):
+                    logger.info(f"[ITAU] Processando como CSV/TXT com separador ponto e vírgula")
+                    
+                    with open(arquivo_path, 'r', encoding='utf-8') as file:
+                        linhas = file.readlines()
+                    
+                    logger.info(f"[ITAU] Arquivo lido com {len(linhas)} linhas")
+                    
+                    lancamentos = []
+                    for i, linha in enumerate(linhas):
+                        try:
+                            linha = linha.strip()
+                            if not linha:
+                                continue
+                            
+                            # Dividir por ponto e vírgula
+                            partes = linha.split(';')
+                            
+                            if len(partes) != 3:
+                                logger.warning(f"[ITAU] Linha {i+1} com formato inválido: {linha}")
+                                continue
+                            
+                            data_str, descricao, valor_str = partes
+                            
+                            # Processar data
+                            try:
+                                data = datetime.strptime(data_str.strip(), '%d/%m/%Y').date()
+                            except ValueError:
+                                logger.warning(f"[ITAU] Data inválida na linha {i+1}: {data_str}")
+                                continue
+                            
+                            # Processar valor
+                            try:
+                                valor_str = valor_str.strip().replace(',', '.')
+                                valor = float(valor_str)
+                            except ValueError:
+                                logger.warning(f"[ITAU] Valor inválido na linha {i+1}: {valor_str}")
+                                continue
+                            
+                            # Processar descrição
+                            descricao = descricao.strip()
+                            
+                            # Extrair e normalizar referência UN
+                            ref_unique = self.extrair_referencia(descricao)
+                            ref_unique_norm = self.normalize_ref(descricao)
+                            
+                            # Criar lançamento conforme especificação
+                            lancamento = {
+                                'data': data.isoformat(),
+                                'data_lancamento': data.isoformat(),
+                                'valor': valor,
+                                'tipo_lancamento': 'DESPESA' if valor < 0 else 'RECEITA',
+                                'descricao_original': descricao,
+                                'historico': descricao,
+                                'ref_unique': ref_unique,
+                                'ref_unique_norm': ref_unique_norm,
+                                'banco_origem': 'ITAU',
+                                'banco': 'Itaú',
+                                'tipo': 'Débito' if valor < 0 else 'Crédito',
+                                'status': 'PENDENTE',
+                                'id_conciliacao': None
+                            }
+                            
+                            lancamentos.append(lancamento)
+                            logger.debug(f"[ITAU] Linha {i+1}: Data={data}, Valor={valor}, Desc={descricao[:30]}...")
+                            
+                        except Exception as e:
+                            logger.warning(f"[ITAU] Erro ao processar linha {i+1}: {e}")
+                            continue
+                    
+                    logger.info(f"[ITAU] {len(lancamentos)} lançamentos processados com sucesso (novo formato)")
+                    return lancamentos
+                
+                # Fallback para formato Excel antigo
+                else:
+                    logger.info(f"[ITAU] Tentando processar como Excel (formato antigo)")
+                    return self.processar_itau_excel_antigo(arquivo_path)
+                    
+            except Exception as e:
+                logger.warning(f"[ITAU] Erro no formato CSV, tentando Excel: {e}")
+                return self.processar_itau_excel_antigo(arquivo_path)
+            
+        except Exception as e:
+            logger.error(f"[ITAU] Erro geral ao processar arquivo: {e}")
+            return []
+    
+    def processar_itau_excel_antigo(self, arquivo_path: str) -> List[Dict]:
+        """Processa arquivo do Itaú no formato Excel antigo (fallback)"""
+        logger.info(f"[ITAU] Processando formato Excel antigo: {arquivo_path}")
         
         try:
             df = pd.read_excel(arquivo_path, dtype=str)
             logger.info(f"[ITAU] Arquivo Excel carregado com {len(df)} linhas e {len(df.columns)} colunas")
             
+            # Encontrar início dos dados
             inicio_dados = 0
             for i, row in df.iterrows():
                 for col in df.columns:
@@ -530,14 +661,14 @@ class ProcessadorBancos:
                     lancamentos.append(lancamento)
                     
                 except Exception as e:
-                    logger.warning(f"Erro ao processar linha Itaú: {e}")
+                    logger.warning(f"[ITAU] Erro ao processar linha Excel: {e}")
                     continue
             
-            logger.info(f"Itaú: {len(lancamentos)} lançamentos processados")
+            logger.info(f"[ITAU] {len(lancamentos)} lançamentos processados (formato Excel)")
             return lancamentos
             
         except Exception as e:
-            logger.error(f"Erro ao processar Itaú: {e}")
+            logger.error(f"[ITAU] Erro ao processar Excel: {e}")
             return []
     
     def processar_arquivo(self, arquivo_path: str, banco: str = None) -> Dict:
@@ -571,7 +702,7 @@ class ProcessadorBancos:
                 'banco_identificado': banco,
                 'formato_arquivo': arquivo_path.split('.')[-1].upper(),
                 'registros_processados': len(lancamentos),
-                'lancamentos': lancamentos
+                'movimentos': lancamentos
             }
             
         except Exception as e:
@@ -691,9 +822,37 @@ def upload_extratos():
                 response_sistema = query.execute()
                 
                 if response_sistema.data:
-                    dados_sistema = response_sistema.data
-                    logger.info(f"[PROCESSAR] {len(dados_sistema)} movimentos do sistema encontrados")
+                    # Normalizar dados do sistema usando ProcessadorBancos
+                    processador = ProcessadorBancos()
+                    dados_sistema_normalizados = []
+                    
+                    for mov in response_sistema.data:
+                        # Normalizar referência do sistema
+                        ref_unique_original = mov.get('ref_unique', '')
+                        ref_unique_norm = processador.normalize_ref(ref_unique_original)
+                        
+                        # Estrutura normalizada conforme especificação
+                        movimento_normalizado = {
+                            'id': f"sistema_{mov.get('ref_unique', '')}_h{hash(str(mov))}",
+                            'data_lancamento': mov.get('data_lancamento'),
+                            'valor': float(mov.get('valor', 0)),
+                            'tipo_lancamento': mov.get('tipo_lancamento', ''),
+                            'descricao_original': mov.get('descricao', ''),
+                            'ref_unique': ref_unique_original,
+                            'ref_unique_norm': ref_unique_norm,
+                            'categoria': mov.get('categoria', ''),
+                            'centro_resultado': mov.get('centro_resultado', ''),
+                            'classe': mov.get('classe', ''),
+                            'origem': 'SISTEMA_FINANCEIRO',
+                            'status': 'PENDENTE',
+                            'id_conciliacao': None
+                        }
+                        dados_sistema_normalizados.append(movimento_normalizado)
+                    
+                    dados_sistema = dados_sistema_normalizados
+                    logger.info(f"[PROCESSAR] {len(dados_sistema)} movimentos do sistema normalizados")
                 else:
+                    dados_sistema = []
                     logger.warning("[PROCESSAR] Nenhum movimento do sistema encontrado")
                     
             except Exception as e:
@@ -728,18 +887,21 @@ def upload_extratos():
             
             logger.info(f"[PROCESSAR] Sucesso: {len(resultado['data'])} movimentos do banco, {len(dados_sistema)} do sistema")
             
-            # Retornar no formato esperado pelo frontend
+            # Retornar no formato especificado pelo plano detalhado
             return jsonify({
                 'success': True,
-                'dados_banco': resultado['data'],
-                'dados_sistema': dados_sistema,
+                'dados_aberta': dados_sistema,     # Dados do sistema conforme especificação
+                'dados_banco': resultado['data'],   # Dados dos bancos conforme especificação
                 'status': {
                     'banco_identificado': resultado['banco'],
                     'formato_arquivo': resultado['arquivo'].split('.')[-1].upper() if 'arquivo' in resultado else 'CSV',
                     'registros_banco': len(resultado['data']),
                     'registros_sistema': len(dados_sistema),
                     'periodo': f"{data_inicio} a {data_fim}"
-                }
+                },
+                # Compatibilidade com frontend existente
+                'dados_sistema': dados_sistema,
+                'dados_bancarios': resultado['data']
             })
         else:
             logger.error(f"[PROCESSAR] Falha no processamento: {resultado['error']}")
@@ -801,21 +963,33 @@ def movimentos_sistema():
             logger.info(f"[CONCILIACAO] Query executada. Total de registros encontrados: {len(response.data) if response.data else 0}")
             
             if response.data:
+                # Inicializar processador para usar normalize_ref
+                processador = ProcessadorBancos()
+                
                 movimentos = []
                 for mov in response.data:
-                    # Padronizar campos para a interface
+                    # Normalizar referência do sistema
+                    ref_unique_original = mov.get('ref_unique', '')
+                    ref_unique_norm = processador.normalize_ref(ref_unique_original)
+                    
+                    # Padronizar campos conforme especificação
                     movimento_padronizado = {
                         'id': f"sistema_{mov.get('ref_unique', '')}_h{hash(str(mov))}",
                         'data_movimento': mov.get('data_lancamento'),
                         'data_lancamento': mov.get('data_lancamento'), 
                         'descricao': mov.get('descricao', ''),
+                        'descricao_original': mov.get('descricao', ''),
                         'valor': float(mov.get('valor', 0)),
                         'tipo_movimento': mov.get('tipo_lancamento', ''),
+                        'tipo_lancamento': mov.get('tipo_lancamento', ''),
                         'categoria': mov.get('categoria', ''),
                         'centro_resultado': mov.get('centro_resultado', ''),
                         'classe': mov.get('classe', ''),
-                        'ref_unique': mov.get('ref_unique', ''),
-                        'origem': 'SISTEMA_FINANCEIRO'
+                        'ref_unique': ref_unique_original,
+                        'ref_unique_norm': ref_unique_norm,
+                        'origem': 'SISTEMA_FINANCEIRO',
+                        'status': 'PENDENTE',
+                        'id_conciliacao': None
                     }
                     movimentos.append(movimento_padronizado)
                 
@@ -926,9 +1100,36 @@ def processar_conciliacao():
         
         logger.info(f"[CONCILIACAO] Conciliação processada: {resultado.get('conciliados_automatico', 0)} automáticos")
         
+        # Retornar estrutura JSON conforme especificação
+        response_data = {
+            'dados_aberta': {
+                'conciliados': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'conciliado']),
+                'pendentes': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'pendente']),
+                'duplicados': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'duplicado']),
+                'divergentes': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'divergente']),
+                'dados': resultado.get('movimentos_sistema', [])
+            },
+            'dados_banco': {
+                'conciliados': len([mov for mov in resultado.get('movimentos_banco', []) if mov.get('status') == 'conciliado']),
+                'pendentes': len([mov for mov in resultado.get('movimentos_banco', []) if mov.get('status') == 'pendente']),
+                'duplicados': len([mov for mov in resultado.get('movimentos_banco', []) if mov.get('status') == 'duplicado']),
+                'dados': resultado.get('movimentos_banco', [])
+            },
+            'status': {
+                'total_sistema': len(resultado.get('movimentos_sistema', [])),
+                'total_banco': len(resultado.get('movimentos_banco', [])),
+                'conciliados_automatico': resultado.get('conciliados_automatico', 0),
+                'pendentes_manual': resultado.get('pendentes_manual', 0),
+                'divergencias': resultado.get('divergencias', 0),
+                'duplicatas': resultado.get('duplicatas', 0)
+            },
+            'id_conciliacao': session_id,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
         return jsonify({
             'success': True,
-            'data': resultado
+            'data': response_data
         })
         
     except Exception as e:
@@ -1047,7 +1248,7 @@ def processar_arquivo_extrato(file):
             
             return {
                 'success': True,
-                'data': resultado['lancamentos'],
+                'data': resultado['movimentos'],
                 'arquivo': filename,
                 'banco': resultado['banco_identificado'],
                 'registros_processados': resultado['registros_processados']
@@ -1243,126 +1444,264 @@ def identificar_banco(filename, df):
 
 
 def executar_conciliacao_automatica(movimentos_sistema, movimentos_banco):
-    """Executar conciliação automática baseada em valor e data."""
+    """
+    Executar conciliação automática conforme especificação hierárquica:
+    Passo 1: Match de Alta Precisão (data + valor + ref_unique_norm)
+    Passo 2: Match de Média Precisão (data + valor único)
+    Passo 3: Finalização (marcar duplicados e pendentes)
+    """
     try:
-        logger.info(f"[CONCILIACAO] Iniciando conciliação automática - Sistema: {len(movimentos_sistema)}, Banco: {len(movimentos_banco)}")
+        logger.info(f"[CONCILIACAO] Iniciando conciliação hierárquica - Sistema: {len(movimentos_sistema)}, Banco: {len(movimentos_banco)}")
         
-        conciliados = []
+        import uuid
+        from collections import defaultdict
+        
+        # Listas de trabalho (cópias para não modificar originais)
         pendentes_sistema = list(movimentos_sistema)
         pendentes_banco = list(movimentos_banco)
+        conciliados = []
         
-        # Algoritmo simples de conciliação por valor e data (±3 dias)
+        # ========== PASSO 1: MATCH DE ALTA PRECISÃO (data + valor + ref_unique_norm) ==========
+        logger.info("[CONCILIACAO] Passo 1: Match de Alta Precisão (data + valor + ref_unique_norm)")
+        
         for mov_sistema in movimentos_sistema[:]:
+            if mov_sistema not in pendentes_sistema:
+                continue
+                
             try:
+                # Dados do sistema
                 valor_sistema = float(mov_sistema.get('valor', 0))
+                data_sistema = mov_sistema.get('data_lancamento') or mov_sistema.get('data_movimento')
+                ref_norm_sistema = mov_sistema.get('ref_unique_norm')
                 
-                # Tratar diferentes formatos de data do sistema
-                data_campo = mov_sistema.get('data_movimento') or mov_sistema.get('data_lancamento')
-                if not data_campo:
+                # Pular se não tem referência normalizada
+                if not ref_norm_sistema:
                     continue
                 
-                # Converter data brasileira (DD/MM/YYYY) para objeto date
+                # Converter data do sistema para comparação
                 try:
-                    if '/' in data_campo:  # DD/MM/YYYY
-                        data_sistema = datetime.strptime(data_campo, '%d/%m/%Y').date()
-                    else:  # YYYY-MM-DD
-                        data_sistema = datetime.strptime(data_campo, '%Y-%m-%d').date()
+                    if '/' in data_sistema:
+                        data_sistema_obj = datetime.strptime(data_sistema, '%d/%m/%Y').date()
+                    else:
+                        data_sistema_obj = datetime.strptime(data_sistema, '%Y-%m-%d').date()
                 except ValueError:
-                    logger.warning(f"[CONCILIACAO] Data inválida no sistema: {data_campo}")
                     continue
                 
+                # Procurar match exato no banco
                 for mov_banco in movimentos_banco[:]:
+                    if mov_banco not in pendentes_banco:
+                        continue
+                        
                     try:
                         valor_banco = float(mov_banco.get('valor', 0))
+                        data_banco = mov_banco.get('data_lancamento') or mov_banco.get('data')
+                        ref_norm_banco = mov_banco.get('ref_unique_norm')
                         
-                        # Tratar data do banco (pode vir em diferentes formatos)
-                        data_banco_campo = mov_banco.get('data') or mov_banco.get('data_movimento')
-                        if not data_banco_campo:
+                        # Verificar se tem referência normalizada
+                        if not ref_norm_banco:
                             continue
                         
+                        # Converter data do banco
                         try:
-                            if '/' in data_banco_campo:  # DD/MM/YYYY
-                                data_banco = datetime.strptime(data_banco_campo, '%d/%m/%Y').date()
-                            else:  # YYYY-MM-DD
-                                data_banco = datetime.strptime(data_banco_campo, '%Y-%m-%d').date()
+                            if '/' in data_banco:
+                                data_banco_obj = datetime.strptime(data_banco, '%d/%m/%Y').date()
+                            else:
+                                data_banco_obj = datetime.strptime(data_banco, '%Y-%m-%d').date()
                         except ValueError:
-                            logger.warning(f"[CONCILIACAO] Data inválida no banco: {data_banco_campo}")
                             continue
                         
-                        # Verificar se valores batem e datas estão próximas (±3 dias)
-                        diferenca_valor = abs(valor_sistema - valor_banco)
-                        diferenca_data = abs((data_sistema - data_banco).days)
-                        
-                        if diferenca_valor < 0.01 and diferenca_data <= 3:
-                            # Conciliação encontrada
+                        # MATCH EXATO: data + valor + ref_unique_norm
+                        if (data_sistema_obj == data_banco_obj and 
+                            abs(valor_sistema - valor_banco) < 0.01 and 
+                            ref_norm_sistema == ref_norm_banco):
+                            
+                            # Conciliação de Alta Precisão encontrada
+                            id_conciliacao = str(uuid.uuid4())
+                            
+                            # Atualizar status nos objetos
+                            mov_sistema['status'] = 'CONCILIADO_AUTO_REF'
+                            mov_sistema['id_conciliacao'] = id_conciliacao
+                            mov_banco['status'] = 'CONCILIADO_AUTO_REF'
+                            mov_banco['id_conciliacao'] = id_conciliacao
+                            
                             conciliacao = {
+                                'id_conciliacao': id_conciliacao,
+                                'tipo': 'CONCILIADO_AUTO_REF',
                                 'sistema_id': mov_sistema.get('id'),
                                 'banco_id': mov_banco.get('id'),
                                 'sistema': mov_sistema,
                                 'banco': mov_banco,
-                                'tipo': 'automatica',
                                 'data_conciliacao': datetime.now().isoformat(),
-                                'diferenca_valor': diferenca_valor,
-                                'diferenca_dias': diferenca_data,
-                                'valor': valor_sistema
+                                'valor': valor_sistema,
+                                'criterios': 'data + valor + ref_unique_norm'
                             }
                             
                             conciliados.append(conciliacao)
-                            logger.info(f"[CONCILIACAO] Match encontrado: R$ {valor_sistema} ({diferenca_data} dias)")
                             
                             # Remover das listas de pendentes
-                            if mov_sistema in pendentes_sistema:
-                                pendentes_sistema.remove(mov_sistema)
-                            if mov_banco in pendentes_banco:
-                                pendentes_banco.remove(mov_banco)
+                            pendentes_sistema.remove(mov_sistema)
+                            pendentes_banco.remove(mov_banco)
                             
-                            break  # Sair do loop do banco após encontrar match
+                            logger.debug(f"[CONCILIACAO] Alta Precisão: {ref_norm_sistema} - R$ {valor_sistema}")
+                            break
                     
                     except Exception as banco_error:
-                        logger.warning(f"[CONCILIACAO] Erro ao processar movimento banco: {str(banco_error)}")
                         continue
             
             except Exception as sistema_error:
-                logger.warning(f"[CONCILIACAO] Erro ao processar movimento sistema: {str(sistema_error)}")
                 continue
         
-        # Calcular totais
+        logger.info(f"[CONCILIACAO] Passo 1 concluído: {len(conciliados)} matches de alta precisão")
+        
+        # ========== PASSO 2: MATCH DE MÉDIA PRECISÃO (data + valor único) ==========
+        logger.info("[CONCILIACAO] Passo 2: Match de Média Precisão (data + valor)")
+        
+        # Agrupar pendentes por data+valor para identificar únicos
+        grupos_sistema = defaultdict(list)
+        grupos_banco = defaultdict(list)
+        
+        for mov in pendentes_sistema:
+            try:
+                valor = float(mov.get('valor', 0))
+                data = mov.get('data_lancamento') or mov.get('data_movimento')
+                
+                if '/' in data:
+                    data_obj = datetime.strptime(data, '%d/%m/%Y').date()
+                else:
+                    data_obj = datetime.strptime(data, '%Y-%m-%d').date()
+                
+                chave = (data_obj, valor)
+                grupos_sistema[chave].append(mov)
+            except:
+                continue
+        
+        for mov in pendentes_banco:
+            try:
+                valor = float(mov.get('valor', 0))
+                data = mov.get('data_lancamento') or mov.get('data')
+                
+                if '/' in data:
+                    data_obj = datetime.strptime(data, '%d/%m/%Y').date()
+                else:
+                    data_obj = datetime.strptime(data, '%Y-%m-%d').date()
+                
+                chave = (data_obj, valor)
+                grupos_banco[chave].append(mov)
+            except:
+                continue
+        
+        # Processar matches únicos (1 para 1)
+        for chave, lista_sistema in grupos_sistema.items():
+            if len(lista_sistema) == 1 and chave in grupos_banco and len(grupos_banco[chave]) == 1:
+                mov_sistema = lista_sistema[0]
+                mov_banco = grupos_banco[chave][0]
+                
+                # Match de Média Precisão encontrado
+                id_conciliacao = str(uuid.uuid4())
+                
+                # Atualizar status
+                mov_sistema['status'] = 'CONCILIADO_AUTO_VALOR'
+                mov_sistema['id_conciliacao'] = id_conciliacao
+                mov_banco['status'] = 'CONCILIADO_AUTO_VALOR'
+                mov_banco['id_conciliacao'] = id_conciliacao
+                
+                conciliacao = {
+                    'id_conciliacao': id_conciliacao,
+                    'tipo': 'CONCILIADO_AUTO_VALOR',
+                    'sistema_id': mov_sistema.get('id'),
+                    'banco_id': mov_banco.get('id'),
+                    'sistema': mov_sistema,
+                    'banco': mov_banco,
+                    'data_conciliacao': datetime.now().isoformat(),
+                    'valor': float(mov_sistema.get('valor', 0)),
+                    'criterios': 'data + valor (único)'
+                }
+                
+                conciliados.append(conciliacao)
+                
+                # Remover das listas de pendentes
+                if mov_sistema in pendentes_sistema:
+                    pendentes_sistema.remove(mov_sistema)
+                if mov_banco in pendentes_banco:
+                    pendentes_banco.remove(mov_banco)
+                
+                logger.debug(f"[CONCILIACAO] Média Precisão: {chave} - R$ {mov_sistema.get('valor', 0)}")
+        
+        logger.info(f"[CONCILIACAO] Passo 2 concluído: {len(conciliados)} matches total")
+        
+        # ========== PASSO 3: FINALIZAÇÃO (marcar duplicados e pendentes) ==========
+        logger.info("[CONCILIACAO] Passo 3: Finalização (duplicados e pendentes)")
+        
+        # Marcar registros com múltiplos candidatos como PENDENTE_DUPLICADO
+        for chave, lista_sistema in grupos_sistema.items():
+            if len(lista_sistema) > 1 or (chave in grupos_banco and len(grupos_banco[chave]) > 1):
+                for mov in lista_sistema:
+                    if mov.get('status') == 'PENDENTE':
+                        mov['status'] = 'PENDENTE_DUPLICADO'
+        
+        for chave, lista_banco in grupos_banco.items():
+            if len(lista_banco) > 1 or (chave in grupos_sistema and len(grupos_sistema[chave]) > 1):
+                for mov in lista_banco:
+                    if mov.get('status') == 'PENDENTE':
+                        mov['status'] = 'PENDENTE_DUPLICADO'
+        
+        # Marcar demais como PENDENTE
+        for mov in pendentes_sistema:
+            if mov.get('status') not in ['CONCILIADO_AUTO_REF', 'CONCILIADO_AUTO_VALOR', 'PENDENTE_DUPLICADO']:
+                mov['status'] = 'PENDENTE'
+        
+        for mov in pendentes_banco:
+            if mov.get('status') not in ['CONCILIADO_AUTO_REF', 'CONCILIADO_AUTO_VALOR', 'PENDENTE_DUPLICADO']:
+                mov['status'] = 'PENDENTE'
+        
+        # Calcular estatísticas finais
         total_sistema = len(movimentos_sistema)
         total_banco = len(movimentos_banco)
         total_conciliados = len(conciliados)
-        total_pendentes_sistema = len(pendentes_sistema)
-        total_pendentes_banco = len(pendentes_banco)
         
         valor_sistema = sum(float(m.get('valor', 0)) for m in movimentos_sistema)
         valor_banco = sum(float(m.get('valor', 0)) for m in movimentos_banco)
         valor_conciliado = sum(float(c.get('valor', 0)) for c in conciliados)
-        valor_pendente_sistema = sum(float(m.get('valor', 0)) for m in pendentes_sistema)
-        valor_pendente_banco = sum(float(m.get('valor', 0)) for m in pendentes_banco)
+        
+        # Contar por status
+        status_counts_sistema = defaultdict(int)
+        status_counts_banco = defaultdict(int)
+        
+        for mov in movimentos_sistema:
+            status_counts_sistema[mov.get('status', 'PENDENTE')] += 1
+        
+        for mov in movimentos_banco:
+            status_counts_banco[mov.get('status', 'PENDENTE')] += 1
         
         resultado = {
             'total_sistema': total_sistema,
             'total_extratos': total_banco,
             'conciliados_automatico': total_conciliados,
-            'pendentes_sistema': total_pendentes_sistema,
-            'pendentes_banco': total_pendentes_banco,
+            'pendentes_sistema': status_counts_sistema['PENDENTE'] + status_counts_sistema['PENDENTE_DUPLICADO'],
+            'pendentes_banco': status_counts_banco['PENDENTE'] + status_counts_banco['PENDENTE_DUPLICADO'],
             'valor_sistema': valor_sistema,
             'valor_extratos': valor_banco,
             'valor_conciliado': valor_conciliado,
-            'valor_pendente_sistema': valor_pendente_sistema,
-            'valor_pendente_banco': valor_pendente_banco,
             'conciliados': conciliados,
-            'pendentes_sistema_lista': pendentes_sistema,
-            'pendentes_banco_lista': pendentes_banco,
-            'movimentos_sistema': movimentos_sistema,
-            'movimentos_banco': movimentos_banco
+            'movimentos_sistema': movimentos_sistema,  # Com status atualizados
+            'movimentos_banco': movimentos_banco,      # Com status atualizados
+            'status_detalhado': {
+                'sistema': dict(status_counts_sistema),
+                'banco': dict(status_counts_banco)
+            }
         }
         
-        logger.info(f"[CONCILIACAO] Resultado: {total_conciliados} conciliados de {total_sistema + total_banco} movimentos")
+        logger.info(f"[CONCILIACAO] Conciliação hierárquica concluída:")
+        logger.info(f"  - Total conciliado: {total_conciliados}")
+        logger.info(f"  - CONCILIADO_AUTO_REF: {status_counts_sistema.get('CONCILIADO_AUTO_REF', 0)} sistema, {status_counts_banco.get('CONCILIADO_AUTO_REF', 0)} banco")
+        logger.info(f"  - CONCILIADO_AUTO_VALOR: {status_counts_sistema.get('CONCILIADO_AUTO_VALOR', 0)} sistema, {status_counts_banco.get('CONCILIADO_AUTO_VALOR', 0)} banco")
+        logger.info(f"  - PENDENTE_DUPLICADO: {status_counts_sistema.get('PENDENTE_DUPLICADO', 0)} sistema, {status_counts_banco.get('PENDENTE_DUPLICADO', 0)} banco")
+        logger.info(f"  - PENDENTE: {status_counts_sistema.get('PENDENTE', 0)} sistema, {status_counts_banco.get('PENDENTE', 0)} banco")
         
         return resultado
         
     except Exception as e:
-        logger.error(f"[CONCILIACAO] Erro na conciliação automática: {str(e)}")
+        logger.error(f"[CONCILIACAO] Erro na conciliação hierárquica: {str(e)}")
         return {
             'total_sistema': 0,
             'total_extratos': 0,

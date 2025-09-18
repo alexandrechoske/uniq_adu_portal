@@ -14,16 +14,36 @@
 
 {% block content %}
 <div class="conciliacao-container">
-    <!-- Header da Página -->
-    <div class="page-header">
-        <div class="row align-items-center">
-            <div class="col">
-                <h1 class="page-title">
-                    <i class="mdi mdi-file-compare"></i>
-                    Conciliação Bancária
-                </h1>
-                <p class="page-subtitle">Ferramenta automatizada para conciliação de extratos bancários com lançamentos do sistema</p>
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-financeiro">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
+                {'name': 'Conciliação Bancária', 'icon': 'mdi mdi-file-compare'}
+            ], 'financeiro') }}
+            <!-- Resumo de Status -->
+            <div id="status-summary" class="filter-summary">
+                <span id="status-summary-text">Ferramenta automatizada para conciliação de extratos bancários</span>
             </div>
+        </div>
+        <div class="actions-right">
+            <button id="btnLimparTudo" class="btn btn-secondary" style="display: none;">
+                <i class="mdi mdi-refresh"></i>
+                Limpar Dados
+            </button>
+            <button id="btnExportarRelatorio" class="btn btn-primary" style="display: none;">
+                <i class="mdi mdi-download"></i>
+                Exportar Relatório
+            </button>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Processando arquivos de conciliação...</p>
         </div>
     </div>
 
@@ -57,8 +77,8 @@
                             <div class="form-group">
                                 <label for="arquivo_extrato" class="form-label">Extrato Bancário</label>
                                 <input type="file" id="arquivo_extrato" name="arquivo_extrato" 
-                                       class="form-control" accept=".csv,.xls,.xlsx" required>
-                                <div class="form-text">Formatos suportados: CSV, XLS, XLSX</div>
+                                       class="form-control" accept=".csv,.xls,.xlsx,.txt" required>
+                                <div class="form-text">Formatos suportados: CSV, XLS, XLSX, TXT</div>
                             </div>
                         </div>
 
@@ -214,14 +234,6 @@
                             <button type="button" class="btn btn-warning" id="btnConciliarManual" disabled>
                                 <i class="mdi mdi-hand-pointing-up"></i>
                                 Conciliar Selecionados
-                            </button>
-                            <button type="button" class="btn btn-info" id="btnExportarRelatorio" disabled>
-                                <i class="mdi mdi-file-excel"></i>
-                                Exportar Relatório
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="btnLimparTudo">
-                                <i class="mdi mdi-refresh"></i>
-                                Limpar Tudo
                             </button>
                         </div>
                     </div>

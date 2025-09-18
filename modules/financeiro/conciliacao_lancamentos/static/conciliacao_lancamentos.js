@@ -1,4 +1,4 @@
-// JavaScript para Conciliação Bancária
+// JavaScript para Conciliação Bancária - Versão corrigida
 class ConciliacaoBancaria {
     constructor() {
         this.dadosSistema = [];
@@ -112,7 +112,8 @@ class ConciliacaoBancaria {
 
     processarResultado(result) {
         if (result.success) {
-            this.dadosSistema = result.dados_sistema || [];
+            // Nova estrutura: result tem dados_aberta e dados_banco
+            this.dadosSistema = result.dados_aberta || [];
             this.dadosBanco = result.dados_banco || [];
             
             this.showStatus(result.status);
@@ -122,7 +123,7 @@ class ConciliacaoBancaria {
             
             this.showSuccess(`Arquivos processados com sucesso! ${this.dadosSistema.length} lançamentos do sistema e ${this.dadosBanco.length} do banco encontrados.`);
         } else {
-            this.showError(result.message || 'Erro ao processar arquivos');
+            this.showError(result.message || result.error || 'Erro ao processar arquivos');
         }
     }
 
@@ -157,11 +158,17 @@ class ConciliacaoBancaria {
         this.dadosSistema.forEach((item, index) => {
             const row = tbody.insertRow();
             
-            // Garantir que os campos existam e tenham valores padrão
+            // Usar os novos campos da implementação hierárquica
             const data = item.data_lancamento || item.data_movimento || item.data || '-';
             const valor = parseFloat(item.valor || 0);
             const tipo = (item.tipo_lancamento || item.tipo_movimento || item.tipo || 'N/A').toString();
-            const descricao = item.descricao || 'Sem descrição';
+            const descricao = item.descricao_original || item.descricao || 'Sem descrição';
+            const status = item.status || 'pendente';
+            const refNorm = item.ref_unique_norm || '-';
+            
+            // Classe CSS baseada no status
+            const statusClass = status.toLowerCase();
+            const statusText = this.formatarStatus(status);
             
             row.innerHTML = `
                 <td><input type="checkbox" data-tipo="sistema" data-index="${index}"></td>
@@ -169,10 +176,16 @@ class ConciliacaoBancaria {
                 <td class="${valor >= 0 ? 'valor-positivo' : 'valor-negativo'}">${this.formatarValor(valor)}</td>
                 <td><span class="tipo-${tipo.toLowerCase()}">${tipo}</span></td>
                 <td title="${descricao}">${this.truncarTexto(descricao, 50)}</td>
-                <td><span class="status-badge status-pendente">Pendente</span></td>
+                <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
+                <td><small class="text-muted">${refNorm}</small></td>
             `;
             row.dataset.index = index;
             row.dataset.tipo = 'sistema';
+            
+            // Adicionar classe visual baseada no status
+            if (status === 'conciliado') {
+                row.classList.add('conciliado');
+            }
         });
     }
 
@@ -186,10 +199,16 @@ class ConciliacaoBancaria {
         this.dadosBanco.forEach((item, index) => {
             const row = tbody.insertRow();
             
-            // Garantir que os campos existam e tenham valores padrão
+            // Usar os novos campos da implementação hierárquica
             const data = item.data || item.data_movimento || '-';
             const valor = parseFloat(item.valor || 0);
-            const historico = item.historico || item.descricao || 'Sem histórico';
+            const historico = item.descricao || item.historico || 'Sem histórico';
+            const status = item.status || 'pendente';
+            const refNorm = item.ref_unique_norm || '-';
+            
+            // Classe CSS baseada no status
+            const statusClass = status.toLowerCase();
+            const statusText = this.formatarStatus(status);
             
             row.innerHTML = `
                 <td><input type="checkbox" data-tipo="banco" data-index="${index}"></td>
@@ -197,10 +216,16 @@ class ConciliacaoBancaria {
                 <td class="${valor >= 0 ? 'valor-positivo' : 'valor-negativo'}">${this.formatarValor(valor)}</td>
                 <td><span class="tipo-${valor >= 0 ? 'receita' : 'despesa'}">${valor >= 0 ? 'RECEITA' : 'DESPESA'}</span></td>
                 <td title="${historico}">${this.truncarTexto(historico, 50)}</td>
-                <td><span class="status-badge status-pendente">Pendente</span></td>
+                <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
+                <td><small class="text-muted">${refNorm}</small></td>
             `;
             row.dataset.index = index;
             row.dataset.tipo = 'banco';
+            
+            // Adicionar classe visual baseada no status
+            if (status === 'conciliado') {
+                row.classList.add('conciliado');
+            }
         });
     }
 
@@ -208,27 +233,39 @@ class ConciliacaoBancaria {
         this.showLoading(true);
         
         try {
-            const response = await fetch('/financeiro/conciliacao-lancamentos/conciliar_automatico', {
+            const response = await fetch('/financeiro/conciliacao-lancamentos/api/processar-conciliacao', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-API-Key': window.API_BYPASS_KEY || '$env:API_BYPASS_KEY'
                 },
-                body: JSON.stringify({
-                    dados_sistema: this.dadosSistema,
-                    dados_banco: this.dadosBanco
-                })
+                body: JSON.stringify({})
             });
 
             const result = await response.json();
             
             if (result.success) {
-                this.conciliacoes = result.conciliacoes;
-                this.aplicarConciliacoes();
+                // Atualizar dados com a resposta da conciliação hierárquica
+                const responseData = result.data;
+                
+                // Processar dados_aberta (sistema)
+                if (responseData.dados_aberta && responseData.dados_aberta.dados) {
+                    this.dadosSistema = responseData.dados_aberta.dados;
+                }
+                
+                // Processar dados_banco
+                if (responseData.dados_banco && responseData.dados_banco.dados) {
+                    this.dadosBanco = responseData.dados_banco.dados;
+                }
+                
+                // Renderizar dados atualizados
+                this.renderizarDados();
                 this.atualizarResumo();
-                this.showSuccess(`Conciliação automática concluída! ${result.conciliacoes.length} matches encontrados.`);
+                
+                const stats = responseData.status;
+                this.showSuccess(`Conciliação automática concluída! ${stats.conciliados_automatico} conciliações automáticas realizadas.`);
             } else {
-                this.showError(result.message || 'Erro na conciliação automática');
+                this.showError(result.error || 'Erro na conciliação automática');
             }
         } catch (error) {
             console.error('Erro na conciliação automática:', error);
@@ -238,186 +275,43 @@ class ConciliacaoBancaria {
         }
     }
 
-    aplicarConciliacoes() {
-        // Resetar status
-        document.querySelectorAll('#tabelaSistema tbody tr').forEach(row => {
-            row.classList.remove('conciliado');
-            row.querySelector('.status-badge').className = 'status-badge status-pendente';
-            row.querySelector('.status-badge').textContent = 'Pendente';
-        });
-
-        document.querySelectorAll('#tabelaBanco tbody tr').forEach(row => {
-            row.classList.remove('conciliado');
-            row.querySelector('.status-badge').className = 'status-badge status-pendente';
-            row.querySelector('.status-badge').textContent = 'Pendente';
-        });
-
-        // Aplicar conciliações
-        this.conciliacoes.forEach(conciliacao => {
-            const rowSistema = document.querySelector(`#tabelaSistema tbody tr[data-index="${conciliacao.index_sistema}"]`);
-            const rowBanco = document.querySelector(`#tabelaBanco tbody tr[data-index="${conciliacao.index_banco}"]`);
-
-            if (rowSistema && rowBanco) {
-                rowSistema.classList.add('conciliado');
-                rowBanco.classList.add('conciliado');
-
-                const statusSistema = rowSistema.querySelector('.status-badge');
-                const statusBanco = rowBanco.querySelector('.status-badge');
-
-                statusSistema.className = 'status-badge status-conciliado';
-                statusSistema.textContent = 'Conciliado';
-                statusBanco.className = 'status-badge status-conciliado';
-                statusBanco.textContent = 'Conciliado';
-            }
-        });
+    // Funções auxiliares
+    formatarStatus(status) {
+        const statusMap = {
+            'pendente': 'Pendente',
+            'conciliado': 'Conciliado',
+            'duplicado': 'Duplicado',
+            'divergente': 'Divergente'
+        };
+        return statusMap[status.toLowerCase()] || status;
     }
 
-    conciliarManualmente() {
-        const selectedSistema = this.getSelectedItems('sistema');
-        const selectedBanco = this.getSelectedItems('banco');
-
-        if (selectedSistema.length === 0 || selectedBanco.length === 0) {
-            this.showWarning('Selecione pelo menos um item de cada tabela para conciliar manualmente.');
-            return;
-        }
-
-        if (selectedSistema.length !== selectedBanco.length) {
-            this.showWarning('O número de itens selecionados deve ser igual em ambas as tabelas.');
-            return;
-        }
-
-        // Criar conciliações manuais
-        for (let i = 0; i < selectedSistema.length; i++) {
-            const conciliacao = {
-                index_sistema: selectedSistema[i],
-                index_banco: selectedBanco[i],
-                tipo: 'manual',
-                confianca: 100
-            };
-            this.conciliacoes.push(conciliacao);
-        }
-
-        this.aplicarConciliacoes();
-        this.atualizarResumo();
-        this.showSuccess(`${selectedSistema.length} conciliação(ões) manual(is) realizada(s) com sucesso!`);
-
-        // Desmarcar checkboxes
-        this.clearSelections();
-    }
-
-    getSelectedItems(tipo) {
-        const checkboxes = document.querySelectorAll(`input[data-tipo="${tipo}"]:checked`);
-        return Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
-    }
-
-    clearSelections() {
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-        document.getElementById('btnConciliarManual').disabled = true;
-    }
-
-    toggleSelectAllSistema() {
-        const selectAll = document.getElementById('selectAllSistema');
-        const checkboxes = document.querySelectorAll('input[data-tipo="sistema"]');
-        
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        this.updateManualConciliationButton();
-    }
-
-    toggleSelectAllBanco() {
-        const selectAll = document.getElementById('selectAllBanco');
-        const checkboxes = document.querySelectorAll('input[data-tipo="banco"]');
-        
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        this.updateManualConciliationButton();
-    }
-
-    updateManualConciliationButton() {
-        const selectedSistema = this.getSelectedItems('sistema');
-        const selectedBanco = this.getSelectedItems('banco');
-        const btnManual = document.getElementById('btnConciliarManual');
-        
-        btnManual.disabled = selectedSistema.length === 0 || selectedBanco.length === 0;
-    }
-
-    atualizarResumo() {
-        const totalSistema = this.dadosSistema.length;
-        const totalBanco = this.dadosBanco.length;
-        const conciliados = this.conciliacoes.length;
-        const pendentes = Math.max(totalSistema, totalBanco) - conciliados;
-        const divergencias = Math.abs(totalSistema - totalBanco);
-        const percentual = totalSistema > 0 ? Math.round((conciliados / totalSistema) * 100) : 0;
-
-        document.getElementById('statConciliados').textContent = conciliados;
-        document.getElementById('statPendentes').textContent = pendentes;
-        document.getElementById('statDivergencias').textContent = divergencias;
-        document.getElementById('statPercentual').textContent = percentual + '%';
-
-        // Habilitar botão de exportar se houver dados
-        document.getElementById('btnExportarRelatorio').disabled = conciliados === 0;
-    }
-
-    async exportarRelatorio() {
-        try {
-            const response = await fetch('/financeiro/conciliacao-lancamentos/exportar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-Key': window.API_BYPASS_KEY || '$env:API_BYPASS_KEY'
-                },
-                body: JSON.stringify({
-                    dados_sistema: this.dadosSistema,
-                    dados_banco: this.dadosBanco,
-                    conciliacoes: this.conciliacoes
-                })
-            });
-
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `conciliacao_bancaria_${new Date().toISOString().split('T')[0]}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                this.showSuccess('Relatório exportado com sucesso!');
-            } else {
-                throw new Error('Erro ao gerar relatório');
-            }
-        } catch (error) {
-            console.error('Erro na exportação:', error);
-            this.showError('Erro ao exportar relatório: ' + error.message);
-        }
-    }
-
-    limparTudo() {
-        if (confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
-            this.dadosSistema = [];
-            this.dadosBanco = [];
-            this.conciliacoes = [];
-            
-            document.getElementById('uploadForm').reset();
-            this.validateForm();
-            this.hideSections(['statusSection', 'dadosSection', 'resumoSection']);
-            
-            this.showInfo('Dados limpos com sucesso!');
-        }
-    }
-
-    // Métodos utilitários
     formatarData(data) {
-        if (!data) return '';
-        const date = new Date(data);
-        return date.toLocaleDateString('pt-BR');
+        if (!data || data === '-') return '-';
+        
+        try {
+            // Se já está no formato DD/MM/YYYY, retorna como está
+            if (data.includes('/')) {
+                return data;
+            }
+            
+            // Se está no formato YYYY-MM-DD, converte para DD/MM/YYYY
+            if (data.includes('-')) {
+                const [ano, mes, dia] = data.split('-');
+                return `${dia}/${mes}/${ano}`;
+            }
+            
+            return data;
+        } catch (error) {
+            return data;
+        }
     }
 
     formatarValor(valor) {
-        if (valor === null || valor === undefined) return '';
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
-        }).format(Math.abs(valor));
+        }).format(valor);
     }
 
     truncarTexto(texto, limite) {
@@ -425,104 +319,71 @@ class ConciliacaoBancaria {
         return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
     }
 
+    // Métodos de UI
+    showLoading(show) {
+        const overlay = document.getElementById('loading-overlay');
+        overlay.style.display = show ? 'flex' : 'none';
+    }
+
+    showUploadProgress(show) {
+        // Implementar se necessário
+    }
+
     showSections(sections) {
         sections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
             if (section) {
                 section.style.display = 'block';
-                section.classList.add('fade-in');
             }
         });
-    }
-
-    hideSections(sections) {
-        sections.forEach(sectionId => {
-            const section = document.getElementById(sectionId);
-            if (section) {
-                section.style.display = 'none';
-            }
-        });
-    }
-
-    showLoading(show) {
-        const modalElement = document.getElementById('loadingModal');
-        if (modalElement) {
-            if (show) {
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
-            } else {
-                // Garantir que o modal seja fechado, mesmo se já existir uma instância
-                const existingModal = bootstrap.Modal.getInstance(modalElement);
-                if (existingModal) {
-                    existingModal.hide();
-                } else {
-                    const modal = new bootstrap.Modal(modalElement);
-                    modal.hide();
-                }
-                // Forçar remoção do backdrop se ainda estiver presente
-                setTimeout(() => {
-                    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-                        backdrop.remove();
-                    });
-                    document.body.classList.remove('modal-open');
-                    document.body.style.removeProperty('overflow');
-                    document.body.style.removeProperty('padding-right');
-                }, 100);
-            }
-        }
-    }
-
-    showUploadProgress(show) {
-        const progress = document.querySelector('.upload-progress');
-        if (show) {
-            progress.style.display = 'block';
-            let width = 0;
-            const interval = setInterval(() => {
-                width += 10;
-                document.querySelector('.progress-bar').style.width = width + '%';
-                if (width >= 90) {
-                    clearInterval(interval);
-                }
-            }, 200);
-        } else {
-            progress.style.display = 'none';
-            document.querySelector('.progress-bar').style.width = '0%';
-        }
     }
 
     showSuccess(message) {
-        this.showToast(message, 'success');
+        // Implementar notificação de sucesso
+        console.log('Sucesso:', message);
+        alert('Sucesso: ' + message);
     }
 
     showError(message) {
-        this.showToast(message, 'error');
+        // Implementar notificação de erro
+        console.error('Erro:', message);
+        alert('Erro: ' + message);
     }
 
-    showWarning(message) {
-        this.showToast(message, 'warning');
+    atualizarResumo() {
+        // Implementar atualização do resumo
+        console.log('Atualizando resumo...');
     }
 
-    showInfo(message) {
-        this.showToast(message, 'info');
+    // Métodos stubs para funcionalidades não implementadas ainda
+    conciliarManualmente() {
+        this.showError('Conciliação manual ainda não implementada');
     }
 
-    showToast(message, type) {
-        // Implementação básica - pode ser melhorada com biblioteca de toast
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-        toast.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
-        toast.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 5000);
+    exportarRelatorio() {
+        this.showError('Exportação de relatório ainda não implementada');
+    }
+
+    limparTudo() {
+        if (confirm('Tem certeza que deseja limpar todos os dados?')) {
+            this.dadosSistema = [];
+            this.dadosBanco = [];
+            this.conciliacoes = [];
+            this.renderizarDados();
+            this.showSuccess('Dados limpos com sucesso!');
+        }
+    }
+
+    toggleSelectAllSistema() {
+        // Implementar seleção de todos os itens do sistema
+    }
+
+    toggleSelectAllBanco() {
+        // Implementar seleção de todos os itens do banco
+    }
+
+    updateManualConciliationButton() {
+        // Implementar atualização do botão de conciliação manual
     }
 }
 
