@@ -617,20 +617,28 @@ class FaturamentoControllerNovo {
         try {
             console.log('🎯 Carregando gráfico Meta vs Realizado...');
             
-            // Buscar dados do ano atual
-            const responseRealizado = await fetch('/financeiro/faturamento/api/geral/mensal');
-            const dataRealizado = await responseRealizado.json();
+            const anoAtual = new Date().getFullYear();
+            const anoAnterior = anoAtual - 1;
             
-            // Buscar dados da meta
-            const responseMeta = await fetch('/financeiro/faturamento/api/geral/metas_mensais');
+            // Buscar dados do ano atual (realizado)
+            const responseRealizadoAtual = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAtual}`);
+            const dataRealizadoAtual = await responseRealizadoAtual.json();
+            
+            // Buscar dados do ano anterior (realizado)
+            const responseRealizadoAnterior = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAnterior}`);
+            const dataRealizadoAnterior = await responseRealizadoAnterior.json();
+            
+            // Buscar dados da meta do ano atual
+            const responseMeta = await fetch(`/financeiro/faturamento/api/geral/metas_mensais?ano=${anoAtual}`);
             const dataMeta = await responseMeta.json();
             
-            console.log('📊 Data realizado:', dataRealizado);
+            console.log('📊 Data realizado atual:', dataRealizadoAtual);
+            console.log('📊 Data realizado anterior:', dataRealizadoAnterior);
             console.log('🎯 Data meta:', dataMeta);
             
-            if (dataRealizado.success && dataMeta.success) {
+            if (dataRealizadoAtual.success && dataRealizadoAnterior.success && dataMeta.success) {
                 console.log('✅ Renderizando gráfico Meta vs Realizado');
-                this.renderizarGraficoMeta(dataRealizado.data, dataMeta.data);
+                this.renderizarGraficoMeta(dataRealizadoAtual.data, dataRealizadoAnterior.data, dataMeta.data, anoAtual, anoAnterior);
             } else {
                 console.warn('⚠️ Dados de meta ou realizado vazios ou inválidos');
             }
@@ -639,7 +647,7 @@ class FaturamentoControllerNovo {
         }
     }
     
-    renderizarGraficoMeta(dadosRealizado, dadosMeta) {
+    renderizarGraficoMeta(dadosRealizadoAtual, dadosRealizadoAnterior, dadosMeta, anoAtual, anoAnterior) {
         const canvas = document.getElementById('comparativo-chart');
         if (!canvas) {
             console.error('Canvas comparativo-chart não encontrado');
@@ -656,24 +664,31 @@ class FaturamentoControllerNovo {
         const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         
-        // Preparar dados do realizado (do endpoint mensal)
-        const valoresRealizado = new Array(12).fill(0);
-        dadosRealizado.forEach(item => {
+        // Preparar dados do realizado do ano atual
+        const valoresRealizadoAtual = new Array(12).fill(0);
+        dadosRealizadoAtual.forEach(item => {
             const mesIndex = parseInt(item.mes) - 1;
-            valoresRealizado[mesIndex] = item.faturamento_total || 0; // Campo correto
+            valoresRealizadoAtual[mesIndex] = item.faturamento_total || 0;
         });
         
-        // Preparar dados da meta (do endpoint metas_mensais)
+        // Preparar dados do realizado do ano anterior
+        const valoresRealizadoAnterior = new Array(12).fill(0);
+        dadosRealizadoAnterior.forEach(item => {
+            const mesIndex = parseInt(item.mes) - 1;
+            valoresRealizadoAnterior[mesIndex] = item.faturamento_total || 0;
+        });
+        
+        // Preparar dados da meta do ano atual
         const valoresMeta = new Array(12).fill(0);
         dadosMeta.forEach(item => {
             const mesIndex = parseInt(item.mes) - 1;
-            valoresMeta[mesIndex] = item.meta || 0; // Campo correto
+            valoresMeta[mesIndex] = item.meta || 0;
         });
         
         const datasets = [
             {
-                label: `Realizado ${this.currentAno}`,
-                data: valoresRealizado,
+                label: `Realizado ${anoAtual}`,
+                data: valoresRealizadoAtual,
                 borderColor: this.coresGraficos.anos[0],
                 backgroundColor: this.coresGraficos.anos[0] + '20',
                 borderWidth: 3,
@@ -683,7 +698,18 @@ class FaturamentoControllerNovo {
                 pointHoverRadius: 7
             },
             {
-                label: `Meta ${this.currentAno}`,
+                label: `Realizado ${anoAnterior}`,
+                data: valoresRealizadoAnterior,
+                borderColor: this.coresGraficos.anos[1],
+                backgroundColor: this.coresGraficos.anos[1] + '20',
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            },
+            {
+                label: `Meta ${anoAtual}`,
                 data: valoresMeta,
                 borderColor: this.coresGraficos.meta,
                 backgroundColor: this.coresGraficos.meta + '20',
@@ -741,7 +767,7 @@ class FaturamentoControllerNovo {
             }
         });
         
-        console.log('✅ Gráfico Meta vs Realizado renderizado');
+        console.log('✅ Gráfico Meta vs Realizado renderizado com 3 datasets');
     }
     
     async carregarGraficoCentroResultado() {
