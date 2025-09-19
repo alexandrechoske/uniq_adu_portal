@@ -241,22 +241,6 @@
     min-height: 450px;
 }
 
-/* Charts Row - Second row layout (50% + 50%) */
-.charts-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.charts-row .chart-container {
-    grid-column: span 1;
-}
-
-.charts-row .chart-container .chart-content {
-    min-height: 350px;
-}
-
 /* Chart Container */
 .chart-container {
     background: white;
@@ -303,6 +287,18 @@
     max-height: 450px;
     width: 100% !important;
     height: 100% !important;
+}
+
+/* Horizontal Bar Chart Specific Styles */
+.chart-container .chart-content:has(canvas) {
+    /* Ensure horizontal bar charts have enough height for long labels */
+    min-height: 500px;
+}
+
+/* Improve label readability for horizontal bar charts */
+.chart-container canvas {
+    /* Allow more space for y-axis labels in horizontal charts */
+    margin-left: 20px;
 }
 
 /* Table Container */

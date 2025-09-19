@@ -100,7 +100,6 @@
     </div>
     
     <!-- Gráficos -->
-        <!-- Gráficos -->
     <div class="charts-grid">
         <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (100% width) -->
         <div class="chart-container wide-chart">
@@ -115,28 +114,27 @@
             </div>
         </div>
         
-        <!-- Gráfico 2: Projeção de Fluxo de Caixa (100% width) -->
+        <!-- Gráfico 2: Evolução do Saldo Acumulado com Projeção (100% width) -->
         <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-line"></i>
-                    Projeção de Fluxo de Caixa - Resultado Líquido
+                    Evolução do Saldo Acumulado
                 </h3>
             </div>
             <div class="chart-content">
-                <canvas id="chart-projecao"></canvas>
+                <canvas id="chart-saldo-acumulado"></canvas>
             </div>
         </div>
     </div>
     
-    <!-- Second row: Two charts side by side (50% + 50%) -->
-    <div class="charts-row">
-        <!-- Gráfico 3: Despesas por Categoria (50% width) -->
-        <div class="chart-container">
+    <!-- Gráfico 3: Despesas por Centro de Resultado (100% width, horizontal) -->
+    <div class="charts-grid">
+        <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-bar"></i>
-                    <span id="chart-despesas-title">Despesas por Categoria</span>
+                    <span id="chart-despesas-title">Despesas por Centro de Resultado</span>
                     <span class="drill-indicator" title="Clique nas barras para fazer drill-down">
                         <i class="mdi mdi-cursor-pointer"></i>
                         <small>Clique para detalhar</small>
@@ -151,19 +149,6 @@
             </div>
             <div class="chart-content">
                 <canvas id="chart-despesas-categoria" style="cursor: pointer;"></canvas>
-            </div>
-        </div>
-        
-        <!-- Gráfico 4: Evolução do Saldo Acumulado (50% width) -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-line"></i>
-                    Evolução do Saldo Acumulado
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-saldo-acumulado"></canvas>
             </div>
         </div>
     </div>

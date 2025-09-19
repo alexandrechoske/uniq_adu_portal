@@ -183,11 +183,6 @@ class FluxoCaixaController {
                 return null;
             });
             
-            const projecaoPromise = this.loadProjecao().catch(error => {
-                console.error('Erro ao carregar projeção:', error);
-                return null;
-            });
-            
             const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
                 console.error('Erro ao carregar saldo acumulado:', error);
                 return null;
@@ -203,7 +198,6 @@ class FluxoCaixaController {
                 kpisPromise,
                 fluxoMensalPromise,
                 despesasCategoriaPromise,
-                projecaoPromise,
                 saldoAcumuladoPromise,
                 tableDataPromise
             ]);
@@ -565,11 +559,14 @@ class FluxoCaixaController {
         // Convert negative values to positive for better visualization
         const valoresPositivos = data.valores.map(valor => Math.abs(valor));
         
+        // Format labels with line breaks for long text
+        const formattedLabels = data.labels.map(label => this.formatCategoryLabel(label));
+        
         // For horizontal bar chart, we need to swap x and y axes
         this.charts.despesasCategoria = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: data.labels,
+                labels: formattedLabels,
                 datasets: [{
                     label: chartTitle,
                     data: valoresPositivos,
@@ -587,7 +584,7 @@ class FluxoCaixaController {
                     // Add drill-down functionality when clicking on bars
                     if (elements.length > 0) {
                         const elementIndex = elements[0].index;
-                        const selectedItem = data.labels[elementIndex];
+                        const selectedItem = data.labels[elementIndex]; // Use original label for drill-down
                         this.handleDrillDown(selectedItem, data.drill_level);
                     }
                 },
@@ -648,6 +645,12 @@ class FluxoCaixaController {
                     y: {
                         grid: {
                             display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            padding: 10
                         }
                     }
                 }
@@ -662,14 +665,26 @@ class FluxoCaixaController {
                 ...(this.currentMes && { mes: this.currentMes })
             });
             
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?${queryString}`);
-            const data = await response.json();
+            // Load both saldo acumulado and projection data
+            const [saldoResponse, projecaoResponse] = await Promise.all([
+                fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?${queryString}`),
+                fetch(`/financeiro/fluxo-de-caixa/api/projecao`)
+            ]);
             
-            if (!response.ok || data.error) {
-                throw new Error(data.error || 'Erro ao carregar evolução do saldo acumulado');
+            const saldoData = await saldoResponse.json();
+            const projecaoData = await projecaoResponse.json();
+            
+            if (!saldoResponse.ok || saldoData.error) {
+                throw new Error(saldoData.error || 'Erro ao carregar evolução do saldo acumulado');
             }
             
-            this.renderSaldoAcumuladoChart(data);
+            if (!projecaoResponse.ok || projecaoData.error) {
+                console.warn('Erro ao carregar projeção, continuando sem projeção:', projecaoData.error);
+                // Continue without projection data
+                this.renderSaldoAcumuladoChart(saldoData, null);
+            } else {
+                this.renderSaldoAcumuladoChart(saldoData, projecaoData);
+            }
         } catch (error) {
             console.error('Erro ao carregar saldo acumulado:', error);
             this.showError('Erro ao carregar evolução do saldo acumulado: ' + (error.message || 'Erro desconhecido'));
@@ -728,7 +743,7 @@ class FluxoCaixaController {
         });
     }
     
-    renderSaldoAcumuladoChart(data) {
+    renderSaldoAcumuladoChart(saldoData, projecaoData = null) {
         const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
         
         // Ensure proper cleanup before creating new chart
@@ -743,36 +758,82 @@ class FluxoCaixaController {
             chartInstance.destroy();
         }
         
+        // Prepare datasets
+        const datasets = [];
+        let allDates = [];
+        let allValues = [];
+        
+        // Dataset 1: Saldo Acumulado Real
+        const realValues = saldoData.saldos.filter(val => val !== null);
+        datasets.push({
+            label: 'Saldo Acumulado Real',
+            data: saldoData.saldos,
+            borderColor: 'rgba(0, 123, 255, 1)',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: saldoData.saldos.map(value => 
+                value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
+            ),
+            pointBorderColor: 'white',
+            pointBorderWidth: 2,
+            pointRadius: 3
+        });
+        
+        allDates = [...saldoData.datas];
+        allValues = [...realValues];
+        
+        // Dataset 2: Projeção (if available)
+        if (projecaoData && projecaoData.future_dates && projecaoData.future_dates.length > 0) {
+            // Calculate projected saldo acumulado based on last real saldo + future projections
+            const lastRealSaldo = saldoData.saldos[saldoData.saldos.length - 1] || 0;
+            
+            // Create cumulative projection values
+            let cumulativeProjection = lastRealSaldo;
+            const projectionValues = [cumulativeProjection]; // Start with last real value
+            
+            for (let i = 0; i < projecaoData.future_values.length; i++) {
+                cumulativeProjection += projecaoData.future_values[i];
+                projectionValues.push(cumulativeProjection);
+            }
+            
+            // Create null values for past dates + first projection value
+            const pastNulls = new Array(saldoData.datas.length - 1).fill(null);
+            const projectionData = [...pastNulls, ...projectionValues];
+            
+            datasets.push({
+                label: 'Saldo Acumulado Projetado',
+                data: projectionData,
+                borderColor: 'rgba(255, 193, 7, 1)',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                borderWidth: 3,
+                borderDash: [5, 5], // Dashed line for projection
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(255, 193, 7, 1)',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            });
+            
+            // Combine dates for x-axis
+            allDates = [...saldoData.datas, ...projecaoData.future_dates];
+            allValues = [...allValues, ...projectionValues];
+        }
+        
         // Find min and max values for proper scaling
-        const allValues = data.saldos.filter(val => val !== null);
         const minValue = Math.min(...allValues);
         const maxValue = Math.max(...allValues);
         const range = maxValue - minValue;
         const minPadded = minValue - (range * 0.1);
         const maxPadded = maxValue + (range * 0.1);
         
-        // Define colors based on positive/negative values
-        const borderColors = data.saldos.map(value => 
-            value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
-        );
-        
         this.charts.saldoAcumulado = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: data.datas,
-                datasets: [{
-                    label: 'Saldo Acumulado',
-                    data: data.saldos,
-                    borderColor: 'rgba(0, 123, 255, 1)',
-                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: borderColors,
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 3
-                }]
+                labels: allDates,
+                datasets: datasets
             },
             options: {
                 ...this.chartDefaults,
@@ -783,7 +844,11 @@ class FluxoCaixaController {
                         text: 'Evolução do Saldo Acumulado'
                     },
                     legend: {
-                        display: false
+                        display: datasets.length > 1, // Show legend only if we have projection data
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
                     },
                     datalabels: {
                         display: true,
@@ -829,7 +894,7 @@ class FluxoCaixaController {
                             display: false
                         },
                         ticks: {
-                            maxTicksLimit: 10 // Limit number of x-axis labels
+                            maxTicksLimit: 12 // Limit number of x-axis labels
                         }
                     }
                 }
@@ -1226,6 +1291,26 @@ class FluxoCaixaController {
         } else {
             $('#loading-overlay').hide();
         }
+    }
+    
+    formatCategoryLabel(label) {
+        // Break long category names into multiple lines
+        if (!label) return label;
+        
+        // Replace common separators with line breaks
+        let formatted = label
+            .replace(/\//g, '\n')  // ADMINISTRATIVO/FINANCEIRO -> ADMINISTRATIVO\nFINANCEIRO
+            .replace(/-/g, '-\n')  // LONG-CATEGORY -> LONG-\nCATEGORY
+            .replace(/\s+/g, ' '); // Normalize spaces
+        
+        // If still too long, break at spaces
+        const words = formatted.split(' ');
+        if (words.length > 2 && formatted.length > 20) {
+            const midPoint = Math.ceil(words.length / 2);
+            formatted = words.slice(0, midPoint).join(' ') + '\n' + words.slice(midPoint).join(' ');
+        }
+        
+        return formatted;
     }
     
     showError(message) {
