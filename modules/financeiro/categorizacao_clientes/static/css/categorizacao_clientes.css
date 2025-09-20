@@ -1,0 +1,203 @@
+/* Estilo baseado no padrão da aplicação - Categorização de Clientes */
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+}
+
+.filter-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.table-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.editable-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.editable-table th {
+    background-color: #f5f5f5;
+    color: #333;
+    font-weight: 600;
+    padding: 15px 12px;
+    text-align: left;
+    border-bottom: 2px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.editable-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
+}
+
+.editable-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.editable-table tr.selected {
+    background-color: #e3f2fd !important;
+}
+
+.nome-original {
+    font-family: monospace;
+    color: #666;
+    background-color: #f5f5f5;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    max-width: 300px;
+    word-break: break-word;
+}
+
+.nome-padronizado-input {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 0.9em;
+    transition: all 0.3s;
+    background-color: white;
+    min-width: 250px;
+}
+
+.nome-padronizado-input:focus {
+    border-color: #2196f3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+    outline: none;
+}
+
+.nome-padronizado-input.changed {
+    border-left: 4px solid #4caf50;
+    background-color: #f1f8e9;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: white;
+}
+
+.status-categorizado {
+    background-color: #4caf50;
+}
+
+.status-pendente {
+    background-color: #ff9800;
+}
+
+.checkbox-cell {
+    width: 40px;
+    text-align: center;
+}
+
+.checkbox-cell input[type="checkbox"] {
+    transform: scale(1.2);
+}
+
+.action-buttons {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 20px;
+    border-top: 2px solid #e0e0e0;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+    z-index: 20;
+}
+
+.table-container {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.pagination-info {
+    padding: 15px;
+    background-color: #f5f5f5;
+    text-align: center;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.btn-selected {
+    background-color: #4caf50;
+}
+
+.btn-selected:hover {
+    background-color: #45a049;
+}
+
+/* Loading spinner overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.tabs .tab a.active {
+    color: #2196f3;
+}
+
+.tabs .indicator {
+    background-color: #2196f3;
+}
+
+/* Responsividade */
+@media only screen and (max-width: 768px) {
+    .nome-original, .nome-padronizado-input {
+        max-width: 200px;
+        min-width: 150px;
+    }
+    
+    .editable-table th,
+    .editable-table td {
+        padding: 8px 6px;
+        font-size: 0.85em;
+    }
+}
+
+/* Estados de feedback */
+.field-success {
+    border-color: #4caf50 !important;
+    background-color: #f1f8e9 !important;
+}
+
+.field-error {
+    border-color: #f44336 !important;
+    background-color: #ffebee !important;
+}
+
+.toast-success {
+    background-color: #4caf50 !important;
+}
+
+.toast-error {
+    background-color: #f44336 !important;
+}
+
+.toast-warning {
+    background-color: #ff9800 !important;
+}

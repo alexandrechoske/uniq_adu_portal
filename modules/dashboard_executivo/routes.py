@@ -44,14 +44,24 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
             return existing_inside
         print(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
-        if role in ['cliente_unique', 'interno_unique']:
+        
+        # Verificar se usuário tem perfil admin_operacao - se sim, pode ver todos os dados
+        perfil_principal = user_data.get('perfil_principal', '')
+        is_admin_operacao = perfil_principal == 'admin_operacao'
+        
+        if role in ['cliente_unique', 'interno_unique'] and not is_admin_operacao:
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 query = query.in_('cnpj_importador', user_cnpjs)
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Filtrando por CNPJs do usuário: {len(user_cnpjs)} empresas")
             else:
                 print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário sem CNPJs vinculados -> dados vazios")
                 data_cache.set_cache(user_id, 'dashboard_v2_data', [])
                 return []
+        elif is_admin_operacao:
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin_operacao -> carregando TODOS os dados")
+        elif role == 'admin':
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin -> carregando TODOS os dados")
         def _run_main_query():
             return query.execute()
         result = run_with_retries('dashboard_executivo.helper_load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
@@ -168,28 +178,40 @@ def enrich_data_with_despesas_view(data):
                     batch = ref_uniques[i:i + batch_size]
                     print(f"[DESPESAS_VIEW] Processando lote {i//batch_size + 1}: {len(batch)} registros")
                     
-                    # Consulta batch
-                    query = supabase_admin.table('vw_despesas_6_meses').select('ref_unique, valor_custo').in_('ref_unique', batch)
-                    result = query.execute()
-                    
-                    if result.data:
-                        # Agrupar por ref_unique e somar custos
-                        for despesa in result.data:
-                            ref_unique = despesa.get('ref_unique')
-                            valor_custo = despesa.get('valor_custo', 0)
-                            
-                            if ref_unique:
-                                if ref_unique not in despesas_map:
-                                    despesas_map[ref_unique] = 0
+                    try:
+                        # Consulta batch
+                        query = supabase_admin.table('vw_despesas_6_meses').select('ref_unique, valor_custo').in_('ref_unique', batch)
+                        result = query.execute()
+                        
+                        if result.data:
+                            # Agrupar por ref_unique e somar custos
+                            for despesa in result.data:
+                                ref_unique = despesa.get('ref_unique')
+                                valor_custo = despesa.get('valor_custo', 0)
                                 
-                                # Somar valor_custo
-                                if valor_custo is not None and valor_custo != '':
-                                    try:
-                                        valor_float = float(valor_custo)
-                                        if not pd.isna(valor_float) and not np.isinf(valor_float):
-                                            despesas_map[ref_unique] += valor_float
-                                    except (ValueError, TypeError):
-                                        continue
+                                if ref_unique:
+                                    if ref_unique not in despesas_map:
+                                        despesas_map[ref_unique] = 0
+                                    
+                                    # Somar valor_custo
+                                    if valor_custo is not None and valor_custo != '':
+                                        try:
+                                            valor_float = float(valor_custo)
+                                            if not pd.isna(valor_float) and not np.isinf(valor_float):
+                                                despesas_map[ref_unique] += valor_float
+                                        except (ValueError, TypeError):
+                                            continue
+                    
+                    except Exception as batch_error:
+                        # Tratar erro específico de view não encontrada
+                        error_str = str(batch_error)
+                        if '42P01' in error_str or 'does not exist' in error_str.lower():
+                            print(f"[DESPESAS_VIEW] ⚠️ View vw_despesas_6_meses não existe - usando fallback para JSON")
+                            # Marcar que a view não existe para evitar tentativas futuras
+                            break
+                        else:
+                            print(f"[DESPESAS_VIEW] Erro na consulta batch: {batch_error}")
+                            continue
                 
                 print(f"[DESPESAS_VIEW] Encontrados custos para {len(despesas_map)} processos")
                 
@@ -515,12 +537,12 @@ def dashboard_kpis():
         if 'custo_total_original' not in df.columns:
             df['custo_total_original'] = 0.0
         
-        # Construir custo_calculado com fallback
-        df['custo_calculado'] = df['custo_total_view']
+        # Construir custo_calculado com fallback (com cast explícito para evitar warning)
+        df['custo_calculado'] = df['custo_total_view'].astype(float)
         mask_view_zero = df['custo_calculado'] <= 0
-        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total']
+        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total'].astype(float)
         mask_total_zero = df['custo_calculado'] <= 0
-        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original']
+        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original'].astype(float)
         
         # Fallback final: recalcular a partir de despesas_processo quando ainda zero
         if 'despesas_processo' in df.columns:
@@ -588,13 +610,17 @@ def dashboard_kpis():
             if status in ['NUMERARIO ENVIADO', 'NUMERARIO ENVIADO']: return 'NUMERARIO ENVIADO'
             return status
 
-        # CORREÇÃO: Usar status_timeline em vez de status_macro_sistema para KPIs
+        # CORREÇÃO: Usar status_timeline como fonte única para KPIs
         def get_timeline_number(status_timeline):
-            """Extrair número do status_timeline (ex: '2. Embarque' -> 2)"""
+            """Extrair número do status_timeline (ex: '2 - Agd Chegada' -> 2)"""
             if not status_timeline:
                 return 0
             try:
-                return int(str(status_timeline).split('.')[0].strip())
+                # Tentar extrair número do início da string
+                status_str = str(status_timeline).strip()
+                if status_str.startswith(('1', '2', '3', '4', '5', '6')):
+                    return int(status_str.split(' ')[0].replace('-', '').strip())
+                return 0
             except:
                 return 0
 
@@ -603,27 +629,23 @@ def dashboard_kpis():
             # Criar coluna numérica para facilitar comparações
             df['timeline_number'] = df['status_timeline'].apply(get_timeline_number)
             
-            # Calcular métricas baseadas no status_timeline
-            # 1. Aberto, 2. Embarque, 3. Chegada, 4. Registro, 5. Desembaraço, 6. Finalizado
-            aguardando_embarque = len(df[df['timeline_number'] == 1])  # 1. Aberto (aguardando embarque)
-            aguardando_chegada = len(df[df['timeline_number'] == 2])   # 2. Embarque (aguardando chegada)
-            aguardando_liberacao = len(df[df['timeline_number'] == 3]) # 3. Chegada (aguardando liberação/registro)
-            agd_entrega = len(df[df['timeline_number'].isin([4, 5])])  # 4. Registro + 5. Desembaraço (aguardando entrega)
-            aguardando_fechamento = len(df[df['timeline_number'] == 5]) # 5. Desembaraço (aguardando fechamento)
+            # Calcular métricas baseadas no status_timeline - NOVA REGRA
+            # 1 - Agd Embarque, 2 - Agd Chegada, 3 - Agd Liberação, 4 - Agd Fechamento
+            agd_embarque = len(df[df['timeline_number'] == 1])      # 1 - Agd Embarque
+            agd_chegada = len(df[df['timeline_number'] == 2])       # 2 - Agd Chegada  
+            agd_liberacao = len(df[df['timeline_number'] == 3])     # 3 - Agd Liberação
+            agd_fechamento = len(df[df['timeline_number'] == 4])    # 4 - Agd Fechamento
             
-            print(f"[DEBUG_KPI] Status Timeline counts:")
-            print(f"[DEBUG_KPI] 1. Aberto (Aguardando Embarque): {aguardando_embarque}")
-            print(f"[DEBUG_KPI] 2. Embarque (Aguardando Chegada): {aguardando_chegada}")
-            print(f"[DEBUG_KPI] 3. Chegada (Aguardando Liberação): {aguardando_liberacao}")
-            print(f"[DEBUG_KPI] 4+5. Registro+Desembaraço (Agd Entrega): {agd_entrega}")
-            print(f"[DEBUG_KPI] 5. Desembaraço (Aguardando Fechamento): {aguardando_fechamento}")
+            print(f"[DEBUG_KPI] Status Timeline counts (NOVA REGRA):")
+            print(f"[DEBUG_KPI] 1 - Agd Embarque: {agd_embarque}")
+            print(f"[DEBUG_KPI] 2 - Agd Chegada: {agd_chegada}")
+            print(f"[DEBUG_KPI] 3 - Agd Liberação: {agd_liberacao}")
+            print(f"[DEBUG_KPI] 4 - Agd Fechamento: {agd_fechamento}")
         else:
-            aguardando_embarque = 0
-            aguardando_chegada = 0
-            aguardando_liberacao = 0
-            agd_entrega = 0
-            aguardando_fechamento = 0
-            aguardando_fechamento = 0
+            agd_embarque = 0
+            agd_chegada = 0
+            agd_liberacao = 0
+            agd_fechamento = 0
 
         # Chegando Este Mês/Semana: considerar TODAS as datas de chegada dentro do mês/semana (igual dashboard materiais)
         hoje = pd.Timestamp.now().normalize()
@@ -663,29 +685,28 @@ def dashboard_kpis():
             print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
             print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
-        # Calcular processos abertos e fechados baseado no status_timeline
-        # REGRA CORRIGIDA: 
-        # - Fechados: status_timeline = "6. Finalizado"
-        # - Abertos: status_timeline ≠ "6. Finalizado" (incluindo nulls)
+        # Calcular processos abertos baseado no status_timeline
+        # NOVA REGRA: Processos abertos são aqueles com timeline_number entre 1-4
+        # Processos fechados são aqueles com timeline_number >= 5
         processos_abertos = 0
         processos_fechados = 0
         
         if 'status_timeline' in df.columns:
-            # Processos fechados: timeline_number = 6 (Finalizado)
-            processos_fechados = len(df[df['timeline_number'] == 6])
-            
-            # Processos abertos: timeline_number ≠ 6 (incluindo nulls)
+            # Processos abertos: timeline_number entre 1-4 (Agd Embarque, Chegada, Liberação, Fechamento)
             processos_abertos = len(df[
-                (df['timeline_number'] != 6) | 
-                (df['timeline_number'].isna())
+                (df['timeline_number'] >= 1) & 
+                (df['timeline_number'] <= 4)
             ])
+            
+            # Processos fechados: timeline_number >= 5 (Finalizado e posteriores)
+            processos_fechados = len(df[df['timeline_number'] >= 5])
         else:
             # Se não tiver coluna status_timeline, considerar todos como abertos
             processos_abertos = total_processos
             processos_fechados = 0
 
-        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Fechados (timeline_number = 6): {processos_fechados}")
-        print(f"[DEBUG_KPI] REGRA CORRIGIDA - Processos Abertos (timeline_number ≠ 6): {processos_abertos}")
+        print(f"[DEBUG_KPI] NOVA REGRA - Processos Abertos (timeline 1-4): {processos_abertos}")
+        print(f"[DEBUG_KPI] NOVA REGRA - Processos Fechados (timeline ≥ 5): {processos_fechados}")
         print(f"[DEBUG_KPI] Total: {processos_abertos + processos_fechados} (deve ser igual a {total_processos})")
 
         kpis = {
@@ -694,11 +715,10 @@ def dashboard_kpis():
             'processos_fechados': processos_fechados,
             'total_despesas': float(total_despesas),
             'ticket_medio': float(ticket_medio),
-            'aguardando_embarque': aguardando_embarque,
-            'aguardando_chegada': aguardando_chegada,
-            'aguardando_liberacao': aguardando_liberacao,
-            'agd_entrega': agd_entrega,
-            'aguardando_fechamento': aguardando_fechamento,
+            'agd_embarque': agd_embarque,           # NOVO NOME
+            'agd_chegada': agd_chegada,             # NOVO NOME
+            'agd_liberacao': agd_liberacao,         # NOVO NOME  
+            'agd_fechamento': agd_fechamento,       # NOVO NOME
             'chegando_mes': chegando_mes,
             'chegando_mes_custo': float(chegando_mes_custo),
             'chegando_semana': chegando_semana,
@@ -742,11 +762,11 @@ def dashboard_charts():
         if 'custo_total_original' not in df.columns:
             df['custo_total_original'] = 0.0
         
-        df['custo_calculado'] = df['custo_total_view']
+        df['custo_calculado'] = df['custo_total_view'].astype(float)
         mask_view_zero = df['custo_calculado'] <= 0
-        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total']
+        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total'].astype(float)
         mask_total_zero = df['custo_calculado'] <= 0
-        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original']
+        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original'].astype(float)
         if 'despesas_processo' in df.columns:
             for idx in df.index[df['custo_calculado'] <= 0]:
                 v = calculate_custo_from_despesas_processo(df.at[idx, 'despesas_processo'])
@@ -972,11 +992,11 @@ def monthly_chart():
             print("[MONTHLY_CHART] ERRO: Campo custo_total_view não encontrado! Usando fallback.")
             df['custo_total_view'] = 0.0
         
-        df['custo_calculado'] = df['custo_total_view']
+        df['custo_calculado'] = df['custo_total_view'].astype(float)
         mask_view_zero = df['custo_calculado'] <= 0
-        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total']
+        df.loc[mask_view_zero, 'custo_calculado'] = df.loc[mask_view_zero, 'custo_total'].astype(float)
         mask_total_zero = df['custo_calculado'] <= 0
-        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original']
+        df.loc[mask_total_zero, 'custo_calculado'] = df.loc[mask_total_zero, 'custo_total_original'].astype(float)
         if 'despesas_processo' in df.columns:
             for idx in df.index[df['custo_calculado'] <= 0]:
                 v = calculate_custo_from_despesas_processo(df.at[idx, 'despesas_processo'])
@@ -1358,24 +1378,51 @@ def bootstrap_dashboard():
         total_despesas = float(df['custo_calculado'].sum()) if not df.empty else 0.0
         ticket_medio = float(total_despesas/total_processos) if total_processos else 0.0
 
-        # Normalização de status
-        import unicodedata, re
+        # CORREÇÃO: Usar status_timeline como fonte única para KPIs - NOVA REGRA
+        def get_timeline_number_monthly(status_timeline):
+            """Extrair número do status_timeline (ex: '2 - Agd Chegada' -> 2)"""
+            if not status_timeline:
+                return 0
+            try:
+                # Tentar extrair número do início da string
+                status_str = str(status_timeline).strip()
+                if status_str.startswith(('1', '2', '3', '4', '5', '6')):
+                    return int(status_str.split(' ')[0].replace('-', '').strip())
+                return 0
+            except:
+                return 0
+
+        # Função de normalização de status (para fallback se status_timeline não existir)
         def normalize_status(status):
+            import unicodedata, re
             if pd.isna(status) or not status:
                 return ""
             s = unicodedata.normalize('NFKD', str(status)).encode('ASCII','ignore').decode('ASCII')
             s = re.sub(r'[^A-Za-z0-9 ]','', s).upper().strip()
             return s
-        if 'status_macro_sistema' in df.columns:
-            df['status_normalizado'] = df['status_macro_sistema'].apply(normalize_status)
-        else:
-            df['status_normalizado'] = ''
 
-        aguardando_embarque = (df['status_normalizado'] == 'AG EMBARQUE').sum()
-        aguardando_chegada = (df['status_normalizado'] == 'AG CHEGADA').sum()
-        aguardando_liberacao = df['status_normalizado'].isin(['DI REGISTRADA','AG REGISTRO','AG MAPA']).sum()
-        agd_entrega = df['status_normalizado'].isin(['AG CARREGAMENTO','AG. CARREGAMENTO','CARREGAMENTO AGENDADO']).sum()
-        aguardando_fechamento = (df['status_normalizado'] == 'AG FECHAMENTO').sum()
+        # Aplicar nova lógica se a coluna existir
+        if 'status_timeline' in df.columns:
+            # Criar coluna numérica para facilitar comparações
+            df['timeline_number'] = df['status_timeline'].apply(get_timeline_number_monthly)
+            
+            # Calcular métricas baseadas no status_timeline - NOVA REGRA
+            # 1 - Agd Embarque, 2 - Agd Chegada, 3 - Agd Liberação, 4 - Agd Fechamento
+            agd_embarque = (df['timeline_number'] == 1).sum()      # 1 - Agd Embarque
+            agd_chegada = (df['timeline_number'] == 2).sum()       # 2 - Agd Chegada  
+            agd_liberacao = (df['timeline_number'] == 3).sum()     # 3 - Agd Liberação
+            agd_fechamento = (df['timeline_number'] == 4).sum()    # 4 - Agd Fechamento
+        else:
+            # Fallback para normalização de status (caso status_timeline não exista)
+            if 'status_macro_sistema' in df.columns:
+                df['status_normalizado'] = df['status_macro_sistema'].apply(normalize_status)
+            else:
+                df['status_normalizado'] = ''
+
+            agd_embarque = (df['status_normalizado'] == 'AG EMBARQUE').sum()
+            agd_chegada = (df['status_normalizado'] == 'AG CHEGADA').sum()
+            agd_liberacao = df['status_normalizado'].isin(['DI REGISTRADA','AG REGISTRO','AG MAPA']).sum()
+            agd_fechamento = (df['status_normalizado'] == 'AG FECHAMENTO').sum()
 
         # Corrigir datas de chegada truncadas (ex: 07/08/025 -> 07/08/2025)
         if 'data_chegada' in df.columns:
@@ -1413,11 +1460,10 @@ def bootstrap_dashboard():
             'processos_fechados': processos_fechados,
             'total_despesas': total_despesas,
             'ticket_medio': ticket_medio,
-            'aguardando_embarque': int(aguardando_embarque),
-            'aguardando_chegada': int(aguardando_chegada),
-            'aguardando_liberacao': int(aguardando_liberacao),
-            'agd_entrega': int(agd_entrega),
-            'aguardando_fechamento': int(aguardando_fechamento),
+            'agd_embarque': int(agd_embarque),           # NOVO NOME
+            'agd_chegada': int(agd_chegada),             # NOVO NOME
+            'agd_liberacao': int(agd_liberacao),         # NOVO NOME
+            'agd_fechamento': int(agd_fechamento),       # NOVO NOME
             'chegando_mes': int(chegando_mes),
             'chegando_mes_custo': float(chegando_mes_custo),
             'chegando_semana': int(chegando_semana),

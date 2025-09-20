@@ -101,7 +101,7 @@
     
     <!-- Gráficos -->
     <div class="charts-grid">
-        <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (Cascata) -->
+        <!-- Gráfico 1: Fluxo de Caixa Mês a Mês (100% width) -->
         <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
@@ -114,13 +114,31 @@
             </div>
         </div>
         
-        <!-- Second row: Despesas por Categoria and Projeção de Fluxo de Caixa side by side -->
-        <!-- Gráfico 2: Despesas por Categoria (Horizontal) -->
-        <div class="chart-container">
+        <!-- Gráfico 2: Evolução do Saldo Acumulado com Projeção (100% width) -->
+        <div class="chart-container wide-chart">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="mdi mdi-chart-line"></i>
+                    Evolução do Saldo Acumulado
+                </h3>
+            </div>
+            <div class="chart-content">
+                <canvas id="chart-saldo-acumulado"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico 3: Despesas por Centro de Resultado (100% width, horizontal) -->
+    <div class="charts-grid">
+        <div class="chart-container wide-chart">
             <div class="chart-header">
                 <h3 class="chart-title">
                     <i class="mdi mdi-chart-bar"></i>
-                    <span id="chart-despesas-title">Despesas por Categoria</span>
+                    <span id="chart-despesas-title">Despesas por Centro de Resultado</span>
+                    <span class="drill-indicator" title="Clique nas barras para fazer drill-down">
+                        <i class="mdi mdi-cursor-pointer"></i>
+                        <small>Clique para detalhar</small>
+                    </span>
                 </h3>
                 <div class="chart-actions">
                     <button id="btn-voltar-categorias" class="btn btn-sm btn-secondary" style="display: none;">
@@ -130,33 +148,7 @@
                 </div>
             </div>
             <div class="chart-content">
-                <canvas id="chart-despesas-categoria"></canvas>
-            </div>
-        </div>
-        
-        <!-- Gráfico 3: Projeção de Fluxo de Caixa -->
-        <div class="chart-container">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-line"></i>
-                    Projeção de Fluxo de Caixa (24 meses + 6 meses)
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-projecao"></canvas>
-            </div>
-        </div>
-        
-        <!-- Gráfico 4: Saldo Acumulado por Período -->
-        <div class="chart-container wide-chart">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-line"></i>
-                    Saldo Acumulado por Período
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-saldo-acumulado"></canvas>
+                <canvas id="chart-despesas-categoria" style="cursor: pointer;"></canvas>
             </div>
         </div>
     </div>
@@ -265,6 +257,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
     // Pass the current year to the template
     var ano_atual = new Date().getFullYear();

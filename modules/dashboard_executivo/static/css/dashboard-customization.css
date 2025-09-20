@@ -1,0 +1,309 @@
+/* Dashboard Customization Styles
+ * Estilos para o sistema de drag and drop e modo de edição do dashboard
+ */
+
+/* === MODO DE EDIÇÃO === */
+.dashboard-edit-mode {
+    position: relative;
+}
+
+.dashboard-edit-mode::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 123, 255, 0.05);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Instruções do modo de edição */
+.edit-mode-instructions {
+    position: relative;
+    z-index: 2;
+}
+
+.edit-mode-instructions .alert {
+    border-left: 4px solid var(--unique-primary);
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === ELEMENTOS DRAGGABLE === */
+.dashboard-edit-mode .dashboard-draggable {
+    cursor: move;
+    position: relative;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    border-radius: 8px;
+}
+
+.dashboard-edit-mode .dashboard-draggable:hover {
+    border-color: var(--unique-primary);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+/* === ESTADO DE DRAG === */
+.dashboard-dragging {
+    opacity: 0.5 !important;
+    transform: rotate(5deg) !important;
+    z-index: 1000 !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+    border: 2px solid var(--unique-primary) !important;
+}
+
+/* === DROP ZONES === */
+.dashboard-edit-mode .dashboard-drop-zone {
+    min-height: 100px;
+    border: 2px dashed transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.dashboard-drop-zone.dashboard-drag-over {
+    border-color: var(--unique-success);
+    background: rgba(40, 167, 69, 0.05);
+    box-shadow: inset 0 0 20px rgba(40, 167, 69, 0.1);
+}
+
+.dashboard-drop-zone.dashboard-drag-over::before {
+    content: 'Solte aqui para reorganizar';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--unique-success);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    animation: pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+    from { opacity: 0.7; transform: translate(-50%, -50%) scale(0.95); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+/* === PLACEHOLDER === */
+.dashboard-drag-placeholder {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%);
+    border: 2px dashed var(--unique-primary);
+    border-radius: 8px;
+    margin: 10px 0;
+    animation: placeholderPulse 1.5s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-drag-placeholder::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(0, 123, 255, 0.1), 
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes placeholderPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* === KPI GRID CUSTOMIZATION === */
+.dashboard-edit-mode .kpi-grid .kpi-card {
+    margin: 5px;
+    transition: all 0.3s ease;
+}
+
+.dashboard-edit-mode .kpi-grid .kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* === CHART SECTIONS CUSTOMIZATION === */
+.dashboard-edit-mode .chart-section {
+    margin: 10px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.dashboard-edit-mode .chart-section:hover {
+    border-color: var(--unique-primary);
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+}
+
+/* === BOTÃO DE EDIÇÃO === */
+#dashboard-edit-toggle {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+#dashboard-edit-toggle.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    animation: successGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes successGlow {
+    from { box-shadow: 0 0 5px rgba(40, 167, 69, 0.5); }
+    to { box-shadow: 0 0 20px rgba(40, 167, 69, 0.8); }
+}
+
+#dashboard-edit-toggle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+#dashboard-edit-toggle:hover::before {
+    left: 100%;
+}
+
+/* === MENSAGENS DE FEEDBACK === */
+.customization-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+    max-width: 300px;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.customization-message.success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.customization-message.error {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+}
+
+/* === RESPONSIVIDADE === */
+@media (max-width: 768px) {
+    .dashboard-drop-zone.dashboard-drag-over::before {
+        font-size: 10px;
+        padding: 6px 12px;
+    }
+    
+    .edit-mode-instructions .alert {
+        margin: 0 0 15px 0;
+        padding: 12px;
+    }
+    
+    .edit-mode-instructions .alert p {
+        font-size: 13px;
+    }
+    
+    #dashboard-edit-toggle span {
+        display: none;
+    }
+    
+    #dashboard-edit-toggle {
+        padding: 8px 12px;
+    }
+}
+
+/* === ANIMAÇÕES DE ENTRADA === */
+.dashboard-edit-mode .dashboard-draggable {
+    animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* === DISABLE POINTER EVENTS DURANTE DRAG === */
+.dashboard-dragging * {
+    pointer-events: none;
+}
+
+/* === MELHORIAS VISUAIS === */
+.dashboard-edit-mode .actions-bar {
+    border: 2px solid var(--unique-primary);
+    background: linear-gradient(135deg, rgba(0, 123, 255, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+}
+
+.dashboard-edit-mode .dashboard-container {
+    padding: 25px;
+}
+
+/* === TOOLTIPS PARA MODO DE EDIÇÃO === */
+.dashboard-edit-mode .dashboard-draggable[title] {
+    position: relative;
+}
+
+.dashboard-edit-mode .dashboard-draggable:hover:after {
+    content: attr(title);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}

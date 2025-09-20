@@ -20,11 +20,19 @@ class AuthLoggingIntegration:
     
     def __init__(self):
         self.enabled = True
-        # Check if we're in development mode
+        
+        # Configurações de ambiente
         self.flask_env = os.getenv('FLASK_ENV', 'production')
-        if self.flask_env == 'development':
-            self.enabled = False
-            print("[AUTH_LOGGING] Logging de autenticação desabilitado no ambiente de desenvolvimento")
+        self.is_development = self.flask_env == 'development'
+        
+        # Log de inicialização
+        print(f"[AUTH_LOGGING_INIT] Inicializando AuthLoggingIntegration")
+        print(f"[AUTH_LOGGING_INIT] ├─ FLASK_ENV: {self.flask_env}")
+        print(f"[AUTH_LOGGING_INIT] ├─ is_development: {self.is_development}")
+        print(f"[AUTH_LOGGING_INIT] └─ enabled: {self.enabled}")
+        
+        if self.is_development:
+            print("[AUTH_LOGGING_INIT] ⚠️ Ambiente de desenvolvimento - logs podem ser limitados")
     
     def log_login_attempt(self, email=None, success=True, error_message=None, user_data=None):
         """
@@ -40,7 +48,10 @@ class AuthLoggingIntegration:
             bool: Sempre True (nunca falha)
         """
         try:
-            if not self.enabled or self.flask_env == 'development':
+            # Pular apenas em desenvolvimento se não forçado
+            if self.is_development and not os.getenv('FORCE_LOGGING_IN_DEV'):
+                status = "SUCCESS" if success else "FAILED"
+                print(f"[AUTH_LOG_DEBUG] Pulando log em desenvolvimento: login_{status.lower()}")
                 return True
             
             # Se login bem-sucedido, salvar timestamp na sessão

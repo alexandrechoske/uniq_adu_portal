@@ -548,4 +548,173 @@ def test_user_companies():
             'message': str(e)
         }), 500
 
+@bp.route('/test-logging', methods=['GET', 'POST'])
+def test_logging():
+    """Endpoint para testar sistema de logging em produção"""
+    
+    # Verificar API bypass
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    
+    if not (api_bypass_key and request_api_key == api_bypass_key):
+        return jsonify({'error': 'API key required'}), 401
+    
+    try:
+        from services.access_logger import access_logger
+        from services.auth_logging import auth_logging
+        
+        result = {
+            'timestamp': datetime.now().isoformat(),
+            'environment': os.getenv('FLASK_ENV', 'production'),
+            'tests': []
+        }
+        
+        # Teste 1: AccessLogger
+        try:
+            test_result = access_logger.log_access('api_test', test_data='endpoint_test')
+            result['tests'].append({
+                'test': 'access_logger.log_access',
+                'success': test_result,
+                'details': {
+                    'enabled': access_logger.enabled,
+                    'console_only': access_logger.console_only,
+                    'supabase_available': access_logger.supabase_available
+                }
+            })
+        except Exception as e:
+            result['tests'].append({
+                'test': 'access_logger.log_access',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Teste 2: Log de página
+        try:
+            test_result = access_logger.log_page_access('test_page', 'api_module')
+            result['tests'].append({
+                'test': 'access_logger.log_page_access',
+                'success': test_result
+            })
+        except Exception as e:
+            result['tests'].append({
+                'test': 'access_logger.log_page_access',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Teste 3: Log de API
+        try:
+            test_result = access_logger.log_api_call('/api/test-logging', success=True, http_status=200)
+            result['tests'].append({
+                'test': 'access_logger.log_api_call',
+                'success': test_result
+            })
+        except Exception as e:
+            result['tests'].append({
+                'test': 'access_logger.log_api_call', 
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Teste 4: Auth logging
+        try:
+            test_result = auth_logging.log_login_attempt(
+                email='test@example.com',
+                success=True,
+                user_data={'id': 'test_user', 'email': 'test@example.com'}
+            )
+            result['tests'].append({
+                'test': 'auth_logging.log_login_attempt',
+                'success': test_result
+            })
+        except Exception as e:
+            result['tests'].append({
+                'test': 'auth_logging.log_login_attempt',
+                'success': False,
+                'error': str(e)
+            })
+        
+        # Informações do ambiente
+        result['environment_info'] = {
+            'FLASK_ENV': os.getenv('FLASK_ENV'),
+            'SUPABASE_URL': 'SET' if os.getenv('SUPABASE_URL') else 'NOT_SET',
+            'SUPABASE_SERVICE_KEY': 'SET' if os.getenv('SUPABASE_SERVICE_KEY') else 'NOT_SET',
+            'ACCESS_LOGGING_ENABLED': os.getenv('ACCESS_LOGGING_ENABLED', 'true'),
+            'FORCE_LOGGING_IN_DEV': os.getenv('FORCE_LOGGING_IN_DEV', 'false')
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@bp.route('/test-supabase-insert', methods=['POST'])
+def test_supabase_insert():
+    """Endpoint específico para testar insert na access_logs"""
+    
+    # Verificar API bypass
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    
+    if not (api_bypass_key and request_api_key == api_bypass_key):
+        return jsonify({'error': 'API key required'}), 401
+    
+    try:
+        from extensions import supabase_admin
+        
+        # Dados de teste
+        test_data = {
+            'user_email': 'teste@debug.com',
+            'user_role': 'debug',
+            'action_type': 'debug_insert_test',
+            'page_url': 'https://debug.com/test',
+            'ip_address': '127.0.0.1',
+            'success': True,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        print(f"[DEBUG_INSERT] Tentando inserir: {test_data}")
+        
+        # Testar conexão primeiro
+        if supabase_admin is None:
+            return jsonify({'error': 'supabase_admin is None'}), 500
+        
+        print(f"[DEBUG_INSERT] supabase_admin está disponível: {supabase_admin}")
+        
+        # Tentar insert
+        result = supabase_admin.table('access_logs').insert(test_data).execute()
+        
+        print(f"[DEBUG_INSERT] Resultado: {result}")
+        
+        if result.data:
+            return jsonify({
+                'success': True,
+                'message': 'Insert realizado com sucesso!',
+                'data': result.data,
+                'test_data': test_data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Insert não retornou dados',
+                'result': str(result),
+                'test_data': test_data
+            })
+            
+    except Exception as e:
+        print(f"[DEBUG_INSERT] Erro: {type(e).__name__}: {e}")
+        import traceback
+        print(f"[DEBUG_INSERT] Traceback: {traceback.format_exc()}")
+        
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'type': type(e).__name__,
+            'traceback': traceback.format_exc()
+        }), 500
+
 # Any other API endpoints can go here

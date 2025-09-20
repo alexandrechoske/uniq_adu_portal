@@ -187,15 +187,14 @@ window.updateDashboardKPIs = function(kpis) {
         const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
         setText('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
         setText('kpi-chegando-mes', formatNumber(kpis.chegando_mes || 0));
-    setText('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
+        setText('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
         setText('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
-    setText('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo || 0));
-        setText('kpi-Agd-embarque', formatNumber(kpis.aguardando_embarque || 0));
-        setText('kpi-Agd-chegada', formatNumber(kpis.aguardando_chegada || 0));
-        setText('kpi-Agd-liberacao', formatNumber(kpis.aguardando_liberacao || 0));
-        setText('kpi-agd-entrega', formatNumber(kpis.agd_entrega || 0));
-        setText('kpi-Agd-fechamento', formatNumber(kpis.aguardando_fechamento || 0));
-    setText('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas || 0));
+        setText('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo || 0));
+        setText('kpi-agd-embarque', formatNumber(kpis.agd_embarque || 0));        // NOVO NOME
+        setText('kpi-agd-chegada', formatNumber(kpis.agd_chegada || 0));          // NOVO NOME
+        setText('kpi-agd-liberacao', formatNumber(kpis.agd_liberacao || 0));      // NOVO NOME
+        setText('kpi-agd-fechamento', formatNumber(kpis.agd_fechamento || 0));    // NOVO NOME
+        setText('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas || 0));
     } finally {
         try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('kpi-loading'); } catch (_) {}
     }
@@ -2690,17 +2689,14 @@ function formatDataChegada(dateString) {
     
     if (!chegadaDate) return formatDate(dateString);
     
-    // Calcular diferença em dias
-    const diffMs = chegadaDate - hoje;
-    const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    // Zerar horários para comparação apenas da data
+    chegadaDate.setHours(0, 0, 0, 0);
+    hoje.setHours(0, 0, 0, 0);
     
-    // Se chegada for futuro e dentro de 5 dias, mostrar indicador de urgência
-    const isUrgente = diffDias > 0 && diffDias <= 5;
-    
-    if (isUrgente) {
+    // Se a data de chegada é exatamente hoje, mostrar indicador
+    if (chegadaDate.getTime() === hoje.getTime()) {
         return `<span class="chegada-proxima">
-            <img src="https://cdn-icons-png.flaticon.com/512/6198/6198499.png" 
-                 alt="Chegada próxima" class="chegada-proxima-icon">
+            <i class="mdi mdi-clock"></i>
             ${formatDate(dateString)}
         </span>`;
     }

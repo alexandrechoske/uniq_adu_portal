@@ -14,6 +14,7 @@ def get_module_context(request_endpoint):
     if any(x in request_endpoint for x in [
         'dashboard_executivo_financeiro', 'fin_dashboard_executivo', 'faturamento_anual', 'despesas_anual',
         'resultado_anual', 'metas_financeiras', 'fluxo_de_caixa',
+        'fin_conciliacao_lancamentos', 'fin_categorizacao_clientes', 'fin_projecoes_metas',
         'financeiro.'  # Para URLs que começam com financeiro.
     ]):
         return 'financeiro'
@@ -157,6 +158,28 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                     'icon': 'mdi-cash-flow',
                     'url': 'fluxo_de_caixa.index',
                     'active_endpoints': ['fluxo_de_caixa.index']
+                },
+                # Separador para novas funcionalidades
+                {
+                    'title': 'Conciliação de Lançamentos',
+                    'icon': 'mdi-account-balance',
+                    'url': 'fin_conciliacao_lancamentos.index',
+                    'active_endpoints': ['fin_conciliacao_lancamentos.index'],
+                    'roles': ['admin', 'admin_financeiro']
+                },
+                {
+                    'title': 'Categorização de Clientes',
+                    'icon': 'mdi-people',
+                    'url': 'fin_categorizacao_clientes.index',
+                    'active_endpoints': ['fin_categorizacao_clientes.index'],
+                    'roles': ['admin', 'admin_financeiro']
+                },
+                {
+                    'title': 'Projeções e Metas',
+                    'icon': 'mdi-trending-up',
+                    'url': 'fin_projecoes_metas.index',
+                    'active_endpoints': ['fin_projecoes_metas.index'],
+                    'roles': ['admin', 'admin_financeiro']
                 }
             ]
         }

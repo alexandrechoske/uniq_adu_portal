@@ -1,0 +1,1721 @@
+{
+  "Banco BB": {
+    "arquivo": "Banco BB.xlsx",
+    "total_lancamentos": 182,
+    "lancamentos": [
+      {
+        "data": "2025-08-29",
+        "valor": 111047.45,
+        "historico": "Saldo Anterior",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000000000",
+        "cod_historico": "000"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 2300.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000392917136",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 10000.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000392917144",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 2392.41,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000392917185",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 1063.86,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004069",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 16679.1,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004070",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 18508.28,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004070",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 9028.64,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004075",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 4259.62,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004076",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 6775.85,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004076",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 4052.88,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004079",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 12.01,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004086",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 6783.97,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004092",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 1386.78,
+        "historico": "TED-Crédito em Conta 237 2693 75339051000141 DOCOL INDUSTRI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393004103",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 100000.0,
+        "historico": "Pix - Recebido 01/09 09:35 21598910000198 UNIQUE CONS",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00010935208679802",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 4109.97,
+        "historico": "Pix - Recebido 01/09 10:14 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00011014491790991",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 40000.0,
+        "historico": "Pix - Recebido 01/09 10:17 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00011017232009322",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 13500.0,
+        "historico": "Pix - Recebido 01/09 10:17 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00011017525946041",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 2097.35,
+        "historico": "Pix - Recebido 01/09 14:29 84684620000187 LABORATORIO",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00011429289533612",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": 59560.89,
+        "historico": "Pix - Recebido 01/09 16:03 44297098000166 GRIMO IMPOR",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00011603564465022",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -248.21,
+        "historico": "Importação Pucomex DUIMP 14:12:00 PROT. 000000000000209157",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000025120",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -248.21,
+        "historico": "Importação Pucomex DUIMP 14:09:09 PROT. 000000000000209142",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000025159",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -608.17,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501339068",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -2666.91,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501340741",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -2666.91,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501341131",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501341626",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -207.39,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501342436",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -141.71,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501343202",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -754.76,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501345705",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -500.26,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501346133",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501346406",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -259.96,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501346462",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -565.73,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501346874",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -77066.73,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103463733716",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -48888.39,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103463889422",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -55233.14,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103463923280",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -5973.14,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103464159614",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -37004.97,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103464335722",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -61900.97,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103464475583",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -60000.0,
+        "historico": "Pix - Enviado 01/09 16:49 UNIQUE CONSULTORIA ADUANEI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000090101",
+        "cod_historico": "144"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -24246.95,
+        "historico": "Capital Giro PEAC FGI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00315519375000157",
+        "cod_historico": "500"
+      },
+      {
+        "data": "2025-09-01",
+        "valor": -26.84,
+        "historico": "Cobrança de I.O.F. IOF Saldo Devedor Conta",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000391100702",
+        "cod_historico": "118"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": 14000.0,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393124427",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": 82500.0,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393124431",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": 16400.0,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393124436",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": 5000.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393126807",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": 6100.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393126813",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": 24246.95,
+        "historico": "Pix - Recebido 02/09 11:18 45547582000169 CERCARGO TR",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00021118400757261",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 08:57:27 PROT. 000000000000210586",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000027706",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -1054.58,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501348434",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -1864.01,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501348884",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -27.99,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501349182",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -3515.04,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501349600",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -31.48,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501349779",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -2931.1,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501350045",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -638.77,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501350434",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501352348",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -2221.36,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501352599",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -511.63,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501353559",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -154.23,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103464628428",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -35729.4,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103464835512",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -100000.0,
+        "historico": "Pix - Enviado 02/09 17:35 UNIQUE CONSULTORIA ADUANEI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000090201",
+        "cod_historico": "144"
+      },
+      {
+        "data": "2025-09-02",
+        "valor": -30000.0,
+        "historico": "Pix - Enviado 02/09 18:05 UNIQUE CONSULTORIA ADUANEI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000090202",
+        "cod_historico": "144"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": 100000.0,
+        "historico": "TED-Crédito em Conta 102 0001 21598910000198 UNIQUE CONSULT",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000033808604",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": 80700.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393304201",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": 3400.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393304203",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": 2336.88,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393310886",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": 26000.0,
+        "historico": "Pix - Recebido 03/09 12:30 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00031230453934512",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -354.58,
+        "historico": "Importação Pucomex DUIMP 13:49:48 PROT. 000000000000214362",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000033265",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -531.87,
+        "historico": "Importação Pucomex DUIMP 14:11:16 PROT. 000000000000214474",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000033391",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 14:16:37 PROT. 000000000000214510",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000033416",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501355299",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -945.58,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501356164",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501357099",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -1811.12,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501357276",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -735.98,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501357540",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -5723.33,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501358719",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -6034.6,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103465454660",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -254.49,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103465463767",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -83255.42,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103465548177",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -61361.1,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103465664738",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -50000.0,
+        "historico": "Pix - Enviado 03/09 18:02 UNIQUE CONSULTORIA ADUANEI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000090301",
+        "cod_historico": "144"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 61200.0,
+        "historico": "Transferência recebida 04/09 08:27 ENDO C EQUIPAMENTOS LTDA",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00552817000040778",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 6600.0,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393492581",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 11436.93,
+        "historico": "Pix - Recebido 04/09 09:00 03968900000115 INTECH BOAT",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00040900350112242",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 7500.0,
+        "historico": "Pix - Recebido 04/09 11:09 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00041109023985922",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 11000.0,
+        "historico": "Pix - Recebido 04/09 11:09 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00041109267659042",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 500000.0,
+        "historico": "Pix - Recebido 04/09 11:35 21598910000198 UNIQUE CONS",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00041135000725532",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 201.62,
+        "historico": "Pix - Recebido 04/09 14:41 10291570000131 AIN GLOBAL",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00041441529615701",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -561.53,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501362610",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -588.39,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501363211",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -721.85,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501364043",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -331.62,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103466188824",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -460972.82,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103466224570",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -9377.91,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103466519065",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -24241.5,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103466590886",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -20000.0,
+        "historico": "Pix - Enviado 04/09 14:26 UNIQUE CONSULTORIA ADUANEI",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000090401",
+        "cod_historico": "144"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 90000.0,
+        "historico": "Transferência recebida 05/09 13:02 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 96634.03,
+        "historico": "Transferência recebida 05/09 13:02 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 61628.97,
+        "historico": "Transferência recebida 05/09 18:12 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 100000.0,
+        "historico": "Transferência recebida 05/09 18:13 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 100000.0,
+        "historico": "Transferência recebida 05/09 18:13 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 49595.47,
+        "historico": "Transferência recebida 05/09 18:15 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 90000.0,
+        "historico": "Transferência recebida 05/09 18:16 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 93034.03,
+        "historico": "Transferência recebida 05/09 18:16 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 2200.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000393861445",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 10000.0,
+        "historico": "Pix - Recebido 05/09 09:40 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00050940475612812",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 694.38,
+        "historico": "Pix - Recebido 05/09 16:28 03968900000115 INTECH BOAT",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00051628422173572",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": 5000.0,
+        "historico": "Pix - Recebido 05/09 18:00 21598910000198 UNIQUE CONS",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00051759599097291",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -354.58,
+        "historico": "Importação Pucomex DUIMP 17:14:20 PROT. 000000000000220623",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000043623",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 17:21:31 PROT. 000000000000220660",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000043743",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 17:24:16 PROT. 000000000000220676",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000043822",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 17:30:29 PROT. 000000000000220699",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000043901",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -2637.11,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501368086",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501368452",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -2546.29,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501368465",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -7490.72,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501368806",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -5048.46,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501370054",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -1720.83,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103466952443",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -99255.61,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103466993476",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -169023.7,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467016180",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-05",
+        "valor": -52700.0,
+        "historico": "Pagto via Auto-Atend.BB GRU-GUIA RECOLHIM. UNIAO",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000090501",
+        "cod_historico": "303"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 70000.0,
+        "historico": "Transferência recebida 08/09 12:11 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 70000.0,
+        "historico": "Transferência recebida 08/09 12:11 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 72334.03,
+        "historico": "Transferência recebida 08/09 12:11 LUPIN IMP & EXP",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00550305000038425",
+        "cod_historico": "870"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 39800.0,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000394109897",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 1442.1,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000394109947",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 70000.0,
+        "historico": "Pix - Recebido 08/09 10:28 21598910000198 UNIQUE CONS",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00081028086913071",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": 100000.0,
+        "historico": "Pix - Recebido 08/09 17:50 21598910000198 UNIQUE CONS",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00081750388194182",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -70.92,
+        "historico": "Importação Pucomex DUIMP 10:02:52 PROT. 000000000000221361",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000044854",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501372947",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -6113.13,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501374474",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -7408.36,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501374654",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -2716.36,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501374687",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -2688.94,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501375172",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -1864.95,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501375999",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -7537.88,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501382340",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -217.46,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501383161",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -710.45,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501383655",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -2833.39,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501383778",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -814.27,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501385326",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -164004.06,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467362810",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -49444.42,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467369164",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -230632.59,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467384783",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -47506.9,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467449257",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -34869.94,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467547712",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -172199.95,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467625411",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-08",
+        "valor": -95891.52,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103467897578",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": 16100.0,
+        "historico": "TED-Pag Fornecedores 422 0088 84693183000168 SCHULZ S A",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000394240293",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": 5500.0,
+        "historico": "TED-Crédito em Conta 237 3178 23635798000143 SCHULZ COMPRES",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000394242813",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": 150000.0,
+        "historico": "Pix - Recebido 09/09 11:13 21598910000198 UNIQUE CONS",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00091113098144271",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": 61949.01,
+        "historico": "Pix - Recebido 09/09 13:59 03968900000115 INTECH BOAT",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00091359381738862",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": 1879.95,
+        "historico": "Pix - Recebido 09/09 13:59 03968900000115 INTECH BOAT",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00091359382256982",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": 284792.23,
+        "historico": "Pix - Recebido 09/09 14:37 44297098000166 GRIMO IMPOR",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00091437197190352",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -354.58,
+        "historico": "Importação Pucomex DUIMP 08:45:08 PROT. 000000000000223363",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000046901",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 09:16:34 PROT. 000000000000223453",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000046978",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 09:30:39 PROT. 000000000000223488",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000047037",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -94.81,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501388504",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -5702.69,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501390257",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -55.53,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501393714",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -147176.27,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103468243695",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-09",
+        "valor": -176664.33,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103468387506",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": 1906.8,
+        "historico": "Pix - Recebido 10/09 10:23 84704683000158 QUIMIDROL C",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00101023288275171",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": 1153.68,
+        "historico": "Pix - Recebido 10/09 14:35 84684620000187 LABORATORIO",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00101435165940862",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": 2104.92,
+        "historico": "Pix - Recebido 10/09 22:30 42724015000142 BRINOVAR CO",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00102230368160561",
+        "cod_historico": "821"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 14:39:09 PROT. 000000000000226842",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000050395",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -177.29,
+        "historico": "Importação Pucomex DUIMP 14:43:59 PROT. 000000000000226889",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000050418",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -70.92,
+        "historico": "Importação Pucomex DUIMP 17:12:43 PROT. 000000000000228136",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000051693",
+        "cod_historico": "302"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -42.17,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501398615",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501404353",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -33.56,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501406699",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -12116.65,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103468812061",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -8344.85,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103469240827",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -8333.31,
+        "historico": "Pagto cartão crédito EMPRESARIAL ELO",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000161634003",
+        "cod_historico": "328"
+      },
+      {
+        "data": "2025-09-10",
+        "valor": -34.74,
+        "historico": "Pagamento Pedágio SEM PARAR",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000011806",
+        "cod_historico": "190"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": -5186.02,
+        "historico": "Importação siscomex",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002103469430863",
+        "cod_historico": "342"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": 15346.37,
+        "historico": "TED Transf.Eletr.Disponív 033 4218 32150633000172 LABOR MED APAR",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000033658689",
+        "cod_historico": "976"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": -110.86,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501408917",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": -158.87,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501409679",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": -20.0,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501409729",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": -82.52,
+        "historico": "AFRMM-Adicional Frete Ren",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00002102501410357",
+        "cod_historico": "112"
+      },
+      {
+        "data": "2025-09-11",
+        "valor": 214943.7,
+        "historico": "S A L D O",
+        "ref_unique": "",
+        "banco": "Banco do Brasil",
+        "documento": "00000000000000000",
+        "cod_historico": "999"
+      }
+    ]
+  },
+  "BANCO SANTANDER": {
+    "arquivo": "BANCO SANTANDER.xlsx",
+    "total_lancamentos": 8,
+    "lancamentos": [
+      {
+        "data": "2025-09-04",
+        "valor": -129189.8,
+        "historico": "APLICACAO CONTAMAX",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "nan"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -670.2,
+        "historico": "PAGAMENTO DE BOLETO OUTROS BANCOS  ICATU SEGUROS",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "0000000000"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": 130000.0,
+        "historico": "PIX RECEBIDO  21598910000198",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "nan"
+      },
+      {
+        "data": "2025-09-04",
+        "valor": -140.0,
+        "historico": "PIX ENVIADO  KI LAVANDERIA LTDA",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "nan"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": 808.06,
+        "historico": "RESGATE CONTAMAX AUTOMATICO",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "nan"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -170.65,
+        "historico": "PIX ENVIADO  HOTEL PRINCIPE LTDA",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "nan"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -577.27,
+        "historico": "PAGAMENTO DE BOLETO OUTROS BANCOS  SWILE DO BRASIL S.A.",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "0000000000"
+      },
+      {
+        "data": "2025-09-03",
+        "valor": -60.14,
+        "historico": "PIX ENVIADO  IFOOD COM AGENCIA DE REST",
+        "ref_unique": "",
+        "banco": "Santander",
+        "documento": "nan"
+      }
+    ]
+  },
+  "banco itau": {
+    "arquivo": "banco itau.xls",
+    "total_lancamentos": 0,
+    "lancamentos": []
+  }
+}

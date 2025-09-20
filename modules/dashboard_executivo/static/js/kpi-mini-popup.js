@@ -3,28 +3,24 @@
 (function(){
     const STATUS_GROUPS = {
         'processos_abertos': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum !== 6; // ≠ 6. Finalizado
+            const t = getTimelineNumber(op.status_timeline);
+            return t && t >= 1 && t <= 4; // NOVA REGRA: 1-4 são abertos
         },
-        'AG EMBARQUE': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 1; // 1. Aberto
+        'agd_embarque': (op, ctx) => {
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 1; // 1 - Agd Embarque
         },
-        'AG CHEGADA': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 2; // 2. Embarque
+        'agd_chegada': (op, ctx) => {
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 2; // 2 - Agd Chegada
         },
-        'AG LIBERACAO': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 3; // 3. Chegada  
+        'agd_liberacao': (op, ctx) => {
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 3; // 3 - Agd Liberação
         },
-        'AGD_ENTREGA': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return [4, 5].includes(timelineNum); // 4. Registro + 5. Desembaraço
-        },
-        'AG FECHAMENTO': (op, ctx) => {
-            const timelineNum = getTimelineNumber(op.status_timeline || op.status_processo || op.status_macro_sistema);
-            return timelineNum === 5; // 5. Desembaraço
+        'agd_fechamento': (op, ctx) => {
+            const t = getTimelineNumber(op.status_timeline);
+            return t === 4; // 4 - Agd Fechamento
         },
         'chegando_mes': (op, ctx) => inPeriodoChegada(op, 'mes'),
         'chegando_semana': (op, ctx) => inPeriodoChegada(op, 'semana')
@@ -32,72 +28,29 @@
 
     const TITLE_MAP = {
         'processos_abertos':'Processos Abertos',
-        'AG EMBARQUE':'Aguardando Embarque',
-        'AG CHEGADA':'Aguardando Chegada',
-        'AG LIBERACAO':'Aguardando Liberação',
-        'AGD_ENTREGA':'Agd Entrega',
-        'AG FECHAMENTO':'Aguardando Fechamento',
+        'agd_embarque':'Agd Embarque',           // NOVO NOME
+        'agd_chegada':'Agd Chegada',             // NOVO NOME
+        'agd_liberacao':'Agd Liberação',         // NOVO NOME
+        'agd_fechamento':'Agd Fechamento',       // NOVO NOME
         'chegando_mes':'Chegando Este Mês',
         'chegando_semana':'Chegando Esta Semana'
     };
 
     function getTimelineNumber(status_timeline) {
-        // Extrair número do status_timeline (ex: '2. Embarque' -> 2)
-        // OU mapear status_processo para número do timeline se status_timeline não existir
+        // Extrair número do status_timeline (ex: '2 - Agd Chegada' -> 2)
         if (!status_timeline) return 0;
         
-        // Se status_timeline já é um número com ponto, extrair
+        // Tentar extrair número do início da string
         try {
-            const match = String(status_timeline).match(/^(\d+)\./);
-            if (match) {
-                return parseInt(match[1]);
+            const status_str = String(status_timeline).trim();
+            // Verificar se começa com um dígito de 1-9
+            if (/^[1-9]/.test(status_str)) {
+                return parseInt(status_str.split(' ')[0].replace('-', '').trim());
             }
-        } catch {}
-        
-        // Mapear status_processo para timeline number
-        const statusProcessoMap = {
-            // Estágio 1: Aberto/Aguardando Embarque
-            'PROCESSO ABERTO': 1,
-            'AGUARDANDO EMBARQUE': 1,
-            'MERCADORIA EMBARCADA': 1,
-            
-            // Estágio 2: Embarque/Em Trânsito
-            'EM TRANSITO': 2,
-            'EMBARQUE CONFIRMADO': 2,
-            'MERCADORIA EM TRANSITO': 2,
-            
-            // Estágio 3: Chegada
-            'CHEGADA CONFIRMADA': 3,
-            'MERCADORIA CHEGOU': 3,
-            'AGUARDANDO CHEGADA': 3,
-            
-            // Estágio 4: Registro/DI
-            'DECLARACAO REGISTRADA': 4,
-            'NUMERARIO ENVIADO': 4,
-            'NUMERÁRIO ENVIADO': 4,
-            'DI AGUARDANDO PARAMETRIZACAO': 4,
-            'DI ALTERADA PELO USUÁRIO': 4,
-            'DI ALTERADA PELO USUARIO': 4,
-            'PREENCHIMENTO DA DECLARAÇÃO DE IMPORTAÇÃO ESTÁ OK.': 4,
-            'PREENCHIMENTO DA DECLARACAO DE IMPORTACAO ESTA OK.': 4,
-            'DECLARAÇÃO DE IMPORTAÇÃO NÃO FOI REGISTRADA': 4,
-            'DECLARACAO DE IMPORTACAO NAO FOI REGISTRADA': 4,
-            
-            // Estágio 5: Desembaraço
-            'DECLARACAO DESEMBARACADA': 5,
-            'DECLARAÇÃO DESEMBARAÇADA': 5,
-            'DESEMBARACO AUTORIZADO': 5,
-            'DESEMBARAÇO AUTORIZADO': 5,
-            
-            // Estágio 6: Finalizado
-            'PROCESSO FINALIZADO': 6,
-            'ENTREGUE': 6,
-            'CONCLUIDO': 6,
-            'CONCLUÍDO': 6
-        };
-        
-        const normalizedStatus = String(status_timeline).toUpperCase().trim();
-        return statusProcessoMap[normalizedStatus] || 0;
+            return 0;
+        } catch {
+            return 0;
+        }
     }
 
     function parseDateBr(str){

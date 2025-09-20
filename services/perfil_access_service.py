@@ -29,6 +29,10 @@ class PerfilAccessService:
         'fluxo_caixa': 'fluxo_de_caixa',  # Fluxo de Caixa
         'despesas': 'despesas_anual',  # Despesas
         'faturamento': 'faturamento_anual',  # Faturamento
+        # Novas páginas do módulo Financeiro
+        'conciliacao_lancamentos': 'fin_conciliacao_lancamentos',  # Conciliação de Lançamentos
+        'categorizacao_clientes': 'fin_categorizacao_clientes',  # Categorização de Clientes
+        'projecoes_metas': 'fin_projecoes_metas',  # Projeções e Metas
         # 'dashboard_executivo' já mapeado acima (compartilhado)
     }
     
@@ -65,10 +69,10 @@ class PerfilAccessService:
             accessible_modules = set()
             
             if user_perfil_principal == 'admin_operacao':
-                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários
+                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 
-                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios',
+                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config',
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
                 ])
@@ -265,12 +269,13 @@ class PerfilAccessService:
             user_manages_module = False
             
             if user_perfil_principal == 'admin_operacao':
-                # Mapear módulos operacionais: Importações, Consultoria, Exportação
+                # Mapear módulos operacionais: Importações, Consultoria, Exportação, Configurações
                 operational_modules = [
                     'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'relatorios',
                     'conferencia', 'agente',  # Existing importacao modules
                     'consultoria', 'con',  # Future consultoria modules 
-                    'exportacao', 'exp'  # Future exportacao modules
+                    'exportacao', 'exp',  # Future exportacao modules
+                    'config'  # Configuration module for system setup
                 ]
                 user_manages_module = modulo_codigo in operational_modules
                 

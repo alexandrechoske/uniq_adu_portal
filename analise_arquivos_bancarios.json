@@ -1,0 +1,94 @@
+{
+  "BANCO DO BRASIL": {
+    "arquivo": "Banco BB.xlsx",
+    "linhas": 195,
+    "colunas": [
+      "Extrato Conta Corrente",
+      "Unnamed: 1",
+      "Unnamed: 2",
+      "Unnamed: 3",
+      "Unnamed: 4",
+      "Unnamed: 5",
+      "Unnamed: 6",
+      "Unnamed: 7",
+      "Unnamed: 8",
+      "Unnamed: 9",
+      "Unnamed: 10"
+    ],
+    "tipos": {
+      "Extrato Conta Corrente": "object",
+      "Unnamed: 1": "object",
+      "Unnamed: 2": "object",
+      "Unnamed: 3": "object",
+      "Unnamed: 4": "object",
+      "Unnamed: 5": "object",
+      "Unnamed: 6": "object",
+      "Unnamed: 7": "object",
+      "Unnamed: 8": "object",
+      "Unnamed: 9": "object",
+      "Unnamed: 10": "object"
+    },
+    "amostra": [
+      {
+        "Extrato Conta Corrente": "Agencia",
+        "Unnamed: 1": "08281",
+        "Unnamed: 2": "Conta corrente",
+        "Unnamed: 3": "000000384364",
+        "Unnamed: 4": NaN,
+        "Unnamed: 5": NaN,
+        "Unnamed: 6": NaN,
+        "Unnamed: 7": NaN,
+        "Unnamed: 8": NaN,
+        "Unnamed: 9": NaN,
+        "Unnamed: 10": NaN
+      },
+      {
+        "Extrato Conta Corrente": "Data",
+        "Unnamed: 1": "observacao",
+        "Unnamed: 2": "Data balancete",
+        "Unnamed: 3": "Agencia Origem",
+        "Unnamed: 4": "Lote",
+        "Unnamed: 5": "Numero Documento",
+        "Unnamed: 6": "Cod. Historico",
+        "Unnamed: 7": "Historico",
+        "Unnamed: 8": "Valor R$ ",
+        "Unnamed: 9": "Inf.",
+        "Unnamed: 10": "Detalhamento Hist."
+      }
+    ]
+  },
+  "SANTANDER": {
+    "arquivo": "BANCO SANTANDER.xlsx",
+    "linhas": 10,
+    "colunas": [
+      "AGENCIA",
+      "4390",
+      "CONTA",
+      "130062442",
+      "Unnamed: 4"
+    ],
+    "tipos": {
+      "AGENCIA": "object",
+      "4390": "object",
+      "CONTA": "object",
+      "130062442": "object",
+      "Unnamed: 4": "object"
+    },
+    "amostra": [
+      {
+        "AGENCIA": NaN,
+        "4390": NaN,
+        "CONTA": NaN,
+        "130062442": NaN,
+        "Unnamed: 4": NaN
+      },
+      {
+        "AGENCIA": "Data",
+        "4390": "Histórico",
+        "CONTA": "Documento",
+        "130062442": "Valor (R$)",
+        "Unnamed: 4": "Saldo (R$)"
+      }
+    ]
+  }
+}

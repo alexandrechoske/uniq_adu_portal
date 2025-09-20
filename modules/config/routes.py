@@ -9,6 +9,43 @@ import unicodedata
 import json
 from datetime import datetime
 
+def check_config_admin_permission():
+    """
+    Verifica se o usuário tem permissão para acessar funcionalidades de configuração.
+    Permitido para Master Admin e Admin Operacional.
+    
+    Returns:
+        bool: True se tem permissão, False caso contrário
+    """
+    user = session.get('user', {})
+    user_role = user.get('role')
+    user_perfil_principal = user.get('perfil_principal', 'basico')
+    
+    # Permitir acesso para Master Admin e Admin Operacional
+    return ((user_role == 'admin' and user_perfil_principal == 'master_admin') or 
+            (user_role == 'interno_unique' and user_perfil_principal == 'admin_operacao'))
+
+def require_config_admin_permission():
+    """
+    Decorator para verificar permissão de admin de configuração.
+    Redireciona para menu se não tiver permissão.
+    """
+    if not check_config_admin_permission():
+        flash('Acesso negado. Esta funcionalidade requer perfil de Admin Master ou Admin Operacional.', 'error')
+        return redirect(url_for('menu.menu_home'))
+    return None
+
+def api_check_config_admin_permission():
+    """
+    Verifica permissão para APIs e retorna JSON de erro se não autorizado.
+    
+    Returns:
+        tuple: (response, status_code) se não autorizado, None se autorizado
+    """
+    if not check_config_admin_permission():
+        return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+    return None
+
 # Criar blueprint com configuração modular
 config_bp = Blueprint(
     'config', 
@@ -21,30 +58,50 @@ config_bp = Blueprint(
 
 @config_bp.route('/logos-clientes')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def logos_clientes():
     """Página de gerenciamento de logos de clientes"""
+    # Verificar permissão específica
+    permission_error = require_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     return render_template('logos_clientes.html')
 
 @config_bp.route('/test-clientes')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def test_clientes():
     """Página de teste do CRUD de clientes"""
+    # Verificar permissão específica
+    permission_error = require_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     return render_template('test_clientes.html')
 
 @config_bp.route('/icones-materiais')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def icones_materiais():
     """Página de gerenciamento de ícones de materiais"""
+    # Verificar permissão específica
+    permission_error = require_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     return render_template('icones_materiais.html')
 
 @config_bp.route('/api/cnpj-options')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_cnpj_options():
     """API para listar CNPJs disponíveis (não atrelados a clientes)"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         # Usar view que mostra apenas CNPJs disponíveis
         response = supabase_admin.table('vw_cnpjs_disponiveis').select('cnpj, razao_social').order('razao_social').execute()
@@ -62,7 +119,7 @@ def api_cnpj_options():
 
 @config_bp.route('/api/cnpj-importadores')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_cnpj_importadores():
     """API para autocomplete de CNPJs ou Razão Social usando view vw_aux_cnpj_importador.
 
@@ -70,6 +127,11 @@ def api_cnpj_importadores():
         q (str): termo parcial para busca (mínimo 2 chars). Pode ser parte do CNPJ (apenas números) ou parte da razão social.
         limit (int): limite de registros (default 15)
     """
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         term = (request.args.get('q') or '').strip()
         limit = int(request.args.get('limit', 15))
@@ -106,9 +168,14 @@ def api_cnpj_importadores():
 
 @config_bp.route('/api/logos-clientes')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_logos_clientes():
     """API para listar clientes do sistema com seus CNPJs"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         # Buscar clientes ativos com seus CNPJs em array (com retries)
         def _query():
@@ -149,9 +216,14 @@ def api_logos_clientes():
 
 @config_bp.route('/api/logos-clientes', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_create_logo_cliente():
     """API para criar cliente do sistema com CNPJs"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         data = request.get_json()
         print(f"[CONFIG] Dados recebidos: {data}")
@@ -218,9 +290,14 @@ def api_create_logo_cliente():
 
 @config_bp.route('/api/logos-clientes/<int:cliente_id>', methods=['PUT'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_update_logo_cliente(cliente_id):
     """API para atualizar cliente do sistema"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         data = request.get_json()
         print(f"[CONFIG] Atualizando cliente {cliente_id} com dados: {data}")
@@ -282,9 +359,14 @@ def api_update_logo_cliente(cliente_id):
 
 @config_bp.route('/api/logos-clientes/<int:cliente_id>', methods=['DELETE'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_delete_logo_cliente(cliente_id):
     """API para excluir cliente do sistema"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         print(f"[CONFIG] Excluindo cliente {cliente_id}")
         
@@ -313,30 +395,17 @@ def api_delete_logo_cliente(cliente_id):
             'success': False,
             'error': str(e)
         }), 500
-@role_required(['admin'])
-def api_delete_logo_cliente(cliente_id):
-    """API para deletar cliente do sistema (cascata remove CNPJs associados)"""
-    try:
-        # Deletar cliente (cascata remove CNPJs via foreign key)
-        response = supabase_admin.table('cad_clientes_sistema').delete().eq('id', cliente_id).execute()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Cliente removido com sucesso'
-        })
-        
-    except Exception as e:
-        print(f"[CONFIG] Erro ao deletar cliente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 @config_bp.route('/api/mercadorias-options')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_mercadorias_options():
     """API para listar opções de mercadorias"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         response = supabase_admin.table('vw_aux_mercadorias').select('mercadoria').order('mercadoria').execute()
         
@@ -353,9 +422,14 @@ def api_mercadorias_options():
 
 @config_bp.route('/api/icones-materiais')
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_icones_materiais():
     """API para listar materiais disponíveis para cadastro de ícones"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         # Buscar lista de materiais da view vw_aux_mercadorias (coluna mercadoria)
         response = supabase_admin.table('vw_aux_mercadorias').select('mercadoria').order('mercadoria').execute()
@@ -372,9 +446,14 @@ def api_icones_materiais():
 
 @config_bp.route('/api/icones-materiais', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_create_icone_material():
     """API para cadastrar novo material com ícone"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         data = request.get_json()
         # Validar dados obrigatórios
@@ -403,9 +482,14 @@ def api_create_icone_material():
 
 @config_bp.route('/api/icones-materiais/<int:material_id>', methods=['DELETE'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_delete_icone_material(material_id):
     """API para deletar ícone de material"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         response = supabase_admin.table('cad_icones_materiais').delete().eq('id', material_id).execute()
         
@@ -423,9 +507,14 @@ def api_delete_icone_material(material_id):
 
 @config_bp.route('/api/upload-logo', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_upload_logo():
     """API para upload de logo de cliente"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         if 'file' not in request.files:
             return jsonify({
@@ -538,9 +627,14 @@ def api_upload_logo():
 
 @config_bp.route('/api/upload-icone', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def api_upload_icone():
     """API para upload de ícone de material"""
+    # Verificar permissão específica
+    permission_error = api_check_config_admin_permission()
+    if permission_error:
+        return permission_error
+    
     try:
         if 'file' not in request.files:
             return jsonify({

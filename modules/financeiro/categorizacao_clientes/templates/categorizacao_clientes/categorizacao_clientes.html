@@ -1,0 +1,1178 @@
+{% extends "base.html" %}
+
+{% block title %}Categorização de Clientes - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<style>
+    .categorizacao-container {
+        padding: 20px;
+    }
+
+    .filter-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #2196f3;
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 20px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        font-weight: 500;
+        color: #37474f;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+
+    .form-select, .form-input {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        background: white;
+    }
+
+    .form-select:focus, .form-input:focus {
+        outline: none;
+        border-color: #2196f3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .btn-primary {
+        background: #2196f3;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1976d2;
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background: #4caf50;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #388e3c;
+        transform: translateY(-1px);
+    }
+
+    .btn-warning {
+        background: #ff9800;
+        color: white;
+    }
+
+    .btn-warning:hover {
+        background: #f57c00;
+        transform: translateY(-1px);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #2196f3;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .stats-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+    }
+
+    .stats-icon.primary { background: #2196f3; }
+    .stats-icon.success { background: #4caf50; }
+    .stats-icon.warning { background: #ff9800; }
+
+    .stats-content h3 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: bold;
+        color: #37474f;
+    }
+
+    .stats-content p {
+        margin: 5px 0 0 0;
+        color: #666;
+        font-size: 14px;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .table-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #37474f;
+        margin: 0;
+    }
+
+    .table-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .enhanced-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .enhanced-table th {
+        background: #f8f9fa;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        color: #37474f;
+        border-bottom: 2px solid #dee2e6;
+        font-size: 14px;
+    }
+
+    .enhanced-table td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+    }
+
+    .enhanced-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .cliente-original {
+        font-weight: 500;
+        color: #37474f;
+    }
+
+    .cliente-padronizado {
+        color: #666;
+        font-style: italic;
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .status-nao-categorizado {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .status-categorizado {
+        background: #e8f5e8;
+        color: #388e3c;
+    }
+
+    .valor-total {
+        font-weight: 600;
+        color: #2196f3;
+    }
+
+    .input-edit {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .input-edit:focus {
+        outline: none;
+        border-color: #2196f3;
+        box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+    }
+
+    .checkbox-select {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .pagination-info {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .pagination-controls {
+        display: flex;
+        gap: 5px;
+    }
+
+    .pagination-btn {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        color: #666;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+
+    .pagination-btn:hover {
+        background: #2196f3;
+        color: white;
+        border-color: #2196f3;
+    }
+
+    .pagination-btn.active {
+        background: #2196f3;
+        color: white;
+        border-color: #2196f3;
+    }
+
+    .bulk-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.96);
+        padding: 12px 20px;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+        z-index: 9000;
+    }
+
+    .selected-count {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .loading-spinner {
+        text-align: center;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #2196f3;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 4px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        transform: translateX(400px);
+        transition: transform 0.3s;
+    }
+
+    .toast.show {
+        transform: translateX(0);
+    }
+
+    .toast-success { background: #4caf50; }
+    .toast-error { background: #f44336; }
+    .toast-warning { background: #ff9800; }
+
+    /* Modal simples (estilo consistente) */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+    }
+    .modal {
+        background: #fff;
+        width: min(520px, 92vw);
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        overflow: hidden;
+        display: block;
+        margin: auto;
+    }
+    .modal-header {
+        padding: 14px 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .modal-title { font-weight: 600; color: #37474f; }
+    .modal-body { padding: 16px; }
+    .modal-footer { padding: 12px 16px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 8px; }
+    .modal-close { background: transparent; border: none; font-size: 20px; cursor: pointer; }
+    .modal-input { 
+        width: 100%; 
+        padding: 10px 12px; 
+        border: 1px solid #ddd; 
+        border-radius: 6px; 
+        font-size: 14px; 
+        background: #fff;
+        color: #000;
+    }
+    .modal-input:focus { 
+        outline: none; 
+        border-color: #2196f3; 
+        box-shadow: 0 0 0 2px rgba(33,150,243,0.2); 
+    }
+
+    @media (max-width: 768px) {
+        .filter-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-group {
+            min-width: auto;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .enhanced-table {
+            min-width: 600px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="categorizacao-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-financeiro">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-chart-line'},
+                {'name': 'Categorização de Clientes', 'icon': 'mdi mdi-people'}
+            ], 'financeiro') }}
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="busca-cliente">Buscar Cliente</label>
+                <input type="text" id="busca-cliente" class="form-input" placeholder="Digite o nome do cliente...">
+            </div>
+            <div class="filter-group">
+                <label for="filtro-status">Status</label>
+                <select id="filtro-status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="nao_categorizado">Não Categorizados</option>
+                    <option value="categorizado">Categorizados</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button id="btn-popular" class="btn btn-warning">
+                    <i class="mdi mdi-database-plus"></i>
+                    Popular Tabela
+                </button>
+                <button id="btn-buscar" class="btn btn-primary">
+                    <i class="mdi mdi-magnify"></i>
+                    Buscar
+                </button>
+                <button id="btn-limpar-filtros" class="btn">
+                    <i class="mdi mdi-filter-remove"></i>
+                    Limpar filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <div class="stats-icon primary">
+                <i class="mdi mdi-account-group"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-clientes">0</h3>
+                <p>Total de Clientes</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon warning">
+                <i class="mdi mdi-alert-circle"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="nao-categorizados">0</h3>
+                <p>Não Categorizados</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon success">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="categorizados">0</h3>
+                <p>Categorizados</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+        <div class="table-header">
+            <h2 class="table-title">Clientes para Categorização</h2>
+            <div class="table-actions">
+                <button id="btn-selecionar-todos" class="btn btn-primary">
+                    <i class="mdi mdi-checkbox-multiple-marked"></i>
+                    Selecionar Todos
+                </button>
+                <button id="btn-limpar-selecao" class="btn btn-warning">
+                    <i class="mdi mdi-checkbox-multiple-blank"></i>
+                    Limpar Seleção
+                </button>
+            </div>
+        </div>
+
+        <table class="enhanced-table">
+            <thead>
+                <tr>
+                    <th width="50">
+                        <input type="checkbox" id="checkbox-master" class="checkbox-select">
+                    </th>
+                    <th>Nome Original</th>
+                    <th>Nome Padronizado</th>
+                    <th>Ocorrências</th>
+                    <th>Valor Total</th>
+                    <th>Última Ocorrência</th>
+                    <th>Status</th>
+                    <th width="100">Ações</th>
+                </tr>
+                </tr>
+            </thead>
+            <tbody id="clientes-tbody">
+                <!-- Dados serão carregados via JavaScript -->
+            </tbody>
+        </table>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions" id="bulk-actions" style="display: none;">
+            <div class="selected-count">
+                <span id="selected-count">0</span> cliente(s) selecionado(s)
+            </div>
+            <div class="table-actions">
+                <button id="btn-editar-selecionados" class="btn btn-primary">
+                    <i class="mdi mdi-pencil"></i>
+                    Editar Selecionados
+                </button>
+                <button id="btn-salvar-selecionados" class="btn btn-success">
+                    <i class="mdi mdi-content-save"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination" style="display: none;">
+            <div class="pagination-info" id="pagination-info">
+                Mostrando 1-50 de 150 clientes
+            </div>
+            <div class="pagination-controls" id="pagination-controls">
+                <!-- Controles de paginação serão gerados via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div id="toast-container"></div>
+
+<!-- Modal de Edição em Massa -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="mdi mdi-pencil"></i> Editar selecionados</div>
+      <button class="modal-close" id="modal-close" title="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-bottom:8px;color:#666;font-size:14px">Digite o nome padronizado que será aplicado para <span id="modal-selected-count">0</span> cliente(s) selecionado(s).</p>
+      <input id="modal-input" class="modal-input" type="text" placeholder="Nome padronizado..." />
+    </div>
+    <div class="modal-footer">
+      <button id="modal-cancel" class="btn">Cancelar</button>
+      <button id="modal-apply" class="btn btn-primary"><i class="mdi mdi-check"></i> Aplicar aos selecionados</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    // Variáveis globais
+    let clientes = [];
+    let paginaAtual = 1;
+    let totalPaginas = 1;
+    let clientesSelecionados = new Set();
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function() {
+        configurarEventos();
+        carregarClientes();
+    });
+
+    function configurarEventos() {
+        // Busca
+        document.getElementById('btn-buscar').addEventListener('click', carregarClientes);
+        // Debounce na busca (400ms)
+        let buscaTimeout;
+        const buscaInput = document.getElementById('busca-cliente');
+        buscaInput.addEventListener('input', function() {
+            clearTimeout(buscaTimeout);
+            buscaTimeout = setTimeout(() => {
+                paginaAtual = 1;
+                carregarClientes();
+            }, 400);
+        });
+        buscaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(buscaTimeout);
+                paginaAtual = 1;
+                carregarClientes();
+            }
+        });
+
+        // Filtros
+        document.getElementById('filtro-status').addEventListener('change', function() {
+            paginaAtual = 1;
+            carregarClientes();
+        });
+
+        // Limpar filtros
+        document.getElementById('btn-limpar-filtros').addEventListener('click', function() {
+            document.getElementById('busca-cliente').value = '';
+            document.getElementById('filtro-status').value = '';
+            paginaAtual = 1;
+            carregarClientes();
+        });
+
+        // Ações em lote
+        document.getElementById('btn-selecionar-todos').addEventListener('click', selecionarTodos);
+        document.getElementById('btn-limpar-selecao').addEventListener('click', limparSelecao);
+        document.getElementById('btn-editar-selecionados').addEventListener('click', abrirModalEdicaoMassa);
+        document.getElementById('btn-salvar-selecionados').addEventListener('click', salvarSelecionados);
+
+        // Modal handlers
+        document.getElementById('modal-close').addEventListener('click', fecharModal);
+        document.getElementById('modal-cancel').addEventListener('click', fecharModal);
+        document.getElementById('modal-apply').addEventListener('click', aplicarEdicaoMassa);
+        document.getElementById('modal-overlay').addEventListener('click', function(e){
+            if (e.target.id === 'modal-overlay') fecharModal();
+        });
+
+        // Popular tabela
+        document.getElementById('btn-popular').addEventListener('click', popularTabela);
+
+        // Checkbox master
+        document.getElementById('checkbox-master').addEventListener('change', function(e) {
+            const checkboxes = document.querySelectorAll('.cliente-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+                toggleSelecaoCliente(cb.dataset.clienteId, cb.checked);
+            });
+            atualizarBulkActions();
+        });
+    }
+
+    function carregarClientes() {
+        mostrarLoading(true);
+
+        const busca = document.getElementById('busca-cliente').value;
+        const status = document.getElementById('filtro-status').value;
+
+        const params = new URLSearchParams({
+            page: paginaAtual,
+            per_page: 50,
+            busca: busca || '',
+            status: status || ''
+        });
+
+        fetch(`/financeiro/categorizacao-clientes/api/clientes-nao-categorizados?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    clientes = data.data;
+                    const pagination = data.pagination;
+
+                    paginaAtual = pagination.page;
+                    totalPaginas = pagination.total_pages;
+
+                    renderizarClientes();
+                    renderizarPaginacao(pagination);
+                    atualizarEstatisticas(pagination.total);
+                } else {
+                    mostrarToast('Erro ao carregar clientes', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                mostrarToast('Erro de comunicação com o servidor', 'error');
+            })
+            .finally(() => {
+                mostrarLoading(false);
+            });
+    }
+
+    function renderizarClientes() {
+        const tbody = document.getElementById('clientes-tbody');
+        tbody.innerHTML = '';
+
+        if (clientes.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
+                        <i class="mdi mdi-account-search" style="font-size: 48px; display: block; margin-bottom: 10px;"></i>
+                        Nenhum cliente encontrado
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        clientes.forEach(cliente => {
+            const isSelecionado = clientesSelecionados.has(cliente.nome_original);
+            const statusClass = cliente.status === 'categorizado' ? 'status-categorizado' : 'status-nao-categorizado';
+            const statusText = cliente.status === 'categorizado' ? 'Categorizado' : 'Não Categorizado';
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="checkbox"
+                           class="checkbox-select cliente-checkbox"
+                           data-cliente-id="${cliente.nome_original}"
+                           ${isSelecionado ? 'checked' : ''}>
+                </td>
+                <td>
+                    <div class="cliente-original">${cliente.nome_original}</div>
+                </td>
+                <td>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text"
+                               class="input-edit cliente-padronizado-input"
+                               data-cliente-id="${cliente.nome_original}"
+                               value="${cliente.nome_padronizado || ''}"
+                               placeholder="Digite o nome padronizado...">
+                        ${clientesSelecionados.size > 1 && isSelecionado ? `
+                            <button class="btn btn-primary btn-sm apply-to-selected"
+                                    title="Aplicar este valor aos selecionados"
+                                    data-source-id="${cliente.nome_original}">
+                                <i class="mdi mdi-arrow-right-bold"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </td>
+                <td>${cliente.total_ocorrencias}</td>
+                <td>
+                    <span class="valor-total">${formatarMoeda(cliente.valor_total)}</span>
+                </td>
+                <td>${formatarData(cliente.ultima_ocorrencia)}</td>
+                <td>
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="editarCliente('${cliente.nome_original}')">
+                        <i class="mdi mdi-pencil"></i>
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="salvarClienteIndividual('${cliente.nome_original}')" style="margin-left: 5px;">
+                        <i class="mdi mdi-content-save"></i>
+                        Salvar
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        });
+
+        // Configurar eventos dos checkboxes
+        document.querySelectorAll('.cliente-checkbox').forEach(cb => {
+            cb.addEventListener('change', function(e) {
+                toggleSelecaoCliente(e.target.dataset.clienteId, e.target.checked);
+                atualizarBulkActions();
+            });
+        });
+
+        // Configurar eventos dos inputs
+        document.querySelectorAll('.cliente-padronizado-input').forEach(input => {
+            input.addEventListener('change', function(e) {
+                atualizarClientePadronizado(e.target.dataset.clienteId, e.target.value);
+            });
+
+            // Atalho: Ctrl+Enter para aplicar valor deste input aos selecionados
+            input.addEventListener('keydown', function(e){
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && clientesSelecionados.size > 1) {
+                    e.preventDefault();
+                    applyValueFromInputToSelected(e.target.dataset.clienteId);
+                }
+            });
+        });
+
+        // Botões "aplicar aos selecionados" inline
+        document.querySelectorAll('.apply-to-selected').forEach(btn => {
+            btn.addEventListener('click', function(e){
+                e.preventDefault();
+                const sourceId = e.currentTarget.dataset.sourceId;
+                applyValueFromInputToSelected(sourceId);
+            });
+        });
+    }
+
+    function renderizarPaginacao(pagination) {
+        const paginationEl = document.getElementById('pagination');
+        const infoEl = document.getElementById('pagination-info');
+        const controlsEl = document.getElementById('pagination-controls');
+
+        if (pagination.total_pages <= 1) {
+            paginationEl.style.display = 'none';
+            return;
+        }
+
+        paginationEl.style.display = 'flex';
+        infoEl.textContent = `Mostrando ${(pagination.page - 1) * pagination.per_page + 1}-${Math.min(pagination.page * pagination.per_page, pagination.total)} de ${pagination.total} clientes`;
+
+        controlsEl.innerHTML = '';
+
+        // Botão Anterior
+        if (pagination.page > 1) {
+            const prevBtn = document.createElement('a');
+            prevBtn.href = '#';
+            prevBtn.className = 'pagination-btn';
+            prevBtn.textContent = 'Anterior';
+            prevBtn.onclick = () => mudarPagina(pagination.page - 1);
+            controlsEl.appendChild(prevBtn);
+        }
+
+        // Páginas
+        const startPage = Math.max(1, pagination.page - 2);
+        const endPage = Math.min(pagination.total_pages, pagination.page + 2);
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('a');
+            pageBtn.href = '#';
+            pageBtn.className = `pagination-btn ${i === pagination.page ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.onclick = () => mudarPagina(i);
+            controlsEl.appendChild(pageBtn);
+        }
+
+        // Botão Próximo
+        if (pagination.page < pagination.total_pages) {
+            const nextBtn = document.createElement('a');
+            nextBtn.href = '#';
+            nextBtn.className = 'pagination-btn';
+            nextBtn.textContent = 'Próximo';
+            nextBtn.onclick = () => mudarPagina(pagination.page + 1);
+            controlsEl.appendChild(nextBtn);
+        }
+    }
+
+    function mudarPagina(pagina) {
+        paginaAtual = pagina;
+        carregarClientes();
+    }
+
+    function selecionarTodos() {
+        const checkboxes = document.querySelectorAll('.cliente-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            clientesSelecionados.add(cb.dataset.clienteId);
+        });
+        atualizarBulkActions();
+    }
+
+    function limparSelecao() {
+        const checkboxes = document.querySelectorAll('.cliente-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+        });
+        clientesSelecionados.clear();
+        atualizarBulkActions();
+    }
+
+    function toggleSelecaoCliente(clienteId, selecionado) {
+        if (selecionado) {
+            clientesSelecionados.add(clienteId);
+        } else {
+            clientesSelecionados.delete(clienteId);
+        }
+    }
+
+    function atualizarBulkActions() {
+        const bulkActions = document.getElementById('bulk-actions');
+        const selectedCount = document.getElementById('selected-count');
+
+        if (clientesSelecionados.size > 0) {
+            bulkActions.style.display = 'flex';
+            selectedCount.textContent = clientesSelecionados.size;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+
+    function abrirModalEdicaoMassa() {
+        if (clientesSelecionados.size === 0) {
+            mostrarToast('Selecione ao menos um cliente', 'warning');
+            return;
+        }
+        document.getElementById('modal-selected-count').textContent = clientesSelecionados.size;
+        document.getElementById('modal-input').value = '';
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalInput = document.getElementById('modal-input');
+        console.log('[UX] Modal overlay element:', modalOverlay);
+        console.log('[UX] Modal input element:', modalInput);
+        modalOverlay.style.display = 'flex';
+        console.log('[UX] Modal display set to flex');
+        setTimeout(()=> {
+            if (modalInput) {
+                modalInput.focus();
+                console.log('[UX] Modal input focused');
+            } else {
+                console.log('[UX] Modal input not found');
+            }
+        }, 50);
+        console.log('[UX] Abrindo modal de edição em massa para', clientesSelecionados.size, 'itens');
+    }
+
+    function fecharModal() {
+        const modalOverlay = document.getElementById('modal-overlay');
+        console.log('[UX] Fechando modal, overlay element:', modalOverlay);
+        modalOverlay.style.display = 'none';
+        console.log('[UX] Modal display set to none');
+    }
+
+    function aplicarEdicaoMassa() {
+        const valor = (document.getElementById('modal-input').value || '').trim();
+        if (!valor) {
+            mostrarToast('Digite um nome padronizado para aplicar', 'warning');
+            return;
+        }
+        let count = 0;
+        clientesSelecionados.forEach(clienteId => {
+            const input = document.querySelector(`.cliente-padronizado-input[data-cliente-id="${clienteId}"]`);
+            if (input) {
+                input.value = valor;
+                atualizarClientePadronizado(clienteId, valor);
+                count++;
+            }
+        });
+        console.log('[UX] Aplicado valor em massa para', count, 'itens');
+        mostrarToast(`Aplicado a ${count} cliente(s)`, 'success');
+        fecharModal();
+    }
+
+    function applyValueFromInputToSelected(sourceClienteId) {
+        const sourceInput = document.querySelector(`.cliente-padronizado-input[data-cliente-id="${sourceClienteId}"]`);
+        if (!sourceInput) return;
+        const valor = (sourceInput.value || '').trim();
+        if (!valor) {
+            mostrarToast('Campo está vazio. Digite um valor antes de aplicar.', 'warning');
+            return;
+        }
+        let count = 0;
+        clientesSelecionados.forEach(clienteId => {
+            const input = document.querySelector(`.cliente-padronizado-input[data-cliente-id="${clienteId}"]`);
+            if (input) {
+                input.value = valor;
+                atualizarClientePadronizado(clienteId, valor);
+                count++;
+            }
+        });
+        console.log('[UX] Aplicado inline para', count, 'itens a partir de', sourceClienteId);
+        mostrarToast(`Aplicado a ${count} cliente(s)`, 'success');
+    }
+
+    function salvarSelecionados() {
+        if (clientesSelecionados.size === 0) {
+            mostrarToast('Nenhum cliente selecionado', 'warning');
+            return;
+        }
+
+        const categorizacoes = [];
+        clientesSelecionados.forEach(clienteId => {
+            const input = document.querySelector(`.cliente-padronizado-input[data-cliente-id="${clienteId}"]`);
+            if (input && input.value.trim()) {
+                categorizacoes.push({
+                    nome_original: clienteId,
+                    nome_padronizado: input.value.trim()
+                });
+            }
+        });
+
+        if (categorizacoes.length === 0) {
+            mostrarToast('Preencha pelo menos um nome padronizado', 'warning');
+            return;
+        }
+
+        mostrarLoading(true);
+
+        fetch('/financeiro/categorizacao-clientes/api/salvar-categorizacoes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                categorizacoes: categorizacoes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const msg = `Salvo(s): ${data.salvos || categorizacoes.length}${data.erros && data.erros.length ? ` | Erros: ${data.erros.length}` : ''}`;
+                mostrarToast(msg, 'success');
+                limparSelecao();
+                carregarClientes(); // Recarregar para atualizar status
+            } else {
+                mostrarToast(data.error || 'Erro ao salvar categorizações', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarToast('Erro de comunicação com o servidor', 'error');
+        })
+        .finally(() => {
+            mostrarLoading(false);
+        });
+    }
+
+    function editarCliente(clienteId) {
+        const input = document.querySelector(`.cliente-padronizado-input[data-cliente-id="${clienteId}"]`);
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }
+
+    function salvarClienteIndividual(clienteId) {
+        const input = document.querySelector(`.cliente-padronizado-input[data-cliente-id="${clienteId}"]`);
+        if (!input) {
+            mostrarToast('Campo de entrada não encontrado', 'error');
+            return;
+        }
+
+        const nomePadronizado = input.value.trim();
+        if (!nomePadronizado) {
+            mostrarToast('Preencha o nome padronizado antes de salvar', 'warning');
+            input.focus();
+            return;
+        }
+
+        mostrarLoading(true);
+
+        // Usa o endpoint em lote com um item
+        fetch('/financeiro/categorizacao-clientes/api/salvar-categorizacoes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                categorizacoes: [{ nome_original: clienteId, nome_padronizado: nomePadronizado }]
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const msg = `Salvo(s): ${data.salvos || 1}${data.erros && data.erros.length ? ` | Erros: ${data.erros.length}` : ''}`;
+                mostrarToast(msg, 'success');
+                carregarClientes(); // Recarregar para atualizar status
+            } else {
+                mostrarToast(data.error || 'Erro ao salvar categorização', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarToast('Erro de comunicação com o servidor', 'error');
+        })
+        .finally(() => {
+            mostrarLoading(false);
+        });
+    }
+
+    function atualizarClientePadronizado(clienteId, valor) {
+        // Atualizar localmente se necessário
+        const cliente = clientes.find(c => c.nome_original === clienteId);
+        if (cliente) {
+            cliente.nome_padronizado = valor;
+        }
+    }
+
+    function popularTabela() {
+        if (!confirm('Esta ação irá popular a tabela de mapeamento com todos os clientes. Deseja continuar?')) {
+            return;
+        }
+
+        mostrarLoading(true);
+
+        fetch('/financeiro/categorizacao-clientes/api/popular-tabelas', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarToast(data.message || 'Tabelas populadas com sucesso', 'success');
+                    carregarClientes(); // Recarregar dados
+                } else {
+                    mostrarToast(data.error || 'Erro ao popular tabela', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                mostrarToast('Erro de comunicação com o servidor', 'error');
+            })
+            .finally(() => {
+                mostrarLoading(false);
+            });
+    }
+
+    function atualizarEstatisticas(total) {
+        document.getElementById('total-clientes').textContent = total;
+
+        const naoCategorizados = clientes.filter(c => !c.nome_padronizado || c.nome_padronizado.trim() === '').length;
+        const categorizados = total - naoCategorizados;
+
+        document.getElementById('nao-categorizados').textContent = naoCategorizados;
+        document.getElementById('categorizados').textContent = categorizados;
+    }
+
+    function mostrarLoading(mostrar) {
+        document.getElementById('loading-overlay').style.display = mostrar ? 'flex' : 'none';
+    }
+
+    function mostrarToast(mensagem, tipo = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${tipo}`;
+        toast.textContent = mensagem;
+
+        const container = document.getElementById('toast-container');
+        container.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => container.removeChild(toast), 300);
+        }, 3000);
+    }
+
+    function formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(valor || 0);
+    }
+
+    function formatarData(data) {
+        if (!data) return '-';
+        return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+    }
+</script>
+{% endblock %}

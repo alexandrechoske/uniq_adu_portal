@@ -709,15 +709,17 @@ class DashboardImportacoesResumido {
             const [dia, mes, ano] = dataStr.split('/');
             const dataChegada = new Date(ano, mes - 1, dia);
             const hoje = new Date();
-            const diffTime = dataChegada.getTime() - hoje.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            // Se a data de chegada é nos próximos 7 dias, adicionar bandeirinha
-            if (diffDays >= 0 && diffDays <= 7) {
-                return `<div class="data-chegada-proxima">
-                    <i class="mdi mdi-flag flag-icon"></i>
+            // Zerar horários para comparação apenas da data
+            dataChegada.setHours(0, 0, 0, 0);
+            hoje.setHours(0, 0, 0, 0);
+            
+            // Se a data de chegada é exatamente hoje, mostrar indicador
+            if (dataChegada.getTime() === hoje.getTime()) {
+                return `<span class="data-chegada-proxima">
+                    <i class="mdi mdi-clock"></i>
                     ${dataStr}
-                </div>`;
+                </span>`;
             } else {
                 return dataStr;
             }

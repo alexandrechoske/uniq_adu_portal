@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='shared/document-manager.css') }}">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard-customization.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -56,13 +57,8 @@
         </div>
     </div>
     
-    <!-- KPI Cards - Layout 6+3 -->
+    <!-- KPI Cards - Layout 5+3 -->
     <div class="kpi-grid">
-        <div id="kpi-loading" class="component-loading">
-            <div class="spinner"></div>
-        </div>
-        
-        <!-- LINHA 1: 6 cards principais (1-6) -->
         <!-- Card 1: Processos Abertos -->
         <div class="kpi-card kpi-info" data-kpi-status="processos_abertos">
             <div class="kpi-icon">
@@ -76,65 +72,66 @@
         </div>
         
         <!-- Card 2: Agd Embarque -->
-        <div class="kpi-card kpi-orange" data-kpi-status="AG EMBARQUE">
+        <div class="kpi-card kpi-orange" data-kpi-status="agd_embarque">
             <div class="kpi-icon">
                 <i class="mdi mdi-ship-wheel"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Agd Embarque</p>
-                <p class="kpi-value" id="kpi-Agd-embarque">-</p>
+                <p class="kpi-value" id="kpi-agd-embarque">-</p>
             </div>
-            <button class="kpi-mini-btn" title="Ver processos aguardando embarque" data-mini="AG EMBARQUE">≡</button>
+            <button class="kpi-mini-btn" title="Ver processos aguardando embarque" data-mini="agd_embarque">≡</button>
         </div>
         
         <!-- Card 3: Agd Chegada -->
-        <div class="kpi-card kpi-purple" data-kpi-status="AG CHEGADA">
+        <div class="kpi-card kpi-purple" data-kpi-status="agd_chegada">
             <div class="kpi-icon">
                 <i class="mdi mdi-map-marker-check"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Agd Chegada</p>
-                <p class="kpi-value" id="kpi-Agd-chegada">-</p>
+                <p class="kpi-value" id="kpi-agd-chegada">-</p>
             </div>
-            <button class="kpi-mini-btn" title="Ver processos aguardando chegada" data-mini="AG CHEGADA">≡</button>
+            <button class="kpi-mini-btn" title="Ver processos aguardando chegada" data-mini="agd_chegada">≡</button>
         </div>
         
         <!-- Card 4: Agd Liberação -->
-        <div class="kpi-card kpi-info" data-kpi-status="LIBERACAO">
+        <div class="kpi-card kpi-info" data-kpi-status="agd_liberacao">
             <div class="kpi-icon">
                 <i class="mdi mdi-shield-check"></i>
             </div>
             <div class="kpi-content">
                 <p class="kpi-label">Agd Liberação</p>
-                <p class="kpi-value" id="kpi-Agd-liberacao">-</p>
+                <p class="kpi-value" id="kpi-agd-liberacao">-</p>
             </div>
-            <button class="kpi-mini-btn" title="Ver processos aguardando liberação" data-mini="AG LIBERACAO">≡</button>
+            <button class="kpi-mini-btn" title="Ver processos aguardando liberação" data-mini="agd_liberacao">≡</button>
         </div>
         
-        <!-- Card 5: Agd Entrega -->
-        <div class="kpi-card kpi-success" data-kpi-status="AGD_ENTREGA">
+        <!-- Card 5: Agd Fechamento -->
+        <div class="kpi-card kpi-success" data-kpi-status="agd_fechamento">
             <div class="kpi-icon">
-                <i class="mdi mdi-truck-delivery"></i>
+                <i class="mdi mdi-file-check"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Agd Entrega</p>
-                <p class="kpi-value" id="kpi-agd-entrega">-</p>
+                <p class="kpi-label">Agd Fechamento</p>
+                <p class="kpi-value" id="kpi-agd-fechamento">-</p>
             </div>
-            <button class="kpi-mini-btn" title="Ver processos aguardando entrega" data-mini="AGD_ENTREGA">≡</button>
+            <button class="kpi-mini-btn" title="Ver processos aguardando fechamento" data-mini="agd_fechamento">≡</button>
         </div>
         
-        <!-- Card 6: Total Despesas (movido da posição 9) -->
-        <div class="kpi-card kpi-indigo">
+        <!-- Card 6: Chegando Esta Semana -->
+        <div class="kpi-card kpi-teal" data-kpi-status="chegando_semana">
             <div class="kpi-icon">
-                <i class="mdi mdi-currency-usd"></i>
+                <i class="mdi mdi-calendar-week"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Total Despesas</p>
-                <p class="kpi-value" id="kpi-total-despesas">-</p>
+                <p class="kpi-label">Chegando Esta Semana</p>
+                <p class="kpi-value" id="kpi-chegando-semana">-</p>
+                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
             </div>
+            <button class="kpi-mini-btn" title="Ver processos com chegada nesta semana" data-mini="chegando_semana">≡</button>
         </div>
         
-        <!-- LINHA 2: 3 cards secundários (7-9) -->
         <!-- Card 7: Chegando Este Mês -->
         <div class="kpi-card kpi-emerald" data-kpi-status="chegando_mes">
             <div class="kpi-icon">
@@ -148,29 +145,20 @@
             <button class="kpi-mini-btn" title="Ver processos com chegada neste mês" data-mini="chegando_mes">≡</button>
         </div>
         
-        <!-- Card 8: Chegando Esta Semana -->
-        <div class="kpi-card kpi-teal" data-kpi-status="chegando_semana">
+        <!-- Card 8: Total Despesas -->
+        <div class="kpi-card kpi-indigo">
             <div class="kpi-icon">
-                <i class="mdi mdi-calendar-week"></i>
+                <i class="mdi mdi-currency-usd"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Chegando Esta Semana</p>
-                <p class="kpi-value" id="kpi-chegando-semana">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
+                <p class="kpi-label">Total Despesas</p>
+                <p class="kpi-value" id="kpi-total-despesas">-</p>
             </div>
-            <button class="kpi-mini-btn" title="Ver processos com chegada nesta semana" data-mini="chegando_semana">≡</button>
         </div>
         
-        <!-- Card 9: Agd Fechamento (movido da posição 6) -->
-        <div class="kpi-card kpi-warning" data-kpi-status="AG FECHAMENTO">
-            <div class="kpi-icon">
-                <i class="mdi mdi-file-check"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Agd Fechamento</p>
-                <p class="kpi-value" id="kpi-Agd-fechamento">-</p>
-            </div>
-            <button class="kpi-mini-btn" title="Ver processos aguardando fechamento" data-mini="AG FECHAMENTO">≡</button>
+        <!-- Loading Overlay -->
+        <div id="kpi-loading" class="component-loading">
+            <div class="spinner"></div>
         </div>
     </div>
     
@@ -742,6 +730,7 @@
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/kpi-mini-popup.js') }}"></script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
 
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager
