@@ -47,43 +47,93 @@
         </div>
     </div>
 
-    <!-- Seção de Upload de Arquivos -->
+    <!-- Seção de Carregamento de Dados -->
     <div class="upload-section">
+        <!-- Upload de Arquivos Bancários -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="mdi mdi-file-upload"></i>
+                    Upload de Arquivos Bancários
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="uploadArquivoForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <!-- Seleção do Banco para Upload -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="banco_origem" class="form-label">Banco do Arquivo</label>
+                                <select id="banco_origem" name="banco_origem" class="form-select">
+                                    <option value="auto">Identificar Automaticamente</option>
+                                    <option value="banco_brasil">Banco do Brasil (.xlsx)</option>
+                                    <option value="santander">Santander (.xlsx)</option>
+                                    <option value="itau">Itaú (.txt)</option>
+                                </select>
+                                <div class="form-text">O sistema tentará identificar automaticamente o banco pelo conteúdo</div>
+                            </div>
+                        </div>
+
+                        <!-- Seleção do Arquivo -->
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="arquivo_banco" class="form-label">Arquivo do Extrato</label>
+                                <input type="file" id="arquivo_banco" name="arquivo" class="form-control" 
+                                       accept=".xlsx,.xls,.txt,.csv" required>
+                                <div class="form-text">
+                                    Formatos aceitos: Excel (.xlsx, .xls) para BB/Santander, TXT para Itaú
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Upload -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" id="btnUploadArquivo" class="btn btn-success">
+                                <i class="mdi mdi-file-upload"></i>
+                                Fazer Upload do Arquivo
+                            </button>
+                            <div class="upload-progress-arquivo" style="display: none;">
+                                <div class="progress mt-2">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Processando arquivo...</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Carregamento de Dados do Sistema -->
         <div class="card">
             <div class="card-header">
                 <h5 class="card-title">
-                    <i class="mdi mdi-upload"></i>
-                    Upload de Arquivos para Conciliação
+                    <i class="mdi mdi-database"></i>
+                    Carregar Dados do Sistema
                 </h5>
             </div>
             <div class="card-body">
                 <form id="uploadForm" enctype="multipart/form-data">
                     <div class="row">
                         <!-- Seleção do Banco -->
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label for="banco" class="form-label">Banco</label>
                                 <select id="banco" name="banco" class="form-select" required>
-                                    <option value="">Selecione o banco</option>
-                                    <option value="banco_brasil">Banco do Brasil</option>
-                                    <option value="santander">Santander</option>
-                                    <option value="itau">Itaú</option>
+                                    <option value="todos">Todos os bancos</option>
+                                    <option value="ITAU">Itaú</option>
+                                    <option value="Bradesco">Bradesco</option>
+                                    <option value="SANTANDER">Santander</option>
+                                    <option value="BANCO_BRASIL">Banco do Brasil</option>
                                 </select>
-                            </div>
-                        </div>
-
-                        <!-- Upload do Extrato Bancário -->
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="arquivo_extrato" class="form-label">Extrato Bancário</label>
-                                <input type="file" id="arquivo_extrato" name="arquivo_extrato" 
-                                       class="form-control" accept=".csv,.xls,.xlsx,.txt" required>
-                                <div class="form-text">Formatos suportados: CSV, XLS, XLSX, TXT</div>
+                                <div class="form-text">Selecione o banco específico ou todos os bancos</div>
                             </div>
                         </div>
 
                         <!-- Período de Análise -->
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label for="periodo" class="form-label">Período</label>
                                 <select id="periodo" name="periodo" class="form-select">
@@ -112,18 +162,19 @@
                         </div>
                     </div>
 
-                    <!-- Botão de Upload -->
+                    <!-- Botão de Carregamento -->
                     <div class="row mt-3">
                         <div class="col-12">
-                            <button type="submit" id="btnUpload" class="btn btn-primary" disabled>
-                                <i class="mdi mdi-upload"></i>
-                                Processar Arquivos
+                            <button type="submit" id="btnUpload" class="btn btn-primary">
+                                <i class="mdi mdi-database-search"></i>
+                                Carregar Dados do Sistema
                             </button>
+                            <div class="form-text">Dados serão carregados da tabela fin_conciliacao_movimentos</div>
                             <div class="upload-progress" style="display: none;">
                                 <div class="progress mt-2">
                                     <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                 </div>
-                                <small class="text-muted">Processando arquivos...</small>
+                                <small class="text-muted">Carregando dados...</small>
                             </div>
                         </div>
                     </div>
@@ -151,6 +202,33 @@
 
     <!-- Seção de Dados Processados -->
     <div class="dados-section" id="dadosSection" style="display: none;">
+        
+        <!-- Filtros por Banco -->
+        <div class="banco-filter-section">
+            <div class="card">
+                <div class="card-body">
+                    <div class="filter-group">
+                        <span class="filter-label">Filtrar por Banco:</span>
+                        <button type="button" class="banco-filter-btn all active" data-banco="todos">
+                            <i class="mdi mdi-bank"></i> Todos
+                        </button>
+                        <button type="button" class="banco-filter-btn" data-banco="ITAU">
+                            <i class="mdi mdi-bank"></i> Itaú
+                        </button>
+                        <button type="button" class="banco-filter-btn" data-banco="Bradesco">
+                            <i class="mdi mdi-bank"></i> Bradesco
+                        </button>
+                        <button type="button" class="banco-filter-btn" data-banco="SANTANDER">
+                            <i class="mdi mdi-bank"></i> Santander
+                        </button>
+                        <button type="button" class="banco-filter-btn" data-banco="BANCO_BRASIL">
+                            <i class="mdi mdi-bank"></i> Banco do Brasil
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <!-- Lançamentos do Sistema -->
             <div class="col-md-6">
@@ -163,18 +241,23 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <div class="table-counter">
+                            <strong id="countSistemaSelecionados">0</strong> selecionados de <strong id="countSistemaTotal">0</strong> registros
+                        </div>
                         <div class="table-container">
                             <table class="table table-hover" id="tabelaSistema">
                                 <thead>
                                     <tr>
-                                        <th width="5%">
-                                            <input type="checkbox" id="selectAllSistema">
+                                        <th width="5%" class="checkbox-cell">
+                                            <input type="checkbox" id="selectAllSistema" title="Selecionar todos">
                                         </th>
-                                        <th width="15%">Data</th>
-                                        <th width="15%">Valor</th>
-                                        <th width="15%">Tipo</th>
-                                        <th width="35%">Descrição</th>
-                                        <th width="15%">Status</th>
+                                        <th width="12%">Data</th>
+                                        <th width="15%">Banco</th>
+                                        <th width="12%">Conta</th>
+                                        <th width="12%">Valor</th>
+                                        <th width="10%">Tipo</th>
+                                        <th width="25%">Descrição</th>
+                                        <th width="9%">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -197,18 +280,23 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <div class="table-counter">
+                            <strong id="countBancoSelecionados">0</strong> selecionados de <strong id="countBancoTotal">0</strong> registros
+                        </div>
                         <div class="table-container">
                             <table class="table table-hover" id="tabelaBanco">
                                 <thead>
                                     <tr>
-                                        <th width="5%">
-                                            <input type="checkbox" id="selectAllBanco">
+                                        <th width="5%" class="checkbox-cell">
+                                            <input type="checkbox" id="selectAllBanco" title="Selecionar todos">
                                         </th>
-                                        <th width="15%">Data</th>
-                                        <th width="15%">Valor</th>
+                                        <th width="12%">Data</th>
+                                        <th width="15%">Banco</th>
+                                        <th width="12%">Conta</th>
+                                        <th width="12%">Valor</th>
                                         <th width="10%">Tipo</th>
-                                        <th width="40%">Histórico</th>
-                                        <th width="15%">Status</th>
+                                        <th width="25%">Histórico</th>
+                                        <th width="9%">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -237,6 +325,38 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Somatório dos Selecionados -->
+        <div class="somatorio-section" id="somatorioSection">
+            <div class="somatorio-content">
+                <div class="somatorio-info">
+                    <div class="somatorio-item">
+                        <div class="somatorio-label">Sistema</div>
+                        <div class="somatorio-count" id="somatorioSistemaCount">0 itens</div>
+                        <div class="somatorio-valor" id="somatorioSistemaValor">R$ 0,00</div>
+                    </div>
+                    <div class="somatorio-item">
+                        <div class="somatorio-label">Banco</div>
+                        <div class="somatorio-count" id="somatorioBancoCount">0 itens</div>
+                        <div class="somatorio-valor" id="somatorioBancoValor">R$ 0,00</div>
+                    </div>
+                    <div class="somatorio-item">
+                        <div class="somatorio-label">Diferença</div>
+                        <div class="somatorio-valor" id="somatorioDiferenca">R$ 0,00</div>
+                    </div>
+                </div>
+                <div class="somatorio-actions">
+                    <button type="button" class="btn btn-warning btn-conciliar" id="btnConciliarSelecionados" disabled>
+                        <i class="mdi mdi-link"></i>
+                        Conciliar Selecionados
+                    </button>
+                    <button type="button" class="btn btn-secondary" id="btnLimparSelecao">
+                        <i class="mdi mdi-close"></i>
+                        Limpar Seleção
+                    </button>
                 </div>
             </div>
         </div>

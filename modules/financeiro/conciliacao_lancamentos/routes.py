@@ -747,7 +747,107 @@ def index():
         return redirect(url_for('dashboard.dashboard_main'))
 
 @conciliacao_lancamentos_bp.route('/processar', methods=['POST'])
-def upload_extratos():
+def carregar_dados_conciliacao():
+    """Carregar dados da tabela fin_conciliacao_movimentos e simular extrato bancário."""
+    try:
+        logger.info("[PROCESSAR] Carregando dados para conciliação")
+        
+        # Verificar bypass da API ou autenticação
+        if not (verificar_api_bypass() or (session.get('user', {}).get('role') in ['admin', 'interno_unique'])):
+            logger.warning("[PROCESSAR] Acesso negado - sem bypass ou autenticação")
+            return jsonify({'error': 'Acesso negado'}), 403
+        
+        # Obter parâmetros
+        banco_selecionado = request.form.get('banco', 'todos')
+        periodo = request.form.get('periodo', 'mes_atual')
+        
+        logger.info(f"[PROCESSAR] Banco: {banco_selecionado}, Período: {periodo}")
+        
+        # Calcular período baseado na seleção
+        from datetime import datetime, timedelta
+        hoje = datetime.now()
+        
+        if periodo == 'personalizado':
+            data_inicio = request.form.get('data_inicio')
+            data_fim = request.form.get('data_fim')
+        elif periodo == 'mes_atual':
+            data_inicio = hoje.replace(day=1).strftime('%Y-%m-%d')
+            data_fim = hoje.strftime('%Y-%m-%d')
+        elif periodo == 'mes_anterior':
+            primeiro_mes_anterior = (hoje.replace(day=1) - timedelta(days=1)).replace(day=1)
+            ultimo_mes_anterior = hoje.replace(day=1) - timedelta(days=1)
+            data_inicio = primeiro_mes_anterior.strftime('%Y-%m-%d')
+            data_fim = ultimo_mes_anterior.strftime('%Y-%m-%d')
+        else:  # ultimos_30_dias
+            data_inicio = (hoje - timedelta(days=30)).strftime('%Y-%m-%d')
+            data_fim = hoje.strftime('%Y-%m-%d')
+        
+        logger.info(f"[PROCESSAR] Período calculado: {data_inicio} a {data_fim}")
+        
+        # Buscar dados do sistema (fin_conciliacao_movimentos)
+        query_sistema = supabase.table('fin_conciliacao_movimentos').select(
+            'id, data_lancamento, nome_banco, numero_conta, tipo_lancamento, '
+            'valor, descricao, ref_unique, status'
+        ).gte('data_lancamento', data_inicio).lte('data_lancamento', data_fim)
+        
+        # Aplicar filtro de banco se especificado
+        if banco_selecionado and banco_selecionado != 'todos':
+            query_sistema = query_sistema.ilike('nome_banco', f'%{banco_selecionado}%')
+        
+        response_sistema = query_sistema.order('data_lancamento', desc=True).execute()
+        
+        dados_sistema = []
+        if response_sistema.data:
+            for item in response_sistema.data:
+                movimento = {
+                    'id': item.get('id'),
+                    'data_lancamento': item.get('data_lancamento'),
+                    'nome_banco': item.get('nome_banco', 'N/A'),
+                    'numero_conta': item.get('numero_conta', 'N/A'),
+                    'tipo_lancamento': item.get('tipo_lancamento', 'N/A'),
+                    'valor': float(item.get('valor', 0)),
+                    'descricao': item.get('descricao') or 'Sem descrição',
+                    'ref_unique': item.get('ref_unique'),
+                    'status': 'pendente'  # Para conciliação
+                }
+                dados_sistema.append(movimento)
+        
+        # Simular dados do banco (baseado nos mesmos dados mas com pequenas variações)
+        dados_banco = []
+        for item in dados_sistema[:3]:  # Pegar apenas os primeiros 3 para simular extrato
+            movimento_banco = {
+                'id': f"banco_{item['id']}",
+                'data': item['data_lancamento'],
+                'nome_banco': item['nome_banco'],
+                'numero_conta': item['numero_conta'],
+                'valor': item['valor'],
+                'descricao': f"Extrato: {item['descricao'][:50]}...",
+                'historico': item['descricao'],
+                'status': 'pendente'
+            }
+            dados_banco.append(movimento_banco)
+        
+        logger.info(f"[PROCESSAR] Dados carregados - Sistema: {len(dados_sistema)}, Banco: {len(dados_banco)}")
+        
+        # Resultado de sucesso
+        resultado = {
+            'success': True,
+            'dados_aberta': dados_sistema,  # Nome esperado pelo frontend
+            'dados_banco': dados_banco,
+            'status': {
+                'banco_identificado': banco_selecionado if banco_selecionado != 'todos' else 'Todos os bancos',
+                'formato_arquivo': 'Dados da tabela fin_conciliacao_movimentos',
+                'registros_banco': len(dados_banco),
+                'registros_sistema': len(dados_sistema),
+                'periodo': f"{data_inicio} a {data_fim}"
+            }
+        }
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        logger.error(f"[PROCESSAR] Erro inesperado: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Erro interno: {str(e)}'}), 500
     """Upload e processamento de arquivos de extrato bancário."""
     try:
         logger.info("[PROCESSAR] Iniciando processamento de upload")
@@ -911,33 +1011,212 @@ def upload_extratos():
         logger.error(f"[PROCESSAR] Erro inesperado: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'error': f'Erro interno: {str(e)}'}), 500
 
-@conciliacao_lancamentos_bp.route('/api/movimentos-sistema')
-def movimentos_sistema():
-    """Buscar movimentos financeiros do sistema para conciliação."""
+
+def allowed_file(filename):
+    """Verifica se o arquivo tem uma extensão permitida."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@conciliacao_lancamentos_bp.route('/upload-arquivo', methods=['POST'])
+def upload_arquivo_banco():
+    """Upload e processamento de arquivos bancários (Excel para BB/Bradesco, TXT para Itaú)."""
+    try:
+        # Verificar bypass da API ou autenticação
+        if not (verificar_api_bypass() or (session.get('user', {}).get('role') in ['admin', 'interno_unique'])):
+            return jsonify({'error': 'Acesso negado'}), 403
+
+        logger.info("[UPLOAD] Iniciando upload de arquivo bancário")
+
+        # Verificar se o arquivo foi enviado
+        if 'arquivo' not in request.files:
+            logger.warning("[UPLOAD] Nenhum arquivo foi enviado")
+            return jsonify({'success': False, 'error': 'Nenhum arquivo foi enviado'}), 400
+
+        file = request.files['arquivo']
+        banco_selecionado = request.form.get('banco_origem', '').strip()
+
+        if file.filename == '':
+            logger.warning("[UPLOAD] Nome do arquivo está vazio")
+            return jsonify({'success': False, 'error': 'Nome do arquivo está vazio'}), 400
+
+        if not allowed_file(file.filename):
+            logger.warning(f"[UPLOAD] Extensão de arquivo não permitida: {file.filename}")
+            return jsonify({'success': False, 'error': 'Formato de arquivo não suportado. Use .xlsx, .xls, .csv ou .txt'}), 400
+
+        # Verificar tamanho do arquivo
+        file.seek(0, 2)  # Mover para o final do arquivo
+        file_size = file.tell()
+        file.seek(0)  # Voltar para o início
+
+        if file_size > MAX_FILE_SIZE:
+            logger.warning(f"[UPLOAD] Arquivo muito grande: {file_size} bytes")
+            return jsonify({'success': False, 'error': f'Arquivo muito grande. Máximo permitido: {MAX_FILE_SIZE/1024/1024:.1f}MB'}), 400
+
+        # Salvar arquivo temporariamente
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        arquivo_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        
+        logger.info(f"[UPLOAD] Salvando arquivo em: {arquivo_path}")
+        file.save(arquivo_path)
+
+        # Processar arquivo usando a classe ProcessadorBancos
+        processador = ProcessadorBancos()
+        
+        # Identificar banco automaticamente se não foi especificado
+        if not banco_selecionado or banco_selecionado == 'auto':
+            banco_identificado = processador.identificar_banco(arquivo_path, filename)
+            logger.info(f"[UPLOAD] Banco identificado automaticamente: {banco_identificado}")
+        else:
+            banco_identificado = banco_selecionado.lower().replace(' ', '_')
+            logger.info(f"[UPLOAD] Banco especificado pelo usuário: {banco_identificado}")
+
+        # Processar conforme o banco
+        lancamentos = []
+        if banco_identificado == 'banco_brasil':
+            lancamentos = processador.processar_banco_brasil(arquivo_path)
+        elif banco_identificado == 'santander':
+            lancamentos = processador.processar_santander(arquivo_path)
+        elif banco_identificado == 'itau':
+            lancamentos = processador.processar_itau(arquivo_path)
+        else:
+            # Tentar todos os formatos se não conseguir identificar
+            logger.warning(f"[UPLOAD] Banco não identificado, tentando todos os formatos...")
+            for metodo in ['processar_banco_brasil', 'processar_santander', 'processar_itau']:
+                try:
+                    lancamentos = getattr(processador, metodo)(arquivo_path)
+                    if lancamentos:
+                        logger.info(f"[UPLOAD] Sucesso com método: {metodo}")
+                        break
+                except Exception as e:
+                    logger.debug(f"[UPLOAD] Falha com método {metodo}: {e}")
+                    continue
+
+        # Limpar arquivo temporário
+        try:
+            os.remove(arquivo_path)
+            logger.info(f"[UPLOAD] Arquivo temporário removido: {arquivo_path}")
+        except Exception as e:
+            logger.warning(f"[UPLOAD] Erro ao remover arquivo temporário: {e}")
+
+        if not lancamentos:
+            logger.error("[UPLOAD] Nenhum lançamento foi processado do arquivo")
+            return jsonify({
+                'success': False, 
+                'error': 'Não foi possível processar o arquivo. Verifique se o formato está correto.'
+            }), 400
+
+        # Armazenar na sessão
+        session['movimentos_banco'] = lancamentos
+        session['arquivo_processado'] = {
+            'nome': filename,
+            'banco': banco_identificado,
+            'total_registros': len(lancamentos),
+            'data_upload': datetime.now().isoformat()
+        }
+
+        logger.info(f"[UPLOAD] Upload concluído com sucesso: {len(lancamentos)} lançamentos processados")
+
+        return jsonify({
+            'success': True,
+            'message': f'Arquivo processado com sucesso! {len(lancamentos)} lançamentos encontrados.',
+            'data': {
+                'total_registros': len(lancamentos),
+                'banco_identificado': banco_identificado,
+                'nome_arquivo': filename,
+                'lancamentos': lancamentos[:5]  # Primeiros 5 para visualização
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"[UPLOAD] Erro no upload: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Erro no processamento: {str(e)}'}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/movimentos-fin-conciliacao')
+def movimentos_fin_conciliacao():
+    """Buscar movimentos da nova tabela fin_conciliacao_movimentos."""
     try:
         # Verificar bypass da API ou autenticação
         if not (verificar_api_bypass() or (session.get('user', {}).get('role') in ['admin', 'interno_unique'])):
             return jsonify({'error': 'Acesso negado'}), 403
         
-        logger.info("[CONCILIACAO] Buscando movimentos do sistema")
-        
-        # Verificar se existem dados temporários da sessão atual
-        session_id = session.get('session_id')
-        if session_id:
-            dados_temporarios = carregar_dados_temporarios(session_id, 'sistema')
-            if dados_temporarios:
-                logger.info(f"[CONCILIACAO] Retornando {len(dados_temporarios)} movimentos da sessão temporária")
-                return jsonify({
-                    'success': True,
-                    'data': dados_temporarios,
-                    'total': len(dados_temporarios),
-                    'periodo': session.get('periodo_conciliacao', 'N/A')
-                })
-        
-        # Se não há dados temporários, buscar no banco
-        logger.info("[CONCILIACAO] Buscando movimentos do banco de dados")
+        logger.info("[CONCILIACAO] Buscando movimentos da tabela fin_conciliacao_movimentos")
         
         # Parâmetros de filtro
+        banco_filtro = request.args.get('banco', 'todos')
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        
+        # Construir query base
+        query = supabase.table('fin_conciliacao_movimentos').select('*')
+        
+        # Aplicar filtro de banco se especificado
+        if banco_filtro and banco_filtro != 'todos':
+            query = query.ilike('nome_banco', f'%{banco_filtro}%')
+        
+        # Aplicar filtro de data se especificado
+        if data_inicio:
+            query = query.gte('data_lancamento', data_inicio)
+        if data_fim:
+            query = query.lte('data_lancamento', data_fim)
+        
+        # Executar query
+        response = query.order('data_lancamento', desc=True).limit(1000).execute()
+        
+        if response.data:
+            movimentos = []
+            for item in response.data:
+                movimento = {
+                    'id': item.get('id'),
+                    'data_lancamento': item.get('data_lancamento'),
+                    'nome_banco': item.get('nome_banco'),
+                    'numero_conta': item.get('numero_conta'),
+                    'tipo_lancamento': item.get('tipo_lancamento'),
+                    'valor': float(item.get('valor', 0)),
+                    'descricao': item.get('descricao'),
+                    'ref_unique': item.get('ref_unique'),
+                    'status': 'pendente'  # Status padrão para conciliação
+                }
+                movimentos.append(movimento)
+            
+            logger.info(f"[CONCILIACAO] Encontrados {len(movimentos)} movimentos na tabela fin_conciliacao_movimentos")
+            
+            return jsonify({
+                'success': True,
+                'count': len(movimentos),
+                'data': movimentos,
+                'filtros': {
+                    'banco': banco_filtro,
+                    'data_inicio': data_inicio,
+                    'data_fim': data_fim
+                }
+            })
+        else:
+            logger.warning("[CONCILIACAO] Nenhum movimento encontrado na tabela fin_conciliacao_movimentos")
+            return jsonify({
+                'success': True,
+                'count': 0,
+                'data': [],
+                'message': 'Nenhum movimento encontrado'
+            })
+            
+    except Exception as e:
+        logger.error(f"[CONCILIACAO] Erro ao buscar movimentos fin_conciliacao_movimentos: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Erro interno: {str(e)}'}), 500
+
+@conciliacao_lancamentos_bp.route('/api/movimentos-sistema')
+def movimentos_sistema():
+    """Buscar movimentos da tabela fin_conciliacao_movimentos para conciliação."""
+    try:
+        # Verificar bypass da API ou autenticação
+        if not (verificar_api_bypass() or (session.get('user', {}).get('role') in ['admin', 'interno_unique'])):
+            return jsonify({'error': 'Acesso negado'}), 403
+        
+        logger.info("[CONCILIACAO] Buscando movimentos da tabela fin_conciliacao_movimentos")
+        
+        # Parâmetros de filtro
+        banco_filtro = request.args.get('banco', 'todos')
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         
@@ -946,6 +1225,61 @@ def movimentos_sistema():
             hoje = datetime.now()
             data_inicio = hoje.replace(day=1).strftime('%Y-%m-%d')
             data_fim = hoje.strftime('%Y-%m-%d')
+        
+        logger.info(f"[CONCILIACAO] Filtros - Banco: {banco_filtro}, Data: {data_inicio} a {data_fim}")
+        
+        # Construir query base
+        query = supabase.table('fin_conciliacao_movimentos').select(
+            'id, data_lancamento, nome_banco, numero_conta, tipo_lancamento, '
+            'valor, descricao, ref_unique, status'
+        )
+        
+        # Aplicar filtro de data
+        query = query.gte('data_lancamento', data_inicio).lte('data_lancamento', data_fim)
+        
+        # Aplicar filtro de banco se especificado
+        if banco_filtro and banco_filtro != 'todos':
+            query = query.ilike('nome_banco', f'%{banco_filtro}%')
+        
+        # Executar query
+        response = query.order('data_lancamento', desc=True).limit(1000).execute()
+        
+        if response.data:
+            movimentos = []
+            for item in response.data:
+                movimento = {
+                    'id': item.get('id'),
+                    'data_lancamento': item.get('data_lancamento'),
+                    'nome_banco': item.get('nome_banco', 'N/A'),
+                    'numero_conta': item.get('numero_conta', 'N/A'),
+                    'tipo_lancamento': item.get('tipo_lancamento', 'N/A'),
+                    'valor': float(item.get('valor', 0)),
+                    'descricao': item.get('descricao') or 'Sem descrição',
+                    'ref_unique': item.get('ref_unique'),
+                    'status': item.get('status', 'PENDENTE').lower()
+                }
+                movimentos.append(movimento)
+            
+            logger.info(f"[CONCILIACAO] Encontrados {len(movimentos)} movimentos do sistema")
+            
+            return jsonify({
+                'success': True,
+                'data': movimentos,
+                'total': len(movimentos),
+                'filtros': {
+                    'banco': banco_filtro,
+                    'data_inicio': data_inicio,
+                    'data_fim': data_fim
+                }
+            })
+        else:
+            logger.warning("[CONCILIACAO] Nenhum movimento encontrado")
+            return jsonify({
+                'success': True,
+                'data': [],
+                'total': 0,
+                'message': 'Nenhum movimento encontrado para o período'
+            })
         
         logger.info(f"[CONCILIACAO] Período: {data_inicio} a {data_fim}")
         
