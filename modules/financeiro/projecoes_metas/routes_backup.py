@@ -111,7 +111,7 @@ def api_criar():
             }), 400
         
         # Validação de tipos aceitos
-        tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+        tipos_validos = ['financeiro', 'operacional', 'projecao']
         if tipo not in tipos_validos:
             return jsonify({
                 'success': False,
@@ -156,8 +156,6 @@ def api_criar():
         if result.data:
             tipo_desc = {
                 'financeiro': 'Meta financeira',
-                'financeiro_geral': 'Meta financeira geral',
-                'financeiro_consultoria': 'Meta financeira consultoria',
                 'operacional': 'Meta operacional', 
                 'projecao': 'Projeção'
             }.get(dados.get('tipo'), 'Item')
@@ -206,7 +204,7 @@ def api_criar_lote():
                     }), 400
                 
                 # Validação de tipos aceitos
-                tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+                tipos_validos = ['financeiro', 'operacional', 'projecao']
                 if tipo not in tipos_validos:
                     return jsonify({
                         'success': False,
@@ -249,7 +247,7 @@ def api_criar_lote():
                 }), 400
             
             # Validação de tipos aceitos
-            tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+            tipos_validos = ['financeiro', 'operacional', 'projecao']
             if tipo not in tipos_validos:
                 return jsonify({
                     'success': False,
@@ -337,7 +335,7 @@ def api_atualizar(item_id):
             }), 400
         
         # Validação de tipos aceitos
-        tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+        tipos_validos = ['financeiro', 'operacional', 'projecao']
         if tipo not in tipos_validos:
             return jsonify({
                 'success': False,
@@ -382,8 +380,6 @@ def api_atualizar(item_id):
         if result.data:
             tipo_desc = {
                 'financeiro': 'Meta financeira',
-                'financeiro_geral': 'Meta financeira geral',
-                'financeiro_consultoria': 'Meta financeira consultoria',
                 'operacional': 'Meta operacional',
                 'projecao': 'Projeção'
             }.get(dados.get('tipo'), 'Item')

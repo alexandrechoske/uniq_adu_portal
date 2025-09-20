@@ -355,7 +355,7 @@ if __name__ == '__main__':
     # Start server based on FLASK_ENV
     flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
     if flask_env == 'development':
-        # app.run(debug=True, host='192.168.0.75', port=5000)
-        app.run(debug=True, port=5000)
+        app.run(debug=True, host='192.168.0.75', port=5000)
+        # app.run(debug=True, port=5000)
     else:
         app.run(debug=app.config.get('DEBUG', False))

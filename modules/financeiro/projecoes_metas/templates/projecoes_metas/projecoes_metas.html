@@ -37,8 +37,8 @@
                 <label for="ano-filtro">Ano</label>
                 <select id="ano-filtro" class="form-select">
                     <option value="2024">2024</option>
-                    <option value="2025" selected>2025</option>
-                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
                     <option value="2027">2027</option>
                 </select>
             </div>
@@ -46,7 +46,9 @@
                 <label for="tipo-filtro">Tipo</label>
                 <select id="tipo-filtro" class="form-select">
                     <option value="" selected>Todos os tipos</option>
-                    <option value="financeiro">Metas Financeiras</option>
+                    <option value="financeiro">Metas Financeiras (Todas)</option>
+                    <option value="financeiro_geral">Metas Financeiras - Geral</option>
+                    <option value="financeiro_consultoria">Metas Financeiras - Consultoria</option>
                     <option value="operacional">Metas Operacionais</option>
                     <option value="projecao">Projeções</option>
                 </select>
@@ -71,8 +73,17 @@
                 <i class="mdi mdi-cash-multiple"></i>
             </div>
             <div class="stats-content">
-                <h3 id="total-financeiras">0</h3>
-                <p>Metas Financeiras</p>
+                <h3 id="total-financeiras-geral">0</h3>
+                <p>Metas Financeiras - Geral</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon primary">
+                <i class="mdi mdi-cash-check"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-financeiras-consultoria">0</h3>
+                <p>Metas Financeiras - Consultoria</p>
             </div>
         </div>
         <div class="stats-card">
@@ -98,9 +109,13 @@
     <!-- Navigation Tabs -->
     <div class="filter-section">
         <div class="filter-row">
-            <button id="tab-metas-financeiras" class="btn btn-primary tab-button active" data-tab="metas-financeiras">
+            <button id="tab-metas-financeiras-geral" class="btn btn-primary tab-button active" data-tab="metas-financeiras-geral">
                 <i class="mdi mdi-cash-multiple"></i>
-                Metas Financeiras
+                Metas Financeiras - Geral
+            </button>
+            <button id="tab-metas-financeiras-consultoria" class="btn btn-primary tab-button" data-tab="metas-financeiras-consultoria">
+                <i class="mdi mdi-cash-check"></i>
+                Metas Financeiras - Consultoria
             </button>
             <button id="tab-metas-operacionais" class="btn btn-primary tab-button" data-tab="metas-operacionais">
                 <i class="mdi mdi-chart-timeline-variant"></i>
@@ -113,15 +128,15 @@
         </div>
     </div>
 
-    <!-- Tab Metas Financeiras -->
-    <div id="content-metas-financeiras" class="tab-content active">
+    <!-- Tab Metas Financeiras - Geral -->
+    <div id="content-metas-financeiras-geral" class="tab-content active">
         <div class="table-container">
             <div class="table-header">
-                <h2 class="table-title">Metas Financeiras</h2>
+                <h2 class="table-title">Metas Financeiras - Geral</h2>
                 <div class="table-actions">
-                    <button id="btn-nova-meta-financeira" class="btn btn-primary">
+                    <button id="btn-nova-meta-financeira-geral" class="btn btn-primary">
                         <i class="mdi mdi-plus"></i>
-                        Nova Meta Financeira
+                        Nova Meta Financeira Geral
                     </button>
                 </div>
             </div>
@@ -136,7 +151,37 @@
                         <th width="120">Ações</th>
                     </tr>
                 </thead>
-                <tbody id="table-metas-financeiras-tbody">
+                <tbody id="table-metas-financeiras-geral-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Metas Financeiras - Consultoria -->
+    <div id="content-metas-financeiras-consultoria" class="tab-content">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Metas Financeiras - Consultoria</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-meta-financeira-consultoria" class="btn btn-primary">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Meta Financeira Consultoria
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Mês</th>
+                        <th>Valor da Meta</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-metas-financeiras-consultoria-tbody">
                     <!-- Dados serão carregados via JavaScript -->
                 </tbody>
             </table>

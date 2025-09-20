@@ -3,7 +3,7 @@ console.log('[PROJECOES] Script carregado');
 let dadosProjecoes = [];
 let editandoItem = null;
 let tipoEdicao = null;
-let tabAtiva = 'metas-financeiras-geral';
+let tabAtiva = 'metas-financeiras';
 let modoModal = 'individual';
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,9 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         configurarTabs();
         configurarEventos();
-        
-        // Garantir que a aba inicial esteja corretamente ativa
-        switchTab(tabAtiva);
         
         // Aguardar um pouco para garantir que todos os elementos estejam prontos
         setTimeout(function() {
@@ -69,8 +66,7 @@ function configurarEventos() {
         document.getElementById('ano-filtro').addEventListener('change', buscarDados);
         document.getElementById('tipo-filtro').addEventListener('change', buscarDados);
         
-        document.getElementById('btn-nova-meta-financeira-geral').addEventListener('click', function() { abrirModal('financeiro_geral'); });
-        document.getElementById('btn-nova-meta-financeira-consultoria').addEventListener('click', function() { abrirModal('financeiro_consultoria'); });
+        document.getElementById('btn-nova-meta-financeira').addEventListener('click', function() { abrirModal('financeiro'); });
         document.getElementById('btn-nova-meta-operacional').addEventListener('click', function() { abrirModal('operacional'); });
         document.getElementById('btn-nova-projecao').addEventListener('click', function() { abrirModal('projecao'); });
         
@@ -159,46 +155,26 @@ function buscarDados() {
 
 function renderizarDados() {
     console.log('[PROJECOES] Renderizando dados:', dadosProjecoes.length, 'itens');
-    renderizarMetasFinanceirasGeral();
-    renderizarMetasFinanceirasConsultoria();
+    renderizarMetasFinanceiras();
     renderizarMetasOperacionais();
     renderizarProjecoes();
 }
 
-function renderizarMetasFinanceirasGeral() {
-    const tbody = document.getElementById('table-metas-financeiras-geral-tbody');
-    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro_geral');
+function renderizarMetasFinanceiras() {
+    const tbody = document.getElementById('table-metas-financeiras-tbody');
+    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro');
     
-    console.log('[PROJECOES] Metas financeiras geral:', metas.length);
+    console.log('[PROJECOES] Metas financeiras:', metas.length);
     tbody.innerHTML = '';
     
     if (metas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 40px;"><i class="mdi mdi-information-outline" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>Nenhuma meta financeira geral encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 40px;"><i class="mdi mdi-information-outline" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>Nenhuma meta financeira encontrada</td></tr>';
         return;
     }
     
     metas.forEach(meta => {
         const row = document.createElement('tr');
-        row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_geral\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
-        tbody.appendChild(row);
-    });
-}
-
-function renderizarMetasFinanceirasConsultoria() {
-    const tbody = document.getElementById('table-metas-financeiras-consultoria-tbody');
-    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro_consultoria');
-    
-    console.log('[PROJECOES] Metas financeiras consultoria:', metas.length);
-    tbody.innerHTML = '';
-    
-    if (metas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 40px;"><i class="mdi mdi-information-outline" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>Nenhuma meta financeira consultoria encontrada</td></tr>';
-        return;
-    }
-    
-    metas.forEach(meta => {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_consultoria\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+        row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
         tbody.appendChild(row);
     });
 }
@@ -242,15 +218,13 @@ function renderizarProjecoes() {
 }
 
 function atualizarEstatisticas() {
-    const financeirasGeral = dadosProjecoes.filter(item => item.tipo === 'financeiro_geral').length;
-    const financeirasConsultoria = dadosProjecoes.filter(item => item.tipo === 'financeiro_consultoria').length;
+    const financeiras = dadosProjecoes.filter(item => item.tipo === 'financeiro').length;
     const operacionais = dadosProjecoes.filter(item => item.tipo === 'operacional').length;
     const projecoes = dadosProjecoes.filter(item => item.tipo === 'projecao').length;
     
-    console.log('[PROJECOES] Estatísticas - Financeiras Geral:', financeirasGeral, 'Financeiras Consultoria:', financeirasConsultoria, 'Operacionais:', operacionais, 'Projeções:', projecoes);
+    console.log('[PROJECOES] Estatísticas - Financeiras:', financeiras, 'Operacionais:', operacionais, 'Projeções:', projecoes);
     
-    document.getElementById('total-financeiras-geral').textContent = financeirasGeral;
-    document.getElementById('total-financeiras-consultoria').textContent = financeirasConsultoria;
+    document.getElementById('total-financeiras').textContent = financeiras;
     document.getElementById('total-operacionais').textContent = operacionais;
     document.getElementById('total-projecoes').textContent = projecoes;
 }
@@ -263,8 +237,6 @@ function abrirModal(tipo) {
     
     var titulos = {
         'financeiro': 'Nova Meta Financeira',
-        'financeiro_geral': 'Nova Meta Financeira - Geral',
-        'financeiro_consultoria': 'Nova Meta Financeira - Consultoria',
         'operacional': 'Nova Meta Operacional',
         'projecao': 'Nova Projeção'
     };
@@ -302,8 +274,6 @@ window.editarItem = function(itemId, tipo) {
     
     var titulos = {
         'financeiro': 'Editar Meta Financeira',
-        'financeiro_geral': 'Editar Meta Financeira - Geral',
-        'financeiro_consultoria': 'Editar Meta Financeira - Consultoria',
         'operacional': 'Editar Meta Operacional',
         'projecao': 'Editar Projeção'
     };
