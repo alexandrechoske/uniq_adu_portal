@@ -642,9 +642,9 @@ function updateAnalystTable() {
             <td>${efficiency}</td>
         `;
         
-        // Add hover event to show top clients popup
-        tr.addEventListener('mouseenter', (e) => showAnalystPopup(e, analyst));
-        tr.addEventListener('mouseleave', hideAnalystPopup);
+        // Add click event to show top clients popup (melhor que hover)
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', (e) => showAnalystPopup(e, analyst));
         
         tbody.appendChild(tr);
     });
@@ -718,16 +718,11 @@ function displayAnalystPopup(analystName, clients, event) {
 }
 
 /**
- * Hide analyst popup
+ * Close analyst popup (usado pelo botão fechar)
  */
-function hideAnalystPopup() {
-    // Add delay to prevent immediate hiding when moving to popup
-    setTimeout(() => {
-        const popup = document.getElementById('analyst-popup');
-        if (!popup.matches(':hover')) {
-            popup.style.display = 'none';
-        }
-    }, 100);
+function closeAnalystPopup() {
+    const popup = document.getElementById('analyst-popup');
+    popup.style.display = 'none';
 }
 
 /**
@@ -786,6 +781,18 @@ function updateModalChart() {
             plugins: {
                 legend: {
                     display: false
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'right',
+                    color: '#333',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: function(value) {
+                        return value.toString();
+                    }
                 }
             },
             scales: {
@@ -793,7 +800,8 @@ function updateModalChart() {
                     beginAtZero: true
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -834,6 +842,18 @@ function updateCanalChart() {
             plugins: {
                 legend: {
                     display: false
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'right',
+                    color: '#333',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: function(value) {
+                        return value.toString();
+                    }
                 }
             },
             scales: {
@@ -841,7 +861,8 @@ function updateCanalChart() {
                     beginAtZero: true
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -892,16 +913,17 @@ function createCalendar(year, month, calendarData) {
     
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${month.padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
         const dayData = calendarData.find(d => d.date === dateStr);
         const count = dayData ? dayData.count : 0;
         
         const hasData = count > 0;
         const intensity = hasData ? Math.min(count / 10, 1) : 0; // Scale intensity
         
+        // Improved calendar day with clear count display
         html += `<div class="calendar-day ${hasData ? 'has-data' : ''}" 
-                      style="${hasData ? `opacity: ${0.3 + intensity * 0.7}` : ''}"
-                      title="${count} registros em ${day}/${month}/${year}">
+                      style="${hasData ? `background-color: rgba(74, 144, 226, ${0.2 + intensity * 0.6})` : ''}"
+                      title="${count} registro${count !== 1 ? 's' : ''} em ${day}/${month}/${year}">
             <div class="calendar-day-number">${day}</div>
             ${hasData ? `<div class="calendar-day-count">${count}</div>` : ''}
         </div>`;
@@ -1023,6 +1045,18 @@ function updateSLAComparison() {
                 legend: {
                     display: true,
                     position: 'top'
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    color: '#333',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(1) + 'd';
+                    }
                 }
             },
             scales: {
@@ -1040,7 +1074,8 @@ function updateSLAComparison() {
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 

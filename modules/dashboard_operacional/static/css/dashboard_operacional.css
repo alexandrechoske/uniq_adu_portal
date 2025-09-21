@@ -352,21 +352,34 @@ canvas {
 .calendar-day-number {
     font-weight: 600;
     color: #2c3e50 !important; /* Force dark color */
+    font-size: 0.9rem;
 }
 
 .calendar-day-count {
-    font-size: 0.7rem;
-    color: #7f8c8d !important; /* Force readable gray */
+    font-size: 0.75rem;
+    color: #fff !important; /* White for visibility */
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 1px 4px;
     margin-top: 2px;
+    font-weight: 600;
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
 }
 
 .calendar-day.has-data {
-    background: linear-gradient(135deg, var(--unique-primary), var(--unique-secondary)) !important;
-    color: white !important;
+    border: 2px solid var(--unique-primary) !important;
+    color: #333 !important;
 }
 
-.calendar-day.has-data .calendar-day-number,
+.calendar-day.has-data .calendar-day-number {
+    color: var(--unique-primary) !important;
+    font-weight: 700;
+}
+
 .calendar-day.has-data .calendar-day-count {
+    background: var(--unique-primary) !important;
     color: white !important;
 }
 
