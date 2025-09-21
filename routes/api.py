@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify, session
 from extensions import supabase, supabase_admin
 from routes.auth import login_required
-import pandas as pd
-import numpy as np
+# import pandas as pd  # Temporariamente comentado para resolver conflito
+# import numpy as np   # Temporariamente comentado para resolver conflito
 from datetime import datetime
 import requests
 import logging

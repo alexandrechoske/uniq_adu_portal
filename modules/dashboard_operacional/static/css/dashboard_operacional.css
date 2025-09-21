@@ -341,6 +341,7 @@ canvas {
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    background-color: white;
 }
 
 .calendar-day:hover {
@@ -350,23 +351,23 @@ canvas {
 
 .calendar-day-number {
     font-weight: 600;
-    color: var(--unique-text-primary);
+    color: #2c3e50 !important; /* Force dark color */
 }
 
 .calendar-day-count {
     font-size: 0.7rem;
-    color: var(--unique-text-secondary);
+    color: #7f8c8d !important; /* Force readable gray */
     margin-top: 2px;
 }
 
 .calendar-day.has-data {
-    background: linear-gradient(135deg, var(--unique-primary), var(--unique-secondary));
-    color: white;
+    background: linear-gradient(135deg, var(--unique-primary), var(--unique-secondary)) !important;
+    color: white !important;
 }
 
 .calendar-day.has-data .calendar-day-number,
 .calendar-day.has-data .calendar-day-count {
-    color: white;
+    color: white !important;
 }
 
 .calendar-day.other-month {
