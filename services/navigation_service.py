@@ -21,7 +21,7 @@ def get_module_context(request_endpoint):
     
     # Módulo Importações
     if any(x in request_endpoint for x in [
-        'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios',
+        'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
         'conferencia', 'materiais', 'importacoes.'
     ]):
         return 'importacoes'
@@ -89,6 +89,13 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                     'icon': 'mdi-view-dashboard',
                     'url': 'dashboard_executivo.index',
                     'active_endpoints': ['dashboard_executivo.index']
+                },
+                {
+                    'title': 'Dashboard Operacional',
+                    'icon': 'mdi-chart-line',
+                    'url': 'dashboard_operacional.index',
+                    'active_endpoints': ['dashboard_operacional.index'],
+                    'roles': ['admin', 'interno_unique']
                 },
                 {
                     'title': 'Dashboard Importações',

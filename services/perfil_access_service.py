@@ -19,6 +19,7 @@ class PerfilAccessService:
     PAGE_TO_ENDPOINT_MAPPING = {
         # Páginas do módulo Importação (imp)
         'dashboard_executivo': 'dashboard_executivo',  # Dashboard Executivo
+        'dashboard_operacional': 'dashboard_operacional',  # Dashboard Operacional
         'dashboard_resumido': 'dash_importacoes_resumido',  # Dashboard Importações
         'documentos': 'conferencia',  # Conferência Documental 
         'relatorio': 'export_relatorios',  # Exportação de Relatórios
@@ -58,7 +59,7 @@ class PerfilAccessService:
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
                 'usuarios', 'agente', 'conferencia', 'materiais', 'config',
-                'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios',
+                'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
             ]
             print(f"[ACCESS_SERVICE] Master Admin (master_admin) - módulos disponíveis: {accessible_modules}")
@@ -71,7 +72,7 @@ class PerfilAccessService:
             if user_perfil_principal == 'admin_operacao':
                 # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações
                 accessible_modules.update([
-                    'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 
+                    'importacoes', 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 
                     'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config',
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
@@ -136,6 +137,11 @@ class PerfilAccessService:
                                 accessible_modules.add('dashboard_executivo')
                                 print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo (contexto: importação)")
                             # Para financeiro, o dashboard executivo é interno ao submenu
+                        elif pagina_codigo == 'dashboard_operacional':
+                            # Dashboard Operacional é específico por módulo - só adicionar se for do módulo de importação
+                            if modulo_codigo == 'imp':
+                                accessible_modules.add('dashboard_operacional')
+                                print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_operacional (contexto: importação)")
                         elif pagina_codigo == 'fin_dashboard_executivo':
                             # Dashboard Executivo Financeiro - específico do módulo financeiro
                             if modulo_codigo == 'fin':

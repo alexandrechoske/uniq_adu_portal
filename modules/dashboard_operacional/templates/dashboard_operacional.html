@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Operacional - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_operacional.static', filename='css/dashboard_operacional.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/document-manager.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Security Warning for clients without companies -->
+{% if show_company_warning %}
+<div class="alert alert-warning company-warning-alert" style="margin: 20px; padding: 20px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffeaa7; color: #856404;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #f39c12;"></i>
+        <div>
+            <h4 style="margin: 0 0 8px 0; color: #856404;">Acesso Restrito - Empresas Não Vinculadas</h4>
+            <p style="margin: 0; font-size: 14px; line-height: 1.4;">
+                Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o administrador do sistema para associar as empresas adequadas ao seu perfil.
+            </p>
+            <p style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d;">
+                <i class="mdi mdi-information"></i> Por questões de segurança e privacidade, o acesso aos dados é restrito às empresas associadas à sua conta.
+            </p>
+        </div>
+    </div>
+</div>
+<div class="dashboard-container" style="opacity: 0.3; pointer-events: none;">
+{% else %}
+<div class="dashboard-container">
+{% endif %}
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-importacoes">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
+                {'name': 'Dashboard Operacional', 'icon': 'mdi mdi-account-group'}
+            ], 'importacoes') }}
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados completos</span>
+            </div>
+        </div>
+        <div class="actions-right">
+            <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <div class="filter-controls">
+                <select id="year-filter" class="form-select filter-select">
+                    <option value="">Selecionar Ano</option>
+                </select>
+                <select id="month-filter" class="form-select filter-select">
+                    <option value="">Todos os Meses</option>
+                    <option value="01">Janeiro</option>
+                    <option value="02">Fevereiro</option>
+                    <option value="03">Março</option>
+                    <option value="04">Abril</option>
+                    <option value="05">Maio</option>
+                    <option value="06">Junho</option>
+                    <option value="07">Julho</option>
+                    <option value="08">Agosto</option>
+                    <option value="09">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KPI Cards - Linha de Metas Operacionais -->
+    <div class="kpi-grid">
+        <!-- Card 1: Total de Processos -->
+        <div class="kpi-card kpi-info" data-kpi-status="total_processos">
+            <div class="kpi-icon">
+                <i class="mdi mdi-folder-multiple"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Processos</p>
+                <p class="kpi-value" id="kpi-total-processos">-</p>
+                <p class="kpi-sub-value" id="kpi-total-processos-periodo">-</p>
+            </div>
+            <button class="kpi-mini-btn" title="Ver detalhes dos processos" data-mini="total_processos">≡</button>
+        </div>
+        
+        <!-- Card 2: Meta Mensal -->
+        <div class="kpi-card kpi-orange" data-kpi-status="meta_mensal">
+            <div class="kpi-icon">
+                <i class="mdi mdi-target"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Meta Mensal</p>
+                <p class="kpi-value" id="kpi-meta-mensal">-</p>
+                <p class="kpi-sub-value" id="kpi-meta-periodo">-</p>
+            </div>
+        </div>
+        
+        <!-- Card 3: Meta Realizada (%) -->
+        <div class="kpi-card kpi-success" data-kpi-status="meta_realizada">
+            <div class="kpi-icon">
+                <i class="mdi mdi-gauge"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Meta Realizada</p>
+                <div class="gauge-container" id="gauge-meta-realizada">
+                    <canvas id="gauge-canvas" width="80" height="80"></canvas>
+                    <div class="gauge-value" id="gauge-percentage">0%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card 4: Meta a Realizar -->
+        <div class="kpi-card kpi-purple" data-kpi-status="meta_realizar">
+            <div class="kpi-icon">
+                <i class="mdi mdi-chart-line-variant"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Meta a Realizar</p>
+                <p class="kpi-value" id="kpi-meta-realizar">-</p>
+                <p class="kpi-sub-value" id="kpi-meta-status">-</p>
+            </div>
+        </div>
+        
+        <!-- Card 5: SLA Médio -->
+        <div class="kpi-card kpi-teal" data-kpi-status="sla_medio">
+            <div class="kpi-icon">
+                <i class="mdi mdi-clock-outline"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">SLA Médio</p>
+                <p class="kpi-value" id="kpi-sla-medio">-</p>
+                <p class="kpi-sub-value">dias</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Análise Detalhada - Grid Principal -->
+    <div class="analysis-grid">
+        <!-- Coluna Esquerda: Tabelas -->
+        <div class="analysis-left">
+            <!-- Tabela Dinâmica de Clientes -->
+            <div class="enhanced-table-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="mdi mdi-account-group"></i>
+                        Performance por Cliente
+                    </h3>
+                    <div class="section-actions">
+                        <button class="btn btn-sm btn-outline-primary" id="expand-all-clients">
+                            <i class="mdi mdi-expand-all"></i>
+                            Expandir Todos
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="collapse-all-clients">
+                            <i class="mdi mdi-collapse-all"></i>
+                            Recolher Todos
+                        </button>
+                    </div>
+                </div>
+                <div class="enhanced-table-container">
+                    <div class="table-responsive">
+                        <table class="table table-hover enhanced-table" id="clients-table">
+                            <thead>
+                                <tr>
+                                    <th width="40px"></th>
+                                    <th>Cliente</th>
+                                    <th>Total Registros</th>
+                                    <th>Período Anterior</th>
+                                    <th>Variação %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body">
+                                <!-- Conteúdo carregado via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de Analistas -->
+            <div class="enhanced-table-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="mdi mdi-account-tie"></i>
+                        Performance por Analista
+                    </h3>
+                </div>
+                <div class="enhanced-table-container">
+                    <div class="table-responsive">
+                        <table class="table table-hover enhanced-table" id="analysts-table">
+                            <thead>
+                                <tr>
+                                    <th>Analista</th>
+                                    <th>Total Registros</th>
+                                    <th>SLA Médio</th>
+                                    <th>Eficiência</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysts-table-body">
+                                <!-- Conteúdo carregado via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Direita: Gráficos e Calendário -->
+        <div class="analysis-right">
+            <!-- Gráficos de Distribuição -->
+            <div class="chart-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Distribuição por Modal
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="modal-chart" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="mdi mdi-source-branch"></i>
+                        Distribuição por Canal
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="canal-chart" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Calendário de Atividade -->
+            <div class="calendar-section">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="mdi mdi-calendar-month"></i>
+                        Registros por Dia
+                    </h3>
+                </div>
+                <div class="calendar-container" id="activity-calendar">
+                    <!-- Calendário gerado via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Componentes Extras -->
+    <div class="extra-components">
+        <!-- Processos em Alerta -->
+        <div class="enhanced-table-section alert-section">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="mdi mdi-alert-circle"></i>
+                    Processos que Exigem Atenção
+                </h3>
+                <div class="section-actions">
+                    <span class="badge badge-warning" id="alert-count">0</span>
+                </div>
+            </div>
+            <div class="enhanced-table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover enhanced-table" id="alert-processes-table">
+                        <thead>
+                            <tr>
+                                <th>Ref. Unique</th>
+                                <th>Cliente</th>
+                                <th>Analista</th>
+                                <th>Data Registro</th>
+                                <th>Dias em Aberto</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alert-processes-body">
+                            <!-- Conteúdo carregado via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparativo SLA por Analista -->
+        <div class="chart-section sla-comparison">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <i class="mdi mdi-chart-box"></i>
+                    Comparativo de SLA por Analista
+                </h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="sla-comparison-chart" width="800" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados operacionais...</p>
+            <p class="last-update" id="loading-status">Inicializando...</p>
+        </div>
+    </div>
+
+    <!-- Popup para Detalhes do Analista -->
+    <div id="analyst-popup" class="analyst-popup" style="display: none;">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h4 id="popup-analyst-name">Analista</h4>
+                <button class="popup-close" id="close-analyst-popup">×</button>
+            </div>
+            <div class="popup-body">
+                <canvas id="popup-analyst-chart" width="400" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('dashboard_operacional.static', filename='js/dashboard_operacional.js') }}"></script>
+{% endblock %}

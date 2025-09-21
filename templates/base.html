@@ -768,6 +768,15 @@
                     </a>
                     {% endif %}
                     
+                    {% if 'dashboard_operacional' in accessible_modules %}
+                    <a href="{{ url_for('dashboard_operacional.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_operacional.index' %}active{% endif %}"
+                       title="Dashboard Operacional">
+                        <i class="mdi mdi-chart-line"></i>
+                        <span class="sidebar-text">Dashboard Operacional</span>
+                    </a>
+                    {% endif %}
+                    
                     {% if 'importacoes' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}"
@@ -932,6 +941,15 @@
                    title="Dashboard Executivo">
                     <i class="mdi mdi-view-dashboard text-xl"></i>
                     <span class="sidebar-text">Dashboard Executivo</span>
+                </a>
+                {% endif %}
+                
+                {% if 'dashboard_operacional' in accessible_modules %}
+                <a href="{{ url_for('dashboard_operacional.index') }}"
+                   class="sidebar-item {% if request.endpoint == 'dashboard_operacional.index' %}active{% endif %}"
+                   title="Dashboard Operacional">
+                    <i class="mdi mdi-chart-line text-xl"></i>
+                    <span class="sidebar-text">Dashboard Operacional</span>
                 </a>
                 {% endif %}
                 
