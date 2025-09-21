@@ -139,12 +139,16 @@ function onFilterChange() {
     const year = document.getElementById('year-filter').value;
     const month = document.getElementById('month-filter').value;
     const previousYear = currentFilters.year;
+    const previousMonth = currentFilters.month;
+    
     currentFilters.year = year;
     currentFilters.month = month;
     updateFilterSummary();
     operationalCache.invalidate(); // Invalidate cache when filters change
     loadOperationalData();
-    if (previousYear !== year) {
+    
+    // Update operations chart if year or month changed (for highlighting)
+    if (previousYear !== year || previousMonth !== month) {
         // Debounce update to avoid overlap
         setTimeout(() => updateOperationsChart(), 0);
     }
@@ -378,12 +382,21 @@ function createClientRow(client, index) {
     // Use correct property names from backend
     const clientName = client.nome || client.cliente || 'N/A';
     const totalProcessos = client.total_processos || 0;
-    const slaMedio = client.sla_medio || 0;
+    const periodoAnterior = client.periodo_anterior || 0;
+    const variacaoPercent = client.variacao_percent || 0;
     
-    // For now, we don't have periodo_anterior in the data
-    // So we'll show SLA instead for the third column
-    const variationHtml = slaMedio ? `${slaMedio} dias` : '-';
-    const variationClass = 'variation-neutral';
+    // Format variation with color coding
+    let variationHtml, variationClass;
+    if (variacaoPercent > 0) {
+        variationHtml = `+${variacaoPercent}%`;
+        variationClass = 'variation-positive';
+    } else if (variacaoPercent < 0) {
+        variationHtml = `${variacaoPercent}%`;
+        variationClass = 'variation-negative';
+    } else {
+        variationHtml = '0%';
+        variationClass = 'variation-neutral';
+    }
     
     tr.innerHTML = `
         <td>
@@ -391,14 +404,8 @@ function createClientRow(client, index) {
         </td>
         <td><strong>${clientName}</strong></td>
         <td>${totalProcessos.toLocaleString('pt-BR')}</td>
-        <td>${variationHtml}</td>
-        <td>
-            <div class="canal-badges">
-                ${Object.entries(client.canais || {}).map(([canal, count]) => 
-                    `<span class="canal-badge canal-${canal.toLowerCase()}">${canal}: ${count}</span>`
-                ).join('')}
-            </div>
-        </td>
+        <td>${periodoAnterior.toLocaleString('pt-BR')}</td>
+        <td><span class="${variationClass}">${variationHtml}</span></td>
     `;
     
     // Add click event for expansion
@@ -1116,6 +1123,37 @@ async function updateOperationsChart() {
         const monthlyData = result.data;
 
         const ctx = canvas.getContext('2d');
+        
+        // Determine which month to highlight based on current filters
+        const currentMonth = currentFilters.month ? parseInt(currentFilters.month) : null;
+        
+        // Create background colors array with highlight for current month
+        const backgroundColors = monthlyData.operations.map((value, index) => {
+            const monthIndex = index + 1; // months are 1-based
+            if (currentMonth && monthIndex === currentMonth) {
+                return 'rgba(52, 152, 219, 1.0)'; // Highlight color (full opacity)
+            }
+            return 'rgba(52, 152, 219, 0.7)'; // Normal color
+        });
+        
+        // Create border colors array with highlight for current month
+        const borderColors = monthlyData.operations.map((value, index) => {
+            const monthIndex = index + 1;
+            if (currentMonth && monthIndex === currentMonth) {
+                return 'rgba(41, 128, 185, 1)'; // Darker blue for highlight
+            }
+            return 'rgba(52, 152, 219, 1)';
+        });
+        
+        // Create border width array with highlight for current month
+        const borderWidths = monthlyData.operations.map((value, index) => {
+            const monthIndex = index + 1;
+            if (currentMonth && monthIndex === currentMonth) {
+                return 3; // Thicker border for highlight
+            }
+            return 2;
+        });
+        
         operationalCharts.operationsChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1123,9 +1161,9 @@ async function updateOperationsChart() {
                 datasets: [{
                     label: 'Operações Realizadas',
                     data: monthlyData.operations,
-                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    borderWidth: 2,
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
+                    borderWidth: borderWidths,
                     type: 'bar'
                 }, {
                     label: 'Meta Mensal',
@@ -1144,6 +1182,14 @@ async function updateOperationsChart() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 25, // Espaço extra no topo para o subtitle
+                        bottom: 5,
+                        left: 5,
+                        right: 5
+                    }
+                },
                 interaction: {
                     mode: 'index',
                     intersect: false,
@@ -1156,13 +1202,15 @@ async function updateOperationsChart() {
                     subtitle: {
                         display: true,
                         text: 'Clique em um mês para mais detalhes',
+                        position: 'top',
                         font: {
                             size: 12,
                             style: 'italic'
                         },
                         color: '#666',
                         padding: {
-                            bottom: 10
+                            top: 5,
+                            bottom: 35 // Maior distância dos data labels
                         }
                     },
                     // Removido title do gráfico
@@ -1172,6 +1220,7 @@ async function updateOperationsChart() {
                         },
                         anchor: 'end',
                         align: 'top',
+                        offset: 8, // Espaçamento extra acima das barras
                         color: '#333',
                         font: {
                             weight: 'bold',

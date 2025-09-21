@@ -168,15 +168,56 @@ def get_dashboard_data():
                     unique_clients[cliente]['canais'][canal] = 0
                 unique_clients[cliente]['canais'][canal] += 1
         
-        # Convert to list and calculate averages
+        # Get data from same period in previous year for comparison
+        previous_year_data = {}
+        if year:
+            try:
+                if month:
+                    # Same month in previous year
+                    prev_year = int(year) - 1
+                    prev_month = int(month)
+                    prev_year_records = [r for r in all_data 
+                                       if r.get('data_registro', '')[:4] == str(prev_year) 
+                                       and r.get('data_registro', '')[5:7] == f"{prev_month:02d}"]
+                else:
+                    # Previous year (all months)
+                    prev_year = int(year) - 1
+                    prev_year_records = [r for r in all_data 
+                                       if r.get('data_registro', '')[:4] == str(prev_year)]
+                
+                # Count by client in previous period
+                for record in prev_year_records:
+                    cliente = record.get('cliente', '')
+                    if cliente and isinstance(cliente, str) and cliente.strip():
+                        if cliente not in previous_year_data:
+                            previous_year_data[cliente] = 0
+                        previous_year_data[cliente] += 1
+                        
+            except Exception as e:
+                logger.error(f"Erro ao obter dados do período anterior: {str(e)}")
+        
+        # Convert to list and calculate averages with period comparison
         clients_list = []
         for cliente_data in unique_clients.values():
             sla_values = cliente_data['sla_medio']
             avg_sla = round(sum(sla_values) / len(sla_values), 1) if sla_values else None
             
+            # Get previous year data for this client
+            cliente_nome = cliente_data['nome']
+            total_atual = cliente_data['total_processos']
+            total_anterior = previous_year_data.get(cliente_nome, 0)
+            
+            # Calculate variation percentage
+            if total_anterior > 0:
+                variacao_percent = round(((total_atual - total_anterior) / total_anterior) * 100, 1)
+            else:
+                variacao_percent = 100.0 if total_atual > 0 else 0.0
+            
             clients_list.append({
-                'nome': cliente_data['nome'],
-                'total_processos': cliente_data['total_processos'],
+                'nome': cliente_nome,
+                'total_processos': total_atual,
+                'periodo_anterior': total_anterior,
+                'variacao_percent': variacao_percent,
                 'sla_medio': avg_sla,
                 'canais': cliente_data['canais']
             })
@@ -650,18 +691,17 @@ def get_sla_comparison_data(where_clause, params):
         return []
 
 def get_previous_period_data(year, month, group_by, params):
-    """Get data from previous period for comparison"""
+    """Get data from same period in previous year for comparison"""
     try:
         if not year:
             return {}
         
+        # Always compare to same period in previous year
+        # Example: Sep 2025 vs Sep 2024, or Year 2025 vs Year 2024
         if month:
-            # Previous month
-            prev_year = int(year)
-            prev_month = int(month) - 1
-            if prev_month == 0:
-                prev_month = 12
-                prev_year -= 1
+            # Same month in previous year
+            prev_year = int(year) - 1
+            prev_month = int(month)
             
             prev_filters = [
                 "EXTRACT(year FROM data_registro::date) = %(prev_year)s",
@@ -669,7 +709,7 @@ def get_previous_period_data(year, month, group_by, params):
             ]
             prev_params = {'prev_year': prev_year, 'prev_month': prev_month}
         else:
-            # Previous year
+            # Previous year (same as before)
             prev_filters = ["EXTRACT(year FROM data_registro::date) = %(prev_year)s"]
             prev_params = {'prev_year': int(year) - 1}
         
