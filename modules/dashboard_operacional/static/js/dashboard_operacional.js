@@ -71,7 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     setupEventListeners();
     initializeFilters();
-    updateOperationsChart(); // Carrega gráfico de operações
+    // Prevent double render: schedule chart after filters & before data load
+    setTimeout(() => updateOperationsChart(), 0); // Carrega gráfico de operações
     loadOperationalData();
 });
 
@@ -137,19 +138,15 @@ function initializeFilters() {
 function onFilterChange() {
     const year = document.getElementById('year-filter').value;
     const month = document.getElementById('month-filter').value;
-    
     const previousYear = currentFilters.year;
-    
     currentFilters.year = year;
     currentFilters.month = month;
-    
     updateFilterSummary();
     operationalCache.invalidate(); // Invalidate cache when filters change
     loadOperationalData();
-    
-    // Update operations chart if year changed
     if (previousYear !== year) {
-        updateOperationsChart();
+        // Debounce update to avoid overlap
+        setTimeout(() => updateOperationsChart(), 0);
     }
 }
 
@@ -258,7 +255,8 @@ function updateAllComponents() {
     if (!operationalData) return;
     
     updateKPIs();
-    updateOperationsChart(); // Novo gráfico de operações mensais
+    // Evitar render duplo do gráfico aqui: apenas se ainda não renderizado ou ano mudou
+    // updateOperationsChart(); // Removido para evitar duplicidade
     updateClientTable();
     updateAnalystTable();
     updateDistributionCharts();
@@ -1094,25 +1092,29 @@ function updateSLAComparison() {
  */
 async function updateOperationsChart() {
     const canvas = document.getElementById('operations-chart');
-    
-    if (operationalCharts.operationsChart) {
-        operationalCharts.operationsChart.destroy();
+    if (!canvas) return;
+
+    // Reentry guard
+    if (isOperationsChartRendering) {
+        console.debug('updateOperationsChart ignorado: renderização já em andamento');
+        return;
     }
-    
+    isOperationsChartRendering = true;
+
+    // Ensure previous instance is destroyed
+    destroyChartIfExists('operations-chart');
+    if (operationalCharts.operationsChart && typeof operationalCharts.operationsChart.destroy === 'function') {
+        operationalCharts.operationsChart.destroy();
+        operationalCharts.operationsChart = null;
+    }
+
     try {
-        // Get current year from filters or use current year
         const year = currentFilters.year || new Date().getFullYear();
-        
-        // Fetch monthly operations data
         const response = await fetch(`/dashboard-operacional/api/operations-monthly?year=${year}`);
         const result = await response.json();
-        
-        if (!result.success) {
-            throw new Error(result.message);
-        }
-        
+        if (!result.success) throw new Error(result.message || 'Falha ao carregar dados');
         const monthlyData = result.data;
-        
+
         const ctx = canvas.getContext('2d');
         operationalCharts.operationsChart = new Chart(ctx, {
             type: 'bar',
@@ -1149,12 +1151,21 @@ async function updateOperationsChart() {
                 plugins: {
                     legend: {
                         display: true,
-                        position: 'top'
+                        position: 'bottom' // Movido para baixo
                     },
-                    title: {
+                    subtitle: {
                         display: true,
-                        text: `Operações vs Meta - ${year}`
+                        text: 'Clique em um mês para mais detalhes',
+                        font: {
+                            size: 12,
+                            style: 'italic'
+                        },
+                        color: '#666',
+                        padding: {
+                            bottom: 10
+                        }
                     },
+                    // Removido title do gráfico
                     datalabels: {
                         display: function(context) {
                             return context.datasetIndex === 0; // Only show on bars
@@ -1173,16 +1184,22 @@ async function updateOperationsChart() {
                 },
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Quantidade de Operações'
-                        }
+                        beginAtZero: true
+                        // Removido title dos eixos
                     },
                     x: {
-                        title: {
-                            display: true,
-                            text: 'Meses'
+                        // Removido title dos eixos
+                    }
+                },
+                onClick: function(event, activeElements) {
+                    // Implementar drill-down por mês
+                    if (activeElements.length > 0) {
+                        const clickedElement = activeElements[0];
+                        if (clickedElement.datasetIndex === 0) { // Apenas para barras (operações)
+                            const monthIndex = clickedElement.index;
+                            const year = currentFilters.year || new Date().getFullYear();
+                            const month = monthIndex + 1; // Converter para 1-12
+                            drillDownToDaily(year, month, monthlyData.months[monthIndex]);
                         }
                     }
                 }
@@ -1199,8 +1216,198 @@ async function updateOperationsChart() {
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('Erro ao carregar dados mensais', canvas.width / 2, canvas.height / 2);
+    } finally {
+        isOperationsChartRendering = false;
     }
 }
+
+/**
+ * Drill down to daily view for a specific month
+ */
+async function drillDownToDaily(year, month, monthName) {
+    const canvas = document.getElementById('operations-chart');
+    
+    // Show loading state
+    const actionsContainer = document.querySelector('.operations-chart-section .section-actions');
+    if (actionsContainer) {
+        actionsContainer.innerHTML = '<span>Carregando dados diários...</span>';
+    }
+    
+    try {
+        // Fetch daily data
+        const response = await fetch(`/dashboard-operacional/api/operations-daily?year=${year}&month=${month}`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+        
+        const dailyData = result.data;
+        
+        // Destroy existing chart
+        if (operationalCharts.operationsChart && typeof operationalCharts.operationsChart.destroy === 'function') {
+            operationalCharts.operationsChart.destroy();
+            operationalCharts.operationsChart = null;
+        }
+        
+        // Create daily chart
+        const ctx = canvas.getContext('2d');
+        operationalCharts.operationsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dailyData.days,
+                datasets: [{
+                    label: 'Operações Diárias',
+                    data: dailyData.operations,
+                    backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                    borderColor: 'rgba(46, 204, 113, 1)',
+                    borderWidth: 2
+                }, {
+                    label: `Meta Diária (${dailyData.daily_target})`,
+                    data: new Array(dailyData.days.length).fill(dailyData.daily_target),
+                    borderColor: 'rgba(231, 76, 60, 1)',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    fill: false,
+                    type: 'line',
+                    pointStyle: 'circle',
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                    pointBorderColor: 'rgba(231, 76, 60, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: `Operações Diárias - ${monthName} ${year}`,
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        color: '#333'
+                    },
+                    datalabels: {
+                        display: function(context) {
+                            // Check if context and parsed data exist
+                            if (!context || !context.parsed || typeof context.parsed.y === 'undefined') {
+                                return false;
+                            }
+                            // Only show on bars with values > 0
+                            return context.datasetIndex === 0 && context.parsed.y > 0;
+                        },
+                        anchor: 'end',
+                        align: 'top',
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        },
+                        color: '#333',
+                        formatter: function(value, context) {
+                            // Safety check for value
+                            if (typeof value === 'number' && value > 0) {
+                                return value.toString();
+                            }
+                            return '';
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Dias do Mês',
+                            color: '#666'
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Operações',
+                            color: '#666'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('pt-BR');
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        
+        // Update actions container with return button
+        if (actionsContainer) {
+            actionsContainer.innerHTML = `
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="returnToMonthlyView()">
+                    <i class="fas fa-arrow-left"></i> Voltar para Visão Mensal
+                </button>
+                <span class="ms-2 text-muted">
+                    Total: ${dailyData.total_operations.toLocaleString('pt-BR')} operações | 
+                    Meta Mensal: ${dailyData.monthly_target.toLocaleString('pt-BR')}
+                </span>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados diários:', error);
+        if (actionsContainer) {
+            actionsContainer.innerHTML = '<span class="text-danger">Erro ao carregar dados diários</span>';
+        }
+    }
+}
+
+/**
+ * Return to monthly view from daily drill-down
+ */
+function returnToMonthlyView() {
+    // Clear actions container
+    const actionsContainer = document.querySelector('.operations-chart-section .section-actions');
+    if (actionsContainer) {
+        actionsContainer.innerHTML = '';
+    }
+    
+    // Destroy existing chart before recreating
+    if (operationalCharts.operationsChart && typeof operationalCharts.operationsChart.destroy === 'function') {
+        operationalCharts.operationsChart.destroy();
+        operationalCharts.operationsChart = null;
+    }
+    
+    // Small delay to ensure canvas is properly cleared
+    setTimeout(() => {
+        updateOperationsChart();
+    }, 100);
+}
+
+/**
+ * Helper to safely destroy chart instances bound to a canvas
+ */
+function destroyChartIfExists(canvasId) {
+    try {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const existing = Chart.getChart ? Chart.getChart(canvas) : (canvas._chart || null);
+        if (existing && typeof existing.destroy === 'function') {
+            existing.destroy();
+        }
+    } catch (e) {
+        console.warn('Falha ao destruir chart existente:', e);
+    }
+}
+
+// Reentry guard to avoid concurrent updates rendering on same canvas
+let isOperationsChartRendering = false;
 
 /**
  * Utility functions

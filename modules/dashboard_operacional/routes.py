@@ -1079,3 +1079,89 @@ def get_operations_monthly():
             'success': False,
             'message': f'Erro ao carregar dados mensais: {str(e)}'
         }), 500
+
+@dashboard_operacional.route('/api/operations-daily')
+@login_required
+def get_operations_daily():
+    """Get daily operations data for a specific month"""
+    try:
+        year = request.args.get('year', type=int, default=datetime.now().year)
+        month = request.args.get('month', type=int, default=datetime.now().month)
+        
+        # Get all data from correct table
+        response = supabase_admin.table('importacoes_processos_operacional').select('*').execute()
+        all_data = response.data
+        
+        # Group data by day for the specified year/month
+        daily_data = {}
+        for record in all_data:
+            data_registro_str = record.get('data_registro', '')
+            if data_registro_str and isinstance(data_registro_str, str):
+                try:
+                    if len(data_registro_str) >= 10:  # YYYY-MM-DD
+                        year_str = data_registro_str[:4]
+                        month_str = data_registro_str[5:7]
+                        day_str = data_registro_str[8:10]
+                        
+                        if year_str and month_str and day_str:
+                            record_year = int(year_str)
+                            record_month = int(month_str)
+                            record_day = int(day_str)
+                            
+                            if record_year == year and record_month == month:
+                                day_key = f"{year}-{month:02d}-{record_day:02d}"
+                                if day_key not in daily_data:
+                                    daily_data[day_key] = 0
+                                daily_data[day_key] += 1
+                except (ValueError, TypeError):
+                    continue
+        
+        # Get number of days in the month
+        from calendar import monthrange
+        _, days_in_month = monthrange(year, month)
+        
+        # Prepare chart data
+        days = []
+        operations = []
+        
+        for day in range(1, days_in_month + 1):
+            day_key = f"{year}-{month:02d}-{day:02d}"
+            days.append(f"{day:02d}")
+            operations.append(daily_data.get(day_key, 0))
+        
+        # Get monthly target for reference
+        meta_response = supabase_admin.table('fin_metas_projecoes')\
+            .select('meta')\
+            .eq('ano', str(year))\
+            .eq('mes', f"{month:02d}")\
+            .eq('tipo', 'operacional')\
+            .execute()
+        
+        monthly_target = int(meta_response.data[0]['meta']) if meta_response.data else 0
+        daily_target = round(monthly_target / days_in_month, 1) if monthly_target > 0 else 0
+        
+        # Month names in Portuguese
+        month_names = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'year': year,
+                'month': month,
+                'month_name': month_names[month-1],
+                'days': days,
+                'operations': operations,
+                'daily_target': daily_target,
+                'total_operations': sum(operations),
+                'monthly_target': monthly_target
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter dados diários: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao carregar dados diários: {str(e)}'
+        }), 500
