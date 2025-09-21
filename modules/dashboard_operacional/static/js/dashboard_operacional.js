@@ -445,25 +445,55 @@ async function expandClient(clientIndex) {
     const client = operationalData.clients[clientIndex];
     
     try {
-        // Since backend doesn't provide modal breakdown yet, we'll simulate it
-        // Based on the distribution data we have
-        const modalDistribution = operationalData.distribution.modal || [];
-        const totalProcessos = client.total_processos;
+        // Make API call to get real modal data for this client
+        const params = new URLSearchParams();
+        const clientName = client.nome || client.cliente || client.name || '';
+        params.append('client', clientName);
+        if (currentFilters.year) params.append('year', currentFilters.year);
+        if (currentFilters.month) params.append('month', currentFilters.month);
         
-        // Calculate proportional modal breakdown for this client
-        const totalModalCount = modalDistribution.reduce((sum, modal) => sum + modal.value, 0);
+        console.log('[DEBUG] Expanding client:', clientName, 'with params:', params.toString());
         
-        const clientModals = modalDistribution.map(modal => ({
-            modal: modal.label,
-            total_processos: Math.floor((modal.value / totalModalCount) * totalProcessos),
-            percentage: ((modal.value / totalModalCount) * 100).toFixed(1)
-        }));
+        const response = await fetch(`/dashboard-operacional/api/client-modals?${params.toString()}`);
+        const data = await response.json();
         
-        insertModalRows(clientIndex, clientModals);
+        if (data.success) {
+            const modals = data.data.modals || [];
+            console.log('[DEBUG] Received modals:', modals);
+            insertModalRows(clientIndex, modals);
+        } else {
+            console.error('Erro ao carregar dados de modais:', data.message);
+            // Fallback to simulated data if API fails
+            fallbackToSimulatedModals(clientIndex, client);
+        }
         
     } catch (error) {
         console.error('Erro ao carregar dados do modal:', error);
+        // Fallback to simulated data if API fails
+        fallbackToSimulatedModals(clientIndex, client);
     }
+}
+
+/**
+ * Fallback function to use simulated modal data
+ */
+function fallbackToSimulatedModals(clientIndex, client) {
+    // Since backend doesn't provide modal breakdown yet, we'll simulate it
+    // Based on the distribution data we have
+    const modalDistribution = operationalData.distribution.modal || [];
+    const totalProcessos = client.total_processos;
+    
+    // Calculate proportional modal breakdown for this client
+    const totalModalCount = modalDistribution.reduce((sum, modal) => sum + modal.value, 0);
+    
+    const clientModals = modalDistribution.map(modal => ({
+        modal: modal.label,
+        total_registros: Math.floor((modal.value / totalModalCount) * totalProcessos),
+        periodo_anterior: 0, // Unknown in simulated data
+        variacao_percent: 0 // Unknown in simulated data
+    }));
+    
+    insertModalRows(clientIndex, clientModals);
 }
 
 /**
@@ -480,22 +510,39 @@ function insertModalRows(clientIndex, modals) {
             modalRow.dataset.clientIndex = clientIndex;
             modalRow.dataset.level = '1';
             
+            // Use correct property names and structure for modal data
+            const modalName = modal.modal || modal.label || 'N/A';
+            const totalRegistros = modal.total_registros || modal.total_processos || 0;
+            const periodoAnterior = modal.periodo_anterior || 0;
+            const variacaoPercent = modal.variacao_percent || 0;
+            
+            // Format variation with color coding
+            let variationHtml, variationClass;
+            if (variacaoPercent > 0) {
+                variationHtml = `+${variacaoPercent}%`;
+                variationClass = 'variation-positive';
+            } else if (variacaoPercent < 0) {
+                variationHtml = `${variacaoPercent}%`;
+                variationClass = 'variation-negative';
+            } else {
+                variationHtml = '0%';
+                variationClass = 'variation-neutral';
+            }
+            
             modalRow.innerHTML = `
                 <td>
-                    <div class="expand-icon" data-action="expand" data-modal="${modal.modal}">+</div>
+                    <div class="expand-icon" data-action="expand" data-modal="${modalName}">+</div>
                 </td>
-                <td class="level-indicator">→ ${modal.modal}</td>
-                <td>${modal.total_processos.toLocaleString('pt-BR')}</td>
-                <td>${modal.percentage}%</td>
-                <td>
-                    <span class="modal-badge modal-${modal.modal.toLowerCase().replace('í', 'i').replace('É', 'e')}">${modal.modal}</span>
-                </td>
+                <td class="level-indicator">→ ${modalName}</td>
+                <td>${totalRegistros.toLocaleString('pt-BR')}</td>
+                <td>${periodoAnterior.toLocaleString('pt-BR')}</td>
+                <td><span class="${variationClass}">${variationHtml}</span></td>
             `;
             
             // Add event for process expansion
             modalRow.querySelector('.expand-icon').addEventListener('click', (e) => {
                 e.stopPropagation();
-                toggleModalExpansion(clientIndex, modal.modal, modalRow);
+                toggleModalExpansion(clientIndex, modalName, modalRow);
             });
             
             // Insert after client row (and any existing modal rows)

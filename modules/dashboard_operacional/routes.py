@@ -741,7 +741,7 @@ def get_previous_period_data(year, month, group_by, params):
         return {}
 
 @dashboard_operacional.route('/api/client-modals')
-@login_required
+@require_login
 def get_client_modals():
     """Get modal breakdown for a specific client"""
     try:
@@ -753,53 +753,93 @@ def get_client_modals():
         if not client:
             return jsonify({'success': False, 'message': 'Cliente não especificado'}), 400
         
-        # Build filters
-        filters = ["cliente = %(client)s"]
-        params = {'client': client}
-        
-        if year and month:
-            filters.extend([
-                "EXTRACT(year FROM data_registro::date) = %(year)s",
-                "EXTRACT(month FROM data_registro::date) = %(month)s"
-            ])
-            params.update({'year': int(year), 'month': int(month)})
-        elif year:
-            filters.append("EXTRACT(year FROM data_registro::date) = %(year)s")
-            params['year'] = int(year)
-        
-        # Company filter
+        # Company filter for security
         if user_companies is not None and client not in user_companies:
             return jsonify({'success': False, 'message': 'Acesso negado'}), 403
         
-        where_clause = f"WHERE {' AND '.join(filters)}"
+        # Use the main data source - same as get_dashboard_data
+        response = supabase_admin.table('importacoes_processos_operacional').select('*').execute()
+        all_data = response.data
         
-        # Current period
-        query = f"""
-            SELECT 
-                modal,
-                COUNT(*) as total_registros
-            FROM importacoes_processos_aberta
-            {where_clause} AND modal IS NOT NULL
-            GROUP BY modal
-            ORDER BY total_registros DESC
-        """
+        # Filter data by client and period
+        filtered_data = []
+        for record in all_data:
+            # Filter by client
+            if record.get('cliente') != client:
+                continue
+                
+            # Filter by period if specified
+            data_registro_str = record.get('data_registro', '')
+            if data_registro_str and isinstance(data_registro_str, str):
+                if year and len(data_registro_str) >= 4:
+                    record_year = data_registro_str[:4]
+                    if record_year != str(year):
+                        continue
+                
+                if month and len(data_registro_str) >= 7:
+                    record_month = data_registro_str[5:7]
+                    if record_month != f"{int(month):02d}":
+                        continue
+            
+            filtered_data.append(record)
         
-        result = supabase_admin.rpc('execute_sql', {'sql_query': query, 'params': params}).execute()
-        current_data = {row['modal']: row['total_registros'] for row in result.data}
+        # Count by modal
+        modal_counts = {}
+        for record in filtered_data:
+            modal = record.get('modal')
+            if modal:
+                modal_counts[modal] = modal_counts.get(modal, 0) + 1
         
-        # Previous period data
-        previous_data = get_previous_period_client_modals(client, year, month)
+        # Get previous period data for comparison
+        previous_modal_counts = {}
+        if year:
+            prev_year = int(year) - 1 if not month else int(year)
+            prev_month = int(month) - 1 if month else None
+            
+            if prev_month == 0:
+                prev_month = 12
+                prev_year = int(year) - 1
+            
+            for record in all_data:
+                if record.get('cliente') != client:
+                    continue
+                    
+                data_registro_str = record.get('data_registro', '')
+                if data_registro_str and isinstance(data_registro_str, str):
+                    if len(data_registro_str) >= 4:
+                        record_year = data_registro_str[:4]
+                        if record_year != str(prev_year):
+                            continue
+                    
+                    if prev_month and len(data_registro_str) >= 7:
+                        record_month = data_registro_str[5:7]
+                        if record_month != f"{prev_month:02d}":
+                            continue
+                
+                modal = record.get('modal')
+                if modal:
+                    previous_modal_counts[modal] = previous_modal_counts.get(modal, 0) + 1
         
-        # Combine data
+        # Combine data and calculate variations
         modals = []
-        for modal, total_registros in current_data.items():
-            periodo_anterior = previous_data.get(modal, 0)
+        for modal, total_registros in modal_counts.items():
+            periodo_anterior = previous_modal_counts.get(modal, 0)
+            
+            # Calculate variation percentage
+            if periodo_anterior > 0:
+                variacao_percent = round(((total_registros - periodo_anterior) / periodo_anterior) * 100, 1)
+            else:
+                variacao_percent = 100.0 if total_registros > 0 else 0.0
             
             modals.append({
                 'modal': modal,
                 'total_registros': total_registros,
-                'periodo_anterior': periodo_anterior
+                'periodo_anterior': periodo_anterior,
+                'variacao_percent': variacao_percent
             })
+        
+        # Sort by total_registros desc
+        modals.sort(key=lambda x: x['total_registros'], reverse=True)
         
         return jsonify({
             'success': True,
@@ -856,7 +896,7 @@ def get_previous_period_client_modals(client, year, month):
         return {}
 
 @dashboard_operacional.route('/api/client-processes')
-@login_required
+@require_login
 def get_client_processes():
     """Get individual processes for a specific client and modal"""
     try:
@@ -873,44 +913,42 @@ def get_client_processes():
         if user_companies is not None and client not in user_companies:
             return jsonify({'success': False, 'message': 'Acesso negado'}), 403
         
-        # Build filters
-        filters = ["cliente = %(client)s", "modal = %(modal)s"]
-        params = {'client': client, 'modal': modal}
+        # Use the main data source
+        response = supabase_admin.table('importacoes_processos_operacional').select('*').execute()
+        all_data = response.data
         
-        if year and month:
-            filters.extend([
-                "EXTRACT(year FROM data_registro::date) = %(year)s",
-                "EXTRACT(month FROM data_registro::date) = %(month)s"
-            ])
-            params.update({'year': int(year), 'month': int(month)})
-        elif year:
-            filters.append("EXTRACT(year FROM data_registro::date) = %(year)s")
-            params['year'] = int(year)
-        
-        where_clause = f"WHERE {' AND '.join(filters)}"
-        
-        query = f"""
-            SELECT 
-                ref_unique,
-                data_registro
-            FROM importacoes_processos_aberta
-            {where_clause}
-            ORDER BY data_registro DESC
-            LIMIT 50
-        """
-        
-        result = supabase_admin.rpc('execute_sql', {'sql_query': query, 'params': params}).execute()
-        
-        processes = []
-        for row in result.data:
-            processes.append({
-                'ref_unique': row['ref_unique'],
-                'data_registro': row['data_registro']
+        # Filter data
+        filtered_processes = []
+        for record in all_data:
+            # Filter by client and modal
+            if record.get('cliente') != client or record.get('modal') != modal:
+                continue
+                
+            # Filter by period if specified
+            data_registro_str = record.get('data_registro', '')
+            if data_registro_str and isinstance(data_registro_str, str):
+                if year and len(data_registro_str) >= 4:
+                    record_year = data_registro_str[:4]
+                    if record_year != str(year):
+                        continue
+                
+                if month and len(data_registro_str) >= 7:
+                    record_month = data_registro_str[5:7]
+                    if record_month != f"{int(month):02d}":
+                        continue
+            
+            filtered_processes.append({
+                'ref_unique': record.get('ref_unique', ''),
+                'data_registro': data_registro_str
             })
+        
+        # Sort by data_registro desc and limit to 50
+        filtered_processes.sort(key=lambda x: x['data_registro'], reverse=True)
+        filtered_processes = filtered_processes[:50]
         
         return jsonify({
             'success': True,
-            'data': {'processes': processes}
+            'data': {'processes': filtered_processes}
         })
         
     except Exception as e:
