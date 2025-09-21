@@ -1262,19 +1262,6 @@ async function drillDownToDaily(year, month, monthName) {
                     backgroundColor: 'rgba(46, 204, 113, 0.7)',
                     borderColor: 'rgba(46, 204, 113, 1)',
                     borderWidth: 2
-                }, {
-                    label: `Meta Diária (${dailyData.daily_target})`,
-                    data: new Array(dailyData.days.length).fill(dailyData.daily_target),
-                    borderColor: 'rgba(231, 76, 60, 1)',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    borderWidth: 3,
-                    borderDash: [5, 5],
-                    fill: false,
-                    type: 'line',
-                    pointStyle: 'circle',
-                    pointRadius: 4,
-                    pointBackgroundColor: 'rgba(231, 76, 60, 1)',
-                    pointBorderColor: 'rgba(231, 76, 60, 1)'
                 }]
             },
             options: {
@@ -1282,6 +1269,7 @@ async function drillDownToDaily(year, month, monthName) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
+                        display: true,
                         position: 'bottom'
                     },
                     title: {
