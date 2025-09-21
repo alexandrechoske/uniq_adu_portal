@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     setupEventListeners();
     initializeFilters();
+    updateOperationsChart(); // Carrega gráfico de operações
     loadOperationalData();
 });
 
@@ -137,12 +138,19 @@ function onFilterChange() {
     const year = document.getElementById('year-filter').value;
     const month = document.getElementById('month-filter').value;
     
+    const previousYear = currentFilters.year;
+    
     currentFilters.year = year;
     currentFilters.month = month;
     
     updateFilterSummary();
     operationalCache.invalidate(); // Invalidate cache when filters change
     loadOperationalData();
+    
+    // Update operations chart if year changed
+    if (previousYear !== year) {
+        updateOperationsChart();
+    }
 }
 
 /**
@@ -250,6 +258,7 @@ function updateAllComponents() {
     if (!operationalData) return;
     
     updateKPIs();
+    updateOperationsChart(); // Novo gráfico de operações mensais
     updateClientTable();
     updateAnalystTable();
     updateDistributionCharts();
@@ -279,14 +288,15 @@ function updateKPIs() {
     const metaRealizarEl = document.getElementById('kpi-meta-realizar');
     const metaStatusEl = document.getElementById('kpi-meta-status');
     
-    if (kpis.meta_a_realizar > 0) {
+    // Meta é atingida quando percentual >= 100%
+    if (kpis.meta_percentual >= 100) {
+        metaRealizarEl.textContent = 'Meta Atingida';
+        metaStatusEl.textContent = '✓ Atingida';
+        metaRealizarEl.parentElement.parentElement.className = 'kpi-card kpi-success';
+    } else {
         metaRealizarEl.textContent = kpis.meta_a_realizar.toLocaleString('pt-BR');
         metaStatusEl.textContent = 'a realizar';
         metaRealizarEl.parentElement.parentElement.className = 'kpi-card kpi-purple';
-    } else {
-        metaRealizarEl.textContent = 'Meta Atingida';
-        metaStatusEl.textContent = '✓';
-        metaRealizarEl.parentElement.parentElement.className = 'kpi-card kpi-success';
     }
     
     // SLA Médio
@@ -1077,6 +1087,119 @@ function updateSLAComparison() {
         },
         plugins: [ChartDataLabels]
     });
+}
+
+/**
+ * Update operations monthly chart
+ */
+async function updateOperationsChart() {
+    const canvas = document.getElementById('operations-chart');
+    
+    if (operationalCharts.operationsChart) {
+        operationalCharts.operationsChart.destroy();
+    }
+    
+    try {
+        // Get current year from filters or use current year
+        const year = currentFilters.year || new Date().getFullYear();
+        
+        // Fetch monthly operations data
+        const response = await fetch(`/dashboard-operacional/api/operations-monthly?year=${year}`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+        
+        const monthlyData = result.data;
+        
+        const ctx = canvas.getContext('2d');
+        operationalCharts.operationsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: monthlyData.months,
+                datasets: [{
+                    label: 'Operações Realizadas',
+                    data: monthlyData.operations,
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 2,
+                    type: 'bar'
+                }, {
+                    label: 'Meta Mensal',
+                    data: monthlyData.targets,
+                    borderColor: 'rgba(231, 76, 60, 1)',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    borderWidth: 3,
+                    borderDash: [10, 5],
+                    type: 'line',
+                    fill: false,
+                    pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                    pointBorderColor: 'rgba(231, 76, 60, 1)',
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: `Operações vs Meta - ${year}`
+                    },
+                    datalabels: {
+                        display: function(context) {
+                            return context.datasetIndex === 0; // Only show on bars
+                        },
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#333',
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        formatter: function(value) {
+                            return value > 0 ? value.toString() : '';
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantidade de Operações'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Meses'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados das operações mensais:', error);
+        // Show error message on canvas
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6c757d';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Erro ao carregar dados mensais', canvas.width / 2, canvas.height / 2);
+    }
 }
 
 /**

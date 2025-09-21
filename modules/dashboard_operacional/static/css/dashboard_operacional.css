@@ -162,11 +162,33 @@ canvas {
 /* Sections */
 .enhanced-table-section,
 .chart-section,
-.calendar-section {
+.calendar-section,
+.operations-chart-section {
     background: var(--unique-background-white);
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+}
+
+/* Operations Chart Section */
+.operations-chart-section {
+    margin-bottom: 2rem;
+    margin-top: 1rem;
+}
+
+.operations-chart-section .section-content {
+    padding: 1.5rem;
+}
+
+.operations-chart-section .chart-container {
+    position: relative;
+    height: 350px;
+    width: 100%;
+}
+
+.operations-chart-section #operations-chart {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .section-header {

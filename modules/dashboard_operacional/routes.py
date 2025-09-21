@@ -133,8 +133,9 @@ def get_dashboard_data():
             if meta_response.data:
                 meta_mensal = int(meta_response.data[0]['meta'])
         
-        # Calculate meta percentage
+        # Calculate meta percentage and remaining
         meta_percentual = round((total_processos / meta_mensal * 100), 2) if meta_mensal > 0 else 0
+        meta_a_realizar = max(0, meta_mensal - total_processos) if meta_mensal > 0 else 0
         
         # Calculate average SLA
         sla_values = [record.get('sla_dias') for record in filtered_data if record.get('sla_dias') is not None]
@@ -297,6 +298,7 @@ def get_dashboard_data():
                 'total_processos': total_processos,
                 'meta_mensal': meta_mensal,
                 'meta_percentual': meta_percentual,
+                'meta_a_realizar': meta_a_realizar,
                 'sla_medio': sla_medio
             },
             'clients': clients_list[:20],  # Top 20
@@ -993,3 +995,87 @@ def test_dashboard_data():
     except Exception as e:
         logger.error(f"Erro no teste: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@dashboard_operacional.route('/api/operations-monthly')
+@login_required
+def get_operations_monthly():
+    """Get monthly operations data with targets for chart"""
+    try:
+        year = request.args.get('year', type=int, default=datetime.now().year)
+        
+        # Get all data from correct table
+        response = supabase_admin.table('importacoes_processos_operacional').select('*').execute()
+        all_data = response.data
+        
+        # Group data by month for the specified year
+        monthly_data = {}
+        for record in all_data:
+            data_registro_str = record.get('data_registro', '')
+            if data_registro_str and isinstance(data_registro_str, str):
+                try:
+                    if len(data_registro_str) >= 10:  # YYYY-MM-DD
+                        year_str = data_registro_str[:4]
+                        month_str = data_registro_str[5:7]
+                        
+                        if year_str and month_str:
+                            record_year = int(year_str)
+                            record_month = int(month_str)
+                            
+                            if record_year == year:
+                                month_key = f"{year}-{month_str}"
+                                if month_key not in monthly_data:
+                                    monthly_data[month_key] = 0
+                                monthly_data[month_key] += 1
+                except (ValueError, TypeError):
+                    continue
+        
+        # Get monthly targets from fin_metas_projecoes
+        monthly_targets = {}
+        for month in range(1, 13):
+            meta_response = supabase_admin.table('fin_metas_projecoes')\
+                .select('meta')\
+                .eq('ano', str(year))\
+                .eq('mes', f"{month:02d}")\
+                .eq('tipo', 'operacional')\
+                .execute()
+            
+            if meta_response.data:
+                month_key = f"{year}-{month:02d}"
+                monthly_targets[month_key] = int(meta_response.data[0]['meta'])
+            else:
+                month_key = f"{year}-{month:02d}"
+                monthly_targets[month_key] = 0
+        
+        # Prepare chart data
+        months = []
+        operations = []
+        targets = []
+        
+        month_names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        
+        for month in range(1, 13):
+            month_key = f"{year}-{month:02d}"
+            months.append(month_names[month-1])
+            operations.append(monthly_data.get(month_key, 0))
+            targets.append(monthly_targets.get(month_key, 0))
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'year': year,
+                'months': months,
+                'operations': operations,
+                'targets': targets,
+                'total_operations': sum(operations),
+                'total_targets': sum(targets)
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter dados mensais: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao carregar dados mensais: {str(e)}'
+        }), 500
