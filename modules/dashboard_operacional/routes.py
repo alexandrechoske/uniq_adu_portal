@@ -917,30 +917,62 @@ def get_client_processes():
         response = supabase_admin.table('importacoes_processos_operacional').select('*').execute()
         all_data = response.data
         
+        logger.info(f"[DEBUG] Searching for client '{client}' and modal '{modal}' in {len(all_data)} total records")
+        
+        # Debug: show first few records to understand structure
+        if all_data and len(all_data) > 0:
+            sample_record = all_data[0]
+            logger.info(f"[DEBUG] Sample record keys: {list(sample_record.keys())}")
+            logger.info(f"[DEBUG] Sample client: '{sample_record.get('cliente', 'N/A')}'")
+            logger.info(f"[DEBUG] Sample modal: '{sample_record.get('modal', 'N/A')}'")
+        
         # Filter data
         filtered_processes = []
+        client_matches = 0
+        modal_matches = 0
+        
         for record in all_data:
-            # Filter by client and modal
-            if record.get('cliente') != client or record.get('modal') != modal:
-                continue
+            # Debug: check client matches
+            record_client = record.get('cliente', '')
+            if record_client == client:
+                client_matches += 1
                 
-            # Filter by period if specified
-            data_registro_str = record.get('data_registro', '')
-            if data_registro_str and isinstance(data_registro_str, str):
-                if year and len(data_registro_str) >= 4:
-                    record_year = data_registro_str[:4]
-                    if record_year != str(year):
-                        continue
-                
-                if month and len(data_registro_str) >= 7:
-                    record_month = data_registro_str[5:7]
-                    if record_month != f"{int(month):02d}":
-                        continue
-            
-            filtered_processes.append({
-                'ref_unique': record.get('ref_unique', ''),
-                'data_registro': data_registro_str
-            })
+                # Debug: check modal matches for this client
+                record_modal = record.get('modal', '')
+                if record_modal == modal:
+                    modal_matches += 1
+                    
+                    # Filter by period if specified
+                    data_registro_str = record.get('data_registro', '')
+                    include_record = True
+                    
+                    if data_registro_str and isinstance(data_registro_str, str):
+                        if year and len(data_registro_str) >= 4:
+                            record_year = data_registro_str[:4]
+                            if record_year != str(year):
+                                include_record = False
+                        
+                        if month and len(data_registro_str) >= 7 and include_record:
+                            record_month = data_registro_str[5:7]
+                            if record_month != f"{int(month):02d}":
+                                include_record = False
+                    
+                    if include_record:
+                        # Try different possible column names for reference
+                        ref_unique = (record.get('ref_unique') or 
+                                    record.get('referencia') or 
+                                    record.get('numero_processo') or 
+                                    record.get('id') or 
+                                    f"PROC_{modal_matches}")
+                        
+                        filtered_processes.append({
+                            'ref_unique': str(ref_unique),
+                            'data_registro': data_registro_str or 'N/A'
+                        })
+        
+        logger.info(f"[DEBUG] Found {client_matches} records for client '{client}'")
+        logger.info(f"[DEBUG] Found {modal_matches} records for modal '{modal}' in that client")
+        logger.info(f"[DEBUG] Final filtered processes after date filter: {len(filtered_processes)}")
         
         # Sort by data_registro desc and limit to 50
         filtered_processes.sort(key=lambda x: x['data_registro'], reverse=True)

@@ -587,16 +587,25 @@ async function expandModal(clientIndex, modal, modalRow) {
     
     try {
         const params = new URLSearchParams();
-        params.append('client', client.cliente);
+        const clientName = client.nome || client.cliente || client.name || '';
+        params.append('client', clientName);
         params.append('modal', modal);
         if (currentFilters.year) params.append('year', currentFilters.year);
         if (currentFilters.month) params.append('month', currentFilters.month);
         
+        console.log('[DEBUG] Expanding modal:', modal, 'for client:', clientName, 'with params:', params.toString());
+        
         const response = await fetch(`/dashboard-operacional/api/client-processes?${params.toString()}`);
         const data = await response.json();
         
+        console.log('[DEBUG] Processes response:', data);
+        
         if (data.success) {
-            insertProcessRows(clientIndex, modal, data.data.processes, modalRow);
+            const processes = data.data.processes || [];
+            console.log('[DEBUG] Total processes found:', processes.length);
+            insertProcessRows(clientIndex, modal, processes, modalRow);
+        } else {
+            console.error('[DEBUG] API error:', data.message);
         }
     } catch (error) {
         console.error('Erro ao carregar processos:', error);
