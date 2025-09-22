@@ -198,7 +198,7 @@ class PerfilAccessService:
                                     accessible_modules.add(endpoint_module)
                                     print(f"[ACCESS_SERVICE] Adicionado módulo por página: {pagina_codigo} → {endpoint_module}")
                                 
-                                # Add sidebar compatibility modules
+                                # Add sidebar compatibility modules with module context
                                 if pagina_codigo == 'relatorio':
                                     accessible_modules.add('relatorios')  # For sidebar compatibility
                                     accessible_modules.add('export_relatorios')  # For direct access
@@ -208,7 +208,15 @@ class PerfilAccessService:
                                 elif pagina_codigo == 'agente':
                                     accessible_modules.add('agente')
                                 elif pagina_codigo == 'dashboard_executivo':
-                                    accessible_modules.add('dashboard_executivo')
+                                    # Dashboard Executivo é específico por módulo - só adicionar se for do módulo de importação
+                                    if modulo_codigo in ['imp', 'importacoes']:
+                                        accessible_modules.add('dashboard_executivo')
+                                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_executivo (contexto: importação)")
+                                elif pagina_codigo == 'dashboard_operacional':
+                                    # Dashboard Operacional é específico por módulo - só adicionar se for do módulo de importação
+                                    if modulo_codigo in ['imp', 'importacoes']:
+                                        accessible_modules.add('dashboard_operacional')
+                                        print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_operacional (contexto: importação)")
                                 elif pagina_codigo == 'dashboard_resumido':
                                     accessible_modules.add('dash_importacoes_resumido')
                     break

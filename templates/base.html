@@ -752,7 +752,7 @@
                 <!-- SEÇÕES PARA USUÁRIOS DO SISTEMA -->
                 
                 <!-- Seção Importações -->
-                {% if 'dashboard_executivo' in accessible_modules or 'importacoes' in accessible_modules or 'relatorios' in accessible_modules or 'conferencia' in accessible_modules or 'agente' in accessible_modules %}
+                {% if 'dashboard_executivo' in accessible_modules or 'importacoes' in accessible_modules or 'relatorios' in accessible_modules %}
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">
                         <i class="mdi mdi-ferry text-sm"></i>
@@ -804,14 +804,7 @@
                     </a>
                     {% endif %}
                     
-                    {% if 'agente' in accessible_modules %}
-                    <a href="{{ url_for('agente.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}"
-                       title="Agente Unique">
-                        <i class="mdi mdi-chat"></i>
-                        <span class="sidebar-text">Agente Unique</span>
-                    </a>
-                    {% endif %}
+                    <!-- Agente Unique removido conforme solicitação -->
                 </div>
                 {% endif %}
                 
@@ -825,11 +818,11 @@
                     
                     {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
                     
-                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
                        title="Dashboard Executivo Financeiro">
-                        <i class="mdi mdi-chart-box"></i>
+                        <i class="mdi mdi-chart-box text-xl"></i>
                         <span class="sidebar-text">Dashboard Executivo</span>
                     </a>
                     {% endif %}
@@ -962,14 +955,7 @@
                 </a>
                 {% endif %}
                 
-                {% if 'conferencia' in accessible_modules %}
-                <a href="{{ url_for('conferencia.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('conferencia.') %}active{% endif %}"
-                   title="Conferência Documental">
-                    <i class="mdi mdi-file-check text-xl"></i>
-                    <span class="sidebar-text">Conferência Documental</span>
-                </a>
-                {% endif %}
+                <!-- Conferência Documental removida conforme solicitação - ainda em desenvolvimento -->
                 
                 {% if 'relatorios' in accessible_modules %}
                 <a href="{{ url_for('export_relatorios.index') }}"
@@ -980,20 +966,13 @@
                 </a>
                 {% endif %}
                 
-                {% if 'agente' in accessible_modules %}
-                <a href="{{ url_for('agente.index') }}"
-                   class="sidebar-item {% if request.endpoint and request.endpoint.startswith('agente.') %}active{% endif %}"
-                   title="Agente Unique">
-                    <i class="mdi mdi-chat text-xl"></i>
-                    <span class="sidebar-text">Agente Unique</span>
-                </a>
-                {% endif %}
+                <!-- Agente Unique removido conforme solicitação -->
                 
                 <!-- Páginas do Financeiro (se tiver acesso) -->
                 {% if 'financeiro' in accessible_modules %}
                     {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
                     
-                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}"
                        class="sidebar-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
                        title="Dashboard Executivo Financeiro">

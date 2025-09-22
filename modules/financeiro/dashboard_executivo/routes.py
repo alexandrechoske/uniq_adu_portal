@@ -18,14 +18,14 @@ dashboard_executivo_financeiro_bp = Blueprint(
 
 @dashboard_executivo_financeiro_bp.route('/')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def index():
     """Dashboard Executivo Financeiro - Visão estratégica das finanças"""
     return render_template('dashboard_executivo_financeiro.html')
 
 @dashboard_executivo_financeiro_bp.route('/api/kpis')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_kpis():
     """API para KPIs principais do dashboard executivo"""
     try:
@@ -127,7 +127,7 @@ def api_kpis():
 
 @dashboard_executivo_financeiro_bp.route('/api/meta-atingimento')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_meta_atingimento():
     """API para meta de atingimento de faturamento"""
     try:
@@ -169,7 +169,7 @@ def api_meta_atingimento():
 
 @dashboard_executivo_financeiro_bp.route('/api/resultado-mensal')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_resultado_mensal():
     """API para resultado mensal"""
     try:
@@ -222,7 +222,7 @@ def api_resultado_mensal():
 
 @dashboard_executivo_financeiro_bp.route('/api/saldo-acumulado')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_saldo_acumulado():
     """API para evolução do saldo acumulado"""
     try:
@@ -270,7 +270,7 @@ def api_saldo_acumulado():
 
 @dashboard_executivo_financeiro_bp.route('/api/faturamento-setor')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_faturamento_setor():
     """API para faturamento por setor"""
     try:
@@ -324,7 +324,7 @@ def api_faturamento_setor():
 
 @dashboard_executivo_financeiro_bp.route('/api/top-despesas')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_top_despesas():
     """API para top 5 categorias de despesa"""
     try:
@@ -373,7 +373,7 @@ def api_top_despesas():
 
 @dashboard_executivo_financeiro_bp.route('/api/top-clientes')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_top_clientes():
     """API para top 10 clientes por faturamento"""
     try:
@@ -422,7 +422,7 @@ def api_top_clientes():
 
 @dashboard_executivo_financeiro_bp.route('/api/faturamento-classe')
 @login_required
-@perfil_required('financeiro', 'fin_dashboard_executivo')
+@perfil_required('financeiro', 'dashboard_executivo')
 def api_faturamento_classe():
     """API para faturamento por classe dentro de um setor específico"""
     try:

@@ -739,3 +739,34 @@ def test_password_reset():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/redirect-after-login')
+@login_required
+def redirect_after_login():
+    """Redireciona o usuário para a página apropriada baseada no seu perfil"""
+    try:
+        user = session.get('user', {})
+        perfis_json = user.get('perfis_json', [])
+        
+        print(f"[REDIRECT] Redirecionando usuário: {user.get('email')}")
+        print(f"[REDIRECT] Perfis: {perfis_json}")
+        
+        # Se tem perfil financeiro, redireciona para dashboard financeiro
+        perfis_financeiros = ['financeiro_completo', 'admin_financeiro', 'financeiro']
+        if any(perfil in perfis_financeiros for perfil in perfis_json):
+            print(f"[REDIRECT] Usuário tem perfil financeiro - redirecionando para dashboard financeiro")
+            return redirect(url_for('fin_dashboard_executivo.index'))
+        
+        # Se tem perfil admin, redireciona para dashboard de importações
+        if user.get('role') == 'admin':
+            print(f"[REDIRECT] Usuário admin - redirecionando para dashboard executivo")
+            return redirect(url_for('dashboard_executivo.index'))
+        
+        # Para outros casos, redireciona para o menu
+        print(f"[REDIRECT] Redirecionamento padrão - menu principal")
+        return redirect(url_for('menu.menu_home'))
+        
+    except Exception as e:
+        print(f"[REDIRECT] Erro no redirecionamento: {str(e)}")
+        # Em caso de erro, redireciona para o menu
+        return redirect(url_for('menu.menu_home'))
