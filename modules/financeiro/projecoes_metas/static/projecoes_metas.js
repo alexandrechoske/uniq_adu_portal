@@ -62,13 +62,7 @@ function configurarEventos() {
     console.log('[PROJECOES] Configurando eventos...');
     
     try {
-        document.getElementById('btn-buscar').addEventListener('click', buscarDados);
-        document.getElementById('btn-limpar-filtros').addEventListener('click', limparFiltros);
-        
-        // Eventos para mudança automática dos filtros
-        document.getElementById('ano-filtro').addEventListener('change', buscarDados);
-        document.getElementById('tipo-filtro').addEventListener('change', buscarDados);
-        
+        // Eventos dos botões de nova meta/projeção
         document.getElementById('btn-nova-meta-financeira-geral').addEventListener('click', function() { abrirModal('financeiro_geral'); });
         document.getElementById('btn-nova-meta-financeira-consultoria').addEventListener('click', function() { abrirModal('financeiro_consultoria'); });
         document.getElementById('btn-nova-meta-operacional').addEventListener('click', function() { abrirModal('operacional'); });
@@ -103,31 +97,11 @@ function configurarModais() {
 }
 
 function buscarDados() {
-    const anoSelect = document.getElementById('ano-filtro');
-    const tipoSelect = document.getElementById('tipo-filtro');
-    
-    const ano = anoSelect ? anoSelect.value : '';
-    const tipo = tipoSelect ? tipoSelect.value : '';
-    
-    console.log('[PROJECOES] Buscando dados - Ano:', ano, 'Tipo:', tipo);
-    console.log('[PROJECOES] Elementos encontrados - Ano select:', !!anoSelect, 'Tipo select:', !!tipoSelect);
-    
-    if (!anoSelect || !tipoSelect) {
-        console.error('[PROJECOES] Elementos de filtro não encontrados!');
-        return;
-    }
+    console.log('[PROJECOES] Buscando todos os dados...');
     
     mostrarLoading(true);
     
-    const params = new URLSearchParams();
-    if (ano && ano !== '') {
-        params.append('ano', ano);
-    }
-    if (tipo && tipo !== '') {
-        params.append('tipo', tipo);
-    }
-    
-    const url = '/financeiro/projecoes-metas/api/dados?' + params.toString();
+    const url = '/financeiro/projecoes-metas/api/dados';
     console.log('[PROJECOES] URL da requisição:', url);
     
     fetch(url)
@@ -177,10 +151,31 @@ function renderizarMetasFinanceirasGeral() {
         return;
     }
     
+    // Agrupar por ano
+    const metasPorAno = {};
     metas.forEach(meta => {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_geral\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
-        tbody.appendChild(row);
+        if (!metasPorAno[meta.ano]) {
+            metasPorAno[meta.ano] = [];
+        }
+        metasPorAno[meta.ano].push(meta);
+    });
+    
+    // Ordenar anos (mais recente primeiro)
+    const anosOrdenados = Object.keys(metasPorAno).sort((a, b) => b - a);
+    
+    anosOrdenados.forEach(ano => {
+        // Cabeçalho do ano
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'ano-header';
+        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        tbody.appendChild(headerRow);
+        
+        // Metas do ano
+        metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_geral\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            tbody.appendChild(row);
+        });
     });
 }
 
@@ -196,10 +191,31 @@ function renderizarMetasFinanceirasConsultoria() {
         return;
     }
     
+    // Agrupar por ano
+    const metasPorAno = {};
     metas.forEach(meta => {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_consultoria\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
-        tbody.appendChild(row);
+        if (!metasPorAno[meta.ano]) {
+            metasPorAno[meta.ano] = [];
+        }
+        metasPorAno[meta.ano].push(meta);
+    });
+    
+    // Ordenar anos (mais recente primeiro)
+    const anosOrdenados = Object.keys(metasPorAno).sort((a, b) => b - a);
+    
+    anosOrdenados.forEach(ano => {
+        // Cabeçalho do ano
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'ano-header';
+        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        tbody.appendChild(headerRow);
+        
+        // Metas do ano
+        metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_consultoria\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            tbody.appendChild(row);
+        });
     });
 }
 
@@ -215,10 +231,31 @@ function renderizarMetasOperacionais() {
         return;
     }
     
+    // Agrupar por ano
+    const metasPorAno = {};
     metas.forEach(meta => {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-operacional">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-warning" onclick="editarItem(' + meta.id + ', \'operacional\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
-        tbody.appendChild(row);
+        if (!metasPorAno[meta.ano]) {
+            metasPorAno[meta.ano] = [];
+        }
+        metasPorAno[meta.ano].push(meta);
+    });
+    
+    // Ordenar anos (mais recente primeiro)
+    const anosOrdenados = Object.keys(metasPorAno).sort((a, b) => b - a);
+    
+    anosOrdenados.forEach(ano => {
+        // Cabeçalho do ano
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'ano-header';
+        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        tbody.appendChild(headerRow);
+        
+        // Metas do ano
+        metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-operacional">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-warning" onclick="editarItem(' + meta.id + ', \'operacional\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            tbody.appendChild(row);
+        });
     });
 }
 
@@ -234,10 +271,31 @@ function renderizarProjecoes() {
         return;
     }
     
+    // Agrupar por ano
+    const projecoesPorAno = {};
     projecoes.forEach(projecao => {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td>' + projecao.ano + '</td><td>' + formatarMes(projecao.mes) + '</td><td class="valor-projecao">' + formatarMoeda(projecao.meta) + '</td><td>' + formatarData(projecao.created_at) + '</td><td><button class="btn btn-sm btn-success" onclick="editarItem(' + projecao.id + ', \'projecao\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + projecao.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
-        tbody.appendChild(row);
+        if (!projecoesPorAno[projecao.ano]) {
+            projecoesPorAno[projecao.ano] = [];
+        }
+        projecoesPorAno[projecao.ano].push(projecao);
+    });
+    
+    // Ordenar anos (mais recente primeiro)
+    const anosOrdenados = Object.keys(projecoesPorAno).sort((a, b) => b - a);
+    
+    anosOrdenados.forEach(ano => {
+        // Cabeçalho do ano
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'ano-header';
+        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        tbody.appendChild(headerRow);
+        
+        // Projeções do ano
+        projecoesPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(projecao => {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td>' + projecao.ano + '</td><td>' + formatarMes(projecao.mes) + '</td><td class="valor-projecao">' + formatarMoeda(projecao.meta) + '</td><td>' + formatarData(projecao.created_at) + '</td><td><button class="btn btn-sm btn-success" onclick="editarItem(' + projecao.id + ', \'projecao\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + projecao.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            tbody.appendChild(row);
+        });
     });
 }
 
@@ -526,12 +584,6 @@ function salvarLote() {
     .finally(function() {
         mostrarLoading(false);
     });
-}
-
-function limparFiltros() {
-    document.getElementById('ano-filtro').value = '2026';
-    document.getElementById('tipo-filtro').value = '';
-    buscarDados();
 }
 
 function mostrarLoading(mostrar) {

@@ -527,7 +527,24 @@
     }
 }
 
-/* Novos estilos para modal melhorado */
+/* Agrupamento por ano nas tabelas */
+.ano-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    font-weight: 600;
+    color: #495057;
+    border-top: 2px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.ano-header i {
+    color: #6c757d;
+    margin-right: 8px;
+}
+
+.ano-header td {
+    padding: 12px 15px !important;
+    font-size: 16px !important;
+}
 
 /* Tabs do modo de criação */
 .modo-criacao-tabs {
