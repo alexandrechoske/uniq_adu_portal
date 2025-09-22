@@ -84,21 +84,21 @@
                     {% endif %}
                     {% if '*' in financeiro_pages or 'conciliacao_lancamentos' in financeiro_pages %}
                     <a href="{{ url_for('fin_conciliacao_lancamentos.index') }}" class="module-card" data-module="conciliacao_lancamentos">
-                        <div class="module-icon"><i class="mdi mdi-account-balance"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-account-balance text-xl"></i></div>
                         <h4 class="module-title">Conciliação de Lançamentos</h4>
                         <p class="module-desc">Concilie lançamentos com extratos bancários.</p>
                     </a>
                     {% endif %}
                     {% if '*' in financeiro_pages or 'categorizacao_clientes' in financeiro_pages %}
                     <a href="{{ url_for('fin_categorizacao_clientes.index') }}" class="module-card" data-module="categorizacao_clientes">
-                        <div class="module-icon"><i class="mdi mdi-people"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-people text-xl"></i></div>
                         <h4 class="module-title">Categorização de Clientes</h4>
                         <p class="module-desc">Gerencie categorias e perfis de clientes.</p>
                     </a>
                     {% endif %}
                     {% if '*' in financeiro_pages or 'projecoes_metas' in financeiro_pages %}
                     <a href="{{ url_for('fin_projecoes_metas.index') }}" class="module-card" data-module="projecoes_metas">
-                        <div class="module-icon"><i class="mdi mdi-trending-up"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-trending-up text-xl"></i></div>
                         <h4 class="module-title">Projeções e Metas</h4>
                         <p class="module-desc">Planejamento e controle de metas financeiras.</p>
                     </a>

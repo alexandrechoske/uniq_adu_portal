@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from extensions import supabase, supabase_admin
 from decorators.perfil_decorators import perfil_required
+from modules.auth.routes import login_required
 from services.access_logger import access_logger
 import tempfile
 import uuid
@@ -709,6 +710,8 @@ class ProcessadorBancos:
             return {'success': False, 'message': f'Erro ao processar arquivo: {str(e)}'}
 
 @conciliacao_lancamentos_bp.route('/')
+@login_required
+@perfil_required('financeiro', 'conciliacao_lancamentos')
 def index():
     """Página principal da conciliação de lançamentos."""
     try:
@@ -719,22 +722,12 @@ def index():
                                  module_name='Conciliação de Lançamentos',
                                  page_title='Conciliação de Lançamentos')
         
-        # Verificação de autenticação tradicional
+        # Log de acesso
+        access_logger.log_page_access('Conciliação de Lançamentos', 'financeiro')
+        
+        # Buscar dados iniciais se necessário
         user = session.get('user', {})
-        if not user:
-            logger.warning(f"[CONCILIACAO] Usuário não autenticado")
-            if request.is_json:
-                return jsonify({'error': 'Usuário não autenticado', 'redirect': '/auth/login'}), 401
-            return redirect(url_for('auth.login'))
-        
-        user_role = user.get('role', '')
-        if user_role not in ['admin', 'interno_unique']:
-            logger.warning(f"[CONCILIACAO] Acesso negado para perfil: {user_role}")
-            if request.is_json:
-                return jsonify({'error': 'Acesso negado'}), 403
-            return redirect(url_for('dashboard.dashboard_main'))
-        
-        logger.info(f"[CONCILIACAO] Acessando página principal - usuário: {user.get('email', 'N/A')}")
+        logger.info(f"[CONCILIACAO] Usuário {user.get('email')} acessou Conciliação de Lançamentos")
         
         return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                              module_name='Conciliação de Lançamentos',
