@@ -19,9 +19,28 @@
                 {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
                 {'name': 'Faturamento', 'icon': 'mdi mdi-receipt'}
             ], 'financeiro') }}
+            
+            <!-- Filtros de Empresa -->
+            <div class="empresa-filter-buttons" style="margin-left: 20px;">
+                <div class="btn-group" role="group" aria-label="Filtro de Empresa">
+                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn active" data-empresa="ambos">
+                        <i class="mdi mdi-domain"></i>
+                        Ambos
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn" data-empresa="Unique Consultoria">
+                        <i class="mdi mdi-account-supervisor"></i>
+                        Consultoria
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn" data-empresa="Unique Soluções">
+                        <i class="mdi mdi-truck"></i>
+                        Soluções
+                    </button>
+                </div>
+            </div>
+            
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
-                <span id="filter-summary-text">Vendo dados do ano atual</span>
+                <span id="filter-summary-text">Vendo dados de ambas as empresas</span>
             </div>
         </div>
         <div class="actions-right">

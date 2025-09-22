@@ -81,6 +81,62 @@
     color: #6c757d;
 }
 
+/* Empresa Filter Buttons */
+.empresa-filter-buttons {
+    display: inline-flex;
+    align-items: center;
+}
+
+.empresa-filter-buttons .btn-group {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.empresa-filter-btn {
+    border: 1px solid #007bff !important;
+    background: #fff !important;
+    color: #007bff !important;
+    font-size: 12px;
+    padding: 6px 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 0 !important;
+}
+
+.empresa-filter-btn:first-child {
+    border-top-left-radius: 6px !important;
+    border-bottom-left-radius: 6px !important;
+}
+
+.empresa-filter-btn:last-child {
+    border-top-right-radius: 6px !important;
+    border-bottom-right-radius: 6px !important;
+}
+
+.empresa-filter-btn:hover {
+    background: #e7f3ff !important;
+    color: #0056b3 !important;
+    transform: translateY(-1px);
+}
+
+.empresa-filter-btn.active {
+    background: #007bff !important;
+    color: #fff !important;
+    border-color: #007bff !important;
+}
+
+.empresa-filter-btn.active:hover {
+    background: #0056b3 !important;
+    border-color: #0056b3 !important;
+    transform: translateY(-1px);
+}
+
+.empresa-filter-btn i {
+    margin-right: 4px;
+    font-size: 14px;
+}
+
 /* Navigation Tabs */
 .nav-tabs {
     display: flex;

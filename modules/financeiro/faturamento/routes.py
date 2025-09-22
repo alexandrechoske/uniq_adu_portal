@@ -23,6 +23,39 @@ def index():
     """Faturamento Anual - Controle de receitas"""
     return render_template('faturamento.html')
 
+@faturamento_bp.route('/api/empresas')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_empresas():
+    """API para buscar empresas disponíveis no banco de dados"""
+    try:
+        # Buscar empresas distintas da tabela de faturamento
+        response = supabase_admin.table('fin_faturamento_anual').select('empresa').execute()
+        dados = response.data
+        
+        # Extrair empresas únicas
+        empresas_set = set()
+        for item in dados:
+            if item.get('empresa') and item['empresa'].strip():
+                empresas_set.add(item['empresa'].strip())
+        
+        empresas_lista = sorted(list(empresas_set))
+        
+        # Log para debug
+        print(f"📊 Empresas encontradas: {empresas_lista}")
+        
+        return jsonify({
+            'success': True,
+            'data': empresas_lista
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar empresas: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
+
 @faturamento_bp.route('/api/geral/kpis')
 @login_required
 @perfil_required('financeiro', 'faturamento')
@@ -163,55 +196,59 @@ def api_geral_proporcao():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_comparativo_anos():
-    """API para comparativo anual usando view vw_fin_fat_anualizado"""
+    """API para comparativo anual usando tabela fin_faturamento_anual"""
     try:
-        # Buscar todos os dados da view (desde 2015)
-        response = supabase_admin.table('vw_fin_fat_anualizado').select('*').order('ano, mes').execute()
+        empresa = request.args.get('empresa', '')
+        
+        # Buscar dados da tabela base que tem a coluna empresa
+        query = supabase_admin.table('fin_faturamento_anual').select('data, valor, empresa')
+        
+        # Aplicar filtro de empresa se especificado
+        if empresa and empresa.strip() and empresa != 'ambos':
+            query = query.eq('empresa', empresa)
+        
+        response = query.execute()
         dados = response.data
         
-        # Filtrar dados válidos (remover registros com ano/mês null)
-        dados_validos = [item for item in dados if item.get('ano') and item.get('mes')]
+        # Log para debug
+        print(f"📊 Comparativo anos - Empresa: {empresa}, Registros: {len(dados)}")
         
-        # Organizar dados por ano
-        anos_data = defaultdict(list)
+        # Agrupar dados por ano e mês
+        anos_data = defaultdict(lambda: defaultdict(float))
         
-        for item in dados_validos:
-            ano = str(item['ano'])
-            mes = item['mes'].zfill(2)  # Garantir formato 01, 02, etc.
-            valor = float(item.get('valor_faturamento', 0))
-            
-            anos_data[ano].append({
-                'mes': mes,
-                'total_valor': valor
-            })
+        for item in dados:
+            if item.get('data') and item.get('valor'):
+                try:
+                    data_str = item['data']
+                    # Assumindo formato YYYY-MM-DD
+                    ano = data_str[:4]
+                    mes = data_str[5:7]
+                    valor = float(item['valor'])
+                    
+                    anos_data[ano][mes] += valor
+                except Exception as e:
+                    print(f"Erro ao processar data {item.get('data')}: {e}")
+                    continue
         
-        # Garantir que todos os anos tenham 12 meses
-        for ano in anos_data:
-            meses_existentes = {item['mes'] for item in anos_data[ano]}
-            for mes in range(1, 13):
-                mes_str = str(mes).zfill(2)
-                if mes_str not in meses_existentes:
-                    anos_data[ano].append({
-                        'mes': mes_str,
-                        'total_valor': 0
-                    })
-            
-            # Ordenar por mês
-            anos_data[ano] = sorted(anos_data[ano], key=lambda x: x['mes'])
+        # Formatar dados para o frontend
+        resultado = {}
+        for ano in sorted(anos_data.keys()):
+            meses_data = []
+            for mes in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']:
+                valor = anos_data[ano].get(mes, 0)
+                meses_data.append({
+                    'mes': mes,
+                    'total_valor': valor
+                })
+            resultado[ano] = meses_data
         
         return jsonify({
             'success': True,
-            'data': dict(anos_data)
+            'data': resultado
         })
         
     except Exception as e:
         print(f"Erro no comparativo_anos: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-        
-    except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
@@ -452,37 +489,35 @@ def api_geral_centro_resultado():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_categoria_operacao():
-    """API para gráfico de rosca - Faturamento por Categoria (usando campo 'categoria_operacao')"""
+    """API para gráfico de rosca - Faturamento por Categoria usando tabela base"""
     try:
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
         
-        # Tentar usar a view tratada que tem categoria_operacao
-        try:
-            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria_operacao, valor')
-        except:
-            # Fallback para tabela original usando campo 'categoria'
-            query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor')
+        # Usar a tabela base que tem a coluna empresa
+        query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor, empresa')
         
         # Aplicar filtros
         if start_date:
             query = query.gte('data', start_date)
         if end_date:
             query = query.lte('data', end_date)
-        if empresa and empresa.strip():
+        if empresa and empresa.strip() and empresa != 'ambos':
             query = query.eq('empresa', empresa)
             
         response = query.execute()
         dados = response.data
         
-        # Agrupar por categoria_operacao (ou categoria se for fallback)
+        # Log para debug
+        print(f"📊 Categoria operação - Empresa: {empresa}, Registros: {len(dados)}")
+        
+        # Agrupar por categoria
         categoria_data = defaultdict(float)
         total_geral = 0
         
         for item in dados:
-            # Tentar categoria_operacao primeiro, depois categoria
-            categoria = item.get('categoria_operacao') or item.get('categoria', 'Não Classificado')
+            categoria = item.get('categoria', 'Não Classificado')
             valor = float(item.get('valor', 0))
             categoria_data[categoria] += valor
             total_geral += valor

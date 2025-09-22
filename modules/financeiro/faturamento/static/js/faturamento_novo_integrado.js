@@ -11,6 +11,7 @@ class FaturamentoControllerNovo {
         this.charts = {};
         this.exibindoMeta = false; // Estado do toggle Meta vs Realizado
         this.dataLabelsAtivos = false; // Estado dos rótulos de dados
+        this.empresaAtual = 'ambos'; // Filtro de empresa padrão
         
         // Configurações globais
         Chart.register(ChartDataLabels);
@@ -33,6 +34,7 @@ class FaturamentoControllerNovo {
         
         try {
             this.setupToggleLabels();
+            this.setupEmpresaFilters(); // Novo método para configurar filtros de empresa
             this.setupSectorFunctionality(); // Configurar funcionalidade do setor
             await this.buscarAnosDisponiveis();
             await this.carregarTodosOsDados();
@@ -117,6 +119,58 @@ class FaturamentoControllerNovo {
         }
         
         console.log(`🎯 ${this.exibindoMeta ? 'Exibindo Meta vs Realizado' : 'Exibindo Comparativo Anos'}`);
+    }
+    
+    setupEmpresaFilters() {
+        console.log('Configurando filtros de empresa...');
+        
+        // Configurar listeners para os botões de empresa
+        const empresaButtons = document.querySelectorAll('.empresa-filter-btn');
+        
+        empresaButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remover classe active de todos os botões
+                empresaButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Adicionar classe active ao botão clicado
+                button.classList.add('active');
+                
+                // Obter empresa selecionada
+                const empresaSelecionada = button.getAttribute('data-empresa');
+                this.empresaAtual = empresaSelecionada;
+                
+                // Atualizar texto do resumo
+                this.atualizarTextoEmpresa(empresaSelecionada);
+                
+                // Recarregar todos os dados com o novo filtro
+                this.carregarTodosOsDados();
+                
+                console.log(`🏢 Filtro de empresa alterado para: ${empresaSelecionada}`);
+            });
+        });
+    }
+    
+    atualizarTextoEmpresa(empresa) {
+        const filterSummaryText = document.getElementById('filter-summary-text');
+        if (filterSummaryText) {
+            let texto = '';
+            switch (empresa) {
+                case 'ambos':
+                    texto = 'Vendo dados de ambas as empresas';
+                    break;
+                case 'Unique Consultoria':
+                    texto = 'Vendo dados da Unique Consultoria';
+                    break;
+                case 'Unique Soluções':
+                    texto = 'Vendo dados da Unique Soluções';
+                    break;
+                default:
+                    texto = `Vendo dados de ${empresa}`;
+            }
+            filterSummaryText.textContent = texto;
+        }
     }
     
     formatarMoeda(valor) {
@@ -497,7 +551,17 @@ class FaturamentoControllerNovo {
     async carregarGraficoComparativo() {
         try {
             console.log('🔄 Carregando gráfico comparativo...');
-            const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
+            
+            // Incluir parâmetro de empresa na URL
+            const params = new URLSearchParams();
+            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
+                params.append('empresa', this.empresaAtual);
+            }
+            
+            const url = `/financeiro/faturamento/api/geral/comparativo_anos?${params.toString()}`;
+            console.log(`📡 URL: ${url}`);
+            
+            const response = await fetch(url);
             console.log('📡 Response comparativo:', response.status);
             const data = await response.json();
             console.log('📊 Data comparativo:', data);
@@ -773,7 +837,17 @@ class FaturamentoControllerNovo {
     async carregarGraficoCentroResultado() {
         try {
             console.log('🔄 Carregando gráfico centro resultado...');
-            const response = await fetch('/financeiro/faturamento/api/geral/centro_resultado');
+            
+            // Incluir parâmetro de empresa na URL
+            const params = new URLSearchParams();
+            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
+                params.append('empresa', this.empresaAtual);
+            }
+            
+            const url = `/financeiro/faturamento/api/geral/centro_resultado?${params.toString()}`;
+            console.log(`📡 URL: ${url}`);
+            
+            const response = await fetch(url);
             console.log('📡 Response centro resultado:', response.status);
             const data = await response.json();
             console.log('📊 Data centro resultado:', data);
@@ -873,7 +947,17 @@ class FaturamentoControllerNovo {
     async carregarGraficoCategoriaOperacao() {
         try {
             console.log('🔄 Carregando gráfico categoria operação...');
-            const response = await fetch('/financeiro/faturamento/api/geral/categoria_operacao');
+            
+            // Incluir parâmetro de empresa na URL
+            const params = new URLSearchParams();
+            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
+                params.append('empresa', this.empresaAtual);
+            }
+            
+            const url = `/financeiro/faturamento/api/geral/categoria_operacao?${params.toString()}`;
+            console.log(`📡 URL: ${url}`);
+            
+            const response = await fetch(url);
             console.log('📡 Response categoria:', response.status);
             const data = await response.json();
             console.log('📊 Data categoria:', data);
@@ -964,7 +1048,18 @@ class FaturamentoControllerNovo {
     async carregarTopClientes() {
         try {
             console.log('🔄 Carregando top clientes...');
-            const response = await fetch('/financeiro/faturamento/api/geral/top_clientes?limit=10');
+            
+            // Incluir parâmetro de empresa na URL
+            const params = new URLSearchParams();
+            params.append('limit', '10');
+            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
+                params.append('empresa', this.empresaAtual);
+            }
+            
+            const url = `/financeiro/faturamento/api/geral/top_clientes?${params.toString()}`;
+            console.log(`📡 URL: ${url}`);
+            
+            const response = await fetch(url);
             console.log('📡 Response top clientes:', response.status);
             const data = await response.json();
             console.log('📊 Data top clientes:', data);
