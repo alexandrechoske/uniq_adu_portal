@@ -1625,9 +1625,11 @@ async function loadDayDetails(dateStr) {
         }
         
         const data = await response.json();
-        console.log(`[Calendar] Loaded ${data.processes?.length || 0} processes for ${dateStr}`);
+        console.log(`[Calendar] Response data structure:`, data);
+        console.log(`[Calendar] Data.data:`, data.data);
+        console.log(`[Calendar] Processes found:`, data.data?.processes?.length || 0);
         
-        renderDayDetails(data);
+        renderDayDetails(data.data || data);
         
     } catch (error) {
         console.error('[Calendar] Error loading day details:', error);
