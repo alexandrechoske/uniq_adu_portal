@@ -934,6 +934,17 @@ function updateActivityCalendar() {
     const year = currentFilters.year || new Date().getFullYear();
     const month = currentFilters.month || String(new Date().getMonth() + 1).padStart(2, '0');
     
+    // Update calendar title
+    const monthNames = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const monthName = monthNames[parseInt(month) - 1];
+    const titleElement = document.getElementById('calendar-title');
+    if (titleElement) {
+        titleElement.textContent = `${monthName} ${year}`;
+    }
+    
     const calendar = createCalendar(year, month, operationalData.calendar);
     container.innerHTML = calendar;
 }
@@ -981,7 +992,11 @@ function createCalendar(year, month, calendarData) {
         // Improved calendar day with clear count display
         html += `<div class="calendar-day ${hasData ? 'has-data' : ''}" 
                       style="${hasData ? `background-color: rgba(74, 144, 226, ${0.2 + intensity * 0.6})` : ''}"
-                      title="${count} registro${count !== 1 ? 's' : ''} em ${day}/${month}/${year}">
+                      title="${count} registro${count !== 1 ? 's' : ''} em ${day}/${month}/${year}"
+                      data-date="${dateStr}"
+                      data-day="${day}"
+                      data-count="${count}"
+                      onclick="${hasData ? `showDayDetails('${dateStr}', ${day}, ${count})` : ''}">
             <div class="calendar-day-number">${day}</div>
             ${hasData ? `<div class="calendar-day-count">${count}</div>` : ''}
         </div>`;
@@ -1521,6 +1536,221 @@ function formatDate(dateString) {
     
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR');
+}
+
+/**
+ * Show day details modal
+ */
+function showDayDetails(dateStr, day, count) {
+    console.log(`[Calendar] Opening day details for: ${dateStr} (${count} processes)`);
+    
+    // Parse date for display
+    const [year, month, dayNum] = dateStr.split('-');
+    const monthNames = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const monthName = monthNames[parseInt(month) - 1];
+    const formattedDate = `${dayNum} de ${monthName} de ${year}`;
+    
+    // Update modal title (using the existing modal structure)
+    const titleElement = document.getElementById('day-details-title');
+    if (titleElement) {
+        titleElement.textContent = `Processos do Dia ${dayNum} - ${monthName} ${year}`;
+    }
+    
+    // Show loading state
+    const loadingElement = document.getElementById('day-details-loading');
+    const contentElement = document.getElementById('day-details-content');
+    
+    if (loadingElement) {
+        loadingElement.style.display = 'block';
+    }
+    if (contentElement) {
+        contentElement.style.display = 'none';
+    }
+    
+    // Show modal using the existing modal structure
+    const modalElement = document.getElementById('day-details-modal');
+    if (modalElement) {
+        modalElement.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        
+        // Add click event to close modal when clicking outside
+        modalElement.onclick = function(e) {
+            if (e.target === modalElement) {
+                hideDayDetailsModal();
+            }
+        };
+    }
+    
+    // Add close button event if not already added
+    const closeButton = document.getElementById('close-day-details');
+    if (closeButton && !closeButton.hasAttribute('data-listener-added')) {
+        closeButton.onclick = hideDayDetailsModal;
+        closeButton.setAttribute('data-listener-added', 'true');
+    }
+    
+    // Load day details
+    loadDayDetails(dateStr);
+}
+
+/**
+ * Hide day details modal manually
+ */
+function hideDayDetailsModal() {
+    const modalElement = document.getElementById('day-details-modal');
+    if (modalElement) {
+        modalElement.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+}
+
+/**
+ * Load day details from API
+ */
+async function loadDayDetails(dateStr) {
+    try {
+        console.log(`[Calendar] Loading processes for date: ${dateStr}`);
+        
+        const params = new URLSearchParams({
+            date: dateStr,
+            ...currentFilters
+        });
+        
+        const response = await fetch(`/dashboard-operacional/api/day-details?${params}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log(`[Calendar] Loaded ${data.processes?.length || 0} processes for ${dateStr}`);
+        
+        renderDayDetails(data);
+        
+    } catch (error) {
+        console.error('[Calendar] Error loading day details:', error);
+        
+        // Show error in modal
+        const loadingElement = document.getElementById('day-details-loading');
+        const contentElement = document.getElementById('day-details-content');
+        const tableBody = document.getElementById('day-processes-body');
+        
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+        if (contentElement) {
+            contentElement.style.display = 'block';
+        }
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center text-danger py-4">
+                        <i class="mdi mdi-alert-circle mdi-48px mb-2" style="display: block;"></i>
+                        <strong>Erro ao carregar detalhes</strong><br>
+                        <small>Não foi possível carregar os processos deste dia.<br>
+                        Erro: ${error.message}</small>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+/**
+ * Render day details in modal
+ */
+function renderDayDetails(data) {
+    const loadingElement = document.getElementById('day-details-loading');
+    const contentElement = document.getElementById('day-details-content');
+    const tableBody = document.getElementById('day-processes-body');
+    
+    // Hide loading
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+    }
+    
+    // Show content
+    if (contentElement) {
+        contentElement.style.display = 'block';
+    }
+    
+    if (!tableBody) return;
+    
+    const processes = data.processes || [];
+    const stats = data.stats || {};
+    
+    if (processes.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    <i class="mdi mdi-calendar-remove mdi-48px mb-2" style="display: block; opacity: 0.5;"></i>
+                    Nenhum processo encontrado para esta data
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Create table rows
+    const tableHtml = processes.map(process => `
+        <tr>
+            <td>${process.analista || '-'}</td>
+            <td>${process.cliente || '-'}</td>
+            <td>${formatDate(process.data_registro)}</td>
+            <td>${process.canal || '-'}</td>
+            <td>${process.modal || '-'}</td>
+            <td>${process.data_fechamento ? formatDate(process.data_fechamento) : '-'}</td>
+            <td>
+                <span class="sla-indicator ${getSlaClass(process.sla_status)}">
+                    ${process.sla_days || process.sla_dias || '-'} dias
+                </span>
+            </td>
+            <td>
+                <span class="status-badge ${getStatusClass(process.status)}">
+                    ${getDisplayStatus(process.desempenho, process.data_fechamento)}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+    
+    tableBody.innerHTML = tableHtml;
+}
+
+/**
+ * Get SLA status class
+ */
+function getSlaClass(slaStatus) {
+    switch (slaStatus) {
+        case 'dentro_prazo': return 'dentro-prazo';
+        case 'atencao': return 'atencao';
+        case 'atrasado': return 'atrasado';
+        default: return 'dentro-prazo';
+    }
+}
+
+/**
+ * Get process status class
+ */
+function getStatusClass(status) {
+    switch (status?.toLowerCase()) {
+        case 'concluido': return 'concluido';
+        case 'em andamento': return 'em-andamento';
+        case 'pendente': return 'pendente';
+        default: return 'pendente';
+    }
+}
+
+/**
+ * Get display status based on performance and closure
+ */
+function getDisplayStatus(desempenho, dataFechamento) {
+    if (dataFechamento) {
+        return desempenho > 0 ? 'Concluído' : 'Concluído';
+    } else {
+        return 'Em Andamento';
+    }
 }
 
 // Export for testing purposes

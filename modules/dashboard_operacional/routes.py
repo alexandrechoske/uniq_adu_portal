@@ -1275,3 +1275,130 @@ def get_operations_daily():
             'success': False,
             'message': f'Erro ao carregar dados diários: {str(e)}'
         }), 500
+
+@dashboard_operacional.route('/api/day-details')
+@require_login
+def get_day_details():
+    """Get detailed processes for a specific day"""
+    try:
+        # Get parameters
+        date_str = request.args.get('date')
+        if not date_str:
+            return jsonify({
+                'success': False,
+                'message': 'Data é obrigatória'
+            }), 400
+        
+        # Validate date format
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Formato de data inválido. Use YYYY-MM-DD'
+            }), 400
+        
+        logger.info(f"[Day Details] Loading processes for date: {date_str}")
+        
+        # Get filter parameters
+        user_companies = get_user_companies()
+        analista_filter = request.args.get('analista')
+        cliente_filter = request.args.get('cliente')
+        canal_filter = request.args.get('canal')
+        modal_filter = request.args.get('modal')
+        
+        # Base query
+        query = supabase_admin.table('importacoes_processos_operacional').select('*')
+        
+        # Filter by date - data_registro is already in YYYY-MM-DD format
+        query = query.eq('data_registro', date_str)
+        
+        # Apply filters
+        if user_companies:
+            query = query.in_('cnpj_importador', user_companies)
+        
+        if analista_filter:
+            query = query.eq('analista', analista_filter)
+        
+        if cliente_filter:
+            query = query.eq('cliente', cliente_filter)
+        
+        if canal_filter:
+            query = query.eq('canal', canal_filter)
+        
+        if modal_filter:
+            query = query.eq('modal', modal_filter)
+        
+        # Execute query
+        response = query.execute()
+        processes = response.data if response.data else []
+        
+        logger.info(f"[Day Details] Found {len(processes)} processes for {date_str}")
+        
+        # Calculate statistics
+        stats = {
+            'total': len(processes),
+            'pendentes': 0,
+            'em_andamento': 0,
+            'concluidos': 0,
+            'atrasados': 0
+        }
+        
+        # Process each record
+        for process in processes:
+            # Determine status
+            status = process.get('status', '').lower()
+            if 'conclu' in status:
+                stats['concluidos'] += 1
+            elif 'andamento' in status:
+                stats['em_andamento'] += 1
+            else:
+                stats['pendentes'] += 1
+            
+            # Check if overdue (simple logic - can be enhanced)
+            if not process.get('data_fechamento'):
+                # Calculate days since registration
+                try:
+                    reg_date = datetime.strptime(process.get('data_registro', ''), '%d/%m/%Y').date()
+                    days_since = (datetime.now().date() - reg_date).days
+                    
+                    # Consider overdue if more than 30 days without closure
+                    if days_since > 30:
+                        stats['atrasados'] += 1
+                        process['sla_status'] = 'atrasado'
+                        process['sla_days'] = days_since
+                    elif days_since > 20:
+                        process['sla_status'] = 'atencao'
+                        process['sla_days'] = days_since
+                    else:
+                        process['sla_status'] = 'dentro_prazo'
+                        process['sla_days'] = days_since
+                except:
+                    process['sla_status'] = 'dentro_prazo'
+                    process['sla_days'] = 0
+            else:
+                process['sla_status'] = 'dentro_prazo'
+                try:
+                    reg_date = datetime.strptime(process.get('data_registro', ''), '%d/%m/%Y').date()
+                    close_date = datetime.strptime(process.get('data_fechamento', ''), '%d/%m/%Y').date()
+                    process['sla_days'] = (close_date - reg_date).days
+                except:
+                    process['sla_days'] = 0
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'date': date_str,
+                'formatted_date': target_date.strftime('%d/%m/%Y'),
+                'processes': processes,
+                'stats': stats
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"[Day Details] Erro ao obter detalhes do dia: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro ao carregar detalhes do dia: {str(e)}'
+        }), 500

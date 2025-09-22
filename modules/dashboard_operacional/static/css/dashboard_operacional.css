@@ -372,22 +372,24 @@ canvas {
 }
 
 .calendar-day-number {
-    font-weight: 600;
+    font-weight: 500;
     color: #2c3e50 !important; /* Force dark color */
-    font-size: 0.9rem;
+    font-size: 0.75rem; /* Smaller number */
+    line-height: 1;
 }
 
 .calendar-day-count {
-    font-size: 0.75rem;
+    font-size: 0.9rem; /* Larger count */
     color: #fff !important; /* White for visibility */
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-    padding: 1px 4px;
-    margin-top: 2px;
-    font-weight: 600;
+    border-radius: 6px;
+    padding: 3px 6px; /* More padding for emphasis */
+    margin-top: 4px;
+    font-weight: 700; /* Bolder font */
     display: inline-block;
-    min-width: 20px;
+    min-width: 24px; /* Slightly wider */
     text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .calendar-day.has-data {
@@ -397,12 +399,16 @@ canvas {
 
 .calendar-day.has-data .calendar-day-number {
     color: var(--unique-primary) !important;
-    font-weight: 700;
+    font-weight: 600; /* Less bold for smaller numbers */
 }
 
 .calendar-day.has-data .calendar-day-count {
     background: var(--unique-primary) !important;
     color: white !important;
+    font-weight: 800; /* Extra bold for emphasis */
+    font-size: 1rem; /* Even larger for data days */
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .calendar-day.other-month {
@@ -573,5 +579,331 @@ canvas {
     
     .filter-select {
         width: 100%;
+    }
+}
+
+/* Modal Day Details */
+#dayDetailsModal .modal-dialog {
+    max-width: 90%;
+    width: 1200px;
+}
+
+#dayDetailsModal .modal-header {
+    background-color: var(--unique-primary);
+    color: white;
+    border-bottom: none;
+}
+
+#dayDetailsModal .modal-header .btn-close {
+    filter: invert(1);
+}
+
+#dayDetailsModal .modal-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+#dayDetailsModal .date-display {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-top: 4px;
+}
+
+#dayDetailsModal .modal-body {
+    padding: 20px;
+}
+
+.day-details-table {
+    width: 100%;
+    margin-top: 15px;
+}
+
+.day-details-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 12px 8px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+    color: #495057;
+}
+
+.day-details-table td {
+    padding: 10px 8px;
+    border: 1px solid #dee2e6;
+    font-size: 0.8rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.day-details-table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.day-details-table tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.pendente {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status-badge.em-andamento {
+    background-color: #cce7ff;
+    color: #004085;
+    border: 1px solid #7cc7ff;
+}
+
+.status-badge.concluido {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #7dd87d;
+}
+
+.sla-indicator {
+    font-weight: 600;
+}
+
+.sla-indicator.dentro-prazo {
+    color: #28a745;
+}
+
+.sla-indicator.atencao {
+    color: #ffc107;
+}
+
+.sla-indicator.atrasado {
+    color: #dc3545;
+}
+
+.day-details-loading {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.day-details-loading .spinner-border {
+    margin-bottom: 15px;
+}
+
+.no-processes-message {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.summary-stat {
+    text-align: center;
+}
+
+.summary-stat .stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--unique-primary);
+    display: block;
+}
+
+.summary-stat .stat-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* Responsive adjustments for modal */
+@media (max-width: 768px) {
+    #dayDetailsModal .modal-dialog {
+        max-width: 95%;
+        margin: 10px auto;
+    }
+    
+    .day-details-table {
+        font-size: 0.75rem;
+    }
+    
+    .day-details-table th,
+    .day-details-table td {
+        padding: 8px 4px;
+    }
+    
+    .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Custom Modal Overlay (for day-details-modal) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+    backdrop-filter: blur(2px);
+}
+
+.modal-overlay .modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-overlay .modal-header {
+    background: var(--unique-primary);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+}
+
+.modal-overlay .modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-overlay .btn-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.modal-overlay .btn-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-overlay .modal-body {
+    padding: 20px;
+    max-height: calc(90vh - 80px);
+    overflow-y: auto;
+}
+
+/* Day details specific styles */
+#day-details-loading {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+#day-details-loading .mdi {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* Ensure table styles work in the custom modal */
+.modal-overlay .table {
+    margin-bottom: 0;
+}
+
+.modal-overlay .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 12px 8px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+    color: #495057;
+}
+
+.modal-overlay .table td {
+    padding: 10px 8px;
+    border: 1px solid #dee2e6;
+    font-size: 0.8rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.modal-overlay .table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.modal-overlay .table tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+/* Responsive adjustments for custom modal */
+@media (max-width: 768px) {
+    .modal-overlay .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .modal-overlay .modal-header {
+        padding: 12px 15px;
+    }
+    
+    .modal-overlay .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    .modal-overlay .modal-body {
+        padding: 15px;
+    }
+    
+    .modal-overlay .table {
+        font-size: 0.75rem;
+    }
+    
+    .modal-overlay .table th,
+    .modal-overlay .table td {
+        padding: 8px 4px;
     }
 }
