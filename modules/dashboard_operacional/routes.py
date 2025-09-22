@@ -988,64 +988,81 @@ def get_client_processes():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @dashboard_operacional.route('/api/analyst-clients')
-@login_required
+@require_login
 def get_analyst_clients():
     """Get top 5 clients for a specific analyst"""
     try:
         analyst = request.args.get('analyst')
-        year = request.args.get('year')
-        month = request.args.get('month')
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
         user_companies = get_user_companies()
         
         if not analyst:
             return jsonify({'success': False, 'message': 'Analista não especificado'}), 400
         
-        # Build filters
-        filters = ["analista = %(analyst)s"]
-        params = {'analyst': analyst}
+        logger.info(f"[Analyst Clients] Loading clients for analyst: {analyst}, year: {year}, month: {month}")
         
-        if year and month:
-            filters.extend([
-                "EXTRACT(year FROM data_registro::date) = %(year)s",
-                "EXTRACT(month FROM data_registro::date) = %(month)s"
-            ])
-            params.update({'year': int(year), 'month': int(month)})
-        elif year:
-            filters.append("EXTRACT(year FROM data_registro::date) = %(year)s")
-            params['year'] = int(year)
+        # Get all data and filter in Python (same approach as main endpoint)
+        response = supabase_admin.table('importacoes_processos_operacional').select('*').execute()
+        all_data = response.data
         
-        # Company filter
+        # Filter by analyst
+        analyst_data = [record for record in all_data if record.get('analista') == analyst]
+        
+        # Filter by date using Python
+        filtered_data = analyst_data
+        if year or month:
+            filtered_data = []
+            for record in analyst_data:
+                data_registro_str = record.get('data_registro', '')
+                if data_registro_str and isinstance(data_registro_str, str):
+                    try:
+                        if len(data_registro_str) >= 10:  # YYYY-MM-DD
+                            year_str = data_registro_str[:4]
+                            month_str = data_registro_str[5:7]
+                            
+                            if year_str and month_str:
+                                record_year = int(year_str)
+                                record_month = int(month_str)
+                                
+                                # Apply filters
+                                if year and month:
+                                    if record_year == year and record_month == month:
+                                        filtered_data.append(record)
+                                elif year:
+                                    if record_year == year:
+                                        filtered_data.append(record)
+                    except (ValueError, TypeError):
+                        continue
+        
+        # Apply company filter if needed
         if user_companies is not None and len(user_companies) > 0:
-            placeholders = ','.join([f"%(company_{i})s" for i in range(len(user_companies))])
-            filters.append(f"cliente IN ({placeholders})")
-            for i, company in enumerate(user_companies):
-                params[f'company_{i}'] = company
+            filtered_data = [record for record in filtered_data if record.get('cliente') in user_companies]
         
-        where_clause = f"WHERE {' AND '.join(filters)}"
+        # Count by client
+        client_counts = {}
+        for record in filtered_data:
+            cliente = record.get('cliente', '')
+            if cliente and isinstance(cliente, str) and cliente.strip():
+                if cliente not in client_counts:
+                    client_counts[cliente] = 0
+                client_counts[cliente] += 1
         
-        query = f"""
-            SELECT 
-                cliente,
-                COUNT(*) as total_registros
-            FROM importacoes_processos_aberta
-            {where_clause}
-            GROUP BY cliente
-            ORDER BY total_registros DESC
-            LIMIT 5
-        """
-        
-        result = supabase_admin.rpc('execute_sql', {'sql_query': query, 'params': params}).execute()
-        
+        # Convert to list and sort
         clients = []
-        for row in result.data:
+        for cliente, count in client_counts.items():
             clients.append({
-                'cliente': row['cliente'],
-                'total_registros': row['total_registros']
+                'cliente': cliente,
+                'total_registros': count
             })
+        
+        clients.sort(key=lambda x: x['total_registros'], reverse=True)
+        
+        logger.info(f"[Analyst Clients] Found {len(clients)} clients for {analyst}, total records: {len(filtered_data)}")
         
         return jsonify({
             'success': True,
-            'data': {'clients': clients}
+            'data': {'clients': clients}  # Return ALL clients, not just top 5
         })
         
     except Exception as e:

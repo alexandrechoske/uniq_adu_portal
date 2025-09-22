@@ -709,23 +709,97 @@ function updateAnalystTable() {
 }
 
 /**
- * Show analyst popup with top 5 clients
+ * Show analyst popup with all clients
  */
 async function showAnalystPopup(event, analyst) {
     try {
-        // Since we don't have a specific endpoint, we'll simulate top clients for this analyst
-        // based on the overall client data and make it proportional
-        
-        const topClients = operationalData.clients.slice(0, 5).map(client => ({
-            nome: client.nome,
-            total_processos: Math.floor(Math.random() * client.total_processos * 0.3) + 5 // Simulate analyst's portion
-        }));
-        
-        displayAnalystPopup(analyst.nome, topClients, event);
-        
+        // Show loading state
+        const popup = document.getElementById('analyst-popup');
+        const nameEl = document.getElementById('popup-analyst-name');
+        nameEl.textContent = `Carregando clientes de ${analyst.nome}...`;
+        popup.style.display = 'flex';
+
+        // Get current filters
+        const year = document.getElementById('year-filter').value;
+        const month = document.getElementById('month-filter').value;
+
+        // Build URL with filters
+        let url = `/dashboard-operacional/api/analyst-clients?analyst=${encodeURIComponent(analyst.nome)}`;
+        if (year) url += `&year=${year}`;
+        if (month) url += `&month=${month}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': 'uniq_api_2025_dev_bypass_key' // For testing
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.data && data.data.clients && data.data.clients.length > 0) {
+            displayAnalystPopup(analyst.nome, data.data.clients, event);
+        } else {
+            // No clients found
+            nameEl.textContent = `Nenhum cliente encontrado para ${analyst.nome}`;
+            const canvas = document.getElementById('popup-analyst-chart');
+            const ctx = canvas.getContext('2d');
+            if (analystPopupChart) {
+                analystPopupChart.destroy();
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#666';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Nenhum dado disponível', canvas.width / 2, canvas.height / 2);
+        }
+
     } catch (error) {
         console.error('Erro ao carregar clientes do analista:', error);
+        const nameEl = document.getElementById('popup-analyst-name');
+        nameEl.textContent = `Erro ao carregar dados de ${analyst.nome}`;
     }
+}
+
+/**
+ * Format client name with line breaks
+ */
+function formatClientName(clientName) {
+    if (!clientName || clientName.length <= 15) {
+        return clientName;
+    }
+    
+    // Split by spaces
+    const words = clientName.split(' ');
+    if (words.length < 2) {
+        // If no spaces, break at 15 characters
+        return clientName.length > 15 ? 
+            [clientName.substring(0, 15), clientName.substring(15)] :
+            [clientName];
+    }
+    
+    // Try to break at second space or 15 characters
+    let firstLine = words[0];
+    let secondLineStart = 1;
+    
+    // Add words until we reach second space or exceed 15 chars
+    for (let i = 1; i < words.length; i++) {
+        const testLine = firstLine + ' ' + words[i];
+        if (testLine.length > 15 || i >= 2) {
+            secondLineStart = i;
+            break;
+        }
+        firstLine = testLine;
+        secondLineStart = i + 1;
+    }
+    
+    const secondLine = words.slice(secondLineStart).join(' ');
+    return secondLine ? [firstLine, secondLine] : [firstLine];
 }
 
 /**
@@ -736,7 +810,12 @@ function displayAnalystPopup(analystName, clients, event) {
     const nameEl = document.getElementById('popup-analyst-name');
     const canvas = document.getElementById('popup-analyst-chart');
     
-    nameEl.textContent = `Top 5 Clientes - ${analystName}`;
+    nameEl.textContent = `Clientes - ${analystName}`;
+    
+    // Sort clients by total_registros descending (maior para menor)
+    const sortedClients = [...clients].sort((a, b) => 
+        (b.total_registros || b.total_processos || 0) - (a.total_registros || a.total_processos || 0)
+    );
     
     // Create chart
     if (analystPopupChart) {
@@ -747,10 +826,10 @@ function displayAnalystPopup(analystName, clients, event) {
     analystPopupChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: clients.map(c => c.nome || c.cliente),
+            labels: sortedClients.map(c => formatClientName(c.nome || c.cliente)),
             datasets: [{
                 label: 'Total de Processos',
-                data: clients.map(c => c.total_processos),
+                data: sortedClients.map(c => c.total_registros || c.total_processos || 0),
                 backgroundColor: OPERATIONAL_COLORS.primary,
                 borderColor: OPERATIONAL_COLORS.primary,
                 borderWidth: 1
@@ -758,18 +837,44 @@ function displayAnalystPopup(analystName, clients, event) {
         },
         options: {
             responsive: true,
-            indexAxis: 'y',
+            indexAxis: 'y', // Horizontal bars (cima para baixo)
             plugins: {
                 legend: {
                     display: false
+                },
+                // Add data labels plugin
+                datalabels: {
+                    display: true,
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                    formatter: (value) => value
                 }
             },
             scales: {
                 x: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    right: 20
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels] // Enable data labels plugin
     });
     
     popup.style.display = 'flex';
