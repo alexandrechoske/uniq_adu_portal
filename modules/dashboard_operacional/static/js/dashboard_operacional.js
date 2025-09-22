@@ -985,6 +985,29 @@ function updateCanalChart() {
         return;
     }
     
+    // Function to get color based on canal name
+    function getCanalColor(canalName) {
+        const name = (canalName || '').toLowerCase().trim();
+        
+        if (name.includes('verde')) {
+            return '#27ae60'; // Green
+        } else if (name.includes('amarelo')) {
+            return '#f39c12'; // Yellow/Orange
+        } else if (name.includes('vermelho')) {
+            return '#e74c3c'; // Red
+        } else {
+            return '#3498db'; // Default blue
+        }
+    }
+    
+    // Create color arrays based on canal names
+    const backgroundColors = canalData.map(item => {
+        const color = getCanalColor(item.label);
+        return color + '80'; // Add transparency (50% opacity)
+    });
+    
+    const borderColors = canalData.map(item => getCanalColor(item.label));
+    
     const ctx = canvas.getContext('2d');
     operationalCharts.canalChart = new Chart(ctx, {
         type: 'bar',
@@ -993,8 +1016,8 @@ function updateCanalChart() {
             datasets: [{
                 label: 'Registros',
                 data: canalData.map(item => item.value),
-                backgroundColor: CHART_COLORS,
-                borderColor: CHART_COLORS,
+                backgroundColor: backgroundColors,
+                borderColor: borderColors,
                 borderWidth: 1
             }]
         },
