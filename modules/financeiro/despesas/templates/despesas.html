@@ -89,10 +89,7 @@
                 <p class="kpi-variation" id="var-impostos">-</p>
             </div>
         </div>
-    </div>
-    
-    <!-- KPI Card Estratégico -->
-    <div class="kpi-grid-secondary">
+        
         <div class="kpi-card kpi-success" id="kpi-percentual-folha">
             <div class="kpi-icon">
                 <i class="mdi mdi-percent"></i>
@@ -107,18 +104,30 @@
     
     <!-- Seção de Gráficos e Análises -->
     <div class="charts-section">
-        <!-- Gráfico de Despesas por Categoria -->
+        <!-- Gráfico de Despesas por Categoria/Centro de Resultado -->
         <div class="chart-container">
             <div class="chart-header">
-                <h3>
-                    <i class="mdi mdi-chart-bar"></i>
-                    Despesas por Categoria
-                </h3>
-                <div class="chart-actions">
+                <div class="chart-title-section">
+                    <h3>
+                        <i class="mdi mdi-chart-bar"></i>
+                        <span id="chart-title">Despesas por Centro de Resultado</span>
+                    </h3>
                     <small class="chart-hint">
                         <i class="mdi mdi-information-outline"></i>
                         Clique nas barras para ver detalhes
                     </small>
+                </div>
+                <div class="chart-actions">
+                    <div class="chart-mode-toggle">
+                        <label class="toggle-label">
+                            <input type="radio" name="chart-mode" value="centro_resultado" checked>
+                            Centro de Resultado
+                        </label>
+                        <label class="toggle-label">
+                            <input type="radio" name="chart-mode" value="categoria">
+                            Categoria
+                        </label>
+                    </div>
                 </div>
             </div>
             <div class="chart-content">
@@ -131,7 +140,7 @@
             <div class="chart-header">
                 <h3>
                     <i class="mdi mdi-chart-line"></i>
-                    Tendências Mensais - Top 5 Categorias
+                    Tendências Mensais - Top 5 Centro de Resultado → Categoria
                 </h3>
             </div>
             <div class="chart-content">
@@ -142,20 +151,30 @@
     
     <!-- Seção de Tabelas -->
     <div class="tables-section">
-        <!-- Tabela de Análise por Categoria (única, sem drill-down inline) -->
+        <!-- Tabela de Análise por Categoria/Centro de Resultado (única, sem drill-down inline) -->
         <div class="table-container">
             <div class="table-header">
                 <h3>
                     <i class="mdi mdi-table"></i>
-                    Análise por Categoria
+                    <span id="table-title">Análise por Centro de Resultado</span>
                 </h3>
+                <div class="table-mode-toggle">
+                    <label class="toggle-label">
+                        <input type="radio" name="table-mode" value="centro_resultado" checked>
+                        Centro de Resultado
+                    </label>
+                    <label class="toggle-label">
+                        <input type="radio" name="table-mode" value="categoria">
+                        Categoria
+                    </label>
+                </div>
             </div>
             <div class="table-content">
                 <div class="enhanced-table-container">
                     <table id="table-categorias" class="enhanced-table">
                         <thead>
                             <tr>
-                                <th>Categoria</th>
+                                <th id="col-header-name">Centro de Resultado</th>
                                 <th>Valor</th>
                                 <th>% do Total</th>
                                 <th>Ações</th>
@@ -329,6 +348,30 @@
                 </select>
             </div>
             
+            <div class="form-group">
+                <label for="centro-resultado-select">Centro de Resultado:</label>
+                <select id="centro-resultado-select" class="form-control">
+                    <option value="">Todos os Centros de Resultado</option>
+                    <!-- Opções carregadas dinamicamente -->
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoria-select">Categoria:</label>
+                <select id="categoria-select" class="form-control">
+                    <option value="">Todas as Categorias</option>
+                    <!-- Opções carregadas dinamicamente -->
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="classe-select">Classe:</label>
+                <select id="classe-select" class="form-control">
+                    <option value="">Todas as Classes</option>
+                    <!-- Opções carregadas dinamicamente -->
+                </select>
+            </div>
+            
             <div id="periodo-personalizado" class="form-group" style="display: none;">
                 <div class="row">
                     <div class="col-md-6">
@@ -361,6 +404,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="{{ url_for('fin_despesas.static', filename='js/despesas_anual.js') }}"></script>
 <script>
 // Inicializar controlador das despesas após o carregamento completo

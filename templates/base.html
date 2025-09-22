@@ -768,6 +768,15 @@
                     </a>
                     {% endif %}
                     
+                    {% if 'dashboard_operacional' in accessible_modules %}
+                    <a href="{{ url_for('dashboard_operacional.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_operacional.index' %}active{% endif %}"
+                       title="Dashboard Operacional">
+                        <i class="mdi mdi-chart-line"></i>
+                        <span class="sidebar-text">Dashboard Operacional</span>
+                    </a>
+                    {% endif %}
+                    
                     {% if 'importacoes' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint == 'dash_importacoes_resumido.dashboard' %}active{% endif %}"
@@ -851,6 +860,33 @@
                         <span class="sidebar-text">Faturamento</span>
                     </a>
                     {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'conciliacao_lancamentos' in financeiro_pages %}
+                    <a href="{{ url_for('fin_conciliacao_lancamentos.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_conciliacao_lancamentos.index' %}active{% endif %}"
+                       title="Conciliação de Lançamentos">
+                        <i class="mdi mdi-account-balance text-xl"></i>
+                        <span class="sidebar-text">Conciliação</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'categorizacao_clientes' in financeiro_pages %}
+                    <a href="{{ url_for('fin_categorizacao_clientes.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_categorizacao_clientes.index' %}active{% endif %}"
+                       title="Categorização de Clientes">
+                        <i class="mdi mdi-people text-xl"></i>
+                        <span class="sidebar-text">Categorização</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'projecoes_metas' in financeiro_pages %}
+                    <a href="{{ url_for('fin_projecoes_metas.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_projecoes_metas.index' %}active{% endif %}"
+                       title="Projeções e Metas">
+                        <i class="mdi mdi-trending-up text-xl"></i>
+                        <span class="sidebar-text">Projeções & Metas</span>
+                    </a>
+                    {% endif %}
                 </div>
                 {% endif %}
                 
@@ -905,6 +941,15 @@
                    title="Dashboard Executivo">
                     <i class="mdi mdi-view-dashboard text-xl"></i>
                     <span class="sidebar-text">Dashboard Executivo</span>
+                </a>
+                {% endif %}
+                
+                {% if 'dashboard_operacional' in accessible_modules %}
+                <a href="{{ url_for('dashboard_operacional.index') }}"
+                   class="sidebar-item {% if request.endpoint == 'dashboard_operacional.index' %}active{% endif %}"
+                   title="Dashboard Operacional">
+                    <i class="mdi mdi-chart-line text-xl"></i>
+                    <span class="sidebar-text">Dashboard Operacional</span>
                 </a>
                 {% endif %}
                 
@@ -981,6 +1026,33 @@
                        title="Faturamento">
                         <i class="mdi mdi-receipt text-xl"></i>
                         <span class="sidebar-text">Faturamento</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'conciliacao_lancamentos' in financeiro_pages %}
+                    <a href="{{ url_for('fin_conciliacao_lancamentos.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_conciliacao_lancamentos.index' %}active{% endif %}"
+                       title="Conciliação de Lançamentos">
+                        <i class="mdi mdi-account-balance text-xl"></i>
+                        <span class="sidebar-text">Conciliação de Lançamentos</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'categorizacao_clientes' in financeiro_pages %}
+                    <a href="{{ url_for('fin_categorizacao_clientes.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_categorizacao_clientes.index' %}active{% endif %}"
+                       title="Categorização de Clientes">
+                        <i class="mdi mdi-people text-xl"></i>
+                        <span class="sidebar-text">Categorização de Clientes</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'projecoes_metas' in financeiro_pages %}
+                    <a href="{{ url_for('fin_projecoes_metas.index') }}"
+                       class="sidebar-item {% if request.endpoint == 'fin_projecoes_metas.index' %}active{% endif %}"
+                       title="Projeções e Metas">
+                        <i class="mdi mdi-trending-up text-xl"></i>
+                        <span class="sidebar-text">Projeções e Metas</span>
                     </a>
                     {% endif %}
                 {% endif %}

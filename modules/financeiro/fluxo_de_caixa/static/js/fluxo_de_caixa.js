@@ -49,7 +49,9 @@ class FluxoCaixaController {
         this.currentMes = null; // Changed to null for year-only default
         this.currentPage = 1;
         this.pageLimit = 25;
-        this.currentDrillCategoria = null; // For drill-down functionality
+        this.currentDrillCentro = null; // For drill-down level 1
+        this.currentDrillCategoria = null; // For drill-down level 2
+        this.drillLevel = 1; // Track current drill level (1=Centro, 2=Categoria, 3=Classe)
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -108,6 +110,11 @@ class FluxoCaixaController {
     }
     
     init() {
+        // Register ChartJS plugins
+        if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+        
         this.setupEventListeners();
         this.populateYearSelect();
         this.setInitialMonth();
@@ -129,7 +136,7 @@ class FluxoCaixaController {
         $('#search-table').on('input', debounce(() => this.loadTableData(), 300));
         
         // Drill-down button for expenses chart
-        $('#btn-voltar-categorias').on('click', () => this.voltarCategorias());
+        $('#btn-voltar-categorias').on('click', () => this.voltarNivelAnterior());
         
         // Fechar modal ao clicar fora
         $('#filter-modal').on('click', (e) => {
@@ -171,18 +178,13 @@ class FluxoCaixaController {
                 return null;
             });
             
-            const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
-                console.error('Erro ao carregar saldo acumulado:', error);
-                return null;
-            });
-            
             const despesasCategoriaPromise = this.loadDespesasCategoria().catch(error => {
                 console.error('Erro ao carregar despesas por categoria:', error);
                 return null;
             });
             
-            const projecaoPromise = this.loadProjecao().catch(error => {
-                console.error('Erro ao carregar projeção:', error);
+            const saldoAcumuladoPromise = this.loadSaldoAcumulado().catch(error => {
+                console.error('Erro ao carregar saldo acumulado:', error);
                 return null;
             });
             
@@ -195,9 +197,8 @@ class FluxoCaixaController {
             await Promise.all([
                 kpisPromise,
                 fluxoMensalPromise,
-                saldoAcumuladoPromise,
                 despesasCategoriaPromise,
-                projecaoPromise,
+                saldoAcumuladoPromise,
                 tableDataPromise
             ]);
         } catch (error) {
@@ -288,22 +289,10 @@ class FluxoCaixaController {
     }
     
     updateVariation(selector, variation) {
+        // Remove variation display as requested - we don't have previous period data
         const element = $(selector);
-        const isPositive = variation > 0;
-        const isNegative = variation < 0;
-        
+        element.text('');
         element.removeClass('variation-positive variation-negative variation-neutral');
-        
-        if (isPositive) {
-            element.addClass('variation-positive');
-            element.html(`<i class="mdi mdi-trending-up"></i> +${variation.toFixed(1)}% vs. período anterior`);
-        } else if (isNegative) {
-            element.addClass('variation-negative');
-            element.html(`<i class="mdi mdi-trending-down"></i> ${variation.toFixed(1)}% vs. período anterior`);
-        } else {
-            element.addClass('variation-neutral');
-            element.html(`<i class="mdi mdi-minus"></i> Sem variação`);
-        }
     }
     
     updateKPICardColor(cardSelector, value) {
@@ -423,135 +412,29 @@ class FluxoCaixaController {
                     title: {
                         display: true,
                         text: 'Fluxo de Caixa Mês a Mês'
-                    }
-                },
-                scales: {
-                    y: {
-                        min: minPadded,
-                        max: maxPadded,
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrencyShort(value);
-                            }
-                        }
                     },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    async loadSaldoAcumulado() {
-        try {
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?ano=${this.currentAno}`);
-            const data = await response.json();
-            
-            if (!response.ok || data.error) {
-                throw new Error(data.error || 'Erro ao carregar saldo acumulado');
-            }
-            
-            this.renderSaldoAcumuladoChart(data);
-        } catch (error) {
-            console.error('Erro ao carregar saldo acumulado:', error);
-            this.showError('Erro ao carregar saldo acumulado: ' + (error.message || 'Erro desconhecido'));
-            // Render error state in chart
-            this.renderSaldoAcumuladoChartError();
-        }
-    }
-
-    renderSaldoAcumuladoChartError() {
-        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
-        
-        if (this.charts.saldoAcumulado) {
-            this.charts.saldoAcumulado.destroy();
-        }
-        
-        // Create a simple error message chart
-        this.charts.saldoAcumulado = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Erro'],
-                datasets: [{
-                    label: 'Erro ao carregar dados',
-                    data: [1],
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    borderWidth: 2,
-                    fill: true
-                }]
-            },
-            options: {
-                ...this.chartDefaults,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        enabled: false
-                    }
-                },
-                scales: {
-                    y: {
-                        display: false
-                    },
-                    x: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-    
-    renderSaldoAcumuladoChart(data) {
-        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
-        
-        if (this.charts.saldoAcumulado) {
-            this.charts.saldoAcumulado.destroy();
-        }
-        
-        // Group data by month instead of daily
-        const monthlyData = this.groupByMonthForSaldo(data.datas, data.saldos);
-        
-        // Find min and max values for proper scaling
-        const minValue = Math.min(...monthlyData.saldos);
-        const maxValue = Math.max(...monthlyData.saldos);
-        const range = maxValue - minValue;
-        const minPadded = minValue - (range * 0.1);
-        const maxPadded = maxValue + (range * 0.1);
-        
-        // Create line chart for saldo acumulado (monthly)
-        this.charts.saldoAcumulado = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: monthlyData.datas,
-                datasets: [{
-                    label: 'Saldo Acumulado',
-                    data: monthlyData.saldos,
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                ...this.chartDefaults,
-                plugins: {
-                    ...this.chartDefaults.plugins,
-                    title: {
+                    datalabels: {
                         display: true,
-                        text: 'Saldo Acumulado por Período (Mensal)'
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 11,
+                            weight: 'bold'
+                        }
                     }
                 },
                 scales: {
@@ -575,56 +458,29 @@ class FluxoCaixaController {
                 }
             }
         });
-    }
-
-    // Helper function to group daily data by month for saldo acumulado
-    groupByMonthForSaldo(dates, values) {
-        const monthlyData = {};
-        
-        // Group by month and keep the last value of each month (for saldo acumulado)
-        for (let i = 0; i < dates.length; i++) {
-            const date = dates[i];
-            const value = values[i];
-            
-            // Extract month from date (format: dd/MM)
-            const parts = date.split('/');
-            if (parts.length === 2) {
-                const monthKey = parts[1]; // Month part (MM)
-                
-                // For saldo acumulado, we want the last value of each month
-                monthlyData[monthKey] = {
-                    date: date,
-                    value: value
-                };
-            }
-        }
-        
-        // Convert to arrays and sort by month
-        const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
-            return parseInt(a) - parseInt(b);
-        });
-        
-        const monthlyDates = sortedMonths.map(month => {
-            const monthNames = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
-                               'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            const monthNum = parseInt(month);
-            return monthNames[monthNum] || month;
-        });
-        
-        const monthlyValues = sortedMonths.map(month => monthlyData[month].value);
-        
-        return {
-            datas: monthlyDates,
-            saldos: monthlyValues
-        };
     }
     
     async loadDespesasCategoria() {
         try {
-            // When no month is selected, load full year data
-            const mesParam = this.currentMes ? `&mes=${this.currentMes}` : '';
-            const drillParam = this.currentDrillCategoria ? `&categoria=${encodeURIComponent(this.currentDrillCategoria)}` : '';
-            const response = await fetch(`/financeiro/fluxo-de-caixa/api/despesas-categoria?ano=${this.currentAno}${mesParam}${drillParam}`);
+            // Build parameters for drill-down levels
+            const params = {
+                ano: this.currentAno
+            };
+            
+            if (this.currentMes) {
+                params.mes = this.currentMes;
+            }
+            
+            if (this.currentDrillCentro) {
+                params.centro_resultado = this.currentDrillCentro;
+            }
+            
+            if (this.currentDrillCategoria) {
+                params.categoria = this.currentDrillCategoria;
+            }
+            
+            const queryString = new URLSearchParams(params).toString();
+            const response = await fetch(`/financeiro/fluxo-de-caixa/api/despesas-categoria?${queryString}`);
             const data = await response.json();
             
             if (!response.ok || data.error) {
@@ -689,25 +545,33 @@ class FluxoCaixaController {
             this.charts.despesasCategoria.destroy();
         }
         
-        // Update chart title and drill-down button visibility
-        if (data.drill_categoria) {
-            $('#chart-despesas-title').text(`Despesas por Classe - ${data.drill_categoria}`);
+        // Update chart title and drill-down button visibility based on drill level
+        const chartTitle = data.drill_title || 'Despesas por Centro de Resultado';
+        $('#chart-despesas-title').text(chartTitle);
+        
+        // Show/hide back button based on drill level
+        if (data.drill_level > 1) {
             $('#btn-voltar-categorias').show();
         } else {
-            $('#chart-despesas-title').text('Despesas por Categoria');
             $('#btn-voltar-categorias').hide();
         }
+        
+        // Convert negative values to positive for better visualization
+        const valoresPositivos = data.valores.map(valor => Math.abs(valor));
+        
+        // Format labels with line breaks for long text
+        const formattedLabels = data.labels.map(label => this.formatCategoryLabel(label));
         
         // For horizontal bar chart, we need to swap x and y axes
         this.charts.despesasCategoria = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: data.labels,
+                labels: formattedLabels,
                 datasets: [{
-                    label: data.drill_categoria ? 'Despesas por Classe' : 'Despesas por Categoria',
-                    data: data.valores,
-                    backgroundColor: data.valores.map(() => 'rgba(111, 66, 193, 0.8)'),
-                    borderColor: data.valores.map(() => 'rgba(111, 66, 193, 1)'),
+                    label: chartTitle,
+                    data: valoresPositivos,
+                    backgroundColor: valoresPositivos.map(() => 'rgba(111, 66, 193, 0.8)'),
+                    borderColor: valoresPositivos.map(() => 'rgba(111, 66, 193, 1)'),
                     borderWidth: 2,
                     borderRadius: 6,
                     borderSkipped: false
@@ -718,20 +582,43 @@ class FluxoCaixaController {
                 indexAxis: 'y', // This makes it horizontal
                 onClick: (event, elements) => {
                     // Add drill-down functionality when clicking on bars
-                    if (elements.length > 0 && !data.drill_categoria) {
+                    if (elements.length > 0) {
                         const elementIndex = elements[0].index;
-                        const categoria = data.labels[elementIndex];
-                        this.drillDownCategoria(categoria);
+                        const selectedItem = data.labels[elementIndex]; // Use original label for drill-down
+                        this.handleDrillDown(selectedItem, data.drill_level);
                     }
                 },
                 plugins: {
                     ...this.chartDefaults.plugins,
                     title: {
                         display: true,
-                        text: data.drill_categoria ? `Despesas por Classe - ${data.drill_categoria}` : 'Despesas por Categoria'
+                        text: chartTitle
                     },
                     legend: {
                         display: false
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'right',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 10,
+                            weight: 'bold'
+                        }
                     },
                     tooltip: {
                         ...this.chartDefaults.plugins.tooltip,
@@ -758,6 +645,256 @@ class FluxoCaixaController {
                     y: {
                         grid: {
                             display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            padding: 10
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    async loadSaldoAcumulado() {
+        try {
+            const queryString = new URLSearchParams({
+                ano: this.currentAno,
+                ...(this.currentMes && { mes: this.currentMes })
+            });
+            
+            // Load both saldo acumulado and projection data
+            const [saldoResponse, projecaoResponse] = await Promise.all([
+                fetch(`/financeiro/fluxo-de-caixa/api/saldo-acumulado?${queryString}`),
+                fetch(`/financeiro/fluxo-de-caixa/api/projecao`)
+            ]);
+            
+            const saldoData = await saldoResponse.json();
+            const projecaoData = await projecaoResponse.json();
+            
+            if (!saldoResponse.ok || saldoData.error) {
+                throw new Error(saldoData.error || 'Erro ao carregar evolução do saldo acumulado');
+            }
+            
+            if (!projecaoResponse.ok || projecaoData.error) {
+                console.warn('Erro ao carregar projeção, continuando sem projeção:', projecaoData.error);
+                // Continue without projection data
+                this.renderSaldoAcumuladoChart(saldoData, null);
+            } else {
+                this.renderSaldoAcumuladoChart(saldoData, projecaoData);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar saldo acumulado:', error);
+            this.showError('Erro ao carregar evolução do saldo acumulado: ' + (error.message || 'Erro desconhecido'));
+            // Render error state in chart
+            this.renderSaldoAcumuladoChartError();
+        }
+    }
+
+    renderSaldoAcumuladoChartError() {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        // Ensure proper cleanup before creating new chart
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+            delete this.charts.saldoAcumulado;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        // Create a simple error message chart
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Erro ao carregar dados',
+                    data: [1],
+                    backgroundColor: 'rgba(220, 53, 69, 0.8)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    renderSaldoAcumuladoChart(saldoData, projecaoData = null) {
+        const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+        
+        // Ensure proper cleanup before creating new chart
+        if (this.charts.saldoAcumulado) {
+            this.charts.saldoAcumulado.destroy();
+            delete this.charts.saldoAcumulado;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        // Prepare datasets
+        const datasets = [];
+        let allDates = [];
+        let allValues = [];
+        
+        // Dataset 1: Saldo Acumulado Real
+        const realValues = saldoData.saldos.filter(val => val !== null);
+        datasets.push({
+            label: 'Saldo Acumulado Real',
+            data: saldoData.saldos,
+            borderColor: 'rgba(0, 123, 255, 1)',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: saldoData.saldos.map(value => 
+                value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
+            ),
+            pointBorderColor: 'white',
+            pointBorderWidth: 2,
+            pointRadius: 3
+        });
+        
+        allDates = [...saldoData.datas];
+        allValues = [...realValues];
+        
+        // Dataset 2: Projeção (if available)
+        if (projecaoData && projecaoData.future_dates && projecaoData.future_dates.length > 0) {
+            // Calculate projected saldo acumulado based on last real saldo + future projections
+            const lastRealSaldo = saldoData.saldos[saldoData.saldos.length - 1] || 0;
+            
+            // Create cumulative projection values
+            let cumulativeProjection = lastRealSaldo;
+            const projectionValues = [cumulativeProjection]; // Start with last real value
+            
+            for (let i = 0; i < projecaoData.future_values.length; i++) {
+                cumulativeProjection += projecaoData.future_values[i];
+                projectionValues.push(cumulativeProjection);
+            }
+            
+            // Create null values for past dates + first projection value
+            const pastNulls = new Array(saldoData.datas.length - 1).fill(null);
+            const projectionData = [...pastNulls, ...projectionValues];
+            
+            datasets.push({
+                label: 'Saldo Acumulado Projetado',
+                data: projectionData,
+                borderColor: 'rgba(255, 193, 7, 1)',
+                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                borderWidth: 3,
+                borderDash: [5, 5], // Dashed line for projection
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(255, 193, 7, 1)',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            });
+            
+            // Combine dates for x-axis
+            allDates = [...saldoData.datas, ...projecaoData.future_dates];
+            allValues = [...allValues, ...projectionValues];
+        }
+        
+        // Find min and max values for proper scaling
+        const minValue = Math.min(...allValues);
+        const maxValue = Math.max(...allValues);
+        const range = maxValue - minValue;
+        const minPadded = minValue - (range * 0.1);
+        const maxPadded = maxValue + (range * 0.1);
+        
+        this.charts.saldoAcumulado = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: allDates,
+                datasets: datasets
+            },
+            options: {
+                ...this.chartDefaults,
+                plugins: {
+                    ...this.chartDefaults.plugins,
+                    title: {
+                        display: true,
+                        text: 'Evolução do Saldo Acumulado'
+                    },
+                    legend: {
+                        display: datasets.length > 1, // Show legend only if we have projection data
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 11,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: minPadded,
+                        max: maxPadded,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyShort(value);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxTicksLimit: 12 // Limit number of x-axis labels
                         }
                     }
                 }
@@ -786,8 +923,16 @@ class FluxoCaixaController {
     renderProjecaoChartError() {
         const ctx = document.getElementById('chart-projecao').getContext('2d');
         
+        // Ensure proper cleanup before creating new chart
         if (this.charts.projecao) {
             this.charts.projecao.destroy();
+            delete this.charts.projecao;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
         // Create a simple error message chart
@@ -829,20 +974,27 @@ class FluxoCaixaController {
     renderProjecaoChart(data) {
         const ctx = document.getElementById('chart-projecao').getContext('2d');
         
+        // Ensure proper cleanup before creating new chart
         if (this.charts.projecao) {
             this.charts.projecao.destroy();
+            delete this.charts.projecao;
+        }
+        
+        // Clear any existing chart instance on the canvas
+        const chartInstance = Chart.getChart(ctx);
+        if (chartInstance) {
+            chartInstance.destroy();
         }
         
         // Combine past and future data
         const allDates = [...data.past_dates, ...data.future_dates];
-        const allFluxos = [...data.past_fluxos, ...data.future_fluxos];
-        const allSaldos = [...data.past_saldos, ...data.future_saldos];
+        const allFluxos = [...data.past_values, ...data.future_values];
         
         // Split into past and future for different styling
         const pastCount = data.past_dates.length;
         
         // Find min and max values for proper scaling
-        const allValues = [...allFluxos, ...allSaldos].filter(val => val !== null);
+        const allValues = [...allFluxos].filter(val => val !== null);
         const minValue = Math.min(...allValues);
         const maxValue = Math.max(...allValues);
         const range = maxValue - minValue;
@@ -878,31 +1030,6 @@ class FluxoCaixaController {
                     pointBorderColor: 'white',
                     pointBorderWidth: 2,
                     pointRadius: 4
-                }, {
-                    label: 'Saldo Acumulado Real',
-                    data: allSaldos.map((value, index) => index < pastCount ? value : null),
-                    borderColor: 'rgba(23, 162, 184, 1)',
-                    backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                    borderWidth: 3,
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(23, 162, 184, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }, {
-                    label: 'Saldo Acumulado Projetado',
-                    data: allSaldos.map((value, index) => index >= pastCount ? value : null),
-                    borderColor: 'rgba(111, 66, 193, 1)',
-                    backgroundColor: 'rgba(111, 66, 193, 0.1)',
-                    borderWidth: 3,
-                    borderDash: [5, 5], // Dashed line for projection
-                    fill: false,
-                    tension: 0.4,
-                    pointBackgroundColor: 'rgba(111, 66, 193, 1)',
-                    pointBorderColor: 'white',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
                 }]
             },
             options: {
@@ -911,7 +1038,7 @@ class FluxoCaixaController {
                     ...this.chartDefaults.plugins,
                     title: {
                         display: true,
-                        text: 'Projeção de Fluxo de Caixa (24 meses + 6 meses)'
+                        text: 'Projeção de Fluxo de Caixa - Resultado Líquido'
                     },
                     legend: {
                         labels: {
@@ -920,6 +1047,29 @@ class FluxoCaixaController {
                             font: {
                                 size: 11
                             }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatCurrencyShort(value);
+                        },
+                        color: '#212529',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#dee2e6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 6,
+                            right: 6
+                        },
+                        font: {
+                            size: 11,
+                            weight: 'bold'
                         }
                     }
                 },
@@ -946,14 +1096,43 @@ class FluxoCaixaController {
         });
     }
     
-    drillDownCategoria(categoria) {
-        this.currentDrillCategoria = categoria;
+    handleDrillDown(selectedItem, currentLevel) {
+        if (currentLevel === 1) {
+            // Drill down from Centro de Resultado to Categoria
+            this.currentDrillCentro = selectedItem;
+            this.drillLevel = 2;
+        } else if (currentLevel === 2) {
+            // Drill down from Categoria to Classe
+            this.currentDrillCategoria = selectedItem;
+            this.drillLevel = 3;
+        }
+        // Level 3 (Classe) is the deepest level, no further drill-down
+        
         this.loadDespesasCategoria();
     }
     
-    voltarCategorias() {
-        this.currentDrillCategoria = null;
+    voltarNivelAnterior() {
+        if (this.drillLevel === 3) {
+            // Go back from Classe to Categoria
+            this.currentDrillCategoria = null;
+            this.drillLevel = 2;
+        } else if (this.drillLevel === 2) {
+            // Go back from Categoria to Centro de Resultado
+            this.currentDrillCentro = null;
+            this.drillLevel = 1;
+        }
+        
         this.loadDespesasCategoria();
+    }
+    
+    drillDownCategoria(categoria) {
+        // Legacy function - redirect to new drill-down system
+        this.handleDrillDown(categoria, 1);
+    }
+    
+    voltarCategorias() {
+        // Legacy function - redirect to new system
+        this.voltarNivelAnterior();
     }
     
     async loadTableData() {
@@ -1112,6 +1291,26 @@ class FluxoCaixaController {
         } else {
             $('#loading-overlay').hide();
         }
+    }
+    
+    formatCategoryLabel(label) {
+        // Break long category names into multiple lines
+        if (!label) return label;
+        
+        // Replace common separators with line breaks
+        let formatted = label
+            .replace(/\//g, '\n')  // ADMINISTRATIVO/FINANCEIRO -> ADMINISTRATIVO\nFINANCEIRO
+            .replace(/-/g, '-\n')  // LONG-CATEGORY -> LONG-\nCATEGORY
+            .replace(/\s+/g, ' '); // Normalize spaces
+        
+        // If still too long, break at spaces
+        const words = formatted.split(' ');
+        if (words.length > 2 && formatted.length > 20) {
+            const midPoint = Math.ceil(words.length / 2);
+            formatted = words.slice(0, midPoint).join(' ') + '\n' + words.slice(midPoint).join(' ');
+        }
+        
+        return formatted;
     }
     
     showError(message) {

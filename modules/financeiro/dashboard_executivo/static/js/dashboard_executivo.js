@@ -43,6 +43,26 @@ function setupEventListeners() {
         });
     }
     
+    // Back to sectors button
+    const backButton = document.getElementById('back-to-sectors');
+    if (backButton) {
+        backButton.addEventListener('click', function() {
+            // Deactivate drill-down mode
+            isDrillDownActive = false;
+            currentDrillDownSetor = null;
+            
+            // Hide back button
+            const backButtonContainer = document.getElementById('drill-down-back');
+            if (backButtonContainer) {
+                backButtonContainer.style.display = 'none';
+            }
+            
+            // Reload the chart with sector data
+            const year = document.getElementById('year-filter').value;
+            loadFaturamentoPorSetor(year);
+        });
+    }
+    
     // KPI card click handlers
     setupKPICardClickHandlers();
 }
@@ -86,6 +106,10 @@ function loadData() {
     showLoading();
     
     const year = document.getElementById('year-filter').value;
+    
+    // Reset drill-down state when loading new data
+    isDrillDownActive = false;
+    currentDrillDownSetor = null;
     
     // Load all data in parallel
     Promise.all([
@@ -164,6 +188,12 @@ function loadSaldoAcumulado(year) {
 
 function loadFaturamentoPorSetor(year) {
     console.log(`Loading faturamento por setor for year: ${year}`);
+    
+    // If we're in drill-down mode, load the classe data instead
+    if (isDrillDownActive && currentDrillDownSetor) {
+        loadFaturamentoClasseData(currentDrillDownSetor);
+        return Promise.resolve();
+    }
     
     return fetch(`/financeiro/dashboard-executivo/api/faturamento-setor?ano=${year}`)
         .then(response => response.json())
@@ -303,6 +333,130 @@ function updateResultadoMensalChart(data) {
     });
 }
 
+function updateFaturamentoPorSetorChart(data) {
+    console.log('Updating faturamento por setor chart:', data);
+    
+    const ctx = document.getElementById('chart-faturamento-setor').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.faturamentoSetorChart) {
+        window.faturamentoSetorChart.destroy();
+    }
+    
+    // Show/hide back button
+    const backButton = document.getElementById('drill-down-back');
+    if (backButton) {
+        backButton.style.display = 'none';
+    }
+    
+    // Prepare data for sector level
+    const labels = ['Importação', 'Consultoria', 'Exportação'];
+    const values = [data.importacao.valor, data.consultoria.valor, data.exportacao.valor];
+    const backgroundColors = [
+        'rgba(25, 135, 84, 0.7)',
+        'rgba(13, 110, 253, 0.7)',
+        'rgba(255, 193, 7, 0.7)'
+    ];
+    
+    window.faturamentoSetorChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Proporção do Faturamento por Setor',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 10
+                    }
+                },
+                // Add data labels plugin
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => {
+                            sum += data;
+                        });
+                        let percentage = (value * 100 / sum).toFixed(2) + "%";
+                        
+                        // Format value with compact number
+                        let formattedValue = formatCompactNumber(value);
+                        
+                        // Only show label if percentage is above threshold (e.g., 2%)
+                        if ((value * 100 / sum) >= 2) {
+                            return formattedValue + "\n" + percentage;
+                        } else {
+                            return ''; // Don't show label for small values
+                        }
+                    },
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    textAlign: 'center'
+                }
+            },
+            aspectRatio: 1.5,
+            onClick: (event, elements) => {
+                // Handle drill down to classe when clicking on a slice
+                if (elements.length > 0) {
+                    const elementIndex = elements[0].index;
+                    const label = labels[elementIndex];
+                    
+                    // Map label to setor
+                    let setor = 'importacao';
+                    if (label.includes('Consultoria')) {
+                        setor = 'consultoria';
+                    } else if (label.includes('Exportação')) {
+                        setor = 'exportacao';
+                    }
+                    
+                    console.log('Drill down to classe for setor:', setor);
+                    
+                    // Activate drill-down mode
+                    isDrillDownActive = true;
+                    currentDrillDownSetor = setor;
+                    
+                    // Show back button
+                    if (backButton) {
+                        backButton.style.display = 'block';
+                    }
+                    
+                    // Reload the chart with classe data
+                    const year = document.getElementById('year-filter').value;
+                    loadFaturamentoPorSetor(year); // This will trigger the drill-down
+                }
+            }
+        },
+        plugins: [ChartDataLabels] // Register the data labels plugin
+    });
+}
+
 function updateSaldoAcumuladoChart(data) {
     console.log('Updating saldo acumulado chart:', data);
     
@@ -342,6 +496,21 @@ function updateSaldoAcumuladoChart(data) {
                 },
                 title: {
                     display: false
+                },
+                // Add data labels plugin
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        return formatCompactNumber(value);
+                    },
+                    color: '#495057',
+                    font: {
+                        weight: 'bold',
+                        size: 10
+                    },
+                    align: 'top',
+                    anchor: 'end',
+                    offset: 5,
+                    display: 'auto' // Only show labels when there's enough space
                 }
             },
             scales: {
@@ -354,7 +523,8 @@ function updateSaldoAcumuladoChart(data) {
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels] // Register the data labels plugin
     });
     
     // Update KPI with final saldo acumulado value
@@ -362,57 +532,6 @@ function updateSaldoAcumuladoChart(data) {
         const finalSaldo = data[data.length - 1].saldo_acumulado;
         updateKPIValue('valor-saldo-acumulado', finalSaldo, null);
     }
-}
-
-function updateFaturamentoPorSetorChart(data) {
-    console.log('Updating faturamento por setor chart:', data);
-    
-    const ctx = document.getElementById('chart-faturamento-setor').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.faturamentoSetorChart) {
-        window.faturamentoSetorChart.destroy();
-    }
-    
-    // Prepare data
-    const labels = ['Importação', 'Consultoria', 'Exportação'];
-    const values = [data.importacao.valor, data.consultoria.valor, data.exportacao.valor];
-    const backgroundColors = [
-        'rgba(25, 135, 84, 0.7)',
-        'rgba(13, 110, 253, 0.7)',
-        'rgba(255, 193, 7, 0.7)'
-    ];
-    
-    window.faturamentoSetorChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    data: values,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        boxWidth: 12,
-                        padding: 10
-                    }
-                },
-                title: {
-                    display: false
-                }
-            },
-            aspectRatio: 1.5
-        }
-    });
 }
 
 function updateTopDespesasChart(data) {
@@ -453,6 +572,20 @@ function updateTopDespesasChart(data) {
                 },
                 title: {
                     display: false
+                },
+                // Add data labels plugin
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        return formatCompactNumber(value);
+                    },
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    anchor: 'end',
+                    align: 'right',
+                    offset: 5
                 }
             },
             scales: {
@@ -465,7 +598,8 @@ function updateTopDespesasChart(data) {
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels] // Register the data labels plugin
     });
 }
 
@@ -486,6 +620,7 @@ function updateTopClientes(data) {
             return;
         }
         
+        // Update to show top 10 instead of top 5
         data.forEach((cliente, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -594,4 +729,143 @@ function getMonthName(monthNumber) {
         'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
     ];
     return months[parseInt(monthNumber) - 1] || monthNumber;
+}
+
+// Add a variable to track drill-down state
+let isDrillDownActive = false;
+let currentDrillDownSetor = null;
+
+function loadFaturamentoClasseData(setor) {
+    console.log(`Loading faturamento classe data for setor: ${setor}`);
+    
+    const year = document.getElementById('year-filter').value;
+    
+    fetch(`/financeiro/dashboard-executivo/api/faturamento-classe?ano=${year}&setor=${setor}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateFaturamentoClasseChart(data);
+            } else {
+                throw new Error(data.error || 'Erro ao carregar faturamento por classe');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading classe data:', error);
+            showError('Erro ao carregar dados de classe. Por favor, tente novamente.');
+        });
+}
+
+function updateFaturamentoClasseChart(data) {
+    console.log('Updating faturamento classe chart:', data);
+    
+    const ctx = document.getElementById('chart-faturamento-setor').getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.faturamentoSetorChart) {
+        window.faturamentoSetorChart.destroy();
+    }
+    
+    // Show back button
+    const backButton = document.getElementById('drill-down-back');
+    if (backButton) {
+        backButton.style.display = 'block';
+    }
+    
+    // Prepare data for classe level
+    const labels = data.data.map(item => item.classe);
+    const values = data.data.map(item => item.valor);
+    
+    // Generate colors dynamically
+    const backgroundColors = generateColors(values.length);
+    
+    window.faturamentoSetorChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 10
+                    }
+                },
+                title: {
+                    display: true,
+                    text: `Proporção do Faturamento - ${getSetorDisplayName(data.setor)}`,
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: {
+                        top: 10,
+                        bottom: 10
+                    }
+                },
+                // Add data labels plugin
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let sum = 0;
+                        let dataArr = ctx.chart.data.datasets[0].data;
+                        dataArr.map(data => {
+                            sum += data;
+                        });
+                        let percentage = (value * 100 / sum).toFixed(2) + "%";
+                        
+                        // Format value with compact number
+                        let formattedValue = formatCompactNumber(value);
+                        
+                        // Only show label if percentage is above threshold (e.g., 2%)
+                        if ((value * 100 / sum) >= 2) {
+                            return formattedValue + "\n" + percentage;
+                        } else {
+                            return ''; // Don't show label for small values
+                        }
+                    },
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    textAlign: 'center'
+                }
+            },
+            aspectRatio: 1.5,
+            onClick: null // Disable click handler in classe view to avoid confusion
+        },
+        plugins: [ChartDataLabels] // Register the data labels plugin
+    });
+}
+
+function getSetorDisplayName(setor) {
+    const setorMap = {
+        'importacao': 'Importação',
+        'consultoria': 'Consultoria',
+        'exportacao': 'Exportação'
+    };
+    return setorMap[setor] || setor;
+}
+
+function generateColors(count) {
+    // Generate distinct colors for chart segments
+    const colors = [];
+    const hueStep = 360 / count;
+    
+    for (let i = 0; i < count; i++) {
+        const hue = (i * hueStep) % 360;
+        colors.push(`hsla(${hue}, 70%, 50%, 0.7)`);
+    }
+    
+    return colors;
 }

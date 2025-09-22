@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Projeções e Metas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link href="{{ url_for('fin_projecoes_metas.static', filename='projecoes_metas.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="projecoes-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-financeiro">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-chart-line'},
+                {'name': 'Projeções e Metas', 'icon': 'mdi mdi-trending-up'}
+            ], 'financeiro') }}
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados...</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <div class="stats-icon primary">
+                <i class="mdi mdi-cash-multiple"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-financeiras-geral">0</h3>
+                <p>Metas Financeiras - Geral</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon primary">
+                <i class="mdi mdi-cash-check"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-financeiras-consultoria">0</h3>
+                <p>Metas Financeiras - Consultoria</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon warning">
+                <i class="mdi mdi-chart-timeline-variant"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-operacionais">0</h3>
+                <p>Metas Operacionais</p>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon success">
+                <i class="mdi mdi-trending-up"></i>
+            </div>
+            <div class="stats-content">
+                <h3 id="total-projecoes">0</h3>
+                <p>Projeções</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <button id="tab-metas-financeiras-geral" class="btn btn-primary tab-button active" data-tab="metas-financeiras-geral">
+                <i class="mdi mdi-cash-multiple"></i>
+                Metas Financeiras - Geral
+            </button>
+            <button id="tab-metas-financeiras-consultoria" class="btn btn-primary tab-button" data-tab="metas-financeiras-consultoria">
+                <i class="mdi mdi-cash-check"></i>
+                Metas Financeiras - Consultoria
+            </button>
+            <button id="tab-metas-operacionais" class="btn btn-primary tab-button" data-tab="metas-operacionais">
+                <i class="mdi mdi-chart-timeline-variant"></i>
+                Metas Operacionais
+            </button>
+            <button id="tab-projecoes" class="btn btn-primary tab-button" data-tab="projecoes">
+                <i class="mdi mdi-trending-up"></i>
+                Projeções
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab Metas Financeiras - Geral -->
+    <div id="content-metas-financeiras-geral" class="tab-content active">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Metas Financeiras - Geral</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-meta-financeira-geral" class="btn btn-primary">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Meta Financeira Geral
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Mês</th>
+                        <th>Valor da Meta</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-metas-financeiras-geral-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Metas Financeiras - Consultoria -->
+    <div id="content-metas-financeiras-consultoria" class="tab-content">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Metas Financeiras - Consultoria</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-meta-financeira-consultoria" class="btn btn-primary">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Meta Financeira Consultoria
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Mês</th>
+                        <th>Valor da Meta</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-metas-financeiras-consultoria-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Metas Operacionais -->
+    <div id="content-metas-operacionais" class="tab-content">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Metas Operacionais</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-meta-operacional" class="btn btn-warning">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Meta Operacional
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Mês</th>
+                        <th>Valor da Meta</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-metas-operacionais-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Projeções -->
+    <div id="content-projecoes" class="tab-content">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Projeções</h2>
+                <div class="table-actions">
+                    <button id="btn-nova-projecao" class="btn btn-success">
+                        <i class="mdi mdi-plus"></i>
+                        Nova Projeção
+                    </button>
+                </div>
+            </div>
+
+            <table class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Ano</th>
+                        <th>Mês</th>
+                        <th>Valor da Projeção</th>
+                        <th>Data Criação</th>
+                        <th width="120">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="table-projecoes-tbody">
+                    <!-- Dados serão carregados via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div id="toast-container"></div>
+
+<!-- Modal centralizado seguindo padrão da aplicação -->
+<div id="meta-modal" class="modal-overlay">
+    <div class="modal-container">
+        <!-- Modal Header -->
+        <div class="modal-header">
+            <h2 class="modal-title" id="meta-modal-title">Nova Meta</h2>
+            <button class="modal-close" id="meta-modal-close">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="modal-content">
+            <!-- Modo de criação: individual ou lote -->
+            <div class="modo-criacao-tabs" style="margin-bottom: 20px;">
+                <button id="tab-individual" class="modo-tab active" data-modo="individual">
+                    <i class="mdi mdi-plus-circle"></i>
+                    Individual
+                </button>
+                <button id="tab-lote" class="modo-tab" data-modo="lote">
+                    <i class="mdi mdi-plus-box-multiple"></i>
+                    Múltiplos Meses
+                </button>
+            </div>
+
+            <!-- Formulário Individual -->
+            <div id="form-individual" class="form-section active">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Ano</label>
+                        <select id="meta-modal-ano" class="form-input">
+                            <!-- Será preenchido dinamicamente -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mês</label>
+                        <select id="meta-modal-mes" class="form-input">
+                            <option value="01">Janeiro</option>
+                            <option value="02">Fevereiro</option>
+                            <option value="03">Março</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Maio</option>
+                            <option value="06">Junho</option>
+                            <option value="07">Julho</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor (R$)</label>
+                        <input type="text" id="meta-modal-valor" class="form-input money-input" placeholder="0,00">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulário Lote -->
+            <div id="form-lote" class="form-section">
+                <div class="form-group">
+                    <label class="form-label">Ano</label>
+                    <select id="meta-modal-ano-lote" class="form-input">
+                        <!-- Será preenchido dinamicamente -->
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label class="form-label">Meses e Valores</label>
+                    <div class="meses-valores-container">
+                        <div class="meses-valores-header">
+                            <div class="header-mes">Mês</div>
+                            <div class="header-valor">Valor (R$)</div>
+                            <div class="header-acao">Ação</div>
+                        </div>
+                        <div id="meses-valores-lista" class="meses-valores-lista">
+                            <!-- Linhas serão adicionadas dinamicamente -->
+                        </div>
+                        <button type="button" id="btn-adicionar-mes-valor" class="btn btn-sm btn-primary" style="margin-top: 10px;">
+                            <i class="mdi mdi-plus"></i>
+                            Adicionar Mês
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button id="meta-modal-cancel" class="btn btn-secondary">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button id="meta-modal-save" class="btn btn-primary">
+                    <i class="mdi mdi-check"></i>
+                    <span id="save-text">Salvar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('fin_projecoes_metas.static', filename='projecoes_metas.js') }}"></script>
+{% endblock %}

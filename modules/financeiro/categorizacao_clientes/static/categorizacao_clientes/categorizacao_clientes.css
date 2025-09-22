@@ -1,0 +1,119 @@
+/**
+ * CSS para Categorização de Clientes
+ * Estilos específicos para interface tipo planilha
+ */
+
+/* Estilos adicionais para compatibilidade */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8em;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-primary {
+    background-color: #2196f3;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1976d2;
+}
+
+.btn-success {
+    background-color: #4caf50;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #388e3c;
+}
+
+.btn-warning {
+    background-color: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #f57c00;
+}
+
+/* Estilos para Materialize overrides */
+.card .card-content {
+    padding: 20px;
+}
+
+.card .card-title {
+    font-size: 1.4em;
+    margin-bottom: 15px;
+}
+
+.btn {
+    border-radius: 4px;
+    text-transform: none;
+}
+
+.btn-small {
+    height: auto;
+    line-height: normal;
+}
+
+/* Estilos para inputs */
+.input-field input[type=text]:focus + label,
+.input-field input[type=search]:focus + label {
+    color: #2196f3 !important;
+}
+
+.input-field input[type=text]:focus,
+.input-field input[type=search]:focus {
+    border-bottom: 1px solid #2196f3 !important;
+    box-shadow: 0 1px 0 0 #2196f3 !important;
+}
+
+/* Estilos para selects */
+.select-wrapper input.select-dropdown:focus {
+    border-bottom: 1px solid #2196f3 !important;
+    box-shadow: 0 1px 0 0 #2196f3 !important;
+}
+
+/* Estilos para modal */
+.modal {
+    border-radius: 8px;
+}
+
+.modal .modal-content {
+    padding: 20px;
+}
+
+.modal .modal-footer {
+    padding: 10px 20px;
+}
+
+/* Responsividade adicional */
+@media (max-width: 768px) {
+    .categorizacao-container {
+        padding: 10px;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .enhanced-table {
+        min-width: 600px;
+    }
+}

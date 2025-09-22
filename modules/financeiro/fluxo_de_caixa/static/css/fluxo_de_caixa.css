@@ -289,6 +289,18 @@
     height: 100% !important;
 }
 
+/* Horizontal Bar Chart Specific Styles */
+.chart-container .chart-content:has(canvas) {
+    /* Ensure horizontal bar charts have enough height for long labels */
+    min-height: 500px;
+}
+
+/* Improve label readability for horizontal bar charts */
+.chart-container canvas {
+    /* Allow more space for y-axis labels in horizontal charts */
+    margin-left: 20px;
+}
+
 /* Table Container */
 .table-container {
     background: white;
@@ -517,18 +529,22 @@
 
 /* Responsive Design */
 @media (min-width: 1200px) {
-    .charts-grid {
+    .charts-row {
         grid-template-columns: 1fr 1fr;
-    }
-    
-    .wide-chart {
-        grid-column: 1 / span 2;
     }
 }
 
 @media (max-width: 1199px) {
     .kpi-grid-monthly {
         grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .charts-row .chart-container .chart-content {
+        min-height: 300px;
     }
 }
 
@@ -561,9 +577,17 @@
         grid-template-columns: 1fr;
     }
     
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+    
     .chart-content {
         padding: 1rem;
         min-height: 300px;
+    }
+    
+    .charts-row .chart-container .chart-content {
+        min-height: 250px;
     }
     
     .table-header {
@@ -590,6 +614,16 @@
     
     .filter-date-inputs {
         grid-template-columns: 1fr;
+    }
+    
+    /* Drill indicator responsive */
+    .drill-indicator {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .drill-indicator small {
+        display: none; /* Hide text on mobile */
     }
 }
 
@@ -755,20 +789,30 @@
     gap: 1rem !important;
 }
 
-/* Error Notification */
-#error-notification {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: none;
-    border-radius: 8px;
-    padding: 1rem 1.5rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Drill-down indicator */
+.drill-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(0, 123, 255, 0.1);
+    border: 1px solid rgba(0, 123, 255, 0.2);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: #007bff;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
 }
 
-#error-notification .btn-close {
-    padding: 0.5rem;
-    margin: -0.5rem -0.5rem -0.5rem auto;
+.drill-indicator:hover {
+    opacity: 1;
 }
 
-#error-notification strong {
-    margin-right: 0.5rem;
+.drill-indicator i {
+    font-size: 0.875rem;
+}
+
+.drill-indicator small {
+    font-weight: 500;
 }

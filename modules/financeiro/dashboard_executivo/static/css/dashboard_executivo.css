@@ -307,21 +307,49 @@
     margin: 0;
 }
 
+#drill-down-back {
+    margin-left: auto;
+}
+
+#back-to-sectors {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #6c757d;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    margin-top: 0.5rem;
+    align-self: flex-start;
+    border: none;
+    cursor: pointer;
+}
+
+#back-to-sectors:hover {
+    background-color: #5c636a;
+    color: white;
+    text-decoration: none;
+}
+
 .chart-content {
     min-height: 300px;
     position: relative;
 }
 
 .large-chart .chart-content {
-    min-height: 400px;
+    min-height: 450px; /* Increased height to accommodate data labels */
 }
 
 .medium-chart .chart-content {
-    min-height: 350px;
+    min-height: 400px; /* Increased height to accommodate data labels */
 }
 
 .small-chart .chart-content {
-    min-height: 300px;
+    min-height: 350px; /* Increased height to accommodate data labels */
 }
 
 .small-table .chart-content {
@@ -459,6 +487,19 @@
         grid-row: 3;
         grid-column: 1 / span 2;
     }
+    
+    /* Adjust chart heights for medium screens */
+    .large-chart .chart-content {
+        min-height: 400px;
+    }
+    
+    .medium-chart .chart-content {
+        min-height: 350px;
+    }
+    
+    .small-chart .chart-content {
+        min-height: 300px;
+    }
 }
 
 @media (max-width: 991px) and (min-width: 768px) {
@@ -528,19 +569,19 @@
     }
     
     .large-chart .chart-content {
-        min-height: 300px;
+        min-height: 350px;
     }
     
     .medium-chart .chart-content {
-        min-height: 250px;
+        min-height: 300px;
     }
     
     .small-chart .chart-content {
-        min-height: 200px;
+        min-height: 250px;
     }
     
     .small-table .chart-content {
-        min-height: 300px;
+        min-height: 350px;
     }
 }
 

@@ -136,15 +136,12 @@ class AccessLogger:
         self.max_retries = 1  # Apenas 1 tentativa para não impactar performance
         self.timeout = 2  # Timeout de 2 segundos
         
-        # Log de inicialização mais detalhado
-        print(f"[ACCESS_LOG_INIT] Inicializando AccessLogger")
-        print(f"[ACCESS_LOG_INIT] ├─ FLASK_ENV: {self.flask_env}")
-        print(f"[ACCESS_LOG_INIT] ├─ is_development: {self.is_development}")
-        print(f"[ACCESS_LOG_INIT] ├─ enabled: {self.enabled}")
-        print(f"[ACCESS_LOG_INIT] ├─ supabase_available: {self.supabase_available}")
-        print(f"[ACCESS_LOG_INIT] └─ console_only: {self.console_only}")
+        # Skip logging in development mode
+        self.flask_env = os.getenv('FLASK_ENV', 'production')
+        if self.flask_env == 'development':
+            self.enabled = False
+            print("[ACCESS_LOG] Logging desabilitado no ambiente de desenvolvimento")
         
-        # Decisão final sobre logging
         if not self.enabled:
             print("[ACCESS_LOG_INIT] ❌ Logging desabilitado via ACCESS_LOGGING_ENABLED")
         elif self.console_only:
@@ -365,7 +362,15 @@ class AccessLogger:
             log_data['page_url'] = str(kwargs['page_url'])[:500]
         elif request and hasattr(request, 'url'):
             try:
-                log_data['page_url'] = str(request.url)[:500]
+                # Use the correct production URL
+                if self.flask_env == 'production':
+                    # Extract path from request.url and prepend production URL
+                    request_path = request.path
+                    if request.query_string:
+                        request_path += '?' + request.query_string.decode('utf-8')
+                    log_data['page_url'] = f"{self.production_url}{request_path}"[:500]
+                else:
+                    log_data['page_url'] = str(request.url)[:500]
             except:
                 pass
         

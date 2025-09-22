@@ -62,6 +62,7 @@ from routes import background_tasks
 
 # Import modular dashboard blueprints
 from modules.dashboard_executivo import routes as dashboard_executivo
+from modules.dashboard_operacional.routes import dashboard_operacional
 
 # Import modular users blueprint
 from modules.usuarios import routes as usuarios_modular
@@ -114,6 +115,7 @@ app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Backgr
 
 # Register modular dashboard blueprints
 app.register_blueprint(dashboard_executivo.bp)  # Dashboard Executivo modular
+app.register_blueprint(dashboard_operacional)  # Dashboard Operacional modular
 
 # Register modular users blueprint
 app.register_blueprint(usuarios_modular.bp)  # Usuários modular
@@ -355,7 +357,7 @@ if __name__ == '__main__':
     # Start server based on FLASK_ENV
     flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
     if flask_env == 'development':
-        # app.run(debug=True, host='192.168.0.75', port=5000)
-        app.run(debug=True, port=5000)
+        app.run(debug=True, host='192.168.0.75', port=5000)
+        # app.run(debug=True, port=5000)
     else:
         app.run(debug=app.config.get('DEBUG', False))
