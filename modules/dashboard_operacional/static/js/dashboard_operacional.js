@@ -87,8 +87,7 @@ function setupEventListeners() {
     // Reset filters
     document.getElementById('reset-filters').addEventListener('click', resetFilters);
     
-    // Client table expand/collapse
-    document.getElementById('expand-all-clients').addEventListener('click', expandAllClients);
+    // Client table collapse
     document.getElementById('collapse-all-clients').addEventListener('click', collapseAllClients);
     
     // Analyst popup close
@@ -657,18 +656,6 @@ function collapseClient(clientIndex) {
 function collapseModal(clientIndex, modal) {
     const rows = document.querySelectorAll(`tr[data-client-index="${clientIndex}"][data-modal="${modal}"][data-level="2"]`);
     rows.forEach(row => row.remove());
-}
-
-/**
- * Expand all clients
- */
-function expandAllClients() {
-    operationalData.clients.forEach((client, index) => {
-        const expandIcon = document.querySelector(`tr[data-client-index="${index}"] .expand-icon`);
-        if (expandIcon && expandIcon.dataset.action === 'expand') {
-            expandIcon.click();
-        }
-    });
 }
 
 /**
