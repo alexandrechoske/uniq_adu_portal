@@ -141,13 +141,13 @@ function renderizarDados() {
 
 function renderizarMetasFinanceirasGeral() {
     const tbody = document.getElementById('table-metas-financeiras-geral-tbody');
-    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro_geral');
+    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro_solucoes');
     
-    console.log('[PROJECOES] Metas financeiras geral:', metas.length);
+    console.log('[PROJECOES] Metas financeiras soluções:', metas.length);
     tbody.innerHTML = '';
     
     if (metas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 40px;"><i class="mdi mdi-information-outline" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>Nenhuma meta financeira geral encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666; padding: 40px;"><i class="mdi mdi-information-outline" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>Nenhuma meta financeira soluções encontrada</td></tr>';
         return;
     }
     
@@ -173,7 +173,7 @@ function renderizarMetasFinanceirasGeral() {
         // Metas do ano
         metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
             const row = document.createElement('tr');
-            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_geral\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_solucoes\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
     });
@@ -300,12 +300,12 @@ function renderizarProjecoes() {
 }
 
 function atualizarEstatisticas() {
-    const financeirasGeral = dadosProjecoes.filter(item => item.tipo === 'financeiro_geral').length;
+    const financeirasGeral = dadosProjecoes.filter(item => item.tipo === 'financeiro_solucoes').length;
     const financeirasConsultoria = dadosProjecoes.filter(item => item.tipo === 'financeiro_consultoria').length;
     const operacionais = dadosProjecoes.filter(item => item.tipo === 'operacional').length;
     const projecoes = dadosProjecoes.filter(item => item.tipo === 'projecao').length;
     
-    console.log('[PROJECOES] Estatísticas - Financeiras Geral:', financeirasGeral, 'Financeiras Consultoria:', financeirasConsultoria, 'Operacionais:', operacionais, 'Projeções:', projecoes);
+    console.log('[PROJECOES] Estatísticas - Financeiras Soluções:', financeirasGeral, 'Financeiras Consultoria:', financeirasConsultoria, 'Operacionais:', operacionais, 'Projeções:', projecoes);
     
     document.getElementById('total-financeiras-geral').textContent = financeirasGeral;
     document.getElementById('total-financeiras-consultoria').textContent = financeirasConsultoria;
@@ -321,7 +321,7 @@ function abrirModal(tipo) {
     
     var titulos = {
         'financeiro': 'Nova Meta Financeira',
-        'financeiro_geral': 'Nova Meta Financeira - Geral',
+        'financeiro_geral': 'Nova Meta Financeira - Soluções',
         'financeiro_consultoria': 'Nova Meta Financeira - Consultoria',
         'operacional': 'Nova Meta Operacional',
         'projecao': 'Nova Projeção'
@@ -360,7 +360,7 @@ window.editarItem = function(itemId, tipo) {
     
     var titulos = {
         'financeiro': 'Editar Meta Financeira',
-        'financeiro_geral': 'Editar Meta Financeira - Geral',
+        'financeiro_geral': 'Editar Meta Financeira - Soluções',
         'financeiro_consultoria': 'Editar Meta Financeira - Consultoria',
         'operacional': 'Editar Meta Operacional',
         'projecao': 'Editar Projeção'

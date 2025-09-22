@@ -43,7 +43,7 @@ def index():
 def api_dados():
     """API para obter dados de metas e projeções da tabela fin_metas_projecoes"""
     try:
-        ano = request.args.get('ano', str(datetime.now().year))
+        ano = request.args.get('ano', '')
         tipo = request.args.get('tipo', '')
         
         print(f"[PROJECOES_API] Buscando dados - Ano: {ano}, Tipo: {tipo}")
@@ -111,7 +111,7 @@ def api_criar():
             }), 400
         
         # Validação de tipos aceitos
-        tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+        tipos_validos = ['financeiro', 'financeiro_solucoes', 'financeiro_consultoria', 'operacional', 'projecao']
         if tipo not in tipos_validos:
             return jsonify({
                 'success': False,
@@ -156,7 +156,7 @@ def api_criar():
         if result.data:
             tipo_desc = {
                 'financeiro': 'Meta financeira',
-                'financeiro_geral': 'Meta financeira geral',
+                'financeiro_solucoes': 'Meta financeira soluções',
                 'financeiro_consultoria': 'Meta financeira consultoria',
                 'operacional': 'Meta operacional', 
                 'projecao': 'Projeção'
@@ -206,7 +206,7 @@ def api_criar_lote():
                     }), 400
                 
                 # Validação de tipos aceitos
-                tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+                tipos_validos = ['financeiro', 'financeiro_solucoes', 'financeiro_consultoria', 'operacional', 'projecao']
                 if tipo not in tipos_validos:
                     return jsonify({
                         'success': False,
@@ -249,7 +249,7 @@ def api_criar_lote():
                 }), 400
             
             # Validação de tipos aceitos
-            tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+            tipos_validos = ['financeiro', 'financeiro_solucoes', 'financeiro_consultoria', 'operacional', 'projecao']
             if tipo not in tipos_validos:
                 return jsonify({
                     'success': False,
@@ -337,7 +337,7 @@ def api_atualizar(item_id):
             }), 400
         
         # Validação de tipos aceitos
-        tipos_validos = ['financeiro', 'financeiro_geral', 'financeiro_consultoria', 'operacional', 'projecao']
+        tipos_validos = ['financeiro', 'financeiro_solucoes', 'financeiro_consultoria', 'operacional', 'projecao']
         if tipo not in tipos_validos:
             return jsonify({
                 'success': False,
@@ -382,7 +382,7 @@ def api_atualizar(item_id):
         if result.data:
             tipo_desc = {
                 'financeiro': 'Meta financeira',
-                'financeiro_geral': 'Meta financeira geral',
+                'financeiro_solucoes': 'Meta financeira soluções',
                 'financeiro_consultoria': 'Meta financeira consultoria',
                 'operacional': 'Meta operacional',
                 'projecao': 'Projeção'
