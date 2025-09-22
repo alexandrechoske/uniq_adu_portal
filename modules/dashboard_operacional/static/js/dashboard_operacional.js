@@ -1171,28 +1171,26 @@ function updateAlertProcesses() {
 }
 
 /**
- * Update SLA comparison chart
+ * Update SLA comparison chart - now shows Total Processos vs SLA Médio by client
  */
 function updateSLAComparison() {
     const canvas = document.getElementById('sla-comparison-chart');
-    
+
     if (operationalCharts.slaChart) {
         operationalCharts.slaChart.destroy();
     }
-    
-    // Use data from sla_comparison or fallback to analysts data
-    let slaData = operationalData.sla_comparison || [];
-    
-    if (slaData.length === 0 && operationalData.analysts) {
-        // Create SLA data from analysts
-        slaData = operationalData.analysts.slice(0, 5).map(analyst => ({
-            analista: analyst.nome,
-            sla_medio: analyst.sla_medio,
-            total_processos: analyst.total_processos
-        }));
-    }
-    
-    if (slaData.length === 0) {
+
+    // Get client data with SLA information
+    let clientData = operationalData.clients || [];
+
+    // Filter clients that have both total_processos and sla_medio
+    const validClients = clientData.filter(client =>
+        client.total_processos > 0 &&
+        client.sla_medio !== null &&
+        client.sla_medio !== undefined
+    );
+
+    if (validClients.length === 0) {
         // Show no data message
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1202,18 +1200,26 @@ function updateSLAComparison() {
         ctx.fillText('Nenhum dado de SLA disponível', canvas.width / 2, canvas.height / 2);
         return;
     }
-    
+
+    // Sort by total_processos descending for better visualization
+    validClients.sort((a, b) => b.total_processos - a.total_processos);
+
     const ctx = canvas.getContext('2d');
     operationalCharts.slaChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'scatter',
         data: {
-            labels: slaData.map(item => item.analista),
             datasets: [{
-                label: 'SLA Médio (Dias)',
-                data: slaData.map(item => item.sla_medio || 0),
-                backgroundColor: 'rgba(74, 144, 226, 0.6)',
+                label: 'Clientes: Total de Processos vs SLA Médio',
+                data: validClients.map(client => ({
+                    x: client.total_processos,
+                    y: client.sla_medio,
+                    clientName: client.nome
+                })),
+                backgroundColor: 'rgba(74, 144, 226, 0.7)',
                 borderColor: 'rgba(74, 144, 226, 1)',
-                borderWidth: 1
+                borderWidth: 2,
+                pointRadius: 8,
+                pointHoverRadius: 12
             }]
         },
         options: {
@@ -1224,31 +1230,61 @@ function updateSLAComparison() {
                     display: true,
                     position: 'top'
                 },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const client = context.raw;
+                            return [
+                                `Cliente: ${client.clientName}`,
+                                `Total Processos: ${client.x}`,
+                                `SLA Médio: ${client.y.toFixed(1)} dias`
+                            ];
+                        }
+                    }
+                },
                 datalabels: {
-                    anchor: 'end',
-                    align: 'top',
+                    display: true,
                     color: '#333',
                     font: {
                         weight: 'bold',
-                        size: 12
+                        size: 11
                     },
-                    formatter: function(value) {
-                        return value.toFixed(1) + 'd';
-                    }
+                    formatter: function(value, context) {
+                        // Show client name on the point
+                        return value.clientName.length > 10 ?
+                            value.clientName.substring(0, 10) + '...' :
+                            value.clientName;
+                    },
+                    anchor: 'center',
+                    align: 'center',
+                    offset: 0
                 }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
                     title: {
                         display: true,
-                        text: 'Dias'
+                        text: 'Total de Processos'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return Number.isInteger(value) ? value : '';
+                        }
                     }
                 },
-                x: {
+                y: {
                     title: {
                         display: true,
-                        text: 'Analistas'
+                        text: 'SLA Médio (Dias)'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(1);
+                        }
                     }
                 }
             }
