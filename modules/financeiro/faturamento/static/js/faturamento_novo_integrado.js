@@ -228,7 +228,7 @@ class FaturamentoControllerNovo {
     renderizarToggleAnos() {
         const container = document.getElementById('year-toggles');
         if (!container) {
-            console.error('Container year-toggles não encontrado');
+            // Container year-toggles não existe na página atual - skip silenciosamente
             return;
         }
         
@@ -294,9 +294,15 @@ class FaturamentoControllerNovo {
     async carregarKPIs() {
         try {
             console.log('🔄 Carregando KPIs...');
-            // Usar o endpoint comparativo que tem todos os anos
-            const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
-            console.log('📡 Response KPIs:', response.status);
+            
+            // Obter empresa selecionada dos botões de filtro
+            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
+            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
+            
+            // Usar o endpoint comparativo que tem todos os anos com filtro de empresa
+            const url = `/financeiro/faturamento/api/geral/comparativo_anos?empresa=${encodeURIComponent(empresaSelecionada)}`;
+            const response = await fetch(url);
+            console.log('📡 Response KPIs:', response.status, 'Empresa:', empresaSelecionada);
             const data = await response.json();
             console.log('📊 Data KPIs:', data);
             
@@ -465,54 +471,59 @@ class FaturamentoControllerNovo {
 
     async calcularAderenciaMeta(anoAtual, mesAtual, dadosAnoAtual) {
         try {
-            // Evitar múltiplas chamadas se já armazenado
-            if (!this._cacheMetas || this._cacheMetas.ano !== anoAtual) {
-                const resp = await fetch('/financeiro/faturamento/api/geral/metas_mensais');
-                const metaJson = await resp.json();
-                if (metaJson.success) {
-                    this._cacheMetas = { ano: metaJson.ano || anoAtual, data: metaJson.data };
-                } else {
-                    console.warn('⚠️ Não foi possível carregar metas para KPI Aderência');
-                    return;
-                }
-            }
-            const metas = this._cacheMetas.data || [];
-            // Acumulados até mês atual
-            const realizadoAcumulado = dadosAnoAtual
-                .filter(item => parseInt(item.mes) <= mesAtual)
-                .reduce((acc, item) => acc + (parseFloat(item.total_valor || item.faturamento_total) || 0), 0);
-            const metaAcumulada = metas
-                .filter(m => parseInt(m.mes) <= mesAtual)
-                .reduce((acc, m) => acc + (parseFloat(m.meta) || 0), 0);
-            if (metaAcumulada > 0) {
-                const aderencia = (realizadoAcumulado / metaAcumulada) * 100;
+            // Obter empresa selecionada dos botões de filtro
+            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
+            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
+            
+            console.log(`🎯 Calculando aderência para empresa: ${empresaSelecionada}`);
+            
+            // Chamar nova API dinâmica de aderência
+            const resp = await fetch(`/financeiro/faturamento/api/geral/aderencia_meta?empresa=${encodeURIComponent(empresaSelecionada)}&ano=${anoAtual}&mes=${mesAtual}`);
+            const aderenciaJson = await resp.json();
+            
+            if (aderenciaJson.success) {
+                const dados = aderenciaJson.data;
+                const aderencia = dados.aderencia_percentual;
+                const status = dados.status;
+                
+                // Atualizar KPI com valor formatado
                 const texto = `${aderencia.toFixed(1)}%`;
                 this.atualizarElemento('kpi-aderencia-meta', texto);
                 
-                // Aplicar classe CSS dinâmica baseada no valor
+                // Aplicar classe CSS dinâmica baseada no status
                 const cardElement = document.getElementById('kpi-aderencia-meta-card');
                 if (cardElement) {
                     // Remover classes anteriores
-                    cardElement.classList.remove('positive', 'negative');
-                    // Adicionar classe baseada no valor (>= 100% = positive, < 100% = negative)
-                    if (aderencia >= 100) {
+                    cardElement.classList.remove('positive', 'negative', 'neutral');
+                    
+                    // Adicionar classe baseada no status
+                    if (status === 'atingiu') {
                         cardElement.classList.add('positive');
-                    } else {
+                    } else if (status === 'abaixo') {
                         cardElement.classList.add('negative');
+                    } else {
+                        cardElement.classList.add('neutral');
                     }
                 }
                 
-                console.log(`🎯 Aderência Meta: Realizado ${realizadoAcumulado} / Meta ${metaAcumulada} = ${texto}`);
+                console.log(`🎯 Aderência Meta (${empresaSelecionada}): Realizado ${dados.faturamento_acumulado} / Meta ${dados.meta_acumulada} = ${texto} (${status})`);
             } else {
+                // Fallback para exibir N/A em caso de erro
                 this.atualizarElemento('kpi-aderencia-meta', 'N/A');
-                // Remover classes quando não há dados
                 const cardElement = document.getElementById('kpi-aderencia-meta-card');
                 if (cardElement) {
-                    cardElement.classList.remove('positive', 'negative');
+                    cardElement.classList.remove('positive', 'negative', 'neutral');
                 }
+                console.warn('⚠️ Não foi possível carregar aderência à meta:', aderenciaJson.message);
             }
         } catch (e) {
             console.error('Erro calcularAderenciaMeta:', e);
+            // Em caso de erro, exibir N/A
+            this.atualizarElemento('kpi-aderencia-meta', 'N/A');
+            const cardElement = document.getElementById('kpi-aderencia-meta-card');
+            if (cardElement) {
+                cardElement.classList.remove('positive', 'negative', 'neutral');
+            }
         }
     }
     
@@ -684,16 +695,22 @@ class FaturamentoControllerNovo {
             const anoAtual = new Date().getFullYear();
             const anoAnterior = anoAtual - 1;
             
+            // Obter empresa selecionada dos botões de filtro
+            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
+            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
+            
+            console.log(`🎯 Carregando meta para empresa: ${empresaSelecionada}`);
+            
             // Buscar dados do ano atual (realizado)
-            const responseRealizadoAtual = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAtual}`);
+            const responseRealizadoAtual = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAtual}&empresa=${encodeURIComponent(empresaSelecionada)}`);
             const dataRealizadoAtual = await responseRealizadoAtual.json();
             
             // Buscar dados do ano anterior (realizado)
-            const responseRealizadoAnterior = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAnterior}`);
+            const responseRealizadoAnterior = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAnterior}&empresa=${encodeURIComponent(empresaSelecionada)}`);
             const dataRealizadoAnterior = await responseRealizadoAnterior.json();
             
             // Buscar dados da meta do ano atual
-            const responseMeta = await fetch(`/financeiro/faturamento/api/geral/metas_mensais?ano=${anoAtual}`);
+            const responseMeta = await fetch(`/financeiro/faturamento/api/geral/metas_mensais?ano=${anoAtual}&empresa=${encodeURIComponent(empresaSelecionada)}`);
             const dataMeta = await responseMeta.json();
             
             console.log('📊 Data realizado atual:', dataRealizadoAtual);
@@ -1116,8 +1133,14 @@ class FaturamentoControllerNovo {
     async carregarTabelaComparativa() {
         try {
             console.log('🔄 Carregando tabela comparativa...');
-            const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
-            console.log('📡 Response tabela:', response.status);
+            
+            // Obter empresa selecionada dos botões de filtro
+            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
+            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
+            
+            const url = `/financeiro/faturamento/api/geral/comparativo_anos?empresa=${encodeURIComponent(empresaSelecionada)}`;
+            const response = await fetch(url);
+            console.log('📡 Response tabela:', response.status, 'Empresa:', empresaSelecionada);
             const data = await response.json();
             console.log('📊 Data tabela:', data);
             

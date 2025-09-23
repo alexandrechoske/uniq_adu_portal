@@ -84,14 +84,21 @@ def api_geral_mensal():
     """API para tabela de faturamento mensal da Visão Geral"""
     try:
         ano = request.args.get('ano', datetime.now().year)
+        empresa = request.args.get('empresa', '')
         
         # Buscar dados de faturamento do ano atual
-        response_atual = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31').execute()
+        query_atual = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
+        if empresa and empresa.strip() and empresa != 'ambos':
+            query_atual = query_atual.eq('empresa', empresa)
+        response_atual = query_atual.execute()
         dados_atual = response_atual.data
         
         # Buscar dados de faturamento do ano anterior
         ano_anterior = int(ano) - 1
-        response_anterior = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano_anterior}-01-01').lte('data', f'{ano_anterior}-12-31').execute()
+        query_anterior = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano_anterior}-01-01').lte('data', f'{ano_anterior}-12-31')
+        if empresa and empresa.strip() and empresa != 'ambos':
+            query_anterior = query_anterior.eq('empresa', empresa)
+        response_anterior = query_anterior.execute()
         dados_anterior = response_anterior.data
         
         # Agrupar por mês para o ano atual
@@ -695,18 +702,51 @@ def api_geral_metas_mensais():
     """API para buscar metas mensais de faturamento"""
     try:
         ano = request.args.get('ano', datetime.now().year)
+        empresa = request.args.get('empresa', '')
         
-        # Buscar metas financeiras do ano
-        query = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro').order('mes')
-        response = query.execute()
-        dados_metas = response.data
+        # Determinar tipo de meta baseado na empresa
+        if empresa == 'Unique Consultoria':
+            tipo_meta = 'financeiro_consultoria'
+        elif empresa == 'Unique Soluções':
+            tipo_meta = 'financeiro_solucoes'
+        else:
+            # Para 'ambos' ou empresa não especificada, usar ambos os tipos
+            tipo_meta = None
         
-        # Organizar dados por mês (garantir 12 meses)
-        metas_por_mes = {}
-        for item in dados_metas:
-            mes = int(item.get('mes', 0))
-            meta = float(item.get('meta', 0))
-            metas_por_mes[mes] = meta
+        if tipo_meta:
+            # Meta específica (consultoria ou soluções)
+            query = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', tipo_meta).order('mes')
+            response = query.execute()
+            dados_metas = response.data
+            
+            # Organizar dados por mês
+            metas_por_mes = {}
+            for item in dados_metas:
+                mes = int(item.get('mes', 0))
+                meta = float(item.get('meta', 0))
+                metas_por_mes[mes] = meta
+        else:
+            # Para 'ambos', somar consultoria + soluções
+            query_consultoria = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_consultoria').order('mes')
+            query_solucoes = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_solucoes').order('mes')
+            
+            response_consultoria = query_consultoria.execute()
+            response_solucoes = query_solucoes.execute()
+            
+            # Organizar e somar metas por mês
+            metas_por_mes = {}
+            
+            # Adicionar metas de consultoria
+            for item in response_consultoria.data:
+                mes = int(item.get('mes', 0))
+                meta = float(item.get('meta', 0))
+                metas_por_mes[mes] = metas_por_mes.get(mes, 0) + meta
+            
+            # Adicionar metas de soluções
+            for item in response_solucoes.data:
+                mes = int(item.get('mes', 0))
+                meta = float(item.get('meta', 0))
+                metas_por_mes[mes] = metas_por_mes.get(mes, 0) + meta
         
         # Garantir que todos os 12 meses existam
         metas_completas = []
@@ -727,6 +767,107 @@ def api_geral_metas_mensais():
     except Exception as e:
         print(f"Erro em api_geral_metas_mensais: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@faturamento_bp.route('/api/geral/aderencia_meta')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_aderencia_meta():
+    """API para calcular aderência à meta dinâmica baseada no filtro de empresa (consultoria ou soluções)"""
+    try:
+        empresa = request.args.get('empresa', 'ambos')
+        ano = request.args.get('ano', datetime.now().year)
+        
+        print(f"🎯 [ADERENCIA_META] Calculando para empresa: {empresa}, ano: {ano}")
+        
+        # Determinar tipo de meta baseado na empresa
+        if empresa in ['consultoria', 'Unique Consultoria']:
+            tipo_meta = 'financeiro_consultoria'
+            empresa_filtro = 'Unique Consultoria'
+        elif empresa in ['solucoes', 'Unique Soluções']:
+            tipo_meta = 'financeiro_solucoes'
+            empresa_filtro = 'Unique Soluções'
+        else:
+            # Para 'ambos', usar ambos os tipos e somar
+            tipo_meta = None
+            empresa_filtro = None
+        
+        # Obter mês atual para calcular período acumulado
+        mes_atual = datetime.now().month
+        
+        # 1. Buscar metas do ano até o mês atual
+        if tipo_meta:
+            # Meta específica (consultoria ou soluções)
+            query_meta = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', tipo_meta).lte('mes', f'{mes_atual:02d}')
+            response_meta = query_meta.execute()
+            dados_metas = response_meta.data
+            
+            meta_acumulada = sum(float(item.get('meta', 0)) for item in dados_metas)
+            
+        else:
+            # Para 'ambos', somar consultoria + soluções
+            query_consultoria = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_consultoria').lte('mes', f'{mes_atual:02d}')
+            query_solucoes = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_solucoes').lte('mes', f'{mes_atual:02d}')
+            
+            response_consultoria = query_consultoria.execute()
+            response_solucoes = query_solucoes.execute()
+            
+            meta_consultoria = sum(float(item.get('meta', 0)) for item in response_consultoria.data)
+            meta_solucoes = sum(float(item.get('meta', 0)) for item in response_solucoes.data)
+            meta_acumulada = meta_consultoria + meta_solucoes
+        
+        print(f"🎯 [ADERENCIA_META] Meta acumulada até mês {mes_atual}: R$ {meta_acumulada:,.2f}")
+        
+        # 2. Buscar faturamento realizado do ano até o mês atual
+        # Calcular último dia do mês atual para evitar erro de data inválida
+        ultimo_dia_mes = calendar.monthrange(int(ano), mes_atual)[1]
+        data_fim = f'{ano}-{mes_atual:02d}-{ultimo_dia_mes:02d}'
+        
+        query_faturamento = supabase_admin.table('fin_faturamento_anual').select('valor, data, empresa').gte('data', f'{ano}-01-01').lte('data', data_fim)
+        
+        # Aplicar filtro de empresa se não for 'ambos'
+        if empresa_filtro:
+            query_faturamento = query_faturamento.eq('empresa', empresa_filtro)
+            
+        response_faturamento = query_faturamento.execute()
+        dados_faturamento = response_faturamento.data
+        
+        realizado_acumulado = sum(float(item.get('valor', 0)) for item in dados_faturamento)
+        
+        print(f"🎯 [ADERENCIA_META] Realizado acumulado até mês {mes_atual}: R$ {realizado_acumulado:,.2f}")
+        
+        # 3. Calcular aderência
+        if meta_acumulada > 0:
+            aderencia_percentual = (realizado_acumulado / meta_acumulada) * 100
+            aderencia_valor = realizado_acumulado - meta_acumulada
+            status = 'atingiu' if aderencia_percentual >= 100 else 'abaixo'
+        else:
+            aderencia_percentual = 0
+            aderencia_valor = realizado_acumulado
+            status = 'sem_dados'
+        
+        print(f"🎯 [ADERENCIA_META] Aderência: {aderencia_percentual:.1f}% ({status})")
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'meta_acumulada': meta_acumulada,
+                'faturamento_acumulado': realizado_acumulado,
+                'aderencia_percentual': aderencia_percentual,
+                'aderencia_valor': aderencia_valor,
+                'status': status,
+                'mes_atual': mes_atual,
+                'ano': ano,
+                'empresa': empresa,
+                'tipo_meta': tipo_meta or 'combinado'
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ [ADERENCIA_META] Erro: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @faturamento_bp.route('/api/geral/setor/<setor>')
 @login_required
