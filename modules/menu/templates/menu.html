@@ -22,28 +22,33 @@
         {% set filtered_menu = get_filtered_menu_structure() %}
         
         <div class="menu-columns" data-user-role="{{ role }}">
-            <!-- Coluna: Dashboards -->
-            {% if 'dashboard_executivo' in accessible_modules or 'importacoes' in accessible_modules %}
+            <!-- Coluna: Importações (antigo Dashboards) -->
+            {% if 'dashboard_executivo' in accessible_modules or 'dashboard_operacional' in accessible_modules or 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
             <div class="menu-column">
-                <h3 class="column-title"><i class="mdi mdi-chart-line"></i> Dashboards</h3>
+                <h3 class="column-title"><i class="mdi mdi-ship-wheel"></i> Importações</h3>
                 <div class="column-grid">
-                    {% if 'dashboard_executivo' in accessible_modules %}
+                    {% set importacao_pages = get_user_accessible_pages('importacoes') %}
+                    {% if ('dashboard_executivo' in accessible_modules and ('*' in importacao_pages or 'dashboard_executivo' in importacao_pages)) or (role in ['admin'] and 'dashboard_executivo' in accessible_modules) %}
                     <a href="{{ url_for('dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
-                        <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-chart-box text-xl"></i></div>
                         <h4 class="module-title">Dashboard Executivo</h4>
                         <p class="module-desc">Visão estratégica consolidada de importações.</p>
                     </a>
                     {% endif %}
-                    {% if 'importacoes' in accessible_modules %}
-                    <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
-                        <div class="module-icon"><i class="mdi mdi-ferry text-xl"></i></div>
-                        <h4 class="module-title">Dashboard Importações</h4>
-                        <p class="module-desc">Monitoramento resumido dos processos ativos.</p>
+                    {% if 'dashboard_operacional' in accessible_modules %}
+                    <a href="{{ url_for('dashboard_operacional.index') }}" class="module-card" data-module="dashboard_operacional">
+                        <div class="module-icon"><i class="mdi mdi-monitor-dashboard text-xl"></i></div>
+                        <h4 class="module-title">Dashboard Operacional</h4>
+                        <p class="module-desc">Monitoramento operacional detalhado.</p>
                     </a>
                     {% endif %}
-                    {% if role in ['admin'] %}
-                    <!-- REMOVED ANALYTICS CARD -->
-                    {% endif %}                 
+                    {% if 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
+                    <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
+                        <div class="module-icon"><i class="mdi mdi-television-guide text-xl"></i></div>
+                        <h4 class="module-title">Dashboard TV Importações</h4>
+                        <p class="module-desc">Monitoramento resumido dos processos ativos.</p>
+                    </a>
+                    {% endif %}               
                 </div>
             </div>
             {% endif %}
@@ -54,30 +59,30 @@
                 <h3 class="column-title"><i class="mdi mdi-cash-multiple"></i> Financeiro</h3>
                 <div class="column-grid">
                     {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
-                    {% if '*' in financeiro_pages or 'fin_dashboard_executivo' in financeiro_pages %}
+                    {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="fin_dashboard_executivo">
-                        <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-chart-box text-xl"></i></div>
                         <h4 class="module-title">Dashboard Executivo</h4>
                         <p class="module-desc">Visão executiva do módulo financeiro.</p>
                     </a>
                     {% endif %}
                     {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="module-card" data-module="fluxo_caixa">
-                        <div class="module-icon"><i class="mdi mdi-chart-timeline-variant"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-chart-timeline-variant text-xl"></i></div>
                         <h4 class="module-title">Fluxo de Caixa</h4>
                         <p class="module-desc">Controle financeiro de entradas e saídas.</p>
                     </a>
                     {% endif %}
                     {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}" class="module-card" data-module="despesas">
-                        <div class="module-icon"><i class="mdi mdi-credit-card-minus"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-credit-card-minus text-xl"></i></div>
                         <h4 class="module-title">Despesas</h4>
                         <p class="module-desc">Gestão de despesas operacionais.</p>
                     </a>
                     {% endif %}
                     {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}" class="module-card" data-module="receitas">
-                        <div class="module-icon"><i class="mdi mdi-receipt"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-receipt text-xl"></i></div>
                         <h4 class="module-title">Faturamento</h4>
                         <p class="module-desc">Controle de receitas e faturamento.</p>
                     </a>
@@ -87,13 +92,6 @@
                         <div class="module-icon"><i class="mdi mdi-account-balance text-xl"></i></div>
                         <h4 class="module-title">Conciliação de Lançamentos</h4>
                         <p class="module-desc">Concilie lançamentos com extratos bancários.</p>
-                    </a>
-                    {% endif %}
-                    {% if '*' in financeiro_pages or 'categorizacao_clientes' in financeiro_pages %}
-                    <a href="{{ url_for('fin_categorizacao_clientes.index') }}" class="module-card" data-module="categorizacao_clientes">
-                        <div class="module-icon"><i class="mdi mdi-people text-xl"></i></div>
-                        <h4 class="module-title">Categorização de Clientes</h4>
-                        <p class="module-desc">Gerencie categorias e perfis de clientes.</p>
                     </a>
                     {% endif %}
                     {% if '*' in financeiro_pages or 'projecoes_metas' in financeiro_pages %}
@@ -108,58 +106,45 @@
             {% endif %}
             
             <!-- Coluna: Ferramentas -->
-            {% if 'agente' in accessible_modules or 'relatorios' in accessible_modules or 'conferencia' in accessible_modules %}
+            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules %}
             <div class="menu-column">
                 <h3 class="column-title"><i class="mdi mdi-tools"></i> Ferramentas</h3>
                 <div class="column-grid">
-                    {% if 'agente' in accessible_modules %}
-                    <a href="{{ url_for('agente.index') }}" class="module-card" data-module="agente">
-                        <div class="module-icon"><i class="mdi mdi-robot"></i></div>
-                        <h4 class="module-title">Agente Unique</h4>
-                        <p class="module-desc">Assistente inteligente para consultas especializadas.</p>
-                    </a>
-                    {% endif %}
-                    {% if 'relatorios' in accessible_modules %}
+                    {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules %}
                     <a href="{{ url_for('export_relatorios.index') }}" class="module-card" data-module="export_relatorios">
-                        <div class="module-icon"><i class="mdi mdi-file-export"></i></div>
+                        <div class="module-icon"><i class="mdi mdi-file-export text-xl"></i></div>
                         <h4 class="module-title">Exportação Relatórios</h4>
                         <p class="module-desc">Extrair processos antigos (&gt; 6 meses).</p>
                     </a>
                     {% endif %}
-                    {% if 'conferencia' in accessible_modules %}
-                    <a href="{{ url_for('conferencia.index') }}" class="module-card" data-module="conferencia">
-                        <div class="module-icon"><i class="mdi mdi-file-check"></i></div>
-                        <h4 class="module-title">Conferência Documental</h4>
-                        <p class="module-desc">Validação automatizada de documentos.</p>
+                    {% set financeiro_pages = get_user_accessible_pages('financeiro') %}
+                    {% if '*' in financeiro_pages or 'categorizacao_clientes' in financeiro_pages %}
+                    <a href="{{ url_for('fin_categorizacao_clientes.index') }}" class="module-card" data-module="categorizacao_clientes">
+                        <div class="module-icon"><i class="mdi mdi-account-group text-xl"></i></div>
+                        <h4 class="module-title">Categorização de Clientes</h4>
+                        <p class="module-desc">Gerencie categorias e perfis de clientes.</p>
+                    </a>
+                    {% endif %}
+                    {% if 'config' in accessible_modules %}
+                    <a href="{{ url_for('config.logos_clientes') }}" class="module-card" data-module="logos_clientes">
+                        <div class="module-icon"><i class="mdi mdi-domain text-xl"></i></div>
+                        <h4 class="module-title">Cadastro Clientes e Empresas</h4>
+                        <p class="module-desc">Gerencie a identidade visual das empresas vinculadas.</p>
+                    </a>
+                    {% endif %}
+                    {% if 'usuarios' in accessible_modules %}
+                    <a href="{{ url_for('usuarios.index') }}" class="module-card" data-module="usuarios">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-account-multiple text-xl"></i></div>
+                        <h4 class="module-title">Gerenciar Usuários</h4>
+                        <p class="module-desc">Controle de acessos, criação e manutenção de contas.</p>
                     </a>
                     {% endif %}
                 </div>
             </div>
             {% endif %}
             
-            <!-- Coluna: Administração -->
-            {% if 'usuarios' in accessible_modules or 'config' in accessible_modules %}
-            <div class="menu-column">
-                <h3 class="column-title"><i class="mdi mdi-tools"></i> Administração</h3>
-                <div class="column-grid">
-                    {% if 'usuarios' in accessible_modules %}
-                    <a href="{{ url_for('usuarios.index') }}" class="module-card" data-module="usuarios">
-                        <span class="role-badge admin">ADMIN</span>
-                        <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
-                        <h4 class="module-title">Gerenciar Usuários</h4>
-                        <p class="module-desc">Controle de acessos, criação e manutenção de contas.</p>
-                    </a>
-                    {% endif %}
-                    {% if 'config' in accessible_modules %}
-                    <a href="{{ url_for('config.logos_clientes') }}" class="module-card" data-module="logos_clientes">
-                        <div class="module-icon"><i class="mdi mdi-domain"></i></div>
-                        <h4 class="module-title">Logos de Clientes</h4>
-                        <p class="module-desc">Gerencie a identidade visual das empresas vinculadas.</p>
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
+            <!-- Removido seção Administração - itens movidos para Ferramentas -->
                 </div>
             </div>
         </div>

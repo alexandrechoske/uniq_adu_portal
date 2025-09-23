@@ -321,3 +321,63 @@ def test_table_structure(table_name):
             'table_name': table_name,
             'error': error_msg
         }), 500
+
+@bp.route('/user-info')
+def user_info():
+    """
+    Debug route para verificar dados do usuário da sessão
+    """
+    # Verificar se está usando API bypass
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    if request.headers.get('X-API-Key') != api_bypass_key:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        user_data = session.get('user', {})
+        perfis_data = session.get('user_perfis', [])
+        
+        return jsonify({
+            'status': 'success',
+            'user_data': user_data,
+            'user_perfis': perfis_data,
+            'session_keys': list(session.keys())
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+@bp.route('/user-companies')
+def user_companies():
+    """
+    Debug route para verificar empresas do usuário
+    """
+    # Verificar se está usando API bypass
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    if request.headers.get('X-API-Key') != api_bypass_key:
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        from services.perfil_access_service import get_user_companies
+        
+        user_data = session.get('user', {})
+        if not user_data:
+            return jsonify({
+                'status': 'error',
+                'error': 'No user data in session'
+            }), 400
+        
+        companies = get_user_companies(user_data)
+        
+        return jsonify({
+            'status': 'success',
+            'user_data': user_data,
+            'companies': companies,
+            'companies_count': len(companies) if companies else 0
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500

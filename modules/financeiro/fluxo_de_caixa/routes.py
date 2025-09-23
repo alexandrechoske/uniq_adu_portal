@@ -453,9 +453,11 @@ def api_despesas_categoria():
             # Nível 1: Visão principal por centro de resultado
             agrupamento = defaultdict(float)
             for item in dados:
-                agrupamento[item['centro_resultado']] += abs(float(item['valor']))  # Usar valor absoluto para despesas
+                # Usar centro_resultado se disponível, senão usar categoria como fallback
+                chave_agrupamento = item['centro_resultado'] if item['centro_resultado'] else item['categoria']
+                agrupamento[chave_agrupamento] += abs(float(item['valor']))  # Usar valor absoluto para despesas
             drill_level = 1
-            drill_title = "Despesas por Centro de Resultado"
+            drill_title = "Despesas por Centro/Categoria"
         
         # Converter para listas e ordenar do maior para menor
         items = list(agrupamento.items())

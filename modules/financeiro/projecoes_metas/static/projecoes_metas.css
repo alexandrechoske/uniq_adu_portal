@@ -815,3 +815,41 @@
         padding: 20px 15px; /* Ajusta padding em mobile */
     }
 }
+
+/* Estilos para expandir/colapsar anos */
+.btn-ano-toggle {
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    margin-right: 8px;
+    border-radius: 3px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-ano-toggle:hover {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
+}
+
+.btn-ano-toggle i {
+    font-size: 18px;
+    transition: transform 0.2s;
+}
+
+.ano-header td {
+    position: relative;
+}
+
+.ano-header td > i.mdi-calendar {
+    margin-left: 5px;
+}
+
+/* Animação suave para mostrar/ocultar linhas */
+.ano-data {
+    transition: all 0.3s ease;
+}

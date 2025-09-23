@@ -276,7 +276,8 @@ def login():
                         'role': user.get('role')
                     })
                     
-                    return redirect(url_for('dashboard_v2.index'))
+                    # Redirecionar baseado no perfil do usuário
+                    return redirect(url_for('auth.redirect_after_login'))
                 else:
                     flash('Usuário não encontrado na base de dados.', 'error')
                     # Log de falha no login
@@ -331,7 +332,7 @@ def preload_data():
         return jsonify({
             'success': True, 
             'message': 'Dados carregados com sucesso',
-            'redirect_url': url_for('dashboard_v2.index')
+            'redirect_url': url_for('menu.menu_home')
         })
         
     except Exception as e:

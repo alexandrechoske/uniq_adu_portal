@@ -315,7 +315,7 @@ def internal_error(error):
 @app.route('/')
 def index():
     if 'user' in session:
-        return redirect(url_for('dashboard_executivo.index'))
+        return redirect(url_for('auth.redirect_after_login'))
     return redirect(url_for('auth.login'))
 
 @app.route('/test-date-sorting')

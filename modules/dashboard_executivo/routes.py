@@ -462,11 +462,20 @@ def index():
     # Verificar se é cliente_unique sem empresas associadas
     user_data = session.get('user', {})
     user_role = user_data.get('role')
+    perfil_principal = user_data.get('perfil_principal', '')
     
     if user_role == 'cliente_unique':
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
             print(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            # Passar flag para o template indicar que deve mostrar aviso
+            return render_template('dashboard_executivo.html', show_company_warning=True)
+    
+    # Verificar se é interno_unique sem empresas associadas (exceto admins)
+    if user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
+        user_cnpjs = get_user_companies(user_data)
+        if not user_cnpjs:
+            print(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     

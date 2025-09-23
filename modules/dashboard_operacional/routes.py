@@ -60,7 +60,7 @@ def get_user_companies():
 
 @dashboard_operacional.route('/')
 @login_required
-@role_required(['admin', 'interno_unique'])
+@perfil_required('importacoes', 'dashboard_operacional')
 def index():
     """Dashboard operacional main page"""
     try:
