@@ -485,10 +485,18 @@ class FaturamentoControllerNovo {
                 const dados = aderenciaJson.data;
                 const aderencia = dados.aderencia_percentual;
                 const status = dados.status;
+                const metaAcumulada = dados.meta_acumulada;
+                const faturamentoAcumulado = dados.faturamento_acumulado;
                 
                 // Atualizar KPI com valor formatado
                 const texto = `${aderencia.toFixed(1)}%`;
                 this.atualizarElemento('kpi-aderencia-meta', texto);
+                
+                // Atualizar contexto com valores da meta e realizado
+                const metaFormatada = this.formatarMoeda(metaAcumulada);
+                const realizadoFormatado = this.formatarMoeda(faturamentoAcumulado);
+                const contextoTexto = `Meta: ${metaFormatada} | Realizado: ${realizadoFormatado}`;
+                this.atualizarElemento('kpi-aderencia-meta-contexto', contextoTexto);
                 
                 // Aplicar classe CSS dinâmica baseada no status
                 const cardElement = document.getElementById('kpi-aderencia-meta-card');
@@ -510,6 +518,7 @@ class FaturamentoControllerNovo {
             } else {
                 // Fallback para exibir N/A em caso de erro
                 this.atualizarElemento('kpi-aderencia-meta', 'N/A');
+                this.atualizarElemento('kpi-aderencia-meta-contexto', 'Realizado vs Meta acumulada');
                 const cardElement = document.getElementById('kpi-aderencia-meta-card');
                 if (cardElement) {
                     cardElement.classList.remove('positive', 'negative', 'neutral');
@@ -520,6 +529,7 @@ class FaturamentoControllerNovo {
             console.error('Erro calcularAderenciaMeta:', e);
             // Em caso de erro, exibir N/A
             this.atualizarElemento('kpi-aderencia-meta', 'N/A');
+            this.atualizarElemento('kpi-aderencia-meta-contexto', 'Realizado vs Meta acumulada');
             const cardElement = document.getElementById('kpi-aderencia-meta-card');
             if (cardElement) {
                 cardElement.classList.remove('positive', 'negative', 'neutral');
