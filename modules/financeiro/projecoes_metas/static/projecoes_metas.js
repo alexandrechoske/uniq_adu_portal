@@ -164,15 +164,28 @@ function renderizarMetasFinanceirasGeral() {
     const anosOrdenados = Object.keys(metasPorAno).sort((a, b) => b - a);
     
     anosOrdenados.forEach(ano => {
+        // Verificar estado salvo no localStorage
+        const estadoSalvo = localStorage.getItem(`projecoes_ano_${ano}_${tabAtiva}`);
+        const expandido = estadoSalvo !== null ? estadoSalvo === 'true' : true; // Padrão: expandido
+        
         // Cabeçalho do ano
         const headerRow = document.createElement('tr');
         headerRow.className = 'ano-header';
-        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        headerRow.setAttribute('data-ano', ano);
+        headerRow.innerHTML = `
+            <td colspan="5">
+                <button class="btn-ano-toggle" onclick="toggleAno('${ano}', '${tabAtiva}')" data-ano="${ano}" data-tab="${tabAtiva}">
+                    <i class="mdi ${expandido ? 'mdi-chevron-down' : 'mdi-chevron-right'}"></i>
+                </button>
+                <i class="mdi mdi-calendar"></i> ${ano}
+            </td>`;
         tbody.appendChild(headerRow);
         
         // Metas do ano
         metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
             const row = document.createElement('tr');
+            row.className = `ano-data ano-${ano}`;
+            row.style.display = expandido ? 'table-row' : 'none';
             row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_solucoes\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
@@ -204,15 +217,28 @@ function renderizarMetasFinanceirasConsultoria() {
     const anosOrdenados = Object.keys(metasPorAno).sort((a, b) => b - a);
     
     anosOrdenados.forEach(ano => {
+        // Verificar estado salvo no localStorage
+        const estadoSalvo = localStorage.getItem(`projecoes_ano_${ano}_${tabAtiva}`);
+        const expandido = estadoSalvo !== null ? estadoSalvo === 'true' : true; // Padrão: expandido
+        
         // Cabeçalho do ano
         const headerRow = document.createElement('tr');
         headerRow.className = 'ano-header';
-        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        headerRow.setAttribute('data-ano', ano);
+        headerRow.innerHTML = `
+            <td colspan="5">
+                <button class="btn-ano-toggle" onclick="toggleAno('${ano}', '${tabAtiva}')" data-ano="${ano}" data-tab="${tabAtiva}">
+                    <i class="mdi ${expandido ? 'mdi-chevron-down' : 'mdi-chevron-right'}"></i>
+                </button>
+                <i class="mdi mdi-calendar"></i> ${ano}
+            </td>`;
         tbody.appendChild(headerRow);
         
         // Metas do ano
         metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
             const row = document.createElement('tr');
+            row.className = `ano-data ano-${ano}`;
+            row.style.display = expandido ? 'table-row' : 'none';
             row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_consultoria\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
@@ -244,15 +270,28 @@ function renderizarMetasOperacionais() {
     const anosOrdenados = Object.keys(metasPorAno).sort((a, b) => b - a);
     
     anosOrdenados.forEach(ano => {
+        // Verificar estado salvo no localStorage
+        const estadoSalvo = localStorage.getItem(`projecoes_ano_${ano}_${tabAtiva}`);
+        const expandido = estadoSalvo !== null ? estadoSalvo === 'true' : true; // Padrão: expandido
+        
         // Cabeçalho do ano
         const headerRow = document.createElement('tr');
         headerRow.className = 'ano-header';
-        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        headerRow.setAttribute('data-ano', ano);
+        headerRow.innerHTML = `
+            <td colspan="5">
+                <button class="btn-ano-toggle" onclick="toggleAno('${ano}', '${tabAtiva}')" data-ano="${ano}" data-tab="${tabAtiva}">
+                    <i class="mdi ${expandido ? 'mdi-chevron-down' : 'mdi-chevron-right'}"></i>
+                </button>
+                <i class="mdi mdi-calendar"></i> ${ano}
+            </td>`;
         tbody.appendChild(headerRow);
         
         // Metas do ano
         metasPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(meta => {
             const row = document.createElement('tr');
+            row.className = `ano-data ano-${ano}`;
+            row.style.display = expandido ? 'table-row' : 'none';
             row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-operacional">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-warning" onclick="editarItem(' + meta.id + ', \'operacional\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
@@ -284,15 +323,28 @@ function renderizarProjecoes() {
     const anosOrdenados = Object.keys(projecoesPorAno).sort((a, b) => b - a);
     
     anosOrdenados.forEach(ano => {
+        // Verificar estado salvo no localStorage
+        const estadoSalvo = localStorage.getItem(`projecoes_ano_${ano}_${tabAtiva}`);
+        const expandido = estadoSalvo !== null ? estadoSalvo === 'true' : true; // Padrão: expandido
+        
         // Cabeçalho do ano
         const headerRow = document.createElement('tr');
         headerRow.className = 'ano-header';
-        headerRow.innerHTML = `<td colspan="5"><i class="mdi mdi-calendar"></i> ${ano}</td>`;
+        headerRow.setAttribute('data-ano', ano);
+        headerRow.innerHTML = `
+            <td colspan="5">
+                <button class="btn-ano-toggle" onclick="toggleAno('${ano}', '${tabAtiva}')" data-ano="${ano}" data-tab="${tabAtiva}">
+                    <i class="mdi ${expandido ? 'mdi-chevron-down' : 'mdi-chevron-right'}"></i>
+                </button>
+                <i class="mdi mdi-calendar"></i> ${ano}
+            </td>`;
         tbody.appendChild(headerRow);
         
         // Projeções do ano
         projecoesPorAno[ano].sort((a, b) => a.mes - b.mes).forEach(projecao => {
             const row = document.createElement('tr');
+            row.className = `ano-data ano-${ano}`;
+            row.style.display = expandido ? 'table-row' : 'none';
             row.innerHTML = '<td>' + projecao.ano + '</td><td>' + formatarMes(projecao.mes) + '</td><td class="valor-projecao">' + formatarMoeda(projecao.meta) + '</td><td>' + formatarData(projecao.created_at) + '</td><td><button class="btn btn-sm btn-success" onclick="editarItem(' + projecao.id + ', \'projecao\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + projecao.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
@@ -795,6 +847,34 @@ function atualizarDisponibilidadeMeses() {
 function limparMesesValores() {
     const lista = document.getElementById('meses-valores-lista');
     lista.innerHTML = '';
+}
+
+// Função para expandir/colapsar anos
+function toggleAno(ano, tab) {
+    console.log('[PROJECOES] Toggle ano:', ano, 'tab:', tab);
+    
+    // Encontrar o botão que foi clicado
+    const botao = document.querySelector(`button[data-ano="${ano}"][data-tab="${tab}"]`);
+    const icone = botao.querySelector('i');
+    
+    // Verificar estado atual
+    const estaExpandido = icone.classList.contains('mdi-chevron-down');
+    const novoEstado = !estaExpandido;
+    
+    // Atualizar ícone
+    icone.classList.toggle('mdi-chevron-down', novoEstado);
+    icone.classList.toggle('mdi-chevron-right', !novoEstado);
+    
+    // Mostrar/ocultar linhas do ano
+    const linhasAno = document.querySelectorAll(`.ano-${ano}`);
+    linhasAno.forEach(linha => {
+        linha.style.display = novoEstado ? 'table-row' : 'none';
+    });
+    
+    // Salvar estado no localStorage
+    localStorage.setItem(`projecoes_ano_${ano}_${tab}`, novoEstado.toString());
+    
+    console.log('[PROJECOES] Ano', ano, novoEstado ? 'expandido' : 'colapsado');
 }
 
 window.removerLinhaMesValor = removerLinhaMesValor;
