@@ -125,6 +125,90 @@ def api_kpis():
             'error': str(e)
         }), 500
 
+@dashboard_executivo_financeiro_bp.route('/api/metas-segmentadas')
+@login_required
+@perfil_required('financeiro', 'dashboard_executivo')
+def api_metas_segmentadas():
+    """API para metas segmentadas (Geral, Consultoria, Importação)"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        
+        # Buscar todas as metas do ano da tabela correta fin_metas_projecoes
+        response_metas = supabase_admin.table('fin_metas_projecoes') \
+            .select('meta, tipo, mes') \
+            .eq('ano', str(ano)) \
+            .execute()
+        
+        # Separar metas por tipo
+        meta_consultoria = 0
+        meta_importacao = 0
+        
+        for item in response_metas.data:
+            valor_meta = float(item['meta']) if item['meta'] else 0
+            tipo = item.get('tipo', '').lower()
+            
+            if 'consultoria' in tipo:
+                meta_consultoria += valor_meta
+            elif 'solucoes' in tipo or 'importacao' in tipo:
+                meta_importacao += valor_meta
+        
+        meta_geral = meta_consultoria + meta_importacao
+        
+        # Buscar faturamento realizado segmentado por empresa (não por categoria)
+        response_faturamento = supabase_admin.table('fin_faturamento_anual') \
+            .select('valor, empresa') \
+            .gte('data', f'{ano}-01-01') \
+            .lte('data', f'{ano}-12-31') \
+            .execute()
+
+        # Separar faturamento por empresa (consultoria vs soluções)
+        faturamento_consultoria = 0
+        faturamento_solucoes = 0
+
+        for item in response_faturamento.data:
+            valor = float(item['valor']) if item['valor'] else 0
+            empresa = item.get('empresa', '').lower()
+
+            if 'consultoria' in empresa:
+                faturamento_consultoria += valor
+            elif 'solucoes' in empresa or 'soluções' in empresa:
+                faturamento_solucoes += valor
+
+        faturamento_geral = faturamento_consultoria + faturamento_solucoes
+        
+        # Calcular percentuais de atingimento
+        atingimento_geral = (faturamento_geral / meta_geral * 100) if meta_geral > 0 else 0
+        atingimento_consultoria = (faturamento_consultoria / meta_consultoria * 100) if meta_consultoria > 0 else 0
+        atingimento_solucoes = (faturamento_solucoes / meta_importacao * 100) if meta_importacao > 0 else 0
+        
+        return jsonify({
+            'success': True,
+            'ano': int(ano),
+            'data': {
+                'geral': {
+                    'meta': meta_geral,
+                    'realizado': faturamento_geral,
+                    'atingimento': round(atingimento_geral, 1)
+                },
+                'consultoria': {
+                    'meta': meta_consultoria,
+                    'realizado': faturamento_consultoria,
+                    'atingimento': round(atingimento_consultoria, 1)
+                },
+                'solucoes': {
+                    'meta': meta_importacao,
+                    'realizado': faturamento_solucoes,
+                    'atingimento': round(atingimento_solucoes, 1)
+                }
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @dashboard_executivo_financeiro_bp.route('/api/meta-atingimento')
 @login_required
 @perfil_required('financeiro', 'dashboard_executivo')

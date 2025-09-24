@@ -1101,83 +1101,133 @@
     }
 }
 
-/* Gauge Container - Meta de Faturamento */
-.gauge-container {
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    position: relative;
+/* Metas Card Compacto - Substituição do Gauge Grande */
+.metas-card-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.gauge-content {
-    position: relative;
-    display: flex;
+.metas-gauges-content {
+    padding: 1rem 0;
+}
+
+.metas-gauges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
     align-items: center;
-    justify-content: center;
-    min-height: 200px;
 }
 
-.gauge-center-info {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+/* Container Individual de Mini-Gauge */
+.mini-gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    z-index: 10;
-    pointer-events: none;
+    position: relative;
 }
 
-.gauge-percentage {
-    font-size: 2rem;
-    font-weight: 700;
+.mini-gauge-container canvas {
+    max-width: 120px;
+    max-height: 120px;
+}
+
+/* Informações do Mini-Gauge */
+.mini-gauge-info {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.mini-gauge-percentage {
+    font-size: 1.75rem;
+    font-weight: 800;
     color: #212529;
     line-height: 1;
-    margin-bottom: 0.25rem;
 }
 
-.gauge-status {
+.mini-gauge-label {
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     color: #6c757d;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.05em;
 }
 
-.meta-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
-.meta-realizado {
-    color: #16a085;
-    font-weight: 700;
-}
-
-.meta-separador {
+.mini-gauge-values {
+    font-size: 0.75rem;
     color: #6c757d;
-    font-weight: 400;
+    font-weight: 500;
+    margin-top: 0.25rem;
 }
 
-.meta-target {
-    color: #34495e;
-    font-weight: 600;
+/* Cores por tipo de meta */
+.mini-gauge-container[data-meta="geral"] .mini-gauge-percentage {
+    color: #0d6efd;
 }
 
-/* Responsive Gauge */
-@media (max-width: 768px) {
-    .gauge-content {
-        min-height: 150px;
+.mini-gauge-container[data-meta="consultoria"] .mini-gauge-percentage {
+    color: #198754;
+}
+
+.mini-gauge-container[data-meta="importacao"] .mini-gauge-percentage {
+    color: #fd7e14;
+}
+
+/* Responsividade para Mini-Gauges */
+@media (max-width: 992px) {
+    .metas-gauges-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
     
-    .gauge-percentage {
+    .mini-gauge-container {
+        flex-direction: row;
+        text-align: left;
+        gap: 1rem;
+    }
+    
+    .mini-gauge-container canvas {
+        max-width: 80px;
+        max-height: 80px;
+        flex-shrink: 0;
+    }
+    
+    .mini-gauge-info {
+        align-items: flex-start;
+        margin-top: 0;
+    }
+    
+    .mini-gauge-percentage {
         font-size: 1.5rem;
     }
+}
+
+@media (max-width: 576px) {
+    .metas-gauges-grid {
+        gap: 1rem;
+    }
     
-    .meta-info {
+    .mini-gauge-container canvas {
+        max-width: 60px;
+        max-height: 60px;
+    }
+    
+    .mini-gauge-percentage {
+        font-size: 1.25rem;
+    }
+    
+    .mini-gauge-label {
         font-size: 0.75rem;
-        flex-direction: column;
-        gap: 0.25rem;
+    }
+    
+    .mini-gauge-values {
+        font-size: 0.7rem;
     }
 }
 

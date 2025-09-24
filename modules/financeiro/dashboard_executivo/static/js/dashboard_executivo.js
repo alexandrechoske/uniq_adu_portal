@@ -403,36 +403,26 @@ function loadFaturamentoMensal(dateParams) {
 }
 
 function loadMetaAtingimento(dateParams) {
-    console.log('📊 Loading meta atingimento data...');
+    console.log('📊 Loading metas segmentadas data...');
     
-    const ano = dateParams.ano || new Date().getFullYear();
-    const empresa = dateParams.empresa || 'ambos';
+    const url = `/financeiro/dashboard-executivo/api/metas-segmentadas?${new URLSearchParams(dateParams)}`;
     
-    // Carregar meta anual
-    const metaUrl = `/financeiro/faturamento/api/geral/metas_mensais?ano=${ano}&empresa=${empresa}`;
-    
-    // Carregar faturamento realizado
-    const faturamentoUrl = `/financeiro/dashboard-executivo/api/kpis?${new URLSearchParams(dateParams)}`;
-    
-    return Promise.all([
-        fetch(metaUrl).then(res => res.json()),
-        fetch(faturamentoUrl).then(res => res.json())
-    ])
-    .then(([metaData, faturamentoData]) => {
-        console.log('📊 Meta data:', metaData);
-        console.log('📊 Faturamento data:', faturamentoData);
-        
-        if (metaData.success && faturamentoData.success) {
-            updateMetaGauge(metaData.data, faturamentoData.data);
-        } else {
-            console.error('❌ Error loading meta/faturamento data');
-            updateMetaGauge(null, null);
-        }
-    })
-    .catch(error => {
-        console.error('❌ Error loading meta atingimento:', error);
-        updateMetaGauge(null, null);
-    });
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            console.log('📊 Metas segmentadas data:', data);
+            
+            if (data.success) {
+                updateMetasSegmentadas(data.data);
+            } else {
+                console.error('❌ Error loading metas segmentadas:', data.error);
+                updateMetasSegmentadas(null);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading metas segmentadas:', error);
+            updateMetasSegmentadas(null);
+        });
 }
 
 // ==========================================
@@ -1486,106 +1476,137 @@ document.head.appendChild(style);
 // META GAUGE FUNCTIONS
 // ==========================================
 
-function updateMetaGauge(metaData, faturamentoData) {
-    console.log('📊 Updating meta gauge:', { metaData, faturamentoData });
+// ==========================================
+// METAS SEGMENTADAS - NOVO COMPONENTE COMPACTO
+// ==========================================
+
+function updateMetasSegmentadas(metasData) {
+    console.log('📊 Updating metas segmentadas:', metasData);
     
-    const ctx = document.getElementById('chart-meta-gauge');
-    if (!ctx) return;
-    
-    // Destroy existing chart
-    if (DashboardState.charts.metaGauge) {
-        DashboardState.charts.metaGauge.destroy();
+    if (!metasData) {
+        // Limpar dados em caso de erro
+        const tipos = ['geral', 'consultoria', 'solucoes'];
+        tipos.forEach(tipo => {
+            const percentageEl = document.getElementById(`percentage-${tipo}`);
+            const valuesEl = document.getElementById(`values-${tipo}`);
+            
+            if (percentageEl) percentageEl.textContent = '0%';
+            if (valuesEl) valuesEl.textContent = 'R$ 0 de R$ 0';
+        });
+        return;
     }
     
-    let metaAnual = 0;
-    let faturamentoRealizado = 0;
-    let percentualAtingimento = 0;
+    // Atualizar cada mini-gauge
+    Object.keys(metasData).forEach(tipo => {
+        const data = metasData[tipo];
+        updateMiniGauge(tipo, data);
+    });
+}
+
+function updateMiniGauge(tipo, data) {
+    const canvasId = `gauge-${tipo}`;
+    const percentageId = `percentage-${tipo}`;
+    const valuesId = `values-${tipo}`;
     
-    // Calcular meta anual (somar todos os meses)
-    if (metaData && metaData.metas_mensais) {
-        metaAnual = Object.values(metaData.metas_mensais).reduce((sum, meta) => sum + (meta || 0), 0);
+    const canvas = document.getElementById(canvasId);
+    const percentageEl = document.getElementById(percentageId);
+    const valuesEl = document.getElementById(valuesId);
+    
+    if (!canvas) return;
+    
+    // Destruir gráfico existente se houver
+    if (DashboardState.charts[tipo]) {
+        DashboardState.charts[tipo].destroy();
     }
     
-    // Obter faturamento realizado
-    if (faturamentoData && faturamentoData.faturamento_total) {
-        faturamentoRealizado = faturamentoData.faturamento_total;
+    const atingimento = data.atingimento || 0;
+    const meta = data.meta || 0;
+    const realizado = data.realizado || 0;
+    
+    // Definir cor baseada no tipo e desempenho
+    let baseColor, backgroundColor;
+    switch(tipo) {
+        case 'geral':
+            baseColor = '#0d6efd';
+            break;
+        case 'consultoria':
+            baseColor = '#198754';
+            break;
+        case 'solucoes':
+            baseColor = '#fd7e14';
+            break;
+        default:
+            baseColor = '#6c757d';
     }
     
-    // Calcular percentual
-    if (metaAnual > 0) {
-        percentualAtingimento = (faturamentoRealizado / metaAnual) * 100;
-    }
-    
-    // Limitar entre 0 e 150% para visualização
-    const gaugeValue = Math.min(percentualAtingimento, 150);
-    
-    // Definir cor baseada no desempenho
-    let gaugeColor = '#dc3545'; // Vermelho (< 70%)
-    if (percentualAtingimento >= 100) {
-        gaugeColor = '#28a745'; // Verde (>= 100%)
-    } else if (percentualAtingimento >= 80) {
-        gaugeColor = '#ffc107'; // Amarelo (80-99%)
-    } else if (percentualAtingimento >= 70) {
-        gaugeColor = '#fd7e14'; // Laranja (70-79%)
+    // Ajustar intensidade da cor baseada no desempenho
+    if (atingimento >= 100) {
+        backgroundColor = baseColor;
+    } else if (atingimento >= 80) {
+        backgroundColor = baseColor + 'CC'; // 80% opacity
+    } else if (atingimento >= 60) {
+        backgroundColor = baseColor + '99'; // 60% opacity  
+    } else {
+        backgroundColor = baseColor + '66'; // 40% opacity
     }
     
     // Atualizar elementos HTML
-    const gaugePercentageEl = document.getElementById('gauge-percentage');
-    const gaugeStatusEl = document.getElementById('gauge-status');
-    const metaInfoEl = document.getElementById('meta-info');
-    
-    if (gaugePercentageEl) {
-        gaugePercentageEl.textContent = `${percentualAtingimento.toFixed(1)}%`;
-        gaugePercentageEl.style.color = gaugeColor;
+    if (percentageEl) {
+        percentageEl.textContent = `${atingimento.toFixed(1)}%`;
+        percentageEl.style.color = baseColor;
     }
     
-    if (gaugeStatusEl) {
-        let status = 'Abaixo da Meta';
-        if (percentualAtingimento >= 100) status = 'Meta Atingida!';
-        else if (percentualAtingimento >= 80) status = 'Próximo da Meta';
-        gaugeStatusEl.textContent = status;
+    if (valuesEl) {
+        valuesEl.textContent = `${formatCurrencyCompact(realizado)} de ${formatCurrencyCompact(meta)}`;
     }
     
-    if (metaInfoEl) {
-        const realizadoEl = metaInfoEl.querySelector('.meta-realizado');
-        const targetEl = metaInfoEl.querySelector('.meta-target');
-        
-        if (realizadoEl) realizadoEl.textContent = formatCurrency(faturamentoRealizado);
-        if (targetEl) targetEl.textContent = formatCurrency(metaAnual);
-    }
+    // Criar mini-gauge (doughnut chart)
+    const gaugeValue = Math.min(atingimento, 150); // Limitar visualização
     
-    // Criar gráfico de gauge (doughnut chart)
-    DashboardState.charts.metaGauge = new Chart(ctx, {
+    DashboardState.charts[tipo] = new Chart(canvas, {
         type: 'doughnut',
         data: {
             datasets: [{
-                data: [gaugeValue, 150 - gaugeValue], // Value and remaining
+                data: [gaugeValue, 150 - gaugeValue],
                 backgroundColor: [
-                    gaugeColor,
-                    'rgba(233, 236, 239, 0.3)'
+                    backgroundColor,
+                    'rgba(233, 236, 239, 0.2)'
                 ],
                 borderWidth: 0,
-                cutout: '80%',
+                cutout: '75%',
                 circumference: 270, // 3/4 circle
                 rotation: 225 // Start from bottom left
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
             plugins: {
                 legend: { display: false },
-                tooltip: { enabled: false }
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `${atingimento.toFixed(1)}% da meta atingida`;
+                        },
+                        afterLabel: function(context) {
+                            return [
+                                `Realizado: ${formatCurrency(realizado)}`,
+                                `Meta: ${formatCurrency(meta)}`
+                            ];
+                        }
+                    }
+                }
             },
             animation: {
                 animateRotate: true,
-                duration: 2000,
-                easing: 'easeOutBounce'
+                duration: 1500,
+                easing: 'easeOutCubic'
             }
         }
     });
     
-    console.log(`📊 Meta Gauge: ${percentualAtingimento.toFixed(1)}% (R$ ${faturamentoRealizado.toLocaleString()} / R$ ${metaAnual.toLocaleString()})`);
+    console.log(`📊 Mini-Gauge ${tipo}: ${atingimento.toFixed(1)}% (${formatCurrencyCompact(realizado)} / ${formatCurrencyCompact(meta)})`);
 }
 
 console.log('✅ Dashboard Executivo Financeiro - JavaScript loaded successfully');

@@ -253,30 +253,50 @@
                     </div>
                 </div>
                 
-                <!-- Gauge de Atingimento de Meta -->
-                <div class="chart-container gauge-container">
+                <!-- Card Compacto de Metas Segmentadas -->
+                <div class="chart-container metas-card-container">
                     <div class="chart-header">
                         <h4 class="chart-title">
                             <i class="mdi mdi-target"></i>
-                            Atingimento da Meta Anual
-                            <span class="trend-badge" id="meta-trend">
-                                <i class="mdi mdi-trending-up"></i>
-                                TREND: Progresso vs Meta de Faturamento
-                            </span>
+                            Atingimento das Metas Anuais
                         </h4>
-                        <div class="chart-actions">
-                            <div class="meta-info" id="meta-info">
-                                <span class="meta-realizado">R$ 0</span>
-                                <span class="meta-separador">de</span>
-                                <span class="meta-target">R$ 0</span>
-                            </div>
+                        <div class="trend-badge">
+                            <i class="mdi mdi-information-outline"></i>
+                            <span>Metas: Percentual de faturamento realizado em relação ao planejado para o ano</span>
                         </div>
                     </div>
-                    <div class="chart-content gauge-content">
-                        <canvas id="chart-meta-gauge"></canvas>
-                        <div class="gauge-center-info">
-                            <div class="gauge-percentage" id="gauge-percentage">0%</div>
-                            <div class="gauge-status" id="gauge-status">Meta</div>
+                    <div class="chart-content metas-gauges-content">
+                        <!-- Container dos 3 Mini-Gauges -->
+                        <div class="metas-gauges-grid">
+                            <!-- Meta Geral -->
+                            <div class="mini-gauge-container" data-meta="geral">
+                                <canvas id="gauge-geral" width="120" height="120"></canvas>
+                                <div class="mini-gauge-info">
+                                    <div class="mini-gauge-percentage" id="percentage-geral">0%</div>
+                                    <div class="mini-gauge-label">Geral</div>
+                                    <div class="mini-gauge-values" id="values-geral">R$ 0 de R$ 0</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Meta Consultoria -->
+                            <div class="mini-gauge-container" data-meta="consultoria">
+                                <canvas id="gauge-consultoria" width="120" height="120"></canvas>
+                                <div class="mini-gauge-info">
+                                    <div class="mini-gauge-percentage" id="percentage-consultoria">0%</div>
+                                    <div class="mini-gauge-label">Consultoria</div>
+                                    <div class="mini-gauge-values" id="values-consultoria">R$ 0 de R$ 0</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Meta Soluções -->
+                            <div class="mini-gauge-container" data-meta="solucoes">
+                                <canvas id="gauge-solucoes" width="120" height="120"></canvas>
+                                <div class="mini-gauge-info">
+                                    <div class="mini-gauge-percentage" id="percentage-solucoes">0%</div>
+                                    <div class="mini-gauge-label">Soluções</div>
+                                    <div class="mini-gauge-values" id="values-solucoes">R$ 0 de R$ 0</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
