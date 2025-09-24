@@ -15,6 +15,22 @@ export_bases_financeiro_bp = Blueprint(
     static_folder='static'
 )
 
+# Definição das colunas otimizadas para cada base (nomes reais do banco)
+COLUNAS_OTIMIZADAS = {
+    'fin_despesa_anual': [
+        'data_sincronizacao', 'data', 'centro_resultado', 'categoria', 
+        'classe', 'codigo', 'descricao', 'valor'
+    ],
+    'fin_faturamento_anual': [
+        'data_sincronizacao', 'empresa', 'centro_resultado', 'categoria', 
+        'classe', 'cliente', 'data', 'fatura', 'id', 'operacao', 'valor'
+    ],
+    'fin_resultado_anual': [
+        'data_sincronizacao', 'centro_resultado', 'categoria', 'classe', 
+        'codigo', 'tipo', 'valor'
+    ]
+}
+
 @export_bases_financeiro_bp.route('/')
 @login_required
 @perfil_required('financeiro', 'export_bases')
@@ -91,12 +107,20 @@ def api_exportar_base(base_id):
                 'message': 'Base não encontrada ou não autorizada'
             }), 400
         
+        # Obter colunas otimizadas para esta base
+        colunas_base = COLUNAS_OTIMIZADAS.get(base_id, [])
+        if not colunas_base:
+            return jsonify({
+                'success': False,
+                'message': 'Configuração de colunas não encontrada para esta base'
+            }), 500
+        
         # Parâmetros de filtro opcionais
         ano = request.args.get('ano')
         limite = request.args.get('limite', type=int)
         
-        # Construir query
-        query = supabase_admin.table(base_id).select('*')
+        # Construir query com apenas as colunas otimizadas
+        query = supabase_admin.table(base_id).select(','.join(colunas_base))
         
         # Aplicar filtros se fornecidos
         if ano:
@@ -121,9 +145,8 @@ def api_exportar_base(base_id):
         output = io.StringIO()
         
         if response.data:
-            # Usar as chaves do primeiro registro para os headers
-            headers = list(response.data[0].keys())
-            writer = csv.DictWriter(output, fieldnames=headers)
+            # Usar as colunas otimizadas definidas para esta base
+            writer = csv.DictWriter(output, fieldnames=colunas_base)
             writer.writeheader()
             
             for row in response.data:
@@ -170,9 +193,17 @@ def api_preview_base(base_id):
                 'message': 'Base não encontrada ou não autorizada'
             }), 400
         
-        # Buscar apenas os primeiros 5 registros para preview
+        # Obter colunas otimizadas para esta base
+        colunas_base = COLUNAS_OTIMIZADAS.get(base_id, [])
+        if not colunas_base:
+            return jsonify({
+                'success': False,
+                'message': 'Configuração de colunas não encontrada para esta base'
+            }), 500
+        
+        # Buscar apenas os primeiros 5 registros para preview com colunas otimizadas
         response = supabase_admin.table(base_id) \
-            .select('*') \
+            .select(','.join(colunas_base)) \
             .order('data', desc=True) \
             .limit(5) \
             .execute()
