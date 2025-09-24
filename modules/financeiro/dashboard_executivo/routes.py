@@ -378,36 +378,66 @@ def api_top_clientes():
     """API para top 10 clientes por faturamento"""
     try:
         ano = request.args.get('ano', datetime.now().year)
+        ano_anterior = int(ano) - 1
         
-        # Buscar dados de faturamento por cliente
+        # Buscar dados de faturamento por cliente do ano atual
         response_faturamento = supabase_admin.table('fin_faturamento_anual') \
             .select('cliente, valor') \
             .gte('data', f'{ano}-01-01') \
             .lte('data', f'{ano}-12-31') \
             .execute()
         
-        # Agrupar por cliente
-        faturamento_por_cliente = defaultdict(float)
+        # Buscar dados de faturamento por cliente do ano anterior
+        response_faturamento_anterior = supabase_admin.table('fin_faturamento_anual') \
+            .select('cliente, valor') \
+            .gte('data', f'{ano_anterior}-01-01') \
+            .lte('data', f'{ano_anterior}-12-31') \
+            .execute()
         
+        # Agrupar por cliente - ano atual
+        faturamento_por_cliente = defaultdict(float)
         for item in response_faturamento.data:
             cliente = item.get('cliente', 'Não identificado')
-            valor = float(item['valor'])
-            
+            valor = float(item['valor']) if item['valor'] else 0
             faturamento_por_cliente[cliente] += valor
         
-        # Ordenar e pegar top 10 (instead of top 5)
+        # Agrupar por cliente - ano anterior
+        faturamento_anterior_por_cliente = defaultdict(float)
+        for item in response_faturamento_anterior.data:
+            cliente = item.get('cliente', 'Não identificado')
+            valor = float(item['valor']) if item['valor'] else 0
+            faturamento_anterior_por_cliente[cliente] += valor
+        
+        # Ordenar e pegar top 10
         top_clientes = sorted(faturamento_por_cliente.items(), key=lambda x: x[1], reverse=True)[:10]
         
-        # Formatar resultado
+        # Formatar resultado com trend
         resultado = []
         total_geral = sum(valor for _, valor in top_clientes)
         
         for i, (cliente, total) in enumerate(top_clientes):
+            # Calcular trend
+            total_anterior = faturamento_anterior_por_cliente.get(cliente, 0)
+            
+            if total_anterior == 0:
+                trend = 'up' if total > 0 else 'stable'
+            else:
+                variacao_percentual = ((total - total_anterior) / total_anterior) * 100
+                if variacao_percentual > 5:
+                    trend = 'up'
+                elif variacao_percentual < -5:
+                    trend = 'down'
+                else:
+                    trend = 'stable'
+            
             resultado.append({
                 'cliente': cliente,
                 'total_faturado': total,
+                'total_anterior': total_anterior,
                 'percentual': (total / total_geral * 100) if total_geral > 0 else 0,
-                'rank': i + 1
+                'rank': i + 1,
+                'trend': trend,
+                'variacao_percentual': ((total - total_anterior) / total_anterior * 100) if total_anterior > 0 else 0
             })
         
         return jsonify({

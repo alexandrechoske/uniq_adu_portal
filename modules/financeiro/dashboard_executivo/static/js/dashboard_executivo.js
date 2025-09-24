@@ -1189,19 +1189,33 @@ function updateTopClientes(data) {
     data.forEach((cliente, index) => {
         const row = document.createElement('tr');
         
-        // Generate trend indicator (mock data for demo)
-        const trends = ['up', 'down', 'stable'];
+        // Use real trend data from API
         const trendIcons = { up: '↗', down: '↘', stable: '→' };
-        const randomTrend = trends[Math.floor(Math.random() * trends.length)];
+        const trendLabels = { 
+            up: 'Crescendo', 
+            down: 'Decrescendo', 
+            stable: 'Estável' 
+        };
+        const trendClasses = { 
+            up: 'trend-up', 
+            down: 'trend-down', 
+            stable: 'trend-stable' 
+        };
+        
+        const trend = cliente.trend || 'stable';
+        const variacao = cliente.variacao_percentual || 0;
+        
+        // Create tooltip with detailed information
+        const trendTooltip = `Tendência: ${trendLabels[trend]}${variacao !== 0 ? ` (${variacao > 0 ? '+' : ''}${variacao.toFixed(1)}% vs ano anterior)` : ''}`;
         
         row.innerHTML = `
             <td class="rank-col">${index + 1}</td>
             <td class="cliente-col" title="${cliente.cliente}">${cliente.cliente}</td>
-            <td class="valor-col">${formatCurrency(cliente.total)}</td>
-            <td class="percent-col">${cliente.percentual.toFixed(1)}%</td>
+            <td class="valor-col" title="Valor exato: ${formatCurrency(cliente.total_faturado || 0)}">${formatCurrencyCompact(cliente.total_faturado || 0)}</td>
+            <td class="percent-col">${(cliente.percentual || 0).toFixed(1)}%</td>
             <td class="trend-col">
-                <span class="trend-indicator trend-${randomTrend}" title="Tendência">
-                    ${trendIcons[randomTrend]}
+                <span class="trend-indicator ${trendClasses[trend]}" title="${trendTooltip}">
+                    ${trendIcons[trend]}
                 </span>
             </td>
         `;
