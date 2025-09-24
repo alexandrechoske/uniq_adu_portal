@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import json
+import traceback
+import calendar
 from collections import defaultdict
 
 # Blueprint para Fluxo de Caixa
@@ -104,19 +106,29 @@ def api_kpis():
             # KPI 3 - Mês anterior para comparação
             resultado_mes_anterior = entradas_mes_anterior - saidas_mes_anterior
             
-            # KPI 4: Saldo Acumulado Final
-            query_saldo = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_mes.strftime('%Y-%m-%d'))
-            query_saldo = query_saldo.order('data', desc=True).limit(1)
+            # KPI 4: Saldo Acumulado Final - RECALCULADO CORRETAMENTE
+            query_saldo = supabase_admin.table(table_name).select('data, valor').lte('data', fim_mes.strftime('%Y-%m-%d'))
+            query_saldo = query_saldo.order('data')  # Ordenar por data para calcular acumulado
             query_saldo = _add_transferencia_filter(query_saldo)
             response_saldo = query_saldo.execute()
-            saldo_acumulado = float(response_saldo.data[0]['saldo_acumulado']) if response_saldo.data else 0
             
-            # KPI 4 - Mês anterior para comparação
-            query_saldo_anterior = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_mes_anterior.strftime('%Y-%m-%d'))
-            query_saldo_anterior = query_saldo_anterior.order('data', desc=True).limit(1)
+            # Recalcular saldo acumulado corretamente
+            saldo_acumulado = 0
+            for item in response_saldo.data:
+                valor = float(item['valor']) if item['valor'] else 0
+                saldo_acumulado += valor
+            
+            # KPI 4 - Mês anterior para comparação - RECALCULADO CORRETAMENTE
+            query_saldo_anterior = supabase_admin.table(table_name).select('data, valor').lte('data', fim_mes_anterior.strftime('%Y-%m-%d'))
+            query_saldo_anterior = query_saldo_anterior.order('data')  # Ordenar por data para calcular acumulado
             query_saldo_anterior = _add_transferencia_filter(query_saldo_anterior)
             response_saldo_anterior = query_saldo_anterior.execute()
-            saldo_acumulado_anterior = float(response_saldo_anterior.data[0]['saldo_acumulado']) if response_saldo_anterior.data else 0
+            
+            # Recalcular saldo acumulado anterior corretamente
+            saldo_acumulado_anterior = 0
+            for item in response_saldo_anterior.data:
+                valor = float(item['valor']) if item['valor'] else 0
+                saldo_acumulado_anterior += valor
             
             # Calcular variações percentuais
             var_entradas = _calcular_variacao_percentual(entradas_mes, entradas_mes_anterior)
@@ -177,19 +189,29 @@ def api_kpis():
             # KPI 3 - Ano anterior para comparação
             resultado_mes_anterior = entradas_mes_anterior - saidas_mes_anterior
             
-            # KPI 4: Saldo Acumulado Final
-            query_saldo = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_ano.strftime('%Y-%m-%d'))
-            query_saldo = query_saldo.order('data', desc=True).limit(1)
+            # KPI 4: Saldo Acumulado Final - RECALCULADO CORRETAMENTE
+            query_saldo = supabase_admin.table(table_name).select('data, valor').lte('data', fim_ano.strftime('%Y-%m-%d'))
+            query_saldo = query_saldo.order('data')  # Ordenar por data para calcular acumulado
             query_saldo = _add_transferencia_filter(query_saldo)
             response_saldo = query_saldo.execute()
-            saldo_acumulado = float(response_saldo.data[0]['saldo_acumulado']) if response_saldo.data else 0
             
-            # KPI 4 - Ano anterior para comparação
-            query_saldo_anterior = supabase_admin.table(table_name).select('saldo_acumulado').lte('data', fim_ano_anterior.strftime('%Y-%m-%d'))
-            query_saldo_anterior = query_saldo_anterior.order('data', desc=True).limit(1)
+            # Recalcular saldo acumulado corretamente
+            saldo_acumulado = 0
+            for item in response_saldo.data:
+                valor = float(item['valor']) if item['valor'] else 0
+                saldo_acumulado += valor
+            
+            # KPI 4 - Ano anterior para comparação - RECALCULADO CORRETAMENTE
+            query_saldo_anterior = supabase_admin.table(table_name).select('data, valor').lte('data', fim_ano_anterior.strftime('%Y-%m-%d'))
+            query_saldo_anterior = query_saldo_anterior.order('data')  # Ordenar por data para calcular acumulado
             query_saldo_anterior = _add_transferencia_filter(query_saldo_anterior)
             response_saldo_anterior = query_saldo_anterior.execute()
-            saldo_acumulado_anterior = float(response_saldo_anterior.data[0]['saldo_acumulado']) if response_saldo_anterior.data else 0
+            
+            # Recalcular saldo acumulado anterior corretamente
+            saldo_acumulado_anterior = 0
+            for item in response_saldo_anterior.data:
+                valor = float(item['valor']) if item['valor'] else 0
+                saldo_acumulado_anterior += valor
             
             # Calcular variações percentuais
             var_entradas = _calcular_variacao_percentual(entradas_mes, entradas_mes_anterior)
@@ -227,20 +249,31 @@ def api_kpis():
         }
         print(f"Error in api_kpis: {error_details}")  # Simple logging
         
-                # Return default/fallback values instead of failing completely
+        # Return default/fallback values instead of failing completely
         return jsonify({
-            'dados': [], 
-            'total': 0, 
-            'page': page, 
-            'limit': limit, 
-            'total_pages': 0
+            'entradas_mes': {
+                'valor': 0,
+                'variacao': 0
+            },
+            'saidas_mes': {
+                'valor': 0,
+                'variacao': 0
+            },
+            'resultado_mes': {
+                'valor': 0,
+                'variacao': 0
+            },
+            'saldo_acumulado': {
+                'valor': 0,
+                'variacao': 0
+            }
         })
 
 @fluxo_de_caixa_bp.route('/api/saldo-acumulado')
 @login_required
 @perfil_required('financeiro', 'fluxo_caixa')
 def api_saldo_acumulado():
-    """API para gráfico de evolução do saldo acumulado"""
+    """API para gráfico de evolução do saldo acumulado - CORRIGIDO"""
     try:
         ano = request.args.get('ano', datetime.now().year)
         mes = request.args.get('mes', None)  # None means full year
@@ -251,47 +284,61 @@ def api_saldo_acumulado():
         
         table_name = 'vw_fluxo_caixa'
         
+        # Buscar todos os dados necessários para recalcular o saldo corretamente
         if mes:
-            # Para um mês específico - evolução dia a dia
-            query = supabase_admin.table(table_name).select('data, saldo_acumulado')
-            query = query.gte('data', f'{ano}-{mes:02d}-01')
-            # Calculate last day of month
-            import calendar
+            # Para um mês específico - buscar todos os dados até o final do mês para calcular acumulado
+            query = supabase_admin.table(table_name).select('data, valor, tipo')
             last_day = calendar.monthrange(ano, mes)[1]
             query = query.lte('data', f'{ano}-{mes:02d}-{last_day}')
         else:
-            # Para um ano completo - evolução mensal (último saldo de cada mês)
-            query = supabase_admin.table(table_name).select('data, saldo_acumulado')
-            query = query.gte('data', f'{ano}-01-01')
+            # Para um ano completo - buscar todos os dados até o final do ano
+            query = supabase_admin.table(table_name).select('data, valor, tipo')
             query = query.lte('data', f'{ano}-12-31')
         
+        query = _add_transferencia_filter(query)
         query = query.order('data')
         response = query.execute()
         dados = response.data
         
+        # Recalcular saldo acumulado corretamente
+        saldo_acumulado = 0
+        registros_com_saldo = []
+        
+        for item in dados:
+            valor = float(item['valor']) if item['valor'] else 0
+            saldo_acumulado += valor  # O valor já vem com o sinal correto da view
+            
+            registros_com_saldo.append({
+                'data': item['data'],
+                'saldo_calculado': saldo_acumulado
+            })
+        
         if mes:
-            # Para mês específico, mostrar evolução diária
+            # Para mês específico, mostrar evolução diária dentro do mês solicitado
             datas = []
             saldos = []
             
-            for item in dados:
-                data_formatada = datetime.strptime(item['data'], '%Y-%m-%d').strftime('%d/%m')
-                datas.append(data_formatada)
-                saldos.append(float(item['saldo_acumulado']) if item['saldo_acumulado'] else 0)
+            for item in registros_com_saldo:
+                data_obj = datetime.strptime(item['data'], '%Y-%m-%d')
+                if data_obj.month == mes and data_obj.year == ano:
+                    data_formatada = data_obj.strftime('%d/%m')
+                    datas.append(data_formatada)
+                    saldos.append(item['saldo_calculado'])
         else:
             # Para ano completo, agregar por mês (último saldo de cada mês)
             from collections import defaultdict
-            saldos_mensais = defaultdict(float)
+            saldos_mensais = {}
             
-            for item in dados:
+            for item in registros_com_saldo:
                 data_obj = datetime.strptime(item['data'], '%Y-%m-%d')
-                mes_key = data_obj.strftime('%Y-%m')
-                # Keep the last (highest date) saldo for each month
-                if mes_key not in saldos_mensais or data_obj.day > saldos_mensais[mes_key]['day']:
-                    saldos_mensais[mes_key] = {
-                        'saldo': float(item['saldo_acumulado']) if item['saldo_acumulado'] else 0,
-                        'day': data_obj.day
-                    }
+                if data_obj.year == ano:
+                    mes_key = data_obj.strftime('%Y-%m')
+                    # Manter sempre o último saldo do mês (data mais alta)
+                    if mes_key not in saldos_mensais or data_obj.day >= saldos_mensais[mes_key]['day']:
+                        saldos_mensais[mes_key] = {
+                            'saldo': item['saldo_calculado'],
+                            'day': data_obj.day
+                        }
             
             # Convert to lists and sort
             meses_ordenados = sorted(saldos_mensais.keys())

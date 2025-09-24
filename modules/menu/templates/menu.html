@@ -101,6 +101,13 @@
                         <p class="module-desc">Planejamento e controle de metas financeiras.</p>
                     </a>
                     {% endif %}
+                    {% if '*' in financeiro_pages or 'export_bases' in financeiro_pages %}
+                    <a href="{{ url_for('fin_export_bases.index') }}" class="module-card" data-module="export_bases">
+                        <div class="module-icon"><i class="mdi mdi-download text-xl"></i></div>
+                        <h4 class="module-title">Exportação de Bases</h4>
+                        <p class="module-desc">Exporte bases financeiras em formato CSV.</p>
+                    </a>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}

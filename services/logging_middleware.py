@@ -136,6 +136,7 @@ class RobustLoggingMiddleware:
                 '/menu/',
                 '/config/',
                 '/analytics/',
+                '/financeiro/',  # Adicionado: módulo financeiro
                 '/auth/login',
                 '/auth/logout'
             ]
@@ -181,6 +182,14 @@ class RobustLoggingMiddleware:
                 'menu.dashboards': {'name': 'Menu Dashboards', 'module': 'menu'},
                 'menu.ferramentas': {'name': 'Menu Ferramentas', 'module': 'menu'},
                 'menu.configuracoes': {'name': 'Menu Configurações', 'module': 'menu'},
+                # Módulo Financeiro - Mapeamentos
+                'fin_dashboard_executivo.index': {'name': 'Dashboard Executivo Financeiro', 'module': 'financeiro'},
+                'fluxo_de_caixa.index': {'name': 'Fluxo de Caixa', 'module': 'financeiro'},
+                'despesas.index': {'name': 'Gestão de Despesas', 'module': 'financeiro'},
+                'faturamento.index': {'name': 'Faturamento', 'module': 'financeiro'},
+                'conciliacao_lancamentos.index': {'name': 'Conciliação de Lançamentos', 'module': 'financeiro'},
+                'categorizacao_clientes.index': {'name': 'Categorização de Clientes', 'module': 'financeiro'},
+                'projecoes_metas.index': {'name': 'Projeções e Metas', 'module': 'financeiro'},
                 'auth.login': {'name': 'Login', 'module': 'auth'},
                 'auth.logout': {'name': 'Logout', 'module': 'auth'},
                 'welcome': {'name': 'Página Inicial', 'module': 'main'},

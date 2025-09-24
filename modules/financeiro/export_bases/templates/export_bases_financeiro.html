@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Exportação de Bases - Financeiro - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('fin_export_bases.static', filename='export_bases_financeiro.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/process_modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="export-bases-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-financeiro">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Financeiro', 'icon': 'mdi mdi-chart-line'},
+                {'name': 'Exportação de Bases', 'icon': 'mdi mdi-download'}
+            ], 'financeiro') }}
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Carregando bases disponíveis...</p>
+        </div>
+    </div>
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title-container">
+            <h1 class="page-title">
+                <i class="mdi mdi-download"></i>
+                Exportação de Bases Financeiras
+            </h1>
+            <p class="page-description">
+                Exporte as bases de dados financeiras em formato CSV para análise externa
+            </p>
+        </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="ano-filter">
+                    <i class="mdi mdi-calendar"></i>
+                    Filtrar por Ano
+                </label>
+                <select id="ano-filter" class="form-select">
+                    <option value="">Todos os anos</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="limite-filter">
+                    <i class="mdi mdi-format-list-numbered"></i>
+                    Limite de Registros
+                </label>
+                <select id="limite-filter" class="form-select">
+                    <option value="">Todos os registros</option>
+                    <option value="100">100 registros</option>
+                    <option value="500">500 registros</option>
+                    <option value="1000">1.000 registros</option>
+                    <option value="5000">5.000 registros</option>
+                </select>
+            </div>
+            
+            <div class="filter-actions">
+                <button id="refresh-bases" class="btn btn-primary">
+                    <i class="mdi mdi-refresh"></i>
+                    Atualizar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bases Cards -->
+    <div class="bases-section">
+        <div class="section-header">
+            <div class="section-title">
+                <i class="mdi mdi-database"></i>
+                Bases Disponíveis para Exportação
+            </div>
+            <div class="section-subtitle">
+                Selecione uma base para visualizar preview e exportar em CSV
+            </div>
+        </div>
+        
+        <div class="bases-grid" id="bases-grid">
+            <!-- Cards das bases serão carregados aqui via JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Preview -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="mdi mdi-eye"></i>
+                    Preview da Base
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="preview-info mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong id="preview-base-nome">Nome da Base</strong>
+                            <p id="preview-base-descricao" class="text-muted mb-0">Descrição da base</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-info fs-6" id="preview-total-registros">0 registros</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="preview-table">
+                        <thead class="table-dark">
+                            <!-- Headers serão carregados via JavaScript -->
+                        </thead>
+                        <tbody>
+                            <!-- Dados serão carregados via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="mdi mdi-information"></i>
+                    <strong>Nota:</strong> Este é apenas um preview com os primeiros 5 registros. 
+                    A exportação incluirá todos os dados conforme os filtros aplicados.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
+                </button>
+                <button type="button" class="btn btn-success" id="btn-exportar-modal">
+                    <i class="mdi mdi-download"></i>
+                    Exportar CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exportação -->
+<div class="modal fade" id="confirmExportModal" tabindex="-1" aria-labelledby="confirmExportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmExportModalLabel">
+                    <i class="mdi mdi-download"></i>
+                    Confirmar Exportação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="export-summary">
+                    <h6>Resumo da Exportação:</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>Base:</strong> <span id="confirm-base-nome"></span></li>
+                        <li><strong>Filtro de Ano:</strong> <span id="confirm-ano"></span></li>
+                        <li><strong>Limite:</strong> <span id="confirm-limite"></span></li>
+                        <li><strong>Formato:</strong> CSV</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="mdi mdi-alert"></i>
+                    <strong>Atenção:</strong> A exportação pode demorar alguns segundos dependendo 
+                    da quantidade de dados. O download iniciará automaticamente.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="btn-confirmar-exportacao">
+                    <i class="mdi mdi-download"></i>
+                    Confirmar e Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('fin_export_bases.static', filename='export_bases_financeiro.js') }}"></script>
+{% endblock %}
