@@ -880,6 +880,15 @@
                         <span class="sidebar-text">Projeções & Metas</span>
                     </a>
                     {% endif %}
+                    
+                    {% if '*' in financeiro_pages or 'export_bases' in financeiro_pages %}
+                    <a href="{{ url_for('fin_export_bases.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_export_bases.index' %}active{% endif %}"
+                       title="Exportação de Bases">
+                        <i class="mdi mdi-download text-xl"></i>
+                        <span class="sidebar-text">Exportar Bases</span>
+                    </a>
+                    {% endif %}
                 </div>
                 {% endif %}
                 

@@ -17,6 +17,7 @@ from .faturamento.routes import faturamento_bp
 from .conciliacao_lancamentos.routes import conciliacao_lancamentos_bp
 from .categorizacao_clientes.routes import categorizacao_clientes_bp
 from .projecoes_metas.routes import projecoes_metas_bp
+from .export_bases.routes import export_bases_financeiro_bp
 
 # Criar blueprint principal do módulo financeiro
 financeiro_bp = Blueprint('financeiro', __name__, url_prefix='/financeiro')
@@ -30,7 +31,8 @@ FINANCEIRO_BLUEPRINTS = [
     # Novos módulos
     conciliacao_lancamentos_bp,
     categorizacao_clientes_bp,
-    projecoes_metas_bp
+    projecoes_metas_bp,
+    export_bases_financeiro_bp
 ]
 
 def register_financeiro_blueprints(app):
