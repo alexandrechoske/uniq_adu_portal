@@ -1,7 +1,24 @@
-// Dashboard Executivo Financeiro - JavaScript
+// Dashboard Executivo Financeiro - JavaScript Aprimorado
+
+// Estado global do dashboard
+const DashboardState = {
+    periodo: 'este_ano',
+    empresa: 'todas',
+    dataInicio: null,
+    dataFim: null,
+    isCustomPeriod: false,
+    charts: {
+        metaGauge: null
+    },
+    data: {
+        kpis: null,
+        empresas: [],
+        lastUpdate: null
+    }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard Executivo Financeiro loaded');
+    console.log('🚀 Dashboard Executivo Financeiro loaded');
     
     // Initialize dashboard
     initializeDashboard();
@@ -10,277 +27,667 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     
     // Load initial data
-    loadData();
+    loadInitialData();
 });
 
 function initializeDashboard() {
-    console.log('Initializing dashboard...');
+    console.log('📊 Initializing dashboard...');
     
-    // Set up current year as default
+    // Set up current period as default
     const currentYear = new Date().getFullYear();
-    document.getElementById('year-filter').value = currentYear;
+    
+    // Initialize filters with intelligent defaults
+    initializeFilters();
     
     // Initialize charts
     initializeCharts();
+    
+    // Setup loading states
+    setupLoadingStates();
+}
+
+function initializeFilters() {
+    // Set default period
+    const periodoFilter = document.getElementById('periodo-filter');
+    if (periodoFilter) {
+        periodoFilter.value = DashboardState.periodo;
+    }
+    
+    // Set default empresa
+    const empresaFilter = document.getElementById('empresa-filter');
+    if (empresaFilter) {
+        empresaFilter.value = DashboardState.empresa;
+    }
+    
+    // Load empresas list
+    loadEmpresas();
+    
+    // Update filter summary
+    updateFilterSummary();
 }
 
 function setupEventListeners() {
-    console.log('Setting up event listeners...');
+    console.log('🔧 Setting up event listeners...');
     
-    // Year filter change
-    const yearFilter = document.getElementById('year-filter');
-    if (yearFilter) {
-        yearFilter.addEventListener('change', function() {
-            loadData();
-        });
+    // Período filter change
+    const periodoFilter = document.getElementById('periodo-filter');
+    if (periodoFilter) {
+        periodoFilter.addEventListener('change', handlePeriodoChange);
+    }
+    
+    // Custom date inputs
+    const dataInicioInput = document.getElementById('data-inicio');
+    const dataFimInput = document.getElementById('data-fim');
+    if (dataInicioInput && dataFimInput) {
+        dataInicioInput.addEventListener('change', handleCustomDateChange);
+        dataFimInput.addEventListener('change', handleCustomDateChange);
+    }
+    
+    // Empresa filter change
+    const empresaFilter = document.getElementById('empresa-filter');
+    if (empresaFilter) {
+        empresaFilter.addEventListener('change', handleEmpresaChange);
     }
     
     // Refresh button
     const refreshButton = document.getElementById('refresh-data');
     if (refreshButton) {
-        refreshButton.addEventListener('click', function() {
-            loadData();
-        });
+        refreshButton.addEventListener('click', handleRefreshData);
+    }
+    
+    // Reset filters button
+    const resetButton = document.getElementById('reset-filters');
+    if (resetButton) {
+        resetButton.addEventListener('click', handleResetFilters);
     }
     
     // Back to sectors button
     const backButton = document.getElementById('back-to-sectors');
     if (backButton) {
-        backButton.addEventListener('click', function() {
-            // Deactivate drill-down mode
+        backButton.addEventListener('click', () => {
             isDrillDownActive = false;
             currentDrillDownSetor = null;
-            
-            // Hide back button
-            const backButtonContainer = document.getElementById('drill-down-back');
-            if (backButtonContainer) {
-                backButtonContainer.style.display = 'none';
-            }
-            
-            // Reload the chart with sector data
-            const year = document.getElementById('year-filter').value;
-            loadFaturamentoPorSetor(year);
+            loadFaturamentoPorSetor(getCurrentYear());
         });
     }
     
-    // KPI card click handlers
-    setupKPICardClickHandlers();
+    // Chart action buttons
+    setupChartActionListeners();
 }
 
-function setupKPICardClickHandlers() {
-    // Resultado card - navigate to Fluxo de Caixa page
-    const resultadoCard = document.getElementById('kpi-resultado');
-    if (resultadoCard) {
-        resultadoCard.addEventListener('click', function() {
-            window.location.href = '/financeiro/fluxo-de-caixa';
+function setupChartActionListeners() {
+    // Toggle faturamento view
+    const toggleFaturamento = document.getElementById('toggle-faturamento-view');
+    if (toggleFaturamento) {
+        toggleFaturamento.addEventListener('click', () => {
+            showNotification('Funcionalidade em desenvolvimento', 'info');
         });
     }
     
-    // Faturamento card - navigate to Faturamento page
-    const faturamentoCard = document.getElementById('kpi-faturamento');
-    if (faturamentoCard) {
-        faturamentoCard.addEventListener('click', function() {
-            window.location.href = '/financeiro/faturamento';
+    // Toggle despesas view
+    const toggleDespesas = document.getElementById('toggle-despesas-view');
+    if (toggleDespesas) {
+        toggleDespesas.addEventListener('click', () => {
+            showNotification('Funcionalidade em desenvolvimento', 'info');
         });
     }
     
-    // Despesas card - navigate to Despesas page
-    const despesasCard = document.getElementById('kpi-despesas');
-    if (despesasCard) {
-        despesasCard.addEventListener('click', function() {
-            window.location.href = '/financeiro/despesas';
+    // Toggle resultado view
+    const toggleResultado = document.getElementById('toggle-resultado-view');
+    if (toggleResultado) {
+        toggleResultado.addEventListener('click', () => {
+            showNotification('Funcionalidade em desenvolvimento', 'info');
         });
     }
     
-    // Saldo Acumulado card - navigate to Fluxo de Caixa page
-    const saldoAcumuladoCard = document.getElementById('kpi-saldo-acumulado');
-    if (saldoAcumuladoCard) {
-        saldoAcumuladoCard.addEventListener('click', function() {
-            window.location.href = '/financeiro/fluxo-de-caixa';
-        });
+    // Export clientes
+    const exportClientes = document.getElementById('export-clientes');
+    if (exportClientes) {
+        exportClientes.addEventListener('click', handleExportClientes);
     }
 }
 
-function loadData() {
-    console.log('Loading data...');
+// ==========================================
+// FILTER HANDLERS - Filtros Inteligentes
+// ==========================================
+
+function handlePeriodoChange(event) {
+    const selectedPeriodo = event.target.value;
+    DashboardState.periodo = selectedPeriodo;
+    
+    // Show/hide custom date inputs
+    const customDateGroup = document.getElementById('custom-date-group');
+    const customDateEndGroup = document.getElementById('custom-date-end-group');
+    
+    if (selectedPeriodo === 'personalizado') {
+        DashboardState.isCustomPeriod = true;
+        if (customDateGroup) customDateGroup.style.display = 'flex';
+        if (customDateEndGroup) customDateEndGroup.style.display = 'flex';
+        
+        // Set default dates for current year
+        const currentYear = new Date().getFullYear();
+        const dataInicio = document.getElementById('data-inicio');
+        const dataFim = document.getElementById('data-fim');
+        
+        if (dataInicio && !dataInicio.value) {
+            dataInicio.value = `${currentYear}-01-01`;
+        }
+        if (dataFim && !dataFim.value) {
+            dataFim.value = `${currentYear}-12-31`;
+        }
+    } else {
+        DashboardState.isCustomPeriod = false;
+        if (customDateGroup) customDateGroup.style.display = 'none';
+        if (customDateEndGroup) customDateEndGroup.style.display = 'none';
+        
+        // Clear custom dates
+        DashboardState.dataInicio = null;
+        DashboardState.dataFim = null;
+    }
+    
+    updateFilterSummary();
+    updateResetButton();
+    
+    // Only reload data if not custom period (custom dates need to be set first)
+    if (!DashboardState.isCustomPeriod) {
+        loadAllData();
+    }
+}
+
+function handleCustomDateChange() {
+    const dataInicio = document.getElementById('data-inicio');
+    const dataFim = document.getElementById('data-fim');
+    
+    if (dataInicio && dataFim && dataInicio.value && dataFim.value) {
+        DashboardState.dataInicio = dataInicio.value;
+        DashboardState.dataFim = dataFim.value;
+        
+        updateFilterSummary();
+        updateResetButton();
+        loadAllData();
+    }
+}
+
+function handleEmpresaChange(event) {
+    DashboardState.empresa = event.target.value;
+    updateFilterSummary();
+    updateResetButton();
+    loadAllData();
+}
+
+function handleRefreshData() {
+    showNotification('Atualizando dados...', 'info');
+    loadAllData();
+}
+
+function handleResetFilters() {
+    // Reset to defaults
+    DashboardState.periodo = 'este_ano';
+    DashboardState.empresa = 'todas';
+    DashboardState.dataInicio = null;
+    DashboardState.dataFim = null;
+    DashboardState.isCustomPeriod = false;
+    
+    // Update UI
+    const periodoFilter = document.getElementById('periodo-filter');
+    const empresaFilter = document.getElementById('empresa-filter');
+    const customDateGroup = document.getElementById('custom-date-group');
+    const customDateEndGroup = document.getElementById('custom-date-end-group');
+    
+    if (periodoFilter) periodoFilter.value = 'este_ano';
+    if (empresaFilter) empresaFilter.value = 'todas';
+    if (customDateGroup) customDateGroup.style.display = 'none';
+    if (customDateEndGroup) customDateEndGroup.style.display = 'none';
+    
+    updateFilterSummary();
+    updateResetButton();
+    loadAllData();
+    
+    showNotification('Filtros resetados', 'success');
+}
+
+function handleExportClientes() {
+    // TODO: Implement CSV export of top clients
+    showNotification('Funcionalidade de exportação em desenvolvimento', 'info');
+}
+
+// ==========================================
+// DATA LOADING FUNCTIONS
+// ==========================================
+
+function loadInitialData() {
     showLoading();
     
-    const year = document.getElementById('year-filter').value;
-    
-    // Reset drill-down state when loading new data
-    isDrillDownActive = false;
-    currentDrillDownSetor = null;
-    
-    // Load all data in parallel
     Promise.all([
-        loadKPIs(year),
-        loadMetaAtingimento(year),
-        loadResultadoMensal(year),
-        loadSaldoAcumulado(year),
-        loadFaturamentoPorSetor(year),
-        loadTopDespesas(year),
-        loadTopClientes(year)
+        loadEmpresas(),
+        loadAllData()
     ]).then(() => {
         hideLoading();
-        console.log('All data loaded successfully');
+        DashboardState.data.lastUpdate = new Date();
+        updateLastUpdateInfo();
     }).catch(error => {
-        console.error('Error loading data:', error);
+        console.error('❌ Error loading initial data:', error);
         hideLoading();
-        showError('Erro ao carregar dados. Por favor, tente novamente.');
+        showError('Erro ao carregar dados iniciais');
     });
 }
 
-function loadKPIs(year) {
-    console.log(`Loading KPIs for year: ${year}`);
+function loadAllData() {
+    console.log('📡 Loading all dashboard data...');
+    showLoading();
     
-    return fetch(`/financeiro/dashboard-executivo/api/kpis?ano=${year}`)
+    const dateParams = getDateParams();
+    
+    // Load all data in parallel
+    Promise.all([
+        loadKPIs(dateParams),
+        loadResultadoMensal(dateParams),
+        loadSaldoAcumulado(dateParams),
+        loadFaturamentoPorSetor(dateParams),
+        loadTopDespesas(dateParams),
+        loadTopClientes(dateParams),
+        loadFaturamentoMensal(dateParams),
+        loadMetaAtingimento(dateParams)
+    ]).then(() => {
+        hideLoading();
+        DashboardState.data.lastUpdate = new Date();
+        updateLastUpdateInfo();
+        showNotification('Dados atualizados com sucesso', 'success');
+    }).catch(error => {
+        console.error('❌ Error loading data:', error);
+        hideLoading();
+        showError('Erro ao carregar dados do dashboard');
+    });
+}
+
+function loadEmpresas() {
+    return fetch('/financeiro/faturamento/api/empresas')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                DashboardState.data.empresas = data.data;
+                updateEmpresasFilter();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading empresas:', error);
+        });
+}
+
+function loadKPIs(dateParams) {
+    console.log('📊 Loading KPIs...');
+    
+    const url = `/financeiro/dashboard-executivo/api/kpis?${new URLSearchParams(dateParams)}`;
+    
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                DashboardState.data.kpis = data.data;
                 updateKPIs(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar KPIs');
+                updateMargems(data.data); // Calculate derived metrics
             }
         });
 }
 
-function loadMetaAtingimento(year) {
-    console.log(`Loading meta atingimento for year: ${year}`);
+function loadResultadoMensal(dateParams) {
+    const url = `/financeiro/dashboard-executivo/api/resultado-mensal?${new URLSearchParams(dateParams)}`;
     
-    return fetch(`/financeiro/dashboard-executivo/api/meta-atingimento?ano=${year}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateMetaProgressoKPI(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar meta de atingimento');
-            }
-        });
-}
-
-function loadResultadoMensal(year) {
-    console.log(`Loading resultado mensal for year: ${year}`);
-    
-    return fetch(`/financeiro/dashboard-executivo/api/resultado-mensal?ano=${year}`)
+    return fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 updateResultadoMensalChart(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar resultado mensal');
             }
         });
 }
 
-function loadSaldoAcumulado(year) {
-    console.log(`Loading saldo acumulado for year: ${year}`);
+function loadSaldoAcumulado(dateParams) {
+    const url = `/financeiro/dashboard-executivo/api/saldo-acumulado?${new URLSearchParams(dateParams)}`;
     
-    return fetch(`/financeiro/dashboard-executivo/api/saldo-acumulado?ano=${year}`)
+    return fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 updateSaldoAcumuladoChart(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar saldo acumulado');
             }
         });
 }
 
-function loadFaturamentoPorSetor(year) {
-    console.log(`Loading faturamento por setor for year: ${year}`);
+function loadFaturamentoPorSetor(dateParams) {
+    const url = `/financeiro/dashboard-executivo/api/faturamento-setor?${new URLSearchParams(dateParams)}`;
     
-    // If we're in drill-down mode, load the classe data instead
-    if (isDrillDownActive && currentDrillDownSetor) {
-        loadFaturamentoClasseData(currentDrillDownSetor);
-        return Promise.resolve();
-    }
-    
-    return fetch(`/financeiro/dashboard-executivo/api/faturamento-setor?ano=${year}`)
+    return fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 updateFaturamentoPorSetorChart(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar faturamento por setor');
             }
         });
 }
 
-function loadTopDespesas(year) {
-    console.log(`Loading top despesas for year: ${year}`);
+function loadTopDespesas(dateParams) {
+    const url = `/financeiro/dashboard-executivo/api/top-despesas?${new URLSearchParams(dateParams)}`;
     
-    return fetch(`/financeiro/dashboard-executivo/api/top-despesas?ano=${year}`)
+    return fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 updateTopDespesasChart(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar top despesas');
             }
         });
 }
 
-function loadTopClientes(year) {
-    console.log(`Loading top clientes for year: ${year}`);
+function loadTopClientes(dateParams) {
+    const url = `/financeiro/dashboard-executivo/api/top-clientes?${new URLSearchParams(dateParams)}`;
     
-    return fetch(`/financeiro/dashboard-executivo/api/top-clientes?ano=${year}`)
+    return fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 updateTopClientes(data.data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar top clientes');
             }
         });
 }
 
-function updateKPIs(data) {
-    console.log('Updating KPIs:', data);
+function loadFaturamentoMensal(dateParams) {
+    const url = `/financeiro/faturamento/api/geral/mensal?${new URLSearchParams(dateParams)}`;
     
-    // Resultado Líquido
-    updateKPIValue('valor-resultado', data.resultado_liquido, data.resultado_variacao);
-    
-    // Faturamento Total
-    updateKPIValue('valor-faturamento', data.faturamento_total, data.faturamento_variacao);
-    
-    // Despesas Totais
-    updateKPIValue('valor-despesas', data.despesas_total, data.despesas_variacao);
-    
-    // Margem Líquida
-    updateKPIValue('valor-margem-liquida', data.margem_liquida, data.margem_variacao);
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateFaturamentoMensalChart(data.data);
+            }
+        });
 }
 
-function updateMetaProgressoKPI(data) {
-    console.log('Updating meta progresso KPI:', data);
+function loadMetaAtingimento(dateParams) {
+    console.log('📊 Loading metas segmentadas data...');
     
-    // Progresso da Meta Anual
-    updateKPIValue('valor-meta-progresso', data.percentual, null);
+    const url = `/financeiro/dashboard-executivo/api/metas-segmentadas?${new URLSearchParams(dateParams)}`;
     
-    // Update variation text to show actual values
-    const variationElement = document.getElementById('var-meta-progresso');
-    if (variationElement) {
-        variationElement.textContent = `${formatCompactNumber(data.realizado)} / ${formatCompactNumber(data.meta)}`;
-        variationElement.className = 'kpi-variation';
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            console.log('📊 Metas segmentadas data:', data);
+            
+            if (data.success) {
+                updateMetasSegmentadas(data.data);
+            } else {
+                console.error('❌ Error loading metas segmentadas:', data.error);
+                updateMetasSegmentadas(null);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading metas segmentadas:', error);
+            updateMetasSegmentadas(null);
+        });
+}
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+
+function getDateParams() {
+    const params = {};
+    
+    if (DashboardState.isCustomPeriod && DashboardState.dataInicio && DashboardState.dataFim) {
+        params.start_date = DashboardState.dataInicio;
+        params.end_date = DashboardState.dataFim;
+    } else {
+        const currentYear = new Date().getFullYear();
+        
+        switch (DashboardState.periodo) {
+            case 'este_ano':
+                params.ano = currentYear;
+                break;
+            case 'este_mes':
+                params.ano = currentYear;
+                params.mes = new Date().getMonth() + 1;
+                break;
+            case 'ultimos_12_meses':
+                const lastYear = new Date();
+                lastYear.setFullYear(lastYear.getFullYear() - 1);
+                params.start_date = lastYear.toISOString().split('T')[0];
+                params.end_date = new Date().toISOString().split('T')[0];
+                break;
+            case 'ano_anterior':
+                params.ano = currentYear - 1;
+                break;
+            case 'trimestre_atual':
+                const currentMonth = new Date().getMonth();
+                const currentQuarter = Math.floor(currentMonth / 3) + 1;
+                const quarterStart = (currentQuarter - 1) * 3 + 1;
+                const quarterEnd = currentQuarter * 3;
+                params.start_date = `${currentYear}-${quarterStart.toString().padStart(2, '0')}-01`;
+                params.end_date = `${currentYear}-${quarterEnd.toString().padStart(2, '0')}-31`;
+                break;
+        }
+    }
+    
+    if (DashboardState.empresa !== 'todas') {
+        params.empresa = DashboardState.empresa;
+    }
+    
+    return params;
+}
+
+function getCurrentYear() {
+    if (DashboardState.isCustomPeriod && DashboardState.dataInicio) {
+        return new Date(DashboardState.dataInicio).getFullYear();
+    }
+    
+    switch (DashboardState.periodo) {
+        case 'ano_anterior':
+            return new Date().getFullYear() - 1;
+        default:
+            return new Date().getFullYear();
     }
 }
 
+function updateFilterSummary() {
+    const filterSummary = document.getElementById('filter-summary');
+    const filterSummaryText = document.getElementById('filter-summary-text');
+    
+    if (!filterSummary || !filterSummaryText) return;
+    
+    let summaryText = '';
+    
+    // Period summary
+    const periodoMap = {
+        'este_ano': 'Este Ano',
+        'este_mes': 'Este Mês',
+        'ultimos_12_meses': 'Últimos 12 Meses',
+        'ano_anterior': 'Ano Anterior',
+        'trimestre_atual': 'Trimestre Atual',
+        'personalizado': 'Período Personalizado'
+    };
+    
+    summaryText += periodoMap[DashboardState.periodo] || 'Este Ano';
+    
+    if (DashboardState.isCustomPeriod && DashboardState.dataInicio && DashboardState.dataFim) {
+        summaryText += ` (${formatDate(DashboardState.dataInicio)} - ${formatDate(DashboardState.dataFim)})`;
+    }
+    
+    // Empresa summary
+    if (DashboardState.empresa !== 'todas') {
+        summaryText += ` • Empresa: ${DashboardState.empresa}`;
+    }
+    
+    filterSummaryText.textContent = summaryText;
+    
+    // Show/hide summary
+    if (DashboardState.periodo !== 'este_ano' || DashboardState.empresa !== 'todas') {
+        filterSummary.style.display = 'block';
+    } else {
+        filterSummary.style.display = 'none';
+    }
+}
+
+function updateResetButton() {
+    const resetButton = document.getElementById('reset-filters');
+    
+    if (resetButton) {
+        if (DashboardState.periodo !== 'este_ano' || DashboardState.empresa !== 'todas') {
+            resetButton.style.display = 'inline-flex';
+        } else {
+            resetButton.style.display = 'none';
+        }
+    }
+}
+
+function updateEmpresasFilter() {
+    const empresaFilter = document.getElementById('empresa-filter');
+    
+    if (empresaFilter && DashboardState.data.empresas) {
+        // Clear existing options except "Todas as Empresas"
+        while (empresaFilter.children.length > 1) {
+            empresaFilter.removeChild(empresaFilter.lastChild);
+        }
+        
+        // Add empresa options
+        DashboardState.data.empresas.forEach(empresa => {
+            const option = document.createElement('option');
+            option.value = empresa;
+            option.textContent = empresa;
+            empresaFilter.appendChild(option);
+        });
+    }
+}
+
+function updateLastUpdateInfo() {
+    if (DashboardState.data.lastUpdate) {
+        const timeString = DashboardState.data.lastUpdate.toLocaleTimeString('pt-BR');
+        console.log(`📊 Dashboard atualizado às ${timeString}`);
+    }
+}
+
+// ==========================================
+// KPI UPDATE FUNCTIONS - Métricas Inteligentes
+// ==========================================
+
+function updateKPIs(data) {
+    console.log('📊 Updating KPIs:', data);
+    
+    // Resultado Operacional
+    updateKPIValue('valor-resultado', data.resultado_liquido, data.resultado_variacao, 'currency');
+    
+    // Faturamento Total
+    updateKPIValue('valor-faturamento', data.faturamento_total, data.faturamento_variacao, 'currency');
+    
+    // Despesas Totais
+    updateKPIValue('valor-despesas', data.despesas_total, data.despesas_variacao, 'currency');
+}
+
+function updateMargems(data) {
+    // Margem de Resultado (Métrica Derivada)
+    const margemResultado = data.faturamento_total > 0 
+        ? (data.resultado_liquido / data.faturamento_total) * 100 
+        : 0;
+    
+    updateKPIValue('valor-margem-resultado', margemResultado, null, 'percentage');
+    
+    // Folha / Faturamento (buscar da API de despesas)
+    loadFolhaFaturamentoMetric();
+}
+
+function loadFolhaFaturamentoMetric() {
+    const dateParams = getDateParams();
+    const url = `/financeiro/despesas/api/kpis?${new URLSearchParams(dateParams)}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const percentualFolha = data.data.percentual_folha_faturamento || 0;
+                updateKPIValue('valor-folha-faturamento', percentualFolha, null, 'percentage');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading folha/faturamento metric:', error);
+        });
+}
+
+function updateKPIValue(elementId, value, variation, format = 'currency') {
+    const valueElement = document.getElementById(elementId);
+    const variationElement = document.getElementById(elementId.replace('valor-', 'var-'));
+    
+    if (valueElement) {
+        let formattedValue;
+        let tooltipValue; // Valor completo para tooltip
+        
+        switch (format) {
+            case 'currency':
+                formattedValue = formatCurrencyCompact(value); // Nova formatação compacta
+                tooltipValue = formatCurrency(value); // Valor completo para tooltip
+                break;
+            case 'percentage':
+                formattedValue = `${value.toFixed(1)}%`;
+                tooltipValue = `${value.toFixed(2)}%`; // Maior precisão no tooltip
+                break;
+            case 'number':
+                formattedValue = formatNumber(value);
+                tooltipValue = formattedValue;
+                break;
+            default:
+                formattedValue = formatCurrencyCompact(value);
+                tooltipValue = formatCurrency(value);
+        }
+        
+        valueElement.textContent = formattedValue;
+        
+        // Adicionar tooltip com valor completo para valores monetários
+        if (format === 'currency' && tooltipValue !== formattedValue) {
+            valueElement.setAttribute('title', `Valor exato: ${tooltipValue}`);
+            valueElement.style.cursor = 'help';
+        }
+    }
+    
+    if (variationElement && variation !== null && variation !== undefined) {
+        const isPositive = variation > 0;
+        const isNegative = variation < 0;
+        
+        // Format variation with appropriate icon and "vs período anterior" text
+        const icon = isPositive ? '▲' : isNegative ? '▼' : '●';
+        const formattedVariation = `${icon} ${Math.abs(variation).toFixed(1)}% vs período anterior`;
+        
+        variationElement.textContent = formattedVariation;
+        
+        // Update classes for the new compact structure
+        variationElement.className = 'kpi-comparison';
+        if (isPositive) {
+            variationElement.classList.add('positive');
+        } else if (isNegative) {
+            variationElement.classList.add('negative');
+        } else {
+            variationElement.classList.add('neutral');
+        }
+    }
+}
+
+// ==========================================
+// CHART UPDATE FUNCTIONS
+// ==========================================
+
 function updateResultadoMensalChart(data) {
-    console.log('Updating resultado mensal chart:', data);
+    console.log('📊 Updating resultado mensal chart:', data);
     
-    const ctx = document.getElementById('chart-resultado-mensal').getContext('2d');
+    const ctx = document.getElementById('chart-resultado-mensal');
+    if (!ctx) return;
     
-    // Destroy existing chart if it exists
-    if (window.resultadoMensalChart) {
-        window.resultadoMensalChart.destroy();
+    // Destroy existing chart
+    if (DashboardState.charts.resultadoMensal) {
+        DashboardState.charts.resultadoMensal.destroy();
     }
     
     // Prepare data
     const labels = data.map(item => getMonthName(item.mes.split('-')[1]));
     const receitas = data.map(item => item.receitas);
-    const despesas = data.map(item => item.despesas);
+    const despesas = data.map(item => Math.abs(item.despesas)); // Make positive for display
     const resultados = data.map(item => item.resultado);
     
-    window.resultadoMensalChart = new Chart(ctx, {
+    DashboardState.charts.resultadoMensal = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -288,23 +695,26 @@ function updateResultadoMensalChart(data) {
                 {
                     label: 'Receitas',
                     data: receitas,
-                    backgroundColor: 'rgba(25, 135, 84, 0.7)',
-                    borderColor: 'rgba(25, 135, 84, 1)',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderWidth: 0,
+                    borderRadius: 4
                 },
                 {
                     label: 'Despesas',
                     data: despesas,
-                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderWidth: 0,
+                    borderRadius: 4
                 },
                 {
                     label: 'Resultado',
                     data: resultados,
-                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
-                    borderWidth: 1
+                    type: 'line',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
                 }
             ]
         },
@@ -314,9 +724,20 @@ function updateResultadoMensalChart(data) {
             plugins: {
                 legend: {
                     position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
                 },
-                title: {
-                    display: false
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: 'white',
+                    bodyColor: 'white',
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                        }
+                    }
                 }
             },
             scales: {
@@ -324,8 +745,16 @@ function updateResultadoMensalChart(data) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return 'R$ ' + formatCompactNumber(value);
+                            return formatCurrencyShort(value);
                         }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
             }
@@ -334,258 +763,262 @@ function updateResultadoMensalChart(data) {
 }
 
 function updateFaturamentoPorSetorChart(data) {
-    console.log('Updating faturamento por setor chart:', data);
+    console.log('📊 Updating faturamento por setor chart:', data);
     
-    const ctx = document.getElementById('chart-faturamento-setor').getContext('2d');
+    const ctx = document.getElementById('chart-faturamento-setor');
+    if (!ctx) return;
     
-    // Destroy existing chart if it exists
-    if (window.faturamentoSetorChart) {
-        window.faturamentoSetorChart.destroy();
+    // Destroy existing chart
+    if (DashboardState.charts.faturamentoSetor) {
+        DashboardState.charts.faturamentoSetor.destroy();
     }
     
-    // Show/hide back button
-    const backButton = document.getElementById('drill-down-back');
-    if (backButton) {
-        backButton.style.display = 'none';
-    }
-    
-    // Prepare data for sector level
+    // Prepare data
     const labels = ['Importação', 'Consultoria', 'Exportação'];
     const values = [data.importacao.valor, data.consultoria.valor, data.exportacao.valor];
-    const backgroundColors = [
-        'rgba(25, 135, 84, 0.7)',
-        'rgba(13, 110, 253, 0.7)',
-        'rgba(255, 193, 7, 0.7)'
-    ];
+    const percentuais = [data.importacao.percentual, data.consultoria.percentual, data.exportacao.percentual];
     
-    window.faturamentoSetorChart = new Chart(ctx, {
+    DashboardState.charts.faturamentoSetor = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    data: values,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 1
-                }
-            ]
+            datasets: [{
+                data: values,
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(245, 158, 11, 0.8)'
+                ],
+                borderWidth: 0, // Remover bordas coloridas
+                cutout: '60%' // Fazer o centro menor (mais compacto)
+            }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 1.5, // Fazer o gráfico mais achatado
             plugins: {
                 legend: {
                     position: 'right',
                     labels: {
-                        boxWidth: 12,
-                        padding: 10
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'Proporção do Faturamento por Setor',
-                    font: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    padding: {
-                        top: 10,
-                        bottom: 10
-                    }
-                },
-                // Add data labels plugin
-                datalabels: {
-                    formatter: (value, ctx) => {
-                        let sum = 0;
-                        let dataArr = ctx.chart.data.datasets[0].data;
-                        dataArr.map(data => {
-                            sum += data;
-                        });
-                        let percentage = (value * 100 / sum).toFixed(2) + "%";
-                        
-                        // Format value with compact number
-                        let formattedValue = formatCompactNumber(value);
-                        
-                        // Only show label if percentage is above threshold (e.g., 2%)
-                        if ((value * 100 / sum) >= 2) {
-                            return formattedValue + "\n" + percentage;
-                        } else {
-                            return ''; // Don't show label for small values
+                        usePointStyle: true,
+                        padding: 10,
+                        font: {
+                            size: 12
                         }
-                    },
-                    color: '#fff',
-                    font: {
-                        weight: 'bold',
-                        size: 12
-                    },
-                    textAlign: 'center'
-                }
-            },
-            aspectRatio: 1.5,
-            onClick: (event, elements) => {
-                // Handle drill down to classe when clicking on a slice
-                if (elements.length > 0) {
-                    const elementIndex = elements[0].index;
-                    const label = labels[elementIndex];
-                    
-                    // Map label to setor
-                    let setor = 'importacao';
-                    if (label.includes('Consultoria')) {
-                        setor = 'consultoria';
-                    } else if (label.includes('Exportação')) {
-                        setor = 'exportacao';
                     }
-                    
-                    console.log('Drill down to classe for setor:', setor);
-                    
-                    // Activate drill-down mode
-                    isDrillDownActive = true;
-                    currentDrillDownSetor = setor;
-                    
-                    // Show back button
-                    if (backButton) {
-                        backButton.style.display = 'block';
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label;
+                            const value = formatCurrency(context.parsed);
+                            const percentage = percentuais[context.dataIndex].toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
                     }
-                    
-                    // Reload the chart with classe data
-                    const year = document.getElementById('year-filter').value;
-                    loadFaturamentoPorSetor(year); // This will trigger the drill-down
                 }
             }
-        },
-        plugins: [ChartDataLabels] // Register the data labels plugin
+        }
     });
 }
 
 function updateSaldoAcumuladoChart(data) {
-    console.log('Updating saldo acumulado chart:', data);
+    console.log('📊 Updating saldo acumulado chart:', data);
     
-    const ctx = document.getElementById('chart-saldo-acumulado').getContext('2d');
+    const ctx = document.getElementById('chart-saldo-acumulado');
+    if (!ctx) return;
     
-    // Destroy existing chart if it exists
-    if (window.saldoAcumuladoChart) {
-        window.saldoAcumuladoChart.destroy();
+    // Destroy existing chart
+    if (DashboardState.charts.saldoAcumulado) {
+        DashboardState.charts.saldoAcumulado.destroy();
     }
     
     // Prepare data
     const labels = data.map(item => getMonthName(item.mes.split('-')[1]));
     const saldos = data.map(item => item.saldo_acumulado);
     
-    window.saldoAcumuladoChart = new Chart(ctx, {
+    // Determine trend
+    const isPositiveTrend = saldos.length > 1 && saldos[saldos.length - 1] > saldos[0];
+    updateSaldoStatus(isPositiveTrend);
+    
+    DashboardState.charts.saldoAcumulado = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    label: 'Saldo Acumulado',
-                    data: saldos,
-                    backgroundColor: 'rgba(13, 202, 240, 0.2)',
-                    borderColor: 'rgba(13, 202, 240, 1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.1
-                }
-            ]
+            datasets: [{
+                label: 'Saldo Acumulado',
+                data: saldos,
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1,
+                pointRadius: 4
+            }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'top',
-                },
-                title: {
                     display: false
                 },
-                // Add data labels plugin
-                datalabels: {
-                    formatter: (value, ctx) => {
-                        return formatCompactNumber(value);
-                    },
-                    color: '#495057',
-                    font: {
-                        weight: 'bold',
-                        size: 10
-                    },
-                    align: 'top',
-                    anchor: 'end',
-                    offset: 5,
-                    display: 'auto' // Only show labels when there's enough space
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Saldo: ' + formatCurrency(context.parsed.y);
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: false,
                     ticks: {
                         callback: function(value) {
-                            return 'R$ ' + formatCompactNumber(value);
+                            return formatCurrencyShort(value);
                         }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
                     }
                 }
             }
-        },
-        plugins: [ChartDataLabels] // Register the data labels plugin
+        }
     });
-    
-    // Update KPI with final saldo acumulado value
-    if (data.length > 0) {
-        const finalSaldo = data[data.length - 1].saldo_acumulado;
-        updateKPIValue('valor-saldo-acumulado', finalSaldo, null);
-    }
 }
 
-function updateTopDespesasChart(data) {
-    console.log('Updating top despesas chart:', data);
+function updateFaturamentoMensalChart(data) {
+    console.log('📊 Updating faturamento mensal chart:', data);
     
-    const ctx = document.getElementById('chart-top-despesas').getContext('2d');
+    const ctx = document.getElementById('chart-faturamento-mensal');
+    if (!ctx) return;
     
-    // Destroy existing chart if it exists
-    if (window.topDespesasChart) {
-        window.topDespesasChart.destroy();
+    // Destroy existing chart
+    if (DashboardState.charts.faturamentoMensal) {
+        DashboardState.charts.faturamentoMensal.destroy();
     }
     
     // Prepare data
-    const labels = data.map(item => item.categoria);
-    const values = data.map(item => item.total);
+    const labels = data.map(item => getMonthName(item.mes.toString()));
+    const anoAtual = data.map(item => item.faturamento_total);
+    const anoAnterior = data.map(item => item.faturamento_anterior);
     
-    window.topDespesasChart = new Chart(ctx, {
+    DashboardState.charts.faturamentoMensal = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
                 {
-                    label: 'Valor',
-                    data: values,
-                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    borderWidth: 1
+                    label: 'Ano Atual',
+                    data: anoAtual,
+                    backgroundColor: 'rgba(25, 135, 84, 0.8)',
+                    borderColor: 'rgba(25, 135, 84, 1)',
+                    borderWidth: 2,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Ano Anterior',
+                    data: anoAnterior,
+                    backgroundColor: 'rgba(108, 117, 125, 0.6)',
+                    borderColor: 'rgba(108, 117, 125, 1)',
+                    borderWidth: 2,
+                    borderRadius: 4
                 }
             ]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
+                    display: false // Legend is shown separately
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrencyShort(value);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateTopDespesasChart(data) {
+    console.log('📊 Updating top despesas chart:', data);
+    
+    const ctx = document.getElementById('chart-top-despesas');
+    if (!ctx) return;
+    
+    // Destroy existing chart
+    if (DashboardState.charts.topDespesas) {
+        DashboardState.charts.topDespesas.destroy();
+    }
+    
+    // Prepare data
+    const labels = data.map(item => item.categoria);
+    const valores = data.map(item => item.total);
+    
+    DashboardState.charts.topDespesas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Valor',
+                data: valores,
+                backgroundColor: [
+                    'rgba(99, 102, 241, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ],
+                borderWidth: 0, // Remover bordas coloridas
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y', // Torna o gráfico horizontal
+            plugins: {
+                legend: {
                     display: false
                 },
-                title: {
-                    display: false
-                },
-                // Add data labels plugin
-                datalabels: {
-                    formatter: (value, ctx) => {
-                        return formatCompactNumber(value);
-                    },
-                    color: '#fff',
-                    font: {
-                        weight: 'bold',
-                        size: 11
-                    },
-                    anchor: 'end',
-                    align: 'right',
-                    offset: 5
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return formatCurrency(context.parsed.x);
+                        }
+                    }
                 }
             },
             scales: {
@@ -593,50 +1026,227 @@ function updateTopDespesasChart(data) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return 'R$ ' + formatCompactNumber(value);
+                            return formatCurrencyShort(value);
                         }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
                     }
                 }
             }
+        }
+    });
+}
+
+function updateTendenciaDespesasChart(data) {
+    console.log('📊 Updating tendencia despesas chart:', data);
+    
+    const ctx = document.getElementById('chart-tendencia-despesas');
+    if (!ctx) return;
+    
+    // Destroy existing chart
+    if (DashboardState.charts.tendenciaDespesas) {
+        DashboardState.charts.tendenciaDespesas.destroy();
+    }
+    
+    // Validar se data e data.data existem
+    if (!data || !data.data || typeof data.data !== 'object') {
+        console.warn('⚠️ Dados inválidos para tendência de despesas:', data);
+        
+        // Criar gráfico vazio com mensagem
+        DashboardState.charts.tendenciaDespesas = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                datasets: [{
+                    label: 'Sem dados disponíveis',
+                    data: [0, 0, 0, 0, 0, 0],
+                    borderColor: 'rgba(108, 117, 125, 0.5)',
+                    backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                    borderWidth: 1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+        return;
+    }
+    
+    // Prepare data for multiple lines
+    const colors = [
+        'rgba(99, 102, 241, 1)',
+        'rgba(59, 130, 246, 1)',
+        'rgba(16, 185, 129, 1)',
+        'rgba(245, 158, 11, 1)',
+        'rgba(239, 68, 68, 1)'
+    ];
+    
+    const datasets = [];
+    let index = 0;
+    
+    for (const [combinacao, dadosCombinacao] of Object.entries(data.data)) {
+        datasets.push({
+            label: combinacao,
+            data: dadosCombinacao.valores,
+            borderColor: colors[index % colors.length],
+            backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
+            borderWidth: 2,
+            fill: false,
+            tension: 0.3
+        });
+        index++;
+    }
+    
+    const labels = datasets.length > 0 ? datasets[0].data.map((_, i) => {
+        // Generate month labels for the last 12 months
+        const date = new Date();
+        date.setMonth(date.getMonth() - (datasets[0].data.length - 1 - i));
+        return getMonthName((date.getMonth() + 1).toString());
+    }) : [];
+    
+    DashboardState.charts.tendenciaDespesas = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: datasets
         },
-        plugins: [ChartDataLabels] // Register the data labels plugin
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 10,
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatCurrencyShort(value);
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
     });
 }
 
 function updateTopClientes(data) {
-    console.log('Updating top clientes:', data);
+    console.log('👥 Updating top clientes table:', data);
     
-    // Update the clientes table
     const tableBody = document.querySelector('#table-clientes tbody');
-    if (tableBody) {
-        tableBody.innerHTML = '';
+    if (!tableBody) return;
+    
+    // Clear existing rows
+    tableBody.innerHTML = '';
+    
+    // Add new rows
+    data.forEach((cliente, index) => {
+        const row = document.createElement('tr');
         
-        if (data.length === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td colspan="4" class="text-center text-muted">Nenhum cliente encontrado</td>
-            `;
-            tableBody.appendChild(row);
-            return;
+        // Use real trend data from API
+        const trendIcons = { up: '↗', down: '↘', stable: '→' };
+        const trendLabels = { 
+            up: 'Crescendo', 
+            down: 'Decrescendo', 
+            stable: 'Estável' 
+        };
+        const trendClasses = { 
+            up: 'trend-up', 
+            down: 'trend-down', 
+            stable: 'trend-stable' 
+        };
+        
+        const trend = cliente.trend || 'stable';
+        const variacao = cliente.variacao_percentual || 0;
+        
+        // Create tooltip with detailed information
+        const trendTooltip = `Tendência: ${trendLabels[trend]}${variacao !== 0 ? ` (${variacao > 0 ? '+' : ''}${variacao.toFixed(1)}% vs ano anterior)` : ''}`;
+        
+        row.innerHTML = `
+            <td class="rank-col">${index + 1}</td>
+            <td class="cliente-col" title="${cliente.cliente}">${cliente.cliente}</td>
+            <td class="valor-col" title="Valor exato: ${formatCurrency(cliente.total_faturado || 0)}">${formatCurrencyCompact(cliente.total_faturado || 0)}</td>
+            <td class="percent-col">${(cliente.percentual || 0).toFixed(1)}%</td>
+            <td class="trend-col">
+                <span class="trend-indicator ${trendClasses[trend]}" title="${trendTooltip}">
+                    ${trendIcons[trend]}
+                </span>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+// ==========================================
+// UTILITY & HELPER FUNCTIONS
+// ==========================================
+
+function updateSaldoStatus(isPositive) {
+    const statusElement = document.getElementById('saldo-status');
+    if (statusElement) {
+        statusElement.innerHTML = isPositive 
+            ? '<i class="mdi mdi-trending-up"></i> Tendência positiva'
+            : '<i class="mdi mdi-trending-down"></i> Tendência negativa';
+        
+        statusElement.className = 'chart-status';
+        if (isPositive) {
+            statusElement.style.color = '#198754';
+        } else {
+            statusElement.style.color = '#dc3545';
         }
-        
-        // Update to show top 10 instead of top 5
-        data.forEach((cliente, index) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="text-center">${index + 1}</td>
-                <td>${cliente.cliente}</td>
-                <td>R$ ${formatCompactNumber(cliente.total_faturado)}</td>
-                <td class="text-right">${cliente.percentual.toFixed(2)}%</td>
-            `;
-            tableBody.appendChild(row);
-        });
     }
 }
 
 function initializeCharts() {
-    console.log('Initializing charts...');
-    // Chart initialization is done when data is loaded
+    // Initialize Chart.js defaults
+    Chart.defaults.font.family = "'Segoe UI', 'Roboto', 'Arial', sans-serif";
+    Chart.defaults.color = '#495057';
+    Chart.defaults.borderColor = 'rgba(0, 0, 0, 0.1)';
+}
+
+function setupLoadingStates() {
+    // Add skeleton loaders for all chart containers
+    const chartContainers = document.querySelectorAll('.chart-content');
+    chartContainers.forEach(container => {
+        container.classList.add('chart-loading');
+    });
 }
 
 function showLoading() {
@@ -651,76 +1261,155 @@ function hideLoading() {
     if (loadingOverlay) {
         loadingOverlay.style.display = 'none';
     }
+    
+    // Remove skeleton loaders
+    const chartContainers = document.querySelectorAll('.chart-content');
+    chartContainers.forEach(container => {
+        container.classList.remove('chart-loading');
+    });
 }
 
 function showError(message) {
-    // In a real implementation, you would show an error notification
-    console.error('Dashboard error:', message);
-    alert(message);
+    console.error('❌ Dashboard Error:', message);
+    showNotification(message, 'error');
 }
 
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
-
-function formatNumber(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(value);
-}
-
-// Add this helper function for text alignment
-function formatCompactNumber(value) {
-    // Convert to number if it's a string
-    const num = typeof value === 'string' ? parseFloat(value) : value;
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="mdi mdi-${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'information'}"></i>
+        <span>${message}</span>
+        <button class="notification-close">×</button>
+    `;
     
-    // Handle invalid numbers
-    if (isNaN(num)) return '0,00';
+    // Add styles
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        border-radius: 6px;
+        padding: 12px 16px;
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 400px;
+        animation: slideInRight 0.3s ease;
+    `;
     
-    // Format with appropriate suffix
-    if (Math.abs(num) >= 1000000) {
-        // Millions
-        return (num / 1000000).toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }) + 'M';
-    } else if (Math.abs(num) >= 1000) {
-        // Thousands
-        return (num / 1000).toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }) + 'K';
-    } else {
-        // Less than 1000, format normally with 2 decimals
-        return num.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }
+    }, 5000);
+    
+    // Manual close
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
         });
     }
 }
 
-function updateKPIValue(elementId, value, variation) {
-    const valueElement = document.getElementById(elementId);
-    const variationElement = document.getElementById(elementId.replace('valor-', 'var-'));
-    
-    if (valueElement) {
-        valueElement.textContent = formatCompactNumber(value);
+function formatCurrency(value) {
+    // Verificar se o valor é válido
+    if (value === null || value === undefined || isNaN(value)) {
+        return 'R$ 0,00';
     }
     
-    if (variationElement) {
-        if (variation !== null) {
-            const variationText = `${variation >= 0 ? '+' : ''}${variation.toFixed(2)}%`;
-            variationElement.textContent = variationText;
-            variationElement.className = 'kpi-variation ' + (variation > 0 ? 'positive' : variation < 0 ? 'negative' : '');
-        } else {
-            variationElement.textContent = '';
-            variationElement.className = 'kpi-variation';
-        }
+    // Converter para número se for string
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // Verificar novamente após conversão
+    if (isNaN(numValue)) {
+        return 'R$ 0,00';
     }
+    
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(numValue);
+}
+
+function formatCurrencyCompact(value) {
+    // Formatação inteligente para KPI Cards - valores grandes abreviados
+    if (value === null || value === undefined || isNaN(value)) {
+        return 'R$ 0,00';
+    }
+    
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    if (isNaN(numValue)) {
+        return 'R$ 0,00';
+    }
+    
+    const absValue = Math.abs(numValue);
+    const isNegative = numValue < 0;
+    const prefix = isNegative ? '-' : '';
+    
+    if (absValue >= 1000000) {
+        // Milhões: R$ 5,17 mi
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(2).replace('.', ',')} mi`;
+    } else if (absValue >= 1000) {
+        // Milhares: R$ 450,3 mil
+        return `${prefix}R$ ${(absValue / 1000).toFixed(1).replace('.', ',')} mil`;
+    } else {
+        // Valores menores que 1000: formato normal
+        return formatCurrency(numValue);
+    }
+}
+
+function formatCurrencyShort(value) {
+    // Verificar se o valor é válido
+    if (value === null || value === undefined || isNaN(value)) {
+        return 'R$ 0,00';
+    }
+    
+    // Converter para número se for string
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // Verificar novamente após conversão
+    if (isNaN(numValue)) {
+        return 'R$ 0,00';
+    }
+    
+    const absValue = Math.abs(numValue);
+    const prefix = numValue < 0 ? '-' : '';
+    
+    if (absValue >= 1000000) {
+        return `${prefix}R$ ${(absValue / 1000000).toFixed(1)}M`;
+    } else if (absValue >= 1000) {
+        return `${prefix}R$ ${(absValue / 1000).toFixed(1)}K`;
+    }
+    return formatCurrency(numValue);
+}
+
+function formatNumber(value) {
+    return new Intl.NumberFormat('pt-BR').format(value);
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('pt-BR');
 }
 
 function getMonthName(monthNumber) {
@@ -728,144 +1417,196 @@ function getMonthName(monthNumber) {
         'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
         'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
     ];
-    return months[parseInt(monthNumber) - 1] || monthNumber;
+    return months[parseInt(monthNumber) - 1] || 'Jan';
 }
 
-// Add a variable to track drill-down state
+// Drill-down variables (compatibility with existing code)
 let isDrillDownActive = false;
 let currentDrillDownSetor = null;
 
-function loadFaturamentoClasseData(setor) {
-    console.log(`Loading faturamento classe data for setor: ${setor}`);
+// Add CSS animations for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
     
-    const year = document.getElementById('year-filter').value;
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
     
-    fetch(`/financeiro/dashboard-executivo/api/faturamento-classe?ano=${year}&setor=${setor}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateFaturamentoClasseChart(data);
-            } else {
-                throw new Error(data.error || 'Erro ao carregar faturamento por classe');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading classe data:', error);
-            showError('Erro ao carregar dados de classe. Por favor, tente novamente.');
-        });
-}
+    .notification-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        opacity: 0.7;
+        margin-left: 8px;
+    }
+    
+    .notification-close:hover {
+        opacity: 1;
+    }
+    
+    .chart-loading::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 8px;
+        z-index: 1;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+`;
+document.head.appendChild(style);
 
-function updateFaturamentoClasseChart(data) {
-    console.log('Updating faturamento classe chart:', data);
+// ==========================================
+// META GAUGE FUNCTIONS
+// ==========================================
+
+// ==========================================
+// METAS SEGMENTADAS - NOVO COMPONENTE COMPACTO
+// ==========================================
+
+function updateMetasSegmentadas(metasData) {
+    console.log('📊 Updating metas segmentadas:', metasData);
     
-    const ctx = document.getElementById('chart-faturamento-setor').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.faturamentoSetorChart) {
-        window.faturamentoSetorChart.destroy();
+    if (!metasData) {
+        // Limpar dados em caso de erro
+        const tipos = ['geral', 'consultoria', 'solucoes'];
+        tipos.forEach(tipo => {
+            const percentageEl = document.getElementById(`percentage-${tipo}`);
+            const valuesEl = document.getElementById(`values-${tipo}`);
+            
+            if (percentageEl) percentageEl.textContent = '0%';
+            if (valuesEl) valuesEl.textContent = 'R$ 0 de R$ 0';
+        });
+        return;
     }
     
-    // Show back button
-    const backButton = document.getElementById('drill-down-back');
-    if (backButton) {
-        backButton.style.display = 'block';
-    }
-    
-    // Prepare data for classe level
-    const labels = data.data.map(item => item.classe);
-    const values = data.data.map(item => item.valor);
-    
-    // Generate colors dynamically
-    const backgroundColors = generateColors(values.length);
-    
-    window.faturamentoSetorChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    data: values,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        boxWidth: 12,
-                        padding: 10
-                    }
-                },
-                title: {
-                    display: true,
-                    text: `Proporção do Faturamento - ${getSetorDisplayName(data.setor)}`,
-                    font: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    padding: {
-                        top: 10,
-                        bottom: 10
-                    }
-                },
-                // Add data labels plugin
-                datalabels: {
-                    formatter: (value, ctx) => {
-                        let sum = 0;
-                        let dataArr = ctx.chart.data.datasets[0].data;
-                        dataArr.map(data => {
-                            sum += data;
-                        });
-                        let percentage = (value * 100 / sum).toFixed(2) + "%";
-                        
-                        // Format value with compact number
-                        let formattedValue = formatCompactNumber(value);
-                        
-                        // Only show label if percentage is above threshold (e.g., 2%)
-                        if ((value * 100 / sum) >= 2) {
-                            return formattedValue + "\n" + percentage;
-                        } else {
-                            return ''; // Don't show label for small values
-                        }
-                    },
-                    color: '#fff',
-                    font: {
-                        weight: 'bold',
-                        size: 12
-                    },
-                    textAlign: 'center'
-                }
-            },
-            aspectRatio: 1.5,
-            onClick: null // Disable click handler in classe view to avoid confusion
-        },
-        plugins: [ChartDataLabels] // Register the data labels plugin
+    // Atualizar cada mini-gauge
+    Object.keys(metasData).forEach(tipo => {
+        const data = metasData[tipo];
+        updateMiniGauge(tipo, data);
     });
 }
 
-function getSetorDisplayName(setor) {
-    const setorMap = {
-        'importacao': 'Importação',
-        'consultoria': 'Consultoria',
-        'exportacao': 'Exportação'
-    };
-    return setorMap[setor] || setor;
-}
-
-function generateColors(count) {
-    // Generate distinct colors for chart segments
-    const colors = [];
-    const hueStep = 360 / count;
+function updateMiniGauge(tipo, data) {
+    const canvasId = `gauge-${tipo}`;
+    const percentageId = `percentage-${tipo}`;
+    const valuesId = `values-${tipo}`;
     
-    for (let i = 0; i < count; i++) {
-        const hue = (i * hueStep) % 360;
-        colors.push(`hsla(${hue}, 70%, 50%, 0.7)`);
+    const canvas = document.getElementById(canvasId);
+    const percentageEl = document.getElementById(percentageId);
+    const valuesEl = document.getElementById(valuesId);
+    
+    if (!canvas) return;
+    
+    // Destruir gráfico existente se houver
+    if (DashboardState.charts[tipo]) {
+        DashboardState.charts[tipo].destroy();
     }
     
-    return colors;
+    const atingimento = data.atingimento || 0;
+    const meta = data.meta || 0;
+    const realizado = data.realizado || 0;
+    
+    // Definir cor baseada no tipo e desempenho
+    let baseColor, backgroundColor;
+    switch(tipo) {
+        case 'geral':
+            baseColor = '#0d6efd';
+            break;
+        case 'consultoria':
+            baseColor = '#198754';
+            break;
+        case 'solucoes':
+            baseColor = '#fd7e14';
+            break;
+        default:
+            baseColor = '#6c757d';
+    }
+    
+    // Ajustar intensidade da cor baseada no desempenho
+    if (atingimento >= 100) {
+        backgroundColor = baseColor;
+    } else if (atingimento >= 80) {
+        backgroundColor = baseColor + 'CC'; // 80% opacity
+    } else if (atingimento >= 60) {
+        backgroundColor = baseColor + '99'; // 60% opacity  
+    } else {
+        backgroundColor = baseColor + '66'; // 40% opacity
+    }
+    
+    // Atualizar elementos HTML
+    if (percentageEl) {
+        percentageEl.textContent = `${atingimento.toFixed(1)}%`;
+        percentageEl.style.color = baseColor;
+    }
+    
+    if (valuesEl) {
+        valuesEl.textContent = `${formatCurrencyCompact(realizado)} de ${formatCurrencyCompact(meta)}`;
+    }
+    
+    // Criar mini-gauge (doughnut chart)
+    const gaugeValue = Math.min(atingimento, 150); // Limitar visualização
+    
+    DashboardState.charts[tipo] = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [gaugeValue, 150 - gaugeValue],
+                backgroundColor: [
+                    backgroundColor,
+                    'rgba(233, 236, 239, 0.2)'
+                ],
+                borderWidth: 0,
+                cutout: '75%',
+                circumference: 270, // 3/4 circle
+                rotation: 225 // Start from bottom left
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            return `${atingimento.toFixed(1)}% da meta atingida`;
+                        },
+                        afterLabel: function(context) {
+                            return [
+                                `Realizado: ${formatCurrency(realizado)}`,
+                                `Meta: ${formatCurrency(meta)}`
+                            ];
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                duration: 1500,
+                easing: 'easeOutCubic'
+            }
+        }
+    });
+    
+    console.log(`📊 Mini-Gauge ${tipo}: ${atingimento.toFixed(1)}% (${formatCurrencyCompact(realizado)} / ${formatCurrencyCompact(meta)})`);
 }
+
+console.log('✅ Dashboard Executivo Financeiro - JavaScript loaded successfully');

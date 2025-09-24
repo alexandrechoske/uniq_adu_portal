@@ -30,182 +30,364 @@
         </div>
     </div>
     
-    <!-- Filter Section -->
+    <!-- Filter Section - Filtros Globais Inteligentes -->
     <div class="filter-section">
         <div class="filter-row">
             <div class="filter-group">
-                <label for="year-filter">Ano</label>
-                <select id="year-filter" class="form-select">
-                    {% for year in range(2020, 2030) %}
-                    <option value="{{ year }}" {% if loop.index == 6 %}selected{% endif %}>{{ year }}</option>
-                    {% endfor %}
+                <label for="periodo-filter">
+                    <i class="mdi mdi-calendar-range"></i>
+                    Período
+                </label>
+                <select id="periodo-filter" class="form-select">
+                    <option value="este_ano" selected>Este Ano</option>
+                    <option value="este_mes">Este Mês</option>
+                    <option value="ultimos_12_meses">Últimos 12 Meses</option>
+                    <option value="ano_anterior">Ano Anterior</option>
+                    <option value="trimestre_atual">Trimestre Atual</option>
+                    <option value="personalizado">Personalizado...</option>
                 </select>
             </div>
+            
+            <div class="filter-group" id="custom-date-group" style="display: none;">
+                <label for="data-inicio">Data Início</label>
+                <input type="date" id="data-inicio" class="form-control">
+            </div>
+            
+            <div class="filter-group" id="custom-date-end-group" style="display: none;">
+                <label for="data-fim">Data Fim</label>
+                <input type="date" id="data-fim" class="form-control">
+            </div>
+            
+            <div class="filter-group">
+                <label for="empresa-filter">
+                    <i class="mdi mdi-domain"></i>
+                    Empresa
+                </label>
+                <select id="empresa-filter" class="form-select">
+                    <option value="todas" selected>Todas as Empresas</option>
+                    <!-- Opções carregadas dinamicamente -->
+                </select>
+            </div>
+            
             <div class="filter-actions">
                 <button id="refresh-data" class="btn btn-primary">
                     <i class="mdi mdi-refresh"></i>
                     Atualizar Dados
                 </button>
+                <button id="reset-filters" class="btn btn-secondary" style="display: none;">
+                    <i class="mdi mdi-filter-off"></i>
+                    Limpar Filtros
+                </button>
             </div>
+        </div>
+        
+        <!-- Resumo dos Filtros Aplicados -->
+        <div class="filter-summary" id="filter-summary" style="display: none;">
+            <span class="filter-summary-label">
+                <i class="mdi mdi-filter"></i>
+                Filtros aplicados:
+            </span>
+            <span id="filter-summary-text"></span>
         </div>
     </div>
     
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-        <!-- Resultado Líquido -->
-        <div class="kpi-card kpi-info" id="kpi-resultado">
-            <div class="kpi-content">
-                <p class="kpi-label">Resultado Líquido</p>
-                <p class="kpi-value" id="valor-resultado">-</p>
-                <p class="kpi-variation" id="var-resultado">-</p>
-            </div>
-            <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="nav-button">
-                <i class="mdi mdi-arrow-right"></i>
-                Ver detalhes
+    <!-- KPI Cards Principais - Seção 1: At-a-Glance -->
+    <div class="kpi-section">
+
+        <div class="kpi-grid-executive">
+            <!-- Resultado Operacional -->
+            <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="kpi-card-compact kpi-primary kpi-highlight" id="kpi-resultado">
+                <div class="kpi-icon-container">
+                    <i class="mdi mdi-chart-line-variant"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <span class="kpi-title">Resultado Operacional</span>
+                    <span class="kpi-value" id="valor-resultado">-</span>
+                    <span class="kpi-comparison" id="var-resultado">-</span>
+                </div>
             </a>
-        </div>
-        
-        <!-- Faturamento Total -->
-        <div class="kpi-card kpi-success" id="kpi-faturamento">
-            <div class="kpi-content">
-                <p class="kpi-label">Faturamento Total</p>
-                <p class="kpi-value" id="valor-faturamento">-</p>
-                <p class="kpi-variation" id="var-faturamento">-</p>
-            </div>
-            <a href="{{ url_for('fin_faturamento.index') }}" class="nav-button">
-                <i class="mdi mdi-arrow-right"></i>
-                Ver detalhes
+            
+            <!-- Faturamento Total -->
+            <a href="{{ url_for('fin_faturamento.index') }}" class="kpi-card-compact kpi-success" id="kpi-faturamento">
+                <div class="kpi-icon-container">
+                    <i class="mdi mdi-trending-up"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <span class="kpi-title">Faturamento Total</span>
+                    <span class="kpi-value" id="valor-faturamento">-</span>
+                    <span class="kpi-comparison" id="var-faturamento">-</span>
+                </div>
             </a>
-        </div>
-        
-        <!-- Despesas Totais -->
-        <div class="kpi-card kpi-danger" id="kpi-despesas">
-            <div class="kpi-content">
-                <p class="kpi-label">Despesas Totais</p>
-                <p class="kpi-value" id="valor-despesas">-</p>
-                <p class="kpi-variation" id="var-despesas">-</p>
-            </div>
-            <a href="{{ url_for('fin_despesas.index') }}" class="nav-button">
-                <i class="mdi mdi-arrow-right"></i>
-                Ver detalhes
+            
+            <!-- Despesas Totais -->
+            <a href="{{ url_for('fin_despesas.index') }}" class="kpi-card-compact kpi-danger" id="kpi-despesas">
+                <div class="kpi-icon-container">
+                    <i class="mdi mdi-trending-down"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <span class="kpi-title">Despesas Totais</span>
+                    <span class="kpi-value" id="valor-despesas">-</span>
+                    <span class="kpi-comparison" id="var-despesas">-</span>
+                </div>
             </a>
-        </div>
-        
-        <!-- Saldo de Caixa Acumulado -->
-        <div class="kpi-card kpi-primary" id="kpi-saldo-acumulado">
-            <div class="kpi-content">
-                <p class="kpi-label">Saldo de Caixa Acumulado</p>
-                <p class="kpi-value" id="valor-saldo-acumulado">-</p>
-                <p class="kpi-variation" id="var-saldo-acumulado">-</p>
-            </div>
-            <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="nav-button">
-                <i class="mdi mdi-arrow-right"></i>
-                Ver detalhes
-            </a>
-        </div>
-        
-        <!-- Progresso da Meta Anual -->
-        <div class="kpi-card kpi-warning" id="kpi-meta-progresso">
-            <div class="kpi-content">
-                <p class="kpi-label">Progresso da Meta Anual</p>
-                <p class="kpi-value" id="valor-meta-progresso">-</p>
-                <p class="kpi-variation" id="var-meta-progresso">-</p>
-            </div>
-        </div>
-        
-        <!-- Margem Líquida -->
-        <div class="kpi-card kpi-purple" id="kpi-margem-liquida">
-            <div class="kpi-content">
-                <p class="kpi-label">Margem Líquida</p>
-                <p class="kpi-value" id="valor-margem-liquida">-</p>
-                <p class="kpi-variation" id="var-margem-liquida">-</p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Charts Grid -->
-    <div class="charts-grid">
-        <!-- Resultado Mensal (60%) -->
-        <div class="chart-container large-chart">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-bar"></i>
-                    Resultado Mensal
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-resultado-mensal"></canvas>
-            </div>
-        </div>
-        
-        <!-- Proporção do Faturamento (40%) -->
-        <div class="chart-container small-chart">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-donut"></i>
-                    Proporção do Faturamento
-                </h3>
-                <div id="drill-down-back" style="display: none;">
-                    <button id="back-to-sectors" class="nav-button">
-                        <i class="mdi mdi-arrow-left"></i>
-                        Voltar para Setores
-                    </button>
+            
+            <!-- Margem de Resultado (Métrica Inteligente) -->
+            <div class="kpi-card-compact kpi-info" id="kpi-margem-resultado">
+                <div class="kpi-icon-container">
+                    <i class="mdi mdi-percent"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <span class="kpi-title">Margem de Resultado</span>
+                    <span class="kpi-value" id="valor-margem-resultado">-</span>
+                    <span class="kpi-comparison" id="var-margem-resultado">-</span>
+                </div>
+                <div class="kpi-tooltip">
+                    <i class="mdi mdi-information-outline"></i>
+                    <span class="tooltip-text">Percentual do resultado operacional sobre o faturamento total</span>
                 </div>
             </div>
-            <div class="chart-content">
-                <canvas id="chart-faturamento-setor"></canvas>
+            
+            <!-- Folha / Faturamento (Métrica Inteligente) -->
+            <div class="kpi-card-compact kpi-warning" id="kpi-folha-faturamento">
+                <div class="kpi-icon-container">
+                    <i class="mdi mdi-account-group"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <span class="kpi-title">Folha / Faturamento</span>
+                    <span class="kpi-value" id="valor-folha-faturamento">-</span>
+                    <span class="kpi-comparison" id="var-folha-faturamento">-</span>
+                </div>
+                <div class="kpi-tooltip">
+                    <i class="mdi mdi-information-outline"></i>
+                    <span class="tooltip-text">Percentual da folha de pagamento sobre o faturamento total</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Grid - Seção 2: Análise Detalhada -->
+    <div class="dashboard-sections">
+        <!-- Seção 2.1: Análise de Faturamento e Despesas (Layout 2 Colunas) -->
+        <div class="section-dual-column">
+            <!-- Coluna Esquerda: Faturamento -->
+            <div class="analysis-column faturamento-column">
+                <div class="column-header">
+                    <h3 class="column-title">
+                        <i class="mdi mdi-chart-line"></i>
+                        Análise de Faturamento
+                    </h3>
+                </div>
+                
+                <!-- Faturamento Mensal vs. Ano Anterior -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-chart-bar"></i>
+                            Faturamento Mensal vs. Ano Anterior
+                        </h4>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn" id="toggle-faturamento-view" title="Alternar visualização">
+                                <i class="mdi mdi-swap-horizontal"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <canvas id="chart-faturamento-mensal"></canvas>
+                    </div>
+                    <div class="chart-legend">
+                        <span class="legend-item">
+                            <span class="legend-color" style="background: #198754;"></span>
+                            Ano Atual
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color" style="background: #6c757d;"></span>
+                            Ano Anterior
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Distribuição de Receita por Setor -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-chart-donut"></i>
+                            Distribuição de Receita por Setor
+                        </h4>
+                        <div id="drill-down-back" style="display: none;">
+                            <button id="back-to-sectors" class="chart-action-btn">
+                                <i class="mdi mdi-arrow-left"></i>
+                                Voltar para Setores
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <canvas id="chart-faturamento-setor"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Coluna Direita: Despesas -->
+            <div class="analysis-column despesas-column">
+                <div class="column-header">
+                    <h3 class="column-title">
+                        <i class="mdi mdi-chart-pie"></i>
+                        Análise de Despesas
+                    </h3>
+                </div>
+                
+                <!-- Top 5 Centros de Custo -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-chart-bar"></i>
+                            Top 5 Centros de Custo
+                        </h4>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn" id="toggle-despesas-view" title="Ver categorias">
+                                <i class="mdi mdi-format-list-bulleted"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <canvas id="chart-top-despesas"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Card Compacto de Metas Segmentadas -->
+                <div class="chart-container metas-card-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-target"></i>
+                            Atingimento das Metas Anuais
+                        </h4>
+                        <div class="trend-badge">
+                            <i class="mdi mdi-information-outline"></i>
+                            <span>Metas: Percentual de faturamento realizado em relação ao planejado para o ano</span>
+                        </div>
+                    </div>
+                    <div class="chart-content metas-gauges-content">
+                        <!-- Container dos 3 Mini-Gauges -->
+                        <div class="metas-gauges-grid">
+                            <!-- Meta Geral -->
+                            <div class="mini-gauge-container" data-meta="geral">
+                                <canvas id="gauge-geral" width="120" height="120"></canvas>
+                                <div class="mini-gauge-info">
+                                    <div class="mini-gauge-percentage" id="percentage-geral">0%</div>
+                                    <div class="mini-gauge-label">Geral</div>
+                                    <div class="mini-gauge-values" id="values-geral">R$ 0 de R$ 0</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Meta Consultoria -->
+                            <div class="mini-gauge-container" data-meta="consultoria">
+                                <canvas id="gauge-consultoria" width="120" height="120"></canvas>
+                                <div class="mini-gauge-info">
+                                    <div class="mini-gauge-percentage" id="percentage-consultoria">0%</div>
+                                    <div class="mini-gauge-label">Consultoria</div>
+                                    <div class="mini-gauge-values" id="values-consultoria">R$ 0 de R$ 0</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Meta Soluções -->
+                            <div class="mini-gauge-container" data-meta="solucoes">
+                                <canvas id="gauge-solucoes" width="120" height="120"></canvas>
+                                <div class="mini-gauge-info">
+                                    <div class="mini-gauge-percentage" id="percentage-solucoes">0%</div>
+                                    <div class="mini-gauge-label">Soluções</div>
+                                    <div class="mini-gauge-values" id="values-solucoes">R$ 0 de R$ 0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Evolução do Saldo Acumulado (40%) -->
-        <div class="chart-container medium-chart">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-line"></i>
-                    Evolução do Saldo Acumulado
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-saldo-acumulado"></canvas>
-            </div>
-        </div>
-        
-        <!-- Top 5 Categorias de Despesa (40%) -->
-        <div class="chart-container medium-chart">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-chart-bar"></i>
-                    Top 5 Categorias de Despesa
-                </h3>
-            </div>
-            <div class="chart-content">
-                <canvas id="chart-top-despesas"></canvas>
-            </div>
-        </div>
-        
-        <!-- Top 5 Clientes por Faturamento (20%) -->
-        <div class="chart-container small-table">
-            <div class="chart-header">
-                <h3 class="chart-title">
-                    <i class="mdi mdi-account-multiple"></i>
-                    Top 10 Clientes
-                </h3>
-            </div>
-            <div class="chart-content">
-                <div class="table-responsive">
-                    <table id="table-clientes" class="dashboard-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Cliente</th>
-                                <th>Faturamento</th>
-                                <th>%</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Dados carregados via JavaScript -->
-                        </tbody>
-                    </table>
+        <!-- Seção 2.2: Visão do Fluxo de Caixa (Base do Dashboard) -->
+        <div class="section-full-width">
+
+            
+            <div class="charts-grid-full-width">
+                <!-- Evolução do Saldo Acumulado - Largura Total -->
+                <div class="chart-container chart-full-width">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-chart-line"></i>
+                            Evolução do Saldo Acumulado
+                            <span class="trend-badge" id="saldo-trend">
+                                <i class="mdi mdi-trending-up"></i>
+                                TREND: Evolução do saldo durante o período
+                            </span>
+                        </h4>
+                        <div class="chart-actions">
+                            <span class="chart-status" id="saldo-status">
+                                <i class="mdi mdi-information-outline"></i>
+                                Tendência atual
+                            </span>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <canvas id="chart-saldo-acumulado"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Resultado Mensal - Largura Total -->
+                <div class="chart-container chart-full-width">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-chart-bar"></i>
+                            Resultado Mensal
+                            <span class="trend-badge" id="resultado-trend">
+                                <i class="mdi mdi-trending-up"></i>
+                                TREND: Receitas vs Despesas mensais
+                            </span>
+                        </h4>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn" id="toggle-resultado-view" title="Alternar visualização">
+                                <i class="mdi mdi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <canvas id="chart-resultado-mensal"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Top 10 Clientes por Faturamento -->
+                <div class="chart-container chart-table">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="mdi mdi-account-multiple"></i>
+                            Top 10 Clientes por Faturamento
+                        </h4>
+                        <div class="trend-badge">
+                            <i class="mdi mdi-information-outline"></i>
+                            <span>Trend: Tendência de faturamento do cliente comparado ao período anterior. ↗ Crescendo, ↘ Decrescendo, → Estável</span>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="chart-action-btn" id="export-clientes" title="Exportar dados">
+                                <i class="mdi mdi-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <div class="table-responsive">
+                            <table id="table-clientes" class="dashboard-table">
+                                <thead>
+                                    <tr>
+                                        <th class="rank-col">#</th>
+                                        <th class="cliente-col">Cliente</th>
+                                        <th class="valor-col">Faturamento</th>
+                                        <th class="percent-col">%</th>
+                                        <th class="trend-col">Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dados carregados via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
