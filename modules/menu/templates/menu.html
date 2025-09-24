@@ -31,7 +31,7 @@
                     {% if ('dashboard_executivo' in accessible_modules and ('*' in importacao_pages or 'dashboard_executivo' in importacao_pages)) or (role in ['admin'] and 'dashboard_executivo' in accessible_modules) %}
                     <a href="{{ url_for('dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
                         <div class="module-icon"><i class="mdi mdi-chart-box text-xl"></i></div>
-                        <h4 class="module-title">Dashboard Executivo</h4>
+                        <h4 class="module-title">Dashboard Executivo Importações</h4>
                         <p class="module-desc">Visão estratégica consolidada de importações.</p>
                     </a>
                     {% endif %}
@@ -62,7 +62,7 @@
                     {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="fin_dashboard_executivo">
                         <div class="module-icon"><i class="mdi mdi-chart-box text-xl"></i></div>
-                        <h4 class="module-title">Dashboard Executivo</h4>
+                        <h4 class="module-title">Dashboard Executivo Financeiro</h4>
                         <p class="module-desc">Visão executiva do módulo financeiro.</p>
                     </a>
                     {% endif %}

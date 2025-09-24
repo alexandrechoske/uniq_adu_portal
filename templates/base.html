@@ -762,9 +762,9 @@
                     {% if 'dashboard_executivo' in accessible_modules %}
                     <a href="{{ url_for('dashboard_executivo.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}"
-                       title="Dashboard Executivo">
+                       title="Dashboard Executivo Importações">
                         <i class="mdi mdi-view-dashboard"></i>
-                        <span class="sidebar-text">Dashboard Executivo</span>
+                        <span class="sidebar-text">Dashboard Executivo Importações</span>
                     </a>
                     {% endif %}
                     
@@ -823,7 +823,7 @@
                        class="sidebar-item sidebar-page-item {% if request.endpoint == 'fin_dashboard_executivo.index' %}active{% endif %}"
                        title="Dashboard Executivo Financeiro">
                         <i class="mdi mdi-chart-box text-xl"></i>
-                        <span class="sidebar-text">Dashboard Executivo</span>
+                        <span class="sidebar-text">Dashboard Executivo Financeiro</span>
                     </a>
                     {% endif %}
                     
@@ -940,9 +940,9 @@
                 {% if 'dashboard_executivo' in accessible_modules %}
                 <a href="{{ url_for('dashboard_executivo.index') }}"
                    class="sidebar-item {% if request.endpoint == 'dashboard_executivo.index' %}active{% endif %}"
-                   title="Dashboard Executivo">
+                   title="Dashboard Executivo Importações">
                     <i class="mdi mdi-view-dashboard text-xl"></i>
-                    <span class="sidebar-text">Dashboard Executivo</span>
+                    <span class="sidebar-text">Dashboard Executivo Importações</span>
                 </a>
                 {% endif %}
                 
