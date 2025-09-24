@@ -308,40 +308,53 @@ def api_resultado_mensal():
 @login_required
 @perfil_required('financeiro', 'dashboard_executivo')
 def api_saldo_acumulado():
-    """API para evolução do saldo acumulado"""
+    """API para evolução do saldo acumulado - CORRIGIDO"""
     try:
         ano = request.args.get('ano', datetime.now().year)
-        
-        # Buscar dados de saldo acumulado mensal
+
+        # Buscar dados de valor (não saldo_acumulado) para recalcular corretamente
         response_saldo = supabase_admin.table('vw_fluxo_caixa') \
-            .select('data, saldo_acumulado') \
+            .select('data, valor') \
             .gte('data', f'{ano}-01-01') \
             .lte('data', f'{ano}-12-31') \
             .neq('classe', 'TRANSFERENCIA DE CONTAS') \
             .order('data') \
             .execute()
-        
+
+        # Recalcular saldo acumulado corretamente
+        saldo_acumulado = 0
+        registros_com_saldo = []
+
+        for item in response_saldo.data:
+            valor = float(item['valor']) if item['valor'] else 0
+            saldo_acumulado += valor  # O valor já vem com sinal correto
+
+            registros_com_saldo.append({
+                'data': item['data'],
+                'saldo_calculado': saldo_acumulado
+            })
+
         # Processar dados mensais
         dados_mensais = defaultdict(list)
-        
-        for item in response_saldo.data:
+
+        for item in registros_com_saldo:
             data = datetime.strptime(item['data'], '%Y-%m-%d')
             mes = data.strftime('%Y-%m')
-            saldo = float(item['saldo_acumulado'])
-            
+            saldo = item['saldo_calculado']
+
             dados_mensais[mes].append(saldo)
-        
+
         # Calcular saldo acumulado final de cada mês
         saldos_mensais = []
         for mes in sorted(dados_mensais.keys()):
             # Pegar o último saldo do mês
             saldo_final = dados_mensais[mes][-1] if dados_mensais[mes] else 0
-            
+
             saldos_mensais.append({
                 'mes': mes,
                 'saldo_acumulado': saldo_final
             })
-        
+
         return jsonify({
             'success': True,
             'data': saldos_mensais
