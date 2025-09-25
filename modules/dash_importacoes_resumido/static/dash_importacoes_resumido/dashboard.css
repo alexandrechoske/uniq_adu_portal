@@ -702,6 +702,75 @@
     height: auto;
 }
 
+/* Date Legend - Legenda das Datas */
+.date-legend {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin: 16px 20px 8px 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.legend-sample {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Bolinhas coloridas para a legenda */
+.legend-sample.legend-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    padding: 0;
+    margin: 0;
+    display: inline-block;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.legend-sample.embarque-red {
+    background-color: #F44336;
+    color: white;
+}
+
+.legend-sample.embarque-past {
+    background-color: #1f2937;
+    color: white;
+}
+
+.legend-sample.chegada-today {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    font-weight: 500;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.legend-sample.chegada-today i {
+    font-size: 12px;
+}
+
 /* Settings Modal */
 .settings-modal {
     position: fixed;
@@ -1055,6 +1124,20 @@
         flex-direction: column;
         gap: 1rem;
         text-align: center;
+    }
+    
+    /* Responsive Date Legend */
+    .date-legend {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+        margin: 12px 10px 8px 10px;
+        padding: 12px 16px;
+    }
+    
+    .legend-item {
+        justify-content: center;
+        font-size: 0.8rem;
     }
     
     .exchange-rates-top {
@@ -1471,6 +1554,44 @@
     border-top: 2px solid #404040 !important;
     padding: 1.5rem 3rem !important;
     flex-shrink: 0 !important;
+}
+
+/* TV Mode - Date Legend */
+.tv-fullscreen-mode .date-legend {
+    background: #2a2a2a !important;
+    border: 1px solid #404040 !important;
+    margin: 16px 30px 8px 30px !important;
+    gap: 48px !important;
+    padding: 20px 24px !important;
+}
+
+.tv-fullscreen-mode .legend-item {
+    color: #e0e0e0 !important;
+    font-size: 1rem !important;
+    gap: 12px !important;
+}
+
+.tv-fullscreen-mode .legend-sample.embarque-red {
+    background-color: #ff6b6b !important;
+    color: white !important;
+    font-size: 0.9rem !important;
+}
+
+.tv-fullscreen-mode .legend-sample.embarque-past {
+    background-color: #b0b0b0 !important;
+    color: white !important;
+    font-size: 0.9rem !important;
+}
+
+.tv-fullscreen-mode .legend-sample.legend-dot {
+    width: 18px !important;
+    height: 18px !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.tv-fullscreen-mode .legend-sample.chegada-today {
+    font-size: 0.85rem !important;
+    background: linear-gradient(135deg, #ff9800, #ff5722) !important;
 }
 
 .tv-fullscreen-mode .footer-center {
