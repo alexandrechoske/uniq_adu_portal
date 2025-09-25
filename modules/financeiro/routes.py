@@ -15,6 +15,7 @@ from .faturamento.routes import faturamento_bp
 
 # Importar novos blueprints
 from .conciliacao_lancamentos.routes import conciliacao_lancamentos_bp
+from .conciliacao_lancamentos.routes_v2 import conciliacao_v2_bp
 from .categorizacao_clientes.routes import categorizacao_clientes_bp
 from .projecoes_metas.routes import projecoes_metas_bp
 from .export_bases.routes import export_bases_financeiro_bp
@@ -30,6 +31,7 @@ FINANCEIRO_BLUEPRINTS = [
     faturamento_bp,
     # Novos módulos
     conciliacao_lancamentos_bp,
+    conciliacao_v2_bp,  # Nova versão da conciliação
     categorizacao_clientes_bp,
     projecoes_metas_bp,
     export_bases_financeiro_bp
