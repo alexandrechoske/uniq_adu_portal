@@ -589,6 +589,182 @@
     </div>
 </div>
 
+<!-- Modal de Alteração de Senha -->
+<div id="modal-change-password" class="modal-overlay hidden">
+    <div class="modal-container modal-small">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                Alterar Senha
+                <span class="info-icon" id="password-rules-info" title="Clique para ver as regras de hierarquia">
+                    <i class="mdi mdi-information"></i>
+                </span>
+            </h2>
+            <div class="modal-header-actions">
+                <button type="button" id="btn-close-change-password" class="btn btn-sm btn-secondary">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
+                </button>
+            </div>
+        </div>
+        
+        <div class="modal-content">
+            <form id="form-change-password">
+                <div class="form-section">
+                    <div class="form-section-title">Dados do Usuário</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Usuário:</label>
+                        <div id="change-password-user-info" class="form-info">
+                            <strong id="change-password-user-name">-</strong><br>
+                            <span id="change-password-user-email" class="text-muted">-</span><br>
+                            <span id="change-password-user-role" class="text-muted">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="form-section-title">Nova Senha</div>
+                    
+                    <div class="form-group">
+                        <label for="new-password" class="form-label required">Nova Senha</label>
+                        <input type="password" id="new-password" class="form-control" placeholder="Digite a nova senha (mínimo 6 caracteres)" required minlength="6">
+                        <div class="form-help">A senha deve ter pelo menos 6 caracteres</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm-new-password" class="form-label required">Confirmar Nova Senha</label>
+                        <input type="password" id="confirm-new-password" class="form-control" placeholder="Digite novamente a nova senha" required minlength="6">
+                        <div class="form-help">Digite a mesma senha para confirmar</div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" id="btn-cancel-change-password" class="btn btn-secondary">
+                <i class="mdi mdi-close"></i>
+                Cancelar
+            </button>
+            <button type="submit" form="form-change-password" id="btn-confirm-change-password" class="btn btn-primary">
+                <i class="mdi mdi-key-variant"></i>
+                Alterar Senha
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Informações sobre Hierarquia de Alteração de Senha -->
+<div id="modal-password-rules" class="modal-overlay hidden">
+    <div class="modal-container modal-medium">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <i class="mdi mdi-shield-account"></i>
+                Regras de Alteração de Senha
+            </h2>
+            <div class="modal-header-actions">
+                <button type="button" id="btn-close-password-rules" class="btn btn-sm btn-secondary">
+                    <i class="mdi mdi-close"></i>
+                    Fechar
+                </button>
+            </div>
+        </div>
+        
+        <div class="modal-content">
+            <div class="hierarchy-info">
+                <div class="hierarchy-section">
+                    <div class="hierarchy-title">
+                        <i class="mdi mdi-shield-crown text-danger"></i>
+                        <strong>Admin Master</strong>
+                    </div>
+                    <div class="hierarchy-permissions">
+                        <div class="permission-item allowed">
+                            <i class="mdi mdi-check-circle text-success"></i>
+                            Pode alterar senha de <strong>todos os usuários</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hierarchy-section">
+                    <div class="hierarchy-title">
+                        <i class="mdi mdi-shield-account text-warning"></i>
+                        <strong>Admin Operacional</strong>
+                    </div>
+                    <div class="hierarchy-permissions">
+                        <div class="permission-item allowed">
+                            <i class="mdi mdi-check-circle text-success"></i>
+                            Pode alterar senha de <strong>Equipe Interna</strong> (não admin)
+                        </div>
+                        <div class="permission-item allowed">
+                            <i class="mdi mdi-check-circle text-success"></i>
+                            Pode alterar senha de <strong>Clientes</strong>
+                        </div>
+                        <div class="permission-item denied">
+                            <i class="mdi mdi-close-circle text-danger"></i>
+                            <strong>NÃO PODE</strong> alterar senha de <strong>Admin Master</strong>
+                        </div>
+                        <div class="permission-item denied">
+                            <i class="mdi mdi-close-circle text-danger"></i>
+                            <strong>NÃO PODE</strong> alterar senha de <strong>Admin Financeiro</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hierarchy-section">
+                    <div class="hierarchy-title">
+                        <i class="mdi mdi-cash text-info"></i>
+                        <strong>Admin Financeiro</strong>
+                    </div>
+                    <div class="hierarchy-permissions">
+                        <div class="permission-item allowed">
+                            <i class="mdi mdi-check-circle text-success"></i>
+                            Pode alterar senha <strong>apenas de Equipe Interna</strong> (não admin)
+                        </div>
+                        <div class="permission-item denied">
+                            <i class="mdi mdi-close-circle text-danger"></i>
+                            <strong>NÃO PODE</strong> alterar senha de <strong>Admin Master</strong>
+                        </div>
+                        <div class="permission-item denied">
+                            <i class="mdi mdi-close-circle text-danger"></i>
+                            <strong>NÃO PODE</strong> alterar senha de <strong>Admin Operacional</strong>
+                        </div>
+                        <div class="permission-item denied">
+                            <i class="mdi mdi-close-circle text-danger"></i>
+                            <strong>NÃO PODE</strong> alterar senha de <strong>Clientes</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hierarchy-section">
+                    <div class="hierarchy-title">
+                        <i class="mdi mdi-account text-secondary"></i>
+                        <strong>Equipe Interna / Cliente</strong>
+                    </div>
+                    <div class="hierarchy-permissions">
+                        <div class="permission-item denied">
+                            <i class="mdi mdi-close-circle text-danger"></i>
+                            <strong>NÃO PODEM</strong> alterar senha de nenhum usuário
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hierarchy-note">
+                    <div class="alert alert-info">
+                        <i class="mdi mdi-information"></i>
+                        <strong>Nota:</strong> As regras de hierarquia garantem que apenas usuários com permissões adequadas possam alterar senhas de outros usuários, mantendo a segurança do sistema.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" id="btn-close-password-rules-footer" class="btn btn-primary">
+                <i class="mdi mdi-check"></i>
+                Entendi
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Template para Card de Usuário -->
 <template id="user-card-template">
     <div class="user-card" data-user-id="{user_id}" data-role="{role}" data-status="{status}">

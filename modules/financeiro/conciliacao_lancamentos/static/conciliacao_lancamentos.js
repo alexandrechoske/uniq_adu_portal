@@ -145,10 +145,14 @@ class ConciliacaoBancaria {
     }
 
     processarResultado(result) {
+        console.log('[PROCESSAR] Processando resultado:', result);
+        
         if (result.success) {
             // Nova estrutura: result tem dados_aberta e dados_banco
             this.dadosSistemaOriginais = result.dados_aberta || [];
             this.dadosBancoOriginais = result.dados_banco || [];
+            
+            console.log('[PROCESSAR] Dados carregados - Sistema:', this.dadosSistemaOriginais.length, 'Banco:', this.dadosBancoOriginais.length);
             
             // Aplicar filtro atual
             this.aplicarFiltroBanco(this.bancoAtivo);
@@ -160,6 +164,7 @@ class ConciliacaoBancaria {
             
             this.showSuccess(`Arquivos processados com sucesso! ${this.dadosSistema.length} lançamentos do sistema e ${this.dadosBanco.length} do banco encontrados.`);
         } else {
+            console.error('[PROCESSAR] Erro no resultado:', result);
             this.showError(result.message || result.error || 'Erro ao processar arquivos');
         }
     }
@@ -299,6 +304,8 @@ class ConciliacaoBancaria {
     }
 
     renderizarTabelaSistema() {
+        console.log('[RENDER] Renderizando tabela sistema com', this.dadosSistema.length, 'registros');
+        
         const tbody = document.querySelector('#tabelaSistema tbody');
         const count = document.getElementById('countSistema');
         const countTotal = document.getElementById('countSistemaTotal');
@@ -347,6 +354,8 @@ class ConciliacaoBancaria {
     }
 
     renderizarTabelaBanco() {
+        console.log('[RENDER] Renderizando tabela banco com', this.dadosBanco.length, 'registros');
+        
         const tbody = document.querySelector('#tabelaBanco tbody');
         const count = document.getElementById('countBanco');
         const countTotal = document.getElementById('countBancoTotal');
@@ -412,14 +421,16 @@ class ConciliacaoBancaria {
                 // Atualizar dados com a resposta da conciliação hierárquica
                 const responseData = result.data;
                 
-                // Processar dados_aberta (sistema)
-                if (responseData.dados_aberta && responseData.dados_aberta.dados) {
-                    this.dadosSistema = responseData.dados_aberta.dados;
+                // Processar dados_aberta (sistema) - estrutura direta sem .dados
+                if (responseData.dados_aberta) {
+                    this.dadosSistema = responseData.dados_aberta;
+                    this.dadosSistemaOriginais = responseData.dados_aberta;
                 }
                 
-                // Processar dados_banco
-                if (responseData.dados_banco && responseData.dados_banco.dados) {
-                    this.dadosBanco = responseData.dados_banco.dados;
+                // Processar dados_banco - estrutura direta sem .dados
+                if (responseData.dados_banco) {
+                    this.dadosBanco = responseData.dados_banco;
+                    this.dadosBancoOriginais = responseData.dados_banco;
                 }
                 
                 // Renderizar dados atualizados

@@ -214,6 +214,34 @@
     white-space: nowrap;
 }
 
+/* Coluna de ações - alinhamento centralizado */
+.users-table th:last-child,
+.users-table td:last-child {
+    text-align: center;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+/* Melhorar espaçamento das células de contagem */
+.users-table .user-count-cell {
+    text-align: center;
+    width: 80px;
+    min-width: 80px;
+}
+
+.users-table .user-admin-cell {
+    text-align: center;
+    width: 80px;
+    min-width: 80px;
+}
+
+.users-table .user-status-cell {
+    text-align: center;
+    width: 100px;
+    min-width: 100px;
+}
+
 .users-table td {
     padding: 1rem;
     border-bottom: 1px solid var(--border-light);
@@ -333,6 +361,8 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
 }
 
 .btn-table-action {
@@ -366,6 +396,18 @@
 
 .btn-table-action.btn-edit:hover {
     background: #e67e22;
+    transform: translateY(-1px);
+}
+
+.btn-table-action.btn-change-password {
+    background: var(--warning-color);
+    color: white;
+    border: 1px solid var(--warning-color);
+}
+
+.btn-table-action.btn-change-password:hover {
+    background: #e67e22;
+    border-color: #e67e22;
     transform: translateY(-1px);
 }
 
@@ -972,6 +1014,50 @@
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+}
+
+/* =================================
+   MODAL DE ALTERAÇÃO DE SENHA
+   ================================= */
+
+.form-info {
+    padding: 15px;
+    background: rgba(var(--primary-blue-rgb), 0.05);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-blue);
+}
+
+.form-info strong {
+    color: var(--text-primary);
+    font-size: 1.1em;
+}
+
+.form-info .text-muted {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.form-section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(var(--text-secondary-rgb), 0.2);
+}
+
+.form-section {
+    margin-bottom: 25px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-help {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-top: 5px;
 }
 
 .btn-close-modal {
@@ -2861,4 +2947,322 @@
     .detail-stats-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+}
+
+/* Controle de largura das colunas da tabela */
+.users-table .user-name-cell {
+    min-width: 200px;
+    max-width: 250px;
+}
+
+.users-table .user-email-cell {
+    min-width: 200px;
+    max-width: 250px;
+}
+
+/* =================================
+   MODAL DE ALTERAÇÃO DE SENHA - ESTILIZAÇÃO COMPLETA
+   ================================= */
+
+#modal-change-password .modal-content {
+    padding: 2rem;
+}
+
+#modal-change-password .form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+#modal-change-password .form-section:last-child {
+    margin-bottom: 0;
+}
+
+#modal-change-password .form-section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modal-change-password .form-section-title::before {
+    content: "";
+    width: 4px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+#modal-change-password .form-info {
+    padding: 1rem;
+    background: rgba(52, 152, 219, 0.05);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-color);
+}
+
+#modal-change-password .form-info strong {
+    color: var(--text-primary);
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+#modal-change-password .form-info .text-muted {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+#modal-change-password .form-group {
+    margin-bottom: 1.5rem;
+}
+
+#modal-change-password .form-group:last-child {
+    margin-bottom: 0;
+}
+
+#modal-change-password .form-label {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#modal-change-password .form-label.required::after {
+    content: "*";
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+#modal-change-password .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+    background: var(--bg-white);
+}
+
+#modal-change-password .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+#modal-change-password .form-control:invalid {
+    border-color: var(--danger-color);
+}
+
+#modal-change-password .form-help {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+#modal-change-password .modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: var(--bg-gray-50);
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+#modal-change-password .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9em;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+#modal-change-password .btn-secondary {
+    background: var(--text-muted);
+    color: white;
+}
+
+#modal-change-password .btn-secondary:hover {
+    background: #6b7280;
+    transform: translateY(-1px);
+}
+
+#modal-change-password .btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+#modal-change-password .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+#modal-change-password .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* =================================
+   ÍCONE DE INFORMAÇÃO NO MODAL
+   ================================= */
+
+.info-icon {
+    margin-left: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--info-color);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    vertical-align: middle;
+}
+
+.info-icon:hover {
+    background: var(--primary-dark);
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.info-icon i {
+    font-size: 12px;
+}
+
+/* =================================
+   MODAL DE HIERARQUIA DE SENHAS
+   ================================= */
+
+#modal-password-rules .modal-container {
+    max-width: 700px;
+    width: 90%;
+}
+
+.hierarchy-info {
+    padding: 0;
+}
+
+.hierarchy-section {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--bg-gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.hierarchy-section:last-of-type {
+    margin-bottom: 20px;
+}
+
+.hierarchy-title {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.hierarchy-title i {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+.hierarchy-permissions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.permission-item.allowed {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+.permission-item.denied {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.permission-item i {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.hierarchy-note {
+    margin-top: 20px;
+}
+
+.hierarchy-note .alert {
+    padding: 16px;
+    border-radius: var(--border-radius);
+    background: rgba(52, 152, 219, 0.1);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+    color: var(--info-color);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.hierarchy-note .alert i {
+    margin-right: 8px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* Cores específicas para os ícones dos níveis */
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.text-warning {
+    color: var(--warning-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
 }
