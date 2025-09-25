@@ -361,6 +361,11 @@
                                         <option value="RECEITA">Receitas</option>
                                         <option value="DESPESA">Despesas</option>
                                     </select>
+                                    <select id="filtroStatusSistema" class="form-select form-select-sm">
+                                        <option value="todos">Todos os status</option>
+                                        <option value="conciliado">✅ Conciliados</option>
+                                        <option value="nao_conciliado">❌ Não Conciliados</option>
+                                    </select>
                                     <select id="filtroBancoSistema" class="form-select form-select-sm">
                                         <option value="todos">Todos os bancos</option>
                                     </select>
@@ -492,6 +497,52 @@
                             <i class="mdi mdi-refresh"></i> Limpar Seleção
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção 4.5: Itens Conciliados -->
+    <div class="section-card" id="itensConciliadosSection" style="display: none;">
+        <div class="card">
+            <div class="card-header">
+                <div class="table-header">
+                    <h5 class="card-title">
+                        <i class="mdi mdi-check-circle text-success"></i>
+                        Itens Conciliados
+                        <span class="badge bg-success" id="badgeConciliados">0</span>
+                    </h5>
+                    <div class="table-filters">
+                        <div class="filter-group">
+                            <select id="filtroScoreConciliados" class="form-select form-select-sm">
+                                <option value="todos">Todos os scores</option>
+                                <option value="perfeito">100% (Perfeito)</option>
+                                <option value="excelente">90-99% (Excelente)</option>
+                                <option value="bom">80-89% (Bom)</option>
+                            </select>
+                            <input type="text" id="searchConciliados" class="form-control form-control-sm" placeholder="Buscar conciliados...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table table-hover table-sm" id="tabelaConciliados">
+                        <thead>
+                            <tr>
+                                <th width="8%">Score</th>
+                                <th width="10%">Data</th>
+                                <th width="12%">Valor</th>
+                                <th width="15%">Banco</th>
+                                <th width="25%">Descrição Sistema</th>
+                                <th width="25%">Descrição Banco</th>
+                                <th width="5%">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyConciliados">
+                            <!-- Dados carregados dinamicamente -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

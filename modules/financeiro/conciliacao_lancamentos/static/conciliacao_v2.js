@@ -151,16 +151,23 @@ class ConciliacaoBancariaV2 {
     }
     
     setupTableFilters() {
-        const filters = [
-            'filtroTipoSistema', 'filtroBancoSistema', 'searchSistema',
-            'filtroTipoBanco', 'filtroBancoBanco', 'searchBanco'
-        ];
-        
-        filters.forEach(filterId => {
+        // Filtros do Sistema
+        const filtrosSistema = ['filtroTipoSistema', 'filtroStatusSistema', 'filtroBancoSistema', 'searchSistema'];
+        filtrosSistema.forEach(filterId => {
             const element = document.getElementById(filterId);
             if (element) {
-                element.addEventListener('change', () => this.aplicarFiltros());
-                element.addEventListener('input', () => this.aplicarFiltros());
+                element.addEventListener('change', () => this.aplicarFiltrosSistema());
+                element.addEventListener('input', () => this.aplicarFiltrosSistema());
+            }
+        });
+
+        // Filtros do Banco
+        const filtrosBanco = ['filtroTipoBanco', 'filtroBancoBanco', 'searchBanco'];
+        filtrosBanco.forEach(filterId => {
+            const element = document.getElementById(filterId);
+            if (element) {
+                element.addEventListener('change', () => this.aplicarFiltrosBanco());
+                element.addEventListener('input', () => this.aplicarFiltrosBanco());
             }
         });
     }
@@ -599,15 +606,248 @@ class ConciliacaoBancariaV2 {
         
         if (!tbody || !badge) return;
         
-        tbody.innerHTML = '';
-        badge.textContent = dados.length;
+        // Debug logs
+        console.log(`[DEBUG] populateTable - Tipo: ${tipo}, Dados recebidos:`, dados?.length || 'undefined');
+        console.log(`[DEBUG] Dados são array?`, Array.isArray(dados));
         
-        dados.forEach((item, index) => {
-            const row = this.createTableRow(tipo, item, index);
-            tbody.appendChild(row);
-        });
+        tbody.innerHTML = '';
+        badge.textContent = dados?.length || 0;
+        
+        // Verificar se dados é válido
+        if (!dados || !Array.isArray(dados)) {
+            console.warn(`[DEBUG] Dados inválidos para ${tipo}:`, dados);
+            return;
+        }
+        
+        // Atualizar selects de banco se necessário
+        this.updateBankSelects(dados, tipo);
+        
+        // Aplicar filtros
+        const filteredData = this.aplicarFiltros(dados, tipo);
+        
+        console.log(`[DEBUG] Após filtros - ${tipo}: ${filteredData?.length || 0} registros`);
+        
+        // Agrupar por dia se for sistema
+        if (tipo === 'sistema') {
+            this.populateGroupedTable(tbody, filteredData, tipo);
+        } else {
+            filteredData.forEach((item, index) => {
+                const row = this.createTableRow(tipo, item, index);
+                tbody.appendChild(row);
+            });
+        }
         
         this.updateSelectionInfo(tipo);
+    }
+    
+    populateConciliados(conciliados) {
+        const tbody = document.getElementById('tbodyConciliados');
+        const badge = document.getElementById('badgeConciliados');
+        const section = document.getElementById('itensConciliadosSection');
+        
+        if (!tbody || !badge || !section) return;
+        
+        tbody.innerHTML = '';
+        badge.textContent = conciliados?.length || 0;
+        
+        if (conciliados && conciliados.length > 0) {
+            section.style.display = 'block';
+            
+            conciliados.forEach((item, index) => {
+                const row = this.createConciliadoRow(item, index);
+                tbody.appendChild(row);
+            });
+        } else {
+            section.style.display = 'none';
+        }
+    }
+    
+    createConciliadoRow(item, index) {
+        const row = document.createElement('tr');
+        
+        // Determinar classe do score
+        const score = item.score || 0;
+        let scoreClass = 'badge bg-secondary';
+        if (score >= 95) scoreClass = 'badge bg-success';
+        else if (score >= 85) scoreClass = 'badge bg-primary';
+        else if (score >= 75) scoreClass = 'badge bg-warning';
+        
+        row.innerHTML = `
+            <td>
+                <span class="${scoreClass}">${score.toFixed(1)}%</span>
+            </td>
+            <td>${item.data || 'N/A'}</td>
+            <td>
+                <span class="text-success fw-bold">
+                    ${this.formatCurrency(item.valor || 0)}
+                </span>
+            </td>
+            <td>${item.banco_sistema || 'N/A'}</td>
+            <td>
+                <small>${item.descricao_sistema || 'N/A'}</small>
+            </td>
+            <td>
+                <small>${item.descricao_banco || 'N/A'}</small>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-info" onclick="conciliacao.verDetalhesConciliacao('${item.id_sistema}')">
+                    <i class="mdi mdi-eye"></i>
+                </button>
+            </td>
+        `;
+        
+        return row;
+    }
+    
+    verDetalhesConciliacao(idSistema) {
+        // Encontrar o item conciliado
+        const conciliado = this.state.resultadosConciliacao?.conciliados?.find(
+            item => item.id_sistema == idSistema
+        );
+        
+        if (conciliado) {
+            alert(`Detalhes da Conciliação:\n\n` +
+                  `Score: ${conciliado.score?.toFixed(1)}%\n` +
+                  `Critérios: ${conciliado.criterios?.join(', ') || 'N/A'}\n\n` +
+                  `Sistema:\n` +
+                  `- Valor: ${this.formatCurrency(conciliado.valor)}\n` +
+                  `- Descrição: ${conciliado.descricao_sistema}\n\n` +
+                  `Banco:\n` +
+                  `- Valor: ${this.formatCurrency(conciliado.valor_banco)}\n` +
+                  `- Descrição: ${conciliado.descricao_banco}`);
+        }
+    }
+    
+    updateBankSelects(dados, tipo) {
+        // Verificar se dados é um array válido
+        if (!dados || !Array.isArray(dados)) {
+            console.warn('updateBankSelects: dados não é um array válido', dados);
+            return;
+        }
+
+        // Extrair bancos únicos dos dados
+        const bancos = new Set();
+        dados.forEach(item => {
+            const banco = item.banco || item.agencia || '';
+            if (banco && banco.trim()) {
+                bancos.add(banco.trim());
+            }
+        });
+
+        // Atualizar select apropriado
+        const selectId = tipo === 'sistema' ? 'filtroBancoSistema' : 'filtroBancoBanco';
+        const select = document.getElementById(selectId);
+        
+        if (select && bancos.size > 0) {
+            // Manter a opção "todos" e valor atual
+            const currentValue = select.value;
+            const todosOption = select.querySelector('option[value="todos"]');
+            
+            // Limpar opções exceto "todos"
+            select.innerHTML = '';
+            if (todosOption) {
+                select.appendChild(todosOption);
+            } else {
+                // Recriar opção "todos" se não existir
+                const todosOption = document.createElement('option');
+                todosOption.value = 'todos';
+                todosOption.textContent = 'Todos os bancos';
+                select.appendChild(todosOption);
+            }
+            
+            // Adicionar bancos ordenados
+            Array.from(bancos).sort().forEach(banco => {
+                const option = document.createElement('option');
+                option.value = banco;
+                option.textContent = banco;
+                select.appendChild(option);
+            });
+            
+            // Restaurar valor anterior se ainda existir
+            if (currentValue && Array.from(select.options).some(opt => opt.value === currentValue)) {
+                select.value = currentValue;
+            }
+        }
+    }
+    
+    populateGroupedTable(tbody, dados, tipo) {
+        // Agrupar por data
+        const groups = {};
+        dados.forEach(item => {
+            const dateKey = item.data_formatada || item.data;
+            if (!groups[dateKey]) {
+                groups[dateKey] = [];
+            }
+            groups[dateKey].push(item);
+        });
+        
+        // Ordenar grupos por data (mais recente primeiro)
+        const sortedDates = Object.keys(groups).sort((a, b) => {
+            const dateA = this.parseDate(a);
+            const dateB = this.parseDate(b);
+            return dateB - dateA;
+        });
+        
+        // Criar linhas agrupadas
+        sortedDates.forEach(dateKey => {
+            const groupItems = groups[dateKey];
+            
+            // Linha de cabeçalho do grupo
+            const groupHeader = document.createElement('tr');
+            groupHeader.className = 'group-header';
+            groupHeader.innerHTML = `
+                <td colspan="7" class="group-date" onclick="window.conciliacao.toggleGroup('${dateKey}')">
+                    <i class="mdi mdi-chevron-down group-icon" id="icon-${dateKey}"></i>
+                    <strong>${dateKey}</strong>
+                    <span class="badge bg-primary ms-2">${groupItems.length} itens</span>
+                    <span class="float-end">Total: ${this.formatCurrency(groupItems.reduce((sum, item) => sum + item.valor, 0))}</span>
+                </td>
+            `;
+            tbody.appendChild(groupHeader);
+            
+            // Container do grupo
+            const groupContainer = document.createElement('tbody');
+            groupContainer.id = `group-${dateKey}`;
+            groupContainer.className = 'group-container';
+            
+            groupItems.forEach((item, index) => {
+                const row = this.createTableRow(tipo, item, index);
+                groupContainer.appendChild(row);
+            });
+            
+            tbody.appendChild(groupContainer);
+        });
+    }
+    
+    toggleGroup(dateKey) {
+        const container = document.getElementById(`group-${dateKey}`);
+        const icon = document.getElementById(`icon-${dateKey}`);
+        
+        if (container && icon) {
+            if (container.style.display === 'none') {
+                container.style.display = '';
+                icon.classList.remove('mdi-chevron-right');
+                icon.classList.add('mdi-chevron-down');
+            } else {
+                container.style.display = 'none';
+                icon.classList.remove('mdi-chevron-down');
+                icon.classList.add('mdi-chevron-right');
+            }
+        }
+    }
+    
+    parseDate(dateString) {
+        // Converter DD/MM/YYYY para Date
+        if (dateString.includes('/')) {
+            const parts = dateString.split('/');
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+        // Formato ISO YYYY-MM-DD
+        return new Date(dateString);
+    }
+    
+    formatCurrency(value) {
+        return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     
     createTableRow(tipo, item, index) {
@@ -930,6 +1170,11 @@ class ConciliacaoBancariaV2 {
             this.populateTable('banco', this.getAllBankMovements().filter(item => !item.conciliado));
         }
         
+        // Mostrar itens conciliados
+        if (this.state.resultadosConciliacao?.dados?.conciliados) {
+            this.populateConciliados(this.state.resultadosConciliacao.dados.conciliados);
+        }
+        
         if (resumoFinalSection) {
             resumoFinalSection.style.display = 'block';
             this.updateFinalStats();
@@ -974,11 +1219,17 @@ class ConciliacaoBancariaV2 {
         const canvas = document.getElementById('gaugeChart');
         if (!canvas) return;
         
-        const ctx = canvas.getContext('2d');
-        
+        // Destruir chart existente
         if (this.charts.gauge) {
             this.charts.gauge.destroy();
+            this.charts.gauge = null;
         }
+        
+        // Resetar canvas
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        
+        const ctx = canvas.getContext('2d');
         
         const taxaSucesso = this.state.resultadosConciliacao ? 
             this.state.resultadosConciliacao.estatisticas.taxa_sucesso : 0;
@@ -998,7 +1249,8 @@ class ConciliacaoBancariaV2 {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 1,
                 plugins: {
                     legend: {
                         display: false
@@ -1106,9 +1358,91 @@ class ConciliacaoBancariaV2 {
         console.log(`Ordenando tabela ${type} por ${column}`);
     }
     
-    aplicarFiltros() {
-        // TODO: Implementar filtros
-        console.log('Aplicando filtros');
+    aplicarFiltrosSistema() {
+        console.log('[DEBUG] Aplicando filtros apenas do sistema');
+        if (this.state.dadosSistema.length > 0) {
+            this.populateTable('sistema', this.state.dadosSistema);
+        }
+    }
+
+    aplicarFiltrosBanco() {
+        console.log('[DEBUG] Aplicando filtros apenas do banco');
+        // Recarregar apenas as tabelas de banco processadas
+        this.state.arquivosProcessados.forEach((bankData, fileName) => {
+            if (Array.isArray(bankData)) {
+                this.populateTable('banco', bankData);
+            }
+        });
+    }
+
+    aplicarFiltros(dados, tipo) {
+        // Se não for fornecido dados, aplicar nos dados existentes
+        if (!dados) {
+            console.warn('[DEBUG] aplicarFiltros chamada sem parâmetros - use aplicarFiltrosSistema() ou aplicarFiltrosBanco()');
+            return;
+        }
+
+        // Verificar se dados é um array válido
+        if (!Array.isArray(dados)) {
+            console.warn('aplicarFiltros: dados não é um array válido', dados);
+            return dados; // Retornar dados originais se não for array
+        }
+
+        // Obter valores dos filtros baseados no tipo de dados
+        let filtroTipo, filtroBanco, filtroDescricao, filtroStatus;
+        
+        if (tipo === 'sistema') {
+            filtroTipo = document.getElementById('filtroTipoSistema')?.value || 'todos';
+            filtroStatus = document.getElementById('filtroStatusSistema')?.value || 'todos';
+            filtroBanco = document.getElementById('filtroBancoSistema')?.value || 'todos';
+            filtroDescricao = document.getElementById('searchSistema')?.value.toLowerCase() || '';
+        } else if (tipo === 'banco') {
+            filtroTipo = document.getElementById('filtroTipoBanco')?.value || 'todos';
+            filtroBanco = document.getElementById('filtroBancoBanco')?.value || 'todos';
+            filtroDescricao = document.getElementById('searchBanco')?.value.toLowerCase() || '';
+        }
+
+        console.log('Aplicando filtros:', {
+            tipo: tipo,
+            filtroTipo: filtroTipo,
+            filtroStatus: filtroStatus,
+            filtroBanco: filtroBanco,
+            filtroDescricao: filtroDescricao
+        });
+
+        return dados.filter(item => {
+            // Filtro por tipo
+            if (filtroTipo && filtroTipo !== 'todos') {
+                if (tipo === 'sistema') {
+                    if (filtroTipo === 'RECEITA' && item.tipo_transacao !== 'RECEITA') return false;
+                    if (filtroTipo === 'DESPESA' && item.tipo_transacao !== 'DESPESA') return false;
+                } else if (tipo === 'banco') {
+                    const valor = parseFloat(item.valor || 0);
+                    if (filtroTipo === 'CREDITO' && valor <= 0) return false;
+                    if (filtroTipo === 'DEBITO' && valor >= 0) return false;
+                }
+            }
+
+            // Filtro por status (apenas para sistema)
+            if (filtroStatus && filtroStatus !== 'todos' && tipo === 'sistema') {
+                if (filtroStatus === 'conciliado' && !item.conciliado) return false;
+                if (filtroStatus === 'nao_conciliado' && item.conciliado) return false;
+            }
+
+            // Filtro por banco
+            if (filtroBanco && filtroBanco !== 'todos') {
+                const bancoItem = (item.banco || item.agencia || '').toLowerCase();
+                if (!bancoItem.includes(filtroBanco.toLowerCase())) return false;
+            }
+
+            // Filtro por descrição/busca
+            if (filtroDescricao) {
+                const descricao = (item.descricao || item.historico || '').toLowerCase();
+                if (!descricao.includes(filtroDescricao)) return false;
+            }
+
+            return true;
+        });
     }
     
     async limparDados() {

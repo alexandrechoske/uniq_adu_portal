@@ -302,10 +302,32 @@ def carregar_dados_sistema():
         # Processar dados
         movimentos_sistema = []
         for row in result.data:
+            # Tratar diferentes formatos de data
+            data_lancamento = row['data_lancamento']
+            try:
+                if isinstance(data_lancamento, str):
+                    # Tentar diferentes formatos
+                    if '/' in data_lancamento:  # DD/MM/YYYY
+                        data_obj = datetime.strptime(data_lancamento, '%d/%m/%Y')
+                    elif '-' in data_lancamento and len(data_lancamento) == 10:  # YYYY-MM-DD
+                        data_obj = datetime.strptime(data_lancamento, '%Y-%m-%d')
+                    else:  # ISO format
+                        data_obj = datetime.fromisoformat(data_lancamento.split('T')[0])
+                else:
+                    data_obj = datetime.now()  # fallback
+                    
+                data_formatada = data_obj.strftime('%d/%m/%Y')
+                data_iso = data_obj.strftime('%Y-%m-%d')
+            except:
+                # Se falhar, usar data atual
+                data_obj = datetime.now()
+                data_formatada = data_obj.strftime('%d/%m/%Y')
+                data_iso = data_obj.strftime('%Y-%m-%d')
+            
             movimentos_sistema.append({
                 'id': row['id'],
-                'data': row['data_lancamento'],
-                'data_formatada': datetime.fromisoformat(row['data_lancamento']).strftime('%d/%m/%Y'),
+                'data': data_iso,  # Formato ISO para processamento
+                'data_formatada': data_formatada,  # Formato brasileiro para exibição
                 'valor': float(row['valor']),
                 'valor_formatado': f"R$ {float(row['valor']):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'),
                 'descricao': row['descricao'],
@@ -360,14 +382,25 @@ def conciliacao_automatica():
         if is_bypass and session_id:
             dados_sistema = get_bypass_session_data(session_id).get('dados_sistema', [])
             arquivos_processados = get_bypass_session_data(session_id).get('arquivos_processados', {})
+            print(f"[DEBUG BYPASS] Session ID: {session_id}")
+            print(f"[DEBUG BYPASS] Dados Sistema: {len(dados_sistema)}")
+            print(f"[DEBUG BYPASS] Arquivos Processados: {len(arquivos_processados)}")
         else:
             dados_sistema = session.get('dados_sistema', [])
             arquivos_processados = session.get('arquivos_processados', {})
+            print(f"[DEBUG NORMAL] Session Keys: {list(session.keys())}")
+            print(f"[DEBUG NORMAL] Dados Sistema: {len(dados_sistema)}")
+            print(f"[DEBUG NORMAL] Arquivos Processados: {len(arquivos_processados)}")
+            if arquivos_processados:
+                for nome, info in arquivos_processados.items():
+                    print(f"[DEBUG NORMAL] Arquivo {nome}: {len(info.get('movimentos', []))} movimentos")
         
         if not dados_sistema:
+            print(f"[DEBUG ERROR] Nenhum dado do sistema encontrado!")
             return jsonify({'success': False, 'message': 'Carregue primeiro os dados do sistema'}), 400
         
         if not arquivos_processados:
+            print(f"[DEBUG ERROR] Nenhum arquivo bancário encontrado!")
             return jsonify({'success': False, 'message': 'FaÃ§a upload de pelo menos um arquivo bancÃ¡rio'}), 400
         
         # Converter dados do sistema para formato do motor
