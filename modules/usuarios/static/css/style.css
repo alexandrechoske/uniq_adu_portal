@@ -3122,3 +3122,147 @@
     cursor: not-allowed;
     transform: none !important;
 }
+
+/* =================================
+   ÍCONE DE INFORMAÇÃO NO MODAL
+   ================================= */
+
+.info-icon {
+    margin-left: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--info-color);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    vertical-align: middle;
+}
+
+.info-icon:hover {
+    background: var(--primary-dark);
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.info-icon i {
+    font-size: 12px;
+}
+
+/* =================================
+   MODAL DE HIERARQUIA DE SENHAS
+   ================================= */
+
+#modal-password-rules .modal-container {
+    max-width: 700px;
+    width: 90%;
+}
+
+.hierarchy-info {
+    padding: 0;
+}
+
+.hierarchy-section {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--bg-gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.hierarchy-section:last-of-type {
+    margin-bottom: 20px;
+}
+
+.hierarchy-title {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.hierarchy-title i {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+.hierarchy-permissions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: var(--border-radius-sm);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.permission-item.allowed {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+.permission-item.denied {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.permission-item i {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.hierarchy-note {
+    margin-top: 20px;
+}
+
+.hierarchy-note .alert {
+    padding: 16px;
+    border-radius: var(--border-radius);
+    background: rgba(52, 152, 219, 0.1);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+    color: var(--info-color);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.hierarchy-note .alert i {
+    margin-right: 8px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* Cores específicas para os ícones dos níveis */
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.text-warning {
+    color: var(--warning-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}

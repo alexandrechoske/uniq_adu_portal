@@ -3120,3 +3120,57 @@ function getPerfilLabel(perfil) {
     
     return perfilLabels[perfil] || perfil;
 }
+
+// =================================
+// MODAL DE HIERARQUIA DE SENHAS
+// =================================
+
+/**
+ * Inicializa os event listeners para o modal de hierarquia
+ */
+function initializePasswordHierarchyModal() {
+    const infoIcon = document.getElementById('password-rules-info');
+    const modal = document.getElementById('modal-password-rules');
+    const closeBtn = document.getElementById('btn-close-password-rules');
+    const closeFooterBtn = document.getElementById('btn-close-password-rules-footer');
+
+    // Abrir modal ao clicar no ícone de informação
+    if (infoIcon) {
+        infoIcon.addEventListener('click', function() {
+            console.log('[USUARIOS] Abrindo modal de hierarquia de senhas');
+            modal.classList.remove('hidden');
+        });
+    }
+
+    // Fechar modal - botão header
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            console.log('[USUARIOS] Fechando modal de hierarquia de senhas (header)');
+            modal.classList.add('hidden');
+        });
+    }
+
+    // Fechar modal - botão footer
+    if (closeFooterBtn) {
+        closeFooterBtn.addEventListener('click', function() {
+            console.log('[USUARIOS] Fechando modal de hierarquia de senhas (footer)');
+            modal.classList.add('hidden');
+        });
+    }
+
+    // Fechar modal ao clicar fora
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                console.log('[USUARIOS] Fechando modal de hierarquia de senhas (overlay)');
+                modal.classList.add('hidden');
+            }
+        });
+    }
+}
+
+// Chamada da função de inicialização quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    // Aguarda um pouco para garantir que todos os elementos estejam carregados
+    setTimeout(initializePasswordHierarchyModal, 500);
+});
