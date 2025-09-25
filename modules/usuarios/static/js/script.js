@@ -547,7 +547,7 @@ function renderUsersInTable(tbodyElement, users, role) {
     
     users.forEach((user, index) => {
         console.log(`[USUARIOS] Criando linha ${index + 1}:`, user);
-        const rowElement = createUserTableRow(user);
+        const rowElement = createUserTableRow(user, role);
         tbodyElement.appendChild(rowElement);
     });
     
@@ -563,8 +563,8 @@ function renderUsersInTable(tbodyElement, users, role) {
 /**
  * Cria linha de tabela para usuário - NOVA VERSÃO PARA TABELAS
  */
-function createUserTableRow(user) {
-    console.log('[USUARIOS] Criando linha para usuário:', user.id, user.nome || user.name);
+function createUserTableRow(user, tableType = 'admin') {
+    console.log('[USUARIOS] Criando linha para usuário:', user.id, user.nome || user.name, 'tabela:', tableType);
     
     // Criar elemento da linha
     const rowElement = document.createElement('tr');
@@ -597,7 +597,19 @@ function createUserTableRow(user) {
     const totalNumeros = (user.whatsapp_numbers && Array.isArray(user.whatsapp_numbers)) ? user.whatsapp_numbers.length : 0;
     const totalPerfis = (user.perfis && Array.isArray(user.perfis)) ? user.perfis.length : 0;
     
-    // Montar HTML da linha
+    // Montar HTML da linha - ajustar estrutura baseada no tipo de tabela
+    let adminCellHtml = '';
+    if (tableType === 'interno') {
+        adminCellHtml = `
+        <td class="user-admin-cell">
+            ${
+                isMasterAdmin ? '<i class="admin-shield mdi mdi-shield-crown" title="Master Admin"></i>' :
+                hasAdminProfile ? '<i class="admin-shield mdi mdi-shield" title="Administrador de Módulo"></i>' :
+                '<span class="admin-none">-</span>'
+            }
+        </td>`;
+    }
+    
     rowElement.innerHTML = `
         <td class="user-name-cell">
             <div class="user-name-container">
@@ -616,13 +628,7 @@ function createUserTableRow(user) {
         <td class="user-count-cell">
             <span class="count-badge">${totalPerfis}</span>
         </td>
-        <td class="user-admin-cell">
-            ${
-                isMasterAdmin ? '<i class="admin-shield mdi mdi-shield-crown" title="Master Admin"></i>' :
-                hasAdminProfile ? '<i class="admin-shield mdi mdi-shield" title="Administrador de Módulo"></i>' :
-                '<span class="admin-none">-</span>'
-            }
-        </td>
+        ${adminCellHtml}
         <td class="user-status-cell">
             <span class="status-badge status-${statusClass}">
                 <span class="status-dot"></span>

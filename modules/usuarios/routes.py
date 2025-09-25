@@ -3808,7 +3808,7 @@ def change_password():
                 
                 return jsonify({
                     'success': True,
-                    'message': f'Senha do usuário {target_user.get("nome")} alterada com sucesso'
+                    'message': f'Senha do usuário {target_user.get("name")} alterada com sucesso'
                 })
             else:
                 return jsonify({

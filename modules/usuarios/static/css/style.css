@@ -214,6 +214,34 @@
     white-space: nowrap;
 }
 
+/* Coluna de ações - alinhamento centralizado */
+.users-table th:last-child,
+.users-table td:last-child {
+    text-align: center;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+/* Melhorar espaçamento das células de contagem */
+.users-table .user-count-cell {
+    text-align: center;
+    width: 80px;
+    min-width: 80px;
+}
+
+.users-table .user-admin-cell {
+    text-align: center;
+    width: 80px;
+    min-width: 80px;
+}
+
+.users-table .user-status-cell {
+    text-align: center;
+    width: 100px;
+    min-width: 100px;
+}
+
 .users-table td {
     padding: 1rem;
     border-bottom: 1px solid var(--border-light);
@@ -333,6 +361,8 @@
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
 }
 
 .btn-table-action {
@@ -370,12 +400,14 @@
 }
 
 .btn-table-action.btn-change-password {
-    background: var(--secondary-orange);
+    background: var(--warning-color);
     color: white;
+    border: 1px solid var(--warning-color);
 }
 
 .btn-table-action.btn-change-password:hover {
     background: #e67e22;
+    border-color: #e67e22;
     transform: translateY(-1px);
 }
 
@@ -2915,4 +2947,178 @@
     .detail-stats-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+}
+
+/* Controle de largura das colunas da tabela */
+.users-table .user-name-cell {
+    min-width: 200px;
+    max-width: 250px;
+}
+
+.users-table .user-email-cell {
+    min-width: 200px;
+    max-width: 250px;
+}
+
+/* =================================
+   MODAL DE ALTERAÇÃO DE SENHA - ESTILIZAÇÃO COMPLETA
+   ================================= */
+
+#modal-change-password .modal-content {
+    padding: 2rem;
+}
+
+#modal-change-password .form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+#modal-change-password .form-section:last-child {
+    margin-bottom: 0;
+}
+
+#modal-change-password .form-section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modal-change-password .form-section-title::before {
+    content: "";
+    width: 4px;
+    height: 20px;
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+#modal-change-password .form-info {
+    padding: 1rem;
+    background: rgba(52, 152, 219, 0.05);
+    border: 1px solid rgba(52, 152, 219, 0.2);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-color);
+}
+
+#modal-change-password .form-info strong {
+    color: var(--text-primary);
+    font-size: 1.1em;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+#modal-change-password .form-info .text-muted {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+#modal-change-password .form-group {
+    margin-bottom: 1.5rem;
+}
+
+#modal-change-password .form-group:last-child {
+    margin-bottom: 0;
+}
+
+#modal-change-password .form-label {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+#modal-change-password .form-label.required::after {
+    content: "*";
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+#modal-change-password .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+    background: var(--bg-white);
+}
+
+#modal-change-password .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+#modal-change-password .form-control:invalid {
+    border-color: var(--danger-color);
+}
+
+#modal-change-password .form-help {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+#modal-change-password .modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: var(--bg-gray-50);
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+#modal-change-password .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9em;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+#modal-change-password .btn-secondary {
+    background: var(--text-muted);
+    color: white;
+}
+
+#modal-change-password .btn-secondary:hover {
+    background: #6b7280;
+    transform: translateY(-1px);
+}
+
+#modal-change-password .btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+#modal-change-password .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+#modal-change-password .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
 }
