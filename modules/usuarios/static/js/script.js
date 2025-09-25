@@ -105,7 +105,9 @@ let appState = {
         available: [],
         selected: [],
         searchTimeout: null
-    }
+    },
+    // Estado para alteração de senha
+    changePasswordUserId: null
 };
 
 // =================================
@@ -338,6 +340,9 @@ function initializeEventListeners() {
     // Perfis e Seções Colapsáveis
     initializePerfisEventListeners();
     initializeCollapsibleSections();
+    
+    // Modal de alteração de senha
+    initializeChangePasswordModalListeners();
     
     // ESC para fechar modal - MELHORADO
     document.addEventListener('keydown', function(e) {
@@ -632,6 +637,9 @@ function createUserTableRow(user) {
                 <button class="btn-table-action btn-edit" title="Editar usuário" data-action="edit" data-user-id="${user.id}">
                     <i class="mdi mdi-pencil"></i>
                 </button>
+                <button class="btn-table-action btn-change-password" title="Alterar senha" data-action="change-password" data-user-id="${user.id}">
+                    <i class="mdi mdi-key-variant"></i>
+                </button>
                 <button class="btn-table-action btn-delete" title="Excluir usuário" data-action="delete" data-user-id="${user.id}">
                     <i class="mdi mdi-delete"></i>
                 </button>
@@ -642,11 +650,13 @@ function createUserTableRow(user) {
     // Adicionar event listeners aos botões
     const viewBtn = rowElement.querySelector('.btn-view');
     const editBtn = rowElement.querySelector('.btn-edit');
+    const changePasswordBtn = rowElement.querySelector('.btn-change-password');
     const deleteBtn = rowElement.querySelector('.btn-delete');
     
     console.log('[USUARIOS] DEBUG - Botões encontrados:', {
         viewBtn: !!viewBtn,
         editBtn: !!editBtn,
+        changePasswordBtn: !!changePasswordBtn,
         deleteBtn: !!deleteBtn,
         userId: user.id
     });
@@ -673,6 +683,18 @@ function createUserTableRow(user) {
         console.log('[USUARIOS] ✓ Event listener EDITAR adicionado para usuário:', user.id);
     } else {
         console.error('[USUARIOS] ✗ Botão EDITAR não encontrado para usuário:', user.id);
+    }
+    
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[USUARIOS] ✓ Botão ALTERAR SENHA clicado para usuário:', user.id);
+            openChangePasswordModal(user.id, user.nome || user.name || 'Usuário');
+        });
+        console.log('[USUARIOS] ✓ Event listener ALTERAR SENHA adicionado para usuário:', user.id);
+    } else {
+        console.error('[USUARIOS] ✗ Botão ALTERAR SENHA não encontrado para usuário:', user.id);
     }
     
     if (deleteBtn) {
@@ -2869,4 +2891,226 @@ function initializeCollapsibleSections() {
     });
     
     console.log('[USUARIOS] Seções colapsáveis inicializadas:', collapsibleHeaders.length);
+}
+
+// =================================
+// FUNCIONALIDADES DE ALTERAÇÃO DE SENHA
+// =================================
+
+/**
+ * Abre modal para alteração de senha
+ */
+function openChangePasswordModal(userId, userName) {
+    console.log('[USUARIOS] Abrindo modal de alteração de senha para:', userId, userName);
+    
+    // Verificar permissão antes de abrir o modal
+    checkPasswordChangePermission(userId).then(canChange => {
+        if (!canChange) {
+            showNotification('Você não tem permissão para alterar a senha deste usuário.', 'error');
+            return;
+        }
+        
+        // Buscar dados completos do usuário
+        loadUserData(userId).then(userData => {
+            if (!userData) {
+                showNotification('Erro ao carregar dados do usuário.', 'error');
+                return;
+            }
+            
+            // Preencher informações do usuário no modal
+            document.getElementById('change-password-user-name').textContent = userData.nome || userData.name || 'Usuário';
+            document.getElementById('change-password-user-email').textContent = userData.email || '-';
+            document.getElementById('change-password-user-role').textContent = getRoleLabel(userData.role) + ' - ' + getPerfilLabel(userData.perfil_principal);
+            
+            // Limpar campos de senha
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-new-password').value = '';
+            
+            // Armazenar ID do usuário para uso posterior
+            appState.changePasswordUserId = userId;
+            
+            // Mostrar modal
+            showChangePasswordModal();
+            
+        }).catch(error => {
+            console.error('[USUARIOS] Erro ao carregar dados do usuário:', error);
+            showNotification('Erro ao carregar dados do usuário.', 'error');
+        });
+    });
+}
+
+/**
+ * Verifica se o usuário atual pode alterar senha do usuário informado
+ */
+async function checkPasswordChangePermission(targetUserId) {
+    try {
+        // Usar o ID do usuário atual da sessão - vamos obter via API
+        const currentUserResponse = await fetch(`${CONFIG.API_BASE_URL}/api/usuarios`);
+        if (!currentUserResponse.ok) return false;
+        
+        const currentUsers = await currentUserResponse.json();
+        // Encontrar o usuário atual (assumindo que está na sessão)
+        // Por simplicidade, vamos pular esta verificação e deixar a API decidir
+        return true; // A API fará a verificação de permissão
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao verificar permissões:', error);
+        return false;
+    }
+}
+
+/**
+ * Mostra modal de alteração de senha
+ */
+function showChangePasswordModal() {
+    const modal = document.getElementById('modal-change-password');
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Focar no primeiro campo
+        setTimeout(() => {
+            const firstInput = document.getElementById('new-password');
+            if (firstInput) firstInput.focus();
+        }, 100);
+    }
+}
+
+/**
+ * Fecha modal de alteração de senha
+ */
+function closeChangePasswordModal() {
+    const modal = document.getElementById('modal-change-password');
+    if (modal) {
+        modal.classList.add('hidden');
+        
+        // Limpar dados
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-new-password').value = '';
+        appState.changePasswordUserId = null;
+    }
+}
+
+/**
+ * Manipula submissão do formulário de alteração de senha
+ */
+async function handleChangePasswordSubmit(e) {
+    e.preventDefault();
+    
+    const newPassword = document.getElementById('new-password').value.trim();
+    const confirmPassword = document.getElementById('confirm-new-password').value.trim();
+    
+    // Validações
+    if (!newPassword) {
+        showNotification('Nova senha é obrigatória.', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification('A nova senha deve ter pelo menos 6 caracteres.', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showNotification('As senhas não coincidem.', 'error');
+        return;
+    }
+    
+    if (!appState.changePasswordUserId) {
+        showNotification('Erro: ID do usuário não encontrado.', 'error');
+        return;
+    }
+    
+    // Mostrar loading
+    const submitBtn = document.getElementById('btn-confirm-change-password');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="mdi mdi-loading spin"></i> Alterando...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                target_user_id: appState.changePasswordUserId,
+                new_password: newPassword
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message || 'Senha alterada com sucesso!', 'success');
+            closeChangePasswordModal();
+        } else {
+            showNotification(result.message || 'Erro ao alterar senha.', 'error');
+        }
+        
+    } catch (error) {
+        console.error('[USUARIOS] Erro ao alterar senha:', error);
+        showNotification('Erro interno ao alterar senha.', 'error');
+    } finally {
+        // Restaurar botão
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+/**
+ * Inicializa event listeners para o modal de alteração de senha
+ */
+function initializeChangePasswordModalListeners() {
+    // Botão fechar
+    const closeBtn = document.getElementById('btn-close-change-password');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeChangePasswordModal);
+    }
+    
+    // Botão cancelar
+    const cancelBtn = document.getElementById('btn-cancel-change-password');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeChangePasswordModal);
+    }
+    
+    // Formulário
+    const form = document.getElementById('form-change-password');
+    if (form) {
+        form.addEventListener('submit', handleChangePasswordSubmit);
+    }
+    
+    // Fechar modal clicando fora
+    const modal = document.getElementById('modal-change-password');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeChangePasswordModal();
+            }
+        });
+    }
+    
+    console.log('[USUARIOS] ✓ Event listeners do modal de alteração de senha configurados');
+}
+
+/**
+ * Funções utilitárias
+ */
+function getRoleLabel(role) {
+    const roleLabels = {
+        'admin': 'Administrador',
+        'interno_unique': 'Equipe Interna',
+        'cliente_unique': 'Cliente'
+    };
+    return roleLabels[role] || role;
+}
+
+function getPerfilLabel(perfil) {
+    if (!perfil) return 'Básico';
+    
+    const perfilLabels = {
+        'master_admin': 'Master Admin',
+        'admin_operacao': 'Admin Operacional',
+        'admin_financeiro': 'Admin Financeiro',
+        'basico': 'Básico'
+    };
+    
+    return perfilLabels[perfil] || perfil;
 }

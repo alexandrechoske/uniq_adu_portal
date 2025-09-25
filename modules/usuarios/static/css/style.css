@@ -369,6 +369,16 @@
     transform: translateY(-1px);
 }
 
+.btn-table-action.btn-change-password {
+    background: var(--secondary-orange);
+    color: white;
+}
+
+.btn-table-action.btn-change-password:hover {
+    background: #e67e22;
+    transform: translateY(-1px);
+}
+
 .btn-table-action.btn-delete {
     background: var(--danger-color);
     color: white;
@@ -972,6 +982,50 @@
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+}
+
+/* =================================
+   MODAL DE ALTERAÇÃO DE SENHA
+   ================================= */
+
+.form-info {
+    padding: 15px;
+    background: rgba(var(--primary-blue-rgb), 0.05);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-blue);
+}
+
+.form-info strong {
+    color: var(--text-primary);
+    font-size: 1.1em;
+}
+
+.form-info .text-muted {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.form-section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(var(--text-secondary-rgb), 0.2);
+}
+
+.form-section {
+    margin-bottom: 25px;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-help {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-top: 5px;
 }
 
 .btn-close-modal {

@@ -3659,3 +3659,244 @@ def api_cleanup_profiles():
             'success': False,
             'message': f'Error during cleanup: {str(e)}'
         }), 500
+
+# =================================
+# ROTAS PARA ALTERAÇÃO DE SENHA COM HIERARQUIA
+# =================================
+
+def can_change_password(editor_user, target_user_data):
+    """Verifica se um usuário pode alterar a senha de outro baseado na hierarquia"""
+    editor_role = editor_user.get('role')
+    editor_perfil_principal = editor_user.get('perfil_principal', 'basico')
+    
+    target_role = target_user_data.get('role')
+    target_perfil_principal = target_user_data.get('perfil_principal', 'basico')
+    
+    print(f"[PASSWORD_CHANGE_CHECK] Editor: {editor_role} + {editor_perfil_principal}")
+    print(f"[PASSWORD_CHANGE_CHECK] Target: {target_role} + {target_perfil_principal}")
+    
+    # Master Admins podem alterar senha de qualquer um
+    if editor_role == 'admin' and editor_perfil_principal == 'master_admin':
+        print(f"[PASSWORD_CHANGE_CHECK] Master Admin pode alterar senha de qualquer usuário")
+        return True
+    
+    # Admin Operacional pode alterar senha de:
+    # - Equipe interna (interno_unique) 
+    # - Clientes (cliente_unique)
+    # MAS NÃO PODE alterar senha de:
+    # - Master Admins (admin + master_admin)
+    # - Outros Module Admins (interno_unique + admin_*)
+    if editor_role == 'interno_unique' and editor_perfil_principal == 'admin_operacao':
+        # Não pode alterar senha de Master Admin
+        if target_role == 'admin' and target_perfil_principal == 'master_admin':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Operacional não pode alterar senha de Master Admin")
+            return False
+        
+        # Não pode alterar senha de outros Module Admins
+        if target_role == 'interno_unique' and target_perfil_principal.startswith('admin_'):
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Operacional não pode alterar senha de outro Module Admin")
+            return False
+        
+        # Pode alterar senha de equipe interna básica e clientes
+        if target_role in ['interno_unique', 'cliente_unique']:
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Operacional pode alterar senha de equipe interna/cliente")
+            return True
+    
+    # Admin Financeiro pode alterar senha APENAS de:
+    # - Equipe interna básica (interno_unique + basico)
+    # NÃO PODE alterar senha de:
+    # - Master Admins
+    # - Module Admins
+    # - Clientes
+    if editor_role == 'interno_unique' and editor_perfil_principal == 'admin_financeiro':
+        # Não pode alterar senha de Master Admin
+        if target_role == 'admin':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Financeiro não pode alterar senha de Master Admin")
+            return False
+        
+        # Não pode alterar senha de outros Module Admins
+        if target_role == 'interno_unique' and target_perfil_principal.startswith('admin_'):
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Financeiro não pode alterar senha de Module Admin")
+            return False
+        
+        # Não pode alterar senha de clientes
+        if target_role == 'cliente_unique':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Financeiro não pode alterar senha de cliente")
+            return False
+        
+        # Pode alterar senha apenas de equipe interna básica
+        if target_role == 'interno_unique' and target_perfil_principal == 'basico':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin Financeiro pode alterar senha de equipe interna básica")
+            return True
+    
+    # Outros usuários não podem alterar senhas
+    print(f"[PASSWORD_CHANGE_CHECK] Usuário sem permissões para alteração de senha")
+    return False
+
+@bp.route('/change-password', methods=['POST'])
+@login_required  # Pode ser chamada via API bypass
+def change_password():
+    """Altera senha de um usuário com base na hierarquia de permissões"""
+    try:
+        # Verificar se é via API bypass ou sessão normal
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        is_api_bypass = request.headers.get('X-API-Key') == api_bypass_key
+        
+        if is_api_bypass:
+            # Para API bypass, receber editor_user_id nos dados
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'Dados não fornecidos'}), 400
+            
+            editor_user_id = data.get('editor_user_id')
+            if not editor_user_id:
+                return jsonify({'success': False, 'message': 'ID do usuário editor não fornecido'}), 400
+            
+            # Buscar dados do editor
+            editor_response = supabase_admin.table(get_users_table()).select('*').eq('id', editor_user_id).execute()
+            if not editor_response.data:
+                return jsonify({'success': False, 'message': 'Usuário editor não encontrado'}), 404
+            
+            editor_user = editor_response.data[0]
+        else:
+            # Usar sessão normal
+            if 'user' not in session:
+                return jsonify({'success': False, 'message': 'Usuário não autenticado'}), 401
+            
+            editor_user = session['user']
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'Dados não fornecidos'}), 400
+        
+        # Extrair dados da requisição
+        target_user_id = data.get('target_user_id')
+        new_password = data.get('new_password')
+        
+        if not target_user_id:
+            return jsonify({'success': False, 'message': 'ID do usuário alvo não fornecido'}), 400
+        
+        if not new_password or len(new_password.strip()) < 6:
+            return jsonify({'success': False, 'message': 'Nova senha deve ter pelo menos 6 caracteres'}), 400
+        
+        # Buscar dados do usuário alvo
+        target_response = supabase_admin.table(get_users_table()).select('*').eq('id', target_user_id).execute()
+        if not target_response.data:
+            return jsonify({'success': False, 'message': 'Usuário alvo não encontrado'}), 404
+        
+        target_user = target_response.data[0]
+        
+        # Verificar permissões de hierarquia
+        if not can_change_password(editor_user, target_user):
+            return jsonify({
+                'success': False, 
+                'message': 'Você não tem permissão para alterar a senha deste usuário'
+            }), 403
+        
+        # Criptografar nova senha e atualizar no auth do Supabase
+        try:
+            # Atualizar senha via Supabase Auth Admin API
+            auth_response = supabase_admin.auth.admin.update_user_by_id(
+                target_user_id,
+                {"password": new_password}
+            )
+            
+            if auth_response.user:
+                # Log da alteração
+                print(f"[PASSWORD_CHANGE] ✅ Senha alterada:")
+                print(f"  - Editor: {editor_user.get('email')} ({editor_user.get('role')}/{editor_user.get('perfil_principal')})")
+                print(f"  - Target: {target_user.get('email')} ({target_user.get('role')}/{target_user.get('perfil_principal')})")
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Senha do usuário {target_user.get("nome")} alterada com sucesso'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Erro ao atualizar senha no sistema de autenticação'
+                }), 500
+                
+        except Exception as auth_error:
+            print(f"[PASSWORD_CHANGE] ❌ Erro no Auth: {str(auth_error)}")
+            return jsonify({
+                'success': False,
+                'message': f'Erro ao atualizar senha: {str(auth_error)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"[PASSWORD_CHANGE] ❌ Erro: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro interno: {str(e)}'
+        }), 500
+
+@bp.route('/<user_id>/can-change-password', methods=['GET'])
+@login_required  # Pode ser chamada via API bypass
+def get_users_can_change_password(user_id):
+    """Retorna lista de usuários cuja senha pode ser alterada pelo usuário informado"""
+    try:
+        # Verificar se é via API bypass ou sessão normal
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        is_api_bypass = request.headers.get('X-API-Key') == api_bypass_key
+        
+        if is_api_bypass:
+            # Buscar dados do editor via user_id da URL
+            editor_response = supabase_admin.table(get_users_table()).select('*').eq('id', user_id).execute()
+            if not editor_response.data:
+                return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+            
+            editor_user = editor_response.data[0]
+        else:
+            # Usar sessão normal e verificar se user_id é do próprio usuário
+            if 'user' not in session:
+                return jsonify({'success': False, 'message': 'Usuário não autenticado'}), 401
+            
+            editor_user = session['user']
+            # Para segurança, apenas permitir consulta dos próprios usuários em sessão normal
+            if str(editor_user.get('id')) != str(user_id):
+                return jsonify({'success': False, 'message': 'Acesso negado'}), 403
+        
+        # Buscar todos os usuários
+        all_users_response = supabase_admin.table(get_users_table()).select('id, name, email, role, perfil_principal, is_active').execute()
+        
+        if not all_users_response.data:
+            return jsonify({'success': True, 'users': []})
+        
+        # Filtrar usuários que podem ter senha alterada
+        changeable_users = []
+        
+        for user in all_users_response.data:
+            # Não incluir o próprio editor na lista
+            if user.get('id') == editor_user.get('id'):
+                continue
+            
+            if can_change_password(editor_user, user):
+                changeable_users.append({
+                    'id': user.get('id'),
+                    'nome': user.get('name'),  # mapear name -> nome
+                    'email': user.get('email'),
+                    'role': user.get('role'),
+                    'perfil_principal': user.get('perfil_principal'),
+                    'status': user.get('is_active')  # mapear is_active -> status
+                })
+        
+        print(f"[PASSWORD_CHANGE_LIST] Usuário {editor_user.get('email')} pode alterar senha de {len(changeable_users)} usuários")
+        
+        return jsonify({
+            'success': True,
+            'users': changeable_users,
+            'editor': {
+                'id': editor_user.get('id'),
+                'nome': editor_user.get('name', editor_user.get('nome')),  # compatibilidade
+                'email': editor_user.get('email'),
+                'role': editor_user.get('role'),
+                'perfil_principal': editor_user.get('perfil_principal')
+            }
+        })
+        
+    except Exception as e:
+        print(f"[PASSWORD_CHANGE_LIST] ❌ Erro: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Erro interno: {str(e)}'
+        }), 500
