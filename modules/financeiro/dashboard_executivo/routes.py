@@ -370,6 +370,181 @@ def api_saldo_acumulado():
             'error': str(e)
         }), 500
 
+@dashboard_executivo_financeiro_bp.route('/api/faturamento-sunburst')
+@login_required
+@perfil_required('financeiro', 'dashboard_executivo')
+def api_faturamento_sunburst():
+    """API para dados Sunburst: Meta Grupo → Centro de Resultado"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        
+        # Buscar dados usando a view com meta_grupo e classe
+        response_faturamento = supabase_admin.table('vw_fin_faturamento_anual_tratado') \
+            .select('meta_grupo, classe, valor') \
+            .gte('data', f'{ano}-01-01') \
+            .lte('data', f'{ano}-12-31') \
+            .execute()
+        
+        # Estruturar dados para Sunburst
+        sunburst_data = []
+        meta_grupos = {}
+        
+        # Processar dados
+        for item in response_faturamento.data:
+            meta_grupo = item.get('meta_grupo', 'Outros')
+            classe = item.get('classe', 'Sem Classe')
+            valor = float(item.get('valor', 0))
+            
+            # Inicializar meta_grupo se não existe
+            if meta_grupo not in meta_grupos:
+                meta_grupos[meta_grupo] = {
+                    'name': meta_grupo,
+                    'value': 0,
+                    'children': {}
+                }
+            
+            # Adicionar valor ao meta_grupo
+            meta_grupos[meta_grupo]['value'] += valor
+            
+            # Inicializar classe se não existe
+            if classe not in meta_grupos[meta_grupo]['children']:
+                meta_grupos[meta_grupo]['children'][classe] = {
+                    'name': classe,
+                    'value': 0
+                }
+            
+            # Adicionar valor à classe
+            meta_grupos[meta_grupo]['children'][classe]['value'] += valor
+        
+        # Converter para formato esperado pelo Sunburst
+        for meta_grupo, data in meta_grupos.items():
+            children = list(data['children'].values())
+            sunburst_data.append({
+                'name': meta_grupo,
+                'value': data['value'],
+                'children': children
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': sunburst_data
+        })
+        
+    except Exception as e:
+        print(f"[DASHBOARD] Erro na API Sunburst: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@dashboard_executivo_financeiro_bp.route('/api/projecoes-saldo')
+@login_required
+@perfil_required('financeiro', 'dashboard_executivo')
+def api_projecoes_saldo():
+    """API para saldo acumulado com projeções (replicada do fluxo de caixa)"""
+    try:
+        ano = request.args.get('ano', datetime.now().year)
+        ano = int(ano)
+        
+        # API 1: Saldo Acumulado Real (até hoje) - usando mesma lógica do fluxo de caixa
+        table_name = 'vw_fluxo_caixa'
+        
+        # Buscar todos os dados até hoje para calcular saldo acumulado
+        query = supabase_admin.table(table_name).select('data, valor, tipo')
+        query = query.lte('data', datetime.now().strftime('%Y-%m-%d'))
+        query = query.not_.ilike('classe', '%TRANSFERENCIA%')  # Filtro transferências
+        query = query.order('data')
+        response = query.execute()
+        dados = response.data
+        
+        # Recalcular saldo acumulado real
+        saldo_acumulado = 0
+        registros_com_saldo = []
+        
+        for item in dados:
+            valor = float(item['valor']) if item['valor'] else 0
+            saldo_acumulado += valor  # O valor já vem com sinal correto da view
+            
+            registros_com_saldo.append({
+                'data': item['data'],
+                'saldo_calculado': saldo_acumulado
+            })
+        
+        # Agregar por mês para o ano atual (último saldo de cada mês)
+        saldos_mensais = {}
+        for item in registros_com_saldo:
+            data_obj = datetime.strptime(item['data'], '%Y-%m-%d')
+            if data_obj.year == ano:
+                mes_key = data_obj.strftime('%Y-%m')
+                # Manter sempre o último saldo do mês
+                if mes_key not in saldos_mensais or data_obj.day >= saldos_mensais[mes_key]['day']:
+                    saldos_mensais[mes_key] = {
+                        'saldo': item['saldo_calculado'],
+                        'day': data_obj.day
+                    }
+        
+        # Preparar dados reais
+        meses_ordenados = sorted(saldos_mensais.keys())
+        datas_reais = []
+        saldos_reais = []
+        
+        for mes_key in meses_ordenados:
+            data_obj = datetime.strptime(mes_key, '%Y-%m')
+            datas_reais.append(data_obj.strftime('%b/%y'))
+            saldos_reais.append(saldos_mensais[mes_key]['saldo'])
+        
+        # API 2: Projeções Futuras
+        projecoes_query = supabase_admin.table('fin_metas_projecoes') \
+            .select('ano, mes, meta') \
+            .eq('tipo', 'projecao') \
+            .order('ano, mes')
+        projecoes_response = projecoes_query.execute()
+        projecoes_dados = projecoes_response.data
+        
+        # Processar projeções futuras
+        datas_futuras = []
+        saldos_futuros = []
+        
+        # Pegar último saldo real como base
+        ultimo_saldo_real = saldos_reais[-1] if saldos_reais else 0
+        saldo_projetado = ultimo_saldo_real
+        
+        # Agrupar projeções por ano-mês para o futuro
+        mes_atual = datetime.now().month
+        for proj in projecoes_dados:
+            proj_ano = int(proj['ano'])
+            proj_mes = int(proj['mes'])
+            meta = float(proj['meta'])
+            
+            # Só incluir meses futuros
+            if (proj_ano > ano) or (proj_ano == ano and proj_mes > mes_atual):
+                saldo_projetado += meta
+                
+                data_obj = datetime(proj_ano, proj_mes, 1)
+                datas_futuras.append(data_obj.strftime('%b/%y'))
+                saldos_futuros.append(saldo_projetado)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'saldo_real': {
+                    'datas': datas_reais,
+                    'saldos': saldos_reais
+                },
+                'projecao': {
+                    'datas': datas_futuras, 
+                    'saldos': saldos_futuros
+                }
+            }
+        })
+        
+    except Exception as e:
+        print(f"[DASHBOARD] Erro na API Saldo com Projeções: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @dashboard_executivo_financeiro_bp.route('/api/faturamento-setor')
 @login_required
 @perfil_required('financeiro', 'dashboard_executivo')

@@ -520,7 +520,7 @@ import requests
 import json
 
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
-BASE_URL = 'http://localhost:5000'
+BASE_URL = 'http://192.168.0.75:5000'
 headers = {'X-API-Key': API_BYPASS_KEY, 'Content-Type': 'application/json'}
 
 def test_novo_modulo():
