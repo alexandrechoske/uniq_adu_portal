@@ -734,20 +734,26 @@ def api_geral_metas_mensais():
         ano = request.args.get('ano', datetime.now().year)
         empresa = request.args.get('empresa', '')
         
+        print(f"📊 [METAS_MENSAIS] Buscando metas para empresa: {empresa}, ano: {ano}")
+        
         # Determinar tipo de meta baseado na empresa
-        if empresa == 'Unique Consultoria':
+        if empresa in ['consultoria', 'Unique Consultoria']:
             tipo_meta = 'financeiro_consultoria'
-        elif empresa == 'Unique Soluções':
-            tipo_meta = 'financeiro_solucoes'
+        elif empresa in ['imp/exp', 'imp_exp', 'solucoes', 'Unique Soluções']:
+            tipo_meta = 'financeiro_imp_exp'
         else:
             # Para 'ambos' ou empresa não especificada, usar ambos os tipos
             tipo_meta = None
         
+        print(f"📊 [METAS_MENSAIS] Tipo de meta determinado: {tipo_meta}")
+        
         if tipo_meta:
-            # Meta específica (consultoria ou soluções)
+            # Meta específica (consultoria ou imp/exp)
             query = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', tipo_meta).order('mes')
             response = query.execute()
             dados_metas = response.data
+            
+            print(f"📊 [METAS_MENSAIS] Registros encontrados para {tipo_meta}: {len(dados_metas)}")
             
             # Organizar dados por mês
             metas_por_mes = {}
@@ -755,13 +761,17 @@ def api_geral_metas_mensais():
                 mes = int(item.get('mes', 0))
                 meta = float(item.get('meta', 0))
                 metas_por_mes[mes] = meta
+                
         else:
-            # Para 'ambos', somar consultoria + soluções
+            # Para 'ambos', somar consultoria + imp/exp
             query_consultoria = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_consultoria').order('mes')
-            query_solucoes = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_solucoes').order('mes')
+            query_imp_exp = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_imp_exp').order('mes')
             
             response_consultoria = query_consultoria.execute()
-            response_solucoes = query_solucoes.execute()
+            response_imp_exp = query_imp_exp.execute()
+            
+            print(f"📊 [METAS_MENSAIS] Registros consultoria: {len(response_consultoria.data)}")
+            print(f"📊 [METAS_MENSAIS] Registros imp/exp: {len(response_imp_exp.data)}")
             
             # Organizar e somar metas por mês
             metas_por_mes = {}
@@ -772,8 +782,8 @@ def api_geral_metas_mensais():
                 meta = float(item.get('meta', 0))
                 metas_por_mes[mes] = metas_por_mes.get(mes, 0) + meta
             
-            # Adicionar metas de soluções
-            for item in response_solucoes.data:
+            # Adicionar metas de imp/exp
+            for item in response_imp_exp.data:
                 mes = int(item.get('mes', 0))
                 meta = float(item.get('meta', 0))
                 metas_por_mes[mes] = metas_por_mes.get(mes, 0) + meta
@@ -802,7 +812,7 @@ def api_geral_metas_mensais():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_aderencia_meta():
-    """API para calcular aderência à meta dinâmica baseada no filtro de empresa (consultoria ou soluções)"""
+    """API para calcular aderência à meta dinâmica baseada no filtro de empresa (consultoria ou imp/exp)"""
     try:
         empresa = request.args.get('empresa', 'ambos')
         ano = request.args.get('ano', datetime.now().year)
@@ -812,39 +822,49 @@ def api_geral_aderencia_meta():
         # Determinar tipo de meta baseado na empresa
         if empresa in ['consultoria', 'Unique Consultoria']:
             tipo_meta = 'financeiro_consultoria'
-            empresa_filtro = 'Unique Consultoria'
-        elif empresa in ['solucoes', 'Unique Soluções']:
-            tipo_meta = 'financeiro_solucoes'
-            empresa_filtro = 'Unique Soluções'
+            meta_grupo_filtro = 'Consultoria'
+        elif empresa in ['imp/exp', 'imp_exp', 'solucoes', 'Unique Soluções']:
+            tipo_meta = 'financeiro_imp_exp'
+            meta_grupo_filtro = 'IMP/EXP'
         else:
             # Para 'ambos', usar ambos os tipos e somar
             tipo_meta = None
-            empresa_filtro = None
+            meta_grupo_filtro = None
         
         # Obter mês atual para calcular período acumulado
         mes_atual = datetime.now().month
         
-        # 1. Buscar metas do ano até o mês atual
+        # 1. Buscar metas do ano completo (12 meses) para comparação
         if tipo_meta:
-            # Meta específica (consultoria ou soluções)
-            query_meta = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', tipo_meta).lte('mes', f'{mes_atual:02d}')
+            # Meta específica (consultoria ou imp/exp) - ano completo
+            query_meta = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', tipo_meta)
             response_meta = query_meta.execute()
             dados_metas = response_meta.data
             
-            meta_acumulada = sum(float(item.get('meta', 0)) for item in dados_metas)
+            meta_anual_total = sum(float(item.get('meta', 0)) for item in dados_metas)
+            
+            # Meta acumulada até o mês atual (para cálculo de aderência)
+            meta_acumulada = sum(float(item.get('meta', 0)) for item in dados_metas if int(item.get('mes', 0)) <= mes_atual)
             
         else:
-            # Para 'ambos', somar consultoria + soluções
-            query_consultoria = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_consultoria').lte('mes', f'{mes_atual:02d}')
-            query_solucoes = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_solucoes').lte('mes', f'{mes_atual:02d}')
+            # Para 'ambos', somar consultoria + imp/exp - ano completo
+            query_consultoria = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_consultoria')
+            query_imp_exp = supabase_admin.table('fin_metas_projecoes').select('mes, meta').eq('ano', str(ano)).eq('tipo', 'financeiro_imp_exp')
             
             response_consultoria = query_consultoria.execute()
-            response_solucoes = query_solucoes.execute()
+            response_imp_exp = query_imp_exp.execute()
             
-            meta_consultoria = sum(float(item.get('meta', 0)) for item in response_consultoria.data)
-            meta_solucoes = sum(float(item.get('meta', 0)) for item in response_solucoes.data)
-            meta_acumulada = meta_consultoria + meta_solucoes
+            # Total anual
+            meta_consultoria_anual = sum(float(item.get('meta', 0)) for item in response_consultoria.data)
+            meta_imp_exp_anual = sum(float(item.get('meta', 0)) for item in response_imp_exp.data)
+            meta_anual_total = meta_consultoria_anual + meta_imp_exp_anual
+            
+            # Acumulado até mês atual
+            meta_consultoria_acumulada = sum(float(item.get('meta', 0)) for item in response_consultoria.data if int(item.get('mes', 0)) <= mes_atual)
+            meta_imp_exp_acumulada = sum(float(item.get('meta', 0)) for item in response_imp_exp.data if int(item.get('mes', 0)) <= mes_atual)
+            meta_acumulada = meta_consultoria_acumulada + meta_imp_exp_acumulada
         
+        print(f"🎯 [ADERENCIA_META] Meta anual total: R$ {meta_anual_total:,.2f}")
         print(f"🎯 [ADERENCIA_META] Meta acumulada até mês {mes_atual}: R$ {meta_acumulada:,.2f}")
         
         # 2. Buscar faturamento realizado do ano até o mês atual
@@ -852,11 +872,12 @@ def api_geral_aderencia_meta():
         ultimo_dia_mes = calendar.monthrange(int(ano), mes_atual)[1]
         data_fim = f'{ano}-{mes_atual:02d}-{ultimo_dia_mes:02d}'
         
-        query_faturamento = supabase_admin.table('fin_faturamento_anual').select('valor, data, empresa').gte('data', f'{ano}-01-01').lte('data', data_fim)
+        # Usar a view atualizada com meta_grupo
+        query_faturamento = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor, data, meta_grupo').gte('data', f'{ano}-01-01').lte('data', data_fim)
         
-        # Aplicar filtro de empresa se não for 'ambos'
-        if empresa_filtro:
-            query_faturamento = query_faturamento.eq('empresa', empresa_filtro)
+        # Aplicar filtro de meta_grupo se não for 'ambos'
+        if meta_grupo_filtro:
+            query_faturamento = query_faturamento.eq('meta_grupo', meta_grupo_filtro)
             
         response_faturamento = query_faturamento.execute()
         dados_faturamento = response_faturamento.data
@@ -880,6 +901,7 @@ def api_geral_aderencia_meta():
         return jsonify({
             'success': True,
             'data': {
+                'meta_anual_total': meta_anual_total,
                 'meta_acumulada': meta_acumulada,
                 'faturamento_acumulado': realizado_acumulado,
                 'aderencia_percentual': aderencia_percentual,

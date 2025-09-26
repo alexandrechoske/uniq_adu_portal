@@ -485,15 +485,16 @@ class FaturamentoControllerNovo {
                 const dados = aderenciaJson.data;
                 const aderencia = dados.aderencia_percentual;
                 const status = dados.status;
-                const metaAcumulada = dados.meta_acumulada;
+                // Usar meta anual total para exibir no card (não a acumulada)
+                const metaAnualTotal = dados.meta_anual_total;
                 const faturamentoAcumulado = dados.faturamento_acumulado;
                 
                 // Atualizar KPI com valor formatado
                 const texto = `${aderencia.toFixed(1)}%`;
                 this.atualizarElemento('kpi-aderencia-meta', texto);
                 
-                // Atualizar contexto com valores da meta e realizado
-                const metaFormatada = this.formatarMoeda(metaAcumulada);
+                // Atualizar contexto com valores da meta anual total e realizado
+                const metaFormatada = this.formatarMoeda(metaAnualTotal);
                 const realizadoFormatado = this.formatarMoeda(faturamentoAcumulado);
                 const contextoTexto = `Meta: ${metaFormatada} | Realizado: ${realizadoFormatado}`;
                 this.atualizarElemento('kpi-aderencia-meta-contexto', contextoTexto);
@@ -514,11 +515,11 @@ class FaturamentoControllerNovo {
                     }
                 }
                 
-                console.log(`🎯 Aderência Meta (${empresaSelecionada}): Realizado ${dados.faturamento_acumulado} / Meta ${dados.meta_acumulada} = ${texto} (${status})`);
+                console.log(`🎯 Aderência Meta (${empresaSelecionada}): Realizado ${dados.faturamento_acumulado} / Meta Anual ${dados.meta_anual_total} = ${texto} (${status})`);
             } else {
                 // Fallback para exibir N/A em caso de erro
                 this.atualizarElemento('kpi-aderencia-meta', 'N/A');
-                this.atualizarElemento('kpi-aderencia-meta-contexto', 'Realizado vs Meta acumulada');
+                this.atualizarElemento('kpi-aderencia-meta-contexto', 'Realizado vs Meta anual');
                 const cardElement = document.getElementById('kpi-aderencia-meta-card');
                 if (cardElement) {
                     cardElement.classList.remove('positive', 'negative', 'neutral');
