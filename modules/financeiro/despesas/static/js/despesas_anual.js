@@ -22,7 +22,7 @@ class DespesasController {
         this.currentCategoriaDrill = null;
         this.currentPage = 1;
         this.pageLimit = 25;
-        this.currentMode = 'centro_resultado'; // 'centro_resultado' ou 'categoria'
+        this.currentMode = 'categoria'; // Para o modal de detalhes
         
         // Armazenar instâncias dos gráficos
         this.charts = {};
@@ -106,17 +106,10 @@ class DespesasController {
         $('#apply-filters').on('click', () => this.applyFilters());
         $('#clear-filters').on('click', () => this.resetFilters());
         
-        // Alternar modo entre categoria e centro de resultado
+        // Alternar modo entre categoria e centro de resultado (para gráficos)
         $('input[name="chart-mode"]').on('change', (e) => {
             this.currentMode = e.target.value;
-            this.updateChartTitle();
-            this.loadCategoriasData();
-        });
-        
-        $('input[name="table-mode"]').on('change', (e) => {
-            this.currentMode = e.target.value;
-            this.updateTableTitle();
-            this.loadCategoriasData();
+            this.loadCategoriaData(); // Recarregar dados de categoria para o gráfico
         });
         
         // Modal de detalhes
@@ -185,26 +178,6 @@ class DespesasController {
         });
     }
     
-    updateChartTitle() {
-        const title = this.currentMode === 'centro_resultado' ? 
-            'Despesas por Centro de Resultado' : 
-            'Despesas por Categoria';
-        $('#chart-title').text(title);
-    }
-    
-    updateTableTitle() {
-        const title = this.currentMode === 'centro_resultado' ? 
-            'Análise por Centro de Resultado' : 
-            'Análise por Categoria';
-        $('#table-title').text(title);
-        
-        // Atualizar cabeçalho da coluna
-        const headerText = this.currentMode === 'centro_resultado' ? 
-            'Centro de Resultado' : 
-            'Categoria';
-        $('#col-header-name').text(headerText);
-    }
-    
     showLoading() {
         $('#loading-overlay').fadeIn(300);
     }
@@ -219,9 +192,10 @@ class DespesasController {
         try {
             await Promise.all([
                 this.loadKPIs(),
-                this.loadCategoriasData(),
+                this.loadCentroResultadoData(),
+                this.loadCategoriaData(),
                 this.loadTendencias(),
-                this.loadFornecedores()
+                this.loadFornecedores() // Manter para compatibilidade, mas não será usado na UI
             ]);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
@@ -254,12 +228,8 @@ class DespesasController {
         }
     }
     
-    async loadCategoriasData() {
+    async loadCentroResultadoData() {
         try {
-            const endpoint = this.currentMode === 'centro_resultado' ? 
-                '/financeiro/despesas/api/centro-resultado' : 
-                '/financeiro/despesas/api/categorias';
-            
             const params = new URLSearchParams({
                 periodo: this.currentPeriodo,
                 centro_resultado: this.currentCentroResultado,
@@ -267,18 +237,41 @@ class DespesasController {
                 classe: this.currentClasse
             });
             
-            const response = await fetch(`${endpoint}?${params}`);
+            const response = await fetch(`/financeiro/despesas/api/centro-resultado?${params}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.updateCentroResultadoTable(result.data);
+            } else {
+                throw new Error(result.error || 'Erro ao carregar dados de centro de resultado');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar centro de resultado:', error);
+            this.showError('Erro ao carregar dados de centro de resultado');
+        }
+    }
+    
+    async loadCategoriaData() {
+        try {
+            const params = new URLSearchParams({
+                periodo: this.currentPeriodo,
+                centro_resultado: this.currentCentroResultado,
+                categoria: this.currentCategoria,
+                classe: this.currentClasse
+            });
+            
+            const response = await fetch(`/financeiro/despesas/api/categorias?${params}`);
             const result = await response.json();
             
             if (result.success) {
                 this.updateCategoriasChart(result.data);
-                this.updateCategoriasTable(result.data);
+                this.updateCategoriaTable(result.data);
             } else {
-                throw new Error(result.error || 'Erro ao carregar dados de categorias');
+                throw new Error(result.error || 'Erro ao carregar dados de categoria');
             }
         } catch (error) {
-            console.error('Erro ao carregar categorias:', error);
-            this.showError('Erro ao carregar análise por categoria/centro de resultado');
+            console.error('Erro ao carregar categoria:', error);
+            this.showError('Erro ao carregar dados de categoria');
         }
     }
     
@@ -366,11 +359,7 @@ class DespesasController {
             this.charts.categorias.destroy();
         }
         
-        const labels = data.map(item => 
-            this.currentMode === 'centro_resultado' ? 
-                (item.centro_resultado || 'Não informado') : 
-                (item.categoria || 'Não informado')
-        );
+        const labels = data.map(item => item.categoria || 'Não informado');
         const valores = data.map(item => item.valor);
         
         this.charts.categorias = new Chart(ctx, {
@@ -393,7 +382,7 @@ class DespesasController {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const label = labels[index];
-                        this.openDetalhesModal(label);
+                        this.openDetalhesModal(label, 'categoria');
                     }
                 },
                 plugins: {
@@ -464,14 +453,12 @@ class DespesasController {
         });
     }
     
-    updateCategoriasTable(data) {
-        const tbody = $('#table-categorias tbody');
+    updateCentroResultadoTable(data) {
+        const tbody = $('#table-centro-resultado tbody');
         tbody.empty();
         
         data.forEach(item => {
-            const nome = this.currentMode === 'centro_resultado' ? 
-                (item.centro_resultado || 'Não informado') : 
-                (item.categoria || 'Não informado');
+            const nome = item.centro_resultado || 'Não informado';
             
             const row = `
                 <tr>
@@ -479,7 +466,31 @@ class DespesasController {
                     <td>${formatCurrency(item.valor)}</td>
                     <td>${formatPercentage(item.percentual)}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="window.despesasController.openDetalhesModal('${nome}')">
+                        <button class="btn btn-sm btn-primary" onclick="window.despesasController.openDetalhesModal('${nome}', 'centro_resultado')">
+                            <i class="mdi mdi-eye"></i>
+                            Ver Detalhes
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+    
+    updateCategoriaTable(data) {
+        const tbody = $('#table-categoria tbody');
+        tbody.empty();
+        
+        data.forEach(item => {
+            const nome = item.categoria || 'Não informado';
+            
+            const row = `
+                <tr>
+                    <td>${nome}</td>
+                    <td>${formatCurrency(item.valor)}</td>
+                    <td>${formatPercentage(item.percentual)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="window.despesasController.openDetalhesModal('${nome}', 'categoria')">
                             <i class="mdi mdi-eye"></i>
                             Ver Detalhes
                         </button>
@@ -616,8 +627,9 @@ class DespesasController {
     }
     
     // Continua com os métodos restantes...
-    async openDetalhesModal(categoria) {
+    async openDetalhesModal(categoria, tipo = 'categoria') {
         this.currentCategoriaDrill = categoria;
+        this.currentDrillTipo = tipo; // 'categoria' ou 'centro_resultado'
         this.currentPage = 1;
         
         $('#modal-categoria-selecionada').text(categoria);
@@ -634,8 +646,8 @@ class DespesasController {
                 limit: this.pageLimit
             });
             
-            // Adicionar parâmetro para indicar que estamos filtrando por centro de resultado
-            if (this.currentMode === 'centro_resultado') {
+            // Adicionar parâmetro para indicar o tipo de filtro
+            if (this.currentDrillTipo === 'centro_resultado') {
                 params.append('centro_resultado', 'true');
             }
             

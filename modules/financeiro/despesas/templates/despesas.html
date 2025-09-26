@@ -151,30 +151,20 @@
     
     <!-- Seção de Tabelas -->
     <div class="tables-section">
-        <!-- Tabela de Análise por Categoria/Centro de Resultado (única, sem drill-down inline) -->
+        <!-- Tabela de Análise por Centro de Resultado -->
         <div class="table-container">
             <div class="table-header">
                 <h3>
-                    <i class="mdi mdi-table"></i>
-                    <span id="table-title">Análise por Centro de Resultado</span>
+                    <i class="mdi mdi-office-building"></i>
+                    Análise por Centro de Resultado
                 </h3>
-                <div class="table-mode-toggle">
-                    <label class="toggle-label">
-                        <input type="radio" name="table-mode" value="centro_resultado" checked>
-                        Centro de Resultado
-                    </label>
-                    <label class="toggle-label">
-                        <input type="radio" name="table-mode" value="categoria">
-                        Categoria
-                    </label>
-                </div>
             </div>
             <div class="table-content">
                 <div class="enhanced-table-container">
-                    <table id="table-categorias" class="enhanced-table">
+                    <table id="table-centro-resultado" class="enhanced-table">
                         <thead>
                             <tr>
-                                <th id="col-header-name">Centro de Resultado</th>
+                                <th>Centro de Resultado</th>
                                 <th>Valor</th>
                                 <th>% do Total</th>
                                 <th>Ações</th>
@@ -188,23 +178,23 @@
             </div>
         </div>
         
-        <!-- Ranking de Fornecedores -->
+        <!-- Tabela de Análise por Categoria -->
         <div class="table-container">
             <div class="table-header">
                 <h3>
-                    <i class="mdi mdi-trophy"></i>
-                    Top 10 Maiores Despesas por Descrição
+                    <i class="mdi mdi-tag-multiple"></i>
+                    Análise por Categoria
                 </h3>
             </div>
             <div class="table-content">
                 <div class="enhanced-table-container">
-                    <table id="table-fornecedores" class="enhanced-table">
+                    <table id="table-categoria" class="enhanced-table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Descrição</th>
-                                <th>Valor Total</th>
+                                <th>Categoria</th>
+                                <th>Valor</th>
                                 <th>% do Total</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
