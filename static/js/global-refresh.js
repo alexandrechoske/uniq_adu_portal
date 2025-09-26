@@ -14,13 +14,13 @@
     // Variáveis privadas do namespace
     let refreshInterval = null;
     let countdownInterval = null;
-    let countdown = 60; // 60 segundos
+    let countdown = 600; // 10 minutos (600 segundos)
     let isRefreshing = false;
     let lastUpdateTime = null;
 
     // Configuração do sistema
     const CONFIG = {
-        REFRESH_INTERVAL: 60, // 60 segundos
+        REFRESH_INTERVAL: 600, // 10 minutos (600 segundos)
         CHECK_SESSION_ENDPOINT: '/paginas/check-session',
         GLOBAL_DATA_ENDPOINT: '/api/global-data'
     };
@@ -195,6 +195,25 @@
         }, 5000);
     }
 
+    // Função helper para formatar o countdown
+    function formatCountdown(seconds) {
+        if (seconds >= 60) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        } else {
+            return `${seconds}s`;
+        }
+    }
+
+    // Função para atualizar o display do countdown
+    function updateCountdownDisplay() {
+        const countdownElement = document.querySelector('[data-global-countdown]');
+        if (countdownElement) {
+            countdownElement.textContent = formatCountdown(countdown);
+        }
+    }
+
     // Função para iniciar o contador regressivo
     function startCountdown() {
         const countdownElement = document.querySelector('[data-global-countdown]');
@@ -203,7 +222,8 @@
             countdown--;
             
             if (countdownElement) {
-                countdownElement.textContent = countdown;
+                // Usar a função helper para formatar
+                countdownElement.textContent = formatCountdown(countdown);
             }
             
             if (countdown <= 0) {
@@ -329,6 +349,7 @@
                 
                 // Resetar countdown
                 countdown = CONFIG.REFRESH_INTERVAL;
+                updateCountdownDisplay(); // Atualizar display após reset
                 
                 // Emitir evento para páginas específicas
                 const refreshEvent = new CustomEvent('globalDataForceRefresh', {
@@ -390,6 +411,7 @@
         
         // Iniciar contador
         countdown = CONFIG.REFRESH_INTERVAL;
+        updateCountdownDisplay(); // Atualizar display inicial
         startCountdown();
         
         console.log('[GlobalRefresh] Sistema de refresh global iniciado');

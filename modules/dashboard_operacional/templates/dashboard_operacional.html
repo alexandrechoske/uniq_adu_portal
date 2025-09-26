@@ -45,6 +45,17 @@
             </div>
         </div>
         <div class="actions-right">
+            <!-- Auto-refresh Status -->
+            <div id="auto-refresh-status" class="auto-refresh-status">
+                <div class="refresh-indicator">
+                    <i class="mdi mdi-refresh" id="refresh-icon"></i>
+                    <span id="refresh-text">Próxima atualização em <span id="countdown">10:00</span></span>
+                </div>
+                <button id="manual-refresh" class="btn btn-outline-light btn-sm" title="Atualizar agora">
+                    <i class="mdi mdi-refresh"></i>
+                </button>
+            </div>
+            
             <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
                 Remover Filtros

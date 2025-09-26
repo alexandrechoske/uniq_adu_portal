@@ -27,13 +27,13 @@
                         <i class="mdi mdi-domain"></i>
                         Ambos
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn" data-empresa="Unique Consultoria">
+                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn" data-empresa="consultoria">
                         <i class="mdi mdi-account-supervisor"></i>
                         Consultoria
                     </button>
-                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn" data-empresa="Unique Soluções">
+                    <button type="button" class="btn btn-outline-primary btn-sm empresa-filter-btn" data-empresa="imp/exp">
                         <i class="mdi mdi-truck"></i>
-                        Soluções
+                        IMP/EXP
                     </button>
                 </div>
             </div>
@@ -185,40 +185,41 @@
             </div>
         </div>
         
-        <!-- Segunda linha - Gráficos de Rosca e Tabela de Clientes -->
-        <div class="charts-grid-three-cols">
-            <!-- Gráfico de Rosca - Centro de Resultado -->
-            <div class="chart-container" id="centro-resultado-container">
+        <!-- Segunda linha - Gráfico Hierárquico e Tabela de Clientes -->
+        <div class="charts-grid-two-cols">
+            <!-- Gráfico de Barras Hierárquico -->
+            <div class="chart-container-wide">
                 <div class="chart-header">
                     <h3 class="chart-title">
-                        <i class="mdi mdi-chart-donut"></i>
-                        <span id="centro-resultado-title">Centro de Resultado</span>
+                        <i class="mdi mdi-chart-bar"></i>
+                        <span id="hierarquico-chart-title">Análise Hierárquica - Meta Grupo</span>
                     </h3>
-                    <div class="chart-actions">
-                        <button id="centro-resultado-voltar" class="btn btn-sm btn-outline-secondary" style="display: none;">
+                    <div class="chart-controls">
+                        <button id="hierarquico-voltar" class="btn btn-sm btn-outline-secondary" style="display: none;">
                             <i class="mdi mdi-arrow-left"></i>
                             Voltar
+                        </button>
+                        <button id="hierarquico-reset" class="btn btn-sm btn-outline-primary" style="display: none;">
+                            <i class="mdi mdi-home"></i>
+                            Início
                         </button>
                     </div>
                 </div>
                 <div class="chart-content">
-                    <p id="centro-resultado-info" class="text-muted mb-2" style="font-size: 0.875rem;">
-                        💡 Clique em uma fatia do gráfico para ver mais detalhes
+                    <p id="hierarquico-info" class="text-muted mb-2" style="font-size: 0.875rem;">
+                        💡 Clique em uma barra para fazer drill-down: Meta Grupo → Centro de Resultado → Categoria → Classe
                     </p>
-                    <canvas id="centro-resultado-chart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Gráfico de Rosca - Categoria -->
-            <div class="chart-container" id="categoria-operacao-container">
-                <div class="chart-header">
-                    <h3 class="chart-title">
-                        <i class="mdi mdi-chart-pie"></i>
-                        Categoria
-                    </h3>
-                </div>
-                <div class="chart-content">
-                    <canvas id="categoria-operacao-chart"></canvas>
+                    <div id="hierarquico-breadcrumb" class="breadcrumb-container mb-3" style="display: none;">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="#" id="breadcrumb-meta-grupo">Meta Grupo</a></li>
+                                <li class="breadcrumb-item" id="breadcrumb-centro" style="display: none;"><a href="#"></a></li>
+                                <li class="breadcrumb-item" id="breadcrumb-categoria" style="display: none;"><a href="#"></a></li>
+                                <li class="breadcrumb-item active" id="breadcrumb-atual" aria-current="page">Meta Grupo</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <canvas id="hierarquico-chart" style="height: 400px;"></canvas>
                 </div>
             </div>
             

@@ -1175,7 +1175,7 @@
     color: #198754;
 }
 
-.mini-gauge-container[data-meta="importacao"] .mini-gauge-percentage {
+.mini-gauge-container[data-meta="imp_exp"] .mini-gauge-percentage {
     color: #fd7e14;
 }
 

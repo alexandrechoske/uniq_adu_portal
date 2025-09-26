@@ -160,11 +160,11 @@ class FaturamentoControllerNovo {
                 case 'ambos':
                     texto = 'Vendo dados de ambas as empresas';
                     break;
-                case 'Unique Consultoria':
-                    texto = 'Vendo dados da Unique Consultoria';
+                case 'consultoria':
+                    texto = 'Vendo dados da Consultoria';
                     break;
-                case 'Unique Soluções':
-                    texto = 'Vendo dados da Unique Soluções';
+                case 'imp/exp':
+                    texto = 'Vendo dados de IMP/EXP';
                     break;
                 default:
                     texto = `Vendo dados de ${empresa}`;
@@ -275,8 +275,7 @@ class FaturamentoControllerNovo {
             await Promise.all([
                 this.carregarKPIs(),
                 this.carregarGraficoComparativo(),
-                this.carregarGraficoCentroResultado(),
-                this.carregarGraficoCategoriaOperacao(),
+                this.setupGraficoHierarquico(),  // Substituindo os antigos gráficos de rosca
                 this.carregarTopClientes(),
                 this.carregarTabelaComparativa()
             ]);
@@ -485,15 +484,16 @@ class FaturamentoControllerNovo {
                 const dados = aderenciaJson.data;
                 const aderencia = dados.aderencia_percentual;
                 const status = dados.status;
-                const metaAcumulada = dados.meta_acumulada;
+                // Usar meta anual total para exibir no card (não a acumulada)
+                const metaAnualTotal = dados.meta_anual_total;
                 const faturamentoAcumulado = dados.faturamento_acumulado;
                 
                 // Atualizar KPI com valor formatado
                 const texto = `${aderencia.toFixed(1)}%`;
                 this.atualizarElemento('kpi-aderencia-meta', texto);
                 
-                // Atualizar contexto com valores da meta e realizado
-                const metaFormatada = this.formatarMoeda(metaAcumulada);
+                // Atualizar contexto com valores da meta anual total e realizado
+                const metaFormatada = this.formatarMoeda(metaAnualTotal);
                 const realizadoFormatado = this.formatarMoeda(faturamentoAcumulado);
                 const contextoTexto = `Meta: ${metaFormatada} | Realizado: ${realizadoFormatado}`;
                 this.atualizarElemento('kpi-aderencia-meta-contexto', contextoTexto);
@@ -514,11 +514,11 @@ class FaturamentoControllerNovo {
                     }
                 }
                 
-                console.log(`🎯 Aderência Meta (${empresaSelecionada}): Realizado ${dados.faturamento_acumulado} / Meta ${dados.meta_acumulada} = ${texto} (${status})`);
+                console.log(`🎯 Aderência Meta (${empresaSelecionada}): Realizado ${dados.faturamento_acumulado} / Meta Anual ${dados.meta_anual_total} = ${texto} (${status})`);
             } else {
                 // Fallback para exibir N/A em caso de erro
                 this.atualizarElemento('kpi-aderencia-meta', 'N/A');
-                this.atualizarElemento('kpi-aderencia-meta-contexto', 'Realizado vs Meta acumulada');
+                this.atualizarElemento('kpi-aderencia-meta-contexto', 'Realizado vs Meta anual');
                 const cardElement = document.getElementById('kpi-aderencia-meta-card');
                 if (cardElement) {
                     cardElement.classList.remove('positive', 'negative', 'neutral');
@@ -1906,6 +1906,277 @@ class FaturamentoControllerNovo {
         
         console.error('❌ Erro exibido na interface do setor');
     }
+
+    // ===============================
+    // GRÁFICO HIERÁRQUICO (NOVO)
+    // ===============================
+    
+    async setupGraficoHierarquico() {
+        console.log('🌳 Configurando gráfico hierárquico...');
+        
+        // Estado do gráfico hierárquico
+        this.estadoHierarquico = {
+            nivel: 'meta_grupo',
+            parent: '',
+            historico: []
+        };
+        
+        // Configurar botões
+        const botaoVoltar = document.getElementById('hierarquico-voltar');
+        const botaoReset = document.getElementById('hierarquico-reset');
+        
+        if (botaoVoltar) {
+            botaoVoltar.addEventListener('click', () => this.voltarNivelHierarquico());
+        }
+        
+        if (botaoReset) {
+            botaoReset.addEventListener('click', () => this.resetHierarquico());
+        }
+        
+        // Carregar dados iniciais
+        await this.carregarDadosHierarquicos();
+    }
+    
+    async carregarDadosHierarquicos() {
+        try {
+            const params = new URLSearchParams({
+                nivel: this.estadoHierarquico.nivel,
+                parent: this.estadoHierarquico.parent,
+                empresa: this.empresaAtual,
+                start_date: `${this.currentAno}-01-01`,
+                end_date: `${this.currentAno}-12-31`
+            });
+            
+            const response = await fetch(`/financeiro/faturamento/api/geral/dados_hierarquicos?${params}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderizarGraficoHierarquico(data);
+                this.atualizarBreadcrumbHierarquico();
+            } else {
+                console.error('Erro ao carregar dados hierárquicos:', data.error);
+            }
+            
+        } catch (error) {
+            console.error('Erro na requisição hierárquica:', error);
+        }
+    }
+    
+    renderizarGraficoHierarquico(data) {
+        const ctx = document.getElementById('hierarquico-chart');
+        if (!ctx) return;
+        
+        // Destruir gráfico existente
+        if (this.charts.hierarquico) {
+            this.charts.hierarquico.destroy();
+        }
+        
+        const items = data.data || [];
+        const labels = items.map(item => item.nome);
+        const valores = items.map(item => item.valor);
+        const percentuais = items.map(item => item.percentual);
+        
+        // Cores dinâmicas baseadas no nível
+        const cores = this.gerarCoresHierarquicas(items.length);
+        
+        this.charts.hierarquico = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Valor (R$)',
+                    data: valores,
+                    backgroundColor: cores,
+                    borderColor: cores.map(cor => cor.replace('0.8', '1')),
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    datalabels: {
+                        display: true,
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: (value, context) => {
+                            const percentual = percentuais[context.dataIndex];
+                            return `R$ ${this.formatarMoedaCompacta(value)}\n(${percentual.toFixed(1)}%)`;
+                        },
+                        font: {
+                            weight: 'bold',
+                            size: 11
+                        },
+                        color: '#333'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const valor = context.parsed.y;
+                                const percentual = percentuais[context.dataIndex];
+                                return `Valor: R$ ${this.formatarMoedaCompacta(valor)} (${percentual.toFixed(1)}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => `R$ ${this.formatarMoedaCompacta(value)}`
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const item = items[index];
+                        
+                        // Fazer drill-down se o item tem filhos
+                        if (item.tem_filhos) {
+                            this.drillDownHierarquico(item.nome);
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+        
+        // Atualizar título
+        this.atualizarTituloHierarquico();
+    }
+    
+    gerarCoresHierarquicas(quantidade) {
+        const coresPrimarias = [
+            'rgba(0, 123, 255, 0.8)',     // Azul
+            'rgba(40, 167, 69, 0.8)',     // Verde
+            'rgba(220, 53, 69, 0.8)',     // Vermelho
+            'rgba(255, 193, 7, 0.8)',     // Amarelo
+            'rgba(108, 117, 125, 0.8)',   // Cinza
+            'rgba(23, 162, 184, 0.8)',    // Ciano
+            'rgba(102, 16, 242, 0.8)',    // Roxo
+            'rgba(233, 30, 99, 0.8)',     // Rosa
+        ];
+        
+        const cores = [];
+        for (let i = 0; i < quantidade; i++) {
+            cores.push(coresPrimarias[i % coresPrimarias.length]);
+        }
+        
+        return cores;
+    }
+    
+    drillDownHierarquico(valorSelecionado) {
+        // Salvar estado atual no histórico
+        this.estadoHierarquico.historico.push({
+            nivel: this.estadoHierarquico.nivel,
+            parent: this.estadoHierarquico.parent
+        });
+        
+        // Determinar próximo nível
+        const proximoNivel = this.getProximoNivel(this.estadoHierarquico.nivel);
+        
+        if (proximoNivel) {
+            this.estadoHierarquico.nivel = proximoNivel;
+            this.estadoHierarquico.parent = valorSelecionado;
+            
+            // Carregar dados do novo nível
+            this.carregarDadosHierarquicos();
+            
+            // Mostrar botões de navegação
+            this.mostrarBotoesNavegacao();
+        }
+    }
+    
+    voltarNivelHierarquico() {
+        if (this.estadoHierarquico.historico.length > 0) {
+            const estadoAnterior = this.estadoHierarquico.historico.pop();
+            this.estadoHierarquico.nivel = estadoAnterior.nivel;
+            this.estadoHierarquico.parent = estadoAnterior.parent;
+            
+            this.carregarDadosHierarquicos();
+            
+            // Esconder botões se voltou ao início
+            if (this.estadoHierarquico.historico.length === 0) {
+                this.esconderBotoesNavegacao();
+            }
+        }
+    }
+    
+    resetHierarquico() {
+        this.estadoHierarquico = {
+            nivel: 'meta_grupo',
+            parent: '',
+            historico: []
+        };
+        
+        this.carregarDadosHierarquicos();
+        this.esconderBotoesNavegacao();
+    }
+    
+    getProximoNivel(nivelAtual) {
+        const sequencia = ['meta_grupo', 'centro_resultado', 'categoria', 'classe'];
+        const indiceAtual = sequencia.indexOf(nivelAtual);
+        
+        if (indiceAtual < sequencia.length - 1) {
+            return sequencia[indiceAtual + 1];
+        }
+        
+        return null; // Já está no último nível
+    }
+    
+    atualizarTituloHierarquico() {
+        const elemento = document.getElementById('hierarquico-chart-title');
+        if (!elemento) return;
+        
+        const titulos = {
+            'meta_grupo': 'Análise Hierárquica - Meta Grupo',
+            'centro_resultado': 'Análise Hierárquica - Centro de Resultado',
+            'categoria': 'Análise Hierárquica - Categoria',
+            'classe': 'Análise Hierárquica - Classe'
+        };
+        
+        elemento.textContent = titulos[this.estadoHierarquico.nivel] || 'Análise Hierárquica';
+    }
+    
+    atualizarBreadcrumbHierarquico() {
+        const breadcrumb = document.getElementById('hierarquico-breadcrumb');
+        if (!breadcrumb) return;
+        
+        if (this.estadoHierarquico.historico.length === 0) {
+            breadcrumb.style.display = 'none';
+        } else {
+            breadcrumb.style.display = 'block';
+            // Aqui você pode implementar a lógica do breadcrumb
+        }
+    }
+    
+    mostrarBotoesNavegacao() {
+        const botaoVoltar = document.getElementById('hierarquico-voltar');
+        const botaoReset = document.getElementById('hierarquico-reset');
+        
+        if (botaoVoltar) botaoVoltar.style.display = 'inline-block';
+        if (botaoReset) botaoReset.style.display = 'inline-block';
+    }
+    
+    esconderBotoesNavegacao() {
+        const botaoVoltar = document.getElementById('hierarquico-voltar');
+        const botaoReset = document.getElementById('hierarquico-reset');
+        
+        if (botaoVoltar) botaoVoltar.style.display = 'none';
+        if (botaoReset) botaoReset.style.display = 'none';
+    }
 }
 
 // Inicializar quando o DOM estiver pronto
@@ -1923,14 +2194,14 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('⚠️ Botão voltar não encontrado');
     }
 
-    // Verificar se os novos elementos existem antes de inicializar
-    if (document.getElementById('year-toggles') || 
-        document.getElementById('grafico-comparativo-anos') ||
-        document.getElementById('centro-resultado-chart')) {
+    // Verificar se os elementos dos gráficos existem antes de inicializar
+    if (document.getElementById('hierarquico-chart') || 
+        document.getElementById('comparativo-chart') ||
+        document.getElementById('resumo-mensal')) {
         
-        console.log('Detectados novos componentes - inicializando FaturamentoControllerNovo');
+        console.log('Detectados componentes dos gráficos - inicializando FaturamentoControllerNovo');
         window.faturamentoNovo = new FaturamentoControllerNovo();
     } else {
-        console.log('Componentes antigos detectados - mantendo FaturamentoController original');
+        console.log('Componentes dos gráficos não encontrados - verificando inicialização');
     }
 });

@@ -853,3 +853,14 @@
 .ano-data {
     transition: all 0.3s ease;
 }
+
+/* Estilos para valores positivos e negativos */
+.valor-positivo {
+    color: #28a745 !important; /* Verde */
+    font-weight: 600;
+}
+
+.valor-negativo {
+    color: #dc3545 !important; /* Vermelho */
+    font-weight: 600;
+}

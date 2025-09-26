@@ -185,11 +185,6 @@
                             <i class="mdi mdi-chart-bar"></i>
                             Faturamento Mensal vs. Ano Anterior
                         </h4>
-                        <div class="chart-actions">
-                            <button class="chart-action-btn" id="toggle-faturamento-view" title="Alternar visualização">
-                                <i class="mdi mdi-swap-horizontal"></i>
-                            </button>
-                        </div>
                     </div>
                     <div class="chart-content">
                         <canvas id="chart-faturamento-mensal"></canvas>
@@ -221,7 +216,7 @@
                         </div>
                     </div>
                     <div class="chart-content">
-                        <canvas id="chart-faturamento-setor"></canvas>
+                        <canvas id="chart-faturamento-por-setor"></canvas>
                     </div>
                 </div>
             </div>
@@ -242,11 +237,6 @@
                             <i class="mdi mdi-chart-bar"></i>
                             Top 5 Centros de Custo
                         </h4>
-                        <div class="chart-actions">
-                            <button class="chart-action-btn" id="toggle-despesas-view" title="Ver categorias">
-                                <i class="mdi mdi-format-list-bulleted"></i>
-                            </button>
-                        </div>
                     </div>
                     <div class="chart-content">
                         <canvas id="chart-top-despesas"></canvas>
@@ -288,13 +278,13 @@
                                 </div>
                             </div>
                             
-                            <!-- Meta Soluções -->
-                            <div class="mini-gauge-container" data-meta="solucoes">
-                                <canvas id="gauge-solucoes" width="120" height="120"></canvas>
+                            <!-- Meta IMP/EXP -->
+                            <div class="mini-gauge-container" data-meta="imp_exp">
+                                <canvas id="gauge-imp-exp" width="120" height="120"></canvas>
                                 <div class="mini-gauge-info">
-                                    <div class="mini-gauge-percentage" id="percentage-solucoes">0%</div>
-                                    <div class="mini-gauge-label">Soluções</div>
-                                    <div class="mini-gauge-values" id="values-solucoes">R$ 0 de R$ 0</div>
+                                    <div class="mini-gauge-percentage" id="percentage-imp-exp">0%</div>
+                                    <div class="mini-gauge-label">IMP/EXP</div>
+                                    <div class="mini-gauge-values" id="values-imp-exp">R$ 0 de R$ 0</div>
                                 </div>
                             </div>
                         </div>
@@ -319,12 +309,6 @@
                                 TREND: Evolução do saldo durante o período
                             </span>
                         </h4>
-                        <div class="chart-actions">
-                            <span class="chart-status" id="saldo-status">
-                                <i class="mdi mdi-information-outline"></i>
-                                Tendência atual
-                            </span>
-                        </div>
                     </div>
                     <div class="chart-content">
                         <canvas id="chart-saldo-acumulado"></canvas>
@@ -342,11 +326,6 @@
                                 TREND: Receitas vs Despesas mensais
                             </span>
                         </h4>
-                        <div class="chart-actions">
-                            <button class="chart-action-btn" id="toggle-resultado-view" title="Alternar visualização">
-                                <i class="mdi mdi-eye"></i>
-                            </button>
-                        </div>
                     </div>
                     <div class="chart-content">
                         <canvas id="chart-resultado-mensal"></canvas>
@@ -363,11 +342,6 @@
                         <div class="trend-badge">
                             <i class="mdi mdi-information-outline"></i>
                             <span>Trend: Tendência de faturamento do cliente comparado ao período anterior. ↗ Crescendo, ↘ Decrescendo, → Estável</span>
-                        </div>
-                        <div class="chart-actions">
-                            <button class="chart-action-btn" id="export-clientes" title="Exportar dados">
-                                <i class="mdi mdi-download"></i>
-                            </button>
                         </div>
                     </div>
                     <div class="chart-content">

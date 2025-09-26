@@ -1,5 +1,15 @@
 // Dashboard Executivo Financeiro - JavaScript Aprimorado
 
+// Registrar plugin ChartDataLabels
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+        console.log('✅ ChartDataLabels plugin registered');
+    } else {
+        console.warn('⚠️ ChartDataLabels plugin not available');
+    }
+});
+
 // Estado global do dashboard
 const DashboardState = {
     periodo: 'este_ano',
@@ -282,8 +292,9 @@ function loadAllData() {
     Promise.all([
         loadKPIs(dateParams),
         loadResultadoMensal(dateParams),
-        loadSaldoAcumulado(dateParams),
         loadFaturamentoPorSetor(dateParams),
+        loadFaturamentoSunburst(dateParams),
+        loadProjecoesSaldo(dateParams), // Esta função agora cuida do gráfico de saldo acumulado
         loadTopDespesas(dateParams),
         loadTopClientes(dateParams),
         loadFaturamentoMensal(dateParams),
@@ -355,13 +366,13 @@ function loadSaldoAcumulado(dateParams) {
 }
 
 function loadFaturamentoPorSetor(dateParams) {
-    const url = `/financeiro/dashboard-executivo/api/faturamento-setor?${new URLSearchParams(dateParams)}`;
+    const url = `/financeiro/dashboard-executivo/api/faturamento-sunburst?${new URLSearchParams(dateParams)}`;
     
     return fetch(url)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                updateFaturamentoPorSetorChart(data.data);
+                updateFaturamentoSunburst(data.data);
             }
         });
 }
@@ -422,6 +433,41 @@ function loadMetaAtingimento(dateParams) {
         .catch(error => {
             console.error('❌ Error loading metas segmentadas:', error);
             updateMetasSegmentadas(null);
+        });
+}
+
+function loadFaturamentoSunburst(dateParams) {
+    console.log('🌻 Loading faturamento sunburst data...');
+    
+    const url = `/financeiro/dashboard-executivo/api/faturamento-sunburst?${new URLSearchParams(dateParams)}`;
+    
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateFaturamentoSunburst(data.data);
+            }
+        });
+}
+
+function loadProjecoesSaldo(dateParams) {
+    console.log('📈 Loading projecoes saldo data (replicando fluxo de caixa)...');
+    
+    const url = `/financeiro/dashboard-executivo/api/projecoes-saldo?${new URLSearchParams(dateParams)}`;
+    
+    return fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Armazenar os dados para usar no updateSaldoAcumuladoChart
+                DashboardState.data.saldoProjecao = data.data;
+                updateSaldoAcumuladoChart(data.data);
+            } else {
+                console.error('❌ Error loading saldo projecao:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error in loadProjecoesSaldo:', error);
         });
 }
 
@@ -738,6 +784,29 @@ function updateResultadoMensalChart(data) {
                             return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
                         }
                     }
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: function(value) {
+                        return formatCurrencyShort(value);
+                    },
+                    color: '#212529',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#dee2e6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: {
+                        top: 4,
+                        bottom: 4,
+                        left: 6,
+                        right: 6
+                    },
+                    font: {
+                        size: 11,
+                        weight: 'bold'
+                    }
                 }
             },
             scales: {
@@ -762,61 +831,155 @@ function updateResultadoMensalChart(data) {
     });
 }
 
-function updateFaturamentoPorSetorChart(data) {
-    console.log('📊 Updating faturamento por setor chart:', data);
+function updateFaturamentoSunburst(data) {
+    console.log('🌻 Updating faturamento sunburst chart (Meta Grupo → Classe):', data);
     
-    const ctx = document.getElementById('chart-faturamento-setor');
-    if (!ctx) return;
-    
-    // Destroy existing chart
-    if (DashboardState.charts.faturamentoSetor) {
-        DashboardState.charts.faturamentoSetor.destroy();
+    const ctx = document.getElementById('chart-faturamento-por-setor');
+    if (!ctx) {
+        console.error('❌ Canvas not found: chart-faturamento-por-setor');
+        return;
     }
     
-    // Prepare data
-    const labels = ['Importação', 'Consultoria', 'Exportação'];
-    const values = [data.importacao.valor, data.consultoria.valor, data.exportacao.valor];
-    const percentuais = [data.importacao.percentual, data.consultoria.percentual, data.exportacao.percentual];
+    // Destroy existing chart
+    if (DashboardState.charts.faturamentoPorSetor) {
+        DashboardState.charts.faturamentoPorSetor.destroy();
+    }
     
-    DashboardState.charts.faturamentoSetor = new Chart(ctx, {
+    if (!data || data.length === 0) {
+        console.warn('⚠️ No data for sunburst chart');
+        return;
+    }
+    
+    // Cores mais distintas para Meta Grupos
+    const coresPorMetaGrupo = {
+        'Consultoria': '#0d6efd',    // Azul
+        'IMP/EXP': '#fd7e14',        // Laranja  
+        'Outros': '#6c757d'          // Cinza
+    };
+    
+    // Cores mais claras para as Classes (tons da cor do Meta Grupo)
+    const coresPorClasse = {
+        // Consultoria - tons de azul
+        'Classificação Fiscal': '#4285f4',
+        'HABILITAÇÃO NO RADAR': '#1e88e5', 
+        'DRAWBACK': '#039be5',
+        'CATALOGO DE PRODUTOS': '#00acc1',
+        'Atestado de Inexistencia': '#00838f',
+        'MAQUINAS USADAS': '#0277bd',
+        'EX-TARIFARIO': '#0288d1',
+        'SISCOSERV': '#0097a7',
+        'CONSULTORIA': '#0d6efd',
+        
+        // IMP/EXP - tons de laranja
+        'IMPORTAÇÃO': '#ff6f00',
+        'EXPORTAÇÃO': '#ff8f00',
+        'OUTSOURCING': '#ffa000',
+        
+        // Outros - tons de cinza  
+        'Outros': '#6c757d'
+    };
+    
+    // Preparar dados para gráficos de rosca aninhados
+    const metaGrupos = data.map(item => item.name);
+    const metaGrupoValues = data.map(item => item.value);
+    const metaGrupoCores = metaGrupos.map(name => coresPorMetaGrupo[name] || '#6c757d');
+    
+    // Preparar dados das classes (anel interno)
+    let classes = [];
+    let classeValues = [];
+    let classeCores = [];
+    
+    data.forEach(metaGrupo => {
+        if (metaGrupo.children && metaGrupo.children.length > 0) {
+            metaGrupo.children.forEach(classe => {
+                classes.push(classe.name);
+                classeValues.push(classe.value);
+                classeCores.push(coresPorClasse[classe.name] || coresPorMetaGrupo[metaGrupo.name] || '#6c757d');
+            });
+        }
+    });
+    
+    DashboardState.charts.faturamentoPorSetor = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: labels,
-            datasets: [{
-                data: values,
-                backgroundColor: [
-                    'rgba(16, 185, 129, 0.8)',
-                    'rgba(59, 130, 246, 0.8)',
-                    'rgba(245, 158, 11, 0.8)'
-                ],
-                borderWidth: 0, // Remover bordas coloridas
-                cutout: '60%' // Fazer o centro menor (mais compacto)
-            }]
+            labels: metaGrupos, // Legenda mostra Meta Grupos
+            datasets: [
+                {
+                    // Dataset interno (classes) 
+                    label: 'Por Classe',
+                    data: classeValues,
+                    backgroundColor: classeCores,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    radius: '70%',
+                    cutout: '45%'
+                },
+                {
+                    // Dataset externo (meta grupos)
+                    label: 'Por Meta Grupo', 
+                    data: metaGrupoValues,
+                    backgroundColor: metaGrupoCores,
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    radius: '95%',
+                    cutout: '72%'
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            aspectRatio: 1.5, // Fazer o gráfico mais achatado
+            aspectRatio: 1.2,
             plugins: {
                 legend: {
+                    display: true,
                     position: 'right',
                     labels: {
                         usePointStyle: true,
-                        padding: 10,
-                        font: {
-                            size: 12
+                        padding: 15,
+                        font: { size: 11 },
+                        generateLabels: function(chart) {
+                            const labels = [];
+                            
+                            // Adicionar Meta Grupos
+                            metaGrupos.forEach((metaGrupo, index) => {
+                                labels.push({
+                                    text: metaGrupo,
+                                    fillStyle: metaGrupoCores[index],
+                                    strokeStyle: metaGrupoCores[index],
+                                    pointStyle: 'circle',
+                                    fontColor: '#333',
+                                    fontWeight: 'bold'
+                                });
+                            });
+                            
+                            return labels;
                         }
                     }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const label = context.label;
+                            const isMetaGrupo = context.datasetIndex === 1;
+                            let label = '';
+                            
+                            if (isMetaGrupo) {
+                                label = `Meta: ${context.label}`;
+                            } else {
+                                label = `Classe: ${classes[context.dataIndex]}`;
+                            }
+                            
                             const value = formatCurrency(context.parsed);
-                            const percentage = percentuais[context.dataIndex].toFixed(1);
-                            return `${label}: ${value} (${percentage}%)`;
+                            const dataset = context.dataset;
+                            const total = dataset.data.reduce((sum, val) => sum + val, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            
+                            return `${label}\nValor: ${value} (${percentage}%)`;
                         }
                     }
+                },
+                datalabels: {
+                    display: false
                 }
             }
         }
@@ -824,7 +987,7 @@ function updateFaturamentoPorSetorChart(data) {
 }
 
 function updateSaldoAcumuladoChart(data) {
-    console.log('📊 Updating saldo acumulado chart:', data);
+    console.log('📊 Updating saldo acumulado chart (replicado do fluxo de caixa):', data);
     
     const ctx = document.getElementById('chart-saldo-acumulado');
     if (!ctx) return;
@@ -834,63 +997,152 @@ function updateSaldoAcumuladoChart(data) {
         DashboardState.charts.saldoAcumulado.destroy();
     }
     
-    // Prepare data
-    const labels = data.map(item => getMonthName(item.mes.split('-')[1]));
-    const saldos = data.map(item => item.saldo_acumulado);
+    if (!data || !data.saldo_real) {
+        console.warn('⚠️ No saldo real data for chart');
+        return;
+    }
     
-    // Determine trend
-    const isPositiveTrend = saldos.length > 1 && saldos[saldos.length - 1] > saldos[0];
-    updateSaldoStatus(isPositiveTrend);
+    // Prepare datasets
+    const datasets = [];
+    let allDates = [];
+    let allValues = [];
+    
+    // Dataset 1: Saldo Acumulado Real
+    const realValues = data.saldo_real.saldos.filter(val => val !== null && val !== undefined);
+    datasets.push({
+        label: 'Saldo Acumulado Real',
+        data: data.saldo_real.saldos,
+        borderColor: 'rgba(0, 123, 255, 1)',
+        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: data.saldo_real.saldos.map(value => 
+            value >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'
+        ),
+        pointBorderColor: 'white',
+        pointBorderWidth: 2,
+        pointRadius: 3
+    });
+    
+    allDates = [...data.saldo_real.datas];
+    allValues = [...realValues];
+    
+    // Dataset 2: Projeção (if available and has future data)
+    if (data.projecao && data.projecao.datas && data.projecao.datas.length > 0) {
+        // Create null values for past dates + projection values
+        const pastNulls = new Array(data.saldo_real.datas.length - 1).fill(null);
+        
+        // Start projection from last real value
+        const lastRealValue = data.saldo_real.saldos[data.saldo_real.saldos.length - 1] || 0;
+        const projectionData = [...pastNulls, lastRealValue, ...data.projecao.saldos];
+        
+        datasets.push({
+            label: 'Saldo Acumulado Projetado',
+            data: projectionData,
+            borderColor: 'rgba(255, 193, 7, 1)',
+            backgroundColor: 'rgba(255, 193, 7, 0.1)', 
+            borderWidth: 3,
+            borderDash: [5, 5], // Dashed line for projection
+            fill: false,
+            tension: 0.4,
+            pointBackgroundColor: 'rgba(255, 193, 7, 1)',
+            pointBorderColor: 'white',
+            pointBorderWidth: 2,
+            pointRadius: 4
+        });
+        
+        // Combine dates for x-axis
+        allDates = [...data.saldo_real.datas, ...data.projecao.datas];
+        allValues = [...allValues, ...data.projecao.saldos];
+    }
+    
+    // Find min and max values for proper scaling
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
+    const range = maxValue - minValue;
+    const minPadded = minValue - (range * 0.1);
+    const maxPadded = maxValue + (range * 0.1);
     
     DashboardState.charts.saldoAcumulado = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
-            datasets: [{
-                label: 'Saldo Acumulado',
-                data: saldos,
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1,
-                pointRadius: 4
-            }]
+            labels: allDates,
+            datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: datasets.length > 1, // Show legend only if we have projection data
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
                 },
                 tooltip: {
+                    mode: 'index',
+                    intersect: false,
                     callbacks: {
                         label: function(context) {
-                            return 'Saldo: ' + formatCurrency(context.parsed.y);
+                            const value = formatCurrency(context.parsed.y);
+                            return `${context.dataset.label}: ${value}`;
                         }
+                    }
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: function(value) {
+                        return formatCurrencyCompact(value);
+                    },
+                    color: '#212529',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#dee2e6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: {
+                        top: 4,
+                        bottom: 4,
+                        left: 6,
+                        right: 6
+                    },
+                    font: {
+                        size: 10,
+                        weight: 'bold'
                     }
                 }
             },
             scales: {
                 y: {
+                    min: minPadded,
+                    max: maxPadded,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.1)',
+                        drawBorder: false
+                    },
                     ticks: {
                         callback: function(value) {
-                            return formatCurrencyShort(value);
+                            return formatCurrencyCompact(value);
                         }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
                     }
                 },
                 x: {
                     grid: {
                         display: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 12 // Limit number of x-axis labels
                     }
                 }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
             }
         }
     });
@@ -948,6 +1200,9 @@ function updateFaturamentoMensalChart(data) {
                             return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
                         }
                     }
+                },
+                datalabels: {
+                    display: false
                 }
             },
             scales: {
@@ -1018,6 +1273,29 @@ function updateTopDespesasChart(data) {
                         label: function(context) {
                             return formatCurrency(context.parsed.x);
                         }
+                    }
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'right',
+                    formatter: function(value) {
+                        return formatCurrencyShort(value);
+                    },
+                    color: '#212529',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#dee2e6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: {
+                        top: 4,
+                        bottom: 4,
+                        left: 6,
+                        right: 6
+                    },
+                    font: {
+                        size: 11,
+                        weight: 'bold'
                     }
                 }
             },
@@ -1485,10 +1763,10 @@ function updateMetasSegmentadas(metasData) {
     
     if (!metasData) {
         // Limpar dados em caso de erro
-        const tipos = ['geral', 'consultoria', 'solucoes'];
+        const tipos = ['geral', 'consultoria', 'imp_exp'];
         tipos.forEach(tipo => {
-            const percentageEl = document.getElementById(`percentage-${tipo}`);
-            const valuesEl = document.getElementById(`values-${tipo}`);
+            const percentageEl = document.getElementById(`percentage-${tipo.replace('_', '-')}`);
+            const valuesEl = document.getElementById(`values-${tipo.replace('_', '-')}`);
             
             if (percentageEl) percentageEl.textContent = '0%';
             if (valuesEl) valuesEl.textContent = 'R$ 0 de R$ 0';
@@ -1504,9 +1782,10 @@ function updateMetasSegmentadas(metasData) {
 }
 
 function updateMiniGauge(tipo, data) {
-    const canvasId = `gauge-${tipo}`;
-    const percentageId = `percentage-${tipo}`;
-    const valuesId = `values-${tipo}`;
+    // Converter tipo para ID correto (imp_exp -> imp-exp)
+    const canvasId = `gauge-${tipo.replace('_', '-')}`;
+    const percentageId = `percentage-${tipo.replace('_', '-')}`;
+    const valuesId = `values-${tipo.replace('_', '-')}`;
     
     const canvas = document.getElementById(canvasId);
     const percentageEl = document.getElementById(percentageId);
@@ -1532,7 +1811,7 @@ function updateMiniGauge(tipo, data) {
         case 'consultoria':
             baseColor = '#198754';
             break;
-        case 'solucoes':
+        case 'imp_exp':
             baseColor = '#fd7e14';
             break;
         default:
@@ -1596,6 +1875,9 @@ function updateMiniGauge(tipo, data) {
                             ];
                         }
                     }
+                },
+                datalabels: {
+                    display: false
                 }
             },
             animation: {

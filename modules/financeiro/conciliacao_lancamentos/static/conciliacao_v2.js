@@ -1376,17 +1376,13 @@ class ConciliacaoBancariaV2 {
     }
 
     aplicarFiltros(dados, tipo) {
-        // Se não for fornecido dados, aplicar nos dados existentes
-        if (!dados) {
-            console.warn('[DEBUG] aplicarFiltros chamada sem parâmetros - use aplicarFiltrosSistema() ou aplicarFiltrosBanco()');
-            return;
-        }
-
         // Verificar se dados é um array válido
         if (!Array.isArray(dados)) {
             console.warn('aplicarFiltros: dados não é um array válido', dados);
             return dados; // Retornar dados originais se não for array
         }
+
+        console.log(`[DEBUG FILTROS] Iniciando filtros para ${tipo}:`, dados.length, 'registros');
 
         // Obter valores dos filtros baseados no tipo de dados
         let filtroTipo, filtroBanco, filtroDescricao, filtroStatus;
@@ -1402,47 +1398,81 @@ class ConciliacaoBancariaV2 {
             filtroDescricao = document.getElementById('searchBanco')?.value.toLowerCase() || '';
         }
 
-        console.log('Aplicando filtros:', {
-            tipo: tipo,
-            filtroTipo: filtroTipo,
-            filtroStatus: filtroStatus,
-            filtroBanco: filtroBanco,
-            filtroDescricao: filtroDescricao
+        console.log(`[DEBUG FILTROS] Valores dos filtros para ${tipo}:`, {
+            filtroTipo, filtroStatus, filtroBanco, filtroDescricao
         });
 
-        return dados.filter(item => {
+        const dadosFiltrados = dados.filter(item => {
+            // Log de cada item sendo processado (apenas os primeiros 3 para não poluir)
+            if (dados.indexOf(item) < 3) {
+                console.log(`[DEBUG FILTROS] Processando item ${dados.indexOf(item)}:`, {
+                    valor: item.valor,
+                    banco: item.banco,
+                    tipo: item.tipo || item.tipo_transacao,
+                    descricao: (item.descricao || '').substring(0, 30) + '...'
+                });
+            }
+
             // Filtro por tipo
             if (filtroTipo && filtroTipo !== 'todos') {
                 if (tipo === 'sistema') {
-                    if (filtroTipo === 'RECEITA' && item.tipo_transacao !== 'RECEITA') return false;
-                    if (filtroTipo === 'DESPESA' && item.tipo_transacao !== 'DESPESA') return false;
+                    if (filtroTipo === 'RECEITA' && item.tipo_transacao !== 'RECEITA') {
+                        console.log(`[DEBUG FILTROS] Item rejeitado por tipo sistema: ${item.tipo_transacao} !== RECEITA`);
+                        return false;
+                    }
+                    if (filtroTipo === 'DESPESA' && item.tipo_transacao !== 'DESPESA') {
+                        console.log(`[DEBUG FILTROS] Item rejeitado por tipo sistema: ${item.tipo_transacao} !== DESPESA`);
+                        return false;
+                    }
                 } else if (tipo === 'banco') {
                     const valor = parseFloat(item.valor || 0);
-                    if (filtroTipo === 'CREDITO' && valor <= 0) return false;
-                    if (filtroTipo === 'DEBITO' && valor >= 0) return false;
+                    if (filtroTipo === 'CREDITO' && valor <= 0) {
+                        console.log(`[DEBUG FILTROS] Item rejeitado por tipo banco: valor ${valor} <= 0 para CREDITO`);
+                        return false;
+                    }
+                    if (filtroTipo === 'DEBITO' && valor >= 0) {
+                        console.log(`[DEBUG FILTROS] Item rejeitado por tipo banco: valor ${valor} >= 0 para DEBITO`);
+                        return false;
+                    }
                 }
             }
 
             // Filtro por status (apenas para sistema)
             if (filtroStatus && filtroStatus !== 'todos' && tipo === 'sistema') {
-                if (filtroStatus === 'conciliado' && !item.conciliado) return false;
-                if (filtroStatus === 'nao_conciliado' && item.conciliado) return false;
+                if (filtroStatus === 'conciliado' && !item.conciliado) {
+                    console.log(`[DEBUG FILTROS] Item rejeitado por status: não conciliado`);
+                    return false;
+                }
+                if (filtroStatus === 'nao_conciliado' && item.conciliado) {
+                    console.log(`[DEBUG FILTROS] Item rejeitado por status: já conciliado`);
+                    return false;
+                }
             }
 
             // Filtro por banco
             if (filtroBanco && filtroBanco !== 'todos') {
                 const bancoItem = (item.banco || item.agencia || '').toLowerCase();
-                if (!bancoItem.includes(filtroBanco.toLowerCase())) return false;
+                if (!bancoItem.includes(filtroBanco.toLowerCase())) {
+                    console.log(`[DEBUG FILTROS] Item rejeitado por banco: '${bancoItem}' não contém '${filtroBanco.toLowerCase()}'`);
+                    return false;
+                }
             }
 
             // Filtro por descrição/busca
             if (filtroDescricao) {
                 const descricao = (item.descricao || item.historico || '').toLowerCase();
-                if (!descricao.includes(filtroDescricao)) return false;
+                if (!descricao.includes(filtroDescricao)) {
+                    console.log(`[DEBUG FILTROS] Item rejeitado por descrição: '${descricao.substring(0, 30)}...' não contém '${filtroDescricao}'`);
+                    return false;
+                }
             }
 
             return true;
         });
+
+        console.log(`[DEBUG FILTROS] Resultado final para ${tipo}: ${dadosFiltrados.length} de ${dados.length} registros`);
+        
+        return dadosFiltrados;
     }
     
     async limparDados() {

@@ -7,7 +7,16 @@
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 <style>
     .categorizacao-container {
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    @media (max-width: 768px) {
+        .categorizacao-container {
+            padding: 10px;
+        }
     }
 
     .filter-section {

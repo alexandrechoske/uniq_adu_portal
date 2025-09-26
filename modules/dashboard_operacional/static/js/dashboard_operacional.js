@@ -10,6 +10,13 @@ let currentFilters = { year: '', month: '' };
 let isLoading = false;
 let analystPopupChart = null;
 
+// Auto-refresh system
+let autoRefreshInterval = null;
+let countdownInterval = null;
+let autoRefreshEnabled = true;
+let refreshTimeoutMinutes = 10;
+let nextRefreshTime = null;
+
 // Color schemes following Unique pattern
 const OPERATIONAL_COLORS = {
     primary: '#3498db',
@@ -71,6 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     setupEventListeners();
     initializeFilters();
+    
+    // Initialize auto-refresh system
+    initializeAutoRefresh();
+    
     // Prevent double render: schedule chart after filters & before data load
     setTimeout(() => updateOperationsChart(), 0); // Carrega gráfico de operações
     loadOperationalData();
@@ -86,6 +97,9 @@ function setupEventListeners() {
     
     // Reset filters
     document.getElementById('reset-filters').addEventListener('click', resetFilters);
+    
+    // Manual refresh
+    document.getElementById('manual-refresh').addEventListener('click', manualRefresh);
     
     // Client table collapse
     document.getElementById('collapse-all-clients').addEventListener('click', collapseAllClients);
@@ -1919,12 +1933,199 @@ function getDisplayStatus(desempenho, dataFechamento) {
     }
 }
 
+/**
+ * Auto-refresh system functions
+ */
+
+/**
+ * Initialize auto-refresh system
+ */
+function initializeAutoRefresh() {
+    console.log('[AUTO_REFRESH] Sistema iniciado - atualização a cada', refreshTimeoutMinutes, 'minutos');
+    
+    // Set next refresh time
+    nextRefreshTime = Date.now() + (refreshTimeoutMinutes * 60 * 1000);
+    
+    // Start countdown
+    startCountdown();
+    
+    // Start auto-refresh timer
+    startAutoRefresh();
+    
+    // Update initial countdown display
+    updateCountdownDisplay();
+}
+
+/**
+ * Start auto-refresh timer
+ */
+function startAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    
+    autoRefreshInterval = setInterval(() => {
+        if (autoRefreshEnabled) {
+            console.log('[AUTO_REFRESH] Executando atualização automática');
+            performAutoRefresh();
+        }
+    }, refreshTimeoutMinutes * 60 * 1000);
+}
+
+/**
+ * Start countdown timer
+ */
+function startCountdown() {
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
+    
+    countdownInterval = setInterval(updateCountdownDisplay, 1000);
+}
+
+/**
+ * Update countdown display
+ */
+function updateCountdownDisplay() {
+    if (!nextRefreshTime) return;
+    
+    const now = Date.now();
+    const timeLeft = nextRefreshTime - now;
+    
+    if (timeLeft <= 0) {
+        document.getElementById('countdown').textContent = '00:00';
+        return;
+    }
+    
+    const minutes = Math.floor(timeLeft / (60 * 1000));
+    const seconds = Math.floor((timeLeft % (60 * 1000)) / 1000);
+    
+    const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    document.getElementById('countdown').textContent = formattedTime;
+}
+
+/**
+ * Perform auto refresh
+ */
+async function performAutoRefresh() {
+    console.log('[AUTO_REFRESH] Iniciando atualização automática dos dados');
+    
+    // Update UI to show refreshing state
+    setRefreshingState(true);
+    
+    try {
+        // Invalidate cache to force fresh data
+        operationalCache.invalidate();
+        
+        // Load fresh data
+        await loadOperationalData();
+        
+        // Reset timer
+        nextRefreshTime = Date.now() + (refreshTimeoutMinutes * 60 * 1000);
+        
+        console.log('[AUTO_REFRESH] Atualização automática concluída');
+        
+    } catch (error) {
+        console.error('[AUTO_REFRESH] Erro na atualização automática:', error);
+    } finally {
+        // Reset UI state
+        setRefreshingState(false);
+    }
+}
+
+/**
+ * Manual refresh triggered by user
+ */
+async function manualRefresh() {
+    console.log('[AUTO_REFRESH] Atualização manual solicitada');
+    
+    // Prevent multiple concurrent refreshes
+    if (isLoading) {
+        console.log('[AUTO_REFRESH] Atualização já em andamento, ignorando solicitação manual');
+        return;
+    }
+    
+    setRefreshingState(true);
+    
+    try {
+        // Invalidate cache
+        operationalCache.invalidate();
+        
+        // Load fresh data
+        await loadOperationalData();
+        
+        // Reset auto-refresh timer
+        nextRefreshTime = Date.now() + (refreshTimeoutMinutes * 60 * 1000);
+        
+        console.log('[AUTO_REFRESH] Atualização manual concluída');
+        
+    } catch (error) {
+        console.error('[AUTO_REFRESH] Erro na atualização manual:', error);
+        showError('Erro ao atualizar dados. Tente novamente.');
+    } finally {
+        setRefreshingState(false);
+    }
+}
+
+/**
+ * Set UI state for refreshing
+ */
+function setRefreshingState(isRefreshing) {
+    const refreshStatus = document.getElementById('auto-refresh-status');
+    const refreshIcon = document.getElementById('refresh-icon');
+    const refreshText = document.getElementById('refresh-text');
+    const manualBtn = document.getElementById('manual-refresh');
+    
+    if (isRefreshing) {
+        refreshStatus.classList.add('updating');
+        refreshIcon.classList.add('spinning');
+        refreshText.textContent = 'Atualizando dados...';
+        manualBtn.disabled = true;
+    } else {
+        refreshStatus.classList.remove('updating');
+        refreshIcon.classList.remove('spinning');
+        refreshText.innerHTML = 'Próxima atualização em <span id="countdown">10:00</span>';
+        manualBtn.disabled = false;
+        
+        // Restart countdown
+        updateCountdownDisplay();
+    }
+}
+
+/**
+ * Enable/disable auto-refresh
+ */
+function toggleAutoRefresh(enabled) {
+    autoRefreshEnabled = enabled;
+    
+    if (enabled) {
+        console.log('[AUTO_REFRESH] Sistema habilitado');
+        startAutoRefresh();
+        startCountdown();
+    } else {
+        console.log('[AUTO_REFRESH] Sistema desabilitado');
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        if (countdownInterval) clearInterval(countdownInterval);
+    }
+}
+
+/**
+ * Clean up auto-refresh on page unload
+ */
+window.addEventListener('beforeunload', function() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+    console.log('[AUTO_REFRESH] Sistema limpo');
+});
+
 // Export for testing purposes
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         loadOperationalData,
         updateAllComponents,
         currentFilters,
-        operationalCache
+        operationalCache,
+        manualRefresh,
+        toggleAutoRefresh
     };
 }
