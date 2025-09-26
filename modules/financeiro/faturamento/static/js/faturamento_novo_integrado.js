@@ -160,11 +160,11 @@ class FaturamentoControllerNovo {
                 case 'ambos':
                     texto = 'Vendo dados de ambas as empresas';
                     break;
-                case 'Unique Consultoria':
-                    texto = 'Vendo dados da Unique Consultoria';
+                case 'consultoria':
+                    texto = 'Vendo dados da Consultoria';
                     break;
-                case 'Unique Soluções':
-                    texto = 'Vendo dados da Unique Soluções';
+                case 'imp/exp':
+                    texto = 'Vendo dados de IMP/EXP';
                     break;
                 default:
                     texto = `Vendo dados de ${empresa}`;

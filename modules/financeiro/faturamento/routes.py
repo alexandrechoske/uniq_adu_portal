@@ -63,9 +63,16 @@ def api_geral_kpis():
     """API para KPIs da Visão Geral de Faturamento"""
     try:
         ano = request.args.get('ano', datetime.now().year)
+        empresa = request.args.get('empresa', '')
         
-        # Buscar dados de faturamento do ano
-        response = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31').execute()
+        # Buscar dados de faturamento do ano usando a nova tabela
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa == 'consultoria':
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa == 'imp_exp':
+                query = query.eq('meta_grupo', 'IMP/EXP')
+        response = query.execute()
         dados_faturamento = response.data
         
         # Calcular total faturado
@@ -86,18 +93,24 @@ def api_geral_mensal():
         ano = request.args.get('ano', datetime.now().year)
         empresa = request.args.get('empresa', '')
         
-        # Buscar dados de faturamento do ano atual
-        query_atual = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
+        # Buscar dados de faturamento do ano atual usando a nova tabela
+        query_atual = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
         if empresa and empresa.strip() and empresa != 'ambos':
-            query_atual = query_atual.eq('empresa', empresa)
+            if empresa == 'consultoria':
+                query_atual = query_atual.eq('meta_grupo', 'Consultoria')
+            elif empresa == 'imp_exp':
+                query_atual = query_atual.eq('meta_grupo', 'IMP/EXP')
         response_atual = query_atual.execute()
         dados_atual = response_atual.data
         
         # Buscar dados de faturamento do ano anterior
         ano_anterior = int(ano) - 1
-        query_anterior = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano_anterior}-01-01').lte('data', f'{ano_anterior}-12-31')
+        query_anterior = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano_anterior}-01-01').lte('data', f'{ano_anterior}-12-31')
         if empresa and empresa.strip() and empresa != 'ambos':
-            query_anterior = query_anterior.eq('empresa', empresa)
+            if empresa == 'consultoria':
+                query_anterior = query_anterior.eq('meta_grupo', 'Consultoria')
+            elif empresa == 'imp_exp':
+                query_anterior = query_anterior.eq('meta_grupo', 'IMP/EXP')
         response_anterior = query_anterior.execute()
         dados_anterior = response_anterior.data
         
@@ -149,50 +162,49 @@ def api_geral_mensal():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_proporcao():
-    """API para gráficos de proporção da Visão Geral"""
+    """API para gráficos de proporção da Visão Geral usando meta_grupo"""
     try:
         ano = request.args.get('ano', datetime.now().year)
+        empresa = request.args.get('empresa', '')
         
-        # Buscar dados de faturamento do ano
-        response = supabase_admin.table('fin_faturamento_anual').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31').execute()
+        # Buscar dados de faturamento do ano usando a nova tabela
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa == 'consultoria':
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa == 'imp_exp':
+                query = query.eq('meta_grupo', 'IMP/EXP')
+        response = query.execute()
         dados_faturamento = response.data
         
-        # Calcular totais por setor
-        total_importacao = 0
+        # Calcular totais por meta_grupo
         total_consultoria = 0
-        total_exportacao = 0
+        total_imp_exp = 0
         
         for item in dados_faturamento:
-            classe = item.get('classe', '').upper()
+            meta_grupo = item.get('meta_grupo', '')
             valor = float(item['valor'])
             
-            if 'IMP' in classe or 'IMPORT' in classe:
-                total_importacao += valor
-            elif 'CONS' in classe or 'CONSULT' in classe:
+            if meta_grupo == 'Consultoria':
                 total_consultoria += valor
-            elif 'EXP' in classe or 'EXPORT' in classe:
-                total_exportacao += valor
+            elif meta_grupo == 'IMP/EXP':
+                total_imp_exp += valor
         
-        total_geral = total_importacao + total_consultoria + total_exportacao
+        total_geral = total_consultoria + total_imp_exp
         
         # Calcular percentuais
-        pct_importacao = (total_importacao / total_geral * 100) if total_geral > 0 else 0
         pct_consultoria = (total_consultoria / total_geral * 100) if total_geral > 0 else 0
-        pct_exportacao = (total_exportacao / total_geral * 100) if total_geral > 0 else 0
+        pct_imp_exp = (total_imp_exp / total_geral * 100) if total_geral > 0 else 0
         
         return jsonify({
             'setores': {
-                'importacao': {
-                    'valor': total_importacao,
-                    'percentual': pct_importacao
-                },
                 'consultoria': {
                     'valor': total_consultoria,
                     'percentual': pct_consultoria
                 },
-                'exportacao': {
-                    'valor': total_exportacao,
-                    'percentual': pct_exportacao
+                'imp_exp': {
+                    'valor': total_imp_exp,
+                    'percentual': pct_imp_exp
                 }
             }
         })
@@ -203,16 +215,19 @@ def api_geral_proporcao():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_comparativo_anos():
-    """API para comparativo anual usando tabela fin_faturamento_anual"""
+    """API para comparativo anual usando nova classificação por meta_grupo"""
     try:
         empresa = request.args.get('empresa', '')
         
-        # Buscar dados da tabela base que tem a coluna empresa
-        query = supabase_admin.table('fin_faturamento_anual').select('data, valor, empresa')
+        # Usar a view atualizada com meta_grupo
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('data, valor, meta_grupo')
         
-        # Aplicar filtro de empresa se especificado
+        # Aplicar filtro baseado no meta_grupo se especificado
         if empresa and empresa.strip() and empresa != 'ambos':
-            query = query.eq('empresa', empresa)
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
         
         response = query.execute()
         dados = response.data
@@ -445,16 +460,21 @@ def api_geral_centro_resultado():
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
         
-        # Buscar dados de faturamento
-        query = supabase_admin.table('fin_faturamento_anual').select('centro_resultado, valor')
+        # Usar a view atualizada
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('centro_resultado, valor, meta_grupo')
         
         # Aplicar filtros
         if start_date:
             query = query.gte('data', start_date)
         if end_date:
             query = query.lte('data', end_date)
-        if empresa and empresa.strip():
-            query = query.eq('empresa', empresa)
+        
+        # Filtro por meta_grupo baseado no parâmetro empresa
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
             
         response = query.execute()
         dados = response.data
@@ -496,22 +516,27 @@ def api_geral_centro_resultado():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_categoria_operacao():
-    """API para gráfico de rosca - Faturamento por Categoria usando tabela base"""
+    """API para gráfico de rosca - Faturamento por Categoria usando nova classificação"""
     try:
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
         
-        # Usar a tabela base que tem a coluna empresa
-        query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor, empresa')
+        # Usar a view atualizada com meta_grupo
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria, valor, meta_grupo')
         
         # Aplicar filtros
         if start_date:
             query = query.gte('data', start_date)
         if end_date:
             query = query.lte('data', end_date)
+        
+        # Filtro por meta_grupo baseado no parâmetro empresa
         if empresa and empresa.strip() and empresa != 'ambos':
-            query = query.eq('empresa', empresa)
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
             
         response = query.execute()
         dados = response.data
@@ -622,23 +647,28 @@ def api_geral_centro_resultado_detalhado():
 @login_required
 @perfil_required('financeiro', 'faturamento')
 def api_geral_top_clientes():
-    """API para tabela de top clientes usando campo 'cliente'"""
+    """API para tabela de top clientes usando nova classificação"""
     try:
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
         limit = int(request.args.get('limit', 10))
         
-        # Buscar dados de faturamento
-        query = supabase_admin.table('fin_faturamento_anual').select('cliente, valor')
+        # Usar a view atualizada com meta_grupo
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('cliente, valor, meta_grupo')
         
         # Aplicar filtros
         if start_date:
             query = query.gte('data', start_date)
         if end_date:
             query = query.lte('data', end_date)
-        if empresa and empresa.strip():
-            query = query.eq('empresa', empresa)
+        
+        # Filtro por meta_grupo baseado no parâmetro empresa
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
             
         response = query.execute()
         dados = response.data
