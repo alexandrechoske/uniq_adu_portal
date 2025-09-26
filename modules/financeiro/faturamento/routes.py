@@ -808,6 +808,111 @@ def api_geral_metas_mensais():
         print(f"Erro em api_geral_metas_mensais: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@faturamento_bp.route('/api/geral/dados_hierarquicos')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_geral_dados_hierarquicos():
+    """API para dados hierárquicos: Meta Grupo → Centro Resultado → Categoria → Classe"""
+    try:
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        empresa = request.args.get('empresa', '')
+        nivel = request.args.get('nivel', 'meta_grupo')  # meta_grupo, centro_resultado, categoria, classe
+        parent = request.args.get('parent', '')  # Filtro do nível pai
+        
+        print(f"🌳 [DADOS_HIERARQUICOS] Nível: {nivel}, Parent: {parent}, Empresa: {empresa}")
+        
+        # Campos para seleção baseados no nível
+        campos_por_nivel = {
+            'meta_grupo': ['meta_grupo', 'valor'],
+            'centro_resultado': ['centro_resultado', 'valor', 'meta_grupo'],
+            'categoria': ['categoria', 'valor', 'centro_resultado', 'meta_grupo'],
+            'classe': ['classe', 'valor', 'categoria', 'centro_resultado', 'meta_grupo']
+        }
+        
+        # Verificar se o nível é válido
+        if nivel not in campos_por_nivel:
+            return jsonify({'error': 'Nível inválido'}), 400
+        
+        # Selecionar campos necessários
+        campos = campos_por_nivel[nivel]
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select(','.join(campos))
+        
+        # Aplicar filtros de data
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
+        
+        # Filtro por meta_grupo baseado no parâmetro empresa
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        # Aplicar filtro do nível pai (drill-down)
+        if parent and parent.strip():
+            if nivel == 'centro_resultado':
+                query = query.eq('meta_grupo', parent)
+            elif nivel == 'categoria':
+                query = query.eq('centro_resultado', parent)
+            elif nivel == 'classe':
+                query = query.eq('categoria', parent)
+        
+        response = query.execute()
+        dados = response.data
+        
+        # Agrupar dados pelo campo principal do nível
+        campo_principal = nivel
+        agrupados = {}
+        total_geral = 0
+        
+        for item in dados:
+            chave = item.get(campo_principal, 'N/A')
+            valor = float(item.get('valor', 0))
+            
+            if chave not in agrupados:
+                agrupados[chave] = {
+                    'nome': chave,
+                    'valor': 0,
+                    'tem_filhos': True  # Todos os níveis exceto classe podem ter filhos
+                }
+            
+            agrupados[chave]['valor'] += valor
+            total_geral += valor
+        
+        # Se for o nível classe, não tem filhos
+        if nivel == 'classe':
+            for item in agrupados.values():
+                item['tem_filhos'] = False
+        
+        # Converter para lista e ordenar por valor
+        resultado = list(agrupados.values())
+        resultado.sort(key=lambda x: x['valor'], reverse=True)
+        
+        # Calcular percentuais
+        for item in resultado:
+            if total_geral > 0:
+                item['percentual'] = (item['valor'] / total_geral) * 100
+            else:
+                item['percentual'] = 0
+        
+        print(f"🌳 [DADOS_HIERARQUICOS] Retornando {len(resultado)} itens para nível {nivel}")
+        
+        return jsonify({
+            'success': True,
+            'data': resultado,
+            'nivel': nivel,
+            'parent': parent,
+            'total': total_geral,
+            'tem_nivel_inferior': nivel != 'classe'
+        })
+        
+    except Exception as e:
+        print(f"❌ [DADOS_HIERARQUICOS] Erro: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @faturamento_bp.route('/api/geral/aderencia_meta')
 @login_required
 @perfil_required('financeiro', 'faturamento')
