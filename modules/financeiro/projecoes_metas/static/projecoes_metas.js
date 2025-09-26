@@ -141,7 +141,7 @@ function renderizarDados() {
 
 function renderizarMetasFinanceirasGeral() {
     const tbody = document.getElementById('table-metas-financeiras-geral-tbody');
-    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro_solucoes');
+    const metas = dadosProjecoes.filter(item => item.tipo === 'financeiro_imp_exp');
     
     console.log('[PROJECOES] Metas financeiras soluções:', metas.length);
     tbody.innerHTML = '';
@@ -186,7 +186,7 @@ function renderizarMetasFinanceirasGeral() {
             const row = document.createElement('tr');
             row.className = `ano-data ano-${ano}`;
             row.style.display = expandido ? 'table-row' : 'none';
-            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira ' + getValorClass(meta.meta) + '">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_solucoes\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira ' + getValorClass(meta.meta) + '">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_imp_exp\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
     });
@@ -352,7 +352,7 @@ function renderizarProjecoes() {
 }
 
 function atualizarEstatisticas() {
-    const financeirasGeral = dadosProjecoes.filter(item => item.tipo === 'financeiro_solucoes').length;
+    const financeirasGeral = dadosProjecoes.filter(item => item.tipo === 'financeiro_imp_exp').length;
     const financeirasConsultoria = dadosProjecoes.filter(item => item.tipo === 'financeiro_consultoria').length;
     const operacionais = dadosProjecoes.filter(item => item.tipo === 'operacional').length;
     const projecoes = dadosProjecoes.filter(item => item.tipo === 'projecao').length;
@@ -373,7 +373,7 @@ function abrirModal(tipo) {
     
     var titulos = {
         'financeiro': 'Nova Meta Financeira',
-        'financeiro_geral': 'Nova Meta Financeira - Soluções',
+        'financeiro_geral': 'Nova Meta Financeira - Imp/Exp',
         'financeiro_consultoria': 'Nova Meta Financeira - Consultoria',
         'operacional': 'Nova Meta Operacional',
         'projecao': 'Nova Projeção'
@@ -412,7 +412,7 @@ window.editarItem = function(itemId, tipo) {
     
     var titulos = {
         'financeiro': 'Editar Meta Financeira',
-        'financeiro_geral': 'Editar Meta Financeira - Soluções',
+        'financeiro_geral': 'Editar Meta Financeira - Imp/Exp',
         'financeiro_consultoria': 'Editar Meta Financeira - Consultoria',
         'operacional': 'Editar Meta Operacional',
         'projecao': 'Editar Projeção'
