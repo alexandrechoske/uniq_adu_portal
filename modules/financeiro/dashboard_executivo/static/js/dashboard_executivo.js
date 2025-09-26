@@ -1,5 +1,15 @@
 // Dashboard Executivo Financeiro - JavaScript Aprimorado
 
+// Registrar plugin ChartDataLabels
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+        Chart.register(ChartDataLabels);
+        console.log('✅ ChartDataLabels plugin registered');
+    } else {
+        console.warn('⚠️ ChartDataLabels plugin not available');
+    }
+});
+
 // Estado global do dashboard
 const DashboardState = {
     periodo: 'este_ano',
@@ -774,6 +784,29 @@ function updateResultadoMensalChart(data) {
                             return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
                         }
                     }
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: function(value) {
+                        return formatCurrencyShort(value);
+                    },
+                    color: '#212529',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#dee2e6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: {
+                        top: 4,
+                        bottom: 4,
+                        left: 6,
+                        right: 6
+                    },
+                    font: {
+                        size: 11,
+                        weight: 'bold'
+                    }
                 }
             },
             scales: {
@@ -944,6 +977,9 @@ function updateFaturamentoSunburst(data) {
                             return `${label}\nValor: ${value} (${percentage}%)`;
                         }
                     }
+                },
+                datalabels: {
+                    display: false
                 }
             }
         }
@@ -1164,6 +1200,9 @@ function updateFaturamentoMensalChart(data) {
                             return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
                         }
                     }
+                },
+                datalabels: {
+                    display: false
                 }
             },
             scales: {
@@ -1234,6 +1273,29 @@ function updateTopDespesasChart(data) {
                         label: function(context) {
                             return formatCurrency(context.parsed.x);
                         }
+                    }
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'right',
+                    formatter: function(value) {
+                        return formatCurrencyShort(value);
+                    },
+                    color: '#212529',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#dee2e6',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    padding: {
+                        top: 4,
+                        bottom: 4,
+                        left: 6,
+                        right: 6
+                    },
+                    font: {
+                        size: 11,
+                        weight: 'bold'
                     }
                 }
             },
@@ -1813,6 +1875,9 @@ function updateMiniGauge(tipo, data) {
                             ];
                         }
                     }
+                },
+                datalabels: {
+                    display: false
                 }
             },
             animation: {
