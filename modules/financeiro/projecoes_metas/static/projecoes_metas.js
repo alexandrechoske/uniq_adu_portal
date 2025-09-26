@@ -186,7 +186,7 @@ function renderizarMetasFinanceirasGeral() {
             const row = document.createElement('tr');
             row.className = `ano-data ano-${ano}`;
             row.style.display = expandido ? 'table-row' : 'none';
-            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_solucoes\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira ' + getValorClass(meta.meta) + '">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_solucoes\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
     });
@@ -239,7 +239,7 @@ function renderizarMetasFinanceirasConsultoria() {
             const row = document.createElement('tr');
             row.className = `ano-data ano-${ano}`;
             row.style.display = expandido ? 'table-row' : 'none';
-            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_consultoria\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-financeira ' + getValorClass(meta.meta) + '">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-primary" onclick="editarItem(' + meta.id + ', \'financeiro_consultoria\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
     });
@@ -292,7 +292,7 @@ function renderizarMetasOperacionais() {
             const row = document.createElement('tr');
             row.className = `ano-data ano-${ano}`;
             row.style.display = expandido ? 'table-row' : 'none';
-            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-operacional">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-warning" onclick="editarItem(' + meta.id + ', \'operacional\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            row.innerHTML = '<td>' + meta.ano + '</td><td>' + formatarMes(meta.mes) + '</td><td class="valor-operacional ' + getValorClass(meta.meta) + '">' + formatarMoeda(meta.meta) + '</td><td>' + formatarData(meta.created_at) + '</td><td><button class="btn btn-sm btn-warning" onclick="editarItem(' + meta.id + ', \'operacional\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + meta.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
     });
@@ -345,7 +345,7 @@ function renderizarProjecoes() {
             const row = document.createElement('tr');
             row.className = `ano-data ano-${ano}`;
             row.style.display = expandido ? 'table-row' : 'none';
-            row.innerHTML = '<td>' + projecao.ano + '</td><td>' + formatarMes(projecao.mes) + '</td><td class="valor-projecao">' + formatarMoeda(projecao.meta) + '</td><td>' + formatarData(projecao.created_at) + '</td><td><button class="btn btn-sm btn-success" onclick="editarItem(' + projecao.id + ', \'projecao\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + projecao.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
+            row.innerHTML = '<td>' + projecao.ano + '</td><td>' + formatarMes(projecao.mes) + '</td><td class="valor-projecao ' + getValorClass(projecao.meta) + '">' + formatarMoeda(projecao.meta) + '</td><td>' + formatarData(projecao.created_at) + '</td><td><button class="btn btn-sm btn-success" onclick="editarItem(' + projecao.id + ', \'projecao\')" title="Editar"><i class="mdi mdi-pencil"></i></button><button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="excluirItem(' + projecao.id + ')" title="Excluir"><i class="mdi mdi-delete"></i></button></td>';
             tbody.appendChild(row);
         });
     });
@@ -674,6 +674,10 @@ function mostrarToast(mensagem, tipo) {
     }, 3000);
 }
 
+function getValorClass(valor) {
+    return valor < 0 ? 'valor-negativo' : 'valor-positivo';
+}
+
 function formatarMoeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -759,9 +763,24 @@ function configurarFormatacaoMoeda() {
 }
 
 function formatarCampoMoeda(input) {
-    var valor = input.value.replace(/\D/g, '');
+    var valor = input.value;
     
-    if (valor === '') {
+    // Verificar se começa com sinal negativo
+    var isNegative = valor.startsWith('-');
+    
+    // Remover todos os caracteres não numéricos, exceto o sinal de menos no início
+    valor = valor.replace(/[^\d-]/g, '');
+    
+    // Se tinha sinal negativo e ainda tem, preservar apenas um sinal no início
+    if (isNegative && valor.startsWith('-')) {
+        valor = '-' + valor.replace(/-/g, '');
+    } else if (isNegative) {
+        valor = '-' + valor.replace(/-/g, '');
+    } else {
+        valor = valor.replace(/-/g, '');
+    }
+    
+    if (valor === '' || valor === '-') {
         input.value = '';
         return;
     }
@@ -771,7 +790,12 @@ function formatarCampoMoeda(input) {
     var formatado = new Intl.NumberFormat('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-    }).format(numero / 100);
+    }).format(Math.abs(numero) / 100);
+    
+    // Adicionar sinal negativo se necessário
+    if (numero < 0) {
+        formatado = '-' + formatado;
+    }
     
     input.value = formatado;
 }
