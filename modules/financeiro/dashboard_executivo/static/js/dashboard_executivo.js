@@ -773,10 +773,24 @@ function updateFaturamentoPorSetorChart(data) {
         DashboardState.charts.faturamentoSetor.destroy();
     }
     
-    // Prepare data
-    const labels = ['Importação', 'Consultoria', 'Exportação'];
-    const values = [data.importacao.valor, data.consultoria.valor, data.exportacao.valor];
-    const percentuais = [data.importacao.percentual, data.consultoria.percentual, data.exportacao.percentual];
+    if (!data || data.length === 0) {
+        console.warn('⚠️ No data for faturamento por setor chart');
+        return;
+    }
+    
+    // Prepare data from array format
+    const labels = data.map(item => item.setor);
+    const values = data.map(item => item.valor);
+    const percentuais = data.map(item => item.percentual);
+    
+    // Cores por setor
+    const coresPorSetor = {
+        'Importação': 'rgba(16, 185, 129, 0.8)',
+        'Consultoria': 'rgba(59, 130, 246, 0.8)', 
+        'Exportação': 'rgba(245, 158, 11, 0.8)'
+    };
+    
+    const cores = labels.map(label => coresPorSetor[label] || 'rgba(156, 163, 175, 0.8)');
     
     DashboardState.charts.faturamentoSetor = new Chart(ctx, {
         type: 'doughnut',
@@ -784,11 +798,7 @@ function updateFaturamentoPorSetorChart(data) {
             labels: labels,
             datasets: [{
                 data: values,
-                backgroundColor: [
-                    'rgba(16, 185, 129, 0.8)',
-                    'rgba(59, 130, 246, 0.8)',
-                    'rgba(245, 158, 11, 0.8)'
-                ],
+                backgroundColor: cores,
                 borderWidth: 0, // Remover bordas coloridas
                 cutout: '60%' // Fazer o centro menor (mais compacto)
             }]
@@ -1485,10 +1495,10 @@ function updateMetasSegmentadas(metasData) {
     
     if (!metasData) {
         // Limpar dados em caso de erro
-        const tipos = ['geral', 'consultoria', 'solucoes'];
+        const tipos = ['geral', 'consultoria', 'imp_exp'];
         tipos.forEach(tipo => {
-            const percentageEl = document.getElementById(`percentage-${tipo}`);
-            const valuesEl = document.getElementById(`values-${tipo}`);
+            const percentageEl = document.getElementById(`percentage-${tipo.replace('_', '-')}`);
+            const valuesEl = document.getElementById(`values-${tipo.replace('_', '-')}`);
             
             if (percentageEl) percentageEl.textContent = '0%';
             if (valuesEl) valuesEl.textContent = 'R$ 0 de R$ 0';
@@ -1504,9 +1514,10 @@ function updateMetasSegmentadas(metasData) {
 }
 
 function updateMiniGauge(tipo, data) {
-    const canvasId = `gauge-${tipo}`;
-    const percentageId = `percentage-${tipo}`;
-    const valuesId = `values-${tipo}`;
+    // Converter tipo para ID correto (imp_exp -> imp-exp)
+    const canvasId = `gauge-${tipo.replace('_', '-')}`;
+    const percentageId = `percentage-${tipo.replace('_', '-')}`;
+    const valuesId = `values-${tipo.replace('_', '-')}`;
     
     const canvas = document.getElementById(canvasId);
     const percentageEl = document.getElementById(percentageId);
@@ -1532,7 +1543,7 @@ function updateMiniGauge(tipo, data) {
         case 'consultoria':
             baseColor = '#198754';
             break;
-        case 'solucoes':
+        case 'imp_exp':
             baseColor = '#fd7e14';
             break;
         default:

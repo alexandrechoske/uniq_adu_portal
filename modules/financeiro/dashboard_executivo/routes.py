@@ -129,7 +129,7 @@ def api_kpis():
 @login_required
 @perfil_required('financeiro', 'dashboard_executivo')
 def api_metas_segmentadas():
-    """API para metas segmentadas (Geral, Consultoria, Importação)"""
+    """API para metas segmentadas (Geral, Consultoria, IMP/EXP)"""
     try:
         ano = request.args.get('ano', datetime.now().year)
         
@@ -141,45 +141,50 @@ def api_metas_segmentadas():
         
         # Separar metas por tipo
         meta_consultoria = 0
-        meta_importacao = 0
+        meta_imp_exp = 0
         
         for item in response_metas.data:
             valor_meta = float(item['meta']) if item['meta'] else 0
             tipo = item.get('tipo', '').lower()
             
-            if 'consultoria' in tipo:
+            if 'financeiro_consultoria' in tipo or 'consultoria' in tipo:
                 meta_consultoria += valor_meta
-            elif 'solucoes' in tipo or 'importacao' in tipo:
-                meta_importacao += valor_meta
+            elif 'financeiro_imp_exp' in tipo or 'solucoes' in tipo or 'importacao' in tipo:
+                meta_imp_exp += valor_meta
         
-        meta_geral = meta_consultoria + meta_importacao
+        meta_geral = meta_consultoria + meta_imp_exp
         
-        # Buscar faturamento realizado segmentado por empresa (não por categoria)
+        # Buscar faturamento realizado usando a mesma lógica da distribuição por setor
         response_faturamento = supabase_admin.table('fin_faturamento_anual') \
-            .select('valor, empresa') \
+            .select('valor, categoria') \
             .gte('data', f'{ano}-01-01') \
             .lte('data', f'{ano}-12-31') \
             .execute()
 
-        # Separar faturamento por empresa (consultoria vs soluções)
+        # Separar faturamento por categoria (mesma lógica do gráfico de rosca)
         faturamento_consultoria = 0
-        faturamento_solucoes = 0
+        faturamento_importacao = 0
+        faturamento_exportacao = 0
 
         for item in response_faturamento.data:
             valor = float(item['valor']) if item['valor'] else 0
-            empresa = item.get('empresa', '').lower()
+            categoria = item.get('categoria', '').upper()
 
-            if 'consultoria' in empresa:
+            if 'CONS' in categoria or 'CONSULT' in categoria:
                 faturamento_consultoria += valor
-            elif 'solucoes' in empresa or 'soluções' in empresa:
-                faturamento_solucoes += valor
+            elif 'IMP' in categoria or 'IMPORT' in categoria:
+                faturamento_importacao += valor
+            elif 'EXP' in categoria or 'EXPORT' in categoria:
+                faturamento_exportacao += valor
 
-        faturamento_geral = faturamento_consultoria + faturamento_solucoes
+        # IMP/EXP é a soma de importação + exportação
+        faturamento_imp_exp = faturamento_importacao + faturamento_exportacao
+        faturamento_geral = faturamento_consultoria + faturamento_imp_exp
         
         # Calcular percentuais de atingimento
         atingimento_geral = (faturamento_geral / meta_geral * 100) if meta_geral > 0 else 0
         atingimento_consultoria = (faturamento_consultoria / meta_consultoria * 100) if meta_consultoria > 0 else 0
-        atingimento_solucoes = (faturamento_solucoes / meta_importacao * 100) if meta_importacao > 0 else 0
+        atingimento_imp_exp = (faturamento_imp_exp / meta_imp_exp * 100) if meta_imp_exp > 0 else 0
         
         return jsonify({
             'success': True,
@@ -195,10 +200,10 @@ def api_metas_segmentadas():
                     'realizado': faturamento_consultoria,
                     'atingimento': round(atingimento_consultoria, 1)
                 },
-                'solucoes': {
-                    'meta': meta_importacao,
-                    'realizado': faturamento_solucoes,
-                    'atingimento': round(atingimento_solucoes, 1)
+                'imp_exp': {
+                    'meta': meta_imp_exp,
+                    'realizado': faturamento_imp_exp,
+                    'atingimento': round(atingimento_imp_exp, 1)
                 }
             }
         })
@@ -398,20 +403,23 @@ def api_faturamento_setor():
         
         return jsonify({
             'success': True,
-            'data': {
-                'importacao': {
+            'data': [
+                {
+                    'setor': 'Importação',
                     'valor': total_importacao,
                     'percentual': (total_importacao / (total_importacao + total_consultoria + total_exportacao) * 100) if (total_importacao + total_consultoria + total_exportacao) > 0 else 0
                 },
-                'consultoria': {
+                {
+                    'setor': 'Consultoria', 
                     'valor': total_consultoria,
                     'percentual': (total_consultoria / (total_importacao + total_consultoria + total_exportacao) * 100) if (total_importacao + total_consultoria + total_exportacao) > 0 else 0
                 },
-                'exportacao': {
+                {
+                    'setor': 'Exportação',
                     'valor': total_exportacao,
                     'percentual': (total_exportacao / (total_importacao + total_consultoria + total_exportacao) * 100) if (total_importacao + total_consultoria + total_exportacao) > 0 else 0
                 }
-            }
+            ]
         })
     except Exception as e:
         return jsonify({
