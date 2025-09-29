@@ -203,6 +203,13 @@ class ConciliacaoBancaria {
             if (result.success) {
                 // Acumular dados de múltiplos arquivos
                 const novosLancamentos = result.data.lancamentos || [];
+                const bancoIdentificado = result.data.banco_identificado;
+                
+                // Adicionar informação do banco aos lançamentos
+                novosLancamentos.forEach(lancamento => {
+                    lancamento.banco_origem = bancoIdentificado;
+                });
+                
                 this.dadosBancoOriginais.push(...novosLancamentos);
                 
                 // Debug: mostrar estrutura do primeiro lançamento
@@ -272,14 +279,9 @@ class ConciliacaoBancaria {
     }
 
     atualizarContadoresFiltros() {
-        // Mapeamento dos bancos para normalizar as variações
-        const bancosMap = {
-            'banco_brasil': ['BANCO DO BRASIL', 'BB', 'BRASIL'],
-            'santander': ['SANTANDER', 'SANT'],
-            'itau': ['ITAU', 'ITAÚ']
-        };
+        console.log('[FILTROS] Iniciando atualização de contadores...');
         
-        // Contar registros por banco nos dados do sistema
+        // Contar registros por banco nos dados do sistema (usando nomes normalizados)
         const contadoresSistema = {
             'banco_brasil': 0,
             'santander': 0,
@@ -287,17 +289,19 @@ class ConciliacaoBancaria {
         };
         
         this.dadosSistemaOriginais.forEach(lancamento => {
-            const nomeBanco = (lancamento.nome_banco || '').toUpperCase();
+            const nomeBanco = (lancamento.nome_banco || '').toLowerCase();
             
-            Object.keys(bancosMap).forEach(banco => {
-                const termosParaBuscar = bancosMap[banco];
-                if (termosParaBuscar.some(termo => nomeBanco.includes(termo))) {
-                    contadoresSistema[banco]++;
-                }
-            });
+            // Usar correspondência direta com nomes normalizados
+            if (nomeBanco === 'banco_brasil') {
+                contadoresSistema['banco_brasil']++;
+            } else if (nomeBanco === 'santander') {
+                contadoresSistema['santander']++;
+            } else if (nomeBanco === 'itau') {
+                contadoresSistema['itau']++;
+            }
         });
         
-        // Contar registros por banco nos dados bancários
+        // Contar registros por banco nos dados bancários (usando banco_origem)
         const contadoresBanco = {
             'banco_brasil': 0,
             'santander': 0,
@@ -305,14 +309,16 @@ class ConciliacaoBancaria {
         };
         
         this.dadosBancoOriginais.forEach(lancamento => {
-            const nomeBanco = (lancamento.nome_banco || lancamento.banco || '').toUpperCase();
+            const bancoOrigem = lancamento.banco_origem || '';
             
-            Object.keys(bancosMap).forEach(banco => {
-                const termosParaBuscar = bancosMap[banco];
-                if (termosParaBuscar.some(termo => nomeBanco.includes(termo))) {
-                    contadoresBanco[banco]++;
-                }
-            });
+            // Mapear identificação do banco OFX para nossos filtros
+            if (bancoOrigem === 'bb' || bancoOrigem === 'banco_brasil') {
+                contadoresBanco['banco_brasil']++;
+            } else if (bancoOrigem === 'itau') {
+                contadoresBanco['itau']++;
+            } else if (bancoOrigem === 'santander') {
+                contadoresBanco['santander']++;
+            }
         });
         
         console.log('[FILTROS] Contadores Sistema:', contadoresSistema);
@@ -336,6 +342,8 @@ class ConciliacaoBancaria {
                 // Atualizar apenas a parte do badge, mantendo o texto do banco
                 const bancoTexto = chip.textContent.replace(/\d+/g, '').trim();
                 chip.innerHTML = bancoTexto + badgeHTML;
+                
+                console.log(`[FILTROS] Chip ${banco}: Sistema=${sistemaCount}, Banco=${bancoCount}`);
             }
         });
     }
@@ -359,25 +367,25 @@ class ConciliacaoBancaria {
             this.dadosSistema = [...this.dadosSistemaOriginais];
             this.dadosBanco = [...this.dadosBancoOriginais];
         } else {
-            // Mapeamento dos bancos para normalizar as variações
-            const bancosMap = {
-                'banco_brasil': ['BANCO DO BRASIL', 'BB', 'BRASIL'],
-                'santander': ['SANTANDER', 'SANT'],
-                'itau': ['ITAU', 'ITAÚ']
-            };
-            
-            const termosParaBuscar = bancosMap[banco] || [banco.toUpperCase()];
-            
-            // Filtrar dados do sistema por banco
+            // Filtrar dados do sistema por banco (usando nomes normalizados)
             this.dadosSistema = this.dadosSistemaOriginais.filter(item => {
-                const nomeBanco = (item.nome_banco || '').toUpperCase();
-                return termosParaBuscar.some(termo => nomeBanco.includes(termo));
+                const nomeBanco = (item.nome_banco || '').toLowerCase();
+                return nomeBanco === banco;
             });
             
-            // Filtrar dados do banco por banco (caso os dados do extrato tenham identificação)
+            // Filtrar dados do banco por banco usando banco_origem
             this.dadosBanco = this.dadosBancoOriginais.filter(item => {
-                const nomeBanco = (item.nome_banco || item.banco || '').toUpperCase();
-                return termosParaBuscar.some(termo => nomeBanco.includes(termo));
+                const bancoOrigem = item.banco_origem || '';
+                
+                // Mapear filtro para identificação do OFX
+                if (banco === 'banco_brasil' && (bancoOrigem === 'bb' || bancoOrigem === 'banco_brasil')) {
+                    return true;
+                } else if (banco === 'itau' && bancoOrigem === 'itau') {
+                    return true;
+                } else if (banco === 'santander' && bancoOrigem === 'santander') {
+                    return true;
+                }
+                return false;
             });
         }
         

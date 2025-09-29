@@ -40,6 +40,62 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Bypass API key para testes
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
 
+def normalizar_nome_banco(nome_banco: str) -> str:
+    """
+    Normaliza os nomes dos bancos do sistema para ficar igual aos identificadores dos arquivos OFX
+    
+    Mapeamento:
+    - bb (OFX) → banco_brasil
+    - itau (OFX) → itau  
+    - santander (OFX) → santander
+    """
+    if not nome_banco:
+        return 'desconhecido'
+    
+    nome_limpo = nome_banco.strip().upper()
+    
+    # Mapeamento de nomes variados para identificadores padronizados
+    mapeamento_bancos = {
+        # Banco do Brasil - várias variações
+        'BANCO DO BRASIL': 'banco_brasil',
+        'BB': 'banco_brasil',
+        'BRASIL': 'banco_brasil',
+        'BANCO BRASIL': 'banco_brasil',
+        
+        # Itaú - várias variações
+        'ITAU': 'itau',
+        'ITAÚ': 'itau',
+        'BANCO ITAU': 'itau',
+        'BANCO ITAÚ': 'itau',
+        
+        # Santander - várias variações
+        'SANTANDER': 'santander',
+        'BANCO SANTANDER': 'santander',
+        
+        # Outros bancos - mantém identificador único
+        'BRADESCO': 'bradesco',
+        'SICOOB': 'sicoob', 
+        'CAIXA': 'caixa',
+        'CAIXA ECONOMICA': 'caixa',
+        'XP INVESTIMENTO': 'xp_investimento',
+        'XP RENDIMENTOS': 'xp_rendimentos',
+        'INTER': 'inter',
+        'NUBANK': 'nubank',
+        'C6': 'c6'
+    }
+    
+    # Procurar por correspondência exata primeiro
+    if nome_limpo in mapeamento_bancos:
+        return mapeamento_bancos[nome_limpo]
+    
+    # Procurar por correspondência parcial
+    for banco_key, banco_id in mapeamento_bancos.items():
+        if banco_key in nome_limpo or nome_limpo in banco_key:
+            return banco_id
+    
+    # Se não encontrar, retornar normalizado (minúsculo, sem espaços)
+    return nome_limpo.lower().replace(' ', '_').replace('ã', 'a').replace('á', 'a').replace('ê', 'e').replace('ç', 'c')
+
 def verificar_api_bypass():
     """Verifica se a requisição tem bypass de API"""
     return request.headers.get('X-API-Key') == API_BYPASS_KEY
@@ -1291,16 +1347,21 @@ def movimentos_sistema():
         if banco_filtro and banco_filtro != 'todos':
             query = query.ilike('nome_banco', f'%{banco_filtro}%')
         
-        # Executar query
-        response = query.order('data_lancamento', desc=True).limit(1000).execute()
+        # Executar query (sem limite para pegar todos os registros do período)
+        response = query.order('data_lancamento', desc=True).execute()
         
         if response.data:
             movimentos = []
             for item in response.data:
+                # Normalizar nome do banco para ficar igual aos identificadores OFX
+                nome_banco_original = item.get('nome_banco', 'N/A')
+                nome_banco_normalizado = normalizar_nome_banco(nome_banco_original)
+                
                 movimento = {
                     'id': item.get('id'),
                     'data_lancamento': item.get('data_lancamento'),
-                    'nome_banco': item.get('nome_banco', 'N/A'),
+                    'nome_banco': nome_banco_normalizado,  # Nome normalizado
+                    'nome_banco_original': nome_banco_original,  # Manter original para debug
                     'numero_conta': item.get('numero_conta', 'N/A'),
                     'tipo_lancamento': item.get('tipo_lancamento', 'N/A'),
                     'valor': float(item.get('valor', 0)),
