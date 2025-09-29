@@ -187,11 +187,11 @@ class ConciliacaoBancaria {
             return;
         }
         
-        // Validar extensão
-        const allowedExtensions = ['.xlsx', '.xls', '.txt', '.csv'];
+        // Validar extensão (apenas OFX)
+        const allowedExtensions = ['.ofx'];
         const fileExtension = arquivo.name.toLowerCase().substring(arquivo.name.lastIndexOf('.'));
         if (!allowedExtensions.includes(fileExtension)) {
-            this.showError('Formato não suportado. Use .xlsx, .xls, .txt ou .csv');
+            this.showError('Apenas arquivos OFX são aceitos (.ofx)');
             return;
         }
         

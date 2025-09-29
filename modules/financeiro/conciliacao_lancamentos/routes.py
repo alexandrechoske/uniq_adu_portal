@@ -16,6 +16,7 @@ from typing import Dict, List, Tuple, Optional
 import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
+from .bank_parser import BankFileParser  # Importa parser atualizado
 
 # Configurar blueprint
 # Configurar blueprint
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Configurações de upload
 UPLOAD_FOLDER = '/tmp/conciliacao_uploads'
-ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv', 'txt'}
+ALLOWED_EXTENSIONS = {'ofx'}  # Apenas arquivos OFX para nova conciliação
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Criar pasta de upload se não existir
@@ -69,6 +70,22 @@ class ProcessadorBancos:
                     logger.info(f"[BANCO] Santander identificado por header CSV")
                     return 'santander'
                     
+            elif arquivo_path.endswith('.ofx'):
+                logger.info(f"[BANCO] Arquivo OFX detectado, usando parser dedicado...")
+                # Para OFX, usar o novo parser que detecta automaticamente
+                parser = BankFileParser()
+                banco_code = parser._detect_bank_from_ofx(arquivo_path)
+                
+                banco_map = {
+                    'BB': 'banco_brasil',
+                    'SANTANDER': 'santander', 
+                    'ITAU': 'itau'
+                }
+                
+                detected = banco_map.get(banco_code, 'desconhecido')
+                logger.info(f"[BANCO] Banco detectado no OFX: {detected}")
+                return detected
+                
             elif arquivo_path.endswith(('.xls', '.xlsx')):
                 logger.info(f"[BANCO] Arquivo Excel detectado, analisando conteúdo...")
                 try:
@@ -673,22 +690,63 @@ class ProcessadorBancos:
             return []
     
     def processar_arquivo(self, arquivo_path: str, banco: str = None) -> Dict:
-        """Processa arquivo de qualquer banco"""
+        """Processa arquivo de qualquer banco (OFX ou formatos legados)"""
         
         if not os.path.exists(arquivo_path):
             return {'success': False, 'message': 'Arquivo não encontrado'}
         
         nome_arquivo = os.path.basename(arquivo_path)
+        file_ext = os.path.splitext(arquivo_path)[1].lower()
         
-        if not banco:
-            banco = self.identificar_banco(arquivo_path, nome_arquivo)
-        
-        if banco == 'desconhecido':
-            return {'success': False, 'message': 'Não foi possível identificar o banco do arquivo'}
-        
-        logger.info(f"Processando arquivo {nome_arquivo} como {banco}")
+        logger.info(f"[PROCESSAMENTO] Arquivo: {nome_arquivo}, Extensão: {file_ext}")
         
         try:
+            # Para arquivos OFX, usar o novo parser unificado
+            if file_ext == '.ofx':
+                logger.info(f"[OFX] Usando parser OFX unificado para {nome_arquivo}")
+                parser = BankFileParser()
+                resultado = parser.parse_file(arquivo_path)
+                
+                if "erro" in resultado:
+                    return {'success': False, 'message': resultado['erro']}
+                
+                # Converte formato do parser para formato esperado pelas rotas
+                lancamentos = []
+                for mov in resultado.get('movimentos', []):
+                    lancamento = {
+                        'data': mov['data'],
+                        'descricao': mov['descricao'],
+                        'valor': mov['valor'],
+                        'tipo': mov['tipo'],
+                        'ref_unique': mov.get('ref_unique'),
+                        'linha_origem': mov.get('linha_origem', 0)
+                    }
+                    lancamentos.append(lancamento)
+                
+                return {
+                    'success': True,
+                    'banco_identificado': resultado.get('codigo_banco', 'OFX').lower(),
+                    'banco_nome': resultado.get('banco', 'Banco OFX'),
+                    'conta': resultado.get('conta', 'N/A'),
+                    'total_lancamentos': len(lancamentos),
+                    'lancamentos': lancamentos,
+                    'formato': 'OFX',
+                    'info_adicional': {
+                        'data_processamento': resultado.get('data_processamento'),
+                        'conta': resultado.get('conta'),
+                        'agencia': resultado.get('agencia')
+                    }
+                }
+            
+            # Para formatos legados (xlsx, txt, csv)
+            if not banco:
+                banco = self.identificar_banco(arquivo_path, nome_arquivo)
+            
+            if banco == 'desconhecido':
+                return {'success': False, 'message': 'Não foi possível identificar o banco do arquivo'}
+            
+            logger.info(f"[LEGADO] Processando arquivo {nome_arquivo} como {banco}")
+            
             if banco == 'banco_brasil':
                 lancamentos = self.processar_banco_brasil(arquivo_path)
             elif banco == 'santander':
@@ -856,11 +914,11 @@ def carregar_dados_conciliacao():
         logger.info("[PROCESSAR] Autenticação/bypass verificado com sucesso")
         
         # Verificar se o arquivo foi enviado corretamente
-        if 'arquivo_extrato' not in request.files:
-            logger.error("[PROCESSAR] Campo 'arquivo_extrato' não encontrado nos files")
-            return jsonify({'success': False, 'error': 'Nenhum arquivo enviado com o nome correto (arquivo_extrato)'}), 400
+        if 'arquivo' not in request.files:
+            logger.error("[PROCESSAR] Campo 'arquivo' não encontrado nos files")
+            return jsonify({'success': False, 'error': 'Nenhum arquivo enviado'}), 400
         
-        arquivo = request.files['arquivo_extrato']
+        arquivo = request.files['arquivo']
         if not arquivo or arquivo.filename == '':
             logger.error("[PROCESSAR] Arquivo vazio ou sem nome")
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
@@ -870,7 +928,7 @@ def carregar_dados_conciliacao():
         # Verificar se é um tipo de arquivo permitido
         if not allowed_file(arquivo.filename):
             logger.error(f"[PROCESSAR] Tipo de arquivo não permitido: {arquivo.filename}")
-            return jsonify({'success': False, 'error': f'Tipo de arquivo não permitido. Use: {", ".join(ALLOWED_EXTENSIONS)}'}), 400
+            return jsonify({'success': False, 'error': 'Apenas arquivos OFX são aceitos. Exporte do internet banking como .ofx'}), 400
         
         # Processar o arquivo
         resultado = processar_arquivo_extrato(arquivo)
@@ -1034,7 +1092,7 @@ def upload_arquivo_banco():
 
         if not allowed_file(file.filename):
             logger.warning(f"[UPLOAD] Extensão de arquivo não permitida: {file.filename}")
-            return jsonify({'success': False, 'error': 'Formato de arquivo não suportado. Use .xlsx, .xls, .csv ou .txt'}), 400
+            return jsonify({'success': False, 'error': 'Apenas arquivos OFX são aceitos. Exporte do internet banking como .ofx'}), 400
 
         # Verificar tamanho do arquivo
         file.seek(0, 2)  # Mover para o final do arquivo
@@ -1053,37 +1111,23 @@ def upload_arquivo_banco():
         logger.info(f"[UPLOAD] Salvando arquivo em: {arquivo_path}")
         file.save(arquivo_path)
 
-        # Processar arquivo usando a classe ProcessadorBancos
+        # Processar arquivo usando a classe ProcessadorBancos (método unificado)
         processador = ProcessadorBancos()
+        resultado = processador.processar_arquivo(arquivo_path)
         
-        # Identificar banco automaticamente se não foi especificado
-        if not banco_selecionado or banco_selecionado == 'auto':
-            banco_identificado = processador.identificar_banco(arquivo_path, filename)
-            logger.info(f"[UPLOAD] Banco identificado automaticamente: {banco_identificado}")
-        else:
-            banco_identificado = banco_selecionado.lower().replace(' ', '_')
-            logger.info(f"[UPLOAD] Banco especificado pelo usuário: {banco_identificado}")
-
-        # Processar conforme o banco
-        lancamentos = []
-        if banco_identificado == 'banco_brasil':
-            lancamentos = processador.processar_banco_brasil(arquivo_path)
-        elif banco_identificado == 'santander':
-            lancamentos = processador.processar_santander(arquivo_path)
-        elif banco_identificado == 'itau':
-            lancamentos = processador.processar_itau(arquivo_path)
-        else:
-            # Tentar todos os formatos se não conseguir identificar
-            logger.warning(f"[UPLOAD] Banco não identificado, tentando todos os formatos...")
-            for metodo in ['processar_banco_brasil', 'processar_santander', 'processar_itau']:
-                try:
-                    lancamentos = getattr(processador, metodo)(arquivo_path)
-                    if lancamentos:
-                        logger.info(f"[UPLOAD] Sucesso com método: {metodo}")
-                        break
-                except Exception as e:
-                    logger.debug(f"[UPLOAD] Falha com método {metodo}: {e}")
-                    continue
+        if not resultado['success']:
+            logger.error(f"[UPLOAD] Erro no processamento: {resultado.get('message', 'Erro desconhecido')}")
+            return jsonify({
+                'success': False, 
+                'error': resultado.get('message', 'Não foi possível processar o arquivo. Verifique se o formato está correto.')
+            }), 400
+        
+        # Extrair dados do resultado
+        banco_identificado = resultado.get('banco_identificado', 'desconhecido')
+        lancamentos = resultado.get('lancamentos', [])
+        
+        logger.info(f"[UPLOAD] Banco identificado: {banco_identificado}")
+        logger.info(f"[UPLOAD] {len(lancamentos)} lançamentos processados")
 
         # Limpar arquivo temporário
         try:
@@ -1091,13 +1135,6 @@ def upload_arquivo_banco():
             logger.info(f"[UPLOAD] Arquivo temporário removido: {arquivo_path}")
         except Exception as e:
             logger.warning(f"[UPLOAD] Erro ao remover arquivo temporário: {e}")
-
-        if not lancamentos:
-            logger.error("[UPLOAD] Nenhum lançamento foi processado do arquivo")
-            return jsonify({
-                'success': False, 
-                'error': 'Não foi possível processar o arquivo. Verifique se o formato está correto.'
-            }), 400
 
         # Armazenar na sessão
         session['movimentos_banco'] = lancamentos
@@ -1531,10 +1568,6 @@ def limpar_dados_temporarios(session_id):
     except Exception as e:
         logger.error(f"Erro ao limpar dados temporários: {e}")
 
-def allowed_file(filename):
-    """Verificar se o arquivo é permitido."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 def processar_arquivo_extrato(file):
     """Processar arquivo de extrato bancário."""
     filename = None
@@ -1570,22 +1603,29 @@ def processar_arquivo_extrato(file):
         
         if resultado['success']:
             logger.info(f"[UPLOAD] Processamento concluído com sucesso para {filename}")
-            logger.info(f"[UPLOAD] Banco identificado: {resultado['banco_identificado']}")
-            logger.info(f"[UPLOAD] Registros processados: {resultado['registros_processados']}")
+            logger.info(f"[UPLOAD] Banco identificado: {resultado.get('banco_identificado', 'N/A')}")
+            logger.info(f"[UPLOAD] Total de lançamentos: {resultado.get('total_lancamentos', 0)}")
             
             return {
                 'success': True,
-                'data': resultado['movimentos'],
+                'data': resultado.get('lancamentos', []),
                 'arquivo': filename,
-                'banco': resultado['banco_identificado'],
-                'registros_processados': resultado['registros_processados']
+                'banco': resultado.get('banco_identificado', 'N/A'),
+                'registros_processados': resultado.get('total_lancamentos', 0),
+                'formato': resultado.get('formato', 'N/A'),
+                'conta': resultado.get('conta', 'N/A'),
+                'info_adicional': resultado.get('info_adicional', {})
             }
         else:
-            logger.error(f"[UPLOAD] Falha no processamento: {resultado['message']}")
-            return {'success': False, 'error': resultado['message']}
+            error_msg = resultado.get('message', 'Erro desconhecido no processamento')
+            logger.error(f"[UPLOAD] Falha no processamento: {error_msg}")
+            return {'success': False, 'error': error_msg}
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logger.error(f"[UPLOAD] Erro inesperado ao processar {filename}: {str(e)}")
+        logger.error(f"[UPLOAD] Stack trace completo: {error_details}")
         
         # Garantir limpeza do arquivo temporário
         if filepath and os.path.exists(filepath):
@@ -1595,7 +1635,7 @@ def processar_arquivo_extrato(file):
             except:
                 logger.warning(f"[UPLOAD] Não foi possível remover arquivo temporário: {filepath}")
                 
-        return {'success': False, 'error': f'Erro interno: {str(e)}'}
+        return {'success': False, 'error': f'Erro no processamento: {str(e)}'}
 
 def identificar_banco(filename, df):
     """Identificar banco baseado no nome do arquivo e estrutura."""

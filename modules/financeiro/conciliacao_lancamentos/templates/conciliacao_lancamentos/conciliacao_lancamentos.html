@@ -63,25 +63,26 @@
                         <!-- Seleção do Banco para Upload -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="banco_origem" class="form-label">Banco do Arquivo</label>
+                                <label for="banco_origem" class="form-label">Banco do Arquivo OFX</label>
                                 <select id="banco_origem" name="banco_origem" class="form-select">
-                                    <option value="auto">Identificar Automaticamente</option>
-                                    <option value="banco_brasil">Banco do Brasil (.xlsx)</option>
-                                    <option value="santander">Santander (.xlsx)</option>
-                                    <option value="itau">Itaú (.txt)</option>
+                                    <option value="auto">🔍 Identificar Automaticamente</option>
+                                    <option value="banco_brasil">🏦 Banco do Brasil</option>
+                                    <option value="santander">🏦 Santander</option>
+                                    <option value="itau">🏦 Itaú</option>
                                 </select>
-                                <div class="form-text">O sistema tentará identificar automaticamente o banco pelo conteúdo</div>
+                                <div class="form-text">Sistema detecta automaticamente o banco pelo conteúdo do arquivo OFX</div>
                             </div>
                         </div>
 
                         <!-- Seleção do Arquivo -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="arquivo_banco" class="form-label">Arquivo do Extrato</label>
+                                <label for="arquivo_banco" class="form-label">Arquivo do Extrato Bancário</label>
                                 <input type="file" id="arquivo_banco" name="arquivo" class="form-control" 
-                                       accept=".xlsx,.xls,.txt,.csv" required>
+                                       accept=".ofx" required>
                                 <div class="form-text">
-                                    Formatos aceitos: Excel (.xlsx, .xls) para BB/Santander, TXT para Itaú
+                                    <strong>Formato:</strong> Apenas arquivos OFX (.ofx)<br>
+                                    <small class="text-muted">Exportar do internet banking como OFX para melhor precisão</small>
                                 </div>
                             </div>
                         </div>
