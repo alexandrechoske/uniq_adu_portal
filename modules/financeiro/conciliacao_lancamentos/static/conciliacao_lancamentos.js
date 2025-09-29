@@ -280,44 +280,64 @@ class ConciliacaoBancaria {
 
     atualizarContadoresFiltros() {
         console.log('[FILTROS] Iniciando atualização de contadores...');
+        console.log('[FILTROS] Dados sistema originais:', this.dadosSistemaOriginais.length);
+        console.log('[FILTROS] Dados banco originais:', this.dadosBancoOriginais.length);
         
-        // Contar registros por banco nos dados do sistema (usando nomes normalizados)
+        // Função helper para normalizar identificadores de banco
+        const normalizarParaFiltro = (nome) => {
+            if (!nome) return '';
+            const nomeNormalizado = nome.toLowerCase().trim();
+            
+            // Mapear nomes amigáveis e normalizados para identificadores de filtro
+            if (nomeNormalizado.includes('banco do brasil') || nomeNormalizado === 'banco_brasil' || nomeNormalizado === 'bb') {
+                return 'banco_brasil';
+            } else if (nomeNormalizado.includes('itau') || nomeNormalizado.includes('itaú') || nomeNormalizado === 'itau') {
+                return 'itau';
+            } else if (nomeNormalizado.includes('santander') || nomeNormalizado === 'santander') {
+                return 'santander';
+            }
+            return nomeNormalizado;
+        };
+        
+        // Contar registros por banco nos dados do sistema
         const contadoresSistema = {
             'banco_brasil': 0,
             'santander': 0,
             'itau': 0
         };
         
-        this.dadosSistemaOriginais.forEach(lancamento => {
-            const nomeBanco = (lancamento.nome_banco || '').toLowerCase();
+        this.dadosSistemaOriginais.forEach((lancamento, index) => {
+            const nomeBanco = lancamento.nome_banco || '';
+            const bancoNormalizado = normalizarParaFiltro(nomeBanco);
             
-            // Usar correspondência direta com nomes normalizados
-            if (nomeBanco === 'banco_brasil') {
-                contadoresSistema['banco_brasil']++;
-            } else if (nomeBanco === 'santander') {
-                contadoresSistema['santander']++;
-            } else if (nomeBanco === 'itau') {
-                contadoresSistema['itau']++;
+            // Debug dos primeiros registros
+            if (index < 3) {
+                console.log(`[FILTROS] Sistema[${index}] '${nomeBanco}' → '${bancoNormalizado}'`);
+            }
+            
+            if (contadoresSistema.hasOwnProperty(bancoNormalizado)) {
+                contadoresSistema[bancoNormalizado]++;
             }
         });
         
-        // Contar registros por banco nos dados bancários (usando banco_origem)
+        // Contar registros por banco nos dados bancários
         const contadoresBanco = {
             'banco_brasil': 0,
             'santander': 0,
             'itau': 0
         };
         
-        this.dadosBancoOriginais.forEach(lancamento => {
+        this.dadosBancoOriginais.forEach((lancamento, index) => {
             const bancoOrigem = lancamento.banco_origem || '';
+            const bancoNormalizado = normalizarParaFiltro(bancoOrigem);
             
-            // Mapear identificação do banco OFX para nossos filtros
-            if (bancoOrigem === 'bb' || bancoOrigem === 'banco_brasil') {
-                contadoresBanco['banco_brasil']++;
-            } else if (bancoOrigem === 'itau') {
-                contadoresBanco['itau']++;
-            } else if (bancoOrigem === 'santander') {
-                contadoresBanco['santander']++;
+            // Debug dos primeiros registros
+            if (index < 3) {
+                console.log(`[FILTROS] Banco[${index}] banco_origem: '${bancoOrigem}' → '${bancoNormalizado}'`);
+            }
+            
+            if (contadoresBanco.hasOwnProperty(bancoNormalizado)) {
+                contadoresBanco[bancoNormalizado]++;
             }
         });
         
@@ -331,17 +351,32 @@ class ConciliacaoBancaria {
             
             const chip = document.querySelector(`[data-banco="${banco}"]`);
             if (chip) {
-                let badgeHTML = '';
-                if (sistemaCount > 0) {
-                    badgeHTML += `<span class="badge bg-primary ms-1">${sistemaCount}</span>`;
+                // CORREÇÃO: Atualizar apenas os badges existentes sem sobrescrever o botão
+                const countersElement = chip.querySelector('.counters');
+                if (countersElement) {
+                    // Atualizar badges existentes
+                    const sistemaBadge = countersElement.querySelector('.bg-primary');
+                    const bancoBadge = countersElement.querySelector('.bg-success');
+                    
+                    if (sistemaBadge) {
+                        sistemaBadge.textContent = sistemaCount;
+                    }
+                    if (bancoBadge) {
+                        bancoBadge.textContent = bancoCount;
+                    }
+                } else {
+                    // Fallback: se não encontrar .counters, criar badges
+                    let badgeHTML = '';
+                    if (sistemaCount > 0) {
+                        badgeHTML += `<span class="badge bg-primary ms-1">${sistemaCount}</span>`;
+                    }
+                    if (bancoCount > 0) {
+                        badgeHTML += `<span class="badge bg-success ms-1">${bancoCount}</span>`;
+                    }
+                    
+                    // Adicionar badges no final do botão
+                    chip.insertAdjacentHTML('beforeend', badgeHTML);
                 }
-                if (bancoCount > 0) {
-                    badgeHTML += `<span class="badge bg-success ms-1">${bancoCount}</span>`;
-                }
-                
-                // Atualizar apenas a parte do badge, mantendo o texto do banco
-                const bancoTexto = chip.textContent.replace(/\d+/g, '').trim();
-                chip.innerHTML = bancoTexto + badgeHTML;
                 
                 console.log(`[FILTROS] Chip ${banco}: Sistema=${sistemaCount}, Banco=${bancoCount}`);
             }
@@ -351,41 +386,61 @@ class ConciliacaoBancaria {
     aplicarFiltroBanco(banco) {
         console.log(`[FILTRO] Aplicando filtro para banco: ${banco}`);
         
-        // Atualizar botões ativos
+        // CORREÇÃO: Normalizar o banco recebido (pode vir em maiúsculo dos data-attributes)
+        const bancoNormalizado = banco ? banco.toLowerCase() : 'todos';
+        console.log(`[FILTRO] Banco normalizado: ${bancoNormalizado}`);
+        
+        // Atualizar botões ativos (usar o banco original para encontrar o elemento)
         document.querySelectorAll('.banco-filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         
-        const activeBtn = document.querySelector(`[data-banco="${banco}"]`);
+        // Tentar encontrar o botão com qualquer variação (maiúsculo/minúsculo)
+        let activeBtn = document.querySelector(`[data-banco="${banco}"]`) || 
+                       document.querySelector(`[data-banco="${bancoNormalizado}"]`);
         if (activeBtn) {
             activeBtn.classList.add('active');
         }
         
-        this.bancoAtivo = banco;
+        this.bancoAtivo = bancoNormalizado;
         
-        if (banco === 'todos') {
+        if (bancoNormalizado === 'todos') {
             this.dadosSistema = [...this.dadosSistemaOriginais];
             this.dadosBanco = [...this.dadosBancoOriginais];
         } else {
-            // Filtrar dados do sistema por banco (usando nomes normalizados)
+            // Função helper para normalizar (mesma lógica dos contadores)
+            const normalizarParaFiltro = (nome) => {
+                if (!nome) return '';
+                const nomeNormalizado = nome.toLowerCase().trim();
+                
+                if (nomeNormalizado.includes('banco do brasil') || nomeNormalizado === 'banco_brasil' || nomeNormalizado === 'bb') {
+                    return 'banco_brasil';
+                } else if (nomeNormalizado.includes('itau') || nomeNormalizado.includes('itaú') || nomeNormalizado === 'itau') {
+                    return 'itau';
+                } else if (nomeNormalizado.includes('santander') || nomeNormalizado === 'santander') {
+                    return 'santander';
+                }
+                return nomeNormalizado;
+            };
+            
+            console.log(`[FILTRO] Filtrando por banco: ${bancoNormalizado}`);
+            
+            // Filtrar dados do sistema por banco
             this.dadosSistema = this.dadosSistemaOriginais.filter(item => {
-                const nomeBanco = (item.nome_banco || '').toLowerCase();
-                return nomeBanco === banco;
+                const nomeBanco = item.nome_banco || '';
+                const bancoNormalizado_item = normalizarParaFiltro(nomeBanco);
+                const match = bancoNormalizado_item === bancoNormalizado;
+                if (match) console.log(`[FILTRO] Sistema match: ${nomeBanco} → ${bancoNormalizado_item}`);
+                return match;
             });
             
             // Filtrar dados do banco por banco usando banco_origem
             this.dadosBanco = this.dadosBancoOriginais.filter(item => {
                 const bancoOrigem = item.banco_origem || '';
-                
-                // Mapear filtro para identificação do OFX
-                if (banco === 'banco_brasil' && (bancoOrigem === 'bb' || bancoOrigem === 'banco_brasil')) {
-                    return true;
-                } else if (banco === 'itau' && bancoOrigem === 'itau') {
-                    return true;
-                } else if (banco === 'santander' && bancoOrigem === 'santander') {
-                    return true;
-                }
-                return false;
+                const bancoNormalizado_item = normalizarParaFiltro(bancoOrigem);
+                const match = bancoNormalizado_item === bancoNormalizado;
+                if (match) console.log(`[FILTRO] Banco match: ${bancoOrigem} → ${bancoNormalizado_item}`);
+                return match;
             });
         }
         
@@ -442,8 +497,17 @@ class ConciliacaoBancaria {
             const descricao = item.descricao_original || item.descricao || 'Sem descrição';
             const status = item.status || 'pendente';
             const refNorm = item.ref_unique_norm || '-';
-            const nomeBanco = item.nome_banco || 'N/A';
+            
+            // CORREÇÃO: Converter nome normalizado para nome amigável (igual ao extrato)
+            const nomeBanco = this.obterNomeBancoAmigavel(item.nome_banco) || item.nome_banco || 'N/A';
             const numeroConta = item.numero_conta || 'N/A';
+            
+            // Debug para verificar estrutura
+            if (index === 0) {
+                console.log('[DEBUG] Primeiro item da tabela sistema:', item);
+                console.log('[DEBUG] nome_banco original:', item.nome_banco);
+                console.log('[DEBUG] nomeBanco convertido:', nomeBanco);
+            }
             
             // Classe CSS baseada no status
             const statusClass = status.toLowerCase();
@@ -491,8 +555,17 @@ class ConciliacaoBancaria {
             const historico = item.descricao || item.historico || 'Sem histórico';
             const status = item.status || 'pendente';
             const refNorm = item.ref_unique_norm || '-';
-            const nomeBanco = item.nome_banco || item.banco || 'N/A';
+            
+            // CORREÇÃO: Derivar nome do banco a partir do banco_origem
+            const nomeBanco = this.obterNomeBancoAmigavel(item.banco_origem) || item.nome_banco || item.banco || 'N/A';
             const numeroConta = item.numero_conta || item.conta || 'N/A';
+            
+            // Debug para verificar estrutura
+            if (index === 0) {
+                console.log('[DEBUG] Primeiro item da tabela banco:', item);
+                console.log('[DEBUG] banco_origem:', item.banco_origem);
+                console.log('[DEBUG] nomeBanco derivado:', nomeBanco);
+            }
             
             // Classe CSS baseada no status
             const statusClass = status.toLowerCase();
@@ -610,6 +683,25 @@ class ConciliacaoBancaria {
     truncarTexto(texto, limite) {
         if (!texto) return '';
         return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
+    }
+
+    obterNomeBancoAmigavel(bancoOrigem) {
+        /**
+         * Converte o identificador do banco (banco_origem) para nome amigável
+         */
+        const mapeamentoBancos = {
+            'bb': 'Banco do Brasil',
+            'banco_brasil': 'Banco do Brasil',
+            'itau': 'Itaú',
+            'santander': 'Santander'
+        };
+        
+        if (!bancoOrigem) return null;
+        
+        const nomeAmigavel = mapeamentoBancos[bancoOrigem.toLowerCase()];
+        console.log(`[BANCO] Mapeando '${bancoOrigem}' → '${nomeAmigavel || 'N/A'}'`);
+        
+        return nomeAmigavel || bancoOrigem;
     }
 
     // Métodos de UI
