@@ -1174,7 +1174,7 @@ def upload_arquivo_banco():
                 'total_registros': len(lancamentos),
                 'banco_identificado': banco_identificado,
                 'nome_arquivo': filename,
-                'lancamentos': lancamentos[:5]  # Primeiros 5 para visualização
+                'lancamentos': lancamentos  # Retornar todos os lançamentos
             }
         })
 

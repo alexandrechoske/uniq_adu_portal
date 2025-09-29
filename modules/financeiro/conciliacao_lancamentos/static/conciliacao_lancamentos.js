@@ -205,6 +205,11 @@ class ConciliacaoBancaria {
                 const novosLancamentos = result.data.lancamentos || [];
                 this.dadosBancoOriginais.push(...novosLancamentos);
                 
+                // Debug: mostrar estrutura do primeiro lançamento
+                if (novosLancamentos.length > 0) {
+                    console.log(`[DEBUG] Primeiro lançamento do arquivo ${atual}:`, novosLancamentos[0]);
+                }
+                
                 console.log(`Arquivo ${atual}/${total} processado: ${novosLancamentos.length} lançamentos adicionados`);
                 return novosLancamentos.length;
                 
@@ -238,8 +243,14 @@ class ConciliacaoBancaria {
             if (result.success) {
                 this.dadosSistemaOriginais = result.data || [];
                 
-                // Renderizar dados
-                this.renderizarDados();
+                // Debug: mostrar estrutura dos dados
+                if (this.dadosSistemaOriginais.length > 0) {
+                    console.log('[DEBUG] Primeiro registro do sistema:', this.dadosSistemaOriginais[0]);
+                    console.log('[DEBUG] Campos disponíveis:', Object.keys(this.dadosSistemaOriginais[0]));
+                }
+                
+                // Aplicar filtro inicial (todos)
+                this.aplicarFiltroBanco('todos');
                 
                 // Atualizar contadores dos filtros
                 this.atualizarContadoresFiltros();
@@ -261,6 +272,13 @@ class ConciliacaoBancaria {
     }
 
     atualizarContadoresFiltros() {
+        // Mapeamento dos bancos para normalizar as variações
+        const bancosMap = {
+            'banco_brasil': ['BANCO DO BRASIL', 'BB', 'BRASIL'],
+            'santander': ['SANTANDER', 'SANT'],
+            'itau': ['ITAU', 'ITAÚ']
+        };
+        
         // Contar registros por banco nos dados do sistema
         const contadoresSistema = {
             'banco_brasil': 0,
@@ -269,9 +287,14 @@ class ConciliacaoBancaria {
         };
         
         this.dadosSistemaOriginais.forEach(lancamento => {
-            if (lancamento.banco && contadoresSistema.hasOwnProperty(lancamento.banco)) {
-                contadoresSistema[lancamento.banco]++;
-            }
+            const nomeBanco = (lancamento.nome_banco || '').toUpperCase();
+            
+            Object.keys(bancosMap).forEach(banco => {
+                const termosParaBuscar = bancosMap[banco];
+                if (termosParaBuscar.some(termo => nomeBanco.includes(termo))) {
+                    contadoresSistema[banco]++;
+                }
+            });
         });
         
         // Contar registros por banco nos dados bancários
@@ -282,10 +305,18 @@ class ConciliacaoBancaria {
         };
         
         this.dadosBancoOriginais.forEach(lancamento => {
-            if (lancamento.banco && contadoresBanco.hasOwnProperty(lancamento.banco)) {
-                contadoresBanco[lancamento.banco]++;
-            }
+            const nomeBanco = (lancamento.nome_banco || lancamento.banco || '').toUpperCase();
+            
+            Object.keys(bancosMap).forEach(banco => {
+                const termosParaBuscar = bancosMap[banco];
+                if (termosParaBuscar.some(termo => nomeBanco.includes(termo))) {
+                    contadoresBanco[banco]++;
+                }
+            });
         });
+        
+        console.log('[FILTROS] Contadores Sistema:', contadoresSistema);
+        console.log('[FILTROS] Contadores Banco:', contadoresBanco);
         
         // Atualizar badges nos chips
         Object.keys(contadoresSistema).forEach(banco => {
@@ -316,7 +347,11 @@ class ConciliacaoBancaria {
         document.querySelectorAll('.banco-filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-banco="${banco}"]`).classList.add('active');
+        
+        const activeBtn = document.querySelector(`[data-banco="${banco}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
         
         this.bancoAtivo = banco;
         
@@ -324,16 +359,25 @@ class ConciliacaoBancaria {
             this.dadosSistema = [...this.dadosSistemaOriginais];
             this.dadosBanco = [...this.dadosBancoOriginais];
         } else {
+            // Mapeamento dos bancos para normalizar as variações
+            const bancosMap = {
+                'banco_brasil': ['BANCO DO BRASIL', 'BB', 'BRASIL'],
+                'santander': ['SANTANDER', 'SANT'],
+                'itau': ['ITAU', 'ITAÚ']
+            };
+            
+            const termosParaBuscar = bancosMap[banco] || [banco.toUpperCase()];
+            
             // Filtrar dados do sistema por banco
             this.dadosSistema = this.dadosSistemaOriginais.filter(item => {
                 const nomeBanco = (item.nome_banco || '').toUpperCase();
-                return nomeBanco.includes(banco.toUpperCase());
+                return termosParaBuscar.some(termo => nomeBanco.includes(termo));
             });
             
             // Filtrar dados do banco por banco (caso os dados do extrato tenham identificação)
             this.dadosBanco = this.dadosBancoOriginais.filter(item => {
                 const nomeBanco = (item.nome_banco || item.banco || '').toUpperCase();
-                return nomeBanco.includes(banco.toUpperCase());
+                return termosParaBuscar.some(termo => nomeBanco.includes(termo));
             });
         }
         
