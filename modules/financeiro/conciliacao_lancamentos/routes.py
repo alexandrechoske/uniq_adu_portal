@@ -863,20 +863,40 @@ def carregar_dados_conciliacao():
                 }
                 dados_sistema.append(movimento)
         
-        # Simular dados do banco (baseado nos mesmos dados mas com pequenas variações)
+        # Usar dados reais do banco da sessão (se disponíveis)
         dados_banco = []
-        for item in dados_sistema[:3]:  # Pegar apenas os primeiros 3 para simular extrato
-            movimento_banco = {
-                'id': f"banco_{item['id']}",
-                'data': item['data_lancamento'],
-                'nome_banco': item['nome_banco'],
-                'numero_conta': item['numero_conta'],
-                'valor': item['valor'],
-                'descricao': f"Extrato: {item['descricao'][:50]}...",
-                'historico': item['descricao'],
-                'status': 'pendente'
-            }
-            dados_banco.append(movimento_banco)
+        movimentos_banco_sessao = session.get('movimentos_banco', [])
+        
+        if movimentos_banco_sessao:
+            logger.info(f"[PROCESSAR] Usando dados do banco da sessão: {len(movimentos_banco_sessao)} registros")
+            # Usar dados reais do upload do banco
+            for movimento in movimentos_banco_sessao:
+                dados_banco.append({
+                    'id': movimento.get('id', f"banco_{len(dados_banco) + 1}"),
+                    'data': movimento.get('data'),
+                    'nome_banco': movimento.get('banco', 'N/A'),
+                    'numero_conta': movimento.get('conta', 'N/A'),
+                    'valor': float(movimento.get('valor', 0)),
+                    'descricao': movimento.get('descricao', ''),
+                    'tipo': movimento.get('tipo', 'N/A'),
+                    'ref_unique': movimento.get('ref_unique'),
+                    'status': 'pendente'
+                })
+        else:
+            logger.warning("[PROCESSAR] Nenhum dado do banco encontrado na sessão - usando simulação limitada")
+            # Fallback: simular alguns dados para teste (apenas 3 registros)
+            for item in dados_sistema[:3]:
+                movimento_banco = {
+                    'id': f"banco_{item['id']}",
+                    'data': item['data_lancamento'],
+                    'nome_banco': item['nome_banco'],
+                    'numero_conta': item['numero_conta'],
+                    'valor': item['valor'],
+                    'descricao': f"Extrato: {item['descricao'][:50]}...",
+                    'historico': item['descricao'],
+                    'status': 'pendente'
+                }
+                dados_banco.append(movimento_banco)
         
         logger.info(f"[PROCESSAR] Dados carregados - Sistema: {len(dados_sistema)}, Banco: {len(dados_banco)}")
         

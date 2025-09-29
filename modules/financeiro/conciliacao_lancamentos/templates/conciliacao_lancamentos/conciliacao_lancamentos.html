@@ -74,15 +74,15 @@
                             </div>
                         </div>
 
-                        <!-- Seleção do Arquivo -->
+                        <!-- Seleção dos Arquivos -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="arquivo_banco" class="form-label">Arquivo do Extrato Bancário</label>
-                                <input type="file" id="arquivo_banco" name="arquivo" class="form-control" 
-                                       accept=".ofx" required>
+                                <label for="arquivo_banco" class="form-label">Arquivos dos Extratos Bancários</label>
+                                <input type="file" id="arquivo_banco" name="arquivos" class="form-control" 
+                                       accept=".ofx" multiple required>
                                 <div class="form-text">
                                     <strong>Formato:</strong> Apenas arquivos OFX (.ofx)<br>
-                                    <small class="text-muted">Exportar do internet banking como OFX para melhor precisão</small>
+                                    <small class="text-muted">📁 Selecione múltiplos arquivos (Ctrl+Click) para processar vários bancos</small>
                                 </div>
                             </div>
                         </div>
@@ -107,99 +107,7 @@
             </div>
         </div>
 
-        <!-- Carregamento de Dados do Sistema -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">
-                    <i class="mdi mdi-database"></i>
-                    Carregar Dados do Sistema
-                </h5>
-            </div>
-            <div class="card-body">
-                <form id="uploadForm" enctype="multipart/form-data">
-                    <div class="row">
-                        <!-- Seleção do Banco -->
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="banco" class="form-label">Banco</label>
-                                <select id="banco" name="banco" class="form-select" required>
-                                    <option value="todos">Todos os bancos</option>
-                                    <option value="ITAU">Itaú</option>
-                                    <option value="Bradesco">Bradesco</option>
-                                    <option value="SANTANDER">Santander</option>
-                                    <option value="BANCO_BRASIL">Banco do Brasil</option>
-                                </select>
-                                <div class="form-text">Selecione o banco específico ou todos os bancos</div>
-                            </div>
-                        </div>
 
-                        <!-- Período de Análise -->
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="periodo" class="form-label">Período</label>
-                                <select id="periodo" name="periodo" class="form-select">
-                                    <option value="mes_atual">Mês Atual</option>
-                                    <option value="mes_anterior">Mês Anterior</option>
-                                    <option value="ultimos_30_dias">Últimos 30 dias</option>
-                                    <option value="personalizado">Personalizado</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Data personalizada (oculta inicialmente) -->
-                    <div class="row" id="data-personalizada" style="display: none;">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="data_inicio" class="form-label">Data Início</label>
-                                <input type="date" id="data_inicio" name="data_inicio" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="data_fim" class="form-label">Data Fim</label>
-                                <input type="date" id="data_fim" name="data_fim" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Botão de Carregamento -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <button type="submit" id="btnUpload" class="btn btn-primary">
-                                <i class="mdi mdi-database-search"></i>
-                                Carregar Dados do Sistema
-                            </button>
-                            <div class="form-text">Dados serão carregados da tabela fin_conciliacao_movimentos</div>
-                            <div class="upload-progress" style="display: none;">
-                                <div class="progress mt-2">
-                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                </div>
-                                <small class="text-muted">Carregando dados...</small>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Seção de Status do Processamento -->
-    <div class="status-section" id="statusSection" style="display: none;">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">
-                    <i class="mdi mdi-information"></i>
-                    Status do Processamento
-                </h5>
-            </div>
-            <div class="card-body">
-                <div id="statusContent">
-                    <!-- Conteúdo dinâmico será inserido aqui -->
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Seção de Dados Processados -->
     <div class="dados-section" id="dadosSection" style="display: none;">
@@ -211,20 +119,47 @@
                     <div class="filter-group">
                         <span class="filter-label">Filtrar por Banco:</span>
                         <button type="button" class="banco-filter-btn all active" data-banco="todos">
-                            <i class="mdi mdi-bank"></i> Todos
+                            <i class="mdi mdi-bank"></i> Todos 
+                            <span class="counters">
+                                <span class="badge bg-primary" id="contador-todos-sistema">0</span>
+                                <span class="badge bg-success" id="contador-todos-banco">0</span>
+                            </span>
                         </button>
                         <button type="button" class="banco-filter-btn" data-banco="ITAU">
                             <i class="mdi mdi-bank"></i> Itaú
+                            <span class="counters">
+                                <span class="badge bg-primary" id="contador-itau-sistema">0</span>
+                                <span class="badge bg-success" id="contador-itau-banco">0</span>
+                            </span>
                         </button>
                         <button type="button" class="banco-filter-btn" data-banco="Bradesco">
                             <i class="mdi mdi-bank"></i> Bradesco
+                            <span class="counters">
+                                <span class="badge bg-primary" id="contador-bradesco-sistema">0</span>
+                                <span class="badge bg-success" id="contador-bradesco-banco">0</span>
+                            </span>
                         </button>
                         <button type="button" class="banco-filter-btn" data-banco="SANTANDER">
                             <i class="mdi mdi-bank"></i> Santander
+                            <span class="counters">
+                                <span class="badge bg-primary" id="contador-santander-sistema">0</span>
+                                <span class="badge bg-success" id="contador-santander-banco">0</span>
+                            </span>
                         </button>
                         <button type="button" class="banco-filter-btn" data-banco="BANCO_BRASIL">
                             <i class="mdi mdi-bank"></i> Banco do Brasil
+                            <span class="counters">
+                                <span class="badge bg-primary" id="contador-bb-sistema">0</span>
+                                <span class="badge bg-success" id="contador-bb-banco">0</span>
+                            </span>
                         </button>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <span class="badge bg-primary">Sistema</span> 
+                            <span class="badge bg-success">Banco</span>
+                            • Contadores atualizados automaticamente
+                        </small>
                     </div>
                 </div>
             </div>

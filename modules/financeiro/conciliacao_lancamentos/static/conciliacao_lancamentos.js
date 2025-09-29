@@ -20,19 +20,32 @@ class ConciliacaoBancaria {
     }
 
     setupEventListeners() {
-        // Eventos do formulário de carregamento
-        document.getElementById('banco').addEventListener('change', this.validateForm.bind(this));
-        document.getElementById('periodo').addEventListener('change', this.toggleDataPersonalizada.bind(this));
-        document.getElementById('uploadForm').addEventListener('submit', this.handleCarregamento.bind(this));
-
         // Evento para upload de arquivo bancário
-        document.getElementById('uploadArquivoForm').addEventListener('submit', this.handleUploadArquivo.bind(this));
+        const uploadForm = document.getElementById('uploadArquivoForm');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', this.handleUploadArquivo.bind(this));
+        }
 
-        // Eventos dos botões de ação
-        document.getElementById('btnConciliarAuto').addEventListener('click', this.conciliarAutomaticamente.bind(this));
-        document.getElementById('btnConciliarManual').addEventListener('click', this.conciliarManualmente.bind(this));
-        document.getElementById('btnExportarRelatorio').addEventListener('click', this.exportarRelatorio.bind(this));
-        document.getElementById('btnLimparTudo').addEventListener('click', this.limparTudo.bind(this));
+        // Eventos dos botões de ação (com verificação de existência)
+        const btnConciliarAuto = document.getElementById('btnConciliarAuto');
+        if (btnConciliarAuto) {
+            btnConciliarAuto.addEventListener('click', this.conciliarAutomaticamente.bind(this));
+        }
+
+        const btnConciliarManual = document.getElementById('btnConciliarManual');
+        if (btnConciliarManual) {
+            btnConciliarManual.addEventListener('click', this.conciliarManualmente.bind(this));
+        }
+
+        const btnExportarRelatorio = document.getElementById('btnExportarRelatorio');
+        if (btnExportarRelatorio) {
+            btnExportarRelatorio.addEventListener('click', this.exportarRelatorio.bind(this));
+        }
+
+        const btnLimparTudo = document.getElementById('btnLimparTudo');
+        if (btnLimparTudo) {
+            btnLimparTudo.addEventListener('click', this.limparTudo.bind(this));
+        }
 
         // Eventos dos checkboxes "selecionar todos"
         document.getElementById('selectAllSistema').addEventListener('change', this.toggleSelectAllSistema.bind(this));
@@ -63,47 +76,26 @@ class ConciliacaoBancaria {
     }
 
     setupFormValidation() {
-        this.validateForm();
+        // Validação do formulário de upload OFX - não há mais formulário de carregamento
+        console.log('Validação do formulário configurada');
     }
 
     validateForm() {
-        const banco = document.getElementById('banco').value;
-        const btnUpload = document.getElementById('btnUpload');
-
-        // Para carregamento de dados, apenas o banco é necessário (pode ser "todos")
-        const isValid = banco;
-        btnUpload.disabled = !isValid;
-
-        if (isValid) {
-            btnUpload.classList.remove('btn-secondary');
-            btnUpload.classList.add('btn-primary');
-        } else {
-            btnUpload.classList.remove('btn-primary');
-            btnUpload.classList.add('btn-secondary');
-        }
+        // Método removido - não há mais formulário de carregamento de banco/período
+        console.log('validateForm: Método descontinuado - usando apenas upload OFX');
     }
 
     toggleDataPersonalizada() {
-        const periodo = document.getElementById('periodo').value;
-        const dataPersonalizada = document.getElementById('data-personalizada');
-        
-        if (periodo === 'personalizado') {
-            dataPersonalizada.style.display = 'block';
-            dataPersonalizada.classList.add('fade-in');
-        } else {
-            dataPersonalizada.style.display = 'none';
-        }
+        // Método removido - não há mais seleção de período
+        console.log('toggleDataPersonalizada: Método descontinuado - usando apenas upload OFX');
     }
 
     async handleCarregamento(event) {
         event.preventDefault();
         
-        const formData = new FormData();
-        const banco = document.getElementById('banco').value;
-        const periodo = document.getElementById('periodo').value;
-
-        formData.append('banco', banco);
-        formData.append('periodo', periodo);
+        // Método removido - não há mais carregamento de dados por banco/período
+        console.log('handleCarregamento: Método descontinuado - usando apenas upload OFX');
+        this.showError('Este método foi descontinuado. Use o upload de arquivos OFX.');
 
         if (periodo === 'personalizado') {
             const dataInicio = document.getElementById('data_inicio').value;
@@ -111,37 +103,7 @@ class ConciliacaoBancaria {
             formData.append('data_inicio', dataInicio);
             formData.append('data_fim', dataFim);
         }
-
-        this.showLoading(true);
-        this.showUploadProgress(true);
-
-        try {
-            console.log('[CARREGAMENTO] Enviando requisição para carregar dados...');
-            
-            const response = await fetch('/financeiro/conciliacao-lancamentos/processar', {
-                method: 'POST',
-                headers: {
-                    'X-API-Key': window.API_BYPASS_KEY || '$env:API_BYPASS_KEY'
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
-            console.log('[CARREGAMENTO] Resposta recebida:', result);
-            
-            this.processarResultado(result);
-
-        } catch (error) {
-            console.error('Erro no carregamento:', error);
-            this.showError('Erro ao carregar dados: ' + error.message);
-        } finally {
-            this.showLoading(false);
-            this.showUploadProgress(false);
-        }
+        return; // Método descontinuado
     }
 
     processarResultado(result) {
@@ -172,41 +134,63 @@ class ConciliacaoBancaria {
     async handleUploadArquivo(event) {
         event.preventDefault();
         
-        const formData = new FormData();
-        const arquivo = document.getElementById('arquivo_banco').files[0];
+        const arquivos = document.getElementById('arquivo_banco').files;
         const bancoOrigem = document.getElementById('banco_origem').value;
         
-        if (!arquivo) {
-            this.showError('Por favor, selecione um arquivo para upload.');
+        if (arquivos.length === 0) {
+            this.showError('Por favor, selecione pelo menos um arquivo para upload.');
             return;
         }
         
-        // Validar tamanho do arquivo (10MB)
-        if (arquivo.size > 10 * 1024 * 1024) {
-            this.showError('Arquivo muito grande. Máximo permitido: 10MB');
-            return;
-        }
-        
-        // Validar extensão (apenas OFX)
+        // Validar todos os arquivos
         const allowedExtensions = ['.ofx'];
-        const fileExtension = arquivo.name.toLowerCase().substring(arquivo.name.lastIndexOf('.'));
-        if (!allowedExtensions.includes(fileExtension)) {
-            this.showError('Apenas arquivos OFX são aceitos (.ofx)');
-            return;
+        for (let i = 0; i < arquivos.length; i++) {
+            const arquivo = arquivos[i];
+            
+            // Validar tamanho (10MB por arquivo)
+            if (arquivo.size > 10 * 1024 * 1024) {
+                this.showError(`Arquivo ${arquivo.name} muito grande. Máximo permitido: 10MB por arquivo`);
+                return;
+            }
+            
+            // Validar extensão
+            const fileExtension = arquivo.name.toLowerCase().substring(arquivo.name.lastIndexOf('.'));
+            if (!allowedExtensions.includes(fileExtension)) {
+                this.showError(`Arquivo ${arquivo.name}: Apenas arquivos OFX são aceitos (.ofx)`);
+                return;
+            }
         }
         
+        // Processar arquivos sequencialmente
+        this.dadosBancoOriginais = [];
+        let totalProcessados = 0;
+        
+        for (let i = 0; i < arquivos.length; i++) {
+            const arquivo = arquivos[i];
+            await this.processarArquivoIndividual(arquivo, bancoOrigem, i + 1, arquivos.length);
+            totalProcessados++;
+        }
+        
+        // Após todos os uploads, carregar dados do sistema automaticamente
+        await this.carregarDadosSistemaAutomatico();
+        
+        this.showSuccess(`✅ ${totalProcessados} arquivo(s) processado(s) com sucesso! Total: ${this.dadosBancoOriginais.length} lançamentos`);
+    }
+
+    async processarArquivoIndividual(arquivo, bancoOrigem, atual, total) {
+        const formData = new FormData();
         formData.append('arquivo', arquivo);
         formData.append('banco_origem', bancoOrigem);
         
-        this.showLoading(true, 'Processando arquivo bancário...');
-        this.showUploadProgressArquivo(true);
+        this.showLoading(true, `Processando arquivo ${atual}/${total}: ${arquivo.name}...`);
         
         try {
-            console.log('[UPLOAD] Iniciando upload do arquivo:', arquivo.name);
+            console.log(`[UPLOAD] Processando arquivo ${atual}/${total}:`, arquivo.name);
             
             const response = await fetch('/financeiro/conciliacao-lancamentos/upload-arquivo', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
             
             if (!response.ok) {
@@ -214,33 +198,115 @@ class ConciliacaoBancaria {
             }
             
             const result = await response.json();
-            console.log('[UPLOAD] Resposta recebida:', result);
+            console.log(`[UPLOAD] Arquivo ${atual}/${total} processado:`, result);
             
             if (result.success) {
-                // Armazenar dados do banco processados
-                this.dadosBancoOriginais = result.data.lancamentos || [];
+                // Acumular dados de múltiplos arquivos
+                const novosLancamentos = result.data.lancamentos || [];
+                this.dadosBancoOriginais.push(...novosLancamentos);
                 
-                // Aplicar filtro atual
-                this.aplicarFiltroBanco(this.bancoAtivo);
+                console.log(`Arquivo ${atual}/${total} processado: ${novosLancamentos.length} lançamentos adicionados`);
+                return novosLancamentos.length;
                 
-                this.renderizarDados();
-                this.showSections(['statusSection', 'dadosSection']);
-                
-                this.showSuccess(`Arquivo ${arquivo.name} processado com sucesso! ${result.data.total_registros} lançamentos encontrados (${result.data.banco_identificado}).`);
-                
-                // Limpar formulário
-                document.getElementById('uploadArquivoForm').reset();
             } else {
-                this.showError(result.error || 'Erro ao processar arquivo');
+                throw new Error(result.error || `Erro ao processar arquivo ${arquivo.name}`);
             }
             
         } catch (error) {
             console.error('Erro no upload:', error);
-            this.showError('Erro ao fazer upload: ' + error.message);
+            throw error;
         } finally {
             this.showLoading(false);
-            this.showUploadProgressArquivo(false);
         }
+    }
+
+    async carregarDadosSistemaAutomatico() {
+        this.showLoading(true, 'Carregando dados do sistema...');
+        
+        try {
+            const response = await fetch('/financeiro/conciliacao-lancamentos/api/movimentos-sistema', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.dadosSistemaOriginais = result.data || [];
+                
+                // Renderizar dados
+                this.renderizarDados();
+                
+                // Atualizar contadores dos filtros
+                this.atualizarContadoresFiltros();
+                
+                // Mostrar seções de dados
+                this.showSections(['dadosSection']);
+                
+                console.log(`Dados do sistema carregados: ${this.dadosSistemaOriginais.length} lançamentos`);
+                
+            } else {
+                throw new Error(result.error || 'Erro ao carregar dados do sistema');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados do sistema:', error);
+            this.showError('Erro ao carregar dados do sistema: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    atualizarContadoresFiltros() {
+        // Contar registros por banco nos dados do sistema
+        const contadoresSistema = {
+            'banco_brasil': 0,
+            'santander': 0,
+            'itau': 0
+        };
+        
+        this.dadosSistemaOriginais.forEach(lancamento => {
+            if (lancamento.banco && contadoresSistema.hasOwnProperty(lancamento.banco)) {
+                contadoresSistema[lancamento.banco]++;
+            }
+        });
+        
+        // Contar registros por banco nos dados bancários
+        const contadoresBanco = {
+            'banco_brasil': 0,
+            'santander': 0,
+            'itau': 0
+        };
+        
+        this.dadosBancoOriginais.forEach(lancamento => {
+            if (lancamento.banco && contadoresBanco.hasOwnProperty(lancamento.banco)) {
+                contadoresBanco[lancamento.banco]++;
+            }
+        });
+        
+        // Atualizar badges nos chips
+        Object.keys(contadoresSistema).forEach(banco => {
+            const sistemaCount = contadoresSistema[banco];
+            const bancoCount = contadoresBanco[banco];
+            
+            const chip = document.querySelector(`[data-banco="${banco}"]`);
+            if (chip) {
+                let badgeHTML = '';
+                if (sistemaCount > 0) {
+                    badgeHTML += `<span class="badge bg-primary ms-1">${sistemaCount}</span>`;
+                }
+                if (bancoCount > 0) {
+                    badgeHTML += `<span class="badge bg-success ms-1">${bancoCount}</span>`;
+                }
+                
+                // Atualizar apenas a parte do badge, mantendo o texto do banco
+                const bancoTexto = chip.textContent.replace(/\d+/g, '').trim();
+                chip.innerHTML = bancoTexto + badgeHTML;
+            }
+        });
     }
 
     aplicarFiltroBanco(banco) {
