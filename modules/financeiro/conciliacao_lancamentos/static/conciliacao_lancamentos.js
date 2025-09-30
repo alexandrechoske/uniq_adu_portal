@@ -11,12 +11,15 @@ class ConciliacaoBancaria {
         
         // Filtros ativos
         this.bancoAtivo = 'todos';
-        this.tipoAtivo = 'todos';
-        this.statusAtivo = 'todos';
+        this.filtroTipo = 'todos';
+        this.filtroStatus = 'todos';
+        
+        // Pesquisa
+        this.termoPesquisa = '';
         
         // Ordenação
-        this.ordenacaoSistema = { campo: 'data', direcao: 'desc' };
-        this.ordenacaoBanco = { campo: 'data', direcao: 'desc' };
+        this.ordenacaoSistema = { campo: 'data', ordem: 'desc' };
+        this.ordenacaoBanco = { campo: 'data', ordem: 'desc' };
         
         this.init();
     }
@@ -89,6 +92,25 @@ class ConciliacaoBancaria {
                 this.aplicarFiltroStatus(e.target.dataset.status);
             });
         });
+        
+        // Configurar campo de pesquisa
+        const searchInput = document.getElementById('searchInput');
+        const clearSearch = document.getElementById('clearSearch');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.aplicarPesquisa(e.target.value);
+            });
+        }
+        
+        if (clearSearch) {
+            clearSearch.addEventListener('click', () => {
+                if (searchInput) {
+                    searchInput.value = '';
+                    this.aplicarPesquisa('');
+                }
+            });
+        }
         
         // Configurar ordenação de tabelas
         const colunasSortaveis = document.querySelectorAll('.sortable');
@@ -560,10 +582,9 @@ class ConciliacaoBancaria {
                 </td>
                 <td>${this.formatarData(data)}</td>
                 <td><strong>${nomeBanco}</strong></td>
-                <td>${numeroConta}</td>
                 <td class="${tipoOriginal === 'DESPESA' ? 'valor-negativo' : 'valor-positivo'}">${this.formatarValor(valorExibido)}</td>
                 <td><span class="tipo-${tipoClass}">${tipoOriginal}</span></td>
-                <td title="${descricao}">${this.truncarTexto(descricao, 30)}</td>
+                <td title="${descricao}">${this.truncarTexto(descricao, 50)}</td>
                 <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
             `;
             row.dataset.index = index;
@@ -1143,9 +1164,34 @@ class ConciliacaoBancaria {
         this.aplicarTodosFiltros();
     }
 
+    // Aplicar pesquisa por termo
+    aplicarPesquisa(termo) {
+        console.log(`[PESQUISA] Aplicando pesquisa: "${termo}"`);
+        
+        // Atualizar estado interno
+        this.termoPesquisa = termo || '';
+        
+        // Atualizar visual do campo de pesquisa
+        const searchInput = document.getElementById('searchInput');
+        const clearSearch = document.getElementById('clearSearch');
+        
+        if (searchInput) {
+            if (this.termoPesquisa.trim() !== '') {
+                searchInput.classList.add('search-active');
+                if (clearSearch) clearSearch.style.display = 'block';
+            } else {
+                searchInput.classList.remove('search-active');
+                if (clearSearch) clearSearch.style.display = 'none';
+            }
+        }
+        
+        // Reaplicar todos os filtros usando a função central
+        this.aplicarTodosFiltros();
+    }
+
     // Aplicar todos os filtros em sequência
     aplicarTodosFiltros() {
-        console.log(`[FILTRO] Aplicando todos os filtros - Banco: ${this.bancoAtivo}, Tipo: ${this.filtroTipo}, Status: ${this.filtroStatus}`);
+        console.log(`[FILTRO] Aplicando todos os filtros - Banco: ${this.bancoAtivo}, Tipo: ${this.filtroTipo}, Status: ${this.filtroStatus}, Pesquisa: "${this.termoPesquisa}"`);
         
         // Resetar dados para o estado original
         this.dadosSistema = [...this.dadosSistemaOriginais];
@@ -1206,6 +1252,43 @@ class ConciliacaoBancaria {
             this.dadosBanco = this.dadosBanco.filter(item => {
                 const statusItem = (item.status || 'pendente').toLowerCase();
                 return statusItem === this.filtroStatus;
+            });
+        }
+        
+        // Aplicar pesquisa por termo
+        if (this.termoPesquisa && this.termoPesquisa.trim() !== '') {
+            const termo = this.termoPesquisa.toLowerCase().trim();
+            
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                // Campos para pesquisar na tabela sistema
+                const camposPesquisa = [
+                    item.descricao_original || '',
+                    item.descricao || '',
+                    item.ref_unique_norm || '',
+                    item.numero_conta || '',
+                    item.nome_banco || '',
+                    (item.tipo_lancamento || item.tipo_movimento || item.tipo || '').toString(),
+                    item.status || ''
+                ];
+                
+                return camposPesquisa.some(campo => 
+                    campo.toString().toLowerCase().includes(termo)
+                );
+            });
+            
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                // Campos para pesquisar na tabela banco
+                const camposPesquisa = [
+                    item.descricao || item.historico || '',
+                    item.ref_unique_norm || '',
+                    item.numero_conta || item.conta || '',
+                    item.banco_origem || item.nome_banco || '',
+                    item.status || ''
+                ];
+                
+                return camposPesquisa.some(campo => 
+                    campo.toString().toLowerCase().includes(termo)
+                );
             });
         }
         

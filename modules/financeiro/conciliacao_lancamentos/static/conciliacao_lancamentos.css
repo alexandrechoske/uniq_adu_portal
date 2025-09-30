@@ -527,6 +527,49 @@ input[type="checkbox"] {
     border-color: #4caf50;
 }
 
+/* Campo de Pesquisa */
+.search-section {
+    margin-bottom: 20px;
+}
+
+.input-group-text {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+}
+
+#searchInput {
+    border-left: none;
+    border-right: none;
+}
+
+#searchInput:focus {
+    border-color: #2196f3;
+    box-shadow: none;
+}
+
+#clearSearch {
+    border-left: none;
+    color: #6c757d;
+}
+
+#clearSearch:hover {
+    color: #495057;
+    background: #f8f9fa;
+}
+
+#searchInput.search-active {
+    border-color: #2196f3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.search-highlight {
+    background-color: #fff3cd;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
 /* Ordenação de Tabelas */
 .sortable {
     cursor: pointer;
