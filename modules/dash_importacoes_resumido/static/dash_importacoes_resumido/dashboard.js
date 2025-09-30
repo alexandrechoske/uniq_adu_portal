@@ -26,7 +26,9 @@ class DashboardImportacoesResumido {
             pagination: 100,
             apiTimeout: 30,
             animationsEnabled: true,
-            tvMode: false
+            tvMode: false,
+            companyFilterEnabled: false,
+            selectedCompanies: []  // Mudança para array
         };
         
         // TV Mode state
@@ -39,7 +41,7 @@ class DashboardImportacoesResumido {
     init() {
         this.loadSettings();
         this.bindEvents();
-        this.loadData();
+        this.checkCompaniesAndLoad(); // Nova função que verifica empresas antes de carregar
         this.startAutoRefresh();
         this.startAutoPageLoop();
         this.updateAutoPageLoopButton();
@@ -243,10 +245,42 @@ class DashboardImportacoesResumido {
             this.resetSettings();
         });
 
-        // Apply filters
+        // Apply filters (both buttons)
         document.getElementById('btn-apply-filter')?.addEventListener('click', () => {
-            this.currentPage = 1;
-            this.loadData();
+            this.applyAllFilters();
+        });
+        
+        document.getElementById('btn-apply-all-filters')?.addEventListener('click', () => {
+            this.applyAllFilters();
+            this.closeSettingsModal();
+        });
+
+        // Company Filter Toggle
+        document.getElementById('company-filter-enabled')?.addEventListener('change', (e) => {
+            this.settings.companyFilterEnabled = e.target.checked;
+            this.saveSettings();
+            if (e.target.checked) {
+                this.loadCompanies();
+            } else {
+                this.settings.selectedCompanies = [];
+                this.saveSettings();
+                // Não aplicar automaticamente - aguardar "Aplicar Filtros"
+            }
+        });
+
+        // Company Search
+        document.getElementById('company-search')?.addEventListener('input', (e) => {
+            this.filterCompanyList(e.target.value);
+        });
+
+        // Select All Companies
+        document.getElementById('btn-select-all-companies')?.addEventListener('click', () => {
+            this.selectAllCompanies();
+        });
+
+        // Clear Company Filter
+        document.getElementById('btn-clear-company-filter')?.addEventListener('click', () => {
+            this.clearCompanySelection();
         });
 
         // Cancel/Close settings
@@ -257,6 +291,7 @@ class DashboardImportacoesResumido {
     
     openSettingsModal() {
         this.updateSettingsForm();
+        this.loadCompanies(); // Load companies when opening settings
         const modal = document.getElementById('settings-modal');
         if (modal) {
             modal.classList.add('show');
@@ -280,6 +315,8 @@ class DashboardImportacoesResumido {
         const animationsToggle = document.getElementById('animations-enabled');
         const filterToggle = document.getElementById('filter-embarque-default');
         const recordsPerPageSelect = document.getElementById('records-per-page');
+        const companyFilterToggle = document.getElementById('company-filter-enabled');
+        const companySelect = document.getElementById('company-select');
         
         if (autoLoopToggle) autoLoopToggle.checked = this.settings.autoLoop;
         if (autoRefreshToggle) autoRefreshToggle.checked = this.settings.autoRefresh;
@@ -289,6 +326,13 @@ class DashboardImportacoesResumido {
         if (animationsToggle) animationsToggle.checked = this.settings.animationsEnabled;
         if (filterToggle) filterToggle.checked = this.settings.showFilters;
         if (recordsPerPageSelect) recordsPerPageSelect.value = this.settings.pagination;
+        if (companyFilterToggle) companyFilterToggle.checked = this.settings.companyFilterEnabled;
+        // Restore multiple company selections
+        if (companySelect && this.settings.selectedCompanies && this.settings.selectedCompanies.length > 0) {
+            Array.from(companySelect.options).forEach(option => {
+                option.selected = this.settings.selectedCompanies.includes(option.value);
+            });
+        }
         
         // Update status
         this.updateSettingsStatus();
@@ -521,6 +565,143 @@ class DashboardImportacoesResumido {
         document.getElementById('current-time').textContent = time;
         document.getElementById('current-date').textContent = date;
     }
+
+    async checkCompaniesAndLoad() {
+        // Verifica informações das empresas do usuário e decide como carregar o dashboard
+        try {
+            console.log('[DASHBOARD] Verificando informações das empresas do usuário...');
+            
+            const response = await fetch('/dash-importacoes-resumido/api/companies-info');
+            
+            if (!response.ok) {
+                console.error('[DASHBOARD] Erro ao buscar informações das empresas:', response.status);
+                this.loadData(); // Fallback para carregamento normal
+                return;
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                console.error('[DASHBOARD] Erro na resposta das empresas:', data.error);
+                this.loadData(); // Fallback para carregamento normal
+                return;
+            }
+            
+            console.log('[DASHBOARD] Informações das empresas:', data);
+            
+            if (data.auto_load && data.company_count === 1) {
+                // Uma empresa - carregar automaticamente
+                console.log('[DASHBOARD] Usuário com 1 empresa - carregando automaticamente');
+                if (data.auto_company) {
+                    this.settings.selectedCompanies = [data.auto_company];
+                    this.settings.companyFilterEnabled = true;
+                    this.saveSettings();
+                }
+                this.showCompanyMessage(data.message, 'info');
+                this.loadData();
+                
+            } else if (data.require_filter) {
+                // Múltiplas empresas ou admin - exigir filtro
+                console.log('[DASHBOARD] Usuário requer filtro - mostrando mensagem de seleção');
+                this.showFilterRequiredMessage(data.message, data.company_count);
+                // Ativar filtro de empresa automaticamente
+                this.settings.companyFilterEnabled = true;
+                this.saveSettings();
+                this.applySettings();
+                // Remover loading e carregar header básico
+                this.hideLoading();
+                this.loadBasicHeader();
+                
+            } else if (data.company_count === 0) {
+                // Nenhuma empresa
+                console.log('[DASHBOARD] Usuário sem empresas vinculadas');
+                this.showCompanyMessage(data.message, 'warning');
+                
+            } else {
+                // Fallback - carregar normalmente
+                console.log('[DASHBOARD] Fallback - carregando normalmente');
+                this.loadData();
+            }
+            
+        } catch (error) {
+            console.error('[DASHBOARD] Erro ao verificar empresas:', error);
+            this.loadData(); // Fallback para carregamento normal
+        }
+    }
+
+    showFilterRequiredMessage(message, companyCount) {
+        // Mostra mensagem informando que é necessário selecionar empresas
+        const tbody = document.getElementById('table-body');
+        if (tbody) {
+            const countText = companyCount === 'all' ? 'todas as empresas' : `${companyCount} empresas`;
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="11" style="text-align: center; padding: 3rem; color: #374151;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+                            <i class="mdi mdi-filter-variant" style="font-size: 4rem; color: #3B82F6;"></i>
+                            <div>
+                                <h3 style="margin: 0; color: #374151; font-size: 1.5rem;">Filtro de Empresa Necessário</h3>
+                                <p style="margin: 0.75rem 0; color: #6B7280; font-size: 1.1rem; max-width: 500px;">
+                                    ${message}
+                                </p>
+                                <p style="margin: 0.5rem 0 0 0; color: #6B7280; font-size: 0.9rem;">
+                                    <strong>Você tem acesso a ${countText}</strong><br>
+                                    Use o filtro de empresas na barra superior para selecionar e carregar os dados.
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    showCompanyMessage(message, type = 'info') {
+        // Mostra mensagem informativa sobre empresas
+        const alertClass = type === 'warning' ? 'alert-warning' : 'alert-info';
+        const iconClass = type === 'warning' ? 'mdi-alert' : 'mdi-information';
+        
+        // Criar elemento de alerta se não existir
+        let alertElement = document.getElementById('company-alert');
+        if (!alertElement) {
+            alertElement = document.createElement('div');
+            alertElement.id = 'company-alert';
+            alertElement.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1000; 
+                max-width: 400px; padding: 1rem; border-radius: 0.5rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; 
+                align-items: center; gap: 0.75rem;
+            `;
+            document.body.appendChild(alertElement);
+        }
+        
+        const bgColor = type === 'warning' ? '#FEF3C7' : '#DBEAFE';
+        const textColor = type === 'warning' ? '#92400E' : '#1E40AF';
+        const borderColor = type === 'warning' ? '#F59E0B' : '#3B82F6';
+        
+        alertElement.style.backgroundColor = bgColor;
+        alertElement.style.color = textColor;
+        alertElement.style.borderLeft = `4px solid ${borderColor}`;
+        
+        alertElement.innerHTML = `
+            <i class="mdi ${iconClass}" style="font-size: 1.5rem; color: ${borderColor};"></i>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-weight: 500;">${message}</p>
+            </div>
+            <button onclick="this.parentElement.remove()" 
+                    style="background: none; border: none; color: ${textColor}; 
+                           cursor: pointer; padding: 0.25rem;">
+                <i class="mdi mdi-close"></i>
+            </button>
+        `;
+        
+        // Auto-remover após 10 segundos
+        setTimeout(() => {
+            if (alertElement && alertElement.parentElement) {
+                alertElement.remove();
+            }
+        }, 10000);
+    }
     
     async loadData(silent = false) {
         if (this.isLoading) return;
@@ -539,6 +720,13 @@ class DashboardImportacoesResumido {
                 per_page: this.perPage,
                 filtro_embarque: filtroEmbarque
             });
+
+            // Adicionar filtro de empresas se ativo (suporte múltiplas empresas)
+            if (this.settings.companyFilterEnabled && this.settings.selectedCompanies && this.settings.selectedCompanies.length > 0) {
+                // Enviar empresas separadas por vírgula
+                params.append('company_filter', this.settings.selectedCompanies.join(','));
+                console.log('[DASHBOARD] Aplicando filtro de empresas:', this.settings.selectedCompanies);
+            }
             
             const response = await fetch(`/dash-importacoes-resumido/api/data?${params}`);
             
@@ -549,9 +737,15 @@ class DashboardImportacoesResumido {
             const data = await response.json();
             
             if (data.success) {
+
                 this.updateHeader(data.header);
                 this.updateTable(data.data);
                 this.updatePagination(data.pagination);
+            } else if (data.require_filter) {
+                // Caso especial: filtro de empresa obrigatório
+                console.log('[DASHBOARD] Filtro de empresa obrigatório detectado');
+                this.showFilterRequiredMessage(data.message, 'multiple');
+                this.updateHeader(data.header); // Atualizar header mesmo sem dados
             } else {
                 this.showError(data.error || 'Erro ao carregar dados');
             }
@@ -568,6 +762,26 @@ class DashboardImportacoesResumido {
             if (!silent) {
                 this.hideLoading();
             }
+        }
+    }
+    
+    loadBasicHeader() {
+        // Carrega header básico sem dados específicos
+        document.getElementById('total-processos').textContent = 
+            'TOTAL: 0 PROCESSOS';
+        
+        document.getElementById('count-maritimo').textContent = '0';
+        document.getElementById('count-aereo').textContent = '0';
+        document.getElementById('count-terrestre').textContent = '0';
+        
+        // Manter cotações existentes ou padrão
+        const dolarEl = document.getElementById('dolar-rate-top');
+        const euroEl = document.getElementById('euro-rate-top');
+        if (dolarEl && (dolarEl.textContent === '' || dolarEl.textContent === 'Carregando...')) {
+            dolarEl.textContent = '-.----';
+        }
+        if (euroEl && (euroEl.textContent === '' || euroEl.textContent === 'Carregando...')) {
+            euroEl.textContent = '-.----';
         }
     }
     
@@ -606,6 +820,8 @@ class DashboardImportacoesResumido {
     }
     
     updateTable(tableData) {
+
+        
         const tbody = document.getElementById('table-body');
         
         // Adicionar classe de loading se animações estão habilitadas
@@ -619,6 +835,7 @@ class DashboardImportacoesResumido {
             tbody.innerHTML = '';
             
             if (!tableData || tableData.length === 0) {
+
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="11" style="text-align: center; padding: 2rem; color: #6b7280;">
@@ -640,7 +857,7 @@ class DashboardImportacoesResumido {
                 
                 // Obter imagem do modal
                 const modalImage = this.getModalImage(row.modal);
-                console.log(`[DEBUG] Row ${row.numero}: modal='${row.modal}' -> image='${modalImage}'`);
+
                 
                 // Verificar se há país para mostrar bandeira
                 const paisContent = (row.pais_procedencia && row.pais_procedencia.trim() !== '') 
@@ -747,13 +964,10 @@ class DashboardImportacoesResumido {
     }
     
     getModalImage(modal) {
-        console.log(`[DEBUG getModalImage] Input: '${modal}' (type: ${typeof modal})`);
-        
         if (modal === null || modal === undefined) return '/static/medias/ship_color.png';
         const v = String(modal).trim().toUpperCase();
         // Normalizar sufixo .0
         const base = v.endsWith('.0') ? v.slice(0, -2) : v;
-        console.log(`[DEBUG getModalImage] Normalized base: '${base}'`);
         
         // Mapear sinônimos
         const map = {
@@ -762,18 +976,14 @@ class DashboardImportacoesResumido {
             '7': 'truck', 'TERRESTRE': 'truck', 'RODOVIARIO': 'truck', 'RODOVIÁRIO': 'truck', 'TRUCK': 'truck', 'ROAD': 'truck'
         };
         const key = map[base] || map[base.replace(/\W/g,'')] || map[base.replace('.','')] || 'ship';
-        console.log(`[DEBUG getModalImage] Mapped key: '${key}'`);
         
         switch (key) {
             case 'plane': 
-                console.log(`[DEBUG getModalImage] Returning plane image`);
                 return '/static/medias/plane_color.png';
             case 'truck': 
-                console.log(`[DEBUG getModalImage] Returning truck image`);
                 return '/static/medias/truck_color.png';
             case 'ship':
             default: 
-                console.log(`[DEBUG getModalImage] Returning ship image (default)`);
                 return '/static/medias/ship_color.png';
         }
     }
@@ -1011,6 +1221,167 @@ class DashboardImportacoesResumido {
         if (event.key === 'Escape' && this.tvModeEnabled) {
             this.exitTVMode();
         }
+    }
+
+    // Load companies for filter
+    async loadCompanies() {
+        try {
+            const companyList = document.getElementById('company-list');
+            if (!companyList) return;
+
+            // Show loading state
+            companyList.innerHTML = '<div class="loading-text">Carregando empresas...</div>';
+
+            const response = await fetch('/dash-importacoes-resumido/api/companies');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('Empresas carregadas:', data.empresas.length);
+                this.renderCompanyList(data.empresas);
+            } else {
+                throw new Error(data.error || 'Erro ao carregar empresas');
+            }
+
+        } catch (error) {
+            console.error('Erro ao carregar empresas:', error);
+            const companyList = document.getElementById('company-list');
+            if (companyList) {
+                companyList.innerHTML = '<div class="loading-text">Erro ao carregar empresas</div>';
+            }
+        }
+    }
+    
+    renderCompanyList(empresas) {
+        const companyList = document.getElementById('company-list');
+        if (!companyList) return;
+        
+        if (!empresas || empresas.length === 0) {
+            companyList.innerHTML = '<div class="loading-text">Nenhuma empresa encontrada</div>';
+            return;
+        }
+        
+        companyList.innerHTML = '';
+        
+        empresas.forEach(empresa => {
+            const item = document.createElement('div');
+            item.className = 'company-item';
+            item.dataset.cnpj = empresa.cnpj;
+            item.dataset.nome = empresa.nome.toLowerCase();
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `company-${empresa.cnpj}`;
+            checkbox.value = empresa.cnpj;
+            checkbox.checked = this.settings.selectedCompanies.includes(empresa.cnpj);
+            
+            const label = document.createElement('label');
+            label.htmlFor = `company-${empresa.cnpj}`;
+            label.innerHTML = `
+                <span class="company-name">${empresa.nome}</span>
+                <span class="company-cnpj">${empresa.cnpj}</span>
+            `;
+            
+            // Event listener para checkbox
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    if (!this.settings.selectedCompanies.includes(empresa.cnpj)) {
+                        this.settings.selectedCompanies.push(empresa.cnpj);
+                    }
+                } else {
+                    this.settings.selectedCompanies = this.settings.selectedCompanies.filter(cnpj => cnpj !== empresa.cnpj);
+                }
+                this.saveSettings();
+                console.log('[DASHBOARD] Empresas selecionadas:', this.settings.selectedCompanies);
+            });
+            
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            companyList.appendChild(item);
+        });
+    }
+    
+    filterCompanyList(searchTerm) {
+        const companyList = document.getElementById('company-list');
+        if (!companyList) return;
+        
+        const items = companyList.querySelectorAll('.company-item');
+        const term = searchTerm.toLowerCase();
+        
+        items.forEach(item => {
+            const nome = item.dataset.nome || '';
+            const cnpj = item.dataset.cnpj || '';
+            
+            if (nome.includes(term) || cnpj.includes(term)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    selectAllCompanies() {
+        const companyList = document.getElementById('company-list');
+        if (!companyList) return;
+        
+        const checkboxes = companyList.querySelectorAll('input[type="checkbox"]:not(:disabled)');
+        const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('.company-item').offsetParent !== null);
+        
+        visibleCheckboxes.forEach(checkbox => {
+            if (!checkbox.checked) {
+                checkbox.checked = true;
+                if (!this.settings.selectedCompanies.includes(checkbox.value)) {
+                    this.settings.selectedCompanies.push(checkbox.value);
+                }
+            }
+        });
+        
+        this.saveSettings();
+        console.log('[DASHBOARD] Todas as empresas visíveis selecionadas:', this.settings.selectedCompanies);
+    }
+    
+    clearCompanySelection() {
+        const companyList = document.getElementById('company-list');
+        if (!companyList) return;
+        
+        const checkboxes = companyList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        const companyToggle = document.getElementById('company-filter-enabled');
+        if (companyToggle) companyToggle.checked = false;
+        
+        const companySearch = document.getElementById('company-search');
+        if (companySearch) companySearch.value = '';
+        
+        this.settings.companyFilterEnabled = false;
+        this.settings.selectedCompanies = [];
+        this.saveSettings();
+        
+        // Mostrar todas as empresas novamente
+        this.filterCompanyList('');
+        
+        console.log('[DASHBOARD] Seleção de empresas limpa');
+    }
+    
+    applyAllFilters() {
+        console.log('[DASHBOARD] Aplicando todos os filtros...');
+        console.log('[DASHBOARD] Configurações atuais:', {
+            companyFilterEnabled: this.settings.companyFilterEnabled,
+            selectedCompanies: this.settings.selectedCompanies,
+            otherSettings: {
+                autoLoop: this.settings.autoLoop,
+                autoRefresh: this.settings.autoRefresh
+            }
+        });
+        
+        this.currentPage = 1;
+        this.loadData();
     }
 }
 

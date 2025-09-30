@@ -596,3 +596,6 @@ Cores Oficiais da Aplicação ( utilizar elas e variantes )
 #165672
 #2d6b92
 #e2ba0a
+
+SEMPRE QUE FOR TESTAR UTILIZE O IP: http://192.168.0.75:5000
+AO INVÉS DE LOCALHOST!

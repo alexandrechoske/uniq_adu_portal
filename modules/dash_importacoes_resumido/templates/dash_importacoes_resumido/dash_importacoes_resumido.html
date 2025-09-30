@@ -305,6 +305,45 @@
                             </div>
                         </div>
 
+                        <!-- Card: Filtro de Empresa -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <i class="mdi mdi-domain"></i>
+                                <h3>Filtro de Empresa</h3>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-row">
+                                    <label for="company-filter-enabled" class="toggle-label">
+                                        <input type="checkbox" id="company-filter-enabled">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Ativar Filtro</span>
+                                    </label>
+                                </div>
+                                <div class="settings-row">
+                                    <label for="company-search">Pesquisar Empresa:</label>
+                                    <input type="text" id="company-search" class="settings-input" placeholder="Digite para pesquisar...">
+                                </div>
+                                <div class="settings-row">
+                                    <label>Empresas Disponíveis:</label>
+                                    <div id="company-list" class="company-list">
+                                        <div class="loading-text">Carregando empresas...</div>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="company-actions">
+                                        <button id="btn-select-all-companies" type="button" class="btn btn-secondary btn-small">
+                                            <i class="mdi mdi-check-all"></i>
+                                            Selecionar Todas
+                                        </button>
+                                        <button id="btn-clear-company-filter" type="button" class="btn btn-secondary btn-small">
+                                            <i class="mdi mdi-filter-remove"></i>
+                                            Limpar Seleção
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Card: Interface -->
                         <div class="settings-card">
                             <div class="settings-card-header">
@@ -361,6 +400,10 @@
                     <span class="settings-status">Configurações salvas automaticamente</span>
                 </div>
                 <div class="settings-footer-actions">
+                    <button id="btn-apply-all-filters" class="btn btn-primary">
+                        <i class="mdi mdi-filter-check"></i>
+                        Aplicar Filtros
+                    </button>
                     <button id="btn-cancel-settings" class="btn btn-secondary">
                         <i class="mdi mdi-close"></i>
                         Fechar
