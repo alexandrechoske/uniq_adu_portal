@@ -162,6 +162,37 @@
                         </small>
                     </div>
                 </div>
+
+                <!-- Filtros Adicionais -->
+                <div class="col-md-6">
+                    <div class="filter-section">
+                        <!-- Filtros de Tipo -->
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="tipo-filter-btn all active" data-tipo="todos">
+                                <i class="mdi mdi-filter"></i> Todos
+                            </button>
+                            <button type="button" class="tipo-filter-btn receita" data-tipo="receita">
+                                <i class="mdi mdi-trending-up"></i> Receitas
+                            </button>
+                            <button type="button" class="tipo-filter-btn despesa" data-tipo="despesa">
+                                <i class="mdi mdi-trending-down"></i> Despesas
+                            </button>
+                        </div>
+                        
+                        <!-- Filtros de Status -->  
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="status-filter-btn all active" data-status="todos">
+                                <i class="mdi mdi-check-all"></i> Todos Status
+                            </button>
+                            <button type="button" class="status-filter-btn pendente" data-status="pendente">
+                                <i class="mdi mdi-clock-outline"></i> Pendentes
+                            </button>
+                            <button type="button" class="status-filter-btn conciliado" data-status="conciliado">
+                                <i class="mdi mdi-check-circle"></i> Conciliados
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -187,13 +218,17 @@
                                         <th width="5%" class="checkbox-cell">
                                             <input type="checkbox" id="selectAllSistema" title="Selecionar todos">
                                         </th>
-                                        <th width="12%">Data</th>
-                                        <th width="15%">Banco</th>
+                                        <th width="14%" class="sortable" data-sort="data">
+                                            Data <i class="mdi mdi-sort sort-icon"></i>
+                                        </th>
+                                        <th width="18%">Banco</th>
                                         <th width="12%">Conta</th>
-                                        <th width="12%">Valor</th>
-                                        <th width="10%">Tipo</th>
+                                        <th width="14%" class="sortable" data-sort="valor">
+                                            Valor <i class="mdi mdi-sort sort-icon"></i>
+                                        </th>
+                                        <th width="12%">Tipo</th>
                                         <th width="25%">Descrição</th>
-                                        <th width="9%">Status</th>
+                                        <th width="10%">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -226,13 +261,16 @@
                                         <th width="5%" class="checkbox-cell">
                                             <input type="checkbox" id="selectAllBanco" title="Selecionar todos">
                                         </th>
-                                        <th width="12%">Data</th>
-                                        <th width="15%">Banco</th>
-                                        <th width="12%">Conta</th>
-                                        <th width="12%">Valor</th>
-                                        <th width="10%">Tipo</th>
-                                        <th width="25%">Histórico</th>
-                                        <th width="9%">Status</th>
+                                        <th width="14%" class="sortable" data-sort="data">
+                                            Data <i class="mdi mdi-sort sort-icon"></i>
+                                        </th>
+                                        <th width="20%">Banco</th>
+                                        <th width="16%" class="sortable" data-sort="valor">
+                                            Valor <i class="mdi mdi-sort sort-icon"></i>
+                                        </th>
+                                        <th width="12%">Tipo</th>
+                                        <th width="33%">Histórico</th>
+                                        <th width="10%">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>

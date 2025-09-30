@@ -8,7 +8,16 @@ class ConciliacaoBancaria {
         this.conciliacoes = [];
         this.selecionadosSistema = new Set();
         this.selecionadosBanco = new Set();
+        
+        // Filtros ativos
         this.bancoAtivo = 'todos';
+        this.tipoAtivo = 'todos';
+        this.statusAtivo = 'todos';
+        
+        // Ordenação
+        this.ordenacaoSistema = { campo: 'data', direcao: 'desc' };
+        this.ordenacaoBanco = { campo: 'data', direcao: 'desc' };
+        
         this.init();
     }
 
@@ -62,6 +71,35 @@ class ConciliacaoBancaria {
         filtrosBanco.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.aplicarFiltroBanco(e.target.dataset.banco);
+            });
+        });
+        
+        // Configurar filtros de tipo
+        const filtrosTipo = document.querySelectorAll('.tipo-filter-btn');
+        filtrosTipo.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.aplicarFiltroTipo(e.target.dataset.tipo);
+            });
+        });
+        
+        // Configurar filtros de status
+        const filtrosStatus = document.querySelectorAll('.status-filter-btn');
+        filtrosStatus.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.aplicarFiltroStatus(e.target.dataset.status);
+            });
+        });
+        
+        // Configurar ordenação de tabelas
+        const colunasSortaveis = document.querySelectorAll('.sortable');
+        colunasSortaveis.forEach(col => {
+            col.addEventListener('click', (e) => {
+                const tabelaElement = e.target.closest('table');
+                const tabelaId = tabelaElement ? tabelaElement.id : '';
+                const tabelaTipo = tabelaId === 'tabelaSistema' ? 'sistema' : 
+                                  tabelaId === 'tabelaBanco' ? 'banco' : 'ambas';
+                const campo = e.target.dataset.sort;
+                this.aplicarOrdenacao(campo, tabelaTipo);
             });
         });
     }
@@ -444,15 +482,8 @@ class ConciliacaoBancaria {
             });
         }
         
-        // Limpar seleções
-        this.selecionadosSistema.clear();
-        this.selecionadosBanco.clear();
-        
-        // Re-renderizar tabelas
-        this.renderizarDados();
-        this.atualizarSomatorio();
-        
-        console.log(`[FILTRO] Dados filtrados - Sistema: ${this.dadosSistema.length}, Banco: ${this.dadosBanco.length}`);
+        // Reaplicar todos os filtros usando a função central
+        this.aplicarTodosFiltros();
     }
 
     showStatus(status) {
@@ -487,7 +518,10 @@ class ConciliacaoBancaria {
         count.textContent = this.dadosSistema.length;
         countTotal.textContent = this.dadosSistema.length;
 
-        this.dadosSistema.forEach((item, index) => {
+        // Aplicar ordenação antes de renderizar
+        const dadosOrdenados = this.ordenarDados([...this.dadosSistema], this.ordenacaoSistema);
+
+        dadosOrdenados.forEach((item, index) => {
             const row = tbody.insertRow();
             
             // Usar os novos campos da implementação hierárquica
@@ -513,6 +547,13 @@ class ConciliacaoBancaria {
             const statusClass = status.toLowerCase();
             const statusText = this.formatarStatus(status);
             
+            // Usar tipo original dos dados para consistência
+            const tipoOriginal = (item.tipo_lancamento || item.tipo_movimento || item.tipo || 'N/A').toString().toUpperCase();
+            const tipoClass = tipoOriginal.toLowerCase();
+            
+            // Se tipo é DESPESA, mostrar valor como negativo visualmente
+            const valorExibido = tipoOriginal === 'DESPESA' ? -Math.abs(valor) : Math.abs(valor);
+            
             row.innerHTML = `
                 <td class="checkbox-cell">
                     <input type="checkbox" data-tipo="sistema" data-index="${index}">
@@ -520,8 +561,8 @@ class ConciliacaoBancaria {
                 <td>${this.formatarData(data)}</td>
                 <td><strong>${nomeBanco}</strong></td>
                 <td>${numeroConta}</td>
-                <td class="${valor >= 0 ? 'valor-positivo' : 'valor-negativo'}">${this.formatarValor(valor)}</td>
-                <td><span class="tipo-${tipo.toLowerCase()}">${tipo}</span></td>
+                <td class="${tipoOriginal === 'DESPESA' ? 'valor-negativo' : 'valor-positivo'}">${this.formatarValor(valorExibido)}</td>
+                <td><span class="tipo-${tipoClass}">${tipoOriginal}</span></td>
                 <td title="${descricao}">${this.truncarTexto(descricao, 30)}</td>
                 <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
             `;
@@ -546,7 +587,10 @@ class ConciliacaoBancaria {
         count.textContent = this.dadosBanco.length;
         countTotal.textContent = this.dadosBanco.length;
 
-        this.dadosBanco.forEach((item, index) => {
+        // Aplicar ordenação antes de renderizar
+        const dadosOrdenados = this.ordenarDados([...this.dadosBanco], this.ordenacaoBanco);
+
+        dadosOrdenados.forEach((item, index) => {
             const row = tbody.insertRow();
             
             // Usar os novos campos da implementação hierárquica
@@ -577,7 +621,6 @@ class ConciliacaoBancaria {
                 </td>
                 <td>${this.formatarData(data)}</td>
                 <td><strong>${nomeBanco}</strong></td>
-                <td>${numeroConta}</td>
                 <td class="${valor >= 0 ? 'valor-positivo' : 'valor-negativo'}">${this.formatarValor(valor)}</td>
                 <td><span class="tipo-${valor >= 0 ? 'receita' : 'despesa'}">${valor >= 0 ? 'RECEITA' : 'DESPESA'}</span></td>
                 <td title="${historico}">${this.truncarTexto(historico, 30)}</td>
@@ -1017,6 +1060,212 @@ class ConciliacaoBancaria {
     updateManualConciliationButton() {
         // Mantido para compatibilidade, funcionalidade movida para atualizarBotoesConciliacao
         this.atualizarBotoesConciliacao();
+    }
+
+    // Função para ordenar dados
+    ordenarDados(dados, criterio) {
+        if (!criterio || !criterio.campo) {
+            // Ordenação padrão: por data, mais recente primeiro
+            return dados.sort((a, b) => {
+                const dataA = new Date(a.data_lancamento || a.data_movimento || a.data || '1900-01-01');
+                const dataB = new Date(b.data_lancamento || b.data_movimento || b.data || '1900-01-01');
+                return dataB - dataA; // Decrescente (mais recente primeiro)
+            });
+        }
+
+        return dados.sort((a, b) => {
+            let valorA, valorB;
+
+            switch (criterio.campo) {
+                case 'data':
+                    valorA = new Date(a.data_lancamento || a.data_movimento || a.data || '1900-01-01');
+                    valorB = new Date(b.data_lancamento || b.data_movimento || b.data || '1900-01-01');
+                    break;
+                case 'valor':
+                    valorA = parseFloat(a.valor || 0);
+                    valorB = parseFloat(b.valor || 0);
+                    break;
+                case 'banco':
+                    valorA = (a.nome_banco || '').toLowerCase();
+                    valorB = (b.nome_banco || '').toLowerCase();
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (criterio.ordem === 'asc') {
+                return valorA > valorB ? 1 : valorA < valorB ? -1 : 0;
+            } else {
+                return valorA < valorB ? 1 : valorA > valorB ? -1 : 0;
+            }
+        });
+    }
+
+    // Aplicar filtro por tipo (receita/despesa)
+    aplicarFiltroTipo(tipo) {
+        console.log(`[FILTRO] Aplicando filtro tipo: ${tipo}`);
+        
+        // Atualizar estado interno
+        this.filtroTipo = tipo || 'todos';
+        
+        // Atualizar botões ativos
+        document.querySelectorAll('.tipo-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.querySelector(`[data-tipo="${this.filtroTipo}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+        
+        // Reaplicar todos os filtros
+        this.aplicarTodosFiltros();
+    }
+
+    // Aplicar filtro por status
+    aplicarFiltroStatus(status) {
+        console.log(`[FILTRO] Aplicando filtro status: ${status}`);
+        
+        // Atualizar estado interno
+        this.filtroStatus = status || 'todos';
+        
+        // Atualizar botões ativos
+        document.querySelectorAll('.status-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.querySelector(`[data-status="${this.filtroStatus}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+        
+        // Reaplicar todos os filtros
+        this.aplicarTodosFiltros();
+    }
+
+    // Aplicar todos os filtros em sequência
+    aplicarTodosFiltros() {
+        console.log(`[FILTRO] Aplicando todos os filtros - Banco: ${this.bancoAtivo}, Tipo: ${this.filtroTipo}, Status: ${this.filtroStatus}`);
+        
+        // Resetar dados para o estado original
+        this.dadosSistema = [...this.dadosSistemaOriginais];
+        this.dadosBanco = [...this.dadosBancoOriginais];
+        
+        // Aplicar filtro de banco
+        if (this.bancoAtivo && this.bancoAtivo !== 'todos') {
+            const normalizarParaFiltro = (nome) => {
+                if (!nome) return '';
+                const nomeNormalizado = nome.toLowerCase().trim();
+                
+                if (nomeNormalizado.includes('banco do brasil') || nomeNormalizado === 'banco_brasil' || nomeNormalizado === 'bb') {
+                    return 'banco_brasil';
+                } else if (nomeNormalizado.includes('itau') || nomeNormalizado.includes('itaú') || nomeNormalizado === 'itau') {
+                    return 'itau';
+                } else if (nomeNormalizado.includes('santander') || nomeNormalizado === 'santander') {
+                    return 'santander';
+                }
+                return nomeNormalizado;
+            };
+            
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                const nomeBanco = item.nome_banco || '';
+                const bancoNormalizado_item = normalizarParaFiltro(nomeBanco);
+                return bancoNormalizado_item === this.bancoAtivo;
+            });
+            
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                const bancoOrigem = item.banco_origem || '';
+                const bancoNormalizado_item = normalizarParaFiltro(bancoOrigem);
+                return bancoNormalizado_item === this.bancoAtivo;
+            });
+        }
+        
+        // Aplicar filtro de tipo
+        if (this.filtroTipo && this.filtroTipo !== 'todos') {
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                // Para dados sistema: usar tipo original dos dados
+                const tipoOriginal = (item.tipo_lancamento || item.tipo_movimento || item.tipo || '').toString().toLowerCase();
+                return tipoOriginal === this.filtroTipo;
+            });
+
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                // Para dados banco: calcular pelo valor (padrão OFX)
+                const valor = parseFloat(item.valor || 0);
+                const tipoItem = valor >= 0 ? 'receita' : 'despesa';
+                return tipoItem === this.filtroTipo;
+            });
+        }
+        
+        // Aplicar filtro de status
+        if (this.filtroStatus && this.filtroStatus !== 'todos') {
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                const statusItem = (item.status || 'pendente').toLowerCase();
+                return statusItem === this.filtroStatus;
+            });
+
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                const statusItem = (item.status || 'pendente').toLowerCase();
+                return statusItem === this.filtroStatus;
+            });
+        }
+        
+        // Limpar seleções
+        this.selecionadosSistema.clear();
+        this.selecionadosBanco.clear();
+        
+        // Re-renderizar tabelas
+        this.renderizarDados();
+        this.atualizarSomatorio();
+        
+        console.log(`[FILTRO] Dados filtrados - Sistema: ${this.dadosSistema.length}, Banco: ${this.dadosBanco.length}`);
+    }
+
+    // Aplicar ordenação nas tabelas
+    aplicarOrdenacao(campo, tabela = 'ambas') {
+        console.log('[ORDENACAO] Aplicando ordenação:', campo, 'em', tabela);
+
+        const criterioAtual = tabela === 'sistema' ? this.ordenacaoSistema : this.ordenacaoBanco;
+        
+        // Alternar direção se for o mesmo campo
+        if (criterioAtual.campo === campo) {
+            criterioAtual.ordem = criterioAtual.ordem === 'asc' ? 'desc' : 'asc';
+        } else {
+            criterioAtual.campo = campo;
+            criterioAtual.ordem = 'desc'; // Padrão decrescente
+        }
+
+        // Atualizar indicadores visuais
+        this.atualizarIndicadoresOrdenacao(campo, criterioAtual.ordem, tabela);
+
+        // Re-renderizar tabelas
+        if (tabela === 'sistema' || tabela === 'ambas') {
+            this.renderizarTabelaSistema();
+        }
+        if (tabela === 'banco' || tabela === 'ambas') {
+            this.renderizarTabelaBanco();
+        }
+    }
+
+    // Atualizar indicadores visuais de ordenação
+    atualizarIndicadoresOrdenacao(campo, ordem, tabela) {
+        const seletores = tabela === 'sistema' ? '#tabelaSistema th[data-sort]' : 
+                         tabela === 'banco' ? '#tabelaBanco th[data-sort]' : 
+                         'th[data-sort]';
+
+        // Remover indicadores existentes
+        document.querySelectorAll(seletores).forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+
+        // Adicionar indicador ao campo ativo
+        const selector = tabela === 'ambas' ? 
+            `th[data-sort="${campo}"]` : 
+            `#${tabela === 'sistema' ? 'tabelaSistema' : 'tabelaBanco'} th[data-sort="${campo}"]`;
+        
+        const thAtivo = document.querySelector(selector);
+        if (thAtivo) {
+            thAtivo.classList.add(`sort-${ordem}`);
+        }
     }
 }
 
