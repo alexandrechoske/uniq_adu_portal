@@ -2170,12 +2170,14 @@ async function saveUserEmpresas(userId) {
     try {
         console.log('[USUARIOS] Salvando empresas do usuário:', userId);
         
-        if (appState.originalEmpresas.length === 0) {
-            console.log('[USUARIOS] Nenhuma empresa para salvar');
-            return Promise.resolve();
-        }
-        
+        // Sempre enviar para que remoções sejam persistidas (lista vazia também)
         const empresaIds = appState.originalEmpresas.map(e => e.id);
+        
+        if (empresaIds.length === 0) {
+            console.log('[USUARIOS] Enviando lista vazia para remover todas as empresas');
+        } else {
+            console.log('[USUARIOS] Enviando', empresaIds.length, 'empresas para associar');
+        }
         
         const response = await apiRequest(`/api/user/${userId}/empresas`, 'POST', {
             empresa_ids: empresaIds

@@ -45,23 +45,31 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
         print(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
-        # Verificar se usuário tem perfil admin_operacao - se sim, pode ver todos os dados
+        # Verificar se usuário precisa de filtragem por empresa
         perfil_principal = user_data.get('perfil_principal', '')
-        is_admin_operacao = perfil_principal == 'admin_operacao'
         
-        if role in ['cliente_unique', 'interno_unique'] and not is_admin_operacao:
+        # REGRA CORRIGIDA: admin_operacao deve ver TODAS as empresas, não apenas as associadas
+        if role == 'cliente_unique':
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 query = query.in_('cnpj_importador', user_cnpjs)
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Filtrando por CNPJs do usuário: {len(user_cnpjs)} empresas")
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente filtrando por CNPJs: {len(user_cnpjs)} empresas")
             else:
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário sem CNPJs vinculados -> dados vazios")
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente sem CNPJs vinculados -> dados vazios")
                 data_cache.set_cache(user_id, 'dashboard_v2_data', [])
                 return []
-        elif is_admin_operacao:
-            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin_operacao -> carregando TODOS os dados")
-        elif role == 'admin':
-            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin -> carregando TODOS os dados")
+        elif role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
+            # Interno não-admin deve ver apenas suas empresas associadas
+            user_cnpjs = get_user_companies(user_data)
+            if user_cnpjs:
+                query = query.in_('cnpj_importador', user_cnpjs)
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Interno filtrando por CNPJs: {len(user_cnpjs)} empresas")
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Interno sem CNPJs vinculados -> dados vazios")
+                data_cache.set_cache(user_id, 'dashboard_v2_data', [])
+                return []
+        else:
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) Admin vê todos os dados (perfil: {perfil_principal})")
         def _run_main_query():
             return query.execute()
         result = run_with_retries('dashboard_executivo.helper_load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
@@ -471,11 +479,12 @@ def index():
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     
-    # Verificar se é interno_unique sem empresas associadas (exceto admins)
+    # Verificar se é interno_unique sem empresas associadas (exceto admin_operacao e master_admin)
+    # CORREÇÃO: admin_operacao deve ver TODOS os dados quando sem empresas específicas
     if user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
-            print(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            print(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} (perfil: {perfil_principal}) sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     
@@ -1248,20 +1257,22 @@ def force_refresh_dashboard():
         # Query base da view com dados de despesas - SEMPRE buscar dados frescos (já filtrada)
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
-        # NOVA REGRA: Filtrar por CNPJs das empresas vinculadas se for cliente_unique ou interno_unique
-        if user_role in ['cliente_unique', 'interno_unique']:
+        # REGRA CORRIGIDA: Filtrar por CNPJs apenas para clientes e internos não-admin
+        perfil_principal = user_data.get('perfil_principal', '')
+        
+        if user_role == 'cliente_unique' or (user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']):
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 print(f"[DASHBOARD_EXECUTIVO] Filtrando por CNPJs das empresas vinculadas: {user_cnpjs}")
                 query = query.in_('cnpj_importador', user_cnpjs)
             else:
-                print(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} sem CNPJs vinculados")
+                print(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} (perfil: {perfil_principal}) sem CNPJs vinculados")
                 return jsonify({
                     'success': False,
                     'error': 'Usuário sem empresas vinculadas'
                 })
         else:
-            print(f"[DASHBOARD_EXECUTIVO] Role admin - sem filtro de CNPJs")
+            print(f"[DASHBOARD_EXECUTIVO] Admin operacional ({perfil_principal}) - visualizando todos os dados")
         
         # Executar query
         result = query.execute()

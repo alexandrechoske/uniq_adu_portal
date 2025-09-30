@@ -107,11 +107,24 @@ def load_data():
         # Query base da view
         query = supabase_admin.table('vw_importacoes_6_meses').select('*')
         
-        # Filtrar por empresa se for cliente
+        # Filtrar por empresa se for cliente ou admin operação
         if user_role == 'cliente_unique':
             user_companies = get_user_companies(user_data)
             if user_companies:
                 query = query.in_('cnpj_importador', user_companies)
+            else:
+                # Cliente sem empresas não deve ver nada
+                query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+        elif user_role == 'interno_unique':
+            user_perfil_principal = user_data.get('perfil_principal', 'basico')
+            
+            if user_perfil_principal == 'admin_operacao':
+                user_companies = get_user_companies(user_data)
+                if user_companies:
+                    query = query.in_('cnpj_importador', user_companies)
+                else:
+                    # Admin operação sem empresas não deve ver nada
+                    query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
         
         # Executar query
         result = query.execute()

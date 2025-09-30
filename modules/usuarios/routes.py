@@ -222,6 +222,8 @@ def can_assign_perfil(editor_user, perfil_id):
         if editor_perfil_principal == 'admin_operacao':
             allowed_perfils = [
                 'cliente_basico', 'basico', 
+                # Perfil administrativo próprio (admin pode manter seu próprio perfil)
+                'admin_operacao',
                 # Perfis de Importação
                 'imp_basico', 'imp_avancado', 'importacao_basico', 'importacao_avancado', 'importacoes_completo',
                 # Perfis de Consultoria (preparado para futuro)
@@ -240,7 +242,13 @@ def can_assign_perfil(editor_user, perfil_id):
         
         # Admin Financeiro pode atribuir apenas perfis relacionados a financeiro
         elif editor_perfil_principal == 'admin_financeiro':
-            allowed_perfils = ['cliente_basico', 'basico', 'fin_basico', 'fin_avancado', 'financeiro_basico', 'financeiro_avancado', 'financeiro_completo', 'financeiro_fluxo_de_caixa']
+            allowed_perfils = [
+                'cliente_basico', 'basico', 
+                # Perfil administrativo próprio (admin pode manter seu próprio perfil)
+                'admin_financeiro',
+                # Perfis financeiros
+                'fin_basico', 'fin_avancado', 'financeiro_basico', 'financeiro_avancado', 'financeiro_completo', 'financeiro_fluxo_de_caixa'
+            ]
             can_assign = perfil_id in allowed_perfils or 'fin' in perfil_id or 'financeiro' in perfil_id.lower()
             print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Financeiro pode atribuir {perfil_id}: {can_assign}")
             return can_assign
@@ -785,7 +793,7 @@ def salvar_usuario():
 
 @bp.route('/deletar/<user_id>', methods=['POST'])
 @login_required
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])  # Allow Module Admins
 def deletar_usuario(user_id):
     """
     EXCLUSÃO EM CASCATA COMPLETA DE USUÁRIO
@@ -820,6 +828,16 @@ def deletar_usuario(user_id):
             print(f"[DEBUG] {error_msg}")
             if request.is_json:
                 return jsonify({'success': False, 'error': error_msg}), 400
+            else:
+                flash(error_msg, 'error')
+                return redirect(url_for('usuarios.index'))
+        
+        # HIERARCHY VALIDATION: Verificar se pode deletar o usuário alvo
+        if not can_edit_user(current_user, user):
+            error_msg = f'Você não tem permissão para deletar este usuário. Verifique a hierarquia de permissões.'
+            print(f"[DEBUG] Hierarchy violation: {current_user.get('email')} tentou deletar usuário de nível superior ou igual")
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 403
             else:
                 flash(error_msg, 'error')
                 return redirect(url_for('usuarios.index'))
@@ -2659,8 +2677,8 @@ def api_update_user(user_id):
         return jsonify({'success': False, 'message': f'Erro interno do servidor: {str(e)}'}), 500
 
 @bp.route('/api/user/<user_id>/empresas', methods=['POST'])
-@login_required
-@role_required(['admin'])
+@login_required  
+@role_required(['admin', 'interno_unique'])  # Allow Module Admins
 def api_update_user_empresas(user_id):
     """API para atualizar empresas do usuário"""
     try:
@@ -2668,6 +2686,25 @@ def api_update_user_empresas(user_id):
         empresa_ids = data.get('empresa_ids', [])
         
         print(f"[DEBUG] Atualizando empresas para usuário {user_id}: {empresa_ids}")
+        
+        # Verificar se o usuário existe e obter suas informações
+        user_response = supabase_admin.table(get_users_table()).select('id, name, role, perfil_principal').eq('id', user_id).execute()
+        if not user_response.data:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+        
+        target_user = user_response.data[0]
+        current_user = session.get('user', {})
+        
+        # HIERARCHY VALIDATION: Verificar se pode gerenciar empresas do usuário alvo
+        # Admin operação pode gerenciar suas próprias empresas
+        if current_user.get('id') == user_id and current_user.get('perfil_principal') == 'admin_operacao':
+            print(f"[DEBUG] Admin operação gerenciando suas próprias empresas: {current_user.get('email')}")
+        elif not can_edit_user(current_user, target_user):
+            print(f"[DEBUG] Hierarchy violation: {current_user.get('email')} tentou gerenciar empresas de usuário de nível superior")
+            return jsonify({
+                'success': False, 
+                'message': 'Você não tem permissão para gerenciar empresas deste usuário. Verifique a hierarquia de permissões.'
+            }), 403
         
         # Primeiro, desativar todas as empresas existentes do usuário
         result = supabase_admin.from_('user_empresas').update({'ativo': False}).eq('user_id', user_id).execute()

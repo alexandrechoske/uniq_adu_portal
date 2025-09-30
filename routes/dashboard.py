@@ -380,8 +380,26 @@ def dashboard_data_api(permissions=None):
                     else:
                         print("[DASHBOARD] Nenhuma empresa encontrada, aplicando filtro impossível")
                         query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                elif user_role == 'interno_unique':
+                    # Verificar se é admin operacional que deve ter filtragem por empresa
+                    user_perfil_principal = user_data.get('perfil_principal', 'basico')
+                    
+                    if user_perfil_principal == 'admin_operacao':
+                        # Admin operação deve ver apenas suas empresas associadas
+                        from routes.api import get_user_companies
+                        user_companies = get_user_companies(user_data)
+                        print(f"[DASHBOARD] Empresas do admin operação: {user_companies}")
+                        
+                        if user_companies:
+                            print(f"[DASHBOARD] Aplicando filtro IN para admin operação: {user_companies}")
+                            query = query.in_('cnpj_importador', user_companies)
+                        else:
+                            print("[DASHBOARD] Admin operação sem empresas, aplicando filtro impossível")
+                            query = query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                    else:
+                        print(f"[DASHBOARD] Usuário interno ({user_perfil_principal}) vê todas as empresas")
                 else:
-                    print("[DASHBOARD] Usuário não é cliente_unique, sem filtro de empresa")
+                    print("[DASHBOARD] Usuário admin vê todas as empresas")
                 
                 result = query.execute()
                 fresh_data = result.data if result.data else []
@@ -541,6 +559,17 @@ def dashboard_data_api(permissions=None):
                         modal_query = modal_query.in_('cnpj_importador', user_companies)
                     else:
                         modal_query = modal_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                elif user_role == 'interno_unique':
+                    user_perfil_principal = user_data.get('perfil_principal', 'basico')
+                    
+                    if user_perfil_principal == 'admin_operacao':
+                        user_companies = get_user_companies(user_data)
+                        print(f"[DASHBOARD] Empresas para modal (admin operação): {user_companies}")
+                        
+                        if user_companies:
+                            modal_query = modal_query.in_('cnpj_importador', user_companies)
+                        else:
+                            modal_query = modal_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
                 
                 modal_result = modal_query.execute()
                 modal_data = modal_result.data if modal_result.data else []
@@ -578,6 +607,18 @@ def dashboard_data_api(permissions=None):
                         pais_query = pais_query.in_('cnpj_importador', user_companies)
                     else:
                         pais_query = pais_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
+                elif user_role == 'interno_unique':
+                    user_perfil_principal = user_data.get('perfil_principal', 'basico')
+                    
+                    if user_perfil_principal == 'admin_operacao':
+                        from routes.api import get_user_companies
+                        user_companies = get_user_companies(user_data)
+                        print(f"[DASHBOARD] Empresas para País Procedência (admin operação): {user_companies}")
+                        
+                        if user_companies:
+                            pais_query = pais_query.in_('cnpj_importador', user_companies)
+                        else:
+                            pais_query = pais_query.eq('cnpj_importador', 'NENHUMA_EMPRESA_ENCONTRADA')
                 
                 pais_result = pais_query.execute()
                 pais_data = pais_result.data if pais_result.data else []
