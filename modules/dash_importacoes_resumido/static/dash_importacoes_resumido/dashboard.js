@@ -255,10 +255,17 @@ class DashboardImportacoesResumido {
             this.closeSettingsModal();
         });
 
-        // Company Filter Toggle
+        // Company Filter Toggle - Controla visibilidade da seção
         document.getElementById('company-filter-enabled')?.addEventListener('change', (e) => {
             this.settings.companyFilterEnabled = e.target.checked;
             this.saveSettings();
+            
+            // Controlar visibilidade das seções de filtro de empresa
+            const companyFilterSections = document.querySelectorAll('.company-filter-section');
+            companyFilterSections.forEach(section => {
+                section.style.display = e.target.checked ? 'block' : 'none';
+            });
+            
             if (e.target.checked) {
                 this.loadCompanies();
             } else {
@@ -327,6 +334,13 @@ class DashboardImportacoesResumido {
         if (filterToggle) filterToggle.checked = this.settings.showFilters;
         if (recordsPerPageSelect) recordsPerPageSelect.value = this.settings.pagination;
         if (companyFilterToggle) companyFilterToggle.checked = this.settings.companyFilterEnabled;
+        
+        // Controlar visibilidade das seções de filtro de empresa
+        const companyFilterSections = document.querySelectorAll('.company-filter-section');
+        companyFilterSections.forEach(section => {
+            section.style.display = this.settings.companyFilterEnabled ? 'block' : 'none';
+        });
+        
         // Restore multiple company selections
         if (companySelect && this.settings.selectedCompanies && this.settings.selectedCompanies.length > 0) {
             Array.from(companySelect.options).forEach(option => {
@@ -1281,8 +1295,14 @@ class DashboardImportacoesResumido {
             
             const label = document.createElement('label');
             label.htmlFor = `company-${empresa.cnpj}`;
+            
+            // Versão compacta: nome truncado + CNPJ na mesma linha
+            const nomeCompacto = empresa.nome.length > 25 ? 
+                empresa.nome.substring(0, 25) + '...' : 
+                empresa.nome;
+            
             label.innerHTML = `
-                <span class="company-name">${empresa.nome}</span>
+                <span class="company-name" title="${empresa.nome}">${nomeCompacto}</span>
                 <span class="company-cnpj">${empresa.cnpj}</span>
             `;
             

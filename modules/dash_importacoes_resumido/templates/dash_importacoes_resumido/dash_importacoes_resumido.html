@@ -296,48 +296,37 @@
                                         <span class="toggle-text">Data de Embarque</span>
                                     </label>
                                 </div>
-                                <div class="settings-row">
-                                    <button id="btn-apply-filter" type="button" class="btn btn-secondary btn-full">
-                                        <i class="mdi mdi-filter-check"></i>
-                                        Aplicar Filtros
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Card: Filtro de Empresa -->
-                        <div class="settings-card">
-                            <div class="settings-card-header">
-                                <i class="mdi mdi-domain"></i>
-                                <h3>Filtro de Empresa</h3>
-                            </div>
-                            <div class="settings-card-body">
+                                
+                                <!-- Filtro de Empresas integrado -->
                                 <div class="settings-row">
                                     <label for="company-filter-enabled" class="toggle-label">
                                         <input type="checkbox" id="company-filter-enabled">
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Ativar Filtro</span>
+                                        <span class="toggle-text">Filtrar por Empresa</span>
                                     </label>
                                 </div>
-                                <div class="settings-row">
+                                
+                                <div class="settings-row company-filter-section" style="display: none;">
                                     <label for="company-search">Pesquisar Empresa:</label>
-                                    <input type="text" id="company-search" class="settings-input" placeholder="Digite para pesquisar...">
+                                    <input type="text" id="company-search" class="settings-input" placeholder="Digite o nome ou CNPJ...">
                                 </div>
-                                <div class="settings-row">
-                                    <label>Empresas Disponíveis:</label>
-                                    <div id="company-list" class="company-list">
+                                
+                                <div class="settings-row company-filter-section" style="display: none;">
+                                    <label>Empresas:</label>
+                                    <div id="company-list" class="company-list-compact">
                                         <div class="loading-text">Carregando empresas...</div>
                                     </div>
                                 </div>
-                                <div class="settings-row">
-                                    <div class="company-actions">
-                                        <button id="btn-select-all-companies" type="button" class="btn btn-secondary btn-small">
+                                
+                                <div class="settings-row company-filter-section" style="display: none;">
+                                    <div class="company-actions-compact">
+                                        <button id="btn-select-all-companies" type="button" class="btn btn-secondary btn-mini">
                                             <i class="mdi mdi-check-all"></i>
-                                            Selecionar Todas
+                                            Todas
                                         </button>
-                                        <button id="btn-clear-company-filter" type="button" class="btn btn-secondary btn-small">
+                                        <button id="btn-clear-company-filter" type="button" class="btn btn-secondary btn-mini">
                                             <i class="mdi mdi-filter-remove"></i>
-                                            Limpar Seleção
+                                            Limpar
                                         </button>
                                     </div>
                                 </div>
