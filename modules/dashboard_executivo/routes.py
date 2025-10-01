@@ -429,11 +429,20 @@ def apply_filters(data):
                     hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
                     
                     if periodo == 'semana':
-                        fim_semana = hoje + timedelta(days=7)
-                        return hoje <= data_obj <= fim_semana
+                        # CORRIGIDO: Usar semana completa (segunda a domingo) como o KPI
+                        dia_semana = hoje.weekday()  # 0=segunda, 6=domingo
+                        inicio_semana = hoje - timedelta(days=dia_semana)
+                        fim_semana = inicio_semana + timedelta(days=6)
+                        return inicio_semana <= data_obj <= fim_semana
                     elif periodo == 'mes':
-                        fim_mes = hoje + timedelta(days=30)
-                        return hoje <= data_obj <= fim_mes
+                        # Mês atual completo (1º ao último dia)
+                        primeiro_dia_mes = hoje.replace(day=1)
+                        if hoje.month == 12:
+                            ultimo_dia_mes = hoje.replace(day=31)
+                        else:
+                            proximo_mes = hoje.replace(month=hoje.month + 1, day=1)
+                            ultimo_dia_mes = proximo_mes - timedelta(days=1)
+                        return primeiro_dia_mes <= data_obj <= ultimo_dia_mes
                 except:
                     return False
                 return False
@@ -764,39 +773,36 @@ def dashboard_kpis():
         hoje = pd.Timestamp.now().normalize()
         primeiro_dia_mes = hoje.replace(day=1)
         ultimo_dia_mes = (primeiro_dia_mes + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
-        # Calcular semana atual (domingo a sábado)
-        dias_desde_domingo = (hoje.dayofweek + 1) % 7  # 0=domingo, 1=segunda, etc.
-        inicio_semana = hoje - pd.Timedelta(days=dias_desde_domingo)
-        fim_semana = inicio_semana + pd.Timedelta(days=6)
+        
+        # Calcular semana atual (SEGUNDA a DOMINGO) - CORRIGIDO
+        # hoje.dayofweek: 0=Segunda, 1=Terça, ..., 6=Domingo
+        dias_desde_segunda = hoje.dayofweek  # Dias desde a segunda-feira
+        inicio_semana = hoje - pd.Timedelta(days=dias_desde_segunda)  # Volta para segunda
+        fim_semana = inicio_semana + pd.Timedelta(days=6)  # Domingo (6 dias depois da segunda)
+        
         chegando_mes = 0
         chegando_mes_custo = 0.0
         chegando_semana = 0
         chegando_semana_custo = 0.0
         if 'data_chegada' in df.columns:
             df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
-            print(f"[DEBUG_KPI] Total registros: {len(df)}")
-            print(f"[DEBUG_KPI] Registros com data_chegada válida: {df['chegada_dt'].notnull().sum()}")
-            print(f"[DEBUG_KPI] Hoje: {hoje.strftime('%d/%m/%Y')}")
-            print(f"[DEBUG_KPI] Semana: {inicio_semana.strftime('%d/%m/%Y')} a {fim_semana.strftime('%d/%m/%Y')}")
-            print(f"[DEBUG_KPI] Mês: {primeiro_dia_mes.strftime('%d/%m/%Y')} a {ultimo_dia_mes.strftime('%d/%m/%Y')}")
+            
+            # Contar processos chegando esta semana
             for idx, row in df.iterrows():
                 chegada = row.get('chegada_dt')
-                custo = row.get('custo_calculado', 0.0)  # USANDO CUSTO CALCULADO
+                custo = row.get('custo_calculado', 0.0)
                 if custo is None:
                     custo = 0.0
-                data_str = row.get('data_chegada', 'SEM DATA')
-                if pd.notnull(chegada) and idx < 5:
-                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Custo: {custo} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
+                
                 # Lógica para MÊS (independente de ser passado ou futuro)
                 if pd.notnull(chegada) and primeiro_dia_mes <= chegada <= ultimo_dia_mes:
                     chegando_mes += 1
                     chegando_mes_custo += custo
+                
                 # Lógica para SEMANA (independente de ser passado ou futuro)
                 if pd.notnull(chegada) and inicio_semana <= chegada <= fim_semana:
                     chegando_semana += 1
                     chegando_semana_custo += custo
-            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
-            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
         # Calcular processos abertos baseado no status_timeline
         # NOVA REGRA: Processos abertos são aqueles com timeline_number entre 1-4
