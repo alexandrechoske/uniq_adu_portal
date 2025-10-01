@@ -1183,11 +1183,11 @@ def recent_operations():
         # CORREÇÃO: Para mini popups funcionarem, precisamos de todos os dados
         # Separar dados para tabela (limitados) vs dados para mini popups (completos)
         
-        # NOVO: Se houver filtro de kpi_status, mostrar TODOS os registros filtrados na tabela
+        # NOVO: Sempre mostrar TODOS os registros na tabela (sem limite de 50)
         kpi_status = request.args.get('kpi_status')
-        limit_table = None if kpi_status else 50  # Sem limite se filtrado por KPI, senão 50
+        limit_table = None  # Sem limite - sempre mostrar todos os registros
         
-        # Para a tabela: Ordenar por data mais recente e limitar conforme necessário
+        # Para a tabela: Ordenar por data mais recente
         if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
             df_sorted = df.sort_values('data_abertura_dt', ascending=False)
