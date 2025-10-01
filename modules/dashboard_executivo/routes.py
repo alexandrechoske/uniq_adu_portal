@@ -610,7 +610,11 @@ def load_data():
 @login_required
 @perfil_required('importacoes', 'dashboard_executivo')
 def dashboard_kpis():
-    """Calcular KPIs para o dashboard executivo"""
+    """Calcular KPIs para o dashboard executivo
+    
+    IMPORTANTE: KPIs sempre mostram valores TOTAIS, mesmo quando há filtro de kpi_status.
+    Apenas tabelas e gráficos são filtrados pelo kpi_status.
+    """
     try:
         # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
@@ -619,8 +623,23 @@ def dashboard_kpis():
         if not data:
             return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'kpis': {}})
         
-        # Aplicar filtros se existirem
+        # NOVO: Remover temporariamente kpi_status dos filtros para KPIs mostrarem valores totais
+        kpi_status_backup = request.args.get('kpi_status')
+        if kpi_status_backup:
+            # Criar uma cópia do request.args sem kpi_status
+            from werkzeug.datastructures import ImmutableMultiDict
+            args_dict = request.args.to_dict()
+            args_dict.pop('kpi_status', None)
+            request.args = ImmutableMultiDict(args_dict)
+        
+        # Aplicar filtros (agora sem kpi_status)
         filtered_data = apply_filters(data)
+        
+        # Restaurar kpi_status se existia
+        if kpi_status_backup:
+            args_dict['kpi_status'] = kpi_status_backup
+            request.args = ImmutableMultiDict(args_dict)
+        
         df = pd.DataFrame(filtered_data)
         
         # Garantir colunas de custo
@@ -1158,12 +1177,17 @@ def recent_operations():
         # CORREÇÃO: Para mini popups funcionarem, precisamos de todos os dados
         # Separar dados para tabela (limitados) vs dados para mini popups (completos)
         
-        # Para a tabela: Ordenar por data mais recente e limitar a 50 registros
+        # NOVO: Se houver filtro de kpi_status, mostrar TODOS os registros filtrados na tabela
+        kpi_status = request.args.get('kpi_status')
+        limit_table = None if kpi_status else 50  # Sem limite se filtrado por KPI, senão 50
+        
+        # Para a tabela: Ordenar por data mais recente e limitar conforme necessário
         if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
-            df_table = df.sort_values('data_abertura_dt', ascending=False).head(50)
+            df_sorted = df.sort_values('data_abertura_dt', ascending=False)
+            df_table = df_sorted if limit_table is None else df_sorted.head(limit_table)
         else:
-            df_table = df.head(50)
+            df_table = df if limit_table is None else df.head(limit_table)
         
         # Para mini popups: manter todos os dados filtrados
         df_all = df

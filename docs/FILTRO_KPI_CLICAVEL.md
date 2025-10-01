@@ -22,17 +22,23 @@ O sistema de mini popup apresentava inconsistências na contagem de processos. A
 - Feedback visual claro do filtro aplicado
 
 ### 3. Filtro por Status
-Ao clicar em um KPI, o dashboard filtra TODOS os dados baseado no `status_timeline`:
+Ao clicar em um KPI, o dashboard filtra **tabelas e gráficos** baseado no `status_timeline`:
 
-| KPI | Filtro Aplicado |
-|-----|----------------|
-| Processos Abertos | Timeline 1-4 |
-| Agd Embarque | Timeline 1 |
-| Agd Chegada | Timeline 2 |
-| Agd Liberação | Timeline 3 |
-| Agd Fechamento | Timeline 4 |
-| Chegando Esta Semana | data_chegada próximos 7 dias |
-| Chegando Este Mês | data_chegada próximos 30 dias |
+**IMPORTANTE**: Os **KPIs permanecem com valores TOTAIS** (não são filtrados), apenas tabelas e gráficos são filtrados.
+
+| KPI | Filtro Aplicado | Comportamento |
+|-----|----------------|---------------|
+| Processos Abertos | Timeline 1-4 | KPI mostra 1081, tabela e gráficos filtram |
+| Agd Embarque | Timeline 1 | KPI mostra 291, tabela e gráficos filtram |
+| Agd Chegada | Timeline 2 | KPI mostra 191, tabela e gráficos filtram |
+| Agd Liberação | Timeline 3 | KPI mostra 25, tabela e gráficos filtram |
+| Agd Fechamento | Timeline 4 | KPI mostra 564, tabela e gráficos filtram |
+| Chegando Esta Semana | data_chegada próximos 7 dias | KPI mostra 58, tabela e gráficos filtram |
+| Chegando Este Mês | data_chegada próximos 30 dias | KPI mostra 243, tabela e gráficos filtram |
+
+### 4. Tabela de Operações Recentes
+- **Sem filtro**: Limitada a 50 registros (performance)
+- **Com filtro de KPI**: Mostra **TODOS os registros filtrados** (sem limite de 50)
 
 ---
 

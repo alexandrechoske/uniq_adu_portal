@@ -1142,11 +1142,12 @@ function hasFiltersChanged() {
 
 /**
  * Load dashboard KPIs
+ * IMPORTANTE: KPIs sempre carregam SEM filtro de kpi_status
  */
 async function loadDashboardKPIs() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs...');
-        const queryString = buildFilterQueryString();
+        const queryString = buildFilterQueryString(true); // true = excluir kpi_status
         const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
         if (result.success) {
@@ -1161,11 +1162,12 @@ async function loadDashboardKPIs() {
 
 /**
  * Load dashboard KPIs with cache
+ * IMPORTANTE: KPIs sempre carregam SEM filtro de kpi_status
  */
 async function loadDashboardKPIsWithCache() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs com cache...');
-        const queryString = buildFilterQueryString();
+        const queryString = buildFilterQueryString(true); // true = excluir kpi_status
         const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
         if (result.success) {
@@ -1181,12 +1183,16 @@ async function loadDashboardKPIsWithCache() {
 
 /**
  * Load dashboard KPIs with retry and cache fallback
+ * IMPORTANTE: KPIs sempre carregam SEM filtro de kpi_status para mostrar valores totais
  */
 async function loadDashboardKPIsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando KPIs (tentativa ${attempt}/${maxRetries})...`);
-            const queryString = buildFilterQueryString();
+            
+            // NOVO: Construir query string SEM kpi_status para KPIs mostrarem valores totais
+            const queryString = buildFilterQueryString(true); // true = excluir kpi_status
+            
             const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
             const result = await response.json();
             if (result.success && result.kpis) {
@@ -3056,7 +3062,11 @@ function getMultiSelectValues(type) {
 /**
  * Build filter query string
  */
-function buildFilterQueryString() {
+/**
+ * Build filter query string from current filters
+ * @param {boolean} excludeKpiStatus - Se true, exclui o filtro kpi_status (usado para KPIs mostrarem valores totais)
+ */
+function buildFilterQueryString(excludeKpiStatus = false) {
     const params = new URLSearchParams();
     
     const dataInicio = document.getElementById('data-inicio')?.value;
@@ -3077,8 +3087,8 @@ function buildFilterQueryString() {
     if (modais.length > 0) params.append('modal', modais.join(','));
     if (canais.length > 0) params.append('canal', canais.join(','));
     
-    // NOVO: Adicionar filtro de KPI clicável se existir
-    if (currentFilters.kpi_status) {
+    // NOVO: Adicionar filtro de KPI clicável apenas se não for para excluir
+    if (!excludeKpiStatus && currentFilters.kpi_status) {
         params.append('kpi_status', currentFilters.kpi_status);
     }
     
