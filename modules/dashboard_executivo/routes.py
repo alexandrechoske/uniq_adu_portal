@@ -340,12 +340,26 @@ def apply_filters(data):
         modal = request.args.get('modal')
         canal = request.args.get('canal')
         status_processo = request.args.get('status_processo')
+        kpi_status = request.args.get('kpi_status')  # NOVO: Filtro por KPI clicável
         
         filtered_data = data
         
         # Pré-normalizar campos usados para contain checks em lower() para evitar recomputo por item
         def norm(s):
             return str(s).lower() if s is not None else ''
+        
+        # Helper para extrair número do status_timeline
+        def get_timeline_number(status_timeline):
+            """Extrair número do status_timeline (ex: '2 - Agd Chegada' -> 2)"""
+            if not status_timeline:
+                return None
+            try:
+                status_str = str(status_timeline).strip()
+                if '-' in status_str:
+                    return int(status_str.split('-')[0].strip())
+                return int(status_str)
+            except:
+                return None
         
         # Filtrar por data
         if data_inicio and data_fim:
@@ -390,6 +404,68 @@ def apply_filters(data):
                 # Processo fechado: status_macro_sistema = "PROCESSO CONCLUIDO"
                 filtered_data = [item for item in filtered_data 
                                if item.get('status_macro_sistema') == 'PROCESSO CONCLUIDO']
+        
+        # NOVO: Filtrar por status de KPI clicável
+        if kpi_status:
+            from datetime import datetime, timedelta
+            
+            # Helper para verificar período de chegada
+            def in_periodo_chegada(item, periodo):
+                try:
+                    data_chegada = item.get('data_chegada')
+                    if not data_chegada:
+                        return False
+                    
+                    # Parse data brasileira DD/MM/YYYY
+                    if isinstance(data_chegada, str):
+                        parts = data_chegada.split('/')
+                        if len(parts) == 3:
+                            data_obj = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+                        else:
+                            return False
+                    else:
+                        data_obj = data_chegada
+                    
+                    hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                    
+                    if periodo == 'semana':
+                        fim_semana = hoje + timedelta(days=7)
+                        return hoje <= data_obj <= fim_semana
+                    elif periodo == 'mes':
+                        fim_mes = hoje + timedelta(days=30)
+                        return hoje <= data_obj <= fim_mes
+                except:
+                    return False
+                return False
+            
+            if kpi_status == 'processos_abertos':
+                # Processos com timeline 1-4
+                filtered_data = [item for item in filtered_data 
+                               if 1 <= get_timeline_number(item.get('status_timeline')) <= 4]
+            elif kpi_status == 'agd_embarque':
+                # Timeline 1
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 1]
+            elif kpi_status == 'agd_chegada':
+                # Timeline 2
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 2]
+            elif kpi_status == 'agd_liberacao':
+                # Timeline 3
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 3]
+            elif kpi_status == 'agd_fechamento':
+                # Timeline 4
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 4]
+            elif kpi_status == 'chegando_semana':
+                # Chegando esta semana
+                filtered_data = [item for item in filtered_data 
+                               if in_periodo_chegada(item, 'semana')]
+            elif kpi_status == 'chegando_mes':
+                # Chegando este mês
+                filtered_data = [item for item in filtered_data 
+                               if in_periodo_chegada(item, 'mes')]
         
         return filtered_data
         

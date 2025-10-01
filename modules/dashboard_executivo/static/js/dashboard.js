@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Inicializar sistema de filtro por KPI clicável
+    initializeKpiClickFilters();
+    
     // Simple initialization - wait a bit for scripts to load
     setTimeout(() => {
         console.log('[DASHBOARD_EXECUTIVO] Chart.js disponível:', typeof Chart !== 'undefined');
@@ -115,6 +118,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+
+// ===== SISTEMA DE FILTRO POR KPI CLICÁVEL =====
+/**
+ * Inicializa o sistema de filtros clicáveis nos KPIs
+ * Quando um KPI é clicado, filtra os dados do dashboard baseado no status correspondente
+ */
+function initializeKpiClickFilters() {
+    console.log('[KPI_FILTER] Inicializando sistema de filtros clicáveis');
+    
+    const clickableKpis = document.querySelectorAll('.kpi-card.kpi-clickable');
+    
+    clickableKpis.forEach(kpi => {
+        kpi.addEventListener('click', function() {
+            const status = this.getAttribute('data-kpi-status');
+            console.log('[KPI_FILTER] KPI clicado:', status);
+            
+            // Toggle filtro: se já está ativo, remove; senão aplica
+            if (this.classList.contains('kpi-active')) {
+                clearKpiFilter();
+            } else {
+                applyKpiFilter(status);
+            }
+        });
+    });
+}
+
+/**
+ * Aplica filtro baseado no status do KPI
+ */
+async function applyKpiFilter(status) {
+    console.log('[KPI_FILTER] Aplicando filtro:', status);
+    
+    // Remover classe active de todos os KPIs
+    document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+        kpi.classList.remove('kpi-active');
+    });
+    
+    // Adicionar classe active no KPI clicado
+    const activeKpi = document.querySelector(`.kpi-card[data-kpi-status="${status}"]`);
+    if (activeKpi) {
+        activeKpi.classList.add('kpi-active');
+    }
+    
+    // Aplicar filtro baseado no status
+    currentFilters.kpi_status = status;
+    
+    // Invalidar cache para forçar reload com filtro
+    dashboardCache.invalidate();
+    
+    // Recarregar todos os componentes com filtro
+    try {
+        console.log('[KPI_FILTER] Recarregando componentes com filtro...');
+        await loadComponentsWithRetry();
+        console.log('[KPI_FILTER] Componentes recarregados com sucesso');
+    } catch (error) {
+        console.error('[KPI_FILTER] Erro ao recarregar componentes:', error);
+    }
+}
+
+/**
+ * Limpa o filtro de KPI ativo
+ */
+async function clearKpiFilter() {
+    console.log('[KPI_FILTER] Limpando filtro de KPI');
+    
+    // Remover classe active de todos os KPIs
+    document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+        kpi.classList.remove('kpi-active');
+    });
+    
+    // Remover filtro
+    delete currentFilters.kpi_status;
+    
+    // Invalidar cache para forçar reload sem filtro
+    dashboardCache.invalidate();
+    
+    // Recarregar todos os componentes sem filtro
+    try {
+        console.log('[KPI_FILTER] Recarregando componentes sem filtro...');
+        await loadComponentsWithRetry();
+        console.log('[KPI_FILTER] Componentes recarregados com sucesso');
+    } catch (error) {
+        console.error('[KPI_FILTER] Erro ao recarregar componentes:', error);
+    }
+}
 
 // ===== Stubs leves para evitar ReferenceError sem mudar comportamento =====
 // Algumas funções podem não existir dependendo da ordem de scripts; criamos stubs no-ops
@@ -2989,6 +3077,11 @@ function buildFilterQueryString() {
     if (modais.length > 0) params.append('modal', modais.join(','));
     if (canais.length > 0) params.append('canal', canais.join(','));
     
+    // NOVO: Adicionar filtro de KPI clicável se existir
+    if (currentFilters.kpi_status) {
+        params.append('kpi_status', currentFilters.kpi_status);
+    }
+    
     return params.toString();
 }
 
@@ -3116,8 +3209,13 @@ function clearFilters() {
         btn.classList.remove('active');
     });
     
-    // Clear stored filters
+    // Clear stored filters (incluindo KPI filter)
     currentFilters = {};
+    
+    // NOVO: Remover classe active dos KPIs clicáveis
+    document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+        kpi.classList.remove('kpi-active');
+    });
     
     // Update summary
     updateFilterSummary();
@@ -3151,8 +3249,13 @@ async function resetAllFilters() {
             btn.classList.remove('active');
         });
         
-        // Clear stored filters
+        // Clear stored filters (incluindo KPI filter)
         currentFilters = {};
+        
+        // NOVO: Remover classe active dos KPIs clicáveis
+        document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+            kpi.classList.remove('kpi-active');
+        });
         
         // Update summary
         updateFilterSummary();

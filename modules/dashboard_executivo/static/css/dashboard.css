@@ -91,122 +91,32 @@ canvas {
     }
 }
 
-/* === MINI KPI POPUP FEATURE === */
-/* Botão pequeno dentro do KPI para abrir mini tabela */
-.kpi-card { position: relative; }
-.kpi-mini-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--unique-background-white);
-    border: 1px solid var(--unique-border-light);
-    border-radius: 6px;
+/* === KPI CLICKABLE FEATURE === */
+/* Tornar KPIs clicáveis com hover effect */
+.kpi-card.kpi-clickable {
     cursor: pointer;
-    color: var(--unique-text-secondary);
-    font-size: 14px;
-    line-height: 1;
-    padding: 0;
-    transition: all .15s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
-.kpi-mini-btn:hover { 
-    background: var(--unique-background-light); 
-    color: var(--unique-text-primary); 
-}
-.kpi-mini-btn:active { transform: scale(0.92); }
 
-/* Container do popup */
-.mini-kpi-popup {
-    position: absolute;
-    z-index: 4000;
-    width: 440px;
-    max-width: calc(100vw - 24px);
-    background: var(--unique-background-white);
-    border: 1px solid var(--unique-border-light);
-    border-radius: 10px;
-    box-shadow: 0 10px 28px -4px rgba(0,0,0,0.12), 0 4px 8px -2px rgba(0,0,0,0.06);
-    overflow: hidden;
-    animation: miniKpiFade .18s ease;
-    font-family: inherit;
+.kpi-card.kpi-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-@keyframes miniKpiFade { 
-    from { opacity:0; transform: translateY(4px);} 
-    to { opacity:1; transform: translateY(0);} 
+
+.kpi-card.kpi-clickable:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
-.mini-kpi-popup-header {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    background: var(--unique-background-light);
-    border-bottom:1px solid var(--unique-border-light);
-    padding:10px 14px;
+
+/* Indicador visual de filtro ativo */
+.kpi-card.kpi-active {
+    border: 2px solid #007bff;
+    background: linear-gradient(135deg, rgba(0,123,255,0.05), rgba(0,123,255,0.02));
 }
-.mini-kpi-popup-title { 
-    margin:0; 
-    font-size:0.9rem; 
-    font-weight:600; 
-    color: var(--unique-primary); 
-}
-.mini-kpi-popup-close { 
-    background:none; 
-    border:none; 
-    cursor:pointer; 
-    font-size:18px; 
-    line-height:1; 
-    color: var(--unique-text-secondary); 
-    padding:2px 4px; 
-}
-.mini-kpi-popup-close:hover { 
-    color: var(--unique-text-primary); 
-}
-.mini-kpi-popup-body { padding:10px 14px 14px 14px; }
-.mini-kpi-table-wrapper { 
-    max-height:260px; 
-    overflow:auto; 
-    border:1px solid var(--unique-border-light); 
-    border-radius:6px; 
-}
-.mini-kpi-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
-.mini-kpi-table th { 
-    position:sticky; 
-    top:0; 
-    background: var(--unique-background-light); 
-    font-weight:600; 
-    text-align:left; 
-    padding:6px 8px; 
-    border-bottom:1px solid var(--unique-border-light); 
-    color: var(--unique-text-secondary); 
-}
-.mini-kpi-table td { 
-    padding:5px 8px; 
-    border-bottom:1px solid var(--unique-border-lighter); 
-    white-space:nowrap; 
-}
-.mini-kpi-table tbody tr:nth-child(even) { 
-    background: var(--unique-background-lighter); 
-}
-.mini-kpi-table tr:last-child td { border-bottom:none; }
-.mini-kpi-table tbody tr:hover { 
-    background: var(--unique-background-light); 
-}
-.mini-kpi-empty { font-size:0.7rem; color:#6c757d; padding:12px 4px; text-align:center; }
-.mini-kpi-footer { margin-top:6px; font-size:0.65rem; color:#6c757d; display:flex; justify-content:space-between; align-items:center; }
-.mini-kpi-badge { display:inline-block; background:#e9f2ff; color:#1976d2; border:1px solid #b3d7ff; padding:2px 6px; border-radius:12px; font-size:0.55rem; font-weight:500; }
-.mini-kpi-highlight { background: #fff9e6; }
-.mini-kpi-page-btn { background:#fff; border:1px solid #d0d7de; padding:2px 6px; border-radius:6px; font-size:0.6rem; cursor:pointer; margin:0 2px; }
-.mini-kpi-page-btn:disabled { opacity:0.4; cursor:default; }
-.mini-kpi-page-btn:hover:not(:disabled){ background:#f0f4f8; }
-.mini-kpi-page-info { font-size:0.6rem; margin:0 4px; }
-@media (max-width:600px){
-  .mini-kpi-popup { width: 96vw; left:2vw !important; }
-  .mini-kpi-table { font-size:0.68rem; }
-}
+
+/* === MINI KPI POPUP FEATURE (REMOVIDO) === */
+/* Sistema de mini popup foi removido e substituído por filtros clicáveis */
+.kpi-card { position: relative; }
 
 /* Buttons */
 .btn {
