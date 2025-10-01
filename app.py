@@ -60,24 +60,11 @@ from utils.module_colors import register_module_color_helpers
 from routes import dashboard, api
 from routes import background_tasks
 
-# Import modular dashboard blueprints
-from modules.dashboard_executivo import routes as dashboard_executivo
-from modules.dashboard_operacional.routes import dashboard_operacional
-
 # Import modular users blueprint
 from modules.usuarios import routes as usuarios_modular
 
-# Import modular agente blueprint
-from modules.agente import routes as agente_modular
-
 # Import modular auth blueprint
 from modules.auth.routes import bp as auth_bp
-
-# Import modular relatorios blueprint
-from modules.relatorios.routes import relatorios_bp
-
-# Import modular conferencia blueprint
-from modules.conferencia.routes import conferencia_bp as conferencia_modular_bp
 
 # Import modular config blueprint
 from modules.config.routes import config_bp
@@ -88,20 +75,14 @@ from modules.paginas.routes import paginas_bp
 # Import modular menu blueprint
 from modules.menu.routes import bp as menu_bp
 
-# Import modular analytics blueprint
-from modules.analytics import analytics_bp
-
-# Import modular dash_importacoes_resumido blueprint
-from modules.dash_importacoes_resumido import dash_importacoes_resumido_bp
-
 # Import shared blueprint
 from modules.shared.routes import shared_bp
 
 # Import documents blueprint
 from routes.documents import documents_bp
 
-# Import export_relatorios blueprint
-from modules.export_relatorios.routes import export_relatorios_bp
+# Import importacoes blueprint and registration function (módulo consolidado)
+from modules.importacoes import register_importacoes_blueprints
 
 # Import financeiro blueprint and registration function
 from modules.financeiro.routes import register_financeiro_blueprints
@@ -113,24 +94,11 @@ app.register_blueprint(dashboard.bp)
 app.register_blueprint(api.bp, url_prefix='/api')  # Registrando o blueprint da API com prefixo
 app.register_blueprint(background_tasks.bp)  # Registrando o blueprint de Background Tasks
 
-# Register modular dashboard blueprints
-app.register_blueprint(dashboard_executivo.bp)  # Dashboard Executivo modular
-app.register_blueprint(dashboard_operacional)  # Dashboard Operacional modular
-
 # Register modular users blueprint
 app.register_blueprint(usuarios_modular.bp)  # Usuários modular
 
-# Register modular agente blueprint
-app.register_blueprint(agente_modular.bp)  # Agente modular
-
 # Register modular auth blueprint
 app.register_blueprint(auth_bp)  # Auth modular
-
-# Register modular relatorios blueprint
-app.register_blueprint(relatorios_bp)  # Relatórios modular
-
-# Register modular conferencia blueprint
-app.register_blueprint(conferencia_modular_bp)  # Conferência modular
 
 # Register modular config blueprint
 app.register_blueprint(config_bp)  # Config modular
@@ -155,14 +123,8 @@ try:
 except Exception as e:
     print(f"⚠️ Não foi possível registrar test API endpoints: {e}")
 
-# Register modular analytics blueprint
-app.register_blueprint(analytics_bp)  # Analytics modular
-
-# Register modular dash_importacoes_resumido blueprint
-app.register_blueprint(dash_importacoes_resumido_bp)  # Dashboard Importações Resumido modular
-
-# Register export_relatorios blueprint (nova tela de exportação de relatórios)
-app.register_blueprint(export_relatorios_bp)
+# Register importacoes blueprints (módulo de importações completo)
+register_importacoes_blueprints(app)
 
 # Register financeiro blueprints (módulo financeiro completo)
 register_financeiro_blueprints(app)
