@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Inicializar sistema de filtro por KPI clicável
+    initializeKpiClickFilters();
+    
     // Simple initialization - wait a bit for scripts to load
     setTimeout(() => {
         console.log('[DASHBOARD_EXECUTIVO] Chart.js disponível:', typeof Chart !== 'undefined');
@@ -115,6 +118,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+
+// ===== SISTEMA DE FILTRO POR KPI CLICÁVEL =====
+/**
+ * Inicializa o sistema de filtros clicáveis nos KPIs
+ * Quando um KPI é clicado, filtra os dados do dashboard baseado no status correspondente
+ */
+function initializeKpiClickFilters() {
+    console.log('[KPI_FILTER] Inicializando sistema de filtros clicáveis');
+    
+    const clickableKpis = document.querySelectorAll('.kpi-card.kpi-clickable');
+    
+    clickableKpis.forEach(kpi => {
+        kpi.addEventListener('click', function() {
+            const status = this.getAttribute('data-kpi-status');
+            console.log('[KPI_FILTER] KPI clicado:', status);
+            
+            // Toggle filtro: se já está ativo, remove; senão aplica
+            if (this.classList.contains('kpi-active')) {
+                clearKpiFilter();
+            } else {
+                applyKpiFilter(status);
+            }
+        });
+    });
+}
+
+/**
+ * Aplica filtro baseado no status do KPI
+ */
+async function applyKpiFilter(status) {
+    console.log('[KPI_FILTER] Aplicando filtro:', status);
+    
+    // Remover classe active de todos os KPIs
+    document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+        kpi.classList.remove('kpi-active');
+    });
+    
+    // Adicionar classe active no KPI clicado
+    const activeKpi = document.querySelector(`.kpi-card[data-kpi-status="${status}"]`);
+    if (activeKpi) {
+        activeKpi.classList.add('kpi-active');
+    }
+    
+    // Aplicar filtro baseado no status
+    currentFilters.kpi_status = status;
+    
+    // Invalidar cache para forçar reload com filtro
+    dashboardCache.invalidate();
+    
+    // Recarregar todos os componentes com filtro
+    try {
+        console.log('[KPI_FILTER] Recarregando componentes com filtro...');
+        await loadComponentsWithRetry();
+        console.log('[KPI_FILTER] Componentes recarregados com sucesso');
+    } catch (error) {
+        console.error('[KPI_FILTER] Erro ao recarregar componentes:', error);
+    }
+}
+
+/**
+ * Limpa o filtro de KPI ativo
+ */
+async function clearKpiFilter() {
+    console.log('[KPI_FILTER] Limpando filtro de KPI');
+    
+    // Remover classe active de todos os KPIs
+    document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+        kpi.classList.remove('kpi-active');
+    });
+    
+    // Remover filtro
+    delete currentFilters.kpi_status;
+    
+    // Invalidar cache para forçar reload sem filtro
+    dashboardCache.invalidate();
+    
+    // Recarregar todos os componentes sem filtro
+    try {
+        console.log('[KPI_FILTER] Recarregando componentes sem filtro...');
+        await loadComponentsWithRetry();
+        console.log('[KPI_FILTER] Componentes recarregados com sucesso');
+    } catch (error) {
+        console.error('[KPI_FILTER] Erro ao recarregar componentes:', error);
+    }
+}
 
 // ===== Stubs leves para evitar ReferenceError sem mudar comportamento =====
 // Algumas funções podem não existir dependendo da ordem de scripts; criamos stubs no-ops
@@ -1054,11 +1142,12 @@ function hasFiltersChanged() {
 
 /**
  * Load dashboard KPIs
+ * IMPORTANTE: KPIs sempre carregam SEM filtro de kpi_status
  */
 async function loadDashboardKPIs() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs...');
-        const queryString = buildFilterQueryString();
+        const queryString = buildFilterQueryString(true); // true = excluir kpi_status
         const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
         if (result.success) {
@@ -1073,11 +1162,12 @@ async function loadDashboardKPIs() {
 
 /**
  * Load dashboard KPIs with cache
+ * IMPORTANTE: KPIs sempre carregam SEM filtro de kpi_status
  */
 async function loadDashboardKPIsWithCache() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando KPIs com cache...');
-        const queryString = buildFilterQueryString();
+        const queryString = buildFilterQueryString(true); // true = excluir kpi_status
         const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
         const result = await response.json();
         if (result.success) {
@@ -1093,12 +1183,16 @@ async function loadDashboardKPIsWithCache() {
 
 /**
  * Load dashboard KPIs with retry and cache fallback
+ * IMPORTANTE: KPIs sempre carregam SEM filtro de kpi_status para mostrar valores totais
  */
 async function loadDashboardKPIsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando KPIs (tentativa ${attempt}/${maxRetries})...`);
-            const queryString = buildFilterQueryString();
+            
+            // NOVO: Construir query string SEM kpi_status para KPIs mostrarem valores totais
+            const queryString = buildFilterQueryString(true); // true = excluir kpi_status
+            
             const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
             const result = await response.json();
             if (result.success && result.kpis) {
@@ -2968,7 +3062,11 @@ function getMultiSelectValues(type) {
 /**
  * Build filter query string
  */
-function buildFilterQueryString() {
+/**
+ * Build filter query string from current filters
+ * @param {boolean} excludeKpiStatus - Se true, exclui o filtro kpi_status (usado para KPIs mostrarem valores totais)
+ */
+function buildFilterQueryString(excludeKpiStatus = false) {
     const params = new URLSearchParams();
     
     const dataInicio = document.getElementById('data-inicio')?.value;
@@ -2988,6 +3086,11 @@ function buildFilterQueryString() {
     if (clientes.length > 0) params.append('cliente', clientes.join(','));
     if (modais.length > 0) params.append('modal', modais.join(','));
     if (canais.length > 0) params.append('canal', canais.join(','));
+    
+    // NOVO: Adicionar filtro de KPI clicável apenas se não for para excluir
+    if (!excludeKpiStatus && currentFilters.kpi_status) {
+        params.append('kpi_status', currentFilters.kpi_status);
+    }
     
     return params.toString();
 }
@@ -3116,8 +3219,13 @@ function clearFilters() {
         btn.classList.remove('active');
     });
     
-    // Clear stored filters
+    // Clear stored filters (incluindo KPI filter)
     currentFilters = {};
+    
+    // NOVO: Remover classe active dos KPIs clicáveis
+    document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+        kpi.classList.remove('kpi-active');
+    });
     
     // Update summary
     updateFilterSummary();
@@ -3151,8 +3259,13 @@ async function resetAllFilters() {
             btn.classList.remove('active');
         });
         
-        // Clear stored filters
+        // Clear stored filters (incluindo KPI filter)
         currentFilters = {};
+        
+        // NOVO: Remover classe active dos KPIs clicáveis
+        document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
+            kpi.classList.remove('kpi-active');
+        });
         
         // Update summary
         updateFilterSummary();

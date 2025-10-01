@@ -1,7 +1,10 @@
 /* Estilo baseado no padrão da aplicação - Conciliação Bancária */
 
 .conciliacao-container {
+    max-width: 1400px;
+    margin: 0 auto;
     padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Actions Bar (seguindo padrão da aplicação) */
@@ -470,6 +473,134 @@ input[type="checkbox"] {
     background: #607d8b;
     border-color: #607d8b;
     color: white;
+}
+
+/* Filtros de Tipo e Status */
+.filter-section {
+    margin-bottom: 15px;
+}
+
+.tipo-filter-btn, .status-filter-btn {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    padding: 8px 16px;
+    margin: 0 5px 5px 0;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    transition: all 0.3s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tipo-filter-btn:hover, .status-filter-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+}
+
+.tipo-filter-btn.active, .status-filter-btn.active {
+    background: #2196f3;
+    border-color: #2196f3;
+    color: white;
+}
+
+.tipo-filter-btn.receita.active {
+    background: #4caf50;
+    border-color: #4caf50;
+}
+
+.tipo-filter-btn.despesa.active {
+    background: #f44336;
+    border-color: #f44336;
+}
+
+.status-filter-btn.pendente.active {
+    background: #ff9800;
+    border-color: #ff9800;
+}
+
+.status-filter-btn.conciliado.active {
+    background: #4caf50;
+    border-color: #4caf50;
+}
+
+/* Campo de Pesquisa */
+.search-section {
+    margin-bottom: 20px;
+}
+
+.input-group-text {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+}
+
+#searchInput {
+    border-left: none;
+    border-right: none;
+}
+
+#searchInput:focus {
+    border-color: #2196f3;
+    box-shadow: none;
+}
+
+#clearSearch {
+    border-left: none;
+    color: #6c757d;
+}
+
+#clearSearch:hover {
+    color: #495057;
+    background: #f8f9fa;
+}
+
+#searchInput.search-active {
+    border-color: #2196f3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.search-highlight {
+    background-color: #fff3cd;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+/* Ordenação de Tabelas */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.sortable:hover {
+    background-color: #f8f9fa;
+}
+
+.sort-icon {
+    font-size: 0.8rem;
+    opacity: 0.5;
+    transition: all 0.3s;
+}
+
+.sortable:hover .sort-icon {
+    opacity: 0.8;
+}
+
+.sortable.sort-asc .sort-icon:before {
+    content: "\F0140"; /* mdi-sort-ascending */
+    opacity: 1;
+    color: #2196f3;
+}
+
+.sortable.sort-desc .sort-icon:before {
+    content: "\F0143"; /* mdi-sort-descending */
+    opacity: 1;
+    color: #2196f3;
 }
 
 /* Somatório de Selecionados */

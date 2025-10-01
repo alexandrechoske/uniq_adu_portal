@@ -296,11 +296,39 @@
                                         <span class="toggle-text">Data de Embarque</span>
                                     </label>
                                 </div>
+                                
+                                <!-- Filtro de Empresas integrado -->
                                 <div class="settings-row">
-                                    <button id="btn-apply-filter" type="button" class="btn btn-secondary btn-full">
-                                        <i class="mdi mdi-filter-check"></i>
-                                        Aplicar Filtros
-                                    </button>
+                                    <label for="company-filter-enabled" class="toggle-label">
+                                        <input type="checkbox" id="company-filter-enabled">
+                                        <span class="toggle-slider"></span>
+                                        <span class="toggle-text">Filtrar por Empresa</span>
+                                    </label>
+                                </div>
+                                
+                                <div class="settings-row company-filter-section" style="display: none;">
+                                    <label for="company-search">Pesquisar Empresa:</label>
+                                    <input type="text" id="company-search" class="settings-input" placeholder="Digite o nome ou CNPJ...">
+                                </div>
+                                
+                                <div class="settings-row company-filter-section" style="display: none;">
+                                    <label>Empresas:</label>
+                                    <div id="company-list" class="company-list-compact">
+                                        <div class="loading-text">Carregando empresas...</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="settings-row company-filter-section" style="display: none;">
+                                    <div class="company-actions-compact">
+                                        <button id="btn-select-all-companies" type="button" class="btn btn-secondary btn-mini">
+                                            <i class="mdi mdi-check-all"></i>
+                                            Todas
+                                        </button>
+                                        <button id="btn-clear-company-filter" type="button" class="btn btn-secondary btn-mini">
+                                            <i class="mdi mdi-filter-remove"></i>
+                                            Limpar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -361,6 +389,10 @@
                     <span class="settings-status">Configurações salvas automaticamente</span>
                 </div>
                 <div class="settings-footer-actions">
+                    <button id="btn-apply-all-filters" class="btn btn-primary">
+                        <i class="mdi mdi-filter-check"></i>
+                        Aplicar Filtros
+                    </button>
                     <button id="btn-cancel-settings" class="btn btn-secondary">
                         <i class="mdi mdi-close"></i>
                         Fechar

@@ -172,7 +172,7 @@ SEMPRE QUE PRECISAR REALIZAR O BYPASS EM REQUISIÇÕES, FAZER ASSIM:
 NUNCA DEIXE CHAVES PRIVADAS EM ARQUIVOS DE CÓDIGOS QUE NÃO SEJA O .ENV
 
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
-BASE_URL = 'http://localhost:5000'
+BASE_URL = 'http://192.168.0.75:5000'
 headers = {'X-API-Key': API_BYPASS_KEY, 'Content-Type': 'application/json'}
 
 SEMPRE QUE FOI CRIAR UM NOVO MÓDULO, A ESTRUTURA DA PASTA DEVE SER A SEGUINTE:
@@ -185,3 +185,6 @@ modules/[nome_do_modulo]/static/[nome_do_modulo]/[arquivos_estaticos].js
 ``` 
 
 A API_BYPASS_KEY É SEMPRE "$env:API_BYPASS_KEY = uniq_api_2025_dev_bypass_key", utilize ela nos testes.
+
+SEMPRE QUE FOR TESTAR UTILIZE O IP: 
+AO INVÉS DE LOCALHOST!

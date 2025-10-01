@@ -3,8 +3,9 @@
 """
 Serviço de Parsing de Arquivos Bancários
 Módulo responsável por processar arquivos dos bancos e padronizar em formato JSON
+Suporte para Excel, CSV, TXT e OFX (novo)
 Author: Sistema UniqueAduaneira
-Data: 24/09/2025
+Data: 29/09/2025 - Atualizado para suportar OFX
 """
 
 import pandas as pd
@@ -23,6 +24,7 @@ class BankFileParser:
     
     def __init__(self):
         self.supported_banks = ['BANCO_DO_BRASIL', 'BANCO_ITAU', 'BANCO_SANTANDER']
+        self.supported_formats = ['xlsx', 'xls', 'csv', 'txt', 'ofx']
         
     def parse_date(self, date_str: str) -> Optional[str]:
         """
@@ -374,18 +376,25 @@ class BankFileParser:
         except:
             return "38436-4"
     
-    def parse_file(self, file_path: str, bank_type: str) -> Dict:
+    def parse_file(self, file_path: str, bank_type: str = None) -> Dict:
         """
         Método principal para parsing de arquivos baseado no tipo de banco
         
         Args:
             file_path: Caminho para o arquivo
-            bank_type: Tipo do banco (BANCO_DO_BRASIL, BANCO_ITAU, BANCO_SANTANDER)
+            bank_type: Tipo do banco (BANCO_DO_BRASIL, BANCO_ITAU, BANCO_SANTANDER) ou None para auto-detectar
             
         Returns:
             Dicionário com dados padronizados
         """
-        if bank_type not in self.supported_banks:
+        # Detectar formato do arquivo
+        file_ext = os.path.splitext(file_path)[1].lower().replace('.', '')
+        
+        if file_ext == 'ofx':
+            return self.parse_ofx_file(file_path)
+        
+        # Para formatos legados (xlsx, txt, csv)
+        if bank_type and bank_type not in self.supported_banks:
             return {"erro": f"Banco não suportado: {bank_type}"}
         
         if bank_type == "BANCO_DO_BRASIL":
@@ -394,5 +403,249 @@ class BankFileParser:
             return self.parse_banco_itau(file_path)
         elif bank_type == "BANCO_SANTANDER":
             return self.parse_banco_santander(file_path)
+        else:
+            return {"erro": "Tipo de banco não especificado para arquivo não-OFX"}
+    
+    # ==========================================
+    # MÉTODOS OFX (NOVO FORMATO PADRÃO)
+    # ==========================================
+    
+    def parse_ofx_file(self, file_path: str) -> Dict:
+        """
+        Parser principal para arquivos OFX dos 3 bancos
+        """
+        logger.info(f"Iniciando parsing OFX: {file_path}")
+        
+        if not os.path.exists(file_path):
+            return {"erro": f"Arquivo não encontrado: {file_path}"}
+        
+        # Detecta banco
+        banco = self._detect_bank_from_ofx(file_path)
+        logger.info(f"Banco detectado: {banco}")
+        
+        try:
+            # Lê arquivo OFX e processa transações
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            
+            # Extrai conta bancária
+            account_info = self._extract_account_info_ofx(content)
+            
+            # Extrai todas as transações STMTTRN
+            transactions = []
+            
+            # Regex para capturar blocos STMTTRN completos
+            stmttrn_pattern = r'<STMTTRN>(.*?)</STMTTRN>'
+            matches = re.findall(stmttrn_pattern, content, re.DOTALL | re.IGNORECASE)
+            
+            logger.info(f"Encontradas {len(matches)} transações")
+            
+            for i, match in enumerate(matches):
+                try:
+                    # Extrai campos individuais
+                    trntype = self._extract_field_ofx(match, 'TRNTYPE')
+                    dtposted = self._extract_field_ofx(match, 'DTPOSTED') 
+                    trnamt = self._extract_field_ofx(match, 'TRNAMT')
+                    memo = self._extract_field_ofx(match, 'MEMO')
+                    fitid = self._extract_field_ofx(match, 'FITID')
+                    
+                    # Processa dados
+                    data_padrao = self._parse_ofx_date(dtposted)
+                    if not data_padrao:
+                        continue
+                        
+                    valor, tipo = self._parse_ofx_amount(trnamt, trntype, banco)
+                    if valor <= 0:
+                        continue
+                    
+                    # Extrai referência UN
+                    ref_un = self._extract_un_reference_ofx(memo)
+                    
+                    transaction = {
+                        "data": data_padrao,
+                        "data_original": dtposted,
+                        "descricao": memo.strip() if memo else "",
+                        "valor": valor,
+                        "valor_original": trnamt,
+                        "tipo": tipo,
+                        "trntype_original": trntype,
+                        "codigo_referencia": ref_un,  # Mantém compatibilidade
+                        "ref_unique": ref_un,  # Novo campo
+                        "fitid": fitid,
+                        "linha_origem": i + 1
+                    }
+                    
+                    transactions.append(transaction)
+                    
+                except Exception as e:
+                    logger.warning(f"Erro ao processar transação OFX {i+1}: {e}")
+                    continue
+            
+            logger.info(f"OFX processado: {len(transactions)} transações válidas")
+            
+            banco_names = {
+                'BB': 'BANCO DO BRASIL',
+                'SANTANDER': 'BANCO SANTANDER', 
+                'ITAU': 'BANCO ITAU'
+            }
+            
+            return {
+                "banco": banco_names.get(banco, banco),
+                "codigo_banco": banco,
+                "conta": account_info.get('conta', 'N/A'),
+                "agencia": account_info.get('agencia', 'N/A'),
+                "arquivo_origem": os.path.basename(file_path),
+                "data_processamento": datetime.now().isoformat(),
+                "total_movimentos": len(transactions),
+                "movimentos": transactions
+            }
+            
+        except Exception as e:
+            logger.error(f"Erro no parsing OFX: {e}")
+            return {"erro": f"Erro ao processar OFX: {str(e)}"}
+    
+    def _detect_bank_from_ofx(self, file_path: str) -> str:
+        """Detecta banco pelo conteúdo do arquivo OFX"""
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read().upper()
+            
+            if 'BANCO DO BRASIL' in content or '<ORG>001' in content:
+                return 'BB'
+            elif 'SANTANDER' in content:
+                return 'SANTANDER' 
+            elif 'ITAU' in content or '<BANKID>0341' in content:
+                return 'ITAU'
+                
+        except Exception as e:
+            logger.error(f"Erro ao detectar banco OFX: {e}")
+            
+        return 'DESCONHECIDO'
+    
+    def _extract_account_info_ofx(self, content: str) -> Dict:
+        """Extrai informações de conta do OFX"""
+        info = {'conta': 'N/A', 'agencia': 'N/A'}
+        
+        try:
+            # Extrai BANKID e ACCTID
+            bankid_match = re.search(r'<BANKID>([^<]+)', content, re.IGNORECASE)
+            acctid_match = re.search(r'<ACCTID>([^<]+)', content, re.IGNORECASE)
+            
+            if bankid_match:
+                info['agencia'] = bankid_match.group(1).strip()
+            if acctid_match:
+                info['conta'] = acctid_match.group(1).strip()
+                
+        except Exception as e:
+            logger.warning(f"Erro ao extrair info da conta OFX: {e}")
+            
+        return info
+    
+    def _extract_field_ofx(self, transaction_block: str, field_name: str) -> Optional[str]:
+        """Extrai campo específico do bloco de transação OFX"""
+        pattern = f'<{field_name}>(.*?)(?:\n|<)'
+        match = re.search(pattern, transaction_block, re.IGNORECASE | re.DOTALL)
+        return match.group(1).strip() if match else None
+    
+    def _parse_ofx_date(self, date_str: str) -> Optional[str]:
+        """
+        Converte data OFX para formato padronizado YYYY-MM-DD
+        
+        Formatos suportados:
+        - BB: 20250910
+        - Santander: 20250910000000[-3:GMT] 
+        - Itaú: 20250910100000[-03:EST]
+        """
+        if not date_str:
+            return None
+            
+        try:
+            # Remove timezone e outros sufixos, fica apenas YYYYMMDD
+            clean_date = re.sub(r'(\d{8}).*', r'\1', date_str)
+            
+            if len(clean_date) == 8:
+                year = clean_date[:4]
+                month = clean_date[4:6]  
+                day = clean_date[6:8]
+                return f"{year}-{month}-{day}"
+                
+        except Exception as e:
+            logger.warning(f"Erro ao processar data OFX '{date_str}': {e}")
+            
+        return None
+    
+    def _parse_ofx_amount(self, amount_str: str, trntype: str, banco: str) -> tuple:
+        """
+        Processa valor OFX e determina tipo CREDITO/DEBITO baseado no banco
+        
+        Returns: (valor_absoluto, tipo_operacao)
+        """
+        if not amount_str:
+            return 0.0, "CREDITO"
+            
+        try:
+            # Remove espaços e converte vírgula para ponto
+            clean_amount = str(amount_str).strip().replace(',', '.')
+            
+            # Detecta se é negativo
+            is_negative = clean_amount.startswith('-')
+            
+            # Obtém valor absoluto
+            valor_absoluto = abs(float(clean_amount))
+            
+            # Determina tipo baseado no banco e TRNTYPE
+            if banco == 'BB':
+                if trntype in ['DEP', 'CREDIT', 'XFER'] and not is_negative:
+                    return valor_absoluto, "CREDITO"
+                else:
+                    return valor_absoluto, "DEBITO"
+                    
+            elif banco == 'SANTANDER':
+                if trntype == 'CREDIT':
+                    return valor_absoluto, "CREDITO"
+                else:
+                    return valor_absoluto, "DEBITO"
+                    
+            elif banco == 'ITAU':
+                return valor_absoluto, "CREDITO" if trntype == 'CREDIT' else "DEBITO"
+            
+            # Fallback
+            return valor_absoluto, "CREDITO" if not is_negative else "DEBITO"
+            
+        except Exception as e:
+            logger.warning(f"Erro ao processar valor OFX '{amount_str}': {e}")
+            return 0.0, "CREDITO"
+    
+    def _extract_un_reference_ofx(self, memo: str) -> Optional[str]:
+        """
+        Extrai referência UN da descrição conforme padrão especificado:
+        UN[0-9]{2}[./]?[0-9]{4,5} -> UN25xxxx
+        """
+        if not memo:
+            return None
+            
+        memo_upper = str(memo).upper()
+        
+        # Padrões UN conforme especificação 
+        patterns = [
+            r'UN\s*\d{2}[./]\d{4,5}',    # UN25/7093, UN25.7020
+            r'UN\s*\d{2}\s+\d{4,5}',     # UN 25 7093  
+            r'UN\s*\d{6,7}',             # UN257093
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, memo_upper)
+            if match:
+                found = match.group()
+                # Extrai apenas os números
+                numbers = re.findall(r'\d+', found)
+                if len(numbers) >= 2:
+                    # UN + primeiros 2 dígitos + últimos 4-5 dígitos
+                    return f"UN{''.join(numbers)}"
+                elif len(numbers) == 1 and len(numbers[0]) >= 6:
+                    # UN seguido de 6+ dígitos diretos
+                    return f"UN{numbers[0]}"
+        
+        return None
         
         return {"erro": f"Parser não implementado para {bank_type}"}

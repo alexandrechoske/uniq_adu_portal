@@ -45,23 +45,31 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
         print(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
-        # Verificar se usuário tem perfil admin_operacao - se sim, pode ver todos os dados
+        # Verificar se usuário precisa de filtragem por empresa
         perfil_principal = user_data.get('perfil_principal', '')
-        is_admin_operacao = perfil_principal == 'admin_operacao'
         
-        if role in ['cliente_unique', 'interno_unique'] and not is_admin_operacao:
+        # REGRA CORRIGIDA: admin_operacao deve ver TODAS as empresas, não apenas as associadas
+        if role == 'cliente_unique':
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 query = query.in_('cnpj_importador', user_cnpjs)
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Filtrando por CNPJs do usuário: {len(user_cnpjs)} empresas")
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente filtrando por CNPJs: {len(user_cnpjs)} empresas")
             else:
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário sem CNPJs vinculados -> dados vazios")
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente sem CNPJs vinculados -> dados vazios")
                 data_cache.set_cache(user_id, 'dashboard_v2_data', [])
                 return []
-        elif is_admin_operacao:
-            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin_operacao -> carregando TODOS os dados")
-        elif role == 'admin':
-            print(f"[DASHBOARD_EXECUTIVO] (Helper) Usuário admin -> carregando TODOS os dados")
+        elif role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
+            # Interno não-admin deve ver apenas suas empresas associadas
+            user_cnpjs = get_user_companies(user_data)
+            if user_cnpjs:
+                query = query.in_('cnpj_importador', user_cnpjs)
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Interno filtrando por CNPJs: {len(user_cnpjs)} empresas")
+            else:
+                print(f"[DASHBOARD_EXECUTIVO] (Helper) Interno sem CNPJs vinculados -> dados vazios")
+                data_cache.set_cache(user_id, 'dashboard_v2_data', [])
+                return []
+        else:
+            print(f"[DASHBOARD_EXECUTIVO] (Helper) Admin vê todos os dados (perfil: {perfil_principal})")
         def _run_main_query():
             return query.execute()
         result = run_with_retries('dashboard_executivo.helper_load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
@@ -332,12 +340,26 @@ def apply_filters(data):
         modal = request.args.get('modal')
         canal = request.args.get('canal')
         status_processo = request.args.get('status_processo')
+        kpi_status = request.args.get('kpi_status')  # NOVO: Filtro por KPI clicável
         
         filtered_data = data
         
         # Pré-normalizar campos usados para contain checks em lower() para evitar recomputo por item
         def norm(s):
             return str(s).lower() if s is not None else ''
+        
+        # Helper para extrair número do status_timeline
+        def get_timeline_number(status_timeline):
+            """Extrair número do status_timeline (ex: '2 - Agd Chegada' -> 2)"""
+            if not status_timeline:
+                return None
+            try:
+                status_str = str(status_timeline).strip()
+                if '-' in status_str:
+                    return int(status_str.split('-')[0].strip())
+                return int(status_str)
+            except:
+                return None
         
         # Filtrar por data
         if data_inicio and data_fim:
@@ -382,6 +404,77 @@ def apply_filters(data):
                 # Processo fechado: status_macro_sistema = "PROCESSO CONCLUIDO"
                 filtered_data = [item for item in filtered_data 
                                if item.get('status_macro_sistema') == 'PROCESSO CONCLUIDO']
+        
+        # NOVO: Filtrar por status de KPI clicável
+        if kpi_status:
+            from datetime import datetime, timedelta
+            
+            # Helper para verificar período de chegada
+            def in_periodo_chegada(item, periodo):
+                try:
+                    data_chegada = item.get('data_chegada')
+                    if not data_chegada:
+                        return False
+                    
+                    # Parse data brasileira DD/MM/YYYY
+                    if isinstance(data_chegada, str):
+                        parts = data_chegada.split('/')
+                        if len(parts) == 3:
+                            data_obj = datetime(int(parts[2]), int(parts[1]), int(parts[0]))
+                        else:
+                            return False
+                    else:
+                        data_obj = data_chegada
+                    
+                    hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+                    
+                    if periodo == 'semana':
+                        # CORRIGIDO: Usar semana completa (segunda a domingo) como o KPI
+                        dia_semana = hoje.weekday()  # 0=segunda, 6=domingo
+                        inicio_semana = hoje - timedelta(days=dia_semana)
+                        fim_semana = inicio_semana + timedelta(days=6)
+                        return inicio_semana <= data_obj <= fim_semana
+                    elif periodo == 'mes':
+                        # Mês atual completo (1º ao último dia)
+                        primeiro_dia_mes = hoje.replace(day=1)
+                        if hoje.month == 12:
+                            ultimo_dia_mes = hoje.replace(day=31)
+                        else:
+                            proximo_mes = hoje.replace(month=hoje.month + 1, day=1)
+                            ultimo_dia_mes = proximo_mes - timedelta(days=1)
+                        return primeiro_dia_mes <= data_obj <= ultimo_dia_mes
+                except:
+                    return False
+                return False
+            
+            if kpi_status == 'processos_abertos':
+                # Processos com timeline 1-4
+                filtered_data = [item for item in filtered_data 
+                               if 1 <= get_timeline_number(item.get('status_timeline')) <= 4]
+            elif kpi_status == 'agd_embarque':
+                # Timeline 1
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 1]
+            elif kpi_status == 'agd_chegada':
+                # Timeline 2
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 2]
+            elif kpi_status == 'agd_liberacao':
+                # Timeline 3
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 3]
+            elif kpi_status == 'agd_fechamento':
+                # Timeline 4
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 4]
+            elif kpi_status == 'chegando_semana':
+                # Chegando esta semana
+                filtered_data = [item for item in filtered_data 
+                               if in_periodo_chegada(item, 'semana')]
+            elif kpi_status == 'chegando_mes':
+                # Chegando este mês
+                filtered_data = [item for item in filtered_data 
+                               if in_periodo_chegada(item, 'mes')]
         
         return filtered_data
         
@@ -471,11 +564,12 @@ def index():
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     
-    # Verificar se é interno_unique sem empresas associadas (exceto admins)
+    # Verificar se é interno_unique sem empresas associadas (exceto admin_operacao e master_admin)
+    # CORREÇÃO: admin_operacao deve ver TODOS os dados quando sem empresas específicas
     if user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
-            print(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            print(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} (perfil: {perfil_principal}) sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     
@@ -525,7 +619,11 @@ def load_data():
 @login_required
 @perfil_required('importacoes', 'dashboard_executivo')
 def dashboard_kpis():
-    """Calcular KPIs para o dashboard executivo"""
+    """Calcular KPIs para o dashboard executivo
+    
+    IMPORTANTE: KPIs sempre mostram valores TOTAIS, mesmo quando há filtro de kpi_status.
+    Apenas tabelas e gráficos são filtrados pelo kpi_status.
+    """
     try:
         # Obter dados (auto-carrega se necessário)
         user_data = session.get('user', {})
@@ -534,8 +632,23 @@ def dashboard_kpis():
         if not data:
             return jsonify({'success': False, 'error': 'Dados não encontrados após tentativa de carregamento.', 'kpis': {}})
         
-        # Aplicar filtros se existirem
+        # NOVO: Remover temporariamente kpi_status dos filtros para KPIs mostrarem valores totais
+        kpi_status_backup = request.args.get('kpi_status')
+        if kpi_status_backup:
+            # Criar uma cópia do request.args sem kpi_status
+            from werkzeug.datastructures import ImmutableMultiDict
+            args_dict = request.args.to_dict()
+            args_dict.pop('kpi_status', None)
+            request.args = ImmutableMultiDict(args_dict)
+        
+        # Aplicar filtros (agora sem kpi_status)
         filtered_data = apply_filters(data)
+        
+        # Restaurar kpi_status se existia
+        if kpi_status_backup:
+            args_dict['kpi_status'] = kpi_status_backup
+            request.args = ImmutableMultiDict(args_dict)
+        
         df = pd.DataFrame(filtered_data)
         
         # Garantir colunas de custo
@@ -660,39 +773,36 @@ def dashboard_kpis():
         hoje = pd.Timestamp.now().normalize()
         primeiro_dia_mes = hoje.replace(day=1)
         ultimo_dia_mes = (primeiro_dia_mes + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
-        # Calcular semana atual (domingo a sábado)
-        dias_desde_domingo = (hoje.dayofweek + 1) % 7  # 0=domingo, 1=segunda, etc.
-        inicio_semana = hoje - pd.Timedelta(days=dias_desde_domingo)
-        fim_semana = inicio_semana + pd.Timedelta(days=6)
+        
+        # Calcular semana atual (SEGUNDA a DOMINGO) - CORRIGIDO
+        # hoje.dayofweek: 0=Segunda, 1=Terça, ..., 6=Domingo
+        dias_desde_segunda = hoje.dayofweek  # Dias desde a segunda-feira
+        inicio_semana = hoje - pd.Timedelta(days=dias_desde_segunda)  # Volta para segunda
+        fim_semana = inicio_semana + pd.Timedelta(days=6)  # Domingo (6 dias depois da segunda)
+        
         chegando_mes = 0
         chegando_mes_custo = 0.0
         chegando_semana = 0
         chegando_semana_custo = 0.0
         if 'data_chegada' in df.columns:
             df['chegada_dt'] = pd.to_datetime(df['data_chegada'], format='%d/%m/%Y', errors='coerce')
-            print(f"[DEBUG_KPI] Total registros: {len(df)}")
-            print(f"[DEBUG_KPI] Registros com data_chegada válida: {df['chegada_dt'].notnull().sum()}")
-            print(f"[DEBUG_KPI] Hoje: {hoje.strftime('%d/%m/%Y')}")
-            print(f"[DEBUG_KPI] Semana: {inicio_semana.strftime('%d/%m/%Y')} a {fim_semana.strftime('%d/%m/%Y')}")
-            print(f"[DEBUG_KPI] Mês: {primeiro_dia_mes.strftime('%d/%m/%Y')} a {ultimo_dia_mes.strftime('%d/%m/%Y')}")
+            
+            # Contar processos chegando esta semana
             for idx, row in df.iterrows():
                 chegada = row.get('chegada_dt')
-                custo = row.get('custo_calculado', 0.0)  # USANDO CUSTO CALCULADO
+                custo = row.get('custo_calculado', 0.0)
                 if custo is None:
                     custo = 0.0
-                data_str = row.get('data_chegada', 'SEM DATA')
-                if pd.notnull(chegada) and idx < 5:
-                    print(f"[DEBUG_KPI] {data_str} -> {chegada.strftime('%d/%m/%Y')} | Custo: {custo} | Semana: {inicio_semana <= chegada <= fim_semana} | Mês: {primeiro_dia_mes <= chegada <= ultimo_dia_mes}")
+                
                 # Lógica para MÊS (independente de ser passado ou futuro)
                 if pd.notnull(chegada) and primeiro_dia_mes <= chegada <= ultimo_dia_mes:
                     chegando_mes += 1
                     chegando_mes_custo += custo
+                
                 # Lógica para SEMANA (independente de ser passado ou futuro)
                 if pd.notnull(chegada) and inicio_semana <= chegada <= fim_semana:
                     chegando_semana += 1
                     chegando_semana_custo += custo
-            print(f"[DEBUG_KPI] Resultados - Chegando semana: {chegando_semana}, Custo: {chegando_semana_custo:,.2f}")
-            print(f"[DEBUG_KPI] Resultados - Chegando mês: {chegando_mes}, Custo: {chegando_mes_custo:,.2f}")
 
         # Calcular processos abertos baseado no status_timeline
         # NOVA REGRA: Processos abertos são aqueles com timeline_number entre 1-4
@@ -1073,12 +1183,17 @@ def recent_operations():
         # CORREÇÃO: Para mini popups funcionarem, precisamos de todos os dados
         # Separar dados para tabela (limitados) vs dados para mini popups (completos)
         
-        # Para a tabela: Ordenar por data mais recente e limitar a 50 registros
+        # NOVO: Sempre mostrar TODOS os registros na tabela (sem limite de 50)
+        kpi_status = request.args.get('kpi_status')
+        limit_table = None  # Sem limite - sempre mostrar todos os registros
+        
+        # Para a tabela: Ordenar por data mais recente
         if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
-            df_table = df.sort_values('data_abertura_dt', ascending=False).head(50)
+            df_sorted = df.sort_values('data_abertura_dt', ascending=False)
+            df_table = df_sorted if limit_table is None else df_sorted.head(limit_table)
         else:
-            df_table = df.head(50)
+            df_table = df if limit_table is None else df.head(limit_table)
         
         # Para mini popups: manter todos os dados filtrados
         df_all = df
@@ -1248,20 +1363,22 @@ def force_refresh_dashboard():
         # Query base da view com dados de despesas - SEMPRE buscar dados frescos (já filtrada)
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
-        # NOVA REGRA: Filtrar por CNPJs das empresas vinculadas se for cliente_unique ou interno_unique
-        if user_role in ['cliente_unique', 'interno_unique']:
+        # REGRA CORRIGIDA: Filtrar por CNPJs apenas para clientes e internos não-admin
+        perfil_principal = user_data.get('perfil_principal', '')
+        
+        if user_role == 'cliente_unique' or (user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']):
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 print(f"[DASHBOARD_EXECUTIVO] Filtrando por CNPJs das empresas vinculadas: {user_cnpjs}")
                 query = query.in_('cnpj_importador', user_cnpjs)
             else:
-                print(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} sem CNPJs vinculados")
+                print(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} (perfil: {perfil_principal}) sem CNPJs vinculados")
                 return jsonify({
                     'success': False,
                     'error': 'Usuário sem empresas vinculadas'
                 })
         else:
-            print(f"[DASHBOARD_EXECUTIVO] Role admin - sem filtro de CNPJs")
+            print(f"[DASHBOARD_EXECUTIVO] Admin operacional ({perfil_principal}) - visualizando todos os dados")
         
         # Executar query
         result = query.execute()

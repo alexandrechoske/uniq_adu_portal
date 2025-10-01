@@ -8,7 +8,19 @@ class ConciliacaoBancaria {
         this.conciliacoes = [];
         this.selecionadosSistema = new Set();
         this.selecionadosBanco = new Set();
+        
+        // Filtros ativos
         this.bancoAtivo = 'todos';
+        this.filtroTipo = 'todos';
+        this.filtroStatus = 'todos';
+        
+        // Pesquisa
+        this.termoPesquisa = '';
+        
+        // Ordenação
+        this.ordenacaoSistema = { campo: 'data', ordem: 'desc' };
+        this.ordenacaoBanco = { campo: 'data', ordem: 'desc' };
+        
         this.init();
     }
 
@@ -20,19 +32,32 @@ class ConciliacaoBancaria {
     }
 
     setupEventListeners() {
-        // Eventos do formulário de carregamento
-        document.getElementById('banco').addEventListener('change', this.validateForm.bind(this));
-        document.getElementById('periodo').addEventListener('change', this.toggleDataPersonalizada.bind(this));
-        document.getElementById('uploadForm').addEventListener('submit', this.handleCarregamento.bind(this));
-
         // Evento para upload de arquivo bancário
-        document.getElementById('uploadArquivoForm').addEventListener('submit', this.handleUploadArquivo.bind(this));
+        const uploadForm = document.getElementById('uploadArquivoForm');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', this.handleUploadArquivo.bind(this));
+        }
 
-        // Eventos dos botões de ação
-        document.getElementById('btnConciliarAuto').addEventListener('click', this.conciliarAutomaticamente.bind(this));
-        document.getElementById('btnConciliarManual').addEventListener('click', this.conciliarManualmente.bind(this));
-        document.getElementById('btnExportarRelatorio').addEventListener('click', this.exportarRelatorio.bind(this));
-        document.getElementById('btnLimparTudo').addEventListener('click', this.limparTudo.bind(this));
+        // Eventos dos botões de ação (com verificação de existência)
+        const btnConciliarAuto = document.getElementById('btnConciliarAuto');
+        if (btnConciliarAuto) {
+            btnConciliarAuto.addEventListener('click', this.conciliarAutomaticamente.bind(this));
+        }
+
+        const btnConciliarManual = document.getElementById('btnConciliarManual');
+        if (btnConciliarManual) {
+            btnConciliarManual.addEventListener('click', this.conciliarManualmente.bind(this));
+        }
+
+        const btnExportarRelatorio = document.getElementById('btnExportarRelatorio');
+        if (btnExportarRelatorio) {
+            btnExportarRelatorio.addEventListener('click', this.exportarRelatorio.bind(this));
+        }
+
+        const btnLimparTudo = document.getElementById('btnLimparTudo');
+        if (btnLimparTudo) {
+            btnLimparTudo.addEventListener('click', this.limparTudo.bind(this));
+        }
 
         // Eventos dos checkboxes "selecionar todos"
         document.getElementById('selectAllSistema').addEventListener('change', this.toggleSelectAllSistema.bind(this));
@@ -51,6 +76,54 @@ class ConciliacaoBancaria {
                 this.aplicarFiltroBanco(e.target.dataset.banco);
             });
         });
+        
+        // Configurar filtros de tipo
+        const filtrosTipo = document.querySelectorAll('.tipo-filter-btn');
+        filtrosTipo.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.aplicarFiltroTipo(e.target.dataset.tipo);
+            });
+        });
+        
+        // Configurar filtros de status
+        const filtrosStatus = document.querySelectorAll('.status-filter-btn');
+        filtrosStatus.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.aplicarFiltroStatus(e.target.dataset.status);
+            });
+        });
+        
+        // Configurar campo de pesquisa
+        const searchInput = document.getElementById('searchInput');
+        const clearSearch = document.getElementById('clearSearch');
+        
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.aplicarPesquisa(e.target.value);
+            });
+        }
+        
+        if (clearSearch) {
+            clearSearch.addEventListener('click', () => {
+                if (searchInput) {
+                    searchInput.value = '';
+                    this.aplicarPesquisa('');
+                }
+            });
+        }
+        
+        // Configurar ordenação de tabelas
+        const colunasSortaveis = document.querySelectorAll('.sortable');
+        colunasSortaveis.forEach(col => {
+            col.addEventListener('click', (e) => {
+                const tabelaElement = e.target.closest('table');
+                const tabelaId = tabelaElement ? tabelaElement.id : '';
+                const tabelaTipo = tabelaId === 'tabelaSistema' ? 'sistema' : 
+                                  tabelaId === 'tabelaBanco' ? 'banco' : 'ambas';
+                const campo = e.target.dataset.sort;
+                this.aplicarOrdenacao(campo, tabelaTipo);
+            });
+        });
     }
 
     setupSelecaoMultipla() {
@@ -63,47 +136,26 @@ class ConciliacaoBancaria {
     }
 
     setupFormValidation() {
-        this.validateForm();
+        // Validação do formulário de upload OFX - não há mais formulário de carregamento
+        console.log('Validação do formulário configurada');
     }
 
     validateForm() {
-        const banco = document.getElementById('banco').value;
-        const btnUpload = document.getElementById('btnUpload');
-
-        // Para carregamento de dados, apenas o banco é necessário (pode ser "todos")
-        const isValid = banco;
-        btnUpload.disabled = !isValid;
-
-        if (isValid) {
-            btnUpload.classList.remove('btn-secondary');
-            btnUpload.classList.add('btn-primary');
-        } else {
-            btnUpload.classList.remove('btn-primary');
-            btnUpload.classList.add('btn-secondary');
-        }
+        // Método removido - não há mais formulário de carregamento de banco/período
+        console.log('validateForm: Método descontinuado - usando apenas upload OFX');
     }
 
     toggleDataPersonalizada() {
-        const periodo = document.getElementById('periodo').value;
-        const dataPersonalizada = document.getElementById('data-personalizada');
-        
-        if (periodo === 'personalizado') {
-            dataPersonalizada.style.display = 'block';
-            dataPersonalizada.classList.add('fade-in');
-        } else {
-            dataPersonalizada.style.display = 'none';
-        }
+        // Método removido - não há mais seleção de período
+        console.log('toggleDataPersonalizada: Método descontinuado - usando apenas upload OFX');
     }
 
     async handleCarregamento(event) {
         event.preventDefault();
         
-        const formData = new FormData();
-        const banco = document.getElementById('banco').value;
-        const periodo = document.getElementById('periodo').value;
-
-        formData.append('banco', banco);
-        formData.append('periodo', periodo);
+        // Método removido - não há mais carregamento de dados por banco/período
+        console.log('handleCarregamento: Método descontinuado - usando apenas upload OFX');
+        this.showError('Este método foi descontinuado. Use o upload de arquivos OFX.');
 
         if (periodo === 'personalizado') {
             const dataInicio = document.getElementById('data_inicio').value;
@@ -111,37 +163,7 @@ class ConciliacaoBancaria {
             formData.append('data_inicio', dataInicio);
             formData.append('data_fim', dataFim);
         }
-
-        this.showLoading(true);
-        this.showUploadProgress(true);
-
-        try {
-            console.log('[CARREGAMENTO] Enviando requisição para carregar dados...');
-            
-            const response = await fetch('/financeiro/conciliacao-lancamentos/processar', {
-                method: 'POST',
-                headers: {
-                    'X-API-Key': window.API_BYPASS_KEY || '$env:API_BYPASS_KEY'
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const result = await response.json();
-            console.log('[CARREGAMENTO] Resposta recebida:', result);
-            
-            this.processarResultado(result);
-
-        } catch (error) {
-            console.error('Erro no carregamento:', error);
-            this.showError('Erro ao carregar dados: ' + error.message);
-        } finally {
-            this.showLoading(false);
-            this.showUploadProgress(false);
-        }
+        return; // Método descontinuado
     }
 
     processarResultado(result) {
@@ -172,41 +194,63 @@ class ConciliacaoBancaria {
     async handleUploadArquivo(event) {
         event.preventDefault();
         
-        const formData = new FormData();
-        const arquivo = document.getElementById('arquivo_banco').files[0];
+        const arquivos = document.getElementById('arquivo_banco').files;
         const bancoOrigem = document.getElementById('banco_origem').value;
         
-        if (!arquivo) {
-            this.showError('Por favor, selecione um arquivo para upload.');
+        if (arquivos.length === 0) {
+            this.showError('Por favor, selecione pelo menos um arquivo para upload.');
             return;
         }
         
-        // Validar tamanho do arquivo (10MB)
-        if (arquivo.size > 10 * 1024 * 1024) {
-            this.showError('Arquivo muito grande. Máximo permitido: 10MB');
-            return;
+        // Validar todos os arquivos
+        const allowedExtensions = ['.ofx'];
+        for (let i = 0; i < arquivos.length; i++) {
+            const arquivo = arquivos[i];
+            
+            // Validar tamanho (10MB por arquivo)
+            if (arquivo.size > 10 * 1024 * 1024) {
+                this.showError(`Arquivo ${arquivo.name} muito grande. Máximo permitido: 10MB por arquivo`);
+                return;
+            }
+            
+            // Validar extensão
+            const fileExtension = arquivo.name.toLowerCase().substring(arquivo.name.lastIndexOf('.'));
+            if (!allowedExtensions.includes(fileExtension)) {
+                this.showError(`Arquivo ${arquivo.name}: Apenas arquivos OFX são aceitos (.ofx)`);
+                return;
+            }
         }
         
-        // Validar extensão
-        const allowedExtensions = ['.xlsx', '.xls', '.txt', '.csv'];
-        const fileExtension = arquivo.name.toLowerCase().substring(arquivo.name.lastIndexOf('.'));
-        if (!allowedExtensions.includes(fileExtension)) {
-            this.showError('Formato não suportado. Use .xlsx, .xls, .txt ou .csv');
-            return;
+        // Processar arquivos sequencialmente
+        this.dadosBancoOriginais = [];
+        let totalProcessados = 0;
+        
+        for (let i = 0; i < arquivos.length; i++) {
+            const arquivo = arquivos[i];
+            await this.processarArquivoIndividual(arquivo, bancoOrigem, i + 1, arquivos.length);
+            totalProcessados++;
         }
         
+        // Após todos os uploads, carregar dados do sistema automaticamente
+        await this.carregarDadosSistemaAutomatico();
+        
+        this.showSuccess(`✅ ${totalProcessados} arquivo(s) processado(s) com sucesso! Total: ${this.dadosBancoOriginais.length} lançamentos`);
+    }
+
+    async processarArquivoIndividual(arquivo, bancoOrigem, atual, total) {
+        const formData = new FormData();
         formData.append('arquivo', arquivo);
         formData.append('banco_origem', bancoOrigem);
         
-        this.showLoading(true, 'Processando arquivo bancário...');
-        this.showUploadProgressArquivo(true);
+        this.showLoading(true, `Processando arquivo ${atual}/${total}: ${arquivo.name}...`);
         
         try {
-            console.log('[UPLOAD] Iniciando upload do arquivo:', arquivo.name);
+            console.log(`[UPLOAD] Processando arquivo ${atual}/${total}:`, arquivo.name);
             
             const response = await fetch('/financeiro/conciliacao-lancamentos/upload-arquivo', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
             
             if (!response.ok) {
@@ -214,72 +258,254 @@ class ConciliacaoBancaria {
             }
             
             const result = await response.json();
-            console.log('[UPLOAD] Resposta recebida:', result);
+            console.log(`[UPLOAD] Arquivo ${atual}/${total} processado:`, result);
             
             if (result.success) {
-                // Armazenar dados do banco processados
-                this.dadosBancoOriginais = result.data.lancamentos || [];
+                // Acumular dados de múltiplos arquivos
+                const novosLancamentos = result.data.lancamentos || [];
+                const bancoIdentificado = result.data.banco_identificado;
                 
-                // Aplicar filtro atual
-                this.aplicarFiltroBanco(this.bancoAtivo);
+                // Adicionar informação do banco aos lançamentos
+                novosLancamentos.forEach(lancamento => {
+                    lancamento.banco_origem = bancoIdentificado;
+                });
                 
-                this.renderizarDados();
-                this.showSections(['statusSection', 'dadosSection']);
+                this.dadosBancoOriginais.push(...novosLancamentos);
                 
-                this.showSuccess(`Arquivo ${arquivo.name} processado com sucesso! ${result.data.total_registros} lançamentos encontrados (${result.data.banco_identificado}).`);
+                // Debug: mostrar estrutura do primeiro lançamento
+                if (novosLancamentos.length > 0) {
+                    console.log(`[DEBUG] Primeiro lançamento do arquivo ${atual}:`, novosLancamentos[0]);
+                }
                 
-                // Limpar formulário
-                document.getElementById('uploadArquivoForm').reset();
+                console.log(`Arquivo ${atual}/${total} processado: ${novosLancamentos.length} lançamentos adicionados`);
+                return novosLancamentos.length;
+                
             } else {
-                this.showError(result.error || 'Erro ao processar arquivo');
+                throw new Error(result.error || `Erro ao processar arquivo ${arquivo.name}`);
             }
             
         } catch (error) {
             console.error('Erro no upload:', error);
-            this.showError('Erro ao fazer upload: ' + error.message);
+            throw error;
         } finally {
             this.showLoading(false);
-            this.showUploadProgressArquivo(false);
         }
+    }
+
+    async carregarDadosSistemaAutomatico() {
+        this.showLoading(true, 'Carregando dados do sistema...');
+        
+        try {
+            const response = await fetch('/financeiro/conciliacao-lancamentos/api/movimentos-sistema', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.dadosSistemaOriginais = result.data || [];
+                
+                // Debug: mostrar estrutura dos dados
+                if (this.dadosSistemaOriginais.length > 0) {
+                    console.log('[DEBUG] Primeiro registro do sistema:', this.dadosSistemaOriginais[0]);
+                    console.log('[DEBUG] Campos disponíveis:', Object.keys(this.dadosSistemaOriginais[0]));
+                }
+                
+                // Aplicar filtro inicial (todos)
+                this.aplicarFiltroBanco('todos');
+                
+                // Atualizar contadores dos filtros
+                this.atualizarContadoresFiltros();
+                
+                // Mostrar seções de dados
+                this.showSections(['dadosSection']);
+                
+                console.log(`Dados do sistema carregados: ${this.dadosSistemaOriginais.length} lançamentos`);
+                
+            } else {
+                throw new Error(result.error || 'Erro ao carregar dados do sistema');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados do sistema:', error);
+            this.showError('Erro ao carregar dados do sistema: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    atualizarContadoresFiltros() {
+        console.log('[FILTROS] Iniciando atualização de contadores...');
+        console.log('[FILTROS] Dados sistema originais:', this.dadosSistemaOriginais.length);
+        console.log('[FILTROS] Dados banco originais:', this.dadosBancoOriginais.length);
+        
+        // Função helper para normalizar identificadores de banco
+        const normalizarParaFiltro = (nome) => {
+            if (!nome) return '';
+            const nomeNormalizado = nome.toLowerCase().trim();
+            
+            // Mapear nomes amigáveis e normalizados para identificadores de filtro
+            if (nomeNormalizado.includes('banco do brasil') || nomeNormalizado === 'banco_brasil' || nomeNormalizado === 'bb') {
+                return 'banco_brasil';
+            } else if (nomeNormalizado.includes('itau') || nomeNormalizado.includes('itaú') || nomeNormalizado === 'itau') {
+                return 'itau';
+            } else if (nomeNormalizado.includes('santander') || nomeNormalizado === 'santander') {
+                return 'santander';
+            }
+            return nomeNormalizado;
+        };
+        
+        // Contar registros por banco nos dados do sistema
+        const contadoresSistema = {
+            'banco_brasil': 0,
+            'santander': 0,
+            'itau': 0
+        };
+        
+        this.dadosSistemaOriginais.forEach((lancamento, index) => {
+            const nomeBanco = lancamento.nome_banco || '';
+            const bancoNormalizado = normalizarParaFiltro(nomeBanco);
+            
+            // Debug dos primeiros registros
+            if (index < 3) {
+                console.log(`[FILTROS] Sistema[${index}] '${nomeBanco}' → '${bancoNormalizado}'`);
+            }
+            
+            if (contadoresSistema.hasOwnProperty(bancoNormalizado)) {
+                contadoresSistema[bancoNormalizado]++;
+            }
+        });
+        
+        // Contar registros por banco nos dados bancários
+        const contadoresBanco = {
+            'banco_brasil': 0,
+            'santander': 0,
+            'itau': 0
+        };
+        
+        this.dadosBancoOriginais.forEach((lancamento, index) => {
+            const bancoOrigem = lancamento.banco_origem || '';
+            const bancoNormalizado = normalizarParaFiltro(bancoOrigem);
+            
+            // Debug dos primeiros registros
+            if (index < 3) {
+                console.log(`[FILTROS] Banco[${index}] banco_origem: '${bancoOrigem}' → '${bancoNormalizado}'`);
+            }
+            
+            if (contadoresBanco.hasOwnProperty(bancoNormalizado)) {
+                contadoresBanco[bancoNormalizado]++;
+            }
+        });
+        
+        console.log('[FILTROS] Contadores Sistema:', contadoresSistema);
+        console.log('[FILTROS] Contadores Banco:', contadoresBanco);
+        
+        // Atualizar badges nos chips
+        Object.keys(contadoresSistema).forEach(banco => {
+            const sistemaCount = contadoresSistema[banco];
+            const bancoCount = contadoresBanco[banco];
+            
+            const chip = document.querySelector(`[data-banco="${banco}"]`);
+            if (chip) {
+                // CORREÇÃO: Atualizar apenas os badges existentes sem sobrescrever o botão
+                const countersElement = chip.querySelector('.counters');
+                if (countersElement) {
+                    // Atualizar badges existentes
+                    const sistemaBadge = countersElement.querySelector('.bg-primary');
+                    const bancoBadge = countersElement.querySelector('.bg-success');
+                    
+                    if (sistemaBadge) {
+                        sistemaBadge.textContent = sistemaCount;
+                    }
+                    if (bancoBadge) {
+                        bancoBadge.textContent = bancoCount;
+                    }
+                } else {
+                    // Fallback: se não encontrar .counters, criar badges
+                    let badgeHTML = '';
+                    if (sistemaCount > 0) {
+                        badgeHTML += `<span class="badge bg-primary ms-1">${sistemaCount}</span>`;
+                    }
+                    if (bancoCount > 0) {
+                        badgeHTML += `<span class="badge bg-success ms-1">${bancoCount}</span>`;
+                    }
+                    
+                    // Adicionar badges no final do botão
+                    chip.insertAdjacentHTML('beforeend', badgeHTML);
+                }
+                
+                console.log(`[FILTROS] Chip ${banco}: Sistema=${sistemaCount}, Banco=${bancoCount}`);
+            }
+        });
     }
 
     aplicarFiltroBanco(banco) {
         console.log(`[FILTRO] Aplicando filtro para banco: ${banco}`);
         
-        // Atualizar botões ativos
+        // CORREÇÃO: Normalizar o banco recebido (pode vir em maiúsculo dos data-attributes)
+        const bancoNormalizado = banco ? banco.toLowerCase() : 'todos';
+        console.log(`[FILTRO] Banco normalizado: ${bancoNormalizado}`);
+        
+        // Atualizar botões ativos (usar o banco original para encontrar o elemento)
         document.querySelectorAll('.banco-filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-banco="${banco}"]`).classList.add('active');
         
-        this.bancoAtivo = banco;
+        // Tentar encontrar o botão com qualquer variação (maiúsculo/minúsculo)
+        let activeBtn = document.querySelector(`[data-banco="${banco}"]`) || 
+                       document.querySelector(`[data-banco="${bancoNormalizado}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
         
-        if (banco === 'todos') {
+        this.bancoAtivo = bancoNormalizado;
+        
+        if (bancoNormalizado === 'todos') {
             this.dadosSistema = [...this.dadosSistemaOriginais];
             this.dadosBanco = [...this.dadosBancoOriginais];
         } else {
+            // Função helper para normalizar (mesma lógica dos contadores)
+            const normalizarParaFiltro = (nome) => {
+                if (!nome) return '';
+                const nomeNormalizado = nome.toLowerCase().trim();
+                
+                if (nomeNormalizado.includes('banco do brasil') || nomeNormalizado === 'banco_brasil' || nomeNormalizado === 'bb') {
+                    return 'banco_brasil';
+                } else if (nomeNormalizado.includes('itau') || nomeNormalizado.includes('itaú') || nomeNormalizado === 'itau') {
+                    return 'itau';
+                } else if (nomeNormalizado.includes('santander') || nomeNormalizado === 'santander') {
+                    return 'santander';
+                }
+                return nomeNormalizado;
+            };
+            
+            console.log(`[FILTRO] Filtrando por banco: ${bancoNormalizado}`);
+            
             // Filtrar dados do sistema por banco
             this.dadosSistema = this.dadosSistemaOriginais.filter(item => {
-                const nomeBanco = (item.nome_banco || '').toUpperCase();
-                return nomeBanco.includes(banco.toUpperCase());
+                const nomeBanco = item.nome_banco || '';
+                const bancoNormalizado_item = normalizarParaFiltro(nomeBanco);
+                const match = bancoNormalizado_item === bancoNormalizado;
+                if (match) console.log(`[FILTRO] Sistema match: ${nomeBanco} → ${bancoNormalizado_item}`);
+                return match;
             });
             
-            // Filtrar dados do banco por banco (caso os dados do extrato tenham identificação)
+            // Filtrar dados do banco por banco usando banco_origem
             this.dadosBanco = this.dadosBancoOriginais.filter(item => {
-                const nomeBanco = (item.nome_banco || item.banco || '').toUpperCase();
-                return nomeBanco.includes(banco.toUpperCase());
+                const bancoOrigem = item.banco_origem || '';
+                const bancoNormalizado_item = normalizarParaFiltro(bancoOrigem);
+                const match = bancoNormalizado_item === bancoNormalizado;
+                if (match) console.log(`[FILTRO] Banco match: ${bancoOrigem} → ${bancoNormalizado_item}`);
+                return match;
             });
         }
         
-        // Limpar seleções
-        this.selecionadosSistema.clear();
-        this.selecionadosBanco.clear();
-        
-        // Re-renderizar tabelas
-        this.renderizarDados();
-        this.atualizarSomatorio();
-        
-        console.log(`[FILTRO] Dados filtrados - Sistema: ${this.dadosSistema.length}, Banco: ${this.dadosBanco.length}`);
+        // Reaplicar todos os filtros usando a função central
+        this.aplicarTodosFiltros();
     }
 
     showStatus(status) {
@@ -314,7 +540,10 @@ class ConciliacaoBancaria {
         count.textContent = this.dadosSistema.length;
         countTotal.textContent = this.dadosSistema.length;
 
-        this.dadosSistema.forEach((item, index) => {
+        // Aplicar ordenação antes de renderizar
+        const dadosOrdenados = this.ordenarDados([...this.dadosSistema], this.ordenacaoSistema);
+
+        dadosOrdenados.forEach((item, index) => {
             const row = tbody.insertRow();
             
             // Usar os novos campos da implementação hierárquica
@@ -324,12 +553,28 @@ class ConciliacaoBancaria {
             const descricao = item.descricao_original || item.descricao || 'Sem descrição';
             const status = item.status || 'pendente';
             const refNorm = item.ref_unique_norm || '-';
-            const nomeBanco = item.nome_banco || 'N/A';
+            
+            // CORREÇÃO: Converter nome normalizado para nome amigável (igual ao extrato)
+            const nomeBanco = this.obterNomeBancoAmigavel(item.nome_banco) || item.nome_banco || 'N/A';
             const numeroConta = item.numero_conta || 'N/A';
+            
+            // Debug para verificar estrutura
+            if (index === 0) {
+                console.log('[DEBUG] Primeiro item da tabela sistema:', item);
+                console.log('[DEBUG] nome_banco original:', item.nome_banco);
+                console.log('[DEBUG] nomeBanco convertido:', nomeBanco);
+            }
             
             // Classe CSS baseada no status
             const statusClass = status.toLowerCase();
             const statusText = this.formatarStatus(status);
+            
+            // Usar tipo original dos dados para consistência
+            const tipoOriginal = (item.tipo_lancamento || item.tipo_movimento || item.tipo || 'N/A').toString().toUpperCase();
+            const tipoClass = tipoOriginal.toLowerCase();
+            
+            // Se tipo é DESPESA, mostrar valor como negativo visualmente
+            const valorExibido = tipoOriginal === 'DESPESA' ? -Math.abs(valor) : Math.abs(valor);
             
             row.innerHTML = `
                 <td class="checkbox-cell">
@@ -337,10 +582,9 @@ class ConciliacaoBancaria {
                 </td>
                 <td>${this.formatarData(data)}</td>
                 <td><strong>${nomeBanco}</strong></td>
-                <td>${numeroConta}</td>
-                <td class="${valor >= 0 ? 'valor-positivo' : 'valor-negativo'}">${this.formatarValor(valor)}</td>
-                <td><span class="tipo-${tipo.toLowerCase()}">${tipo}</span></td>
-                <td title="${descricao}">${this.truncarTexto(descricao, 30)}</td>
+                <td class="${tipoOriginal === 'DESPESA' ? 'valor-negativo' : 'valor-positivo'}">${this.formatarValor(valorExibido)}</td>
+                <td><span class="tipo-${tipoClass}">${tipoOriginal}</span></td>
+                <td title="${descricao}">${this.truncarTexto(descricao, 50)}</td>
                 <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
             `;
             row.dataset.index = index;
@@ -364,7 +608,10 @@ class ConciliacaoBancaria {
         count.textContent = this.dadosBanco.length;
         countTotal.textContent = this.dadosBanco.length;
 
-        this.dadosBanco.forEach((item, index) => {
+        // Aplicar ordenação antes de renderizar
+        const dadosOrdenados = this.ordenarDados([...this.dadosBanco], this.ordenacaoBanco);
+
+        dadosOrdenados.forEach((item, index) => {
             const row = tbody.insertRow();
             
             // Usar os novos campos da implementação hierárquica
@@ -373,8 +620,17 @@ class ConciliacaoBancaria {
             const historico = item.descricao || item.historico || 'Sem histórico';
             const status = item.status || 'pendente';
             const refNorm = item.ref_unique_norm || '-';
-            const nomeBanco = item.nome_banco || item.banco || 'N/A';
+            
+            // CORREÇÃO: Derivar nome do banco a partir do banco_origem
+            const nomeBanco = this.obterNomeBancoAmigavel(item.banco_origem) || item.nome_banco || item.banco || 'N/A';
             const numeroConta = item.numero_conta || item.conta || 'N/A';
+            
+            // Debug para verificar estrutura
+            if (index === 0) {
+                console.log('[DEBUG] Primeiro item da tabela banco:', item);
+                console.log('[DEBUG] banco_origem:', item.banco_origem);
+                console.log('[DEBUG] nomeBanco derivado:', nomeBanco);
+            }
             
             // Classe CSS baseada no status
             const statusClass = status.toLowerCase();
@@ -386,7 +642,6 @@ class ConciliacaoBancaria {
                 </td>
                 <td>${this.formatarData(data)}</td>
                 <td><strong>${nomeBanco}</strong></td>
-                <td>${numeroConta}</td>
                 <td class="${valor >= 0 ? 'valor-positivo' : 'valor-negativo'}">${this.formatarValor(valor)}</td>
                 <td><span class="tipo-${valor >= 0 ? 'receita' : 'despesa'}">${valor >= 0 ? 'RECEITA' : 'DESPESA'}</span></td>
                 <td title="${historico}">${this.truncarTexto(historico, 30)}</td>
@@ -492,6 +747,25 @@ class ConciliacaoBancaria {
     truncarTexto(texto, limite) {
         if (!texto) return '';
         return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
+    }
+
+    obterNomeBancoAmigavel(bancoOrigem) {
+        /**
+         * Converte o identificador do banco (banco_origem) para nome amigável
+         */
+        const mapeamentoBancos = {
+            'bb': 'Banco do Brasil',
+            'banco_brasil': 'Banco do Brasil',
+            'itau': 'Itaú',
+            'santander': 'Santander'
+        };
+        
+        if (!bancoOrigem) return null;
+        
+        const nomeAmigavel = mapeamentoBancos[bancoOrigem.toLowerCase()];
+        console.log(`[BANCO] Mapeando '${bancoOrigem}' → '${nomeAmigavel || 'N/A'}'`);
+        
+        return nomeAmigavel || bancoOrigem;
     }
 
     // Métodos de UI
@@ -807,6 +1081,274 @@ class ConciliacaoBancaria {
     updateManualConciliationButton() {
         // Mantido para compatibilidade, funcionalidade movida para atualizarBotoesConciliacao
         this.atualizarBotoesConciliacao();
+    }
+
+    // Função para ordenar dados
+    ordenarDados(dados, criterio) {
+        if (!criterio || !criterio.campo) {
+            // Ordenação padrão: por data, mais recente primeiro
+            return dados.sort((a, b) => {
+                const dataA = new Date(a.data_lancamento || a.data_movimento || a.data || '1900-01-01');
+                const dataB = new Date(b.data_lancamento || b.data_movimento || b.data || '1900-01-01');
+                return dataB - dataA; // Decrescente (mais recente primeiro)
+            });
+        }
+
+        return dados.sort((a, b) => {
+            let valorA, valorB;
+
+            switch (criterio.campo) {
+                case 'data':
+                    valorA = new Date(a.data_lancamento || a.data_movimento || a.data || '1900-01-01');
+                    valorB = new Date(b.data_lancamento || b.data_movimento || b.data || '1900-01-01');
+                    break;
+                case 'valor':
+                    valorA = parseFloat(a.valor || 0);
+                    valorB = parseFloat(b.valor || 0);
+                    break;
+                case 'banco':
+                    valorA = (a.nome_banco || '').toLowerCase();
+                    valorB = (b.nome_banco || '').toLowerCase();
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (criterio.ordem === 'asc') {
+                return valorA > valorB ? 1 : valorA < valorB ? -1 : 0;
+            } else {
+                return valorA < valorB ? 1 : valorA > valorB ? -1 : 0;
+            }
+        });
+    }
+
+    // Aplicar filtro por tipo (receita/despesa)
+    aplicarFiltroTipo(tipo) {
+        console.log(`[FILTRO] Aplicando filtro tipo: ${tipo}`);
+        
+        // Atualizar estado interno
+        this.filtroTipo = tipo || 'todos';
+        
+        // Atualizar botões ativos
+        document.querySelectorAll('.tipo-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.querySelector(`[data-tipo="${this.filtroTipo}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+        
+        // Reaplicar todos os filtros
+        this.aplicarTodosFiltros();
+    }
+
+    // Aplicar filtro por status
+    aplicarFiltroStatus(status) {
+        console.log(`[FILTRO] Aplicando filtro status: ${status}`);
+        
+        // Atualizar estado interno
+        this.filtroStatus = status || 'todos';
+        
+        // Atualizar botões ativos
+        document.querySelectorAll('.status-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeBtn = document.querySelector(`[data-status="${this.filtroStatus}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+        
+        // Reaplicar todos os filtros
+        this.aplicarTodosFiltros();
+    }
+
+    // Aplicar pesquisa por termo
+    aplicarPesquisa(termo) {
+        console.log(`[PESQUISA] Aplicando pesquisa: "${termo}"`);
+        
+        // Atualizar estado interno
+        this.termoPesquisa = termo || '';
+        
+        // Atualizar visual do campo de pesquisa
+        const searchInput = document.getElementById('searchInput');
+        const clearSearch = document.getElementById('clearSearch');
+        
+        if (searchInput) {
+            if (this.termoPesquisa.trim() !== '') {
+                searchInput.classList.add('search-active');
+                if (clearSearch) clearSearch.style.display = 'block';
+            } else {
+                searchInput.classList.remove('search-active');
+                if (clearSearch) clearSearch.style.display = 'none';
+            }
+        }
+        
+        // Reaplicar todos os filtros usando a função central
+        this.aplicarTodosFiltros();
+    }
+
+    // Aplicar todos os filtros em sequência
+    aplicarTodosFiltros() {
+        console.log(`[FILTRO] Aplicando todos os filtros - Banco: ${this.bancoAtivo}, Tipo: ${this.filtroTipo}, Status: ${this.filtroStatus}, Pesquisa: "${this.termoPesquisa}"`);
+        
+        // Resetar dados para o estado original
+        this.dadosSistema = [...this.dadosSistemaOriginais];
+        this.dadosBanco = [...this.dadosBancoOriginais];
+        
+        // Aplicar filtro de banco
+        if (this.bancoAtivo && this.bancoAtivo !== 'todos') {
+            const normalizarParaFiltro = (nome) => {
+                if (!nome) return '';
+                const nomeNormalizado = nome.toLowerCase().trim();
+                
+                if (nomeNormalizado.includes('banco do brasil') || nomeNormalizado === 'banco_brasil' || nomeNormalizado === 'bb') {
+                    return 'banco_brasil';
+                } else if (nomeNormalizado.includes('itau') || nomeNormalizado.includes('itaú') || nomeNormalizado === 'itau') {
+                    return 'itau';
+                } else if (nomeNormalizado.includes('santander') || nomeNormalizado === 'santander') {
+                    return 'santander';
+                }
+                return nomeNormalizado;
+            };
+            
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                const nomeBanco = item.nome_banco || '';
+                const bancoNormalizado_item = normalizarParaFiltro(nomeBanco);
+                return bancoNormalizado_item === this.bancoAtivo;
+            });
+            
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                const bancoOrigem = item.banco_origem || '';
+                const bancoNormalizado_item = normalizarParaFiltro(bancoOrigem);
+                return bancoNormalizado_item === this.bancoAtivo;
+            });
+        }
+        
+        // Aplicar filtro de tipo
+        if (this.filtroTipo && this.filtroTipo !== 'todos') {
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                // Para dados sistema: usar tipo original dos dados
+                const tipoOriginal = (item.tipo_lancamento || item.tipo_movimento || item.tipo || '').toString().toLowerCase();
+                return tipoOriginal === this.filtroTipo;
+            });
+
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                // Para dados banco: calcular pelo valor (padrão OFX)
+                const valor = parseFloat(item.valor || 0);
+                const tipoItem = valor >= 0 ? 'receita' : 'despesa';
+                return tipoItem === this.filtroTipo;
+            });
+        }
+        
+        // Aplicar filtro de status
+        if (this.filtroStatus && this.filtroStatus !== 'todos') {
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                const statusItem = (item.status || 'pendente').toLowerCase();
+                return statusItem === this.filtroStatus;
+            });
+
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                const statusItem = (item.status || 'pendente').toLowerCase();
+                return statusItem === this.filtroStatus;
+            });
+        }
+        
+        // Aplicar pesquisa por termo
+        if (this.termoPesquisa && this.termoPesquisa.trim() !== '') {
+            const termo = this.termoPesquisa.toLowerCase().trim();
+            
+            this.dadosSistema = this.dadosSistema.filter(item => {
+                // Campos para pesquisar na tabela sistema
+                const camposPesquisa = [
+                    item.descricao_original || '',
+                    item.descricao || '',
+                    item.ref_unique_norm || '',
+                    item.numero_conta || '',
+                    item.nome_banco || '',
+                    (item.tipo_lancamento || item.tipo_movimento || item.tipo || '').toString(),
+                    item.status || ''
+                ];
+                
+                return camposPesquisa.some(campo => 
+                    campo.toString().toLowerCase().includes(termo)
+                );
+            });
+            
+            this.dadosBanco = this.dadosBanco.filter(item => {
+                // Campos para pesquisar na tabela banco
+                const camposPesquisa = [
+                    item.descricao || item.historico || '',
+                    item.ref_unique_norm || '',
+                    item.numero_conta || item.conta || '',
+                    item.banco_origem || item.nome_banco || '',
+                    item.status || ''
+                ];
+                
+                return camposPesquisa.some(campo => 
+                    campo.toString().toLowerCase().includes(termo)
+                );
+            });
+        }
+        
+        // Limpar seleções
+        this.selecionadosSistema.clear();
+        this.selecionadosBanco.clear();
+        
+        // Re-renderizar tabelas
+        this.renderizarDados();
+        this.atualizarSomatorio();
+        
+        console.log(`[FILTRO] Dados filtrados - Sistema: ${this.dadosSistema.length}, Banco: ${this.dadosBanco.length}`);
+    }
+
+    // Aplicar ordenação nas tabelas
+    aplicarOrdenacao(campo, tabela = 'ambas') {
+        console.log('[ORDENACAO] Aplicando ordenação:', campo, 'em', tabela);
+
+        const criterioAtual = tabela === 'sistema' ? this.ordenacaoSistema : this.ordenacaoBanco;
+        
+        // Alternar direção se for o mesmo campo
+        if (criterioAtual.campo === campo) {
+            criterioAtual.ordem = criterioAtual.ordem === 'asc' ? 'desc' : 'asc';
+        } else {
+            criterioAtual.campo = campo;
+            criterioAtual.ordem = 'desc'; // Padrão decrescente
+        }
+
+        // Atualizar indicadores visuais
+        this.atualizarIndicadoresOrdenacao(campo, criterioAtual.ordem, tabela);
+
+        // Re-renderizar tabelas
+        if (tabela === 'sistema' || tabela === 'ambas') {
+            this.renderizarTabelaSistema();
+        }
+        if (tabela === 'banco' || tabela === 'ambas') {
+            this.renderizarTabelaBanco();
+        }
+    }
+
+    // Atualizar indicadores visuais de ordenação
+    atualizarIndicadoresOrdenacao(campo, ordem, tabela) {
+        const seletores = tabela === 'sistema' ? '#tabelaSistema th[data-sort]' : 
+                         tabela === 'banco' ? '#tabelaBanco th[data-sort]' : 
+                         'th[data-sort]';
+
+        // Remover indicadores existentes
+        document.querySelectorAll(seletores).forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+
+        // Adicionar indicador ao campo ativo
+        const selector = tabela === 'ambas' ? 
+            `th[data-sort="${campo}"]` : 
+            `#${tabela === 'sistema' ? 'tabelaSistema' : 'tabelaBanco'} th[data-sort="${campo}"]`;
+        
+        const thAtivo = document.querySelector(selector);
+        if (thAtivo) {
+            thAtivo.classList.add(`sort-${ordem}`);
+        }
     }
 }
 
