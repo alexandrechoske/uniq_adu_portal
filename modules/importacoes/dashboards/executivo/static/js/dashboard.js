@@ -2391,10 +2391,11 @@ function updateElementValue(elementId, value, useCanalBadge = false) {
 
 /**
  * Processar despesas por categoria do campo JSON despesas_processo
+ * VERSÃO DINÂMICA - mantém categorias exatamente como vêm do banco de dados
  */
 function processExpensesByCategory(despesasProcesso) {
     try {
-        console.log('[DASHBOARD_EXECUTIVO] === INÍCIO processExpensesByCategory ===');
+        console.log('[DASHBOARD_EXECUTIVO] === INÍCIO processExpensesByCategory (DINÂMICO) ===');
         console.log('[DASHBOARD_EXECUTIVO] Entrada - despesasProcesso:', despesasProcesso);
         console.log('[DASHBOARD_EXECUTIVO] Tipo:', typeof despesasProcesso);
         console.log('[DASHBOARD_EXECUTIVO] É array:', Array.isArray(despesasProcesso));
@@ -2404,20 +2405,11 @@ function processExpensesByCategory(despesasProcesso) {
             return {
                 categorias: {},
                 total: 0,
-                fretes: { internacional: 0, nacional: 0 },
                 categoriasAjustadas: {}
             };
         }
 
         const categorias = {};
-        // Normalizador reutilizado dentro e fora do loop
-        const normalize = (s) => (s ?? '')
-            .toString()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toUpperCase();
-        let freteInternacional = 0;
-        let freteNacional = 0;
         let total = 0;
 
         console.log('[DASHBOARD_EXECUTIVO] Processando', despesasProcesso.length, 'despesas...');
@@ -2425,60 +2417,34 @@ function processExpensesByCategory(despesasProcesso) {
         despesasProcesso.forEach((despesa, index) => {
             console.log(`[DASHBOARD_EXECUTIVO] Despesa ${index + 1}:`, despesa);
             
-            const categoria = despesa.categoria_custo || 'Outros';
+            // Categoria exatamente como vem do banco
+            const categoria = despesa.categoria_custo || 'Outros Custos';
             const valorStr = despesa.valor_custo;
             const valor = parseFloat(valorStr) || 0;
             
             console.log(`[DASHBOARD_EXECUTIVO] Processando: categoria="${categoria}", valorStr="${valorStr}", valor=${valor}`);
 
+            // Acumular valor na categoria
             if (!categorias[categoria]) {
                 categorias[categoria] = 0;
             }
 
             categorias[categoria] += valor;
             total += valor;
-            
-            // Detectar Frete Internacional/Nacional a partir da descrição
-            const descRaw = (despesa.descricao_custo || '').toString();
-            const desc = normalize(descRaw);
-            const hasFrete = desc.includes('FRETE');
-            if (hasFrete) {
-                const isInter = desc.includes('INTER') || desc.includes('EXTER');
-                const isNac = desc.includes('NACIONAL') || desc.includes('DOMEST');
-                if (isInter) {
-                    freteInternacional += valor;
-                    console.log(`[DASHBOARD_EXECUTIVO] + Frete Internacional detectado (+${valor}) -> Total: ${freteInternacional}`);
-                } else if (isNac) {
-                    freteNacional += valor;
-                    console.log(`[DASHBOARD_EXECUTIVO] + Frete Nacional detectado (+${valor}) -> Total: ${freteNacional}`);
-                }
-            }
 
             console.log(`[DASHBOARD_EXECUTIVO] Categoria "${categoria}" agora tem: R$ ${categorias[categoria].toFixed(2)}`);
             console.log(`[DASHBOARD_EXECUTIVO] Total acumulado: R$ ${total.toFixed(2)}`);
         });
 
-        // Ajustar "Outros Custos" removendo os fretes para evitar duplicidade na exibição
-        const categoriasAjustadas = { ...categorias };
-        const keys = Object.keys(categoriasAjustadas);
-        const findKey = (name) => keys.find(k => normalize(k) === normalize(name));
-        const outrosKey = findKey('Outros Custos');
-        if (outrosKey) {
-            const ajuste = Math.min(categoriasAjustadas[outrosKey], freteInternacional + freteNacional);
-            categoriasAjustadas[outrosKey] = Math.max(0, categoriasAjustadas[outrosKey] - ajuste);
-            console.log(`[DASHBOARD_EXECUTIVO] Ajuste em "Outros Custos": -${ajuste} (para não duplicar fretes)`);
-        }
-
         console.log('[DASHBOARD_EXECUTIVO] Resultado final - categorias:', categorias);
-        console.log('[DASHBOARD_EXECUTIVO] Resultado final - categoriasAjustadas:', categoriasAjustadas);
         console.log('[DASHBOARD_EXECUTIVO] Resultado final - total:', total);
-        console.log('[DASHBOARD_EXECUTIVO] === FIM processExpensesByCategory ===');
+        console.log('[DASHBOARD_EXECUTIVO] === FIM processExpensesByCategory (DINÂMICO) ===');
 
+        // Retornar categorias exatamente como foram calculadas (sem ajustes)
         return {
-            categorias,
-            total,
-            fretes: { internacional: freteInternacional, nacional: freteNacional },
-            categoriasAjustadas
+            categorias: categorias,
+            total: total,
+            categoriasAjustadas: categorias // Mesmo objeto, sem ajustes
         };
 
     } catch (error) {
@@ -2486,15 +2452,15 @@ function processExpensesByCategory(despesasProcesso) {
         return {
             categorias: {},
             total: 0,
-            fretes: { internacional: 0, nacional: 0 },
             categoriasAjustadas: {}
         };
     }
 }
 
 /**
- * Gerar HTML para o novo resumo financeiro
- * VERSÃO CORRIGIDA - só mostra Valor CIF se for maior que 0
+ * Gerar HTML para o novo resumo financeiro - VERSÃO DINÂMICA
+ * Renderiza automaticamente todas as categorias vindas do banco de dados
+ * Não requer alteração de código ao adicionar/remover categorias
  */
 function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
     try {
@@ -2502,7 +2468,7 @@ function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
 
         let html = '';
 
-        // CORREÇÃO: Só mostrar Valor CIF se for maior que 0 (mantido)
+        // CORREÇÃO: Só mostrar Valor CIF se for maior que 0
         if (valorCif > 0) {
             html += `
                 <div class="info-item valor-cif-item">
@@ -2512,60 +2478,36 @@ function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
             `;
         }
 
-        const normalize = (s) => (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        // Usar categorias ajustadas se disponível, senão usar categorias originais
         const catAdj = categoriasAjustadas && Object.keys(categoriasAjustadas).length ? categoriasAjustadas : categorias;
-        const map = {};
-        Object.keys(catAdj || {}).forEach(k => { map[normalize(k)] = { key: k, valor: catAdj[k] || 0 }; });
-        const pick = (names) => {
-            for (const n of names) {
-                const found = map[normalize(n)];
-                if (found) return found.valor;
-            }
-            return 0;
-        };
-
-        const ordemFixada = [
-            { label: 'Impostos (R$):', valor: pick(['Impostos']) },
-            { label: 'Outros Custos (R$):', valor: pick(['Outros Custos']) },
-            { label: 'Honorários (R$):', valor: pick(['Honorarios', 'Honorários']) },
-            { label: 'Frete Internacional', valor: (fretes?.internacional) || 0 },
-            { label: 'Frete Nacional', valor: (fretes?.nacional) || 0 },
-            { label: 'Outras Despesas (R$):', valor: pick(['Outras Despesas']) }
-        ];
-
-        // Renderizar itens da ordem fixada se > 0
-        ordemFixada.forEach(item => {
-            if (item.valor && item.valor > 0) {
-                html += `
-                    <div class="info-item">
-                        <label>${item.label}</label>
-                        <span>${formatCurrency(item.valor)}</span>
-                    </div>
-                `;
-            }
+        
+        // NOVA LÓGICA DINÂMICA: Renderizar TODAS as categorias que vieram do banco
+        // Ordenar alfabeticamente para consistência visual
+        const categoriasOrdenadas = Object.entries(catAdj || {})
+            .filter(([k, v]) => v > 0) // Só mostrar categorias com valor > 0
+            .sort(([a], [b]) => a.localeCompare(b, 'pt-BR')); // Ordem alfabética
+        
+        console.log('[DASHBOARD_EXECUTIVO] Categorias dinâmicas ordenadas:', categoriasOrdenadas);
+        
+        // Renderizar cada categoria dinamicamente
+        categoriasOrdenadas.forEach(([categoria, valor]) => {
+            html += `
+                <div class="info-item">
+                    <label>${categoria} (R$):</label>
+                    <span>${formatCurrency(valor)}</span>
+                </div>
+            `;
         });
 
-        // Renderizar quaisquer outras categorias restantes que não foram exibidas
-        const usados = new Set(['IMPOSTOS', 'OUTROS CUSTOS', 'HONORARIOS', 'HONORÁRIOS', 'OUTRAS DESPESAS']);
-        Object.entries(catAdj || {}).forEach(([k, v]) => {
-            const nk = normalize(k);
-            if (!usados.has(nk) && v > 0) {
-                html += `
-                    <div class="info-item">
-                        <label>${k} (R$):</label>
-                        <span>${formatCurrency(v)}</span>
-                    </div>
-                `;
-            }
-        });
-
-        // Total com destaque (inclui fretes)
+        // Total com destaque (sempre ao final)
         html += `
             <div class="info-item total-item">
                 <label>Custo Total (R$):</label>
                 <span class="total-value">${formatCurrency(total)}</span>
             </div>
         `;
+
+        console.log('[DASHBOARD_EXECUTIVO] HTML dinâmico gerado com', categoriasOrdenadas.length, 'categorias');
 
         return html;
 
@@ -2581,33 +2523,33 @@ function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
 }
 
 /**
- * Atualizar resumo financeiro no modal usando o novo sistema de categorias
- * VERSÃO CORRIGIDA - sempre calcular via despesas_processo quando disponível
+ * Atualizar resumo financeiro no modal usando o novo sistema de categorias DINÂMICO
+ * Renderiza automaticamente todas as categorias vindas do banco de dados
  */
 function updateFinancialSummary(operation) {
     try {
-        console.log('[DASHBOARD_EXECUTIVO] === INÍCIO updateFinancialSummary (CORRIGIDO) ===');
+        console.log('[DASHBOARD_EXECUTIVO] === INÍCIO updateFinancialSummary (DINÂMICO) ===');
         console.log('[DASHBOARD_EXECUTIVO] Atualizando resumo financeiro para operação:', operation.ref_unique);
 
-        // LOG ESPECÍFICO PARA PROCESSO 6561
-        if (operation.ref_unique && operation.ref_unique.includes('6561')) {
-            console.log('[DASHBOARD_EXECUTIVO] *** PROCESSO 6561 NO FRONTEND (CORRIGIDO) ***');
+        // LOG ESPECÍFICO PARA PROCESSO 6555 (do exemplo)
+        if (operation.ref_unique && operation.ref_unique.includes('6763')) {
+            console.log('[DASHBOARD_EXECUTIVO] *** PROCESSO 6763 NO FRONTEND (DINÂMICO) ***');
             console.log('[DASHBOARD_EXECUTIVO] custo_total:', operation.custo_total);
             console.log('[DASHBOARD_EXECUTIVO] custo_total_view:', operation.custo_total_view);
-            console.log('[DASHBOARD_EXECUTIVO] valor_cif_real:', operation.valor_cif_real);
             console.log('[DASHBOARD_EXECUTIVO] despesas_processo disponível:', !!operation.despesas_processo);
             if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
                 console.log('[DASHBOARD_EXECUTIVO] Total de despesas:', operation.despesas_processo.length);
+                console.log('[DASHBOARD_EXECUTIVO] Despesas:', operation.despesas_processo);
             }
         }
 
         let expenseData;
         
-        // NOVA LÓGICA SIMPLIFICADA:
+        // LÓGICA SIMPLIFICADA:
         // 1. Se temos despesas_processo, calcular sempre manualmente (mais confiável)
         // 2. Senão, usar custo_total do backend como fallback
         if (operation.despesas_processo && Array.isArray(operation.despesas_processo) && operation.despesas_processo.length > 0) {
-            console.log('[DASHBOARD_EXECUTIVO] Calculando via despesas_processo (mais confiável)');
+            console.log('[DASHBOARD_EXECUTIVO] Calculando via despesas_processo (dinâmico)');
             expenseData = processExpensesByCategory(operation.despesas_processo);
         } else {
             console.log('[DASHBOARD_EXECUTIVO] Fallback: usando custo_total do backend');
@@ -2622,29 +2564,29 @@ function updateFinancialSummary(operation) {
             
             expenseData = {
                 categorias: { 'Total de Custos': custoTotal },
-                total: custoTotal
+                total: custoTotal,
+                categoriasAjustadas: { 'Total de Custos': custoTotal }
             };
         }
         
         console.log('[DASHBOARD_EXECUTIVO] expenseData final:', expenseData);
         
-        // CORREÇÃO: NÃO mostrar "Valor CIF" separadamente no resumo
-        // O Valor CIF já está incluído nos custos quando apropriado
-        const valorCif = 0; // Remover a exibição separada do Valor CIF
+        // Não mostrar "Valor CIF" separadamente no resumo
+        const valorCif = 0;
         
-        // Gerar HTML
+        // Gerar HTML dinâmico
         const summaryHTML = generateFinancialSummaryHTML(expenseData, valorCif);
 
         // Atualizar o DOM
         const cardGrid = document.querySelector('#process-modal .info-card:nth-child(4) .card-grid-2');
         if (cardGrid) {
             cardGrid.innerHTML = summaryHTML;
-            console.log('[DASHBOARD_EXECUTIVO] Resumo financeiro atualizado com sucesso');
+            console.log('[DASHBOARD_EXECUTIVO] Resumo financeiro atualizado com sucesso (dinâmico)');
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Elemento card-grid-2 não encontrado no modal');
         }
 
-        console.log('[DASHBOARD_EXECUTIVO] === FIM updateFinancialSummary (CORRIGIDO) ===');
+        console.log('[DASHBOARD_EXECUTIVO] === FIM updateFinancialSummary (DINÂMICO) ===');
 
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao atualizar resumo financeiro:', error);
