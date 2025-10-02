@@ -18,51 +18,6 @@
   
   <div class="main-content">
     <div class="content-wrapper">
-      <!-- Header da página -->
-      <div class="export-header">
-        <h1 class="export-title">
-          <i class="mdi mdi-file-export text-blue-600"></i>
-          Exportação de Relatórios
-        </h1>
-        <p class="export-description">
-          Consulte e exporte dados históricos de importações. Use os filtros para refinar sua busca e gerar relatórios personalizados.
-        </p>
-        
-        <!-- Informações de Segurança -->
-        {% if security_info %}
-        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div class="flex items-start gap-2">
-            <i class="mdi mdi-shield-check text-blue-600 text-lg mt-0.5"></i>
-            <div class="text-sm">
-              <p class="font-medium text-blue-800 mb-1">Acesso de Dados</p>
-              {% if security_info.role == 'cliente_unique' %}
-                {% if security_info.has_companies %}
-                <p class="text-blue-700">Você tem acesso aos dados dos seguintes CNPJs:</p>
-                <div class="mt-2 flex flex-wrap gap-1">
-                  {% for cnpj in security_info.companies %}
-                  <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                    {{ cnpj }}
-                  </span>
-                  {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-orange-700">Nenhum CNPJ associado à sua conta. Entre em contato com o suporte.</p>
-                {% endif %}
-              {% elif security_info.role == 'interno_unique' %}
-                {% if security_info.has_companies %}
-                <p class="text-blue-700">Acesso restrito aos CNPJs: {{ security_info.companies|join(', ') }}</p>
-                {% else %}
-                <p class="text-blue-700">Acesso completo aos dados como usuário interno.</p>
-                {% endif %}
-              {% elif security_info.role == 'admin' %}
-                <p class="text-blue-700">Acesso administrativo completo a todos os dados.</p>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-
       <!-- Seção de Filtros -->
       <div class="export-section">
         <div class="export-card">
