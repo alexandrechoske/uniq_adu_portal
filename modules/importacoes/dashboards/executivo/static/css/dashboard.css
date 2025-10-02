@@ -482,16 +482,18 @@ canvas {
     background: #f8f9fa;
     padding: 15px 12px;
     text-align: left;
-    font-weight: 600;
+    font-weight: bold; /* Cabeçalhos em negrito mais forte */
     color: #495057;
     border-bottom: 2px solid #dee2e6;
     white-space: nowrap;
+    font-size: 0.95rem; /* Ligeiramente maior */
 }
 
 .data-table td {
     padding: 12px;
     border-bottom: none;
     vertical-align: middle;
+    font-weight: 600; /* Conteúdo da tabela em semi-negrito */
 }
 
 .data-table tbody tr:hover {
