@@ -1598,6 +1598,15 @@ function updateRecentOperationsTable(operations) {
     if (sortedOperations.length > 0) {
         console.log('[DASHBOARD_EXECUTIVO] Campos disponíveis no primeiro item:', Object.keys(sortedOperations[0]));
         console.log('[DASHBOARD_EXECUTIVO] Primeiro item completo:', sortedOperations[0]);
+        
+        // DEBUG ESPECÍFICO: Verificar se data_fechamento está presente no processo 5360
+        const processo5360 = sortedOperations.find(op => op.ref_unique && op.ref_unique.includes('5360'));
+        if (processo5360) {
+            console.log('[DASHBOARD_EXECUTIVO] *** PROCESSO 5360 NO ARRAY GLOBAL ***');
+            console.log('[DASHBOARD_EXECUTIVO] data_fechamento presente?', 'data_fechamento' in processo5360);
+            console.log('[DASHBOARD_EXECUTIVO] data_fechamento valor:', processo5360.data_fechamento);
+            console.log('[DASHBOARD_EXECUTIVO] Campos de data disponíveis:', Object.keys(processo5360).filter(k => k.includes('data')));
+        }
     }
     
     // Then set data to enhanced table (this triggers render)
@@ -2080,6 +2089,12 @@ function openProcessModal(operationIndex) {
     console.log('[MODAL_DEBUG] url_bandeira:', operation.url_bandeira);
     console.log('[MODAL_DEBUG] Tipo pais_procedencia:', typeof operation.pais_procedencia);
     console.log('[MODAL_DEBUG] Valor após safeValue será:', safeValue(operation.pais_procedencia_normalizado || operation.pais_procedencia));
+    
+    // NOVO: Debug específico do campo data_fechamento
+    console.log('[MODAL_DEBUG] === ANÁLISE DATA FECHAMENTO ===');
+    console.log('[MODAL_DEBUG] data_fechamento:', operation.data_fechamento);
+    console.log('[MODAL_DEBUG] Tipo data_fechamento:', typeof operation.data_fechamento);
+    console.log('[MODAL_DEBUG] Valor após safeValue será:', safeValue(operation.data_fechamento));
     
     // Update modal title
     const modalTitle = document.getElementById('modal-title');
