@@ -455,6 +455,10 @@ window.createStatusChart = function(data) {
                     legend: { 
                         position: 'right',
                         labels: {
+                            font: {
+                                weight: 'bold', // Labels da legenda em negrito
+                                size: 12
+                            },
                             generateLabels(chart) {
                                 const baseGen = (Chart.overrides && Chart.overrides.doughnut && Chart.overrides.doughnut.plugins && Chart.overrides.doughnut.plugins.legend && Chart.overrides.doughnut.plugins.legend.labels && Chart.overrides.doughnut.plugins.legend.labels.generateLabels)
                                     || (Chart.defaults && Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels && Chart.defaults.plugins.legend.labels.generateLabels);
@@ -489,7 +493,7 @@ window.createStatusChart = function(data) {
                             } catch (_) { return '#111'; }
                         },
                         formatter: (value) => `${formatNumber(value)}`,
-                        font: { weight: '600' }
+                        font: { weight: 'bold', size: 11 } // Valores dentro do gráfico em negrito
                     }
                 }
             }
@@ -527,7 +531,15 @@ window.createGroupedModalChart = function(data) {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { position: 'top' },
+                    legend: { 
+                        position: 'top',
+                        labels: {
+                            font: {
+                                weight: 'bold', // Legenda em negrito
+                                size: 12
+                            }
+                        }
+                    },
                     datalabels: {
                         anchor: 'end',
                         align: 'end',
@@ -537,7 +549,7 @@ window.createGroupedModalChart = function(data) {
                             const label = ctx.dataset.label || '';
                             return /custo/i.test(label) ? formatCurrencyCompact(value) : formatNumber(value);
                         },
-                        font: { size: 10, weight: '600' },
+                        font: { size: 11, weight: 'bold' }, // Valores em negrito
                         color: (ctx) => /custo/i.test(ctx.dataset.label || '') ? '#92400e' : '#1e3a8a'
                     },
                     tooltip: {
@@ -553,6 +565,14 @@ window.createGroupedModalChart = function(data) {
                 // Reduzido padding superior para encostar mais no topo
                 layout: { padding: { top: 8 } },
                 scales: {
+                    x: {
+                        ticks: {
+                            font: {
+                                weight: 'bold', // Categorias do eixo X em negrito
+                                size: 11
+                            }
+                        }
+                    },
                     y: { type: 'linear', position: 'left', ticks: { display: false }, grid: { display: false }, border: { display: false } },
                     y1: { type: 'linear', position: 'right', beginAtZero: true, ticks: { display: false }, grid: { display: false }, border: { display: false } }
                 }
@@ -592,8 +612,26 @@ window.createUrfChart = function(data) {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { beginAtZero: true, grid: { display: false }, border: { display: false } },
-                    y: { grid: { display: false }, border: { display: false } }
+                    x: { 
+                        beginAtZero: true, 
+                        grid: { display: false }, 
+                        border: { display: false },
+                        ticks: {
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: { 
+                        grid: { display: false }, 
+                        border: { display: false },
+                        ticks: {
+                            font: {
+                                weight: 'bold', // Deixa as categorias (URFs/Destinos) em negrito
+                                size: 12        // Tamanho da fonte (opcional)
+                            }
+                        }
+                    }
                 }
             }
         });
