@@ -75,20 +75,33 @@
 #tabela-wrapper {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    overflow: auto;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     background: white;
     width: 100%;
     max-height: 70vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Adicionar overflow apenas quando houver dados */
+#tabela-wrapper.has-data {
+    overflow: auto;
+    justify-content: flex-start;
+    align-items: flex-start;
 }
 
 #tabela-resultados {
     width: 100%;
-    min-width: 1800px; /* Largura mínima para garantir espaço para todas as colunas */
     border-collapse: separate;
     border-spacing: 0;
     font-size: 11px;
     line-height: 1.4;
+}
+
+/* min-width aplicado apenas quando há dados */
+#tabela-wrapper.has-data #tabela-resultados {
+    min-width: 1800px; /* Largura mínima para garantir espaço para todas as colunas */
 }
 
 #tabela-resultados th,
@@ -207,31 +220,44 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 3rem 1rem;
+    padding: 4rem 2rem;
     color: #6b7280;
     background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
     border-radius: 8px;
-    margin: 1rem 0;
+    min-height: 300px;
+    width: 100%;
 }
 
 .tabela-empty-state i {
-    font-size: 3rem;
+    font-size: 4rem;
     color: #d1d5db;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .tabela-empty-state h3 {
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: #374151;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    text-align: center;
 }
 
 .tabela-empty-state p {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: #6b7280;
     text-align: center;
-    max-width: 400px;
+    max-width: 500px;
+    line-height: 1.6;
 }
 
 /* Scroll personalizado para horizontal e vertical */

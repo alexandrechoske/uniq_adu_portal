@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 
   function renderTable(columns, rows){
+    const tabelaWrapper = document.getElementById('tabela-wrapper');
+    
     // Cabeçalho
     theadRow.innerHTML='';
     columns.forEach(c=>{
@@ -72,6 +74,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     // Corpo
     tbody.innerHTML='';
     if(rows.length === 0) {
+      // Remover classe has-data quando não houver resultados
+      tabelaWrapper.classList.remove('has-data');
+      
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = columns.length;
@@ -87,6 +92,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       tbody.appendChild(tr);
       return;
     }
+    
+    // Adicionar classe has-data quando houver resultados
+    tabelaWrapper.classList.add('has-data');
     
     rows.forEach((r, index)=>{
       const tr=document.createElement('tr');
