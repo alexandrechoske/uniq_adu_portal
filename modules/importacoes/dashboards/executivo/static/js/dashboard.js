@@ -3294,7 +3294,7 @@ function updateFilterSummary() {
     const summaryElement = document.getElementById('filter-summary-text');
     if (!summaryElement) return;
     
-    let summaryText = 'Vendo dados completos';
+    let summaryText = 'Analisando dados completos';
     
     if (currentFilters.dataInicio && currentFilters.dataFim) {
         const dataInicio = new Date(currentFilters.dataInicio).toLocaleDateString('pt-BR');

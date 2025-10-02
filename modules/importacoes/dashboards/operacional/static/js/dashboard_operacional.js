@@ -206,7 +206,7 @@ function updateFilterSummary() {
         }
         resetBtn.style.display = 'block';
     } else {
-        summary = 'Vendo dados completos';
+        summary = 'Analisando dados completos';
         resetBtn.style.display = 'none';
     }
     
