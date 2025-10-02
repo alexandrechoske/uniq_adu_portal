@@ -60,7 +60,7 @@ config_bp = Blueprint(
 @login_required
 @role_required(['admin', 'interno_unique'])
 def logos_clientes():
-    """Página de gerenciamento de logos de clientes"""
+    """Página de gerenciamento de Clientes"""
     # Verificar permissão específica
     permission_error = require_config_admin_permission()
     if permission_error:

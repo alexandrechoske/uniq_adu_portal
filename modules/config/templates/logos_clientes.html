@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Logos Clientes - Portal UniSystem{% endblock %}
+{% block title %}Clientes - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('config.static', filename='css/config.css') }}">
@@ -16,7 +16,7 @@
             {{ breadcrumb([
                 {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
                 {'name': 'Configurações', 'icon': 'mdi mdi-cog', 'url': url_for('menu.configuracoes')},
-                {'name': 'Logos de Clientes', 'icon': 'mdi mdi-domain'}
+                {'name': 'Clientes', 'icon': 'mdi mdi-domain'}
             ]) }}
         </div>
                 <button type="button" id="add-cnpj" class="btn btn-outline">

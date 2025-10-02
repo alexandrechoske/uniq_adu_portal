@@ -208,7 +208,7 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                 'roles': ['admin']
             },
             {
-                'title': 'Logos Clientes',
+                'title': 'Clientes',
                 'icon': 'mdi-domain',
                 'url': 'config.logos_clientes',
                 'active_endpoints': ['config.logos_clientes'],
