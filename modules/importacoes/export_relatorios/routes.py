@@ -8,6 +8,9 @@ import re
 import os
 import zipfile
 import requests
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
 from io import BytesIO
 
 # Blueprint acessível por todas as roles
@@ -344,9 +347,9 @@ def get_documentos_by_ref_unique(ref_unique_list):
         return {}
     
     try:
-        # Buscar documentos ativos para os processos
+        # Buscar documentos ativos para os processos (incluindo descrição)
         response = supabase_admin.table('documentos_processos')\
-            .select('ref_unique, nome_exibicao, storage_path, extensao, tamanho_bytes, data_upload')\
+            .select('ref_unique, nome_exibicao, storage_path, extensao, tamanho_bytes, data_upload, descricao')\
             .in_('ref_unique', ref_unique_list)\
             .eq('ativo', True)\
             .order('data_upload', desc=True)\
@@ -377,6 +380,7 @@ def get_documentos_by_ref_unique(ref_unique_list):
                 'extensao': doc.get('extensao'),
                 'tamanho': doc.get('tamanho_bytes'),
                 'data_upload': doc.get('data_upload'),
+                'descricao': doc.get('descricao'),  # NOVO: incluir descrição
                 'url': doc_url
             })
         
@@ -501,6 +505,80 @@ def export_csv():
         print(f"[EXPORT_REL][ERRO_EXPORT] {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@export_relatorios_bp.route('/api/export_excel', methods=['POST'])
+@login_required
+def export_excel():
+    """Exporta Excel (XLSX) com os filtros informados (limite de segurança)."""
+    started_at = datetime.now()
+    user = session.get('user', {})
+    payload = request.get_json(silent=True) or {}
+    filters = extract_filters(payload)
+    max_rows = 50000
+    print(f"[EXPORT_REL] Export Excel iniciado user={user.get('id')} filtros={filters}")
+    try:
+        q = build_base_query(user)
+        q = apply_query_filters(q, filters, user)
+        raw = q.limit(max_rows + 1).execute()
+        rows = raw.data or []
+        
+        # VALIDAÇÃO DE SEGURANÇA: Verificar se todos os registros pertencem ao usuário
+        rows = validate_user_data_access(rows, user)
+        print(f"[EXPORT_REL] Após validação de segurança: {len(rows)}")
+        
+        rows = post_fetch_filter(rows, filters)
+        if len(rows) > max_rows:
+            rows = rows[:max_rows]
+        
+        # Criar workbook Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Processos"
+        
+        # Estilização do cabeçalho
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Escrever cabeçalho
+        for col_idx, col_name in enumerate(TABLE_COLUMNS, 1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.value = col_name
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+        
+        # Escrever dados
+        for row_idx, row_data in enumerate(rows, 2):
+            for col_idx, col_name in enumerate(TABLE_COLUMNS, 1):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                value = row_data.get(col_name)
+                cell.value = value if value is not None else ''
+        
+        # Ajustar largura das colunas
+        for col_idx in range(1, len(TABLE_COLUMNS) + 1):
+            ws.column_dimensions[get_column_letter(col_idx)].width = 15
+        
+        # Salvar em BytesIO
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        duration = (datetime.now() - started_at).total_seconds()
+        filename = f"export_processos_antigos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        headers = {
+            'Content-Disposition': f'attachment; filename={filename}',
+            'X-Export-Duration': str(duration)
+        }
+        print(f"[EXPORT_REL] Excel gerado com {len(rows)} registros para usuário {user.get('id')}")
+        return Response(
+            output.getvalue(),
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers=headers
+        )
+    except Exception as e:
+        print(f"[EXPORT_REL][ERRO_EXPORT_EXCEL] {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @export_relatorios_bp.route('/api/filter_options', methods=['GET'])
 def get_filter_options():
     """
@@ -587,9 +665,9 @@ def download_all_docs(ref_unique):
     try:
         print(f"[EXPORT_REL][ZIP] Iniciando download de documentos para {ref_unique}")
         
-        # Buscar documentos do processo
+        # Buscar documentos do processo (incluindo descrição)
         response = supabase_admin.table('documentos_processos')\
-            .select('nome_exibicao, storage_path, extensao')\
+            .select('nome_exibicao, storage_path, extensao, descricao')\
             .eq('ref_unique', ref_unique)\
             .eq('ativo', True)\
             .execute()

@@ -273,10 +273,16 @@
               <i class="mdi mdi-table text-blue-600"></i>
               Resultados da Consulta
             </h2>
-            <button type="button" id="btn-exportar" disabled class="px-4 py-2 bg-gray-400 text-white rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-              <i class="mdi mdi-download"></i> 
-              Exportar CSV
-            </button>
+            <div class="flex items-center gap-2">
+              <button type="button" id="btn-exportar-excel" disabled class="px-4 py-2 bg-gray-400 text-white rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-green-600">
+                <i class="mdi mdi-file-excel"></i> 
+                Exportar Excel
+              </button>
+              <button type="button" id="btn-exportar-csv" disabled class="px-4 py-2 bg-gray-400 text-white rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-blue-600">
+                <i class="mdi mdi-file-delimited"></i> 
+                Exportar CSV
+              </button>
+            </div>
           </div>
           
           <div id="tabela-wrapper">

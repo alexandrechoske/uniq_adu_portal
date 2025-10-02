@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const form = document.getElementById('form-filtros');
   const btnExecutar = document.getElementById('btn-executar');
-  const btnExportar = document.getElementById('btn-exportar');
+  const btnExportarExcel = document.getElementById('btn-exportar-excel');
+  const btnExportarCsv = document.getElementById('btn-exportar-csv');
   const statusEl = document.getElementById('consulta-status');
   const theadRow = document.getElementById('thead-row');
   const tbody = document.getElementById('tbody-rows');
@@ -46,12 +47,17 @@ document.addEventListener('DOMContentLoaded',()=>{
       
       const icon = getFileIcon(doc.extensao);
       
+      // Renderizar descrição se existir
+      const descricaoHtml = doc.descricao ? 
+        `<div class="modal-doc-descricao" title="${doc.descricao}">${doc.descricao}</div>` : '';
+      
       docItem.innerHTML = `
         <div class="modal-doc-icon">
           <i class="mdi ${icon}"></i>
         </div>
         <div class="modal-doc-info">
           <div class="modal-doc-name" title="${doc.nome}">${doc.nome}</div>
+          ${descricaoHtml}
           <div class="modal-doc-meta">
             <span class="modal-doc-ext">${doc.extensao}</span>
             <span class="modal-doc-size">${formatBytes(doc.tamanho)}</span>
@@ -375,15 +381,31 @@ document.addEventListener('DOMContentLoaded',()=>{
       totalPagesEl.textContent = totalPages;
       totalRegistrosEl.textContent = `${data.returned}/${total}`;
       paginacao.classList.remove('hidden');
-      btnExportar.disabled = total === 0;
+      
+      // Habilitar/desabilitar ambos os botões de exportação
+      btnExportarCsv.disabled = total === 0;
+      btnExportarExcel.disabled = total === 0;
+      
       if(total > 0) {
-        btnExportar.classList.remove('bg-gray-400');
-        btnExportar.classList.add('bg-green-600', 'hover:bg-green-700');
-        btnExportar.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
+        // CSV - Azul
+        btnExportarCsv.classList.remove('bg-gray-400');
+        btnExportarCsv.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        btnExportarCsv.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
+        
+        // Excel - Verde
+        btnExportarExcel.classList.remove('bg-gray-400');
+        btnExportarExcel.classList.add('bg-green-600', 'hover:bg-green-700');
+        btnExportarExcel.classList.remove('disabled:opacity-50', 'disabled:cursor-not-allowed');
       } else {
-        btnExportar.classList.add('bg-gray-400');
-        btnExportar.classList.remove('bg-green-600', 'hover:bg-green-700');
-        btnExportar.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
+        // CSV
+        btnExportarCsv.classList.add('bg-gray-400');
+        btnExportarCsv.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        btnExportarCsv.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
+        
+        // Excel
+        btnExportarExcel.classList.add('bg-gray-400');
+        btnExportarExcel.classList.remove('bg-green-600', 'hover:bg-green-700');
+        btnExportarExcel.classList.add('disabled:opacity-50', 'disabled:cursor-not-allowed');
       }
     }catch(e){
       statusEl.textContent='Erro: '+e.message;
@@ -428,6 +450,33 @@ document.addEventListener('DOMContentLoaded',()=>{
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
       statusEl.textContent='CSV pronto.';
+    }catch(e){
+      statusEl.textContent='Erro exportação: '+e.message;
+    }
+  }
+
+  async function exportarExcel(){
+    if(!lastFilters) return;
+    statusEl.textContent='Gerando Excel...';
+    const filtros = {...lastFilters};
+    delete filtros.page; delete filtros.page_size; // exporta tudo dentro do limite server-side
+    try{
+      const res = await fetch('/export_relatorios/api/export_excel',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-API-Key':window.API_BYPASS_KEY||''},
+        body:JSON.stringify(filtros)
+      });
+      if(!res.ok){
+        const js = await res.json().catch(()=>({error:'Erro ao gerar Excel'}));
+        throw new Error(js.error||res.statusText);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url; a.download=res.headers.get('Content-Disposition')?.split('filename=')[1]||'export.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      statusEl.textContent='Excel pronto.';
     }catch(e){
       statusEl.textContent='Erro exportação: '+e.message;
     }
@@ -695,5 +744,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   btnExecutar?.addEventListener('click', executarBusca);
   prevBtn?.addEventListener('click', async()=>{ if(currentPage>1){ currentPage--; await buscarPagina(); }});
   nextBtn?.addEventListener('click', async()=>{ if(currentPage<totalPages){ currentPage++; await buscarPagina(); }});
-  btnExportar?.addEventListener('click', exportarCsv);
+  btnExportarCsv?.addEventListener('click', exportarCsv);
+  btnExportarExcel?.addEventListener('click', exportarExcel);
 });
