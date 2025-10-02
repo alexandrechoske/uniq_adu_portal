@@ -1212,7 +1212,10 @@ def recent_operations():
             'peso_bruto', 'urf_despacho', 'urf_despacho_normalizado', 'container',
             'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
             'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',
-            'canal', 'data_desembaraco', 'despesas_processo'
+            'canal', 'data_desembaraco', 'despesas_processo',
+            
+            # CORREÇÃO BUG: Incluir pais_procedencia e url_bandeira para o modal
+            'pais_procedencia', 'pais_procedencia_normalizado', 'url_bandeira'
         ]
         
         # Colunas normalizadas disponíveis

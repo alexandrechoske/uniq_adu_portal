@@ -1327,18 +1327,22 @@ async function loadRecentOperations() {
         const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
         if (result.success) {
-            // CORREÇÃO: Usar dados completos para mini popups
+            // CORREÇÃO: Usar dados completos para mini popups E modal
             if (result.operations_all) {
-                // Armazenar dados completos para mini popups
+                // Armazenar dados completos para mini popups E modal
                 if (!window.dashboardData) {
                     window.dashboardData = {};
                 }
                 window.dashboardData.data = result.operations_all;
                 console.log('[DASHBOARD_EXECUTIVO] Dados completos para mini popups:', result.operations_all.length);
+                
+                // CORREÇÃO BUG: Usar operations_all (dados completos) para a tabela E modal
+                // operations_all contém TODOS os campos incluindo pais_procedencia
+                updateRecentOperationsTable(result.operations_all);
+            } else {
+                // Fallback: usar operations se operations_all não existir
+                updateRecentOperationsTable(result.operations);
             }
-            
-            // Usar dados limitados para a tabela
-            updateRecentOperationsTable(result.operations);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', result.error);
         }
@@ -1357,18 +1361,23 @@ async function loadRecentOperationsWithCache() {
         const response = await fetchWithAbort('operations', `/dashboard-executivo/api/recent-operations?${queryString}`);
         const result = await response.json();
         if (result.success) {
-            // CORREÇÃO: Usar dados completos para mini popups
+            // CORREÇÃO: Usar dados completos para mini popups E modal
             if (result.operations_all) {
-                // Armazenar dados completos para mini popups
+                // Armazenar dados completos para mini popups E modal
                 if (!window.dashboardData) {
                     window.dashboardData = {};
                 }
                 window.dashboardData.data = result.operations_all;
                 console.log('[DASHBOARD_EXECUTIVO] Dados completos para mini popups (cache):', result.operations_all.length);
+                
+                // CORREÇÃO BUG: Usar operations_all para cache e tabela
+                dashboardCache.set('operations', result.operations_all);
+                updateRecentOperationsTable(result.operations_all);
+            } else {
+                // Fallback: usar operations se operations_all não existir
+                dashboardCache.set('operations', result.operations);
+                updateRecentOperationsTable(result.operations);
             }
-            
-            dashboardCache.set('operations', result.operations);
-            updateRecentOperationsTable(result.operations);
         } else {
             console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar operações:', result.error);
         }
@@ -1389,8 +1398,11 @@ async function loadRecentOperationsWithRetry(maxRetries = 2) {
             const result = await response.json();
             if (result.success && result.operations) {
                 console.log(`[DASHBOARD_EXECUTIVO] Operações carregadas: ${result.operations.length} registros`);
-                dashboardCache.set('operations', result.operations);
-                updateRecentOperationsTable(result.operations);
+                
+                // CORREÇÃO BUG: Usar operations_all se disponível, pois contém todos os campos
+                const operationsToUse = result.operations_all || result.operations;
+                dashboardCache.set('operations', operationsToUse);
+                updateRecentOperationsTable(operationsToUse);
                 return;
             } else {
                 throw new Error(result.error || 'Operações não encontradas');
@@ -2060,6 +2072,14 @@ function openProcessModal(operationIndex) {
     console.log('[MODAL_DEBUG] peso_bruto:', operation.peso_bruto);
     console.log('[MODAL_DEBUG] urf_despacho:', operation.urf_despacho);
     console.log('[MODAL_DEBUG] urf_despacho_normalizado:', operation.urf_despacho_normalizado);
+    
+    // NOVO: Debug específico do campo pais_procedencia
+    console.log('[MODAL_DEBUG] === ANÁLISE PAÍS PROCEDÊNCIA ===');
+    console.log('[MODAL_DEBUG] pais_procedencia:', operation.pais_procedencia);
+    console.log('[MODAL_DEBUG] pais_procedencia_normalizado:', operation.pais_procedencia_normalizado);
+    console.log('[MODAL_DEBUG] url_bandeira:', operation.url_bandeira);
+    console.log('[MODAL_DEBUG] Tipo pais_procedencia:', typeof operation.pais_procedencia);
+    console.log('[MODAL_DEBUG] Valor após safeValue será:', safeValue(operation.pais_procedencia_normalizado || operation.pais_procedencia));
     
     // Update modal title
     const modalTitle = document.getElementById('modal-title');
