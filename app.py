@@ -277,7 +277,8 @@ def internal_error(error):
 @app.route('/')
 def index():
     if 'user' in session:
-        return redirect(url_for('auth.redirect_after_login'))
+        # Redireciona direto para o menu ao invés do dashboard executivo
+        return redirect(url_for('menu.menu_home'))
     return redirect(url_for('auth.login'))
 
 @app.route('/test-date-sorting')
