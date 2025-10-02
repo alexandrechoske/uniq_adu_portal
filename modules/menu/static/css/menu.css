@@ -554,6 +554,214 @@
    Novo layout com tabs horizontais
    =================================== */
 
+/* ===================================
+   ACESSO RÁPIDO - CHIPS
+   Componente de módulos mais acessados
+   =================================== */
+
+.quick-access-container {
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, var(--unique-primary-medium, #2d6b92) 0%, var(--unique-primary-dark, #165672) 100%);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(45, 107, 146, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-access-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.quick-access-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+    color: white;
+    position: relative;
+    z-index: 1;
+}
+
+.quick-access-header i {
+    font-size: 1.5rem;
+    color: var(--unique-accent, #e2ba0a);
+}
+
+.quick-access-header > span:first-of-type {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.quick-access-subtitle {
+    font-size: 0.8125rem;
+    opacity: 0.85;
+    font-weight: 400;
+    margin-left: auto;
+}
+
+.quick-access-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    position: relative;
+    z-index: 1;
+}
+
+.quick-access-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
+    color: var(--unique-text-primary, #1F2937);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-access-chip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--unique-accent, #e2ba0a) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.quick-access-chip:hover::before {
+    opacity: 0.15;
+}
+
+.quick-access-chip:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    border-color: var(--unique-accent, #e2ba0a);
+}
+
+.quick-access-chip:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.quick-access-chip i {
+    font-size: 1.25rem;
+    color: var(--unique-primary-medium, #2d6b92);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.quick-access-chip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    position: relative;
+    z-index: 1;
+}
+
+.quick-access-chip-name {
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.quick-access-chip-count {
+    font-size: 0.6875rem;
+    color: var(--unique-text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.quick-access-chip-count i {
+    font-size: 0.75rem;
+}
+
+/* Estado de loading */
+.quick-access-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    padding: 0.5rem 0;
+}
+
+.quick-access-loading i {
+    font-size: 1.25rem;
+}
+
+/* Estado vazio */
+.quick-access-empty {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.875rem;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.quick-access-empty i {
+    font-size: 1.25rem;
+    opacity: 0.7;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .quick-access-container {
+        padding: 1rem;
+    }
+    
+    .quick-access-header {
+        flex-wrap: wrap;
+    }
+    
+    .quick-access-subtitle {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 0.25rem;
+    }
+    
+    .quick-access-chip {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+    
+    .quick-access-chip-count {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .quick-access-chips {
+        gap: 0.5rem;
+    }
+    
+    .quick-access-chip {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .quick-access-chip i {
+        font-size: 1.125rem;
+    }
+}
+
 /* Container das Tabs */
 .menu-tabs-container {
     margin-bottom: 2rem;

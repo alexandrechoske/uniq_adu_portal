@@ -13,10 +13,102 @@
     };
 
     /**
+     * Carrega e exibe os módulos de acesso rápido
+     */
+    async function loadQuickAccess() {
+        console.log('⚡ Carregando módulos de acesso rápido');
+        
+        const chipsContainer = document.getElementById('quickAccessChips');
+        if (!chipsContainer) {
+            console.warn('⚠️ Container de chips não encontrado');
+            return;
+        }
+
+        try {
+            const response = await fetch('/menu/api/quick-access', {
+                credentials: 'same-origin', // Incluir cookies de sessão
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            // Tratar erro 401 (não autenticado) de forma silenciosa
+            if (response.status === 401) {
+                console.warn('⚠️ Usuário não autenticado - ocultando acesso rápido');
+                chipsContainer.innerHTML = `
+                    <div class="quick-access-empty">
+                        <i class="mdi mdi-information-outline"></i>
+                        <span>Faça login para ver seus módulos favoritos</span>
+                    </div>
+                `;
+                return;
+            }
+
+            // Tratar outros erros HTTP
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Erro ao carregar acesso rápido');
+            }
+
+            const modules = data.modules || [];
+            
+            if (modules.length === 0) {
+                chipsContainer.innerHTML = `
+                    <div class="quick-access-empty">
+                        <i class="mdi mdi-information-outline"></i>
+                        <span>Continue navegando para ver seus módulos favoritos aqui</span>
+                    </div>
+                `;
+                console.log('ℹ️ Nenhum módulo de acesso rápido encontrado');
+                return;
+            }
+
+            // Gerar HTML dos chips
+            const chipsHTML = modules.map(module => {
+                // Usar last_url se disponível, caso contrário construir URL a partir da route
+                const url = module.last_url || `/${module.route.replace('.', '/')}`;
+                
+                return `
+                    <a href="${url}" class="quick-access-chip" title="Acessado ${module.access_count} vezes">
+                        <i class="mdi ${module.icon}"></i>
+                        <div class="quick-access-chip-text">
+                            <span class="quick-access-chip-name">${module.display_name}</span>
+                            <span class="quick-access-chip-count">
+                                <i class="mdi mdi-eye"></i>
+                                ${module.access_count} ${module.access_count === 1 ? 'acesso' : 'acessos'}
+                            </span>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+
+            chipsContainer.innerHTML = chipsHTML;
+            console.log(`✅ ${modules.length} chips de acesso rápido carregados`);
+
+        } catch (error) {
+            console.error('❌ Erro ao carregar acesso rápido:', error);
+            chipsContainer.innerHTML = `
+                <div class="quick-access-empty">
+                    <i class="mdi mdi-alert-circle-outline"></i>
+                    <span>Não foi possível carregar os acessos rápidos</span>
+                </div>
+            `;
+        }
+    }
+
+    /**
      * Inicializa o sistema de tabs
      */
     function init() {
         console.log('🚀 Inicializando sistema de tabs do menu');
+        
+        // Carregar acesso rápido
+        loadQuickAccess();
         
         const tabs = document.querySelectorAll('.menu-tab');
         
