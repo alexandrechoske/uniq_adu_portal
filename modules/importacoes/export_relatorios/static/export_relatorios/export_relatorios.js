@@ -21,6 +21,122 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Campos que suportam busca múltipla
   const multiSearchFields = ['ref_importador', 'ref_unique', 'numero_di', 'container'];
   
+  // ========== FUNCIONALIDADE DO MODAL DE DOCUMENTOS ==========
+  
+  const modalOverlay = document.getElementById('modal-documentos');
+  const modalClose = document.getElementById('modal-close');
+  const modalRefUnique = document.getElementById('modal-ref-unique');
+  const modalDocsList = document.getElementById('modal-docs-list');
+  const modalLoading = document.getElementById('modal-loading');
+  const btnDownloadAllZip = document.getElementById('btn-download-all-zip');
+  
+  let currentProcessDocs = null;
+  let currentRefUnique = null;
+  
+  function openDocsModal(refUnique, documentos) {
+    currentProcessDocs = documentos;
+    currentRefUnique = refUnique;
+    
+    modalRefUnique.textContent = refUnique;
+    modalDocsList.innerHTML = '';
+    
+    documentos.forEach(doc => {
+      const docItem = document.createElement('div');
+      docItem.className = 'modal-doc-item';
+      
+      const icon = getFileIcon(doc.extensao);
+      
+      docItem.innerHTML = `
+        <div class="modal-doc-icon">
+          <i class="mdi ${icon}"></i>
+        </div>
+        <div class="modal-doc-info">
+          <div class="modal-doc-name" title="${doc.nome}">${doc.nome}</div>
+          <div class="modal-doc-meta">
+            <span class="modal-doc-ext">${doc.extensao}</span>
+            <span class="modal-doc-size">${formatBytes(doc.tamanho)}</span>
+          </div>
+        </div>
+        <button class="modal-doc-download" title="Baixar documento" data-url="${doc.url}">
+          <i class="mdi mdi-download"></i>
+        </button>
+      `;
+      
+      modalDocsList.appendChild(docItem);
+    });
+    
+    // Event listener para botões de download individual
+    modalDocsList.querySelectorAll('.modal-doc-download').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const url = e.currentTarget.dataset.url;
+        if (url && url !== 'null') {
+          window.open(url, '_blank');
+        }
+      });
+    });
+    
+    modalOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeDocsModal() {
+    modalOverlay.classList.add('hidden');
+    document.body.style.overflow = '';
+    currentProcessDocs = null;
+    currentRefUnique = null;
+  }
+  
+  async function downloadAllAsZip() {
+    if (!currentRefUnique) return;
+    
+    modalLoading.classList.remove('hidden');
+    modalDocsList.style.display = 'none';
+    
+    try {
+      const res = await fetch(`/export_relatorios/api/download_all_docs/${encodeURIComponent(currentRefUnique)}`, {
+        method: 'GET',
+        headers: {'X-API-Key': window.API_BYPASS_KEY || ''}
+      });
+      
+      if (!res.ok) {
+        throw new Error('Erro ao gerar ZIP');
+      }
+      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentRefUnique.replace('/', '-')}_documentos.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      
+      closeDocsModal();
+    } catch (e) {
+      alert('Erro ao baixar documentos: ' + e.message);
+    } finally {
+      modalLoading.classList.add('hidden');
+      modalDocsList.style.display = '';
+    }
+  }
+  
+  // Event listeners do modal
+  modalClose?.addEventListener('click', closeDocsModal);
+  modalOverlay?.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) {
+      closeDocsModal();
+    }
+  });
+  btnDownloadAllZip?.addEventListener('click', downloadAllAsZip);
+  
+  // Fechar modal com ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modalOverlay.classList.contains('hidden')) {
+      closeDocsModal();
+    }
+  });
+  
   // Adicionar feedback visual para campos de busca múltipla
   multiSearchFields.forEach(fieldName => {
     const input = document.querySelector(`input[name="${fieldName}"]`);
@@ -110,7 +226,9 @@ document.addEventListener('DOMContentLoaded',()=>{
             const docsContainer = document.createElement('div');
             docsContainer.className = 'documentos-container';
             
-            val.forEach(doc => {
+            // Mostrar apenas os primeiros 3 documentos como badges
+            const docsToShow = val.slice(0, 3);
+            docsToShow.forEach(doc => {
               const docLink = document.createElement('a');
               docLink.href = doc.url || '#';
               docLink.target = '_blank';
@@ -129,12 +247,19 @@ document.addEventListener('DOMContentLoaded',()=>{
               docsContainer.appendChild(docLink);
             });
             
-            // Badge de contagem se houver muitos documentos
+            // Badge de contagem se houver muitos documentos - AGORA CLICÁVEL
             if(val.length > 3) {
               const countBadge = document.createElement('span');
               countBadge.className = 'documentos-count-badge';
               countBadge.textContent = `+${val.length - 3}`;
-              countBadge.title = `Total: ${val.length} documentos`;
+              countBadge.title = `Clique para ver todos os ${val.length} documentos`;
+              
+              // Armazenar ref_unique e documentos para o modal
+              const refUnique = r['ref_unique'];
+              countBadge.addEventListener('click', () => {
+                openDocsModal(refUnique, val);
+              });
+              
               docsContainer.appendChild(countBadge);
             }
             

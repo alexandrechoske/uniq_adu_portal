@@ -320,6 +320,42 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de Documentos -->
+<div id="modal-documentos" class="modal-overlay hidden">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h3 class="modal-title">
+        <i class="mdi mdi-file-multiple"></i>
+        Documentos do Processo
+      </h3>
+      <button id="modal-close" class="modal-close-btn">
+        <i class="mdi mdi-close"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="modal-process-info">
+        <span class="modal-ref-label">Referência:</span>
+        <span id="modal-ref-unique" class="modal-ref-value"></span>
+        <button id="btn-download-all-zip" class="btn-download-all">
+          <i class="mdi mdi-download-multiple"></i>
+          Baixar Todos (ZIP)
+        </button>
+      </div>
+      
+      <div id="modal-docs-list" class="modal-docs-list">
+        <!-- Lista de documentos será inserida aqui -->
+      </div>
+      
+      <div id="modal-loading" class="modal-loading hidden">
+        <div class="spinner"></div>
+        <p>Preparando download...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
