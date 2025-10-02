@@ -61,7 +61,7 @@ TABLE_COLUMNS = [
     'ref_unique','ref_importador','cnpj_importador','importador','modal','container','data_embarque',
     'data_chegada','transit_time_real','urf_despacho','exportador_fornecedor',
     'numero_di','data_registro','canal','data_desembaraco','mercadoria','status_processo',
-    'peso_bruto','valor_fob_real','valor_cif_real','data_abertura','status_macro','status_macro_sistema','data_fechamento'
+    'peso_bruto','valor_fob_real','valor_cif_real','data_abertura','status_macro','status_macro_sistema','data_fechamento','documentos'
 ]
 
 DATE_FIELDS = [c for c in TABLE_COLUMNS if c.startswith('data_')]
@@ -332,6 +332,60 @@ def paginate(rows, page, page_size):
     end = start + page_size
     return rows[start:end], total
 
+def get_documentos_by_ref_unique(ref_unique_list):
+    """
+    Busca documentos ativos para uma lista de ref_unique.
+    Retorna dict: {ref_unique: [documentos]}
+    """
+    if not ref_unique_list:
+        return {}
+    
+    try:
+        # Buscar documentos ativos para os processos
+        response = supabase_admin.table('documentos_processos')\
+            .select('ref_unique, nome_exibicao, storage_path, extensao, tamanho_bytes, data_upload')\
+            .in_('ref_unique', ref_unique_list)\
+            .eq('ativo', True)\
+            .order('data_upload', desc=True)\
+            .execute()
+        
+        documentos = response.data or []
+        
+        # Agrupar por ref_unique
+        docs_by_ref = {}
+        for doc in documentos:
+            ref = doc.get('ref_unique')
+            if ref not in docs_by_ref:
+                docs_by_ref[ref] = []
+            
+            # Gerar URL pública do documento
+            storage_path = doc.get('storage_path')
+            doc_url = None
+            if storage_path:
+                try:
+                    # Gerar URL assinada com 1 hora de validade
+                    url_response = supabase_admin.storage.from_('processos-documentos').create_signed_url(storage_path, 3600)
+                    doc_url = url_response.get('signedURL')
+                except Exception as url_error:
+                    print(f"[EXPORT_REL][DOCS] Erro ao gerar URL para {storage_path}: {url_error}")
+            
+            docs_by_ref[ref].append({
+                'nome': doc.get('nome_exibicao'),
+                'extensao': doc.get('extensao'),
+                'tamanho': doc.get('tamanho_bytes'),
+                'data_upload': doc.get('data_upload'),
+                'url': doc_url
+            })
+        
+        print(f"[EXPORT_REL][DOCS] Encontrados documentos para {len(docs_by_ref)} processos")
+        return docs_by_ref
+        
+    except Exception as e:
+        print(f"[EXPORT_REL][DOCS][ERRO] {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
+
 def extract_filters(req_json):
     filters = {}
     for col in TABLE_COLUMNS:
@@ -376,6 +430,16 @@ def search_processos():
         
         rows = post_fetch_filter(rows, filters)
         print(f"[EXPORT_REL] Após pós-filtro: {len(rows)}")
+        
+        # Buscar documentos para os processos (antes da paginação para ter todos os refs)
+        ref_unique_list = [r.get('ref_unique') for r in rows if r.get('ref_unique')]
+        documentos_map = get_documentos_by_ref_unique(ref_unique_list)
+        
+        # Adicionar documentos aos registros
+        for row in rows:
+            ref = row.get('ref_unique')
+            row['documentos'] = documentos_map.get(ref, [])
+        
         page_rows, total = paginate(rows, page, page_size)
         duration = (datetime.now() - started_at).total_seconds()
         return jsonify({

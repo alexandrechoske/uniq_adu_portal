@@ -103,27 +103,104 @@ document.addEventListener('DOMContentLoaded',()=>{
         let val = r[c];
         if(val===null||val===undefined) val='';
         
+        // Formatação especial para coluna de documentos
+        if(c === 'documentos') {
+          td.className = 'documentos-cell';
+          if(Array.isArray(val) && val.length > 0) {
+            const docsContainer = document.createElement('div');
+            docsContainer.className = 'documentos-container';
+            
+            val.forEach(doc => {
+              const docLink = document.createElement('a');
+              docLink.href = doc.url || '#';
+              docLink.target = '_blank';
+              docLink.rel = 'noopener noreferrer';
+              docLink.className = 'documento-badge';
+              docLink.title = `${doc.nome} (${formatBytes(doc.tamanho)})`;
+              
+              // Ícone baseado na extensão
+              const icon = getFileIcon(doc.extensao);
+              docLink.innerHTML = `
+                <i class="mdi ${icon}"></i>
+                <span class="documento-nome">${truncateText(doc.nome, 20)}</span>
+                <span class="documento-ext">.${doc.extensao}</span>
+              `;
+              
+              docsContainer.appendChild(docLink);
+            });
+            
+            // Badge de contagem se houver muitos documentos
+            if(val.length > 3) {
+              const countBadge = document.createElement('span');
+              countBadge.className = 'documentos-count-badge';
+              countBadge.textContent = `+${val.length - 3}`;
+              countBadge.title = `Total: ${val.length} documentos`;
+              docsContainer.appendChild(countBadge);
+            }
+            
+            td.appendChild(docsContainer);
+          } else {
+            td.innerHTML = '<span class="text-gray-400 text-xs">Sem documentos</span>';
+          }
+        }
         // Formatação especial para diferentes tipos de dados
-        if(c.includes('valor') && val && !isNaN(val)) {
+        else if(c.includes('valor') && val && !isNaN(val)) {
           val = parseFloat(val).toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'USD',
             minimumFractionDigits: 2
           });
+          td.textContent = val;
         } else if(c.includes('data') && val) {
           // Manter formato original da data, mas adicionar tooltip se necessário
           td.title = val;
+          td.textContent = val;
         } else if(c.includes('cnpj') && val) {
           // Formatar CNPJ se necessário
           val = val.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+          td.textContent = val;
+        } else {
+          td.textContent = val;
         }
         
-        td.textContent = val;
         td.setAttribute('data-column', c);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
     });
+  }
+  
+  // Função auxiliar para formatar bytes
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+  
+  // Função auxiliar para obter ícone baseado na extensão
+  function getFileIcon(extension) {
+    const iconMap = {
+      'pdf': 'mdi-file-pdf-box',
+      'xml': 'mdi-file-xml-box',
+      'xlsx': 'mdi-file-excel-box',
+      'xls': 'mdi-file-excel-box',
+      'doc': 'mdi-file-word-box',
+      'docx': 'mdi-file-word-box',
+      'jpg': 'mdi-file-image',
+      'jpeg': 'mdi-file-image',
+      'png': 'mdi-file-image',
+      'zip': 'mdi-folder-zip',
+      'rar': 'mdi-folder-zip'
+    };
+    return iconMap[extension?.toLowerCase()] || 'mdi-file-document';
+  }
+  
+  // Função auxiliar para truncar texto
+  function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   }
 
   async function executarBusca(){
@@ -154,7 +231,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     `;
     
     try{
-      const res = await fetch('/export_relatorios/api/search',{
+      const res = await fetch('/export_relatorios/api/search_processos',{
         method:'POST',
         headers:{'Content-Type':'application/json','X-API-Key':window.API_BYPASS_KEY||''},
         body:JSON.stringify(filtros)
@@ -162,12 +239,12 @@ document.addEventListener('DOMContentLoaded',()=>{
       const data = await res.json();
       if(!data.success) throw new Error(data.error||'Erro desconhecido');
       
-      statusEl.textContent=`${data.total} registros encontrados em ${data.duration.toFixed(2)}s`; 
+      statusEl.textContent=`${data.total_count} registros encontrados em ${data.duration.toFixed(2)}s`; 
       lastColumns = data.columns;
       renderTable(data.columns, data.rows);
       
       // Paginação
-      const total = data.total;
+      const total = data.total_count;
       totalPages = Math.max(1, Math.ceil(total / data.page_size));
       currentPageEl.textContent = data.page;
       totalPagesEl.textContent = totalPages;
@@ -493,5 +570,5 @@ document.addEventListener('DOMContentLoaded',()=>{
   btnExecutar?.addEventListener('click', executarBusca);
   prevBtn?.addEventListener('click', async()=>{ if(currentPage>1){ currentPage--; await buscarPagina(); }});
   nextBtn?.addEventListener('click', async()=>{ if(currentPage<totalPages){ currentPage++; await buscarPagina(); }});
-  btnExportar?.addEventListener('click', exportarCSV);
+  btnExportar?.addEventListener('click', exportarCsv);
 });
