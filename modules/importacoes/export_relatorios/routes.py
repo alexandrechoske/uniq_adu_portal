@@ -6,6 +6,9 @@ import csv
 import io
 import re
 import os
+import zipfile
+import requests
+from io import BytesIO
 
 # Blueprint acessível por todas as roles
 export_relatorios_bp = Blueprint(
@@ -562,6 +565,90 @@ def get_filter_options():
         
     except Exception as e:
         print(f"[EXPORT_REL][ERRO_FILTER_OPTIONS] {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@export_relatorios_bp.route('/api/download_all_docs/<path:ref_unique>', methods=['GET'])
+def download_all_docs(ref_unique):
+    """
+    Baixa todos os documentos de um processo como arquivo ZIP.
+    Usa <path:ref_unique> para aceitar ref_unique com barra (ex: UN25/6564)
+    """
+    # Verificar bypass key ou sessão
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    
+    if not (api_bypass_key and request_api_key == api_bypass_key):
+        # Validar sessão normal
+        if 'user' not in session:
+            return jsonify({'success': False, 'error': 'Não autenticado'}), 401
+    
+    try:
+        print(f"[EXPORT_REL][ZIP] Iniciando download de documentos para {ref_unique}")
+        
+        # Buscar documentos do processo
+        response = supabase_admin.table('documentos_processos')\
+            .select('nome_exibicao, storage_path, extensao')\
+            .eq('ref_unique', ref_unique)\
+            .eq('ativo', True)\
+            .execute()
+        
+        documentos = response.data or []
+        
+        if not documentos:
+            return jsonify({'success': False, 'error': 'Nenhum documento encontrado'}), 404
+        
+        print(f"[EXPORT_REL][ZIP] Encontrados {len(documentos)} documentos")
+        
+        # Criar ZIP em memória
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for doc in documentos:
+                storage_path = doc.get('storage_path')
+                nome_arquivo = doc.get('nome_exibicao')
+                
+                try:
+                    # Gerar URL assinada
+                    url_response = supabase_admin.storage.from_('processos-documentos').create_signed_url(storage_path, 300)
+                    doc_url = url_response.get('signedURL')
+                    
+                    if not doc_url:
+                        print(f"[EXPORT_REL][ZIP] Erro ao gerar URL para {storage_path}")
+                        continue
+                    
+                    # Baixar arquivo do Supabase
+                    doc_response = requests.get(doc_url, timeout=30)
+                    
+                    if doc_response.status_code == 200:
+                        # Adicionar ao ZIP
+                        zip_file.writestr(nome_arquivo, doc_response.content)
+                        print(f"[EXPORT_REL][ZIP] Adicionado: {nome_arquivo}")
+                    else:
+                        print(f"[EXPORT_REL][ZIP] Erro ao baixar {nome_arquivo}: Status {doc_response.status_code}")
+                        
+                except Exception as doc_error:
+                    print(f"[EXPORT_REL][ZIP] Erro ao processar {nome_arquivo}: {doc_error}")
+                    continue
+        
+        # Preparar resposta
+        zip_buffer.seek(0)
+        zip_filename = f"{ref_unique.replace('/', '-')}_documentos.zip"
+        
+        print(f"[EXPORT_REL][ZIP] ZIP criado com sucesso: {zip_filename}")
+        
+        return Response(
+            zip_buffer.getvalue(),
+            mimetype='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename={zip_filename}',
+                'Content-Type': 'application/zip'
+            }
+        )
+        
+    except Exception as e:
+        print(f"[EXPORT_REL][ZIP][ERRO] {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
