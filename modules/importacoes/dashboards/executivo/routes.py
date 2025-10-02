@@ -1212,7 +1212,10 @@ def recent_operations():
             'peso_bruto', 'urf_despacho', 'urf_despacho_normalizado', 'container',
             'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
             'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',
-            'canal', 'data_desembaraco', 'despesas_processo'
+            'canal', 'data_desembaraco', 'despesas_processo',
+            
+            # CORREÇÃO BUG: Incluir pais_procedencia e url_bandeira para o modal
+            'pais_procedencia', 'pais_procedencia_normalizado', 'url_bandeira'
         ]
         
         # Colunas normalizadas disponíveis
@@ -1222,6 +1225,13 @@ def recent_operations():
         available_columns = [col for col in relevant_columns if col in df_table.columns]
         print(f"[DASHBOARD_EXECUTIVO] Colunas disponíveis: {available_columns}")
         print(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
+        
+        # DEBUG: Verificar se data_fechamento está disponível
+        if 'data_fechamento' in df_table.columns:
+            print(f"[DASHBOARD_EXECUTIVO] ✅ Coluna 'data_fechamento' DISPONÍVEL no DataFrame")
+        else:
+            print(f"[DASHBOARD_EXECUTIVO] ❌ Coluna 'data_fechamento' NÃO ENCONTRADA no DataFrame")
+            print(f"[DASHBOARD_EXECUTIVO] Colunas presentes no DataFrame: {list(df_table.columns)}")
         
         # Dados para a tabela (limitados a 50)
         operations_table_data = df_table[available_columns].to_dict('records')
@@ -1249,6 +1259,20 @@ def recent_operations():
                 print(f"[RECENT_OPERATIONS] custo_total (enviado): {op.get('custo_total', 'N/A')}")
                 print(f"[RECENT_OPERATIONS] custo_total_view: {op.get('custo_total_view', 'N/A')}")
                 print(f"[RECENT_OPERATIONS] custo_total_original: {op.get('custo_total_original', 'N/A')}")
+                break
+        
+        # Log específico para o processo 5360 - verificar data_fechamento
+        for op in operations_all_data:
+            ref_unique = str(op.get('ref_unique', ''))
+            if '5360' in ref_unique:
+                print(f"[RECENT_OPERATIONS] *** PROCESSO 5360 DADOS PARA FRONTEND (COMPLETO) ***")
+                print(f"[RECENT_OPERATIONS] ref_unique: {op.get('ref_unique', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] data_abertura: {op.get('data_abertura', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] data_embarque: {op.get('data_embarque', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] data_chegada: {op.get('data_chegada', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] data_fechamento: {op.get('data_fechamento', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] data_registro: {op.get('data_registro', 'N/A')}")
+                print(f"[RECENT_OPERATIONS] Campos disponíveis: {list(op.keys())}")
                 break
         
         return jsonify({

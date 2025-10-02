@@ -51,6 +51,31 @@ def dashboards():
 def ferramentas():
     return render_template('ferramentas.html')
 
+@bp.route('/test-tabs')
+@login_required
+def test_tabs():
+    """Página de teste do novo layout com tabs"""
+    try:
+        user = session.get('user', {})
+        if not isinstance(user, dict):
+            user = {}
+        
+        # Obter menu filtrado baseado nos perfis do usuário
+        filtered_menu = PerfilAccessService.get_filtered_menu_structure()
+        accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        
+        print(f"[MENU TEST TABS] Menu filtrado para {user.get('email')}: {list(filtered_menu.keys())}")
+        
+        return render_template('test_menu_tabs.html', 
+                             filtered_menu=filtered_menu,
+                             accessible_modules=accessible_modules,
+                             user_perfis=user.get('user_perfis', []))
+    except Exception as e:
+        app.logger.exception('[MENU TEST TABS] Erro ao renderizar: %s', e)
+        return render_template('errors/500.html'), 500
+def ferramentas():
+    return render_template('ferramentas.html')
+
 @bp.route('/configuracoes')
 @login_required
 def configuracoes():

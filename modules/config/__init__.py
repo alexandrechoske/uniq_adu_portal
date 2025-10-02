@@ -2,7 +2,7 @@
 Módulo de Configuração - UniSystem Portal
 
 Este módulo gerencia:
-- Configuração de logos de clientes
+- Configuração de Clientes
 - Gerenciamento de ícones de materiais
 - Configurações de CNPJ e dados cadastrais
 - Upload e manipulação de assets visuais

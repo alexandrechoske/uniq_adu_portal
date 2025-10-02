@@ -13,7 +13,7 @@ bp = Blueprint('config', __name__, url_prefix='/config')
 @login_required
 @role_required(['admin'])
 def logos_clientes():
-    """Página de gerenciamento de logos de clientes"""
+    """Página de gerenciamento de Clientes"""
     return render_template('config/logos_clientes.html')
 
 @bp.route('/api/cnpj-options')
@@ -39,7 +39,7 @@ def api_cnpj_options():
 @login_required
 @role_required(['admin'])
 def api_logos_clientes():
-    """API para listar logos de clientes"""
+    """API para listar Clientes"""
     try:
         response = supabase_admin.table('cad_clientes').select('*').order('razao_social').execute()
         
@@ -48,7 +48,7 @@ def api_logos_clientes():
             'data': response.data or []
         })
     except Exception as e:
-        print(f"[CONFIG] Erro ao buscar logos de clientes: {e}")
+        print(f"[CONFIG] Erro ao buscar Clientes: {e}")
         return jsonify({
             'success': False,
             'error': str(e)

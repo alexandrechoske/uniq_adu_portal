@@ -1,0 +1,896 @@
+.export-info-box {
+    background: var(--color-white);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem
+}
+
+.export-grid {
+    display: grid;
+    gap: 1rem
+}
+
+@media (min-width:768px) {
+    .export-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))
+    }
+}
+
+/* Estilos para campos de busca múltipla */
+.multi-search-field {
+    position: relative;
+}
+
+.multi-search-field input.border-green-500 {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    background-color: #f0fdf4;
+}
+
+.multi-search-field input.border-blue-500 {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.multi-search-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    opacity: 0.8;
+}
+
+.multi-search-field:hover .multi-search-hint {
+    opacity: 1;
+}
+
+/* Skeleton Loading para Filtros Avançados */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 8px;
+    height: 42px;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skeleton-label {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    height: 14px;
+    width: 60%;
+    margin-bottom: 4px;
+}
+
+/* Estilização avançada da tabela de resultados */
+#tabela-wrapper {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    background: white;
+    width: 100%;
+    max-height: 70vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Adicionar overflow apenas quando houver dados */
+#tabela-wrapper.has-data {
+    overflow: auto;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+#tabela-resultados {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* min-width aplicado apenas quando há dados */
+#tabela-wrapper.has-data #tabela-resultados {
+    min-width: 1800px; /* Largura mínima para garantir espaço para todas as colunas */
+}
+
+#tabela-resultados th,
+#tabela-resultados td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    white-space: nowrap;
+    min-width: 120px; /* Largura mínima para cada coluna */
+}
+
+#tabela-resultados thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    font-weight: 700;
+    color: #374151;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+#tabela-resultados thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+#tabela-resultados thead th:last-child {
+    border-top-right-radius: 12px;
+}
+
+#tabela-resultados tbody tr {
+    transition: all 0.2s ease;
+    background: white;
+}
+
+#tabela-resultados tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+#tabela-resultados tbody tr:hover {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+#tabela-resultados tbody td {
+    color: #374151;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px; /* Aumentei um pouco para melhor legibilidade */
+    min-width: 120px; /* Largura mínima consistente */
+}
+
+/* Estilização específica por tipo de coluna */
+#tabela-resultados tbody td[data-column*="data"] {
+    color: #6366f1;
+    font-weight: 500;
+    min-width: 100px;
+    max-width: 110px;
+}
+
+#tabela-resultados tbody td[data-column*="valor"] {
+    color: #059669;
+    font-weight: 600;
+    text-align: right;
+    min-width: 110px;
+    max-width: 130px;
+}
+
+#tabela-resultados tbody td[data-column*="status"] {
+    font-weight: 500;
+    min-width: 120px;
+    max-width: 150px;
+}
+
+#tabela-resultados tbody td[data-column*="cnpj"] {
+    font-family: 'Courier New', monospace;
+    color: #7c3aed;
+    font-weight: 500;
+    min-width: 140px;
+    max-width: 160px;
+}
+
+#tabela-resultados tbody td[data-column*="ref"] {
+    color: #dc2626;
+    font-weight: 600;
+    min-width: 100px;
+    max-width: 120px;
+}
+
+#tabela-resultados tbody td[data-column*="mercadoria"] {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+#tabela-resultados tbody td[data-column*="importador"] {
+    min-width: 180px;
+    max-width: 250px;
+}
+
+#tabela-resultados tbody td[data-column*="exportador"] {
+    min-width: 180px;
+    max-width: 250px;
+}
+
+/* Estado vazio da tabela */
+.tabela-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: #6b7280;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-radius: 8px;
+    min-height: 300px;
+    width: 100%;
+}
+
+.tabela-empty-state i {
+    font-size: 4rem;
+    color: #d1d5db;
+    margin-bottom: 1.5rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.tabela-empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+
+.tabela-empty-state p {
+    font-size: 0.95rem;
+    color: #6b7280;
+    text-align: center;
+    max-width: 500px;
+    line-height: 1.6;
+}
+
+/* Scroll personalizado para horizontal e vertical */
+#tabela-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#tabela-wrapper::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+#tabela-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+#tabela-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+#tabela-wrapper::-webkit-scrollbar-corner {
+    background: #f1f5f9;
+}
+
+/* Indicador visual de scroll horizontal */
+#tabela-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 100%;
+    background: linear-gradient(to left, rgba(255,255,255,0.8), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#tabela-wrapper:hover::after {
+    opacity: 1;
+}
+
+/* Melhorias nos botões e paginação */
+.export-card .btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    transition: all 0.2s ease;
+}
+
+.export-card .btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+.export-card .btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    transition: all 0.2s ease;
+}
+
+.export-card .btn-success:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Estilização da paginação */
+#paginacao {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+#paginacao button {
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+#paginacao button:hover:not(:disabled) {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Indicadores de status melhorados */
+#consulta-status {
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+/* Animação para loading spinner */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Alinhamento e layout melhorado para página de exportação */
+.export-page {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.export-page .actions-bar {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+}
+
+.export-page .main-content {
+    padding: 0;
+}
+
+.export-page .content-wrapper {
+    padding: 1.5rem;
+    background: transparent;
+    box-shadow: none;
+    border: none;
+}
+
+/* Espaçamento entre blocos */
+.export-section {
+    margin-bottom: 2rem;
+}
+
+.export-section:last-child {
+    margin-bottom: 0;
+}
+
+/* Melhoria visual dos cards */
+.export-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s ease;
+}
+
+.export-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Header da página */
+.export-header {
+    margin-bottom: 2rem;
+}
+
+.export-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.export-description {
+    color: #6b7280;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* ========== ESTILOS PARA DOCUMENTOS ========== */
+
+/* Célula de documentos */
+.documentos-cell {
+    padding: 0.5rem !important;
+    vertical-align: middle;
+    min-width: 200px;
+}
+
+/* Container de documentos */
+.documentos-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    align-items: center;
+}
+
+/* Badge de documento */
+.documento-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    max-width: 200px;
+}
+
+.documento-badge:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.documento-badge i {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.documento-nome {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.documento-ext {
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+/* Badge de contagem */
+.documentos-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.375rem;
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: help;
+}
+
+/* Ícones específicos por tipo de arquivo */
+.documento-badge .mdi-file-pdf-box {
+    color: #fef3f2;
+}
+
+.documento-badge .mdi-file-xml-box {
+    color: #fef7cd;
+}
+
+.documento-badge .mdi-file-excel-box {
+    color: #d1fae5;
+}
+
+.documento-badge .mdi-file-word-box {
+    color: #dbeafe;
+}
+
+.documento-badge .mdi-file-image {
+    color: #fce7f3;
+}
+
+.documento-badge .mdi-folder-zip {
+    color: #e0e7ff;
+}
+
+/* Responsividade para documentos */
+@media (max-width: 768px) {
+    .documentos-cell {
+        min-width: 150px;
+    }
+    
+    .documento-badge {
+        max-width: 150px;
+    }
+    
+    .documento-nome {
+        max-width: 80px;
+    }
+}
+
+/* ========== MODAL DE DOCUMENTOS ========== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    max-width: 700px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+    background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-title i {
+    font-size: 1.5rem;
+    color: #3b82f6;
+}
+
+.modal-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background: #e5e7eb;
+    color: #374151;
+    transform: rotate(90deg);
+}
+
+.modal-close-btn i {
+    font-size: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-process-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.modal-ref-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1e40af;
+}
+
+.modal-ref-value {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    background: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #93c5fd;
+}
+
+.btn-download-all {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-download-all:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+}
+
+.btn-download-all:active {
+    transform: translateY(0);
+}
+
+.btn-download-all i {
+    font-size: 1.125rem;
+}
+
+.modal-docs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.modal-doc-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.modal-doc-item:hover {
+    border-color: #3b82f6;
+    background: #f9fafb;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+
+.modal-doc-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-radius: 0.5rem;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.modal-doc-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-doc-name {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.9375rem;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.modal-doc-descricao {
+    font-size: 0.8125rem;
+    color: #059669;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background: #d1fae5;
+    border-radius: 0.25rem;
+    border-left: 3px solid #10b981;
+    word-wrap: break-word;
+    word-break: break-word;
+    line-height: 1.4;
+    max-width: 100%;
+}
+
+.modal-doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.modal-doc-ext {
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+.modal-doc-size {
+    color: #9ca3af;
+}
+
+.modal-doc-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.modal-doc-download:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.modal-doc-download i {
+    font-size: 1.125rem;
+}
+
+.modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    gap: 1rem;
+}
+
+.modal-loading.hidden {
+    display: none;
+}
+
+.spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 4px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.modal-loading p {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Badge de contagem agora clicável */
+.documentos-count-badge {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.documentos-count-badge:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+    transform: scale(1.05);
+}
+
+@media (max-width: 640px) {
+    .modal-container {
+        max-width: 95%;
+        max-height: 90vh;
+    }
+    
+    .modal-process-info {
+        flex-wrap: wrap;
+    }
+    
+    .btn-download-all {
+        width: 100%;
+        margin-left: 0;
+        justify-content: center;
+    }
+    
+    .modal-doc-item {
+        flex-wrap: wrap;
+    }
+    
+    .modal-doc-download {
+        width: 100%;
+    }
+}
