@@ -129,11 +129,19 @@ def apply_query_filters(q, filters: dict, user: dict):
     user_companies = user.get('user_companies') or []
     
     # Campos que suportam busca múltipla (separados por vírgula)
-    multi_search_fields = ['ref_importador', 'ref_unique', 'numero_di']
+    multi_search_fields = ['ref_importador', 'ref_unique', 'numero_di', 'container']
+    
+    # Campos de data range (não processar no server-side, serão filtrados em Python)
+    date_range_fields = [
+        'data_embarque_start', 'data_embarque_end',
+        'data_chegada_start', 'data_chegada_end', 
+        'data_registro_start', 'data_registro_end',
+        'data_desembaraco_start', 'data_desembaraco_end'
+    ]
     
     # Campos que faremos server-side (igualdade ou like simples)
     for col, val in filters.items():
-        if col in ['date_start','date_end','older_than_days','page','page_size','export']:
+        if col in ['date_start','date_end','older_than_days','page','page_size','export'] + date_range_fields:
             continue
         if val is None or val == '':
             continue
@@ -227,18 +235,42 @@ def validate_user_data_access(rows, user):
         return []
 
 def post_fetch_filter(rows, filters):
-    """Filtragem em Python para datas (formato texto). Sem recorte automático se usuário não define intervalo."""
+    """Filtragem em Python para datas (formato texto). Suporta múltiplos intervalos de data."""
     date_start = filters.get('date_start')
     date_end = filters.get('date_end')
+    
+    # Filtros de data range específicos
+    data_embarque_start = filters.get('data_embarque_start')
+    data_embarque_end = filters.get('data_embarque_end')
+    data_chegada_start = filters.get('data_chegada_start')
+    data_chegada_end = filters.get('data_chegada_end')
+    data_registro_start = filters.get('data_registro_start')
+    data_registro_end = filters.get('data_registro_end')
+    data_desembaraco_start = filters.get('data_desembaraco_start')
+    data_desembaraco_end = filters.get('data_desembaraco_end')
+    
     # Identificadores que devem permitir ignorar o recorte padrão de 6 meses quando usados
     identifier_filters = ['ref_unique','numero_di','ref_importador','container']
     has_identifier = any(filters.get(f) for f in identifier_filters)
 
+    # Parse das datas principais
     dt_start = parse_br_date(date_start) if date_start else None
     dt_end = parse_br_date(date_end) if date_end else None
+    
+    # Parse dos filtros de data range
+    dt_embarque_start = parse_br_date(data_embarque_start) if data_embarque_start else None
+    dt_embarque_end = parse_br_date(data_embarque_end) if data_embarque_end else None
+    dt_chegada_start = parse_br_date(data_chegada_start) if data_chegada_start else None
+    dt_chegada_end = parse_br_date(data_chegada_end) if data_chegada_end else None
+    dt_registro_start = parse_br_date(data_registro_start) if data_registro_start else None
+    dt_registro_end = parse_br_date(data_registro_end) if data_registro_end else None
+    dt_desembaraco_start = parse_br_date(data_desembaraco_start) if data_desembaraco_start else None
+    dt_desembaraco_end = parse_br_date(data_desembaraco_end) if data_desembaraco_end else None
+    
     cutoff = None  # Sem cutoff automático agora
 
     def row_pass(r):
+        # Filtro principal (data_abertura/data_registro)
         raw = r.get('data_abertura') or r.get('data_registro')
         dt = parse_br_date(raw)
         if cutoff and dt:
@@ -248,38 +280,46 @@ def post_fetch_filter(rows, filters):
             return False
         if dt_end and dt and dt > dt_end:
             return False
+        
+        # Filtro de data embarque
+        if dt_embarque_start or dt_embarque_end:
+            dt_embarque = parse_br_date(r.get('data_embarque'))
+            if dt_embarque:
+                if dt_embarque_start and dt_embarque < dt_embarque_start:
+                    return False
+                if dt_embarque_end and dt_embarque > dt_embarque_end:
+                    return False
+        
+        # Filtro de data chegada
+        if dt_chegada_start or dt_chegada_end:
+            dt_chegada = parse_br_date(r.get('data_chegada'))
+            if dt_chegada:
+                if dt_chegada_start and dt_chegada < dt_chegada_start:
+                    return False
+                if dt_chegada_end and dt_chegada > dt_chegada_end:
+                    return False
+        
+        # Filtro de data registro
+        if dt_registro_start or dt_registro_end:
+            dt_reg = parse_br_date(r.get('data_registro'))
+            if dt_reg:
+                if dt_registro_start and dt_reg < dt_registro_start:
+                    return False
+                if dt_registro_end and dt_reg > dt_registro_end:
+                    return False
+        
+        # Filtro de data desembaraço
+        if dt_desembaraco_start or dt_desembaraco_end:
+            dt_desemb = parse_br_date(r.get('data_desembaraco'))
+            if dt_desemb:
+                if dt_desembaraco_start and dt_desemb < dt_desembaraco_start:
+                    return False
+                if dt_desembaraco_end and dt_desemb > dt_desembaraco_end:
+                    return False
+        
         return True
 
-    if dt_start or dt_end:
-        before = len(rows)
-        rows = [r for r in rows if row_pass(r)]
-        after = len(rows)
-        print(f"[EXPORT_REL][FILTRO_DATAS] has_identifier={has_identifier} dt_start={dt_start} dt_end={dt_end} antes={before} depois={after}")
-    return rows
-    """Filtragem em Python para datas (formato texto). Sem recorte automático se usuário não define intervalo."""
-    date_start = filters.get('date_start')
-    date_end = filters.get('date_end')
-    # Identificadores que devem permitir ignorar o recorte padrão de 6 meses quando usados
-    identifier_filters = ['ref_unique','numero_di','ref_importador','container']
-    has_identifier = any(filters.get(f) for f in identifier_filters)
-
-    dt_start = parse_br_date(date_start) if date_start else None
-    dt_end = parse_br_date(date_end) if date_end else None
-    cutoff = None  # Sem cutoff automático agora
-
-    def row_pass(r):
-        raw = r.get('data_abertura') or r.get('data_registro')
-        dt = parse_br_date(raw)
-        if cutoff and dt:
-            if dt > cutoff:
-                return False
-        if dt_start and dt and dt < dt_start:
-            return False
-        if dt_end and dt and dt > dt_end:
-            return False
-        return True
-
-    if dt_start or dt_end:
+    if dt_start or dt_end or dt_embarque_start or dt_embarque_end or dt_chegada_start or dt_chegada_end or dt_registro_start or dt_registro_end or dt_desembaraco_start or dt_desembaraco_end:
         before = len(rows)
         rows = [r for r in rows if row_pass(r)]
         after = len(rows)
@@ -303,12 +343,20 @@ def extract_filters(req_json):
             filters[extra] = req_json.get(extra)
     return filters
 
-@export_relatorios_bp.route('/api/search', methods=['POST'])
-@login_required
+@export_relatorios_bp.route('/api/search_processos', methods=['POST'])
 def search_processos():
     """Executa busca com filtros e retorna JSON paginado."""
+    # Verificar bypass key ou sessão
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    
+    if not (api_bypass_key and request_api_key == api_bypass_key):
+        # Validar sessão normal
+        if 'user' not in session:
+            return jsonify({'success': False, 'error': 'Não autenticado'}), 401
+    
     started_at = datetime.now()
-    user = session.get('user', {})
+    user = session.get('user', {}) if 'user' in session else {'role': 'admin', 'user_companies': []}
     payload = request.get_json(silent=True) or {}
     filters = extract_filters(payload)
     page = int(filters.get('page') or 1)
@@ -336,7 +384,7 @@ def search_processos():
             'page': page,
             'page_size': page_size,
             'returned': len(page_rows),
-            'total': total,
+            'total_count': total,
             'columns': TABLE_COLUMNS,
             'rows': page_rows
         })
@@ -384,4 +432,72 @@ def export_csv():
         return Response(csv_data, mimetype='text/csv; charset=utf-8', headers=headers)
     except Exception as e:
         print(f"[EXPORT_REL][ERRO_EXPORT] {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@export_relatorios_bp.route('/api/filter_options', methods=['GET'])
+def get_filter_options():
+    """
+    Retorna opções disponíveis para campos categóricos (dropdowns/checkboxes).
+    Usa cache e limita quantidade para performance.
+    """
+    # Verificar bypass key ou sessão
+    api_bypass_key = os.getenv('API_BYPASS_KEY')
+    request_api_key = request.headers.get('X-API-Key')
+    
+    if not (api_bypass_key and request_api_key == api_bypass_key):
+        # Validar sessão normal
+        if 'user' not in session:
+            return jsonify({'success': False, 'error': 'Não autenticado'}), 401
+    
+    try:
+        user = session.get('user', {}) if 'user' in session else {'role': 'admin', 'user_companies': []}
+        
+        # Campos categóricos que vamos buscar opções
+        categorical_fields = {
+            'modal': {'limit': 10},
+            'canal': {'limit': 10},
+            'status_macro': {'limit': 20},
+            'status_macro_sistema': {'limit': 30},
+            'status_processo': {'limit': 50},
+            'urf_despacho': {'limit': 50},
+            'mercadoria': {'limit': 100}
+        }
+        
+        result = {}
+        
+        for field, config in categorical_fields.items():
+            # Buscar todos os valores e filtrar em Python (mais simples para valores distintos)
+            q = build_base_query(user)
+            
+            # Limitar a busca inicial
+            response = q.limit(5000).execute()
+            
+            # Extrair valores únicos
+            values = []
+            seen = set()
+            for row in response.data or []:
+                val = row.get(field)
+                if val and val != 'null' and val not in seen:
+                    values.append(val)
+                    seen.add(val)
+                    if len(values) >= config['limit']:
+                        break
+            
+            # Ordenar os valores
+            values.sort()
+            
+            result[field] = {
+                'values': values[:config['limit']],
+                'count': len(values),
+                'limited': len(values) >= config['limit']
+            }
+        
+        print(f"[EXPORT_REL][FILTER_OPTIONS] Retornando opções para {len(result)} campos")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"[EXPORT_REL][ERRO_FILTER_OPTIONS] {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
