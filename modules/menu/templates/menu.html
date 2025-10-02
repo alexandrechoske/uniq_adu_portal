@@ -21,22 +21,6 @@
         {% set accessible_modules = get_user_accessible_modules() %}
         {% set filtered_menu = get_filtered_menu_structure() %}
         
-        <!-- Acesso Rápido - Chips com os módulos mais acessados -->
-        <div class="quick-access-container" id="quickAccessContainer">
-            <div class="quick-access-header">
-                <i class="mdi mdi-lightning-bolt"></i>
-                <span>Acesso Rápido</span>
-                <span class="quick-access-subtitle">Baseado nos seus acessos mais frequentes</span>
-            </div>
-            <div class="quick-access-chips" id="quickAccessChips">
-                <!-- Chips serão carregados via JavaScript -->
-                <div class="quick-access-loading">
-                    <i class="mdi mdi-loading mdi-spin"></i>
-                    <span>Carregando...</span>
-                </div>
-            </div>
-        </div>
-        
         <!-- Tabs de Navegação -->
         <div class="menu-tabs-container">
             <div class="menu-tabs">

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import check_password_hash
 from functools import wraps
 from extensions import supabase, supabase_admin
@@ -122,41 +122,22 @@ def test_connection():
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # LOG INICIAL: Informações da requisição
-        current_app.logger.info(f'[LOGIN_REQUIRED] === VERIFICAÇÃO DE AUTENTICAÇÃO ===')
-        current_app.logger.info(f'[LOGIN_REQUIRED] Endpoint: {request.endpoint}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] URL: {request.url}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] Método: {request.method}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] Headers: {dict(request.headers)}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] Cookies: {dict(request.cookies)}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] Session keys: {list(session.keys())}')
-        
         # Primeiro, verificar se existe usuário na sessão válida
         if 'user' in session and session.get('user') and isinstance(session['user'], dict):
-            current_app.logger.info('[LOGIN_REQUIRED] ✅ Chave "user" encontrada na sessão')
             user_data = session['user']
-            current_app.logger.info(f'[LOGIN_REQUIRED] user_data: {user_data}')
-            
             required_fields = ['id', 'email', 'role']
             missing_fields = [field for field in required_fields if not user_data.get(field)]
-            
-            current_app.logger.info(f'[LOGIN_REQUIRED] Campos obrigatórios: {required_fields}')
-            current_app.logger.info(f'[LOGIN_REQUIRED] Campos ausentes: {missing_fields}')
             
             # Se a sessão está válida e completa, usar ela (não fazer bypass)
             if not missing_fields:
                 print(f"[AUTH] Sessão válida encontrada para: {user_data.get('email')} - usando sessão existente")
-                current_app.logger.info(f'[LOGIN_REQUIRED] ✅ Sessão VÁLIDA para: {user_data.get("email")}')
                 
                 # Verificar expiração da sessão (12 horas)
                 session_created = session.get('created_at')
                 if session_created:
                     session_age = datetime.now().timestamp() - session_created
-                    current_app.logger.info(f'[LOGIN_REQUIRED] Idade da sessão: {session_age/3600:.1f} horas')
-                    
                     if session_age > 43200:  # 12 horas em segundos
                         print(f"[AUTH] Sessão expirada após {session_age/3600:.1f} horas")
-                        current_app.logger.warning(f'[LOGIN_REQUIRED] ❌ Sessão EXPIRADA ({session_age/3600:.1f} horas)')
                         session.clear()
                         flash('Sessão expirada. Faça login novamente.', 'warning')
                         return redirect(url_for('auth.login'))
@@ -164,28 +145,16 @@ def login_required(f):
                 # Atualizar última atividade
                 session['last_activity'] = datetime.now().timestamp()
                 session.permanent = True
-                current_app.logger.info('[LOGIN_REQUIRED] ✅ Autenticação OK - executando função protegida')
                 return f(*args, **kwargs)
-            else:
-                current_app.logger.warning(f'[LOGIN_REQUIRED] ❌ Campos ausentes na sessão: {missing_fields}')
-        else:
-            current_app.logger.warning('[LOGIN_REQUIRED] ❌ Chave "user" NÃO encontrada ou inválida na sessão')
         
         # Só usar bypass se NÃO existe sessão válida
         api_bypass_key = os.getenv('API_BYPASS_KEY')
         request_api_key = request.headers.get('X-API-Key')
         
-        current_app.logger.info('[LOGIN_REQUIRED] Verificando API Bypass...')
-        current_app.logger.info(f'[LOGIN_REQUIRED] API_BYPASS_KEY configurada: {"Sim" if api_bypass_key else "Não"}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] X-API-Key no header: {"Sim" if request_api_key else "Não"}')
-        current_app.logger.info(f'[LOGIN_REQUIRED] Keys coincidem: {api_bypass_key == request_api_key if api_bypass_key and request_api_key else "N/A"}')
-        
         print(f"[AUTH] Sessão inválida/inexistente, verificando bypass")
         
         if api_bypass_key and request_api_key == api_bypass_key:
             print(f"[AUTH] Bypass de API detectado - criando sessão temporária")
-            current_app.logger.info('[LOGIN_REQUIRED] ✅ API Bypass ATIVADO - criando sessão temporária')
-            
             # Criar uma sessão temporária para o bypass
             session['user'] = {
                 'id': 'api_bypass',
@@ -201,8 +170,6 @@ def login_required(f):
         
         # Se não tem sessão válida nem bypass, redirecionar para login
         print(f"[AUTH] Redirecionando para login - sem sessão válida nem bypass")
-        current_app.logger.warning('[LOGIN_REQUIRED] ❌ SEM autenticação - redirecionando para login')
-        current_app.logger.info('[LOGIN_REQUIRED] === FIM VERIFICAÇÃO ===')
         return redirect(url_for('auth.login'))
         
     return decorated_function
