@@ -87,6 +87,9 @@ from modules.importacoes import register_importacoes_blueprints
 # Import financeiro blueprint and registration function
 from modules.financeiro.routes import register_financeiro_blueprints
 
+# Import RH blueprint and registration function
+from modules.rh import register_rh_blueprints
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -128,6 +131,9 @@ register_importacoes_blueprints(app)
 
 # Register financeiro blueprints (módulo financeiro completo)
 register_financeiro_blueprints(app)
+
+# Register RH blueprints (módulo de RH completo)
+register_rh_blueprints(app)
 
 # Register module color helpers for templates
 register_module_color_helpers(app)

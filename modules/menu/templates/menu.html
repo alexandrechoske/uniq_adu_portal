@@ -44,6 +44,11 @@
                     <span>Ferramentas</span>
                 </button>
                 {% endif %}
+                
+                <button class="menu-tab" data-tab="rh">
+                    <i class="mdi mdi-account-tie"></i>
+                    <span>RH</span>
+                </button>
             </div>
         </div>
 
@@ -185,6 +190,19 @@
                 </div>
             </div>
             {% endif %}
+        </div>
+    </div>
+
+            <!-- Tab: RH -->
+            <div class="tab-content" data-content="rh">
+                <div class="cards-grid">
+                    <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="module-card" data-module="rh_colaboradores">
+                        <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
+                        <h4 class="module-title">Colaboradores</h4>
+                        <p class="module-desc">Gestão completa de colaboradores e histórico.</p>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
