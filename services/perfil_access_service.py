@@ -58,7 +58,7 @@ class PerfilAccessService:
         if user_role == 'admin' and user_perfil_principal == 'master_admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
-                'usuarios', 'agente', 'conferencia', 'materiais', 'config',
+                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh',
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
             ]
@@ -632,6 +632,17 @@ class PerfilAccessService:
                 'url': '/config',
                 'paginas': {
                     'sistema': {'nome': 'Sistema', 'url': '/config/sistema'}
+                }
+            },
+            'rh': {
+                'nome': 'Recursos Humanos',
+                'icone': 'fas fa-users',
+                'url': '/rh/colaboradores',
+                'paginas': {
+                    'colaboradores': {'nome': 'Gestão de Colaboradores', 'url': '/rh/colaboradores'},
+                    'recrutamento': {'nome': 'Recrutamento', 'url': '/rh/recrutamento'},
+                    'desempenho': {'nome': 'Avaliações', 'url': '/rh/desempenho'},
+                    'estrutura': {'nome': 'Estrutura Organizacional', 'url': '/rh/estrutura'}
                 }
             }
         }
