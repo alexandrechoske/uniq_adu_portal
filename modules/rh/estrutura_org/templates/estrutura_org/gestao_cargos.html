@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Cargos - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('estrutura_org.static', filename='estrutura_org/estrutura.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-rh-primary mb-1">
+                <i class="fas fa-briefcase"></i> Gestão de Cargos
+            </h2>
+            <p class="text-muted mb-0">Gerencie os cargos da organização</p>
+        </div>
+        <button class="btn btn-rh-primary btn-lg" data-bs-toggle="modal" data-bs-target="#modalCargo" onclick="abrirModalNovo()">
+            <i class="fas fa-plus"></i> Novo Cargo
+        </button>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="stats-label mb-1">Total de Cargos</p>
+                            <h3 class="stats-number">{{ total_cargos }}</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="stats-label mb-1">Grupos Distintos</p>
+                            <h3 class="stats-number">{{ total_grupos }}</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="stats-label mb-1">Status</p>
+                            <h3 class="stats-number" style="font-size: 1.5rem;">
+                                <span class="badge bg-success">Ativo</span>
+                            </h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Busca e Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control search-bar" 
+                               placeholder="Buscar por nome ou grupo...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="filterGrupo" class="form-select">
+                        <option value="">Todos os Grupos</option>
+                        {% for grupo in grupos %}
+                        <option value="{{ grupo }}">{{ grupo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltros()">
+                        <i class="fas fa-eraser"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Cargos -->
+    <div class="card">
+        <div class="card-body p-0">
+            {% if cargos|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-estrutura mb-0" id="tableCargos">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 35%;">Nome do Cargo</th>
+                            <th style="width: 20%;">Grupo</th>
+                            <th style="width: 30%;">Descrição</th>
+                            <th style="width: 10%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cargo in cargos %}
+                        <tr data-nome="{{ cargo.nome_cargo }}" data-grupo="{{ cargo.grupo_cargo or 'Sem Grupo' }}">
+                            <td class="text-muted small">{{ loop.index }}</td>
+                            <td>
+                                <strong>{{ cargo.nome_cargo }}</strong>
+                            </td>
+                            <td>
+                                {% if cargo.grupo_cargo %}
+                                <span class="badge badge-grupo {{ cargo.grupo_cargo.lower() }}">
+                                    {{ cargo.grupo_cargo }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cargo.descricao %}
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+                                      data-bs-toggle="tooltip" title="{{ cargo.descricao }}">
+                                    {{ cargo.descricao[:80] }}{% if cargo.descricao|length > 80 %}...{% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning btn-action me-1" 
+                                        onclick="editarCargo('{{ cargo.id }}')" 
+                                        data-bs-toggle="tooltip" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger btn-action" 
+                                        onclick="confirmarExclusao('{{ cargo.id }}', '{{ cargo.nome_cargo }}')"
+                                        data-bs-toggle="tooltip" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-briefcase"></i>
+                <h5>Nenhum cargo cadastrado</h5>
+                <p>Clique em "Novo Cargo" para adicionar o primeiro cargo</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Cargo -->
+<div class="modal fade" id="modalCargo" tabindex="-1" aria-labelledby="modalCargoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-rh-primary text-white">
+                <h5 class="modal-title" id="modalCargoLabel">
+                    <i class="fas fa-briefcase"></i> <span id="modalTitle">Novo Cargo</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCargo">
+                    <input type="hidden" id="cargo_id" name="cargo_id">
+                    
+                    <div class="row g-3">
+                        <!-- Nome do Cargo -->
+                        <div class="col-md-8">
+                            <label for="nome" class="form-label">
+                                Nome do Cargo <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   placeholder="Ex: Analista de Importação Pleno" required>
+                        </div>
+                        
+                        <!-- Grupo -->
+                        <div class="col-md-4">
+                            <label for="grupo" class="form-label">Grupo</label>
+                            <select class="form-select" id="grupo" name="grupo">
+                                <option value="">Selecione...</option>
+                                <option value="Operacional">Operacional</option>
+                                <option value="Liderança">Liderança</option>
+                                <option value="Administrativo">Administrativo</option>
+                                <option value="Estratégico">Estratégico</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Descrição -->
+                        <div class="col-12">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" 
+                                      rows="4" placeholder="Responsabilidades e requisitos do cargo..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-rh-primary" onclick="salvarCargo()">
+                    <i class="fas fa-save"></i> Salvar Cargo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Exclusão -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalExcluirLabel">
+                    <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Você tem certeza que deseja excluir o cargo:</p>
+                <p class="text-center">
+                    <strong id="cargoNomeExcluir"></strong>
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. O cargo só será excluído se não estiver associado a nenhum colaborador ou histórico.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
+                    <i class="fas fa-trash"></i> Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('estrutura_org.static', filename='estrutura_org/estrutura.js') }}?v=3"></script>
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Busca em tempo real
+document.getElementById('searchInput').addEventListener('keyup', filtrarTabela);
+document.getElementById('filterGrupo').addEventListener('change', filtrarTabela);
+
+function filtrarTabela() {
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const grupoValue = document.getElementById('filterGrupo').value.toLowerCase();
+    const rows = document.querySelectorAll('#tableCargos tbody tr');
+    
+    rows.forEach(row => {
+        const nome = row.dataset.nome.toLowerCase();
+        const grupo = row.dataset.grupo.toLowerCase();
+        
+        const matchSearch = nome.includes(searchValue) || grupo.includes(searchValue);
+        const matchGrupo = grupoValue === '' || grupo === grupoValue;
+        
+        if (matchSearch && matchGrupo) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function limparFiltros() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterGrupo').value = '';
+    filtrarTabela();
+}
+</script>
+{% endblock %}

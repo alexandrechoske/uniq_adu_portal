@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Departamentos - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('estrutura_org.static', filename='estrutura_org/estrutura.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-rh-primary mb-1">
+                <i class="fas fa-building"></i> Gestão de Departamentos
+            </h2>
+            <p class="text-muted mb-0">Gerencie os departamentos e centros de custo</p>
+        </div>
+        <button class="btn btn-rh-primary btn-lg" data-bs-toggle="modal" data-bs-target="#modalDepartamento" onclick="abrirModalNovoDepartamento()">
+            <i class="fas fa-plus"></i> Novo Departamento
+        </button>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="stats-label mb-1">Total de Departamentos</p>
+                            <h3 class="stats-number">{{ total_departamentos }}</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="stats-label mb-1">Com Centro de Custo</p>
+                            <h3 class="stats-number">{{ com_centro_custo }}</h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="stats-label mb-1">Status</p>
+                            <h3 class="stats-number" style="font-size: 1.5rem;">
+                                <span class="badge bg-success">Ativo</span>
+                            </h3>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Busca -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchInputDepto" class="form-control search-bar" 
+                               placeholder="Buscar por nome ou centro de custo...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosDepto()">
+                        <i class="fas fa-eraser"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Departamentos -->
+    <div class="card">
+        <div class="card-body p-0">
+            {% if departamentos|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-estrutura mb-0" id="tableDepartamentos">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 30%;">Nome do Departamento</th>
+                            <th style="width: 20%;">Centro de Custo</th>
+                            <th style="width: 30%;">Descrição</th>
+                            <th style="width: 15%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for depto in departamentos %}
+                        <tr data-nome="{{ depto.nome_departamento }}" data-centro="{{ depto.codigo_centro_custo or '' }}">
+                            <td class="text-muted small">{{ loop.index }}</td>
+                            <td>
+                                <strong>{{ depto.nome_departamento }}</strong>
+                            </td>
+                            <td>
+                                {% if depto.codigo_centro_custo %}
+                                <span class="centro-custo-badge">
+                                    <i class="fas fa-hashtag"></i> {{ depto.codigo_centro_custo }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">Não definido</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if depto.descricao %}
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+                                      data-bs-toggle="tooltip" title="{{ depto.descricao }}">
+                                    {{ depto.descricao[:60] }}...
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning btn-action me-1" 
+                                        onclick="editarDepartamento('{{ depto.id }}')" 
+                                        data-bs-toggle="tooltip" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger btn-action" 
+                                        onclick="confirmarExclusaoDepto('{{ depto.id }}', '{{ depto.nome_departamento }}')"
+                                        data-bs-toggle="tooltip" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-building"></i>
+                <h5>Nenhum departamento cadastrado</h5>
+                <p>Clique em "Novo Departamento" para adicionar o primeiro departamento</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Departamento -->
+<div class="modal fade" id="modalDepartamento" tabindex="-1" aria-labelledby="modalDepartamentoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-rh-primary text-white">
+                <h5 class="modal-title" id="modalDepartamentoLabel">
+                    <i class="fas fa-building"></i> <span id="modalTitleDepto">Novo Departamento</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formDepartamento">
+                    <input type="hidden" id="departamento_id" name="departamento_id">
+                    
+                    <div class="row g-3">
+                        <!-- Nome do Departamento -->
+                        <div class="col-md-8">
+                            <label for="nome_depto" class="form-label">
+                                Nome do Departamento <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome_depto" name="nome" 
+                                   placeholder="Ex: Financeiro, Importação, RH" required>
+                        </div>
+                        
+                        <!-- Centro de Custo -->
+                        <div class="col-md-4">
+                            <label for="codigo_centro_custo" class="form-label">Centro de Custo</label>
+                            <input type="text" class="form-control" id="codigo_centro_custo" 
+                                   name="codigo_centro_custo" 
+                                   placeholder="Ex: FIN-001">
+                        </div>
+                        
+                        <!-- Descrição -->
+                        <div class="col-12">
+                            <label for="descricao_depto" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao_depto" name="descricao" 
+                                      rows="3" placeholder="Atribuições e responsabilidades do departamento..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-rh-primary" onclick="salvarDepartamento()">
+                    <i class="fas fa-save"></i> Salvar Departamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Exclusão -->
+<div class="modal fade" id="modalExcluirDepto" tabindex="-1" aria-labelledby="modalExcluirDeptoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalExcluirDeptoLabel">
+                    <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Você tem certeza que deseja excluir o departamento:</p>
+                <p class="text-center">
+                    <strong id="deptoNomeExcluir"></strong>
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. O departamento só será excluído se não estiver associado a nenhum colaborador ou histórico.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoDepto">
+                    <i class="fas fa-trash"></i> Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('estrutura_org.static', filename='estrutura_org/estrutura.js') }}?v=2"></script>
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Busca em tempo real
+document.getElementById('searchInputDepto').addEventListener('keyup', filtrarTabelaDepto);
+
+function filtrarTabelaDepto() {
+    const searchValue = document.getElementById('searchInputDepto').value.toLowerCase();
+    const rows = document.querySelectorAll('#tableDepartamentos tbody tr');
+    
+    rows.forEach(row => {
+        const nome = row.dataset.nome.toLowerCase();
+        const centro = row.dataset.centro.toLowerCase();
+        
+        const matchSearch = nome.includes(searchValue) || centro.includes(searchValue);
+        
+        if (matchSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function limparFiltrosDepto() {
+    document.getElementById('searchInputDepto').value = '';
+    filtrarTabelaDepto();
+}
+</script>
+{% endblock %}

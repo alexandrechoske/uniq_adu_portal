@@ -640,9 +640,10 @@ class PerfilAccessService:
                 'url': '/rh/colaboradores',
                 'paginas': {
                     'colaboradores': {'nome': 'Gestão de Colaboradores', 'url': '/rh/colaboradores'},
+                    'estrutura_cargos': {'nome': 'Gestão de Cargos', 'url': '/rh/estrutura/cargos'},
+                    'estrutura_departamentos': {'nome': 'Gestão de Departamentos', 'url': '/rh/estrutura/departamentos'},
                     'recrutamento': {'nome': 'Recrutamento', 'url': '/rh/recrutamento'},
-                    'desempenho': {'nome': 'Avaliações', 'url': '/rh/desempenho'},
-                    'estrutura': {'nome': 'Estrutura Organizacional', 'url': '/rh/estrutura'}
+                    'desempenho': {'nome': 'Avaliações', 'url': '/rh/desempenho'}
                 }
             }
         }

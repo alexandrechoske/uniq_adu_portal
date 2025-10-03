@@ -933,6 +933,37 @@
                     <!-- REMOVED ANALYTICS FROM SIDEBAR -->
                 </div>
                 {% endif %}
+                
+                <!-- Seção Recursos Humanos -->
+                {% if 'rh' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-account-group text-sm"></i>
+                        <span>Recursos Humanos</span>
+                    </div>
+                    
+                    <a href="{{ url_for('colaboradores.lista_colaboradores') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}"
+                       title="Gestão de Colaboradores">
+                        <i class="mdi mdi-account-multiple"></i>
+                        <span class="sidebar-text">Gestão de Colaboradores</span>
+                    </a>
+                    
+                    <a href="{{ url_for('estrutura_org.gestao_cargos') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'estrutura_org.gestao_cargos' %}active{% endif %}"
+                       title="Gestão de Cargos">
+                        <i class="mdi mdi-briefcase"></i>
+                        <span class="sidebar-text">Gestão de Cargos</span>
+                    </a>
+                    
+                    <a href="{{ url_for('estrutura_org.gestao_departamentos') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'estrutura_org.gestao_departamentos' %}active{% endif %}"
+                       title="Gestão de Departamentos">
+                        <i class="mdi mdi-domain"></i>
+                        <span class="sidebar-text">Gestão de Departamentos</span>
+                    </a>
+                </div>
+                {% endif %}
             
             {% else %}
                 <!-- LISTA SIMPLES PARA USUÁRIOS COMUNS -->
