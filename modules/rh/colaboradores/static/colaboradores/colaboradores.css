@@ -1,0 +1,265 @@
+/* ===================================================================
+   ESTILOS DO MÓDULO RH - COLABORADORES
+   Cor principal: Roxo (#6f42c1)
+   =================================================================== */
+
+:root {
+    --rh-primary: #6f42c1;
+    --rh-primary-dark: #5a32a3;
+    --rh-primary-light: #9b72d4;
+    --rh-secondary: #e9ecef;
+}
+
+/* Cabeçalho do módulo */
+.rh-header {
+    padding: 20px;
+    background: linear-gradient(135deg, var(--rh-primary) 0%, var(--rh-primary-dark) 100%);
+    border-radius: 10px;
+    color: white;
+}
+
+.rh-header h2 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+}
+
+.rh-header p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Botões do RH */
+.btn-rh {
+    background-color: var(--rh-primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.btn-rh:hover {
+    background-color: var(--rh-primary-dark);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(111, 66, 193, 0.3);
+}
+
+.btn-rh:active {
+    transform: translateY(0);
+}
+
+/* Cards do RH */
+.rh-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--rh-primary);
+}
+
+.rh-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Ícones circulares */
+.rh-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.rh-icon-circle.bg-primary {
+    background-color: var(--rh-primary) !important;
+}
+
+/* Cabeçalho da tabela */
+.rh-table-header {
+    background-color: var(--rh-primary);
+    color: white;
+}
+
+.rh-table-header th {
+    border: none;
+    font-weight: 600;
+    padding: 15px;
+}
+
+/* Linhas da tabela */
+#tabelaColaboradores tbody tr {
+    transition: all 0.2s ease;
+}
+
+#tabelaColaboradores tbody tr:hover {
+    background-color: rgba(111, 66, 193, 0.05);
+    transform: scale(1.01);
+}
+
+/* Badges de status */
+.badge {
+    padding: 6px 12px;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+/* Botões de ação */
+.btn-group-sm .btn {
+    padding: 5px 10px;
+    font-size: 0.875rem;
+}
+
+/* Input de busca */
+.input-group-text {
+    background-color: var(--rh-primary);
+    color: white;
+    border: none;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--rh-primary);
+    box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+}
+
+/* Formulários */
+.form-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.form-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--rh-primary);
+}
+
+.form-section h5 {
+    color: var(--rh-primary);
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+/* Campo obrigatório */
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Seção de histórico */
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--rh-primary);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -30px;
+    top: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--rh-primary);
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px var(--rh-primary);
+}
+
+.timeline-date {
+    color: var(--rh-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.timeline-type {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .rh-header {
+        text-align: center;
+    }
+    
+    .rh-header .col-md-6 {
+        text-align: center !important;
+        margin-bottom: 10px;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rh-card {
+    animation: fadeIn 0.5s ease;
+}
+
+/* Loading spinner */
+.spinner-rh {
+    border: 3px solid rgba(111, 66, 193, 0.1);
+    border-top: 3px solid var(--rh-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast personalizado */
+.toast-rh {
+    border-left: 4px solid var(--rh-primary);
+}
+
+.toast-rh .toast-header {
+    background-color: var(--rh-primary);
+    color: white;
+}

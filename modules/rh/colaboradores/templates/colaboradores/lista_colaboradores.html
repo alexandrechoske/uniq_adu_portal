@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Colaboradores - RH{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Cabeçalho -->
+    <div class="rh-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2><i class="fas fa-users"></i> Gestão de Colaboradores</h2>
+                <p class="text-muted mb-0">Cadastro e gerenciamento de colaboradores</p>
+            </div>
+            <div class="col-md-6 text-end">
+                <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-rh">
+                    <i class="fas fa-plus"></i> Novo Colaborador
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card rh-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rh-icon-circle bg-success me-3">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Colaboradores Ativos</h6>
+                            <h3 class="mb-0">{{ ativos }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card rh-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rh-icon-circle bg-danger me-3">
+                            <i class="fas fa-user-times"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Inativos</h6>
+                            <h3 class="mb-0">{{ inativos }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card rh-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rh-icon-circle bg-primary me-3">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Total</h6>
+                            <h3 class="mb-0">{{ total }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros e Busca -->
+    <div class="card rh-card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome, CPF, matrícula...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="filterStatus" class="form-select">
+                        <option value="">Todos os Status</option>
+                        <option value="Ativo">Ativo</option>
+                        <option value="Inativo">Inativo</option>
+                        <option value="Férias">Férias</option>
+                        <option value="Afastado">Afastado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button id="btnLimparFiltros" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-eraser"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Colaboradores -->
+    <div class="card rh-card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="tabelaColaboradores">
+                    <thead class="rh-table-header">
+                        <tr>
+                            <th>Matrícula</th>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Cargo</th>
+                            <th>Departamento</th>
+                            <th>Admissão</th>
+                            <th>Status</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if colaboradores %}
+                            {% for colab in colaboradores %}
+                            <tr data-status="{{ colab.status }}">
+                                <td>{{ colab.matricula or '-' }}</td>
+                                <td><strong>{{ colab.nome_completo }}</strong></td>
+                                <td>{{ colab.cpf }}</td>
+                                <td>{{ colab.nome_cargo or '-' }}</td>
+                                <td>{{ colab.nome_departamento or '-' }}</td>
+                                <td>{{ colab.data_admissao }}</td>
+                                <td>
+                                    {% if colab.status == 'Ativo' %}
+                                        <span class="badge bg-success">Ativo</span>
+                                    {% elif colab.status == 'Inativo' %}
+                                        <span class="badge bg-danger">Inativo</span>
+                                    {% elif colab.status == 'Férias' %}
+                                        <span class="badge bg-info">Férias</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ colab.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('colaboradores.visualizar_colaborador', colaborador_id=colab.id) }}" 
+                                           class="btn btn-outline-info" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('colaboradores.editar_colaborador', colaborador_id=colab.id) }}" 
+                                           class="btn btn-outline-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        
+                                        <!-- Dropdown de Ações Rápidas -->
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
+                                                    data-bs-toggle="dropdown" aria-expanded="false" title="Mais ações">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Promoção em desenvolvimento'); return false;">
+                                                        <i class="fas fa-arrow-up text-success"></i> Promover
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Transferência em desenvolvimento'); return false;">
+                                                        <i class="fas fa-exchange-alt text-info"></i> Transferir
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Alterar Salário em desenvolvimento'); return false;">
+                                                        <i class="fas fa-dollar-sign text-warning"></i> Alterar Salário
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Férias em desenvolvimento'); return false;">
+                                                        <i class="fas fa-umbrella-beach text-primary"></i> Férias
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger" href="#" 
+                                                       onclick="confirmarDesligamento('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
+                                                        <i class="fas fa-user-times"></i> Desligar
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">Nenhum colaborador cadastrado</p>
+                                    <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-rh">
+                                        <i class="fas fa-plus"></i> Cadastrar Primeiro Colaborador
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Desligamento -->
+<div class="modal fade" id="modalDesligamento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirmar Desligamento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja desligar o colaborador <strong id="nomeColaborador"></strong>?</p>
+                <div class="mb-3">
+                    <label class="form-label">Motivo do Desligamento:</label>
+                    <textarea id="motivoDesligamento" class="form-control" rows="3" placeholder="Descreva o motivo..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarDesligamento">
+                    <i class="fas fa-check"></i> Confirmar Desligamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
+{% endblock %}
