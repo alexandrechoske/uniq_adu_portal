@@ -29,6 +29,89 @@ class ConciliacaoBancaria {
         this.setupFormValidation();
         this.setupFiltros();
         this.setupSelecaoMultipla();
+        this.setupFiltroPeriodo();
+    }
+
+    setupFiltroPeriodo() {
+        // Controla exibição de campos de data personalizada
+        const periodoSelect = document.getElementById('periodo_sistema');
+        const datasPersonalizadas = document.getElementById('datas-personalizadas');
+        
+        if (periodoSelect && datasPersonalizadas) {
+            periodoSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'personalizado') {
+                    datasPersonalizadas.style.display = 'block';
+                    // Define data padrão (mês atual)
+                    const hoje = new Date();
+                    const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                    document.getElementById('data_inicio').valueAsDate = primeiroDiaMes;
+                    document.getElementById('data_fim').valueAsDate = hoje;
+                } else {
+                    datasPersonalizadas.style.display = 'none';
+                }
+            });
+        }
+    }
+
+    calcularPeriodo(opcao) {
+        const hoje = new Date();
+        let dataInicio, dataFim = hoje;
+        
+        switch(opcao) {
+            case 'hoje':
+                dataInicio = hoje;
+                break;
+            case 'ontem':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 1);
+                dataFim = new Date(dataInicio);
+                break;
+            case 'semana_atual':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - hoje.getDay());
+                break;
+            case 'mes_atual':
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                break;
+            case 'mes_anterior':
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+                dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+                break;
+            case 'ultimos_7_dias':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 7);
+                break;
+            case 'ultimos_15_dias':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 15);
+                break;
+            case 'ultimos_30_dias':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 30);
+                break;
+            case 'ultimos_60_dias':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 60);
+                break;
+            case 'ultimos_90_dias':
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 90);
+                break;
+            case 'personalizado':
+                // Usar valores dos campos de data
+                const dataInicioInput = document.getElementById('data_inicio').value;
+                const dataFimInput = document.getElementById('data_fim').value;
+                dataInicio = dataInicioInput ? new Date(dataInicioInput) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                dataFim = dataFimInput ? new Date(dataFimInput) : hoje;
+                break;
+            default:
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        }
+        
+        return {
+            data_inicio: dataInicio.toISOString().split('T')[0],
+            data_fim: dataFim.toISOString().split('T')[0]
+        };
     }
 
     setupEventListeners() {
@@ -296,7 +379,19 @@ class ConciliacaoBancaria {
         this.showLoading(true, 'Carregando dados do sistema...');
         
         try {
-            const response = await fetch('/financeiro/conciliacao-lancamentos/api/movimentos-sistema', {
+            // Obter período selecionado
+            const periodoSelect = document.getElementById('periodo_sistema');
+            const periodoSelecionado = periodoSelect ? periodoSelect.value : 'mes_atual';
+            const periodo = this.calcularPeriodo(periodoSelecionado);
+            
+            console.log(`[SISTEMA] Carregando dados do período: ${periodo.data_inicio} até ${periodo.data_fim}`);
+            
+            // Fazer requisição com parâmetros de data
+            const url = new URL('/financeiro/conciliacao-lancamentos/api/movimentos-sistema', window.location.origin);
+            url.searchParams.append('data_inicio', periodo.data_inicio);
+            url.searchParams.append('data_fim', periodo.data_fim);
+            
+            const response = await fetch(url, {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -325,7 +420,10 @@ class ConciliacaoBancaria {
                 // Mostrar seções de dados
                 this.showSections(['dadosSection']);
                 
-                console.log(`Dados do sistema carregados: ${this.dadosSistemaOriginais.length} lançamentos`);
+                console.log(`Dados do sistema carregados: ${this.dadosSistemaOriginais.length} lançamentos (${periodo.data_inicio} a ${periodo.data_fim})`);
+                
+                // Atualizar mensagem de resumo
+                this.atualizarResumoStatus(periodo);
                 
             } else {
                 throw new Error(result.error || 'Erro ao carregar dados do sistema');
@@ -336,6 +434,22 @@ class ConciliacaoBancaria {
         } finally {
             this.showLoading(false);
         }
+    }
+
+    atualizarResumoStatus(periodo) {
+        const statusSummary = document.getElementById('status-summary-text');
+        if (statusSummary) {
+            const periodoFormatado = this.formatarPeriodo(periodo);
+            statusSummary.textContent = `Conciliando período: ${periodoFormatado} | Sistema: ${this.dadosSistemaOriginais.length} lançamentos | Banco: ${this.dadosBancoOriginais.length} lançamentos`;
+        }
+    }
+
+    formatarPeriodo(periodo) {
+        const dataInicio = new Date(periodo.data_inicio + 'T00:00:00');
+        const dataFim = new Date(periodo.data_fim + 'T00:00:00');
+        
+        const opcoes = { day: '2-digit', month: '2-digit', year: 'numeric' };
+        return `${dataInicio.toLocaleDateString('pt-BR', opcoes)} até ${dataFim.toLocaleDateString('pt-BR', opcoes)}`;
     }
 
     atualizarContadoresFiltros() {

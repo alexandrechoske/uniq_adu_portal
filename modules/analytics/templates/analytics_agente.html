@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics do Agente WhatsApp - UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics_agente.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container analytics-agente">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-analytics">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Analytics do Agente', 'icon': 'mdi mdi-robot'}
+            ], 'analytics') }}
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados dos últimos 30 dias</span>
+            </div>
+        </div>
+        <div class="actions-right">
+            <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-light">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
+            <button id="refresh-data" class="btn btn-outline-light">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div id="kpi-loading" class="component-loading"><div class="spinner"></div></div>
+        
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-message-text"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Interações</p>
+                <p class="kpi-value" id="total-interactions">--</p>
+                <p class="kpi-sub-value">Período selecionado</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-whatsapp"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Usuários Únicos</p>
+                <p class="kpi-value" id="unique-users">--</p>
+                <p class="kpi-sub-value">Números de WhatsApp</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-clock-fast"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Tempo Médio</p>
+                <p class="kpi-value" id="avg-response-time">--</p>
+                <p class="kpi-sub-value">Resposta do agente</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Taxa de Sucesso</p>
+                <p class="kpi-value" id="success-rate">--</p>
+                <p class="kpi-sub-value">Interações bem-sucedidas</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid two-columns">
+        <!-- Gráfico de Linha: Volume de Interações ao Longo do Tempo - Full Width -->
+        <div class="chart-section chart-full-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Volume de Interações ao Longo do Tempo</h2>
+            </div>
+            <div class="chart-container">
+                <div id="timeline-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="timeline-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Segunda Linha: 2 Gráficos -->
+        <!-- Top 5 Empresas por Volume -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Top 5 Empresas por Volume</h2>
+            </div>
+            <div class="chart-container">
+                <div id="empresas-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="top-empresas-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Horários de Pico -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Horários de Pico de Interação</h2>
+            </div>
+            <div class="chart-container">
+                <div id="peak-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="peak-hours-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Terceira Linha: 2 Gráficos -->
+        <!-- Distribuição de Tipos de Resposta -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Distribuição de Tipos de Resposta</h2>
+            </div>
+            <div class="chart-container">
+                <div id="response-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="response-types-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Placeholder para equilíbrio visual ou futuro gráfico -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Distribuição por Dia da Semana</h2>
+            </div>
+            <div class="chart-container">
+                <div id="weekday-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="weekday-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Interações Recentes -->
+    <div class="enhanced-table-section">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
+                <i class="mdi mdi-history"></i>
+                Logs de Interação Recentes
+            </h2>
+            <div class="enhanced-table-controls">
+                <div class="enhanced-table-info">
+                    <span class="enhanced-table-count" id="logs-count">Carregando...</span>
+                </div>
+            </div>
+        </div>
+        <div class="enhanced-table-container">
+            <div id="logs-loading" class="component-loading"><div class="spinner"></div></div>
+            <table id="recent-logs-table" class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Data/Hora Pergunta</th>
+                        <th>Data/Hora Resposta</th>
+                        <th>Usuário</th>
+                        <th>Empresa</th>
+                        <th>Tempo (s)</th>
+                        <th>Processos</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Filtros -->
+<div id="filters-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Filtros de Analytics</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="filter-group">
+                <label for="date-range">Período:</label>
+                <select id="date-range">
+                    <option value="30d" selected>Últimos 30 dias</option>
+                    <option value="7d">Últimos 7 dias</option>
+                    <option value="1d">Hoje</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="empresa-filter">Empresa:</label>
+                <select id="empresa-filter">
+                    <option value="all" selected>Todas</option>
+                    <!-- Carregado dinamicamente -->
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="response-type">Tipo de Resposta:</label>
+                <select id="response-type">
+                    <option value="all" selected>Todos</option>
+                    <option value="normal">Normal</option>
+                    <option value="arquivo">Arquivo</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="apply-filters" class="btn btn-primary">Aplicar Filtros</button>
+            <button id="clear-filters" class="btn btn-secondary">Limpar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes da Interação -->
+<div id="interaction-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <i class="mdi mdi-message-text-outline"></i>
+                Detalhes da Interação
+            </h2>
+            <button class="modal-close" onclick="closeInteractionModal()">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        <div class="modal-body modal-scrollable">
+            <!-- Informações do Header -->
+            <div class="interaction-info-header">
+                <div class="info-row">
+                    <div class="info-item">
+                        <span class="info-label">
+                            <i class="mdi mdi-account"></i>
+                            Usuário:
+                        </span>
+                        <span class="info-value" id="modal-user-name">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <i class="mdi mdi-office-building"></i>
+                            Empresa:
+                        </span>
+                        <span class="info-value" id="modal-empresa">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <i class="mdi mdi-clock-outline"></i>
+                            Data/Hora:
+                        </span>
+                        <span class="info-value" id="modal-datetime">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">
+                            <i class="mdi mdi-timer-outline"></i>
+                            Tempo:
+                        </span>
+                        <span class="info-value" id="modal-response-time">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensagem do Usuário -->
+            <div class="interaction-section">
+                <div class="section-header user-message-header">
+                    <i class="mdi mdi-account-voice"></i>
+                    <h3>Pergunta do Usuário</h3>
+                </div>
+                <div class="message-content user-message" id="modal-user-message">
+                    Carregando...
+                </div>
+            </div>
+
+            <!-- Resposta do Agente -->
+            <div class="interaction-section">
+                <div class="section-header agent-response-header">
+                    <i class="mdi mdi-robot"></i>
+                    <h3>Resposta do Agente WhatsApp</h3>
+                </div>
+                <div class="message-content agent-response" id="modal-agent-response">
+                    Carregando...
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeInteractionModal()" class="btn btn-secondary">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="{{ url_for('analytics.static', filename='js/analytics_agente.js') }}"></script>
+<script>
+// Wrappers para esconder loaders quando dados carregam
+const ANALYTICS_HIDE_LOADER = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = 'none';
+        console.log('[ANALYTICS AGENTE] Loader hidden:', id);
+    }
+};
+
+const ANALYTICS_TRY_WRAP = (name, id) => {
+    const fn = window[name];
+    if (typeof fn === 'function') {
+        window[name] = function() {
+            const r = fn.apply(this, arguments);
+            try { ANALYTICS_HIDE_LOADER(id); } catch (_) {}
+            return r;
+        };
+        console.log('[ANALYTICS AGENTE] Wrapped function:', name, '-> hides', id);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    ANALYTICS_TRY_WRAP('updateKPIs', 'kpi-loading');
+    ANALYTICS_TRY_WRAP('createTimelineChart', 'timeline-loading');
+    ANALYTICS_TRY_WRAP('createTopEmpresasChart', 'empresas-loading');
+    ANALYTICS_TRY_WRAP('createPeakHoursChart', 'peak-loading');
+    ANALYTICS_TRY_WRAP('createResponseTypesChart', 'response-loading');
+    ANALYTICS_TRY_WRAP('createWeekdayChart', 'weekday-loading');
+    ANALYTICS_TRY_WRAP('updateRecentLogsTable', 'logs-loading');
+
+    // Safety timeout
+    setTimeout(() => {
+        ['kpi-loading','timeline-loading','empresas-loading','peak-loading',
+         'response-loading','weekday-loading','logs-loading']
+            .forEach(ANALYTICS_HIDE_LOADER);
+        console.warn('[ANALYTICS AGENTE] Safety timeout reached. Forced hiding of loaders.');
+    }, 20000);
+});
+</script>
+{% endblock %}

@@ -61,7 +61,7 @@
                 <form id="uploadArquivoForm" enctype="multipart/form-data">
                     <div class="row">
                         <!-- Seleção do Banco para Upload -->
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label for="banco_origem" class="form-label">Banco do Arquivo OFX</label>
                                 <select id="banco_origem" name="banco_origem" class="form-select">
@@ -70,20 +70,63 @@
                                     <option value="santander">🏦 Santander</option>
                                     <option value="itau">🏦 Itaú</option>
                                 </select>
-                                <div class="form-text">Sistema detecta automaticamente o banco pelo conteúdo do arquivo OFX</div>
+                                <div class="form-text">Sistema detecta automaticamente o banco</div>
+                            </div>
+                        </div>
+
+                        <!-- Filtro de Período dos Dados do Sistema -->
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="periodo_sistema" class="form-label">
+                                    <i class="mdi mdi-calendar-range"></i>
+                                    Período dos Lançamentos do Sistema
+                                </label>
+                                <select id="periodo_sistema" name="periodo_sistema" class="form-select">
+                                    <option value="hoje">📅 Hoje</option>
+                                    <option value="ontem">📅 Ontem</option>
+                                    <option value="semana_atual">📅 Esta Semana</option>
+                                    <option value="mes_atual" selected>📅 Mês Atual</option>
+                                    <option value="mes_anterior">📅 Mês Anterior</option>
+                                    <option value="ultimos_7_dias">📅 Últimos 7 Dias</option>
+                                    <option value="ultimos_15_dias">📅 Últimos 15 Dias</option>
+                                    <option value="ultimos_30_dias">📅 Últimos 30 Dias</option>
+                                    <option value="ultimos_60_dias">📅 Últimos 60 Dias</option>
+                                    <option value="ultimos_90_dias">📅 Últimos 90 Dias</option>
+                                    <option value="personalizado">📅 Período Personalizado</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="mdi mdi-information"></i>
+                                    Filtra movimentos do sistema para conciliação com o OFX
+                                </div>
                             </div>
                         </div>
 
                         <!-- Seleção dos Arquivos -->
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label for="arquivo_banco" class="form-label">Arquivos dos Extratos Bancários</label>
                                 <input type="file" id="arquivo_banco" name="arquivos" class="form-control" 
                                        accept=".ofx" multiple required>
                                 <div class="form-text">
                                     <strong>Formato:</strong> Apenas arquivos OFX (.ofx)<br>
-                                    <small class="text-muted">📁 Selecione múltiplos arquivos (Ctrl+Click) para processar vários bancos</small>
+                                    <small class="text-muted">📁 Múltiplos arquivos aceitos</small>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos de Data Personalizada (oculto inicialmente) -->
+                    <div class="row mt-2" id="datas-personalizadas" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="data_inicio" class="form-label">Data Início</label>
+                                <input type="date" id="data_inicio" name="data_inicio" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="data_fim" class="form-label">Data Fim</label>
+                                <input type="date" id="data_fim" name="data_fim" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -100,6 +143,21 @@
                                     <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                 </div>
                                 <small class="text-muted">Processando arquivo...</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aviso Informativo -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info" style="background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; padding: 12px 16px; margin: 0;">
+                                <i class="mdi mdi-information-outline" style="font-size: 1.2em; margin-right: 8px;"></i>
+                                <strong>Dica:</strong> Selecione o período correspondente aos arquivos OFX que você vai fazer upload para garantir melhor taxa de conciliação.
+                                <br>
+                                <small class="text-muted">
+                                    • Para OFX de <strong>Setembro/2025</strong>, selecione "Mês Anterior"<br>
+                                    • Para OFX de <strong>Outubro/2025</strong>, selecione "Mês Atual"
+                                </small>
                             </div>
                         </div>
                     </div>
