@@ -538,7 +538,7 @@ function updateRecentLogsTable(data) {
     tbody.innerHTML = '';
     
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #9ca3af; padding: 2rem;">Nenhuma interação encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #9ca3af; padding: 2rem;">Nenhuma interação encontrada</td></tr>';
         if (countElement) countElement.textContent = '0 interações';
         return;
     }
@@ -595,6 +595,15 @@ function updateRecentLogsTable(data) {
         statusBadge.textContent = 'Sucesso';
         statusCell.appendChild(statusBadge);
         row.appendChild(statusCell);
+        
+        // Ações - Botão Ver Detalhes
+        const actionsCell = document.createElement('td');
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'btn-view-details';
+        viewBtn.innerHTML = '<i class="mdi mdi-eye"></i> Ver Detalhes';
+        viewBtn.onclick = () => openInteractionModal(log);
+        actionsCell.appendChild(viewBtn);
+        row.appendChild(actionsCell);
         
         tbody.appendChild(row);
     });
@@ -757,3 +766,168 @@ function showError(message) {
     console.error('[ANALYTICS AGENTE]', message);
     // Você pode adicionar um toast ou notificação aqui
 }
+
+// ========================================
+// MODAL DE DETALHES DA INTERAÇÃO
+// ========================================
+
+/**
+ * Abre o modal com os detalhes da interação
+ * @param {Object} log - Objeto com dados do log de interação
+ */
+function openInteractionModal(log) {
+    console.log('[ANALYTICS AGENTE] Abrindo modal de detalhes:', log);
+    
+    // Preencher informações do header
+    document.getElementById('modal-user-name').textContent = log.user_name || 'N/A';
+    document.getElementById('modal-empresa').textContent = log.empresa_nome || 'N/A';
+    document.getElementById('modal-datetime').textContent = formatDateTime(log.interaction_timestamp_br);
+    document.getElementById('modal-response-time').textContent = `${parseFloat(log.response_time_seconds || 0).toFixed(2)}s`;
+    
+    // Preencher mensagem do usuário
+    const userMessageEl = document.getElementById('modal-user-message');
+    userMessageEl.textContent = log.user_message || 'Mensagem não disponível';
+    
+    // Preencher resposta do agente (com formatação JSON se aplicável)
+    const agentResponseEl = document.getElementById('modal-agent-response');
+    formatAgentResponse(log.agent_response || 'Resposta não disponível', agentResponseEl);
+    
+    // Exibir modal
+    const modal = document.getElementById('interaction-modal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevenir scroll da página
+}
+
+/**
+ * Fecha o modal de detalhes
+ */
+function closeInteractionModal() {
+    const modal = document.getElementById('interaction-modal');
+    modal.style.display = 'none';
+    document.body.style.overflow = ''; // Restaurar scroll
+    console.log('[ANALYTICS AGENTE] Modal de detalhes fechado');
+}
+
+/**
+ * Formata a resposta do agente, extraindo e formatando JSON se presente
+ * @param {string} response - Resposta bruta do agente
+ * @param {HTMLElement} container - Elemento onde inserir o conteúdo formatado
+ */
+function formatAgentResponse(response, container) {
+    // Limpar container
+    container.innerHTML = '';
+    
+    // Tentar extrair JSON do markdown code block
+    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+    
+    if (jsonMatch && jsonMatch[1]) {
+        try {
+            // Parse do JSON
+            const jsonData = JSON.parse(jsonMatch[1]);
+            
+            // Criar elemento para mostrar JSON formatado
+            const jsonContainer = document.createElement('div');
+            jsonContainer.className = 'json-formatted';
+            
+            // Formatar JSON com cores
+            const formattedJson = formatJsonWithColors(jsonData, 0);
+            jsonContainer.innerHTML = formattedJson;
+            
+            container.appendChild(jsonContainer);
+            
+            console.log('[ANALYTICS AGENTE] JSON formatado com sucesso');
+        } catch (e) {
+            // Se falhar ao parsear, mostrar como texto simples
+            console.warn('[ANALYTICS AGENTE] Falha ao parsear JSON:', e);
+            container.textContent = response;
+        }
+    } else {
+        // Sem JSON, mostrar como texto simples
+        container.textContent = response;
+    }
+}
+
+/**
+ * Formata JSON com cores e indentação
+ * @param {Object|Array} obj - Objeto ou array para formatar
+ * @param {number} indent - Nível de indentação
+ * @returns {string} HTML formatado
+ */
+function formatJsonWithColors(obj, indent = 0) {
+    const indentStr = '  '.repeat(indent);
+    let html = '';
+    
+    if (Array.isArray(obj)) {
+        html += '[\n';
+        obj.forEach((item, index) => {
+            html += indentStr + '  ' + formatJsonWithColors(item, indent + 1);
+            if (index < obj.length - 1) html += ',';
+            html += '\n';
+        });
+        html += indentStr + ']';
+    } else if (typeof obj === 'object' && obj !== null) {
+        html += '{\n';
+        const keys = Object.keys(obj);
+        keys.forEach((key, index) => {
+            html += indentStr + '  ';
+            html += `<span class="json-key">"${escapeHtml(key)}"</span>: `;
+            html += formatJsonWithColors(obj[key], indent + 1);
+            if (index < keys.length - 1) html += ',';
+            html += '\n';
+        });
+        html += indentStr + '}';
+    } else if (typeof obj === 'string') {
+        // Strings multilinha quebradas em linhas separadas
+        const escaped = escapeHtml(obj);
+        if (escaped.includes('\n')) {
+            const lines = escaped.split('\n');
+            html += `<span class="json-string">"${lines[0]}`;
+            for (let i = 1; i < lines.length; i++) {
+                html += '\n' + indentStr + '  ' + lines[i];
+            }
+            html += '"</span>';
+        } else {
+            html += `<span class="json-string">"${escaped}"</span>`;
+        }
+    } else if (typeof obj === 'number') {
+        html += `<span class="json-number">${obj}</span>`;
+    } else if (typeof obj === 'boolean') {
+        html += `<span class="json-boolean">${obj}</span>`;
+    } else if (obj === null) {
+        html += `<span class="json-null">null</span>`;
+    } else {
+        html += escapeHtml(String(obj));
+    }
+    
+    return html;
+}
+
+/**
+ * Escapa caracteres HTML para evitar XSS
+ * @param {string} text - Texto para escapar
+ * @returns {string} Texto escapado
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('interaction-modal');
+    if (e.target === modal) {
+        closeInteractionModal();
+    }
+});
+
+// Fechar modal com tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('interaction-modal');
+        if (modal && modal.style.display === 'flex') {
+            closeInteractionModal();
+        }
+    }
+});
+
