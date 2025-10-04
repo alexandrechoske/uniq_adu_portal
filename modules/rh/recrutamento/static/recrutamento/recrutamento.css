@@ -1,0 +1,466 @@
+/* 
+   Módulo Recrutamento - Gestão de Vagas e Candidatos
+   Cor: Roxo (#6f42c1)
+*/
+
+:root {
+    --recrutamento-primary: #6f42c1;
+    --recrutamento-primary-dark: #5a32a3;
+    --recrutamento-primary-light: #9b72d4;
+    --recrutamento-secondary: #e9ecef;
+    --recrutamento-success: #28a745;
+    --recrutamento-warning: #ffc107;
+    --recrutamento-danger: #dc3545;
+}
+
+/* Botões Primários */
+.btn-recrutamento-primary {
+    background-color: var(--recrutamento-primary);
+    border-color: var(--recrutamento-primary);
+    color: white;
+}
+
+.btn-recrutamento-primary:hover {
+    background-color: var(--recrutamento-primary-dark);
+    border-color: var(--recrutamento-primary-dark);
+    color: white;
+}
+
+/* Cards e Containers */
+.recrutamento-card {
+    border-left: 4px solid var(--recrutamento-primary);
+    transition: all 0.3s ease;
+}
+
+.recrutamento-card:hover {
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Tabela de Vagas */
+.table-recrutamento {
+    font-size: 0.95rem;
+}
+
+.table-recrutamento thead {
+    background-color: var(--recrutamento-primary);
+    color: white;
+}
+
+.table-recrutamento thead th {
+    border-bottom: none;
+    font-weight: 600;
+    padding: 1rem 0.75rem;
+}
+
+.table-recrutamento tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-recrutamento tbody tr:hover {
+    background-color: rgba(111, 66, 193, 0.05);
+}
+
+.table-recrutamento td {
+    vertical-align: middle;
+    padding: 0.85rem 0.75rem;
+}
+
+/* Badges de Status */
+.badge-status {
+    padding: 0.5em 0.9em;
+    font-weight: 500;
+    font-size: 0.85rem;
+    border-radius: 20px;
+}
+
+.badge-status.aberta {
+    background-color: var(--recrutamento-success);
+    color: white;
+}
+
+.badge-status.pausada {
+    background-color: var(--recrutamento-warning);
+    color: #000;
+}
+
+.badge-status.fechada {
+    background-color: var(--recrutamento-danger);
+    color: white;
+}
+
+/* Badge de Candidatos */
+.badge-candidatos {
+    background-color: var(--recrutamento-primary-light);
+    color: white;
+    padding: 0.4em 0.8em;
+    border-radius: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.badge-candidatos:hover {
+    background-color: var(--recrutamento-primary);
+    transform: scale(1.1);
+}
+
+/* Botões de Ação */
+.btn-action {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-action i {
+    font-size: 1rem;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Modal Customizado */
+.modal-header {
+    background-color: var(--recrutamento-primary);
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.modal-title {
+    font-weight: 600;
+}
+
+/* Formulário */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--recrutamento-primary);
+    box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--recrutamento-primary-light);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h5 {
+    color: var(--recrutamento-primary);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* ========================================
+   KANBAN - GESTÃO DE CANDIDATOS
+   ======================================== */
+
+.kanban-container {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 1.5rem 0;
+    min-height: 70vh;
+}
+
+.kanban-column {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    min-width: 280px;
+    max-width: 300px;
+    flex-shrink: 0;
+}
+
+.kanban-column-header {
+    background-color: var(--recrutamento-primary);
+    color: white;
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+
+.kanban-column-title {
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.kanban-column-count {
+    background-color: rgba(255, 255, 255, 0.3);
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
+.kanban-cards {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Card de Candidato */
+.candidato-card {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: move;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.candidato-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    border-color: var(--recrutamento-primary);
+}
+
+.candidato-card.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.candidato-card-nome {
+    font-weight: 600;
+    color: var(--recrutamento-primary);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.candidato-card-info {
+    font-size: 0.85rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+}
+
+.candidato-card-info i {
+    color: var(--recrutamento-primary-light);
+    width: 16px;
+}
+
+.candidato-card-fonte {
+    display: inline-block;
+    background-color: var(--recrutamento-secondary);
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    color: #495057;
+}
+
+/* Drag and Drop States */
+.kanban-column.drag-over {
+    background-color: rgba(111, 66, 193, 0.1);
+    border: 2px dashed var(--recrutamento-primary);
+}
+
+/* Modal de Detalhes do Candidato */
+.candidato-detalhes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.candidato-detalhes-item {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.candidato-detalhes-label {
+    font-weight: 600;
+    color: var(--recrutamento-primary);
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+
+.candidato-detalhes-valor {
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+/* Botão de Download de Currículo */
+.btn-download-curriculo {
+    background-color: var(--recrutamento-primary);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.btn-download-curriculo:hover {
+    background-color: var(--recrutamento-primary-dark);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(111, 66, 193, 0.3);
+}
+
+/* Textarea de Observações */
+.observacoes-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .kanban-container {
+        flex-direction: column;
+    }
+    
+    .kanban-column {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .candidato-detalhes-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.recrutamento-card,
+.candidato-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* ========================================
+   TIMELINE DE OBSERVAÇÕES
+   ======================================== */
+.timeline-observacoes {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 35px;
+    padding-bottom: 25px;
+    border-left: 2px solid var(--recrutamento-primary);
+    margin-left: 10px;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+    border-left: none;
+}
+
+.timeline-item-marker {
+    position: absolute;
+    left: -9px;
+    top: 5px;
+    width: 16px;
+    height: 16px;
+    background-color: var(--recrutamento-primary);
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px var(--recrutamento-primary);
+}
+
+.timeline-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.timeline-item-date {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.timeline-item-usuario {
+    font-size: 0.85rem;
+    color: var(--recrutamento-primary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.timeline-item-content {
+    background-color: white;
+    padding: 12px 15px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.timeline-item-content:hover {
+    border-color: var(--recrutamento-primary-light);
+    box-shadow: 0 2px 6px rgba(111, 66, 193, 0.1);
+}
+
+/* Scrollbar customizada */
+.timeline-observacoes::-webkit-scrollbar {
+    width: 8px;
+}
+
+.timeline-observacoes::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.timeline-observacoes::-webkit-scrollbar-thumb {
+    background: var(--recrutamento-primary);
+    border-radius: 10px;
+}
+
+.timeline-observacoes::-webkit-scrollbar-thumb:hover {
+    background: var(--recrutamento-primary-dark);
+}
+
+/* Textarea de nova observação */
+.observacoes-textarea {
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+.observacoes-textarea:focus {
+    border-color: var(--recrutamento-primary);
+    box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+}
+

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Candidatos - {{ vaga.titulo }} - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <!-- Header -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h2 class="mb-1">
+                    <i class="mdi mdi-account-group"></i> Candidatos
+                </h2>
+                <h5 class="text-muted mb-0">
+                    <i class="mdi mdi-briefcase-outline"></i> {{ vaga.titulo }}
+                </h5>
+            </div>
+            <div>
+                <a href="{{ url_for('recrutamento.gestao_vagas') }}" class="btn btn-outline-secondary">
+                    <i class="mdi mdi-arrow-left"></i> Voltar para Vagas
+                </a>
+            </div>
+        </div>
+        
+        <!-- Info da Vaga -->
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="mdi mdi-information-outline me-2" style="font-size: 1.5rem;"></i>
+            <div>
+                <strong>{{ vaga.localizacao or 'Localização não informada' }}</strong> | 
+                {{ vaga.tipo_contratacao or 'CLT' }} | 
+                Status: <span class="badge {% if vaga.status == 'Aberta' %}bg-success{% elif vaga.status == 'Pausada' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                    {{ vaga.status }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Container -->
+    <div class="kanban-container">
+        
+        {% for status, candidatos in candidatos_por_status.items() %}
+        <div class="kanban-column">
+            <div class="kanban-column-header">
+                <span class="kanban-column-title">{{ status }}</span>
+                <span class="kanban-column-count">{{ candidatos|length }}</span>
+            </div>
+            
+            <div class="kanban-cards" data-status="{{ status }}">
+                {% for candidato in candidatos %}
+                <div class="candidato-card" 
+                     draggable="true" 
+                     data-candidato-id="{{ candidato.id }}"
+                     onclick="verDetalhesCandidato('{{ candidato.id }}')">
+                    
+                    <div class="candidato-card-nome">
+                        {{ candidato.nome_completo }}
+                    </div>
+                    
+                    {% if candidato.email %}
+                    <div class="candidato-card-info">
+                        <i class="mdi mdi-email"></i>
+                        <span>{{ candidato.email }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if candidato.telefone %}
+                    <div class="candidato-card-info">
+                        <i class="mdi mdi-phone"></i>
+                        <span>{{ candidato.telefone }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="candidato-card-info">
+                        <i class="mdi mdi-calendar"></i>
+                        <span>
+                            {% if candidato.data_candidatura %}
+                                {% set data_parts = candidato.data_candidatura[:10].split('-') %}
+                                {{ data_parts[2] }}/{{ data_parts[1] }}/{{ data_parts[0] }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    {% if candidato.fonte_candidatura %}
+                    <span class="candidato-card-fonte">
+                        <i class="mdi mdi-source-branch"></i> {{ candidato.fonte_candidatura }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                
+                {% if candidatos|length == 0 %}
+                <div class="text-center text-muted py-4">
+                    <i class="mdi mdi-inbox-outline" style="font-size: 2rem;"></i>
+                    <p class="mb-0 mt-2 small">Nenhum candidato</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+    </div>
+
+</div>
+
+<!-- Modal de Detalhes do Candidato -->
+<div class="modal fade" id="modalDetalhesCandidato" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="mdi mdi-account-details"></i> Detalhes do Candidato
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="candidatoIdObservacoes">
+                
+                <div class="candidato-detalhes-grid mb-4">
+                    <div class="candidato-detalhes-item">
+                        <div class="candidato-detalhes-label">
+                            <i class="mdi mdi-account"></i> Nome Completo
+                        </div>
+                        <div class="candidato-detalhes-valor" id="detalheCandidatoNome">-</div>
+                    </div>
+                    
+                    <div class="candidato-detalhes-item">
+                        <div class="candidato-detalhes-label">
+                            <i class="mdi mdi-email"></i> E-mail
+                        </div>
+                        <div class="candidato-detalhes-valor" id="detalheCandidatoEmail">-</div>
+                    </div>
+                    
+                    <div class="candidato-detalhes-item">
+                        <div class="candidato-detalhes-label">
+                            <i class="mdi mdi-phone"></i> Telefone
+                        </div>
+                        <div class="candidato-detalhes-valor" id="detalheCandidatoTelefone">-</div>
+                    </div>
+                    
+                    <div class="candidato-detalhes-item">
+                        <div class="candidato-detalhes-label">
+                            <i class="mdi mdi-calendar"></i> Data de Candidatura
+                        </div>
+                        <div class="candidato-detalhes-valor" id="detalheCandidatoData">-</div>
+                    </div>
+                    
+                    <div class="candidato-detalhes-item">
+                        <div class="candidato-detalhes-label">
+                            <i class="mdi mdi-source-branch"></i> Fonte
+                        </div>
+                        <div class="candidato-detalhes-valor" id="detalheCandidatoFonte">-</div>
+                    </div>
+                    
+                    <div class="candidato-detalhes-item">
+                        <div class="candidato-detalhes-label">
+                            <i class="mdi mdi-flag"></i> Status Atual
+                        </div>
+                        <div class="candidato-detalhes-valor" id="detalheCandidatoStatus">-</div>
+                    </div>
+                </div>
+                
+                <!-- Botão de Download de Currículo -->
+                <div class="mb-4 text-center">
+                    <a href="#" id="btnDownloadCurriculo" target="_blank" class="btn-download-curriculo" style="display: none;">
+                        <i class="mdi mdi-download"></i> Baixar Currículo
+                    </a>
+                </div>
+                
+                <!-- Linha do Tempo de Observações -->
+                <div class="mb-4">
+                    <h6 class="mb-3">
+                        <i class="mdi mdi-timeline-text"></i> Histórico de Observações
+                        <span class="badge bg-secondary ms-2" id="totalObservacoes">0</span>
+                    </h6>
+                    
+                    <!-- Lista de observações (timeline) -->
+                    <div id="timelineObservacoes" class="timeline-observacoes">
+                        <div class="text-center text-muted py-4">
+                            <i class="mdi mdi-information-outline" style="font-size: 2rem;"></i>
+                            <p class="mb-0">Nenhuma observação registrada ainda</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Nova Observação -->
+                <div>
+                    <label for="novaObservacao" class="form-label">
+                        <i class="mdi mdi-pencil-plus"></i> Adicionar Nova Observação
+                    </label>
+                    <textarea class="form-control observacoes-textarea" 
+                              id="novaObservacao" 
+                              rows="3"
+                              placeholder="Digite sua observação aqui (feedback de entrevista, pontos fortes, ressalvas, etc...)"></textarea>
+                    <div class="text-end mt-2">
+                        <button type="button" class="btn btn-success btn-sm" onclick="salvarObservacao()">
+                            <i class="mdi mdi-content-save"></i> Salvar Observação
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Fechar
+                </button>
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=2"></script>
+{% endblock %}

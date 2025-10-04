@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Vagas - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="mdi mdi-briefcase-search"></i> Gestão de Vagas
+            </h2>
+            <p class="text-muted mb-0">Gerencie vagas abertas e acompanhe candidaturas</p>
+        </div>
+        <button class="btn btn-recrutamento-primary" data-bs-toggle="modal" data-bs-target="#modalVaga" onclick="abrirModalNovaVaga()">
+            <i class="mdi mdi-plus-circle"></i> Nova Vaga
+        </button>
+    </div>
+
+    <!-- Tabela de Vagas -->
+    <div class="card recrutamento-card">
+        <div class="card-body p-0">
+            {% if vagas|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-recrutamento mb-0" id="tableVagas">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 30%;">Título da Vaga</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 10%;" class="text-center">Candidatos</th>
+                            <th style="width: 15%;">Data de Abertura</th>
+                            <th style="width: 10%;">Localização</th>
+                            <th style="width: 15%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vaga in vagas %}
+                        <tr>
+                            <td class="text-muted small">{{ loop.index }}</td>
+                            <td>
+                                <strong>{{ vaga.titulo }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="mdi mdi-briefcase-outline"></i> {{ vaga.tipo_contratacao or 'CLT' }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if vaga.status == 'Aberta' %}
+                                <span class="badge badge-status aberta">
+                                    <i class="mdi mdi-circle"></i> Aberta
+                                </span>
+                                {% elif vaga.status == 'Pausada' %}
+                                <span class="badge badge-status pausada">
+                                    <i class="mdi mdi-pause-circle"></i> Pausada
+                                </span>
+                                {% else %}
+                                <span class="badge badge-status fechada">
+                                    <i class="mdi mdi-close-circle"></i> Fechada
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{{ url_for('recrutamento.gestao_candidatos', vaga_id=vaga.id) }}" 
+                                   class="badge badge-candidatos"
+                                   title="Ver candidatos">
+                                    <i class="mdi mdi-account-multiple"></i> {{ vaga.total_candidatos }}
+                                </a>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="mdi mdi-calendar"></i>
+                                    {% if vaga.data_abertura %}
+                                        {% set data_parts = vaga.data_abertura[:10].split('-') %}
+                                        {{ data_parts[2] }}/{{ data_parts[1] }}/{{ data_parts[0] }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <small>{{ vaga.localizacao or 'Não informado' }}</small>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('recrutamento.gestao_candidatos', vaga_id=vaga.id) }}" 
+                                       class="btn btn-outline-primary btn-action"
+                                       data-bs-toggle="tooltip" title="Gerenciar Candidatos">
+                                        <i class="mdi mdi-account-group"></i>
+                                    </a>
+                                    <button class="btn btn-outline-warning btn-action" 
+                                            onclick="editarVaga('{{ vaga.id }}')"
+                                            data-bs-toggle="tooltip" title="Editar Vaga">
+                                        <i class="mdi mdi-pencil"></i>
+                                    </button>
+                                    
+                                    {% if vaga.status == 'Aberta' %}
+                                    <button class="btn btn-outline-secondary btn-action" 
+                                            onclick="alterarStatusVaga('{{ vaga.id }}', 'Pausada')"
+                                            data-bs-toggle="tooltip" title="Pausar Vaga">
+                                        <i class="mdi mdi-pause"></i>
+                                    </button>
+                                    {% elif vaga.status == 'Pausada' %}
+                                    <button class="btn btn-outline-success btn-action" 
+                                            onclick="alterarStatusVaga('{{ vaga.id }}', 'Aberta')"
+                                            data-bs-toggle="tooltip" title="Reabrir Vaga">
+                                        <i class="mdi mdi-play"></i>
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <button class="btn btn-outline-danger btn-action" 
+                                            onclick="confirmarExclusao('{{ vaga.id }}', '{{ vaga.titulo }}')"
+                                            data-bs-toggle="tooltip" title="Excluir Vaga">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="mdi mdi-briefcase-search-outline"></i>
+                <h5>Nenhuma vaga cadastrada</h5>
+                <p>Clique em "Nova Vaga" para criar a primeira vaga</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal de Vaga (Criar/Editar) -->
+<div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalVagaLabel">Nova Vaga</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formVaga">
+                    <input type="hidden" id="vaga_id" name="vaga_id">
+                    
+                    <div class="row g-3">
+                        <!-- Título -->
+                        <div class="col-md-8">
+                            <label for="titulo" class="form-label">
+                                Título da Vaga <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" 
+                                   placeholder="Ex: Analista de Importação Pleno" required>
+                        </div>
+                        
+                        <!-- Tipo de Contratação -->
+                        <div class="col-md-4">
+                            <label for="tipo_contratacao" class="form-label">Tipo de Contratação</label>
+                            <select class="form-select" id="tipo_contratacao" name="tipo_contratacao">
+                                <option value="CLT" selected>CLT</option>
+                                <option value="PJ">PJ</option>
+                                <option value="Estágio">Estágio</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Cargo Oficial -->
+                        <div class="col-md-6">
+                            <label for="cargo_id" class="form-label">
+                                Cargo Oficial <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="cargo_id" name="cargo_id" required>
+                                <option value="">Selecione um cargo...</option>
+                                {% if cargos %}
+                                    {% for cargo in cargos %}
+                                    <option value="{{ cargo.id }}">{{ cargo.nome_cargo }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option disabled>⚠️ Nenhum cargo cadastrado</option>
+                                {% endif %}
+                            </select>
+                            <small class="text-muted">
+                                {{ cargos|length if cargos else 0 }} cargo(s) disponível(is)
+                            </small>
+                        </div>
+                        
+                        <!-- Localização -->
+                        <div class="col-md-6">
+                            <label for="localizacao" class="form-label">Localização</label>
+                            <input type="text" class="form-control" id="localizacao" name="localizacao" 
+                                   placeholder="Ex: Joinville - SC / Remoto">
+                        </div>
+                        
+                        <!-- Descrição da Vaga -->
+                        <div class="col-12">
+                            <label for="descricao" class="form-label">
+                                Descrição da Vaga <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="descricao" name="descricao" 
+                                      rows="4" placeholder="Detalhe as responsabilidades da posição..." required></textarea>
+                        </div>
+                        
+                        <!-- Requisitos -->
+                        <div class="col-12">
+                            <label for="requisitos" class="form-label">
+                                Requisitos <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="requisitos" name="requisitos" 
+                                      rows="4" placeholder="Detalhe as qualificações e experiências necessárias..." required></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-recrutamento-primary" onclick="salvarVaga()">
+                    <i class="mdi mdi-content-save"></i> Salvar Vaga
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="mdi mdi-alert"></i> Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a vaga:</p>
+                <p class="fw-bold" id="vagaNomeExcluir"></p>
+                <p class="text-danger">
+                    <i class="mdi mdi-alert-circle"></i> Esta ação não pode ser desfeita.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
+                    <i class="mdi mdi-delete"></i> Confirmar Exclusão
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=2"></script>
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
