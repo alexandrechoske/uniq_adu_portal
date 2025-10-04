@@ -664,1412 +664,6 @@ def format_response_time(ms):
     except:
         return "N/A"
 
-@bp.route('/api/agente/stats')
-@login_required
-def get_agente_stats():
-    """
-    API para estatísticas básicas do Analytics do Agente
-    MELHORADO: com cálculo adequado de tempo de resposta
-    """
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_nome = request.args.get('empresa', 'all')
-        message_type = request.args.get('messageType', 'all')
-        
-        # Calcular datas
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base usando campo created_at correto
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        if empresa_nome != 'all':
-            query = query.eq('empresa_nome', empresa_nome)
-            
-        if message_type != 'all':
-            query = query.eq('message_type', message_type)
-        
-        def _exec():
-            return query.execute()
-        response = run_with_retries(
-            'analytics.get_agente_stats',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Calcular estatísticas
-        total_interactions = len(logs)
-        unique_users = len(set(log.get('whatsapp_number') for log in logs if log.get('whatsapp_number')))
-        unique_companies = len(set(log.get('empresa_nome') for log in logs if log.get('empresa_nome')))
-        
-        # Calcular sucessos
-        successful_interactions = len([log for log in logs if log.get('is_successful', True)])
-        success_rate = (successful_interactions / total_interactions * 100) if total_interactions > 0 else 0
-        
-        # Calcular tempo médio de resposta MELHORADO
-        response_times = []
-        for log in logs:
-            calc_time = calculate_response_time_from_log(log)
-            if calc_time > 0:
-                response_times.append(calc_time)
-                
-        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
-        
-        # Tipos de resposta
-        normal_responses = len([log for log in logs if log.get('response_type') == 'normal'])
-        arquivo_responses = len([log for log in logs if log.get('response_type') == 'arquivo'])
-        
-        stats = {
-            'total_interactions': total_interactions,
-            'unique_users': unique_users,
-            'unique_companies': unique_companies,
-            'success_rate': round(success_rate, 1),
-            'avg_response_time': round(avg_response_time, 0),
-            'avg_response_time_formatted': format_response_time(avg_response_time),
-            'normal_responses': normal_responses,
-            'arquivo_responses': arquivo_responses
-        }
-        
-        return jsonify(stats)
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter estatísticas do agente: {e}")
-        return jsonify({
-            'total_interactions': 0,
-            'unique_users': 0,
-            'unique_companies': 0,
-            'success_rate': 0,
-            'avg_response_time': 0,
-            'avg_response_time_formatted': 'N/A',
-            'normal_responses': 0,
-            'arquivo_responses': 0
-        })
-
-@bp.route('/api/agente/interactions-chart')
-@login_required
-def get_agente_interactions_chart():
-    """
-    API para gráfico de interações do agente ao longo do tempo
-    MELHORADO: com correção de timezone (-3h) e campo timestamp correto
-    """
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_nome = request.args.get('empresa', 'all')
-        
-        # Calcular datas
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            interval = 'hour'
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-            interval = 'day'
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-            interval = 'day'
-        else:
-            start_date = end_date - timedelta(days=30)
-            interval = 'day'
-        
-        # Query base usando campo created_at correto
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        query = query.order('created_at', desc=False)
-        
-        if empresa_nome != 'all':
-            query = query.eq('empresa_nome', empresa_nome)
-        
-        def _exec():
-            return query.execute()
-        response = run_with_retries(
-            'analytics.get_agente_interactions_chart',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Agrupar dados por intervalo com correção de timezone
-        chart_data = {}
-        
-        for log in logs:
-            timestamp = log.get('created_at')  # Usar created_at em vez de timestamp
-            if timestamp:
-                # Parse do timestamp UTC
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                # Aplicar correção de timezone (-3h para horário brasileiro)
-                dt_local = dt - timedelta(hours=3)
-                
-                if interval == 'hour':
-                    key = dt_local.strftime('%Y-%m-%d %H:00')
-                else:  # day
-                    key = dt_local.strftime('%Y-%m-%d')
-                
-                if key not in chart_data:
-                    chart_data[key] = {
-                        'date': key,
-                        'total': 0,
-                        'normal': 0,
-                        'arquivo': 0,
-                        'success': 0,
-                        'error': 0
-                    }
-                
-                chart_data[key]['total'] += 1
-                
-                response_type = log.get('response_type', 'normal')
-                if response_type == 'arquivo':
-                    chart_data[key]['arquivo'] += 1
-                else:
-                    chart_data[key]['normal'] += 1
-                
-                if log.get('is_successful', True):
-                    chart_data[key]['success'] += 1
-                else:
-                    chart_data[key]['error'] += 1
-        
-        # Converter para lista ordenada
-        chart_list = list(chart_data.values())
-        chart_list.sort(key=lambda x: x['date'])
-        
-        return jsonify(chart_list)
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter gráfico de interações do agente: {e}")
-        return jsonify([])
-        logs = response.data if response.data else []
-        
-        # Agrupar dados por intervalo
-        chart_data = {}
-        
-        for log in logs:
-            created_at = log.get('created_at')
-            if created_at:
-                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                
-                if interval == 'hour':
-                    key = dt.strftime('%Y-%m-%d %H:00')
-                else:  # day
-                    key = dt.strftime('%Y-%m-%d')
-                
-                if key not in chart_data:
-                    chart_data[key] = {
-                        'date': key,
-                        'total': 0,
-                        'normal': 0,
-                        'arquivo': 0,
-                        'success': 0,
-                        'error': 0
-                    }
-                
-                chart_data[key]['total'] += 1
-                
-                response_type = log.get('response_type', 'normal')
-                if response_type == 'arquivo':
-                    chart_data[key]['arquivo'] += 1
-                else:
-                    chart_data[key]['normal'] += 1
-                
-                if log.get('is_successful', True):
-                    chart_data[key]['success'] += 1
-                else:
-                    chart_data[key]['error'] += 1
-        
-        # Converter para lista ordenada
-        chart_list = list(chart_data.values())
-        chart_list.sort(key=lambda x: x['date'])
-        
-        return jsonify(chart_list)
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter gráfico de interações do agente: {e}")
-        return jsonify([])
-
-@bp.route('/api/agente/top-companies')
-@login_required
-def get_agente_top_companies():
-    """
-    API para empresas que mais usam o agente
-    MELHORADO: com campo timestamp correto e correção de timezone
-    """
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        
-        # Calcular datas
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base usando campo created_at correto
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        def _exec():
-            return query.execute()
-        response = run_with_retries(
-            'analytics.get_agente_top_companies',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Agrupar por empresa
-        company_stats = {}
-        for log in logs:
-            empresa_nome = log.get('empresa_nome', 'N/A')
-            if empresa_nome not in company_stats:
-                company_stats[empresa_nome] = {
-                    'empresa_nome': empresa_nome,
-                    'total_interactions': 0,
-                    'unique_users': set(),
-                    'normal_requests': 0,
-                    'arquivo_requests': 0,
-                    'success_rate': 0,
-                    'avg_processos_encontrados': 0,
-                    'total_processos': 0,
-                    'last_interaction': None,
-                    # Campo interno para comparação por datetime (não retornado)
-                    '_last_interaction_dt': None
-                }
-            
-            company_stats[empresa_nome]['total_interactions'] += 1
-            
-            whatsapp_number = log.get('whatsapp_number')
-            if whatsapp_number:
-                company_stats[empresa_nome]['unique_users'].add(whatsapp_number)
-            
-            response_type = log.get('response_type', 'normal')
-            if response_type == 'arquivo':
-                company_stats[empresa_nome]['arquivo_requests'] += 1
-            else:
-                company_stats[empresa_nome]['normal_requests'] += 1
-            
-            processos_encontrados = log.get('total_processos_encontrados', 0)
-            company_stats[empresa_nome]['total_processos'] += processos_encontrados
-            
-            # Determinar instante da interação: preferir created_at; fallback para timestamp
-            ts_raw = log.get('created_at') or log.get('timestamp')
-            if ts_raw:
-                try:
-                    # Parse UTC e ajustar para horário BR (-3h)
-                    dt = datetime.fromisoformat(ts_raw.replace('Z', '+00:00'))
-                    dt_local = dt - timedelta(hours=3)
-                    ts_local_str = dt_local.strftime('%d/%m/%Y %H:%M:%S')
-                    # Atualiza último se for mais recente
-                    if (company_stats[empresa_nome]['_last_interaction_dt'] is None) or (dt_local > company_stats[empresa_nome]['_last_interaction_dt']):
-                        company_stats[empresa_nome]['_last_interaction_dt'] = dt_local
-                        company_stats[empresa_nome]['last_interaction'] = ts_local_str
-                except Exception as _e:
-                    # Evitar quebra por parse; apenas ignora este registro
-                    pass
-        
-        # Calcular médias e converter unique_users para count
-        for empresa in company_stats.values():
-            empresa['unique_users'] = len(empresa['unique_users'])
-            empresa['avg_processos_encontrados'] = round(
-                empresa['total_processos'] / empresa['total_interactions'], 1
-            ) if empresa['total_interactions'] > 0 else 0
-        
-        # Remover campo interno e converter para lista ordenada
-        for c in company_stats.values():
-            if '_last_interaction_dt' in c:
-                del c['_last_interaction_dt']
-        top_companies = list(company_stats.values())
-        top_companies.sort(key=lambda x: x['total_interactions'], reverse=True)
-        
-        return jsonify({
-            'success': True,
-            'data': top_companies[:10]  # Top 10 empresas
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter top empresas do agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': []
-        })
-
-@bp.route('/api/agente/top-users')
-@login_required
-def get_agente_top_users():
-    """
-    API para usuários que mais usam o agente
-    """
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        
-        # Calcular datas
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base usando campo created_at correto
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        def _exec():
-            return query.execute()
-        response = run_with_retries(
-            'analytics.get_agente_top_users',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Agrupar por usuário
-        user_stats = {}
-        for log in logs:
-            user_name = log.get('user_name', 'N/A')
-            whatsapp_number = log.get('whatsapp_number', 'N/A')
-            empresa_nome = log.get('empresa_nome', 'N/A')
-            
-            # Usar whatsapp como chave única (pode haver nomes duplicados)
-            user_key = f"{whatsapp_number}|{user_name}"
-            
-            if user_key not in user_stats:
-                user_stats[user_key] = {
-                    'user_name': user_name,
-                    'whatsapp_number': whatsapp_number,
-                    'empresa_nome': empresa_nome,
-                    'total_interactions': 0,
-                    'normal_requests': 0,
-                    'arquivo_requests': 0,
-                    'success_rate': 0,
-                    'avg_processos_encontrados': 0,
-                    'total_processos': 0,
-                    'last_interaction': None,
-                    'avg_response_time': 0,
-                    'total_response_time': 0
-                }
-            
-            # Incrementar contadores
-            user_stats[user_key]['total_interactions'] += 1
-            
-            response_type = log.get('response_type', 'normal')
-            if response_type == 'arquivo':
-                user_stats[user_key]['arquivo_requests'] += 1
-            else:
-                user_stats[user_key]['normal_requests'] += 1
-            
-            # Calcular estatísticas
-            processos = log.get('total_processos_encontrados', 0)
-            user_stats[user_key]['total_processos'] += processos
-            
-            # Tempo de resposta
-            response_time = calculate_response_time_from_log(log)
-            user_stats[user_key]['total_response_time'] += response_time
-            
-            # Última interação com correção de timezone
-            timestamp = log.get('created_at')
-            if timestamp:
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                dt_local = dt - timedelta(hours=3)
-                timestamp_local = dt_local.strftime('%d/%m/%Y %H:%M:%S')
-                
-                if not user_stats[user_key]['last_interaction'] or timestamp > user_stats[user_key]['last_interaction']:
-                    user_stats[user_key]['last_interaction'] = timestamp_local
-        
-        # Calcular médias e taxa de sucesso
-        for user in user_stats.values():
-            total = user['total_interactions']
-            user['avg_processos_encontrados'] = round(
-                user['total_processos'] / total, 1
-            ) if total > 0 else 0
-            
-            user['avg_response_time'] = round(
-                user['total_response_time'] / total, 0
-            ) if total > 0 else 0
-            
-            # Taxa de sucesso baseada em processos encontrados
-            user['success_rate'] = round(
-                (user['total_processos'] / total) * 100, 1
-            ) if total > 0 else 0
-        
-        # Converter para lista e ordenar
-        top_users = list(user_stats.values())
-        top_users.sort(key=lambda x: x['total_interactions'], reverse=True)
-        
-        return jsonify({
-            'success': True,
-            'data': top_users[:10]  # Top 10 usuários
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter top usuários do agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': []
-        })
-
-@bp.route('/api/agente/recent-interactions')
-@login_required
-def get_agente_recent_interactions():
-    """
-    API para interações recentes do agente com paginação
-    MELHORADO: com correção de timezone (-3h) e melhor formatação
-    """
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_nome = request.args.get('empresa', 'all')
-        message_type = request.args.get('messageType', 'all')
-        
-        # Parâmetros de paginação
-        page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 10))
-        offset = (page - 1) * limit
-        
-        # Calcular datas
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base para contagem total usando campo created_at correto
-        count_query = supabase_admin.table('agent_interaction_logs').select('id', count='exact')
-        count_query = count_query.gte('created_at', start_date.isoformat())
-        count_query = count_query.lte('created_at', end_date.isoformat())
-        
-        if empresa_nome != 'all':
-            count_query = count_query.eq('empresa_nome', empresa_nome)
-        if message_type != 'all':
-            count_query = count_query.eq('message_type', message_type)
-        
-        # Query para dados paginados usando campo created_at correto
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        query = query.order('created_at', desc=True)
-        query = query.range(offset, offset + limit - 1)
-        
-        if empresa_nome != 'all':
-            query = query.eq('empresa_nome', empresa_nome)
-        if message_type != 'all':
-            query = query.eq('message_type', message_type)
-        
-        def _exec_count():
-            return count_query.execute()
-        def _exec_data():
-            return query.execute()
-            
-        # Executar queries
-        count_response = run_with_retries(
-            'analytics.get_agente_recent_interactions.count',
-            _exec_count,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        
-        data_response = run_with_retries(
-            'analytics.get_agente_recent_interactions.data',
-            _exec_data,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        
-        total_records = count_response.count if count_response else 0
-        logs = data_response.data if data_response.data else []
-        
-        # Formatar dados melhorados para o frontend
-        formatted_logs = []
-        for log in logs:
-            try:
-                # Aplicar correção de timezone (-3h)
-                timestamp = log.get('created_at')  # Usar created_at em vez de timestamp
-                if timestamp:
-                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                    dt_local = dt - timedelta(hours=3)
-                    timestamp_local = dt_local.strftime('%d/%m/%Y %H:%M:%S')
-                else:
-                    timestamp_local = None
-                
-                # Calcular tempo de resposta melhorado
-                response_time_ms = calculate_response_time_from_log(log)
-                response_time_formatted = format_response_time(response_time_ms)
-                
-                # Tratar resposta do agente (pode ser JSON)
-                agent_response = log.get('agent_response', '')
-                agent_response_full = agent_response  # Para o modal
-                
-                if agent_response and agent_response.startswith('{'):
-                    try:
-                        import json
-                        response_obj = json.loads(agent_response)
-                        agent_response = response_obj.get('resposta', agent_response)
-                    except:
-                        pass
-                
-                formatted_log = {
-                    'id': log.get('id'),  # Para identificar no modal
-                    'timestamp': timestamp_local,  # Já corrigido para timezone local
-                    'timestamp_utc': log.get('created_at'),  # Original para referência
-                    'user_name': log.get('user_name', 'N/A'),
-                    'whatsapp_number': log.get('whatsapp_number', 'N/A'),
-                    'empresa_nome': log.get('empresa_nome', 'N/A'),
-                    'user_message': log.get('user_message', 'N/A'),
-                    'user_message_full': log.get('user_message', 'N/A'),  # Para modal
-                    'message_type': log.get('message_type', 'N/A'),
-                    'response_type': log.get('response_type', 'N/A'),
-                    'agent_response': agent_response[:200] + '...' if len(agent_response) > 200 else agent_response,
-                    'agent_response_full': agent_response_full,  # Para modal
-                    'total_processos_encontrados': log.get('total_processos_encontrados', 0),
-                    'is_successful': log.get('is_successful', True),
-                    'response_time_ms': response_time_ms,
-                    'response_time_formatted': response_time_formatted
-                }
-                formatted_logs.append(formatted_log)
-            except Exception as format_error:
-                logger.warning(f"Erro ao formatar log do agente: {format_error}")
-                continue
-        
-        # Calcular informações de paginação
-        total_pages = (total_records + limit - 1) // limit
-        has_next = page < total_pages
-        has_prev = page > 1
-        
-        return jsonify({
-            'data': formatted_logs,
-            'pagination': {
-                'current_page': page,
-                'total_pages': total_pages,
-                'total_records': total_records,
-                'limit': limit,
-                'has_next': has_next,
-                'has_prev': has_prev
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter interações recentes do agente: {e}")
-        return jsonify({
-            'data': [],
-            'pagination': {
-                'current_page': 1,
-                'total_pages': 0,
-                'total_records': 0,
-                'limit': 10,
-                'has_next': False,
-            }
-        })
-
-# === ANALYTICS DO AGENTE - NOVAS ROTAS ===
-
-@bp.route('/api/agente/kpis')
-def get_agente_kpis():
-    """
-    API para KPIs do Analytics do Agente
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_filter = request.args.get('empresa', 'all')
-        response_type_filter = request.args.get('responseType', 'all')
-        
-        # Calcular data de início
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        elif date_range == '90d':
-            start_date = end_date - timedelta(days=90)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        # Aplicar filtros
-        if empresa_filter != 'all':
-            query = query.eq('empresa_nome', empresa_filter)
-        if response_type_filter != 'all':
-            query = query.eq('response_type', response_type_filter)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_kpis',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Calcular KPIs
-        total_interactions = len(logs)
-        unique_users = len(set(log.get('whatsapp_number') for log in logs if log.get('whatsapp_number')))
-        companies_served = len(set(log.get('empresa_nome') for log in logs if log.get('empresa_nome')))
-        
-        successful_logs = [log for log in logs if log.get('is_successful', True)]
-        success_rate = round((len(successful_logs) / total_interactions * 100) if total_interactions > 0 else 100, 1)
-        
-        # Calcular tempo médio de resposta
-        response_times = []
-        for log in logs:
-            calc_time = calculate_response_time_from_log(log)
-            if calc_time > 0:
-                response_times.append(calc_time)
-        
-        avg_response_time_ms = sum(response_times) / len(response_times) if response_times else 0
-        avg_response_time = format_response_time(avg_response_time_ms)
-        
-        normal_responses = len([log for log in logs if log.get('response_type') == 'normal'])
-        file_requests = len([log for log in logs if log.get('response_type') == 'arquivo'])
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'total_interactions': total_interactions,
-                'unique_users': unique_users,
-                'companies_served': companies_served,
-                'success_rate': success_rate,
-                'avg_response_time': avg_response_time,
-                'normal_responses': normal_responses,
-                'file_requests': file_requests
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter KPIs do agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': {
-                'total_interactions': 0,
-                'unique_users': 0,
-                'companies_served': 0,
-                'success_rate': 0,
-                'avg_response_time': '0s',
-                'normal_responses': 0,
-                'file_requests': 0
-            }
-        })
-
-@bp.route('/api/agente/chart')
-def get_agente_chart():
-    """
-    API para dados do gráfico de interações ao longo do tempo
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_filter = request.args.get('empresa', 'all')
-        response_type_filter = request.args.get('responseType', 'all')
-        
-        # Calcular data de início
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            days_count = 1
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-            days_count = 7
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-            days_count = 30
-        elif date_range == '90d':
-            start_date = end_date - timedelta(days=90)
-            days_count = 90
-        else:
-            start_date = end_date - timedelta(days=30)
-            days_count = 30
-        
-        # Query base
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        # Aplicar filtros
-        if empresa_filter != 'all':
-            query = query.eq('empresa_nome', empresa_filter)
-        if response_type_filter != 'all':
-            query = query.eq('response_type', response_type_filter)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_chart',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Agrupar por data
-        from collections import defaultdict
-        daily_data = defaultdict(lambda: {'normal': 0, 'arquivo': 0})
-        
-        for log in logs:
-            try:
-                log_date = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00'))
-                # Aplicar correção de timezone (-3h para horário brasileiro)
-                log_date_local = log_date - timedelta(hours=3)
-                date_key = log_date_local.strftime('%Y-%m-%d')
-                response_type = log.get('response_type', 'normal')
-                
-                if response_type == 'arquivo':
-                    daily_data[date_key]['arquivo'] += 1
-                else:
-                    daily_data[date_key]['normal'] += 1
-            except:
-                continue
-        
-        # Preparar dados para o gráfico
-        labels = []
-        normal_responses = []
-        file_requests = []
-        
-        # Gerar todas as datas no período (CORRIGIDO: incluindo o dia atual)
-        current_date = start_date
-        while current_date <= end_date:
-            date_key = current_date.strftime('%Y-%m-%d')
-            date_label = current_date.strftime('%d/%m')
-            
-            labels.append(date_label)
-            normal_responses.append(daily_data[date_key]['normal'])
-            file_requests.append(daily_data[date_key]['arquivo'])
-            
-            current_date += timedelta(days=1)
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'labels': labels,
-                'normal_responses': normal_responses,
-                'file_requests': file_requests
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter dados do gráfico do agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': {
-                'labels': [],
-                'normal_responses': [],
-                'file_requests': []
-            }
-        })
-
-@bp.route('/api/agente/companies')
-def get_agente_companies():
-    """
-    API para dados das empresas que mais usam o agente
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_filter = request.args.get('empresa', 'all')
-        response_type_filter = request.args.get('responseType', 'all')
-        
-        # Calcular data de início
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        elif date_range == '90d':
-            start_date = end_date - timedelta(days=90)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        # Aplicar filtros
-        if empresa_filter != 'all':
-            query = query.eq('empresa_nome', empresa_filter)
-        if response_type_filter != 'all':
-            query = query.eq('response_type', response_type_filter)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_companies',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Agrupar por empresa
-        from collections import defaultdict
-        companies_data = defaultdict(lambda: {
-            'empresa_nome': '',
-            'total_interactions': 0,
-            'unique_users': set(),
-            'processos_total': 0,
-            'ultima_interacao': None,
-            '_ultima_dt': None
-        })
-        
-        for log in logs:
-            empresa = log.get('empresa_nome', 'N/A')
-            if empresa and empresa != 'N/A':
-                companies_data[empresa]['empresa_nome'] = empresa
-                companies_data[empresa]['total_interactions'] += 1
-                
-                # Usuários únicos por WhatsApp
-                whatsapp = log.get('whatsapp_number')
-                if whatsapp:
-                    companies_data[empresa]['unique_users'].add(whatsapp)
-                
-                # Somar processos encontrados
-                processos = log.get('total_processos_encontrados', 0)
-                companies_data[empresa]['processos_total'] += processos
-                
-                # Última interação
-                try:
-                    log_date = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00'))
-                    log_date_local = log_date - timedelta(hours=3)  # Correção de timezone
-                    
-                    if not companies_data[empresa]['_ultima_dt'] or log_date_local > companies_data[empresa]['_ultima_dt']:
-                        companies_data[empresa]['_ultima_dt'] = log_date_local
-                        companies_data[empresa]['ultima_interacao'] = log_date_local.strftime('%d/%m/%Y %H:%M')
-                except:
-                    pass
-        
-        # Converter para lista e calcular médias
-        companies_list = []
-        for empresa_data in companies_data.values():
-            total_interactions = empresa_data['total_interactions']
-            avg_processes = round(
-                empresa_data['processos_total'] / total_interactions, 1
-            ) if total_interactions > 0 else 0
-            
-            companies_list.append({
-                'empresa_nome': empresa_data['empresa_nome'],
-                'total_interactions': total_interactions,
-                'unique_users': len(empresa_data['unique_users']),
-                'avg_processes': avg_processes,
-                'last_interaction': empresa_data['ultima_interacao'] or 'N/A'
-            })
-        
-        # Ordenar por total de interações
-        companies_list.sort(key=lambda x: x['total_interactions'], reverse=True)
-        
-        return jsonify({
-            'success': True,
-            'data': companies_list[:10]  # Top 10 empresas
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter empresas que mais usam o agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': []
-        })
-
-@bp.route('/api/agente/users')
-def get_agente_users():
-    """
-    API para dados dos usuários que mais usam o agente
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_filter = request.args.get('empresa', 'all')
-        response_type_filter = request.args.get('responseType', 'all')
-        
-        # Calcular data de início
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        elif date_range == '90d':
-            start_date = end_date - timedelta(days=90)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        # Aplicar filtros
-        if empresa_filter != 'all':
-            query = query.eq('empresa_nome', empresa_filter)
-        if response_type_filter != 'all':
-            query = query.eq('response_type', response_type_filter)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_users',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Agrupar por usuário (usando WhatsApp como chave única)
-        from collections import defaultdict
-        users_data = defaultdict(lambda: {
-            'user_name': '',
-            'whatsapp_number': '',
-            'empresa_nome': '',
-            'total_interactions': 0,
-            'response_times': [],
-            'ultima_interacao': None,
-            '_ultima_dt': None
-        })
-        
-        for log in logs:
-            whatsapp = log.get('whatsapp_number', 'N/A')
-            if whatsapp and whatsapp != 'N/A':
-                users_data[whatsapp]['user_name'] = log.get('user_name', 'N/A')
-                users_data[whatsapp]['whatsapp_number'] = whatsapp
-                users_data[whatsapp]['empresa_nome'] = log.get('empresa_nome', 'N/A')
-                users_data[whatsapp]['total_interactions'] += 1
-                
-                # Tempo de resposta
-                response_time = calculate_response_time_from_log(log)
-                if response_time > 0:
-                    users_data[whatsapp]['response_times'].append(response_time)
-                
-                # Última interação
-                try:
-                    log_date = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00'))
-                    log_date_local = log_date - timedelta(hours=3)  # Correção de timezone
-                    
-                    if not users_data[whatsapp]['_ultima_dt'] or log_date_local > users_data[whatsapp]['_ultima_dt']:
-                        users_data[whatsapp]['_ultima_dt'] = log_date_local
-                        users_data[whatsapp]['ultima_interacao'] = log_date_local.strftime('%d/%m/%Y %H:%M')
-                except:
-                    pass
-        
-        # Converter para lista e calcular médias
-        users_list = []
-        for user_data in users_data.values():
-            response_times = user_data['response_times']
-            avg_response_time = format_response_time(
-                sum(response_times) / len(response_times) if response_times else 0
-            )
-            
-            users_list.append({
-                'user_name': user_data['user_name'],
-                'whatsapp_number': user_data['whatsapp_number'],
-                'empresa_nome': user_data['empresa_nome'],
-                'total_interactions': user_data['total_interactions'],
-                'avg_response_time': avg_response_time,
-                'last_interaction': user_data['ultima_interacao'] or 'N/A'
-            })
-        
-        # Ordenar por total de interações
-        users_list.sort(key=lambda x: x['total_interactions'], reverse=True)
-        
-        return jsonify({
-            'success': True,
-            'data': users_list[:10]  # Top 10 usuários
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter usuários que mais usam o agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': []
-        })
-
-@bp.route('/api/agente/interactions')
-def get_agente_interactions():
-    """
-    API para interações recentes do agente
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Obter parâmetros de filtro e paginação
-        date_range = request.args.get('dateRange', '30d')
-        empresa_filter = request.args.get('empresa', 'all')
-        response_type_filter = request.args.get('responseType', 'all')
-        user_filter = request.args.get('user', 'all')
-        page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 20))
-        
-        # Calcular data de início
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        elif date_range == '90d':
-            start_date = end_date - timedelta(days=90)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        query = query.order('created_at', desc=True)
-        
-        # Aplicar filtros
-        if empresa_filter != 'all':
-            query = query.eq('empresa_nome', empresa_filter)
-        if response_type_filter != 'all':
-            query = query.eq('response_type', response_type_filter)
-        if user_filter != 'all':
-            query = query.eq('user_name', user_filter)
-        
-        # Paginação
-        offset = (page - 1) * limit
-        query = query.range(offset, offset + limit - 1)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_interactions',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Formatar dados para o frontend
-        formatted_logs = []
-        for log in logs:
-            try:
-                # Escolher melhor timestamp para exibição: message_timestamp > created_at > processed_at > agent_response_at > updated_at
-                # Seleciona e aplica política por campo
-                ordered = [
-                    ('message_timestamp', 'none'),
-                    ('created_at', 'none'),
-                    ('processed_at', 'minus3'),
-                    ('agent_response_at', 'minus3'),
-                    ('updated_at', 'minus3'),
-                ]
-                timestamp_formatted = 'N/A'
-                for key, policy in ordered:
-                    val = log.get(key)
-                    if val:
-                        timestamp_formatted = _format_ts_with_policy(val, policy)
-                        break
-                
-                # Truncar mensagem para preview
-                user_message = log.get('user_message', '')
-                message_preview = user_message[:100] + '...' if len(user_message) > 100 else user_message
-                
-                formatted_log = {
-                    'id': log.get('id'),
-                    'message_timestamp': timestamp_formatted,
-                    'user_name': log.get('user_name', 'N/A'),
-                    'empresa_nome': log.get('empresa_nome', 'N/A'),
-                    'user_message': message_preview,
-                    'response_type': log.get('response_type', 'normal'),
-                    'total_processos_encontrados': log.get('total_processos_encontrados', 0),
-                    'is_successful': log.get('is_successful', True)
-                }
-                formatted_logs.append(formatted_log)
-            except Exception as format_error:
-                logger.warning(f"Erro ao formatar log do agente: {format_error}")
-                continue
-        
-        return jsonify({
-            'success': True,
-            'data': formatted_logs
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter interações do agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': []
-        })
-
-@bp.route('/api/agente/interaction/<interaction_id>')
-def get_agente_interaction_details(interaction_id):
-    """
-    API para detalhes de uma interação específica
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Buscar interação específica
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.eq('id', interaction_id)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_interaction_details',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        
-        if not response.data or len(response.data) == 0:
-            return jsonify({
-                'success': False,
-                'error': 'Interação não encontrada'
-            }), 404
-        
-        log = response.data[0]
-        
-        # Formatar timestamp (prioriza message_timestamp; converte tz apenas se necessário)
-        ordered = [
-            ('message_timestamp', 'none'),
-            ('created_at', 'none'),
-            ('processed_at', 'minus3'),
-            ('agent_response_at', 'minus3'),
-            ('updated_at', 'minus3'),
-        ]
-        timestamp_formatted = 'N/A'
-        for key, policy in ordered:
-            val = log.get(key)
-            if val:
-                timestamp_formatted = _format_ts_with_policy(val, policy)
-                break
-        
-        # Calcular tempo de resposta
-        response_time_ms = calculate_response_time_from_log(log)
-        response_time_formatted = format_response_time(response_time_ms)
-        
-        # Formatar resposta do agente
-        agent_response = log.get('agent_response', '')
-        if agent_response:
-            try:
-                import json
-                response_obj = json.loads(agent_response)
-                if isinstance(response_obj, dict) and 'resposta' in response_obj:
-                    formatted_response = response_obj['resposta']
-                else:
-                    formatted_response = agent_response
-            except:
-                formatted_response = agent_response
-        else:
-            formatted_response = 'N/A'
-        
-        # Formatar CNPJs consultados
-        cnpjs_consultados = log.get('cnpjs_consultados', '')
-        if cnpjs_consultados:
-            try:
-                import json
-                cnpjs_list = json.loads(cnpjs_consultados)
-                if isinstance(cnpjs_list, list):
-                    cnpjs_formatted = ', '.join(cnpjs_list)
-                else:
-                    cnpjs_formatted = str(cnpjs_consultados)
-            except:
-                cnpjs_formatted = str(cnpjs_consultados)
-        else:
-            cnpjs_formatted = 'N/A'
-        
-        interaction_details = {
-            'id': log.get('id'),
-            'user_name': log.get('user_name', 'N/A'),
-            'whatsapp_number': log.get('whatsapp_number', 'N/A'),
-            'empresa_nome': log.get('empresa_nome', 'N/A'),
-            'message_timestamp': timestamp_formatted,
-            'user_message': log.get('user_message', 'N/A'),
-            'agent_response': formatted_response,
-            'response_type': log.get('response_type', 'normal'),
-            'total_processos_encontrados': log.get('total_processos_encontrados', 0),
-            'empresas_encontradas': log.get('empresas_encontradas', 0),
-            'response_time_ms': response_time_ms,
-            'response_time_formatted': response_time_formatted,
-            'is_successful': log.get('is_successful', True),
-            'session_id': log.get('session_id', 'N/A'),
-            'whatsapp_instance': log.get('whatsapp_instance', 'N/A'),
-            'cnpjs_consultados': cnpjs_formatted,
-            'total_cnpjs': log.get('total_cnpjs', 0),
-            'error_message': log.get('error_message', None)
-        }
-        
-        return jsonify({
-            'success': True,
-            'data': interaction_details
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter detalhes da interação: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-@bp.route('/api/agente/interaction-types')
-def get_agente_interaction_types():
-    """
-    API para tipos de interação (normal vs arquivo) - Para gráfico de rosca
-    """
-    # Verificar autenticação
-    if not check_api_auth():
-        return jsonify({'success': False, 'error': 'Authentication required'}), 401
-        
-    try:
-        # Obter parâmetros de filtro
-        date_range = request.args.get('dateRange', '30d')
-        empresa_filter = request.args.get('empresa', 'all')
-        
-        # Calcular data de início
-        end_date = datetime.now()
-        if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        elif date_range == '7d':
-            start_date = end_date - timedelta(days=7)
-        elif date_range == '30d':
-            start_date = end_date - timedelta(days=30)
-        elif date_range == '90d':
-            start_date = end_date - timedelta(days=90)
-        else:
-            start_date = end_date - timedelta(days=30)
-        
-        # Query base
-        query = supabase_admin.table('agent_interaction_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        
-        # Aplicar filtro de empresa
-        if empresa_filter != 'all':
-            query = query.eq('empresa_nome', empresa_filter)
-        
-        def _exec():
-            return query.execute()
-        
-        response = run_with_retries(
-            'analytics.get_agente_interaction_types',
-            _exec,
-            max_attempts=3,
-            base_delay_seconds=0.8,
-            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
-        )
-        logs = response.data if response.data else []
-        
-        # Contar tipos de interação
-        normal_count = len([log for log in logs if log.get('response_type') == 'normal'])
-        arquivo_count = len([log for log in logs if log.get('response_type') == 'arquivo'])
-        outros_count = len([log for log in logs if log.get('response_type') not in ['normal', 'arquivo']])
-        
-        # Calcular percentuais
-        total = normal_count + arquivo_count + outros_count
-        
-        data = {
-            'labels': ['Interações Normais', 'Solicitações de Documento'],
-            'values': [normal_count, arquivo_count],
-            'percentages': [
-                round((normal_count / total * 100), 1) if total > 0 else 0,
-                round((arquivo_count / total * 100), 1) if total > 0 else 0
-            ],
-            'total': total
-        }
-        
-        # Se houver outros tipos, adicionar
-        if outros_count > 0:
-            data['labels'].append('Outros')
-            data['values'].append(outros_count)
-            data['percentages'].append(round((outros_count / total * 100), 1) if total > 0 else 0)
-        
-        return jsonify({
-            'success': True,
-            'data': data
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao obter tipos de interação do agente: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'data': {
-                'labels': ['Interações Normais', 'Solicitações de Documento'],
-                'values': [0, 0],
-                'percentages': [0, 0],
-                'total': 0
-            }
-        })
 
 # ======== NOVAS ROTAS OTIMIZADAS - ANALYTICS DO PORTAL ========
 
@@ -2585,3 +1179,426 @@ def get_portal_most_active_users():
             'error': str(e),
             'data': []
         })
+
+# ============================================================================
+# ANALYTICS DO AGENTE WHATSAPP - APIs Otimizadas
+# ============================================================================
+
+@bp.route('/api/agente/kpis')
+@login_required
+def get_agente_kpis():
+    """
+    API para KPIs principais do agente WhatsApp
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        empresa_filter = request.args.get('empresaNome', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_agente').select('*')
+        query = query.gte('interaction_date', start_date.isoformat())
+        query = query.lte('interaction_date', end_date.isoformat())
+        
+        if empresa_filter != 'all':
+            query = query.eq('empresa_nome', empresa_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # KPIs
+        total_interactions = len(logs)
+        unique_users = len(set(log.get('user_id') for log in logs if log.get('user_id')))
+        unique_companies = len(set(log.get('empresa_nome') for log in logs if log.get('empresa_nome')))
+        
+        # AJUSTE: response_time agora vem em SEGUNDOS da view
+        response_times = [log.get('response_time_seconds', 0) for log in logs if log.get('response_time_seconds')]
+        avg_response_time_seconds = round(sum(response_times) / len(response_times), 2) if response_times else 0
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'total_interactions': total_interactions,
+                'unique_users': unique_users,
+                'companies_served': unique_companies,
+                'avg_response_time_seconds': avg_response_time_seconds
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter KPIs do agente: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {}
+        })
+
+@bp.route('/api/agente/timeline')
+@login_required
+def get_agente_timeline():
+    """
+    API para linha do tempo de interações
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        empresa_filter = request.args.get('empresaNome', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_agente').select('interaction_date')
+        query = query.gte('interaction_date', start_date.isoformat())
+        query = query.lte('interaction_date', end_date.isoformat())
+        
+        if empresa_filter != 'all':
+            query = query.eq('empresa_nome', empresa_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Agrupar por data
+        from collections import Counter
+        date_counts = Counter(log.get('interaction_date') for log in logs if log.get('interaction_date'))
+        
+        # Ordenar
+        sorted_dates = sorted(date_counts.items())
+        
+        labels = [datetime.fromisoformat(date).strftime('%d/%m') for date, _ in sorted_dates]
+        values = [count for _, count in sorted_dates]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter timeline do agente: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/agente/top-empresas')
+@login_required
+def get_agente_top_empresas():
+    """
+    API para top empresas por volume
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        limit = int(request.args.get('limit', 5))
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_agente').select('empresa_nome')
+        query = query.gte('interaction_date', start_date.isoformat())
+        query = query.lte('interaction_date', end_date.isoformat())
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Agrupar por empresa
+        from collections import Counter
+        empresa_counts = Counter(log.get('empresa_nome', 'N/A') for log in logs)
+        
+        # Top N
+        top_empresas = empresa_counts.most_common(limit)
+        
+        labels = [empresa for empresa, _ in top_empresas]
+        values = [count for _, count in top_empresas]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter top empresas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/agente/peak-hours')
+@login_required
+def get_agente_peak_hours():
+    """
+    API para horários de pico
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        empresa_filter = request.args.get('empresaNome', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_agente').select('interaction_hour')
+        query = query.gte('interaction_date', start_date.isoformat())
+        query = query.lte('interaction_date', end_date.isoformat())
+        
+        if empresa_filter != 'all':
+            query = query.eq('empresa_nome', empresa_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Agrupar por hora
+        from collections import Counter
+        hour_counts = Counter(int(log.get('interaction_hour', 0)) for log in logs if log.get('interaction_hour') is not None)
+        
+        # Ordenar por hora
+        sorted_hours = sorted(hour_counts.items())
+        
+        labels = [f"{hour:02d}:00" for hour, _ in sorted_hours]
+        values = [count for _, count in sorted_hours]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter horários de pico: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/agente/response-types')
+@login_required
+def get_agente_response_types():
+    """
+    API para distribuição de tipos de resposta
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        empresa_filter = request.args.get('empresaNome', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_agente').select('response_type')
+        query = query.gte('interaction_date', start_date.isoformat())
+        query = query.lte('interaction_date', end_date.isoformat())
+        
+        if empresa_filter != 'all':
+            query = query.eq('empresa_nome', empresa_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Agrupar por tipo
+        from collections import Counter
+        type_counts = Counter(log.get('response_type', 'Normal') for log in logs)
+        
+        labels = list(type_counts.keys())
+        values = list(type_counts.values())
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter tipos de resposta: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/agente/recent-interactions')
+@login_required
+def get_agente_recent_interactions():
+    """
+    API para interações recentes com detalhes completos
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        empresa_filter = request.args.get('empresaNome', 'all')
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('perPage', 20))
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_agente').select('*')
+        query = query.gte('interaction_date', start_date.isoformat())
+        query = query.lte('interaction_date', end_date.isoformat())
+        
+        if empresa_filter != 'all':
+            query = query.eq('empresa_nome', empresa_filter)
+        
+        query = query.order('interaction_timestamp_br', desc=True)
+        query = query.limit(per_page)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Formatar dados para retorno
+        formatted_logs = []
+        for log in logs:
+            formatted_logs.append({
+                'log_id': log.get('log_id'),
+                'user_name': log.get('user_name', 'N/A'),
+                'empresa_nome': log.get('empresa_nome', 'N/A'),
+                'message_type': log.get('message_type', 'N/A'),
+                'response_type': log.get('response_type', 'Normal'),
+                'response_time_seconds': log.get('response_time_seconds', 0),
+                'total_cnpjs_consultados': log.get('total_cnpjs_consultados', 0),
+                'total_processos_encontrados': log.get('total_processos_encontrados', 0),
+                'interaction_timestamp_br': log.get('interaction_timestamp_br', '')
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': formatted_logs,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': len(formatted_logs)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter interações recentes: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': [],
+            'pagination': {'page': 1, 'per_page': 20, 'total': 0}
+        })
+
+@bp.route('/api/agente/empresas-list')
+@login_required
+def get_agente_empresas_list():
+    """
+    API para listar todas as empresas disponíveis
+    """
+    try:
+        query = supabase_admin.table('vw_analytics_agente').select('empresa_nome')
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Empresas únicas
+        empresas = sorted(set(log.get('empresa_nome') for log in logs if log.get('empresa_nome')))
+        
+        return jsonify({
+            'success': True,
+            'empresas': empresas
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter lista de empresas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'empresas': []
+        })
+
+@bp.route('/api/agente/interaction-details/<log_id>')
+@login_required
+def get_agente_interaction_details(log_id):
+    """
+    API para buscar detalhes completos de uma interação (prompt + resposta)
+    """
+    try:
+        # Buscar na tabela original para pegar prompt e resposta
+        query = supabase_admin.table('agent_interaction_logs').select('*')
+        query = query.eq('id', log_id)
+        query = query.limit(1)
+        
+        response = query.execute()
+        
+        if not response.data or len(response.data) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'Interação não encontrada',
+                'data': None
+            }), 404
+        
+        log = response.data[0]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'log_id': log.get('id'),
+                'user_name': log.get('user_name'),
+                'empresa_nome': log.get('empresa_nome'),
+                'user_prompt': log.get('user_prompt', ''),  # Prompt do usuário
+                'agent_response_text': log.get('agent_response_text', ''),  # Resposta do agente
+                'message_type': log.get('message_type'),
+                'response_type': log.get('response_type'),
+                'response_time_seconds': log.get('response_time_seconds'),
+                'total_cnpjs': log.get('total_cnpjs'),
+                'total_processos_encontrados': log.get('total_processos_encontrados'),
+                'processed_at': log.get('processed_at')
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao buscar detalhes da interação: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': None
+        }), 500

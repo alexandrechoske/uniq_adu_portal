@@ -137,18 +137,8 @@
     to { transform: rotate(360deg); }
 }
 
-/* Filter Summary */
-.analytics-agente .filter-summary {
-    background-color: rgba(255, 255, 255, 0.15);
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    margin-left: 1rem;
-}
-
-.analytics-agente .filter-summary-text {
-    font-size: 0.875rem;
-    color: white;
-}
+/* Filter Summary - Usando estilo padrão do sistema */
+/* Herda estilo da actions-bar padrão */
 
 /* KPI Cards - Usando sistema global de kpi-cards.css */
 /* Apenas ajustes específicos do Analytics Agente */
