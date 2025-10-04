@@ -20,6 +20,12 @@ function initializeAnalytics() {
     Chart.defaults.color = '#6b7280';
     Chart.defaults.borderColor = '#f1f5f9';
     
+    // Desabilitar datalabels por padrão (habilitamos individualmente)
+    Chart.register(ChartDataLabels);
+    Chart.defaults.set('plugins.datalabels', {
+        display: false
+    });
+    
     setupEventListeners();
     loadEmpresasList();
     loadAllData();
@@ -172,6 +178,19 @@ function createTimelineChart(data) {
                 legend: {
                     display: false
                 },
+                datalabels: {
+                    display: true,
+                    align: 'top',
+                    anchor: 'end',
+                    color: '#128C7E',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    formatter: function(value) {
+                        return value > 0 ? value : '';
+                    }
+                },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     titleColor: 'white',
@@ -234,6 +253,19 @@ function createTopEmpresasChart(data) {
                 legend: {
                     display: false
                 },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'end',
+                    color: '#128C7E',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    formatter: function(value) {
+                        return value > 0 ? value : '';
+                    }
+                },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     titleColor: 'white',
@@ -290,6 +322,19 @@ function createPeakHoursChart(data) {
             plugins: {
                 legend: {
                     display: false
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'end',
+                    color: '#6f42c1',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    formatter: function(value) {
+                        return value > 0 ? value : '';
+                    }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -373,6 +418,19 @@ function createResponseTypesChart(data) {
                         usePointStyle: true
                     }
                 },
+                datalabels: {
+                    display: true,
+                    color: '#ffffff',
+                    font: {
+                        weight: 'bold',
+                        size: 13
+                    },
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${value}\n(${percentage}%)`;
+                    }
+                },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     titleColor: 'white',
@@ -426,6 +484,19 @@ function createWeekdayChart(data) {
             plugins: {
                 legend: {
                     display: false
+                },
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'end',
+                    color: '#c0392b',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    formatter: function(value) {
+                        return value > 0 ? value : '';
+                    }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
