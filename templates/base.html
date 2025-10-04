@@ -930,7 +930,21 @@
                     </a>
                     {% endif %}
                     
-                    <!-- REMOVED ANALYTICS FROM SIDEBAR -->
+                    {% if 'analytics' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+                       title="Analytics Portal">
+                        <i class="mdi mdi-chart-bar"></i>
+                        <span class="sidebar-text">Analytics Portal</span>
+                    </a>
+                    
+                    <a href="{{ url_for('analytics.analytics_agente') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint == 'analytics.analytics_agente' %}active{% endif %}"
+                       title="Analytics Agente">
+                        <i class="mdi mdi-whatsapp"></i>
+                        <span class="sidebar-text">Analytics Agente</span>
+                    </a>
+                    {% endif %}
                 </div>
                 {% endif %}
             

@@ -20,7 +20,6 @@ def register_importacoes_blueprints(app):
     
     # Import blueprints (imports aqui para evitar circular imports)
     from modules.importacoes.agente.routes import bp as agente_bp
-    from modules.importacoes.analytics import analytics_bp
     from modules.importacoes.conferencia.routes import conferencia_bp
     from modules.importacoes.dashboards.executivo.routes import bp as dashboard_executivo_bp
     from modules.importacoes.dashboards.operacional.routes import dashboard_operacional
@@ -30,7 +29,6 @@ def register_importacoes_blueprints(app):
     
     # Registrar blueprints
     app.register_blueprint(agente_bp)
-    app.register_blueprint(analytics_bp)
     app.register_blueprint(conferencia_bp)
     app.register_blueprint(dashboard_executivo_bp)
     app.register_blueprint(dashboard_operacional)

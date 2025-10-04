@@ -58,7 +58,7 @@ class PerfilAccessService:
         if user_role == 'admin' and user_perfil_principal == 'master_admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
-                'usuarios', 'agente', 'conferencia', 'materiais', 'config',
+                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'analytics',
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
             ]
@@ -70,20 +70,20 @@ class PerfilAccessService:
             accessible_modules = set()
             
             if user_perfil_principal == 'admin_operacao':
-                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações
+                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações + analytics
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 
-                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config',
+                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config', 'analytics',
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_operacao) - módulos disponíveis: {list(accessible_modules)}")
                 
             elif user_perfil_principal == 'admin_financeiro':
-                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários
+                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários + analytics
                 accessible_modules.update([
                     'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
-                    'despesas_anual', 'faturamento_anual', 'usuarios'
+                    'despesas_anual', 'faturamento_anual', 'usuarios', 'analytics'
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_financeiro) - módulos disponíveis: {list(accessible_modules)}")
             
@@ -632,6 +632,15 @@ class PerfilAccessService:
                 'url': '/config',
                 'paginas': {
                     'sistema': {'nome': 'Sistema', 'url': '/config/sistema'}
+                }
+            },
+            'analytics': {
+                'nome': 'Ferramentas',
+                'icone': 'fas fa-chart-bar',
+                'url': '/analytics',
+                'paginas': {
+                    'portal': {'nome': 'Analytics do Portal', 'url': '/analytics'},
+                    'agente': {'nome': 'Analytics do Agente', 'url': '/analytics/agente'}
                 }
             }
         }

@@ -5,7 +5,8 @@ try:
 except Exception:
     ZoneInfo = None
 from extensions import supabase_admin
-from routes.auth import role_required
+from modules.auth.routes import login_required
+from services.perfil_access_service import PerfilAccessService
 import logging
 import os
 from services.retry_utils import run_with_retries
@@ -80,42 +81,35 @@ def _format_ts_with_policy(ts_value, policy: str = 'none'):
         return str(ts_value)
 
 @bp.route('/')
-@role_required(['admin'])
+@login_required
 def analytics_dashboard():
     """
     Página principal do Analytics do Portal
+    Acesso: admin master, admin_operacao, admin_financeiro
     """
     try:
-        return render_template('analytics.html', analytics_type='portal')
+        # Verificar se usuário tem acesso ao módulo analytics
+        if not PerfilAccessService.user_can_access_page('analytics', 'portal'):
+            logger.warning(f"Usuário sem permissão para acessar analytics portal")
+            return render_template('errors/403.html'), 403
+            
+        return render_template('analytics_portal_new.html', analytics_type='portal')
     except Exception as e:
         logger.error(f"Erro ao carregar página de analytics: {e}")
         return f"Erro ao carregar página: {str(e)}", 500
 
 @bp.route('/agente')
+@login_required
 def analytics_agente():
     """
     Página principal do Analytics do Agente
+    Acesso: admin master, admin_operacao, admin_financeiro
     """
     try:
-        # Debug: verificar qual template está sendo carregado
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        template_path = os.path.join(current_dir, 'templates', 'analytics_agente.html')
-        print(f"[DEBUG] Carregando template: {template_path}")
-        print(f"[DEBUG] Template exists: {os.path.exists(template_path)}")
-        if os.path.exists(template_path):
-            print(f"[DEBUG] Template size: {os.path.getsize(template_path)} bytes")
-        
-        # Hack temporário para desenvolvimento: se não há usuário na sessão, criar um mock
-        if 'user' not in session or not session.get('user'):
-            # Criar usuário mock para desenvolvimento
-            session['user'] = {
-                'id': 'test-user-id',
-                'name': 'Test User',
-                'role': 'admin',
-                'email': 'test@example.com'
-            }
-            session.permanent = True
+        # Verificar se usuário tem acesso ao módulo analytics
+        if not PerfilAccessService.user_can_access_page('analytics', 'agente'):
+            logger.warning(f"Usuário sem permissão para acessar analytics agente")
+            return render_template('errors/403.html'), 403
         
         return render_template('analytics_agente.html', analytics_type='agente')
     except Exception as e:
@@ -130,7 +124,7 @@ def analytics_agente_test_simple():
     return "<h1>Analytics do Agente - Teste</h1><p>Se você vê esta página, a rota está funcionando!</p>"
 
 @bp.route('/agente/test')
-@role_required(['admin'])
+@login_required
 def analytics_agente_test():
     """
     Página de teste do Analytics do Agente
@@ -142,7 +136,7 @@ def analytics_agente_test():
         return f"Erro ao carregar página de teste: {str(e)}", 500
 
 @bp.route('/api/stats')
-@role_required(['admin'])
+@login_required
 def get_stats():
     """
     API para estatísticas básicas do Analytics
@@ -253,7 +247,7 @@ def get_stats():
         })
 
 @bp.route('/api/charts')
-@role_required(['admin'])
+@login_required
 def get_charts():
     """
     API para dados dos gráficos
@@ -447,7 +441,7 @@ def get_charts():
         })
 
 @bp.route('/api/top-users')
-@role_required(['admin'])
+@login_required
 def get_top_users():
     """
     API para dados dos top usuários
@@ -536,7 +530,7 @@ def get_top_users():
         return jsonify([])  # Retornar lista vazia
 
 @bp.route('/api/recent-activity')
-@role_required(['admin'])
+@login_required
 def get_recent_activity():
     """
     API para atividade recente
@@ -671,7 +665,7 @@ def format_response_time(ms):
         return "N/A"
 
 @bp.route('/api/agente/stats')
-@role_required(['admin'])
+@login_required
 def get_agente_stats():
     """
     API para estatísticas básicas do Analytics do Agente
@@ -765,7 +759,7 @@ def get_agente_stats():
         })
 
 @bp.route('/api/agente/interactions-chart')
-@role_required(['admin'])
+@login_required
 def get_agente_interactions_chart():
     """
     API para gráfico de interações do agente ao longo do tempo
@@ -908,7 +902,7 @@ def get_agente_interactions_chart():
         return jsonify([])
 
 @bp.route('/api/agente/top-companies')
-@role_required(['admin'])
+@login_required
 def get_agente_top_companies():
     """
     API para empresas que mais usam o agente
@@ -1023,7 +1017,7 @@ def get_agente_top_companies():
         })
 
 @bp.route('/api/agente/top-users')
-@role_required(['admin'])
+@login_required
 def get_agente_top_users():
     """
     API para usuários que mais usam o agente
@@ -1146,7 +1140,7 @@ def get_agente_top_users():
         })
 
 @bp.route('/api/agente/recent-interactions')
-@role_required(['admin'])
+@login_required
 def get_agente_recent_interactions():
     """
     API para interações recentes do agente com paginação
@@ -2075,4 +2069,519 @@ def get_agente_interaction_types():
                 'percentages': [0, 0],
                 'total': 0
             }
+        })
+
+# ======== NOVAS ROTAS OTIMIZADAS - ANALYTICS DO PORTAL ========
+
+@bp.route('/api/portal/kpis')
+@login_required
+def get_portal_kpis():
+    """
+    API para KPIs principais do Portal usando view otimizada
+    """
+    try:
+        # Obter filtros
+        date_range = request.args.get('dateRange', '30d')
+        user_role_filter = request.args.get('userRole', 'all')
+        module_filter = request.args.get('moduleName', 'all')
+        
+        # Calcular período
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        # Query base usando a view otimizada
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')  # Apenas acessos a páginas
+        
+        if user_role_filter != 'all':
+            query = query.eq('user_role', user_role_filter)
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Calcular KPIs
+        total_access = len(logs)
+        unique_users = len(set(log['user_id'] for log in logs if log.get('user_id')))
+        
+        # Tempo médio de resposta (apenas sucessos)
+        successful_logs = [log for log in logs if log.get('is_successful')]
+        if successful_logs and any(log.get('response_time_ms') for log in successful_logs):
+            valid_times = [log['response_time_ms'] for log in successful_logs if log.get('response_time_ms') and log['response_time_ms'] > 0]
+            avg_response_time = int(sum(valid_times) / len(valid_times)) if valid_times else 0
+        else:
+            avg_response_time = 0
+        
+        # Taxa de sucesso
+        success_rate = round((len(successful_logs) / total_access * 100), 2) if total_access > 0 else 100.0
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'total_access': total_access,
+                'unique_users': unique_users,
+                'avg_response_time_ms': avg_response_time,
+                'success_rate': success_rate
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter KPIs do portal: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {
+                'total_access': 0,
+                'unique_users': 0,
+                'avg_response_time_ms': 0,
+                'success_rate': 100.0
+            }
+        })
+
+@bp.route('/api/portal/timeline')
+@login_required
+def get_portal_timeline():
+    """
+    API para gráfico de acessos ao longo do tempo
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        user_role_filter = request.args.get('userRole', 'all')
+        module_filter = request.args.get('moduleName', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_portal').select('access_date')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if user_role_filter != 'all':
+            query = query.eq('user_role', user_role_filter)
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Agrupar por data
+        from collections import Counter
+        dates_count = Counter(log['access_date'] for log in logs if log.get('access_date'))
+        
+        # Gerar todas as datas do período
+        date_list = []
+        current = start_date
+        while current <= end_date:
+            date_list.append(current)
+            current += timedelta(days=1)
+        
+        # Formatar resposta
+        labels = [d.strftime('%d/%m') for d in date_list]
+        values = [dates_count.get(d.isoformat(), 0) for d in date_list]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter timeline: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/portal/top-modules')
+@login_required
+def get_portal_top_modules():
+    """
+    API para Top 5 módulos mais acessados
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        user_role_filter = request.args.get('userRole', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_portal').select('module_name')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if user_role_filter != 'all':
+            query = query.eq('user_role', user_role_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Contar módulos
+        from collections import Counter
+        modules_count = Counter(log['module_name'] for log in logs if log.get('module_name'))
+        top_modules = modules_count.most_common(5)
+        
+        labels = [mod[0] for mod in top_modules]
+        values = [mod[1] for mod in top_modules]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter top módulos: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/portal/device-breakdown')
+@login_required
+def get_portal_device_breakdown():
+    """
+    API para distribuição por tipo de dispositivo
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        user_role_filter = request.args.get('userRole', 'all')
+        module_filter = request.args.get('moduleName', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_portal').select('device_type')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if user_role_filter != 'all':
+            query = query.eq('user_role', user_role_filter)
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Contar dispositivos
+        from collections import Counter
+        devices_count = Counter(log['device_type'] for log in logs if log.get('device_type'))
+        
+        labels = list(devices_count.keys())
+        values = list(devices_count.values())
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter breakdown de dispositivos: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/portal/top-pages')
+@login_required
+def get_portal_top_pages():
+    """
+    API para Top 10 páginas mais acessadas
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        user_role_filter = request.args.get('userRole', 'all')
+        module_filter = request.args.get('moduleName', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_portal').select('page_name')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if user_role_filter != 'all':
+            query = query.eq('user_role', user_role_filter)
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Contar páginas
+        from collections import Counter
+        pages_count = Counter(log['page_name'] for log in logs if log.get('page_name'))
+        top_pages = pages_count.most_common(10)
+        
+        labels = [page[0] for page in top_pages]
+        values = [page[1] for page in top_pages]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter top páginas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/portal/recent-logs')
+@login_required
+def get_portal_recent_logs():
+    """
+    API para logs de acesso recentes (tabela paginada)
+    """
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('perPage', 20))
+        date_range = request.args.get('dateRange', '30d')
+        user_role_filter = request.args.get('userRole', 'all')
+        module_filter = request.args.get('moduleName', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        # Query com paginação
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if user_role_filter != 'all':
+            query = query.eq('user_role', user_role_filter)
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        # Ordenar por timestamp mais recente
+        query = query.order('access_timestamp_br', desc=True)
+        
+        # Aplicar paginação
+        start_index = (page - 1) * per_page
+        query = query.range(start_index, start_index + per_page - 1)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Formatar logs para exibição
+        formatted_logs = []
+        for log in logs:
+            formatted_logs.append({
+                'log_id': log.get('log_id'),
+                'user_name': log.get('user_name', 'N/A'),
+                'user_email': log.get('user_email', ''),
+                'user_role': log.get('user_role', ''),
+                'module_name': log.get('module_name', 'N/A'),
+                'page_name': log.get('page_name', 'N/A'),
+                'access_timestamp': log.get('access_timestamp_br', 'N/A'),
+                'http_status': log.get('http_status', 0),
+                'is_successful': log.get('is_successful', True),
+                'device_type': log.get('device_type', 'N/A'),
+                'browser': log.get('browser', 'N/A')
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': formatted_logs,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': len(formatted_logs)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter logs recentes: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': [],
+            'pagination': {'page': 1, 'per_page': 20, 'total': 0}
+        })
+
+@bp.route('/api/portal/user-profile-breakdown')
+@login_required
+def get_portal_user_profile_breakdown():
+    """
+    API para distribuição por perfil de usuário
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        module_filter = request.args.get('moduleName', 'all')
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_portal').select('user_role')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Contar perfis
+        from collections import Counter
+        roles_count = Counter(log['user_role'] for log in logs if log.get('user_role'))
+        
+        labels = list(roles_count.keys())
+        values = list(roles_count.values())
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'values': values
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter breakdown de perfis: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {'labels': [], 'values': []}
+        })
+
+@bp.route('/api/portal/most-active-users')
+@login_required
+def get_portal_most_active_users():
+    """
+    API para usuários mais ativos
+    """
+    try:
+        date_range = request.args.get('dateRange', '30d')
+        module_filter = request.args.get('moduleName', 'all')
+        limit = int(request.args.get('limit', 10))
+        
+        end_date = datetime.now().date()
+        if date_range == '1d':
+            start_date = end_date
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = end_date - timedelta(days=30)
+        
+        query = supabase_admin.table('vw_analytics_portal').select('user_name, user_email, user_role, access_timestamp_br')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.eq('action_type', 'page_access')
+        
+        if module_filter != 'all':
+            query = query.eq('module_name', module_filter)
+        
+        response = query.execute()
+        logs = response.data if response.data else []
+        
+        # Agrupar por usuário
+        from collections import Counter
+        user_access = {}
+        for log in logs:
+            user_key = log.get('user_email', 'N/A')
+            access_timestamp = log.get('access_timestamp_br', '')
+            
+            if user_key not in user_access:
+                user_access[user_key] = {
+                    'user_name': log.get('user_name', 'N/A'),
+                    'user_email': user_key,
+                    'user_role': log.get('user_role', 'N/A'),
+                    'access_count': 0,
+                    'last_access': access_timestamp
+                }
+            else:
+                user_access[user_key]['access_count'] += 1
+                # Atualizar último acesso se for mais recente
+                if access_timestamp > user_access[user_key]['last_access']:
+                    user_access[user_key]['last_access'] = access_timestamp
+        
+        # Ordenar e pegar top N
+        sorted_users = sorted(user_access.values(), key=lambda x: x['access_count'], reverse=True)[:limit]
+        
+        return jsonify({
+            'success': True,
+            'data': sorted_users
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter usuários mais ativos: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': []
         })

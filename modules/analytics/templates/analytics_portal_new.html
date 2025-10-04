@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics do Portal - UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('analytics.static', filename='css/analytics_portal.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container analytics-portal">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-analytics">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Analytics do Portal', 'icon': 'mdi mdi-chart-bar'}
+            ], 'analytics') }}
+            <!-- Resumo de Filtros -->
+            <div id="filter-summary" class="filter-summary">
+                <span id="filter-summary-text">Vendo dados dos últimos 30 dias</span>
+            </div>
+        </div>
+        <div class="actions-right">
+            <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
+                <i class="mdi mdi-filter-off"></i>
+                Remover Filtros
+            </button>
+            <button id="open-filters" class="btn btn-light">
+                <i class="mdi mdi-filter"></i>
+                Filtros
+            </button>
+            <button id="refresh-data" class="btn btn-outline-light">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div id="kpi-loading" class="component-loading"><div class="spinner"></div></div>
+        
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-eye"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Total de Acessos</p>
+                <p class="kpi-value" id="total-access">--</p>
+                <p class="kpi-sub-value">Período selecionado</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-group"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Usuários Únicos</p>
+                <p class="kpi-value" id="unique-users">--</p>
+                <p class="kpi-sub-value">Diferentes usuários</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-clock-fast"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Tempo Médio</p>
+                <p class="kpi-value" id="avg-response-time">--</p>
+                <p class="kpi-sub-value">Resposta do servidor</p>
+            </div>
+        </div>
+        
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">
+                <i class="mdi mdi-check-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Taxa de Sucesso</p>
+                <p class="kpi-value" id="success-rate">--</p>
+                <p class="kpi-sub-value">Requisições bem-sucedidas</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid two-columns">
+        <!-- Gráfico de Linha: Acessos ao Longo do Tempo - Full Width -->
+        <div class="chart-section chart-full-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Acessos ao Longo do Tempo</h2>
+            </div>
+            <div class="chart-container">
+                <div id="timeline-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="timeline-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Segunda Linha: 2 Gráficos -->
+        <!-- Top 5 Módulos Mais Acessados -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Top 5 Módulos</h2>
+            </div>
+            <div class="chart-container">
+                <div id="modules-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="top-modules-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Acessos por Dispositivo -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Acessos por Dispositivo</h2>
+            </div>
+            <div class="chart-container">
+                <div id="device-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="device-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Terceira Linha: 2 Gráficos -->
+        <!-- Top 10 Páginas Mais Acessadas -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Top 10 Páginas</h2>
+            </div>
+            <div class="chart-container">
+                <div id="pages-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="top-pages-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Acessos por Perfil de Usuário -->
+        <div class="chart-section chart-half-width">
+            <div class="chart-header">
+                <h2 class="chart-title">Acessos por Perfil</h2>
+            </div>
+            <div class="chart-container">
+                <div id="profile-loading" class="component-loading"><div class="spinner"></div></div>
+                <canvas id="user-profile-chart" class="chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabelas -->
+    <!-- Usuários Mais Ativos -->
+    <div class="enhanced-table-section">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
+                <i class="mdi mdi-account-star"></i>
+                Usuários Mais Ativos
+            </h2>
+            <div class="enhanced-table-controls">
+                <div class="enhanced-table-info">
+                    <span class="enhanced-table-count" id="users-count">Carregando...</span>
+                </div>
+            </div>
+        </div>
+        <div class="enhanced-table-container">
+            <div id="users-loading" class="component-loading"><div class="spinner"></div></div>
+            <table id="active-users-table" class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Perfil</th>
+                        <th>Total de Acessos</th>
+                        <th>Último Acesso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Logs de Acesso Recentes -->
+    <div class="enhanced-table-section">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
+                <i class="mdi mdi-history"></i>
+                Logs de Acesso Recentes
+            </h2>
+            <div class="enhanced-table-controls">
+                <div class="enhanced-table-info">
+                    <span class="enhanced-table-count" id="logs-count">Carregando...</span>
+                </div>
+            </div>
+        </div>
+        <div class="enhanced-table-container">
+            <div id="logs-loading" class="component-loading"><div class="spinner"></div></div>
+            <table id="recent-logs-table" class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Perfil</th>
+                        <th>Módulo</th>
+                        <th>Página</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Filtros -->
+<div id="filters-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Filtros de Analytics</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="filter-group">
+                <label for="date-range">Período:</label>
+                <select id="date-range">
+                    <option value="30d" selected>Últimos 30 dias</option>
+                    <option value="7d">Últimos 7 dias</option>
+                    <option value="1d">Hoje</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="user-role">Perfil de Usuário:</label>
+                <select id="user-role">
+                    <option value="all" selected>Todos</option>
+                    <option value="admin">Admin</option>
+                    <option value="interno_unique">Interno</option>
+                    <option value="cliente_unique">Cliente</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="module-name">Módulo:</label>
+                <select id="module-name">
+                    <option value="all" selected>Todos</option>
+                    <option value="dashboard">Dashboard</option>
+                    <option value="importacoes">Importações</option>
+                    <option value="financeiro">Financeiro</option>
+                    <option value="usuarios">Usuários</option>
+                    <option value="config">Configurações</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="apply-filters" class="btn btn-primary">Aplicar Filtros</button>
+            <button id="clear-filters" class="btn btn-secondary">Limpar</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('analytics.static', filename='js/analytics_portal.js') }}"></script>
+<script>
+// Wrappers para esconder loaders quando dados carregam
+const ANALYTICS_HIDE_LOADER = (id) => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.style.display = 'none';
+        console.log('[ANALYTICS] Loader hidden:', id);
+    }
+};
+
+const ANALYTICS_TRY_WRAP = (name, id) => {
+    const fn = window[name];
+    if (typeof fn === 'function') {
+        window[name] = function() {
+            const r = fn.apply(this, arguments);
+            try { ANALYTICS_HIDE_LOADER(id); } catch (_) {}
+            return r;
+        };
+        console.log('[ANALYTICS] Wrapped function:', name, '-> hides', id);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    ANALYTICS_TRY_WRAP('updateKPIs', 'kpi-loading');
+    ANALYTICS_TRY_WRAP('createTimelineChart', 'timeline-loading');
+    ANALYTICS_TRY_WRAP('createTopModulesChart', 'modules-loading');
+    ANALYTICS_TRY_WRAP('createDeviceChart', 'device-loading');
+    ANALYTICS_TRY_WRAP('createTopPagesChart', 'pages-loading');
+    ANALYTICS_TRY_WRAP('createUserProfileChart', 'profile-loading');
+    ANALYTICS_TRY_WRAP('updateActiveUsersTable', 'users-loading');
+    ANALYTICS_TRY_WRAP('updateRecentLogsTable', 'logs-loading');
+
+    // Safety timeout
+    setTimeout(() => {
+        ['kpi-loading','timeline-loading','modules-loading','device-loading',
+         'pages-loading','profile-loading','users-loading','logs-loading']
+            .forEach(ANALYTICS_HIDE_LOADER);
+        console.warn('[ANALYTICS] Safety timeout reached. Forced hiding of loaders.');
+    }, 20000);
+});
+</script>
+{% endblock %}
