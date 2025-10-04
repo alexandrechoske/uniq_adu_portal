@@ -538,7 +538,7 @@ function updateRecentLogsTable(data) {
     tbody.innerHTML = '';
     
     if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #9ca3af; padding: 2rem;">Nenhuma interação encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #9ca3af; padding: 2rem;">Nenhuma interação encontrada</td></tr>';
         if (countElement) countElement.textContent = '0 interações';
         return;
     }
@@ -546,10 +546,18 @@ function updateRecentLogsTable(data) {
     data.forEach(log => {
         const row = document.createElement('tr');
         
-        // Data/Hora
-        const dateCell = document.createElement('td');
-        dateCell.textContent = formatDateTime(log.interaction_timestamp_br);
-        row.appendChild(dateCell);
+        // Data/Hora da Pergunta (timestamp original)
+        const questionDateCell = document.createElement('td');
+        questionDateCell.textContent = formatDateTime(log.interaction_timestamp_br);
+        questionDateCell.style.whiteSpace = 'nowrap';
+        row.appendChild(questionDateCell);
+        
+        // Data/Hora da Resposta (pergunta + tempo de resposta)
+        const responseDateCell = document.createElement('td');
+        const responseDateTime = calculateResponseDateTime(log.interaction_timestamp_br, log.response_time_seconds);
+        responseDateCell.textContent = responseDateTime;
+        responseDateCell.style.whiteSpace = 'nowrap';
+        row.appendChild(responseDateCell);
         
         // Usuário
         const userCell = document.createElement('td');
@@ -561,40 +569,18 @@ function updateRecentLogsTable(data) {
         empresaCell.textContent = log.empresa_nome || 'N/A';
         row.appendChild(empresaCell);
         
-        // Tipo Mensagem
-        const msgTypeCell = document.createElement('td');
-        msgTypeCell.textContent = log.message_type || 'N/A';
-        row.appendChild(msgTypeCell);
-        
-        // Tipo Resposta
-        const resTypeCell = document.createElement('td');
-        const resTypeBadge = document.createElement('span');
-        resTypeBadge.className = 'badge';
-        resTypeBadge.textContent = log.response_type || 'N/A';
-        resTypeBadge.style.cssText = log.response_type === 'arquivo' ? 
-            'background: #FEF3C7; color: #92400E; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;' :
-            'background: #DBEAFE; color: #1E40AF; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;';
-        resTypeCell.appendChild(resTypeBadge);
-        row.appendChild(resTypeCell);
-        
         // Tempo de Resposta
         const timeCell = document.createElement('td');
         const time = parseFloat(log.response_time_seconds) || 0;
         timeCell.textContent = time.toFixed(2);
+        timeCell.style.textAlign = 'center';
         row.appendChild(timeCell);
         
         // Processos Encontrados
         const processCell = document.createElement('td');
         processCell.textContent = log.total_processos_encontrados || 0;
+        processCell.style.textAlign = 'center';
         row.appendChild(processCell);
-        
-        // Status (assumindo sucesso)
-        const statusCell = document.createElement('td');
-        const statusBadge = document.createElement('span');
-        statusBadge.className = 'status-badge success';
-        statusBadge.textContent = 'Sucesso';
-        statusCell.appendChild(statusBadge);
-        row.appendChild(statusCell);
         
         // Ações - Botão Ver Detalhes
         const actionsCell = document.createElement('td');
@@ -613,6 +599,54 @@ function updateRecentLogsTable(data) {
     }
     
     console.log('[ANALYTICS AGENTE] Tabela de logs atualizada:', data.length, 'registros');
+}
+
+/**
+ * Calcula a data/hora da resposta somando o tempo de resposta
+ * @param {string} questionDateTime - Data/hora da pergunta
+ * @param {number} responseTimeSeconds - Tempo de resposta em segundos
+ * @returns {string} Data/hora formatada da resposta
+ */
+function calculateResponseDateTime(questionDateTime, responseTimeSeconds) {
+    if (!questionDateTime || !responseTimeSeconds) {
+        return 'N/A';
+    }
+    
+    try {
+        // Parse da data da pergunta
+        let questionDate;
+        
+        // Se for formato ISO (2025-09-26T16:21:40.717634)
+        if (questionDateTime.includes('T')) {
+            questionDate = new Date(questionDateTime);
+        }
+        // Se for formato BR (26/09/2025, 16:21:40)
+        else if (questionDateTime.includes('/')) {
+            const [datePart, timePart] = questionDateTime.split(', ');
+            const [day, month, year] = datePart.split('/');
+            const [hour, minute, second] = timePart.split(':');
+            questionDate = new Date(year, month - 1, day, hour, minute, second);
+        }
+        else {
+            questionDate = new Date(questionDateTime);
+        }
+        
+        // Adicionar segundos de resposta
+        const responseDate = new Date(questionDate.getTime() + (parseFloat(responseTimeSeconds) * 1000));
+        
+        // Formatar no padrão brasileiro
+        return responseDate.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (e) {
+        console.error('[ANALYTICS AGENTE] Erro ao calcular data de resposta:', e);
+        return 'N/A';
+    }
 }
 
 // Funções auxiliares
