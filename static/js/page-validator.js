@@ -48,6 +48,12 @@ class PageValidator {
             return;
         }
         
+        // Não iniciar validação se DISABLE_GLOBAL_REFRESH estiver ativo
+        if (window.DISABLE_GLOBAL_REFRESH === true) {
+            this.log('[PAGE_VALIDATOR] DISABLE_GLOBAL_REFRESH ativo - validação desabilitada');
+            return;
+        }
+        
         // Aguardar um tempo antes de iniciar validação (para permitir carregamento inicial)
         setTimeout(() => {
             this.validatePage();
