@@ -1506,7 +1506,9 @@ def get_agente_recent_interactions():
                 'response_time_seconds': log.get('response_time_seconds', 0),
                 'total_cnpjs_consultados': log.get('total_cnpjs_consultados', 0),
                 'total_processos_encontrados': log.get('total_processos_encontrados', 0),
-                'interaction_timestamp_br': log.get('interaction_timestamp_br', '')
+                'interaction_timestamp_br': log.get('interaction_timestamp_br', ''),
+                'user_message': log.get('user_message', 'Mensagem não disponível'),
+                'agent_response': log.get('agent_response', 'Resposta não disponível')
             })
         
         return jsonify({
