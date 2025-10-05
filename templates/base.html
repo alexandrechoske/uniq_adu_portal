@@ -962,6 +962,21 @@
                         <i class="mdi mdi-domain"></i>
                         <span class="sidebar-text">Gestão de Departamentos</span>
                     </a>
+                    
+                    <a href="{{ url_for('recrutamento.gestao_vagas') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('recrutamento.') %}active{% endif %}"
+                       title="Recrutamento e Seleção">
+                        <i class="mdi mdi-briefcase-search"></i>
+                        <span class="sidebar-text">Recrutamento</span>
+                    </a>
+                    
+                    <a href="{{ url_for('carreiras.portal_vagas') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('carreiras.') %}active{% endif %}"
+                       title="Portal Público de Carreiras"
+                       target="_blank">
+                        <i class="mdi mdi-web"></i>
+                        <span class="sidebar-text">Portal de Carreiras</span>
+                    </a>
                 </div>
                 {% endif %}
             

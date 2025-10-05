@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ vaga.titulo }} - Unique Aduaneira</title>
+    <link rel="icon" type="image/png" href="/static/medias/Logo_Unique.png">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Material Design Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --unique-primary: #6f42c1;
+            --unique-dark: #5a32a3;
+            --unique-light: #9b72d4;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+        
+        .container-detalhe {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .btn-voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 30px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-voltar:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            transform: translateX(-5px);
+        }
+        
+        /* Layout de 2 Colunas */
+        .vaga-layout {
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .vaga-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .vaga-header {
+            background: white;
+            border-radius: 12px;
+            padding: 35px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border-top: 5px solid var(--unique-primary);
+        }
+        
+        .vaga-badge {
+            display: inline-block;
+            background: var(--unique-light);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .vaga-header h1 {
+            color: var(--unique-primary);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        
+        .vaga-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            font-size: 0.95rem;
+            color: #666;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .vaga-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .vaga-meta-item i {
+            color: var(--unique-primary);
+            font-size: 1.3rem;
+        }
+        
+        .vaga-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .vaga-section h3 {
+            color: var(--unique-primary);
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .vaga-section h3 i {
+            font-size: 1.6rem;
+        }
+        
+        .vaga-section p {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+        
+        .vaga-section ul {
+            color: #555;
+            line-height: 1.8;
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+        
+        .vaga-section ul li {
+            margin-bottom: 10px;
+        }
+        
+        /* Formulário Sticky */
+        .form-candidatura {
+            background: white;
+            border-radius: 12px;
+            padding: 35px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border-top: 5px solid var(--unique-primary);
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .form-candidatura h3 {
+            color: var(--unique-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .form-control,
+        .form-select {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--unique-primary);
+            box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
+        }
+        
+        .btn-submit {
+            background: var(--unique-primary);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-submit:hover {
+            background: var(--unique-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
+        }
+        
+        .btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .file-upload-label {
+            display: block;
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-label:hover {
+            background: #e9ecef;
+            border-color: var(--unique-primary);
+        }
+        
+        .file-upload-label i {
+            font-size: 2rem;
+            color: var(--unique-primary);
+            margin-bottom: 8px;
+        }
+        
+        .file-upload-label small {
+            font-size: 0.8rem;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-selected {
+            margin-top: 10px;
+            color: var(--unique-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* Scroll suave */
+        .form-candidatura::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .form-candidatura::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .form-candidatura::-webkit-scrollbar-thumb {
+            background: var(--unique-primary);
+            border-radius: 10px;
+        }
+        
+        /* Responsivo */
+        @media (max-width: 1024px) {
+            .vaga-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-candidatura {
+                position: static;
+                max-height: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .vaga-header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .vaga-meta {
+                gap: 15px;
+            }
+            
+            .form-candidatura {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container container-detalhe">
+        <!-- Botão Voltar -->
+        <a href="{{ url_for('carreiras.portal_vagas') }}" class="btn-voltar">
+            <i class="mdi mdi-arrow-left"></i>
+            Voltar para Vagas
+        </a>
+        
+        <!-- Layout de 2 Colunas -->
+        <div class="vaga-layout">
+            <!-- Coluna Esquerda: Conteúdo da Vaga -->
+            <div class="vaga-content">
+                <!-- Header da Vaga -->
+                <div class="vaga-header">
+                    <div class="vaga-badge">
+                        <i class="mdi mdi-fire"></i>
+                        Vaga Aberta
+                    </div>
+                    
+                    <h1>{{ vaga.titulo }}</h1>
+                    
+                    <div class="vaga-meta">
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-map-marker"></i>
+                            <span>{{ vaga.localizacao or 'Não informado' }}</span>
+                        </div>
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-briefcase"></i>
+                            <span>{{ vaga.tipo_contratacao or 'CLT' }}</span>
+                        </div>
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-clock-outline"></i>
+                            <span>Publicada em {{ vaga.data_abertura[:10] if vaga.data_abertura else 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Descrição da Vaga -->
+                {% if vaga.descricao %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-text-box-outline"></i>
+                        Sobre a Vaga
+                    </h3>
+                    <p>{{ vaga.descricao }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Requisitos -->
+                {% if vaga.requisitos %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-clipboard-list-outline"></i>
+                        Requisitos
+                    </h3>
+                    <p style="white-space: pre-line;">{{ vaga.requisitos }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Coluna Direita: Formulário de Candidatura (Sticky) -->
+            <div class="form-candidatura">
+                <h3>
+                    <i class="mdi mdi-account-plus-outline"></i>
+                    Candidate-se
+                </h3>
+                
+                <form id="formCandidatura" method="POST" action="{{ url_for('carreiras.aplicar_vaga', vaga_id=vaga.id) }}" enctype="multipart/form-data">
+                    <!-- Nome Completo -->
+                    <div class="mb-3">
+                        <label for="nome_completo" class="form-label">
+                            Nome Completo <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="nome_completo" name="nome_completo" required>
+                    </div>
+                    
+                    <!-- E-mail -->
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            E-mail <span class="text-danger">*</span>
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <!-- Telefone -->
+                    <div class="mb-3">
+                        <label for="telefone" class="form-label">
+                            Telefone/WhatsApp
+                        </label>
+                        <input type="tel" class="form-control" id="telefone" name="telefone" placeholder="(00) 00000-0000">
+                    </div>
+                    
+                    <!-- LinkedIn -->
+                    <div class="mb-3">
+                        <label for="linkedin_url" class="form-label">
+                            LinkedIn
+                        </label>
+                        <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" placeholder="linkedin.com/in/seu-perfil">
+                    </div>
+                    
+                    <!-- Upload de Currículo -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            Currículo <span class="text-danger">*</span>
+                        </label>
+                        <label for="curriculo" class="file-upload-label">
+                            <i class="mdi mdi-cloud-upload"></i>
+                            <div>Selecionar currículo</div>
+                            <small class="text-muted">PDF, DOC, DOCX (máx. 10MB)</small>
+                        </label>
+                        <input type="file" id="curriculo" name="curriculo" accept=".pdf,.doc,.docx" required>
+                        <div class="file-selected" id="fileSelected" style="display: none;">
+                            <i class="mdi mdi-file-check"></i>
+                            <span id="fileName"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Botão Submit -->
+                    <button type="submit" class="btn-submit" id="btnSubmit">
+                        <i class="mdi mdi-send"></i>
+                        Enviar Candidatura
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Mostrar nome do arquivo selecionado
+        document.getElementById('curriculo').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                document.getElementById('fileName').textContent = fileName;
+                document.getElementById('fileSelected').style.display = 'block';
+                
+                // Mudar visual do upload label
+                const label = document.querySelector('.file-upload-label');
+                label.style.borderColor = 'var(--unique-primary)';
+                label.style.background = '#f0e7ff';
+            }
+        });
+        
+        // Validação e loading state no submit
+        document.getElementById('formCandidatura').addEventListener('submit', function(e) {
+            const file = document.getElementById('curriculo').files[0];
+            const btnSubmit = document.getElementById('btnSubmit');
+            
+            if (!file) {
+                e.preventDefault();
+                alert('Por favor, anexe seu currículo.');
+                return false;
+            }
+            
+            // Validar tamanho (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                e.preventDefault();
+                alert('O arquivo do currículo não pode exceder 10MB.');
+                return false;
+            }
+            
+            // Loading state
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Enviando...';
+        });
+        
+        // Máscara de telefone
+        document.getElementById('telefone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            
+            if (value.length > 10) {
+                value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+            } else if (value.length > 6) {
+                value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+            } else if (value.length > 2) {
+                value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+            } else if (value.length > 0) {
+                value = value.replace(/^(\d*)/, '($1');
+            }
+            
+            e.target.value = value;
+        });
+    </script>
+</body>
+</html>

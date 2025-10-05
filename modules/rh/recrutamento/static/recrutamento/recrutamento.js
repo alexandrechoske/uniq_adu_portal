@@ -295,6 +295,27 @@ async function handleDrop(e) {
         // Mover o card visualmente
         this.appendChild(draggedCard);
         
+        // Remover mensagem "Nenhum candidato" se existir no destino
+        const emptyMessage = kanbanCards.querySelector('.text-center.text-muted');
+        if (emptyMessage) {
+            emptyMessage.remove();
+        }
+        
+        // Verificar se a coluna de origem ficou vazia e adicionar mensagem
+        const sourceColumn = draggedCard.closest('.kanban-cards');
+        if (sourceColumn && sourceColumn !== kanbanCards) {
+            const cardsInSource = sourceColumn.querySelectorAll('.candidato-card').length;
+            if (cardsInSource === 0 && !sourceColumn.querySelector('.text-center.text-muted')) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'text-center text-muted py-4';
+                emptyDiv.innerHTML = `
+                    <i class="mdi mdi-inbox-outline" style="font-size: 2rem;"></i>
+                    <p class="mb-0 mt-2 small">Nenhum candidato</p>
+                `;
+                sourceColumn.appendChild(emptyDiv);
+            }
+        }
+        
         // Atualizar contador
         atualizarContadores();
         
@@ -391,6 +412,9 @@ async function verDetalhesCandidato(candidatoId) {
             } else {
                 document.getElementById('btnDownloadCurriculo').style.display = 'none';
             }
+            
+            // Exibir análise de IA (se disponível)
+            exibirAnaliseIA(candidato);
             
             // Carregar histórico de observações
             await carregarHistoricoObservacoes(candidato.id);
@@ -509,6 +533,213 @@ async function salvarObservacao() {
     } catch (error) {
         console.error('Erro:', error);
         alert('❌ Erro ao salvar observação');
+    }
+}
+
+/**
+ * Exibir análise de IA no modal
+ */
+function exibirAnaliseIA(candidato) {
+    const container = document.getElementById('analiseIAContainer');
+    
+    // Se não tem dados de IA, ocultar seção
+    if (!candidato.ai_status) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    
+    // Status do processamento
+    const statusBadge = document.getElementById('aiStatusBadge');
+    let badgeClass = 'bg-secondary';
+    let statusText = candidato.ai_status || 'Pendente';
+    
+    if (candidato.ai_status === 'Concluído') {
+        badgeClass = 'bg-success';
+        statusText = '✓ Processamento Concluído';
+    } else if (candidato.ai_status === 'Em Processamento') {
+        badgeClass = 'bg-warning text-dark';
+        statusText = '⏳ Processando...';
+    } else if (candidato.ai_status === 'Erro') {
+        badgeClass = 'bg-danger';
+        statusText = '⚠ Erro no Processamento';
+    } else {
+        badgeClass = 'bg-secondary';
+        statusText = '⏸ Pendente';
+    }
+    
+    statusBadge.className = `badge ${badgeClass}`;
+    statusBadge.textContent = statusText;
+    
+    // Score de compatibilidade
+    const scoreDisplay = document.getElementById('aiScoreDisplay');
+    if (candidato.ai_match_score !== null && candidato.ai_match_score !== undefined) {
+        scoreDisplay.style.display = 'block';
+        
+        const scoreValue = document.getElementById('aiScoreValue');
+        const scoreBar = document.getElementById('aiScoreBar');
+        
+        scoreValue.textContent = `${candidato.ai_match_score}%`;
+        scoreBar.style.width = `${candidato.ai_match_score}%`;
+        
+        // Cor da barra baseada no score
+        scoreBar.className = 'progress-bar';
+        if (candidato.ai_match_score >= 80) {
+            scoreBar.classList.add('bg-success');
+        } else if (candidato.ai_match_score >= 50) {
+            scoreBar.classList.add('bg-warning');
+        } else {
+            scoreBar.classList.add('bg-danger');
+        }
+    } else {
+        scoreDisplay.style.display = 'none';
+    }
+    
+    // Pré-filtro
+    const prefilterDisplay = document.getElementById('aiPrefilterDisplay');
+    if (candidato.ai_pre_filter_status) {
+        prefilterDisplay.style.display = 'block';
+        
+        const prefilterValue = document.getElementById('aiPrefilterValue');
+        let prefilterBadgeClass = 'bg-secondary';
+        
+        if (candidato.ai_pre_filter_status === 'Aprovado') {
+            prefilterBadgeClass = 'bg-success';
+        } else if (candidato.ai_pre_filter_status === 'Reprovado') {
+            prefilterBadgeClass = 'bg-danger';
+        } else if (candidato.ai_pre_filter_status === 'Revisar') {
+            prefilterBadgeClass = 'bg-warning text-dark';
+        }
+        
+        prefilterValue.className = `ms-2 badge ${prefilterBadgeClass}`;
+        prefilterValue.textContent = candidato.ai_pre_filter_status;
+    } else {
+        prefilterDisplay.style.display = 'none';
+    }
+    
+    // Dados extraídos
+    const extractedDisplay = document.getElementById('aiExtractedDataDisplay');
+    const extractedGrid = document.getElementById('aiExtractedGrid');
+    
+    if (candidato.ai_extracted_data_jsonb && Object.keys(candidato.ai_extracted_data_jsonb).length > 0) {
+        extractedDisplay.style.display = 'block';
+        extractedGrid.innerHTML = '';
+        
+        const data = candidato.ai_extracted_data_jsonb;
+        
+        // Formação
+        if (data.formacao) {
+            extractedGrid.innerHTML += `
+                <div class="ai-extracted-item">
+                    <div class="ai-extracted-item-label">
+                        <i class="mdi mdi-school"></i> Formação
+                    </div>
+                    <div class="ai-extracted-item-value">${data.formacao}</div>
+                </div>
+            `;
+        }
+        
+        // Anos de experiência
+        if (data.anos_experiencia) {
+            extractedGrid.innerHTML += `
+                <div class="ai-extracted-item">
+                    <div class="ai-extracted-item-label">
+                        <i class="mdi mdi-briefcase-clock"></i> Experiência
+                    </div>
+                    <div class="ai-extracted-item-value">${data.anos_experiencia} anos</div>
+                </div>
+            `;
+        }
+        
+        // Habilidades
+        if (data.habilidades && Array.isArray(data.habilidades)) {
+            extractedGrid.innerHTML += `
+                <div class="ai-extracted-item">
+                    <div class="ai-extracted-item-label">
+                        <i class="mdi mdi-star-circle"></i> Habilidades
+                    </div>
+                    <div class="ai-extracted-item-value">
+                        <ul>
+                            ${data.habilidades.map(h => `<li>${h}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Idiomas
+        if (data.idiomas && Array.isArray(data.idiomas)) {
+            extractedGrid.innerHTML += `
+                <div class="ai-extracted-item">
+                    <div class="ai-extracted-item-label">
+                        <i class="mdi mdi-translate"></i> Idiomas
+                    </div>
+                    <div class="ai-extracted-item-value">
+                        <ul>
+                            ${data.idiomas.map(i => `<li>${i}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Certificações
+        if (data.certificacoes && Array.isArray(data.certificacoes)) {
+            extractedGrid.innerHTML += `
+                <div class="ai-extracted-item">
+                    <div class="ai-extracted-item-label">
+                        <i class="mdi mdi-certificate"></i> Certificações
+                    </div>
+                    <div class="ai-extracted-item-value">
+                        <ul>
+                            ${data.certificacoes.map(c => `<li>${c}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Experiências relevantes
+        if (data.experiencias_relevantes && Array.isArray(data.experiencias_relevantes)) {
+            let experienciasHTML = '<div class="ai-extracted-item" style="grid-column: 1 / -1;">';
+            experienciasHTML += '<div class="ai-extracted-item-label"><i class="mdi mdi-briefcase-outline"></i> Experiências Relevantes</div>';
+            experienciasHTML += '<div class="ai-extracted-item-value">';
+            
+            data.experiencias_relevantes.forEach(exp => {
+                if (typeof exp === 'string') {
+                    experienciasHTML += `<div class="ai-experiencia-item">${exp}</div>`;
+                } else if (typeof exp === 'object') {
+                    experienciasHTML += `
+                        <div class="ai-experiencia-item">
+                            <div class="ai-experiencia-cargo">${exp.cargo || 'Cargo não especificado'}</div>
+                            ${exp.empresa ? `<div class="ai-experiencia-empresa">${exp.empresa}</div>` : ''}
+                            ${exp.periodo ? `<div class="ai-experiencia-periodo">${exp.periodo}</div>` : ''}
+                            ${exp.descricao ? `<div class="mt-2">${exp.descricao}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+            
+            experienciasHTML += '</div></div>';
+            extractedGrid.innerHTML += experienciasHTML;
+        }
+        
+        // Erro (se houver)
+        if (data.erro) {
+            extractedGrid.innerHTML = `
+                <div class="ai-extracted-item" style="grid-column: 1 / -1; border-left-color: #dc3545;">
+                    <div class="ai-extracted-item-label" style="color: #dc3545;">
+                        <i class="mdi mdi-alert-circle"></i> Erro
+                    </div>
+                    <div class="ai-extracted-item-value" style="color: #dc3545;">
+                        ${data.erro}
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        extractedDisplay.style.display = 'none';
     }
 }
 

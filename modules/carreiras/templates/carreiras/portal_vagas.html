@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carreiras - Unique Aduaneira</title>
+    <link rel="icon" type="image/png" href="/static/medias/Logo_Unique.png">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Material Design Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --unique-primary: #6f42c1;
+            --unique-dark: #5a32a3;
+            --unique-light: #9b72d4;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+        
+        .header-carreiras {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        .header-carreiras img {
+            width: 150px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header-carreiras h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header-carreiras p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        .vagas-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Filtros */
+        .filtros-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .filtros-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: var(--unique-primary);
+        }
+        
+        .filtros-header i {
+            font-size: 1.5rem;
+        }
+        
+        .filtros-header h3 {
+            margin: 0;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .filtros-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filtro-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filtro-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .filtro-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filtro-group select:focus {
+            outline: none;
+            border-color: var(--unique-primary);
+        }
+        
+        .btn-limpar-filtros {
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 22px;
+        }
+        
+        .btn-limpar-filtros:hover {
+            background: #e0e0e0;
+        }
+        
+        .vagas-count {
+            text-align: center;
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        /* Gallery Grid */
+        .vagas-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .vaga-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-top: 4px solid var(--unique-primary);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .vaga-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .vaga-badge {
+            display: inline-block;
+            background: var(--unique-light);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .vaga-titulo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--unique-primary);
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+        
+        .vaga-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .vaga-info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .vaga-info-item i {
+            color: var(--unique-primary);
+            font-size: 1.1rem;
+            width: 20px;
+        }
+        
+        .vaga-descricao {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            flex-grow: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-size: 0.95rem;
+        }
+        
+        .btn-candidatar {
+            background: var(--unique-primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            margin-top: auto;
+        }
+        
+        .btn-candidatar:hover {
+            background: var(--unique-dark);
+            color: white;
+            transform: scale(1.02);
+        }
+        
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            background: white;
+            border-radius: 12px;
+            padding: 60px 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .empty-state p {
+            color: #999;
+        }
+        
+        @media (max-width: 768px) {
+            .vagas-gallery {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-carreiras h1 {
+                font-size: 2rem;
+            }
+            
+            .filtros-row {
+                flex-direction: column;
+            }
+            
+            .filtro-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container vagas-container">
+        <!-- Header -->
+        <div class="header-carreiras">
+            <img src="/static/medias/Logo_Unique.png" alt="Unique Aduaneira">
+            <h1>Venha Fazer Parte do Nosso Time!</h1>
+            <p>Encontre a vaga ideal para você e impulsione sua carreira na Unique Aduaneira</p>
+        </div>
+        
+        {% if vagas and vagas|length > 0 %}
+            <!-- Filtros -->
+            <div class="filtros-container">
+                <div class="filtros-header">
+                    <i class="mdi mdi-filter-variant"></i>
+                    <h3>Filtrar Vagas</h3>
+                </div>
+                <div class="filtros-row">
+                    <div class="filtro-group">
+                        <label for="filtro-localizacao">Localização</label>
+                        <select id="filtro-localizacao" class="form-select">
+                            <option value="">Todas as localizações</option>
+                        </select>
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-tipo">Tipo de Contratação</label>
+                        <select id="filtro-tipo" class="form-select">
+                            <option value="">Todos os tipos</option>
+                        </select>
+                    </div>
+                    <button class="btn-limpar-filtros" id="btn-limpar">
+                        <i class="mdi mdi-refresh"></i>
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Contador de Vagas -->
+            <div class="vagas-count">
+                <span id="vagas-visiveis">{{ vagas|length }}</span> vaga(s) disponível(is)
+            </div>
+            
+            <!-- Gallery de Vagas -->
+            <div class="vagas-gallery" id="vagas-gallery">
+                {% for vaga in vagas %}
+                <div class="vaga-card" 
+                     data-localizacao="{{ vaga.localizacao or 'Não informado' }}"
+                     data-tipo="{{ vaga.tipo_contratacao or 'CLT' }}"
+                     data-data="{{ vaga.data_abertura }}">
+                    
+                    <div class="vaga-badge">Nova Oportunidade</div>
+                    
+                    <h2 class="vaga-titulo">{{ vaga.titulo }}</h2>
+                    
+                    <div class="vaga-info">
+                        <div class="vaga-info-item">
+                            <i class="mdi mdi-map-marker"></i>
+                            <span>{{ vaga.localizacao or 'Não informado' }}</span>
+                        </div>
+                        <div class="vaga-info-item">
+                            <i class="mdi mdi-briefcase"></i>
+                            <span>{{ vaga.tipo_contratacao or 'CLT' }}</span>
+                        </div>
+                        <div class="vaga-info-item">
+                            <i class="mdi mdi-calendar"></i>
+                            <span>Publicada em {{ vaga.data_abertura[:10] if vaga.data_abertura else 'N/A' }}</span>
+                        </div>
+                    </div>
+                    
+                    {% if vaga.descricao %}
+                    <div class="vaga-descricao">
+                        {{ vaga.descricao }}
+                    </div>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('carreiras.detalhe_vaga', vaga_id=vaga.id) }}" class="btn-candidatar">
+                        <i class="mdi mdi-file-document-outline"></i>
+                        Ver Detalhes e Candidatar-se
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="vagas-gallery">
+                <div class="empty-state">
+                    <i class="mdi mdi-briefcase-search-outline"></i>
+                    <h3>Nenhuma vaga aberta no momento</h3>
+                    <p>Volte em breve para conferir novas oportunidades!</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Preencher filtros dinamicamente
+        document.addEventListener('DOMContentLoaded', function() {
+            const vagasCards = document.querySelectorAll('.vaga-card');
+            const filtroLocalizacao = document.getElementById('filtro-localizacao');
+            const filtroTipo = document.getElementById('filtro-tipo');
+            const btnLimpar = document.getElementById('btn-limpar');
+            const vagasVisiveis = document.getElementById('vagas-visiveis');
+            
+            // Extrair valores únicos
+            const localizacoes = new Set();
+            const tipos = new Set();
+            
+            vagasCards.forEach(card => {
+                const loc = card.dataset.localizacao;
+                const tipo = card.dataset.tipo;
+                if (loc) localizacoes.add(loc);
+                if (tipo) tipos.add(tipo);
+            });
+            
+            // Preencher selects
+            [...localizacoes].sort().forEach(loc => {
+                const option = document.createElement('option');
+                option.value = loc;
+                option.textContent = loc;
+                filtroLocalizacao.appendChild(option);
+            });
+            
+            [...tipos].sort().forEach(tipo => {
+                const option = document.createElement('option');
+                option.value = tipo;
+                option.textContent = tipo;
+                filtroTipo.appendChild(option);
+            });
+            
+            // Aplicar filtros
+            function aplicarFiltros() {
+                const locSelecionada = filtroLocalizacao.value;
+                const tipoSelecionado = filtroTipo.value;
+                let vagasVisiveis_count = 0;
+                
+                vagasCards.forEach(card => {
+                    const cardLoc = card.dataset.localizacao;
+                    const cardTipo = card.dataset.tipo;
+                    
+                    const locMatch = !locSelecionada || cardLoc === locSelecionada;
+                    const tipoMatch = !tipoSelecionado || cardTipo === tipoSelecionado;
+                    
+                    if (locMatch && tipoMatch) {
+                        card.style.display = '';
+                        vagasVisiveis_count++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                vagasVisiveis.textContent = vagasVisiveis_count;
+            }
+            
+            // Event listeners
+            filtroLocalizacao.addEventListener('change', aplicarFiltros);
+            filtroTipo.addEventListener('change', aplicarFiltros);
+            
+            btnLimpar.addEventListener('click', function() {
+                filtroLocalizacao.value = '';
+                filtroTipo.value = '';
+                aplicarFiltros();
+            });
+        });
+    </script>
+</body>
+</html>

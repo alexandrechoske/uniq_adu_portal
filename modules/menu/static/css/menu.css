@@ -900,13 +900,21 @@
 }
 
 /* === CORES DO MÓDULO RH === */
-.module-card[data-module="rh_colaboradores"] .module-icon {
+.module-card[data-module="rh_colaboradores"] .module-icon,
+.module-card[data-module="rh_cargos"] .module-icon,
+.module-card[data-module="rh_departamentos"] .module-icon,
+.module-card[data-module="rh_recrutamento"] .module-icon,
+.module-card[data-module="rh_carreiras"] .module-icon {
     background: rgba(111, 66, 193, 0.1);
     color: #6f42c1;
     box-shadow: inset 0 0 0 1px rgba(111, 66, 193, 0.25);
 }
 
-.module-card[data-module="rh_colaboradores"]:hover .module-icon {
+.module-card[data-module="rh_colaboradores"]:hover .module-icon,
+.module-card[data-module="rh_cargos"]:hover .module-icon,
+.module-card[data-module="rh_departamentos"]:hover .module-icon,
+.module-card[data-module="rh_recrutamento"]:hover .module-icon,
+.module-card[data-module="rh_carreiras"]:hover .module-icon {
     background: rgba(111, 66, 193, 0.15);
     box-shadow: inset 0 0 0 1px rgba(111, 66, 193, 0.35);
 }

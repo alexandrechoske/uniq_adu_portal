@@ -117,10 +117,11 @@ def gestao_candidatos(vaga_id):
         
         vaga = vaga_response.data[0]
         
-        # Buscar candidatos da vaga
+        # Buscar candidatos da vaga (ordenar por score de IA primeiro, depois data)
         candidatos_response = supabase_admin.table('rh_candidatos')\
             .select('*')\
             .eq('vaga_id', vaga_id)\
+            .order('ai_match_score', desc=True)\
             .order('data_candidatura', desc=True)\
             .execute()
         

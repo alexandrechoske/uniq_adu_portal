@@ -464,3 +464,228 @@
     box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.25);
 }
 
+/* ========================================
+   BADGES DE IA NOS CARDS DO KANBAN
+   ======================================== */
+
+.ai-score-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.ai-score-badge i {
+    font-size: 0.9rem;
+}
+
+.ai-score-badge.score-high {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.ai-score-badge.score-medium {
+    background: linear-gradient(135deg, #fd7e14, #ffc107);
+    color: white;
+}
+
+.ai-score-badge.score-low {
+    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    color: white;
+}
+
+.ai-filter-badge {
+    position: absolute;
+    top: 36px;
+    right: 8px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+}
+
+.ai-filter-badge.filter-rejected {
+    background: #dc3545;
+    color: white;
+}
+
+.ai-filter-badge.filter-review {
+    background: #ffc107;
+    color: #333;
+}
+
+.ai-filter-badge.filter-error {
+    background: #6c757d;
+    color: white;
+}
+
+/* Ajustar card para acomodar badges */
+.candidato-card {
+    position: relative;
+    padding-top: 35px; /* Espaço para badges */
+}
+
+/* ========================================
+   ANÁLISE DE IA NO MODAL
+   ======================================== */
+
+.ai-analysis-card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid var(--recrutamento-primary);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.ai-status-indicator {
+    text-align: center;
+}
+
+.ai-status-indicator .badge {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+}
+
+.ai-status-indicator .badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+}
+
+.ai-status-indicator .badge.bg-warning {
+    background: linear-gradient(135deg, #fd7e14, #ffc107) !important;
+}
+
+.ai-status-indicator .badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #e83e8c) !important;
+}
+
+.ai-score-display {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.ai-score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--recrutamento-primary);
+}
+
+.ai-score-display .progress-bar {
+    transition: width 0.6s ease;
+}
+
+.ai-score-display .progress-bar.bg-success {
+    background: linear-gradient(90deg, #28a745, #20c997) !important;
+}
+
+.ai-score-display .progress-bar.bg-warning {
+    background: linear-gradient(90deg, #fd7e14, #ffc107) !important;
+}
+
+.ai-score-display .progress-bar.bg-danger {
+    background: linear-gradient(90deg, #dc3545, #e83e8c) !important;
+}
+
+.ai-prefilter {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.ai-prefilter .badge.bg-success {
+    background: #28a745 !important;
+}
+
+.ai-prefilter .badge.bg-danger {
+    background: #dc3545 !important;
+}
+
+.ai-prefilter .badge.bg-warning {
+    background: #ffc107 !important;
+    color: #333;
+}
+
+.ai-extracted-title {
+    font-weight: 700;
+    color: var(--recrutamento-primary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-extracted-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.ai-extracted-item {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 3px solid var(--recrutamento-primary);
+}
+
+.ai-extracted-item-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ai-extracted-item-value {
+    font-size: 0.95rem;
+    color: #333;
+    word-wrap: break-word;
+}
+
+.ai-extracted-item-value ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.ai-extracted-item-value ul li {
+    margin-bottom: 4px;
+}
+
+/* Experiências como lista estilizada */
+.ai-experiencia-item {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--recrutamento-primary-light);
+}
+
+.ai-experiencia-cargo {
+    font-weight: 600;
+    color: var(--recrutamento-primary);
+}
+
+.ai-experiencia-empresa {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.ai-experiencia-periodo {
+    font-size: 0.85rem;
+    color: #999;
+}

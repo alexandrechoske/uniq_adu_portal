@@ -90,6 +90,9 @@ from modules.financeiro.routes import register_financeiro_blueprints
 # Import RH blueprint and registration function
 from modules.rh import register_rh_blueprints
 
+# Import Carreiras blueprint (portal público de vagas)
+from modules.carreiras import carreiras_bp
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -134,6 +137,9 @@ register_financeiro_blueprints(app)
 
 # Register RH blueprints (módulo de RH completo)
 register_rh_blueprints(app)
+
+# Register Carreiras blueprint (portal público de vagas)
+app.register_blueprint(carreiras_bp)
 
 # Register module color helpers for templates
 register_module_color_helpers(app)

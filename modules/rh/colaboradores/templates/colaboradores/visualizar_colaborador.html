@@ -110,10 +110,138 @@
                 </div>
             </div>
 
-            <!-- Histórico -->
+            <!-- Jornada de Recrutamento (se houver) -->
+            {% if candidatura %}
             <div class="card rh-card mb-4">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-history"></i> Linha do Tempo</h5>
+                    <h5 class="mb-0">
+                        <i class="fas fa-briefcase text-primary"></i> Jornada de Recrutamento
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Este colaborador foi contratado através do processo seletivo</strong>
+                        <br>
+                        <small class="text-muted">Vaga: {{ candidatura.vaga.titulo_vaga if candidatura.vaga else 'N/A' }}</small>
+                    </div>
+
+                    <div class="timeline">
+                        <!-- 1. Candidatura -->
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="fas fa-calendar"></i> {{ candidatura.data_candidatura }}
+                            </div>
+                            <div class="timeline-type">
+                                <i class="fas fa-paper-plane text-primary"></i>
+                                Candidatura
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Vaga:</small><br>
+                                    <strong>{{ candidatura.vaga.titulo_vaga if candidatura.vaga else 'N/A' }}</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Tipo:</small><br>
+                                    <strong>{{ candidatura.vaga.tipo_vaga if candidatura.vaga else 'N/A' }}</strong>
+                                </div>
+                            </div>
+                            {% if candidatura.vaga and candidatura.vaga.local_trabalho %}
+                            <div class="mt-2">
+                                <small class="text-muted">Local:</small><br>
+                                {{ candidatura.vaga.local_trabalho }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 2. Análise de IA (se houver) -->
+                        {% if candidatura.ai_status == 'Concluído' %}
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="fas fa-robot"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
+                            </div>
+                            <div class="timeline-type">
+                                <i class="fas fa-brain text-info"></i>
+                                Análise de IA
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Score de Compatibilidade:</small><br>
+                                    <strong>
+                                        {% if candidatura.ai_match_score >= 80 %}
+                                            <span class="text-success">{{ candidatura.ai_match_score }}%</span>
+                                        {% elif candidatura.ai_match_score >= 50 %}
+                                            <span class="text-warning">{{ candidatura.ai_match_score }}%</span>
+                                        {% else %}
+                                            <span class="text-danger">{{ candidatura.ai_match_score }}%</span>
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Pré-filtro:</small><br>
+                                    <strong>
+                                        {% if candidatura.ai_pre_filter_status == 'Aprovado' %}
+                                            <span class="badge bg-success">Aprovado</span>
+                                        {% elif candidatura.ai_pre_filter_status == 'Reprovado' %}
+                                            <span class="badge bg-danger">Reprovado</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Revisar</span>
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 3. Movimentações no Kanban -->
+                        {% if candidatura.status_kanban and candidatura.status_kanban != 'Candidatura' %}
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="fas fa-calendar"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
+                            </div>
+                            <div class="timeline-type">
+                                {% if candidatura.status_kanban == 'Triagem' %}
+                                    <i class="fas fa-filter text-secondary"></i>
+                                {% elif candidatura.status_kanban == 'Entrevista RH' %}
+                                    <i class="fas fa-comments text-primary"></i>
+                                {% elif candidatura.status_kanban == 'Entrevista Técnica' %}
+                                    <i class="fas fa-code text-info"></i>
+                                {% elif candidatura.status_kanban == 'Proposta' %}
+                                    <i class="fas fa-file-contract text-warning"></i>
+                                {% elif candidatura.status_kanban == 'Aprovado' %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% elif candidatura.status_kanban == 'Reprovado' %}
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                {% else %}
+                                    <i class="fas fa-stream"></i>
+                                {% endif %}
+                                Processo: {{ candidatura.status_kanban }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 4. Aprovação Final -->
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="fas fa-calendar"></i> {{ colaborador.data_admissao }}
+                            </div>
+                            <div class="timeline-type">
+                                <i class="fas fa-thumbs-up text-success"></i>
+                                Aprovado e Contratado
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">O candidato foi aprovado no processo seletivo e passou a integrar a equipe.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Histórico de RH -->
+            <div class="card rh-card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Linha do Tempo - RH</h5>
                 </div>
                 <div class="card-body">
                     {% if historico %}

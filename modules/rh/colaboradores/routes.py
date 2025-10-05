@@ -176,17 +176,33 @@ def visualizar_colaborador(colaborador_id):
             flash('Colaborador não encontrado', 'warning')
             return redirect(url_for('colaboradores.lista_colaboradores'))
         
-        # Buscar histórico completo
+        # Buscar histórico completo de RH
         historico = supabase_admin.table('rh_historico_colaborador')\
             .select('*, cargo:rh_cargos(nome_cargo), departamento:rh_departamentos(nome_departamento), empresa:rh_empresas(razao_social)')\
             .eq('colaborador_id', colaborador_id)\
             .order('data_evento', desc=True)\
             .execute()
         
+        # Buscar dados de candidatura (se houver)
+        candidatura = None
+        try:
+            candidatura_response = supabase_admin.table('rh_candidatos')\
+                .select('*, vaga:rh_vagas(titulo_vaga, tipo_vaga, local_trabalho)')\
+                .eq('colaborador_id', colaborador_id)\
+                .execute()
+            
+            if candidatura_response.data and len(candidatura_response.data) > 0:
+                candidatura = candidatura_response.data[0]
+                print(f"[INFO] Candidatura encontrada para colaborador {colaborador_id}: {candidatura.get('id')}")
+        except Exception as e:
+            print(f"[AVISO] Erro ao buscar candidatura (pode ser que o campo ainda não exista): {str(e)}")
+            # Não falha se não encontrar candidatura, é opcional
+        
         return render_template(
             'colaboradores/visualizar_colaborador.html',
             colaborador=colab_response.data,
-            historico=historico.data if historico.data else []
+            historico=historico.data if historico.data else [],
+            candidatura=candidatura
         )
     
     except Exception as e:
