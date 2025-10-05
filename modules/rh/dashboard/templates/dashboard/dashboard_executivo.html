@@ -75,7 +75,11 @@
                 </label>
                 <select id="departamento-filter" class="form-select">
                     <option value="todos" selected>Todos os Departamentos</option>
-                    <!-- Opções carregadas dinamicamente -->
+                    {% if dados.departamentos %}
+                        {% for dept in dados.departamentos %}
+                            <option value="{{ dept.id }}">{{ dept.nome_departamento }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </select>
             </div>
             
@@ -104,34 +108,250 @@
     <!-- KPI Cards Principais - Seção 1: At-a-Glance -->
     <div class="kpi-section">
         <div class="kpi-grid-executive">
-            <!-- KPIs serão adicionados aqui -->
-            <div class="placeholder-message">
-                <i class="mdi mdi-gauge-empty"></i>
-                <p>KPIs serão configurados em breve</p>
+            <!-- KPI 1: Headcount Ativo -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-account-group" style="color: #6f42c1; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Total de Colaboradores</div>
+                    <div class="kpi-value" id="kpi-headcount-valor">-</div>
+                    <div class="kpi-comparison positive" id="kpi-headcount-variacao" style="display: none;">
+                        ↑ 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 2: Massa Salarial -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
+                    <i class="mdi mdi-cash-multiple" style="color: #28a745; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Custo Mensal (Folha)</div>
+                    <div class="kpi-value" id="kpi-massa-salarial-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-massa-salarial-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 3: Turnover -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(220, 53, 69, 0.15);">
+                    <i class="mdi mdi-account-switch" style="color: #dc3545; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Taxa de Rotatividade</div>
+                    <div class="kpi-value" id="kpi-turnover-valor">-</div>
+                    <div class="kpi-comparison negative" id="kpi-turnover-variacao" style="display: none;">
+                        ↓ 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 4: Tempo Médio de Contratação -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(23, 162, 184, 0.15);">
+                    <i class="mdi mdi-clock-outline" style="color: #17a2b8; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Tempo Médio de Contratação</div>
+                    <div class="kpi-value" id="kpi-tempo-contratacao-valor">-</div>
+                    <div class="kpi-comparison positive" id="kpi-tempo-contratacao-variacao" style="display: none;">
+                        ↑ 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 5: Total de Vagas em Aberto -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
+                    <i class="mdi mdi-briefcase-search" style="color: #ffc107; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Vagas em Aberto</div>
+                    <div class="kpi-value" id="kpi-vagas-abertas-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-vagas-abertas-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 6: Média Candidatos por Vaga -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-account-multiple-outline" style="color: #0d6efd; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Média Candidatos/Vaga</div>
+                    <div class="kpi-value" id="kpi-media-candidatos-valor">-</div>
+                    <div class="kpi-comparison positive" id="kpi-media-candidatos-variacao" style="display: none;">
+                        ↑ 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 7: Tempo Médio de Casa -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-history" style="color: #6f42c1; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Tempo Médio de Casa</div>
+                    <div class="kpi-value" id="kpi-tempo-casa-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-tempo-casa-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 8: Idade Média dos Colaboradores -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-cake-variant" style="color: #6f42c1; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Idade Média</div>
+                    <div class="kpi-value" id="kpi-idade-media-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-idade-media-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Charts Grid - Seção 2: Análise Detalhada -->
     <div class="dashboard-sections">
-        <!-- Gráficos serão adicionados aqui -->
-        <div class="placeholder-message">
-            <i class="mdi mdi-chart-line-variant"></i>
-            <p>Gráficos serão configurados em breve</p>
+        <div class="section-title">
+            <i class="mdi mdi-chart-line"></i>
+            Análises Visuais e Tendências
+        </div>
+        
+        <div class="row">
+            <!-- Gráfico 1: Evolução Headcount e Turnover -->
+            <div class="col-12 mb-4">
+                <div class="chart-card">
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="chart-evolucao-headcount"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Gráfico 2: Turnover por Departamento -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-card">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="chart-turnover-departamento"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráfico 3: Distribuição por Departamento -->
+            <div class="col-md-6 mb-4">
+                <div class="chart-card">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="chart-distribuicao-departamento"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Gráfico 4: Dispersão - Tempo de Casa vs Salário -->
+            <div class="col-12 mb-4">
+                <div class="chart-card">
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="chart-dispersao-tempo-salario"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
     <!-- Tabelas Detalhadas - Seção 3 -->
     <div class="tables-section">
-        <!-- Tabelas serão adicionadas aqui -->
-        <div class="placeholder-message">
+        <div class="section-title">
             <i class="mdi mdi-table-large"></i>
-            <p>Tabelas serão configuradas em breve</p>
+            Insights e Detalhes
+        </div>
+        
+        <div class="row">
+            <!-- Tabela 1: Vagas Abertas - Análise de Performance -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="mdi mdi-briefcase-search"></i>
+                            Acompanhamento de Vagas em Aberto
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Título da Vaga</th>
+                                        <th>Departamento</th>
+                                        <th>Dias em Aberto</th>
+                                        <th class="text-center">Nº Candidatos</th>
+                                        <th class="text-center">Score Alto (&gt;80%)</th>
+                                        <th class="text-center">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-vagas-tbody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">
+                                            Carregando vagas...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabela 2: Análise do Funil de Recrutamento -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="mdi mdi-filter-variant"></i>
+                            Eficiência do Funil de Recrutamento (Período)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Etapa do Funil</th>
+                                        <th class="text-center">Nº de Candidatos</th>
+                                        <th class="text-center">Taxa de Conversão (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-funil-tbody">
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">
+                                            Carregando dados do funil...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=3.0"></script>
 {% endblock %}
