@@ -323,6 +323,35 @@
     color: #212529;
 }
 
+/* ==================== BADGES DE GRUPO (CARGOS) ==================== */
+.badge-grupo {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+}
+
+.badge-grupo.operacional {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-grupo.liderança {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-grupo.administrativo {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-grupo.estratégico {
+    background-color: #dc3545;
+    color: white;
+}
+
 /* ==================== BOTÕES DE AÇÃO ==================== */
 .btn-group {
     display: inline-flex;
@@ -454,6 +483,20 @@
 .modal-header.bg-danger {
     background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     color: white;
+}
+
+.modal-header.module-header-rh {
+    background: linear-gradient(135deg, var(--rh-primary) 0%, var(--rh-primary-dark) 100%);
+    color: white !important;
+    border-bottom: none;
+}
+
+.modal-header.module-header-rh .modal-title {
+    color: white !important;
+}
+
+.modal-header.module-header-rh .text-white {
+    color: white !important;
 }
 
 .modal-body {

@@ -3,69 +3,63 @@
 {% block title %}Gestão de Cargos - RH{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('estrutura_org.static', filename='estrutura_org/estrutura.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Cabeçalho -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="text-rh-primary mb-1">
-                <i class="fas fa-briefcase"></i> Gestão de Cargos
-            </h2>
-            <p class="text-muted mb-0">Gerencie os cargos da organização</p>
+<div class="rh-container">
+    <!-- Actions Bar -->
+    <div class="actions-bar module-header-rh">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/" style="color: #6f42c1;"><i class="mdi mdi-home-outline"></i> Início</a></li>
+                <li class="breadcrumb-item"><a href="#" style="color: #6f42c1;">RH</a></li>
+                <li class="breadcrumb-item active">Gestão de Cargos</li>
+            </ol>
+        </nav>
+        <div class="actions-buttons">
+            <button class="btn btn-rh-primary" data-bs-toggle="modal" data-bs-target="#modalCargo" onclick="abrirModalNovo()">
+                <i class="mdi mdi-plus"></i> Novo Cargo
+            </button>
         </div>
-        <button class="btn btn-rh-primary btn-lg" data-bs-toggle="modal" data-bs-target="#modalCargo" onclick="abrirModalNovo()">
-            <i class="fas fa-plus"></i> Novo Cargo
-        </button>
     </div>
 
-    <!-- Cards de Estatísticas -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card stats-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="stats-label mb-1">Total de Cargos</p>
-                            <h3 class="stats-number">{{ total_cargos }}</h3>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="fas fa-briefcase"></i>
-                        </div>
+    <!-- Cards de Resumo -->
+    <div class="kpi-section">
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">
+                <i class="mdi mdi-chart-box-outline"></i>
+                Resumo Geral
+            </h5>
+            <div class="kpi-grid-rh">
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-briefcase"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total de Cargos</p>
+                        <p class="kpi-value">{{ total_cargos }}</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stats-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="stats-label mb-1">Grupos Distintos</p>
-                            <h3 class="stats-number">{{ total_grupos }}</h3>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
+                
+                <div class="kpi-card kpi-danger">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-sitemap"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Grupos Distintos</p>
+                        <p class="kpi-value">{{ total_grupos }}</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card stats-card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="stats-label mb-1">Status</p>
-                            <h3 class="stats-number" style="font-size: 1.5rem;">
-                                <span class="badge bg-success">Ativo</span>
-                            </h3>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
+                
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-check-circle"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Sistema</p>
+                        <p class="kpi-value">{{ total_cargos + total_grupos }}</p>
                     </div>
                 </div>
             </div>
@@ -73,15 +67,15 @@
     </div>
 
     <!-- Barra de Busca e Filtros -->
-    <div class="card mb-4">
+    <div class="card rh-card mb-4">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="fas fa-search text-muted"></i>
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="mdi mdi-magnify text-muted"></i>
                         </span>
-                        <input type="text" id="searchInput" class="form-control search-bar" 
+                        <input type="text" id="searchInput" class="form-control border-start-0" 
                                placeholder="Buscar por nome ou grupo...">
                     </div>
                 </div>
@@ -95,7 +89,7 @@
                 </div>
                 <div class="col-md-3">
                     <button class="btn btn-outline-secondary w-100" onclick="limparFiltros()">
-                        <i class="fas fa-eraser"></i> Limpar Filtros
+                        <i class="mdi mdi-eraser"></i> Limpar Filtros
                     </button>
                 </div>
             </div>
@@ -103,18 +97,18 @@
     </div>
 
     <!-- Tabela de Cargos -->
-    <div class="card">
+    <div class="card rh-card">
         <div class="card-body p-0">
             {% if cargos|length > 0 %}
             <div class="table-responsive">
-                <table class="table table-estrutura mb-0" id="tableCargos">
-                    <thead>
+                <table class="table mb-0" id="tableCargos">
+                    <thead class="rh-table-header">
                         <tr>
-                            <th style="width: 5%;">#</th>
-                            <th style="width: 35%;">Nome do Cargo</th>
-                            <th style="width: 20%;">Grupo</th>
-                            <th style="width: 30%;">Descrição</th>
-                            <th style="width: 10%;" class="text-center">Ações</th>
+                            <th style="width: 3%;">#</th>
+                            <th style="width: 22%;">Nome do Cargo</th>
+                            <th style="width: 12%;">Grupo</th>
+                            <th style="width: 48%;">Descrição</th>
+                            <th style="width: 15%;" class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -122,7 +116,7 @@
                         <tr data-nome="{{ cargo.nome_cargo }}" data-grupo="{{ cargo.grupo_cargo or 'Sem Grupo' }}">
                             <td class="text-muted small">{{ loop.index }}</td>
                             <td>
-                                <strong>{{ cargo.nome_cargo }}</strong>
+                                <strong class="text-dark">{{ cargo.nome_cargo }}</strong>
                             </td>
                             <td>
                                 {% if cargo.grupo_cargo %}
@@ -135,25 +129,39 @@
                             </td>
                             <td>
                                 {% if cargo.descricao %}
-                                <span class="text-truncate d-inline-block" style="max-width: 200px;" 
-                                      data-bs-toggle="tooltip" title="{{ cargo.descricao }}">
-                                    {{ cargo.descricao[:80] }}{% if cargo.descricao|length > 80 %}...{% endif %}
+                                <span class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">
+                                    {{ cargo.descricao[:120] }}{% if cargo.descricao|length > 120 %}...{% endif %}
                                 </span>
                                 {% else %}
-                                <span class="text-muted">-</span>
+                                <span class="text-muted">Sem descrição</span>
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-warning btn-action me-1" 
-                                        onclick="editarCargo('{{ cargo.id }}')" 
-                                        data-bs-toggle="tooltip" title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger btn-action" 
-                                        onclick="confirmarExclusao('{{ cargo.id }}', '{{ cargo.nome_cargo }}')"
-                                        data-bs-toggle="tooltip" title="Excluir">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <!-- Botão Visualizar -->
+                                    <button class="btn btn-outline-info" 
+                                            onclick="visualizarCargo('{{ cargo.id }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Visualizar detalhes">
+                                        <i class="mdi mdi-eye"></i>
+                                    </button>
+                                    
+                                    <!-- Botão Editar -->
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editarCargo('{{ cargo.id }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Editar">
+                                        <i class="mdi mdi-pencil"></i>
+                                    </button>
+                                    
+                                    <!-- Botão Excluir -->
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="confirmarExclusao('{{ cargo.id }}', '{{ cargo.nome_cargo }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Excluir">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -162,7 +170,7 @@
             </div>
             {% else %}
             <div class="empty-state">
-                <i class="fas fa-briefcase"></i>
+                <i class="mdi mdi-briefcase-outline" style="font-size: 4rem; color: #6f42c1; opacity: 0.3;"></i>
                 <h5>Nenhum cargo cadastrado</h5>
                 <p>Clique em "Novo Cargo" para adicionar o primeiro cargo</p>
             </div>
@@ -175,9 +183,9 @@
 <div class="modal fade" id="modalCargo" tabindex="-1" aria-labelledby="modalCargoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-rh-primary text-white">
-                <h5 class="modal-title" id="modalCargoLabel">
-                    <i class="fas fa-briefcase"></i> <span id="modalTitle">Novo Cargo</span>
+            <div class="modal-header module-header-rh">
+                <h5 class="modal-title text-white" id="modalCargoLabel">
+                    <i class="mdi mdi-briefcase"></i> <span id="modalTitle">Novo Cargo</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -189,7 +197,7 @@
                         <!-- Nome do Cargo -->
                         <div class="col-md-8">
                             <label for="nome" class="form-label">
-                                Nome do Cargo <span class="text-danger">*</span>
+                                <i class="mdi mdi-briefcase"></i> Nome do Cargo <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control" id="nome" name="nome" 
                                    placeholder="Ex: Analista de Importação Pleno" required>
@@ -197,7 +205,9 @@
                         
                         <!-- Grupo -->
                         <div class="col-md-4">
-                            <label for="grupo" class="form-label">Grupo</label>
+                            <label for="grupo" class="form-label">
+                                <i class="mdi mdi-sitemap"></i> Grupo
+                            </label>
                             <select class="form-select" id="grupo" name="grupo">
                                 <option value="">Selecione...</option>
                                 <option value="Operacional">Operacional</option>
@@ -209,7 +219,9 @@
                         
                         <!-- Descrição -->
                         <div class="col-12">
-                            <label for="descricao" class="form-label">Descrição</label>
+                            <label for="descricao" class="form-label">
+                                <i class="mdi mdi-text"></i> Descrição
+                            </label>
                             <textarea class="form-control" id="descricao" name="descricao" 
                                       rows="4" placeholder="Responsabilidades e requisitos do cargo..."></textarea>
                         </div>
@@ -218,10 +230,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancelar
+                    <i class="mdi mdi-close"></i> Cancelar
                 </button>
                 <button type="button" class="btn btn-rh-primary" onclick="salvarCargo()">
-                    <i class="fas fa-save"></i> Salvar Cargo
+                    <i class="mdi mdi-content-save"></i> Salvar Cargo
                 </button>
             </div>
         </div>
@@ -234,7 +246,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="modalExcluirLabel">
-                    <i class="fas fa-exclamation-triangle"></i> Confirmar Exclusão
+                    <i class="mdi mdi-alert"></i> Confirmar Exclusão
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -244,16 +256,16 @@
                     <strong id="cargoNomeExcluir"></strong>
                 </p>
                 <div class="alert alert-warning">
-                    <i class="fas fa-info-circle"></i>
+                    <i class="mdi mdi-information-outline"></i>
                     <strong>Atenção:</strong> Esta ação não pode ser desfeita. O cargo só será excluído se não estiver associado a nenhum colaborador ou histórico.
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancelar
+                    <i class="mdi mdi-close"></i> Cancelar
                 </button>
                 <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
-                    <i class="fas fa-trash"></i> Sim, Excluir
+                    <i class="mdi mdi-delete"></i> Sim, Excluir
                 </button>
             </div>
         </div>
@@ -300,6 +312,113 @@ function limparFiltros() {
     document.getElementById('searchInput').value = '';
     document.getElementById('filterGrupo').value = '';
     filtrarTabela();
+}
+
+// Função para visualizar detalhes do cargo
+function visualizarCargo(cargoId) {
+    // Buscar dados do cargo na API
+    fetch(`/rh/estrutura/api/cargos/${cargoId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const cargo = data.cargo;
+            
+            // Criar modal de visualização
+            const modalHtml = `
+                <div class="modal fade" id="modalVisualizarCargo" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header module-header-rh">
+                                <h5 class="modal-title text-white">
+                                    <i class="mdi mdi-eye"></i> Detalhes do Cargo
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-4">
+                                    <div class="col-md-8">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-briefcase"></i> Nome do Cargo
+                                        </label>
+                                        <p class="fs-5 text-dark">${cargo.nome_cargo}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-sitemap"></i> Grupo
+                                        </label>
+                                        <p>
+                                            ${cargo.grupo_cargo ? 
+                                                `<span class="badge badge-grupo ${cargo.grupo_cargo.toLowerCase()}" style="font-size: 1rem; padding: 0.5rem 1rem;">${cargo.grupo_cargo}</span>` 
+                                                : '<span class="text-muted">Não definido</span>'}
+                                        </p>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-text"></i> Descrição
+                                        </label>
+                                        <div class="p-3 bg-light rounded">
+                                            ${cargo.descricao ? 
+                                                `<p class="mb-0" style="white-space: pre-wrap; line-height: 1.6;">${cargo.descricao}</p>` 
+                                                : '<p class="text-muted mb-0">Sem descrição cadastrada</p>'}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-calendar-plus"></i> Criado em
+                                        </label>
+                                        <p>${cargo.criado_em ? new Date(cargo.criado_em).toLocaleString('pt-BR') : '-'}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-calendar-edit"></i> Atualizado em
+                                        </label>
+                                        <p>${cargo.atualizado_em ? new Date(cargo.atualizado_em).toLocaleString('pt-BR') : '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="mdi mdi-close"></i> Fechar
+                                </button>
+                                <button type="button" class="btn btn-rh-primary" onclick="editarCargo('${cargo.id}'); $('#modalVisualizarCargo').modal('hide');">
+                                    <i class="mdi mdi-pencil"></i> Editar Cargo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remover modal antigo se existir
+            const oldModal = document.getElementById('modalVisualizarCargo');
+            if (oldModal) {
+                oldModal.remove();
+            }
+            
+            // Adicionar novo modal ao body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Abrir modal
+            const modal = new bootstrap.Modal(document.getElementById('modalVisualizarCargo'));
+            modal.show();
+            
+            // Remover modal do DOM quando fechado
+            document.getElementById('modalVisualizarCargo').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        } else {
+            alert('Erro ao carregar dados do cargo: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao carregar dados do cargo');
+    });
 }
 </script>
 {% endblock %}
