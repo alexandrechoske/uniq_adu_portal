@@ -361,12 +361,79 @@ async function moverCandidato(candidatoId, novoStatus) {
             location.reload(); // Recarregar para desfazer mudança visual
         } else {
             console.log('✅ Candidato movido com sucesso!');
+            // Atualizar KPIs após mover com sucesso
+            atualizarKPIs();
         }
     } catch (error) {
         console.error('❌ Erro na requisição:', error);
         alert('❌ Erro ao mover candidato');
         location.reload();
     }
+}
+
+/**
+ * Atualizar KPIs da página de candidatos
+ */
+function atualizarKPIs() {
+    // Status que indicam "em processo" (não finalizados)
+    const statusEmProcesso = ['Triagem', 'Contato Inicial', 'Entrevista RH', 'Teste Técnico', 
+                              'Entrevista Gestor', 'Proposta Enviada', 'Aguardando Resposta'];
+    
+    // Status que indicam "aprovados"
+    const statusAprovados = ['Aprovado', 'Contratado'];
+    
+    // Contar todos os cards de candidatos
+    const todosCards = document.querySelectorAll('.candidato-card');
+    const totalCandidatos = todosCards.length;
+    
+    // Contar candidatos em processo
+    let emProcesso = 0;
+    todosCards.forEach(card => {
+        const coluna = card.closest('.kanban-cards');
+        if (coluna) {
+            const status = coluna.dataset.status;
+            if (statusEmProcesso.includes(status)) {
+                emProcesso++;
+            }
+        }
+    });
+    
+    // Contar candidatos aprovados
+    let aprovados = 0;
+    todosCards.forEach(card => {
+        const coluna = card.closest('.kanban-cards');
+        if (coluna) {
+            const status = coluna.dataset.status;
+            if (statusAprovados.includes(status)) {
+                aprovados++;
+            }
+        }
+    });
+    
+    // Calcular taxa de conversão
+    const taxaConversao = totalCandidatos > 0 
+        ? ((aprovados / totalCandidatos) * 100).toFixed(1)
+        : 0;
+    
+    // Atualizar valores nos KPIs
+    const kpiTotal = document.querySelector('.kpi-primary .kpi-value');
+    if (kpiTotal) kpiTotal.textContent = totalCandidatos;
+    
+    const kpiEmProcesso = document.querySelector('.kpi-warning .kpi-value');
+    if (kpiEmProcesso) kpiEmProcesso.textContent = emProcesso;
+    
+    const kpiAprovados = document.querySelector('.kpi-success .kpi-value');
+    if (kpiAprovados) kpiAprovados.textContent = aprovados;
+    
+    const kpiTaxa = document.querySelector('.kpi-info .kpi-value');
+    if (kpiTaxa) kpiTaxa.textContent = `${taxaConversao}%`;
+    
+    console.log('📊 KPIs atualizados:', {
+        total: totalCandidatos,
+        emProcesso: emProcesso,
+        aprovados: aprovados,
+        taxaConversao: taxaConversao + '%'
+    });
 }
 
 /**

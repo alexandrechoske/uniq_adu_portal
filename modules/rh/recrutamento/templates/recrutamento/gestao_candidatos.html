@@ -3,136 +3,414 @@
 {% block title %}Candidatos - {{ vaga.titulo }} - RH{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.css') }}?v=3">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.css') }}?v=4">
+<style>
+/* Cores do Recrutamento (Verde) */
+:root {
+    --recrutamento-primary: #28a745;
+    --recrutamento-primary-dark: #1e7e34;
+    --recrutamento-primary-light: #5cb85c;
+}
+
+.btn-recrutamento-primary {
+    background: linear-gradient(135deg, var(--recrutamento-primary) 0%, var(--recrutamento-primary-dark) 100%);
+    border: none;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-recrutamento-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* Info Card da Vaga */
+.vaga-info-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 4px solid var(--recrutamento-primary);
+    margin-bottom: 1.5rem;
+}
+
+.vaga-info-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vaga-info-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    color: #6c757d;
+    font-size: 0.9375rem;
+}
+
+.vaga-info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vaga-info-item i {
+    font-size: 1.125rem;
+    color: var(--recrutamento-primary);
+}
+
+/* Kanban melhorado */
+.kanban-wrapper {
+    background: #f8f9fa;
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+}
+
+.kanban-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+}
+
+.kanban-column {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-column-header {
+    padding: 1rem;
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.kanban-column-title {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: #2c3e50;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kanban-column-count {
+    background: var(--recrutamento-primary);
+    color: white;
+    padding: 0.25rem 0.625rem;
+    border-radius: 1rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.kanban-cards {
+    padding: 1rem;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.candidato-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.candidato-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border-color: var(--recrutamento-primary);
+}
+
+.candidato-card-nome {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+}
+
+.candidato-card-info {
+    font-size: 0.8125rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.candidato-card-info i {
+    color: var(--recrutamento-primary);
+    font-size: 1rem;
+}
+
+.candidato-card-fonte {
+    display: inline-block;
+    background: #e9ecef;
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    color: #495057;
+    margin-top: 0.5rem;
+}
+
+/* Badges de IA */
+.ai-score-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.ai-score-badge.score-high {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ai-score-badge.score-medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.ai-score-badge.score-low {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.ai-filter-badge {
+    position: absolute;
+    top: 2.5rem;
+    right: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.ai-filter-badge.filter-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.ai-filter-badge.filter-review {
+    background: #fff3cd;
+    color: #856404;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    
-    <!-- Header -->
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h2 class="mb-1">
-                    <i class="mdi mdi-account-group"></i> Candidatos
-                </h2>
-                <h5 class="text-muted mb-0">
-                    <i class="mdi mdi-briefcase-outline"></i> {{ vaga.titulo }}
-                </h5>
-            </div>
-            <div>
-                <a href="{{ url_for('recrutamento.gestao_vagas') }}" class="btn btn-outline-secondary">
-                    <i class="mdi mdi-arrow-left"></i> Voltar para Vagas
-                </a>
+<div class="rh-container">
+    <!-- Actions Bar com Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/"><i class="mdi mdi-home-outline"></i> Início</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('recrutamento.gestao_vagas') }}">Vagas</a></li>
+                <li class="breadcrumb-item active">Candidatos</li>
+            </ol>
+        </nav>
+        <div class="actions-buttons">
+            <a href="{{ url_for('recrutamento.gestao_vagas') }}" class="btn btn-outline-secondary">
+                <i class="mdi mdi-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-section">
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">
+                <i class="mdi mdi-chart-box-outline"></i>
+                Resumo de Candidatos
+            </h5>
+            <div class="kpi-grid-rh" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-account-multiple"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total Candidatos</p>
+                        <p class="kpi-value">{{ total_candidatos }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-warning">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-clock-outline"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Em Processo</p>
+                        <p class="kpi-value">{{ em_processo }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-check-circle"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Aprovados</p>
+                        <p class="kpi-value">{{ aprovados }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-info">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-percent"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Taxa de Conversão</p>
+                        <p class="kpi-value">{{ taxa_conversao }}%</p>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <!-- Info da Vaga -->
-        <div class="alert alert-info d-flex align-items-center">
-            <i class="mdi mdi-information-outline me-2" style="font-size: 1.5rem;"></i>
-            <div>
-                <strong>{{ vaga.localizacao or 'Localização não informada' }}</strong> | 
-                {{ vaga.tipo_contratacao or 'CLT' }} | 
-                Status: <span class="badge {% if vaga.status == 'Aberta' %}bg-success{% elif vaga.status == 'Pausada' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+    </div>
+
+    <!-- Info da Vaga -->
+    <div class="vaga-info-card">
+        <div class="vaga-info-title">
+            <i class="mdi mdi-briefcase"></i>
+            {{ vaga.titulo }}
+        </div>
+        <div class="vaga-info-details">
+            <div class="vaga-info-item">
+                <i class="mdi mdi-map-marker"></i>
+                <span>{{ vaga.localizacao or 'Não informado' }}</span>
+            </div>
+            <div class="vaga-info-item">
+                <i class="mdi mdi-file-document"></i>
+                <span>{{ vaga.tipo_contratacao or 'CLT' }}</span>
+            </div>
+            <div class="vaga-info-item">
+                <i class="mdi mdi-flag"></i>
+                <span class="badge {% if vaga.status == 'Aberta' %}bg-success{% elif vaga.status == 'Pausada' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
                     {{ vaga.status }}
                 </span>
             </div>
         </div>
     </div>
 
-    <!-- Kanban Container -->
-    <div class="kanban-container">
-        
-        {% for status, candidatos in candidatos_por_status.items() %}
-        <div class="kanban-column">
-            <div class="kanban-column-header">
-                <span class="kanban-column-title">{{ status }}</span>
-                <span class="kanban-column-count">{{ candidatos|length }}</span>
-            </div>
-            
-            <div class="kanban-cards" data-status="{{ status }}">
-                {% for candidato in candidatos %}
-                <div class="candidato-card" 
-                     draggable="true" 
-                     data-candidato-id="{{ candidato.id }}"
-                     onclick="verDetalhesCandidato('{{ candidato.id }}')">
-                    
-                    <!-- Badge de Score IA (se disponível) -->
-                    {% if candidato.ai_match_score is not none %}
-                    <div class="ai-score-badge 
-                        {% if candidato.ai_match_score >= 80 %}score-high
-                        {% elif candidato.ai_match_score >= 50 %}score-medium
-                        {% else %}score-low{% endif %}"
-                        title="Score de compatibilidade IA">
-                        <i class="mdi mdi-robot"></i>
-                        <span>{{ candidato.ai_match_score }}%</span>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Status do Pré-filtro IA -->
-                    {% if candidato.ai_pre_filter_status and candidato.ai_pre_filter_status != 'Aprovado' %}
-                    <div class="ai-filter-badge 
-                        {% if candidato.ai_pre_filter_status == 'Reprovado' %}filter-rejected
-                        {% elif candidato.ai_pre_filter_status == 'Revisar' %}filter-review
-                        {% else %}filter-error{% endif %}"
-                        title="Pré-filtro IA: {{ candidato.ai_pre_filter_status }}">
-                        <i class="mdi mdi-alert-circle"></i>
-                        {{ candidato.ai_pre_filter_status }}
-                    </div>
-                    {% endif %}
-                    
-                    <div class="candidato-card-nome">
-                        {{ candidato.nome_completo }}
-                    </div>
-                    
-                    {% if candidato.email %}
-                    <div class="candidato-card-info">
-                        <i class="mdi mdi-email"></i>
-                        <span>{{ candidato.email }}</span>
-                    </div>
-                    {% endif %}
-                    
-                    {% if candidato.telefone %}
-                    <div class="candidato-card-info">
-                        <i class="mdi mdi-phone"></i>
-                        <span>{{ candidato.telefone }}</span>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="candidato-card-info">
-                        <i class="mdi mdi-calendar"></i>
-                        <span>
-                            {% if candidato.data_candidatura %}
-                                {% set data_parts = candidato.data_candidatura[:10].split('-') %}
-                                {{ data_parts[2] }}/{{ data_parts[1] }}/{{ data_parts[0] }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </span>
-                    </div>
-                    
-                    {% if candidato.fonte_candidatura %}
-                    <span class="candidato-card-fonte">
-                        <i class="mdi mdi-source-branch"></i> {{ candidato.fonte_candidatura }}
-                    </span>
-                    {% endif %}
+    <!-- Kanban de Candidatos -->
+    <div class="kanban-wrapper">
+        <div class="kanban-container">
+            {% for status, candidatos in candidatos_por_status.items() %}
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <span class="kanban-column-title">{{ status }}</span>
+                    <span class="kanban-column-count">{{ candidatos|length }}</span>
                 </div>
-                {% endfor %}
                 
-                {% if candidatos|length == 0 %}
-                <div class="text-center text-muted py-4">
-                    <i class="mdi mdi-inbox-outline" style="font-size: 2rem;"></i>
-                    <p class="mb-0 mt-2 small">Nenhum candidato</p>
+                <div class="kanban-cards" data-status="{{ status }}">
+                    {% for candidato in candidatos %}
+                    <div class="candidato-card" 
+                         draggable="true" 
+                         data-candidato-id="{{ candidato.id }}"
+                         onclick="verDetalhesCandidato('{{ candidato.id }}')">
+                        
+                        <!-- Badge de Score IA (se disponível) -->
+                        {% if candidato.ai_match_score is not none %}
+                        <div class="ai-score-badge 
+                            {% if candidato.ai_match_score >= 80 %}score-high
+                            {% elif candidato.ai_match_score >= 50 %}score-medium
+                            {% else %}score-low{% endif %}"
+                            title="Score de compatibilidade IA">
+                            <i class="mdi mdi-robot"></i>
+                            <span>{{ candidato.ai_match_score }}%</span>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Status do Pré-filtro IA -->
+                        {% if candidato.ai_pre_filter_status and candidato.ai_pre_filter_status != 'Aprovado' %}
+                        <div class="ai-filter-badge 
+                            {% if candidato.ai_pre_filter_status == 'Reprovado' %}filter-rejected
+                            {% elif candidato.ai_pre_filter_status == 'Revisar' %}filter-review
+                            {% else %}filter-error{% endif %}"
+                            title="Pré-filtro IA: {{ candidato.ai_pre_filter_status }}">
+                            <i class="mdi mdi-alert-circle"></i>
+                            {{ candidato.ai_pre_filter_status }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="candidato-card-nome">
+                            {{ candidato.nome_completo }}
+                        </div>
+                        
+                        {% if candidato.email %}
+                        <div class="candidato-card-info">
+                            <i class="mdi mdi-email"></i>
+                            <span>{{ candidato.email }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if candidato.telefone %}
+                        <div class="candidato-card-info">
+                            <i class="mdi mdi-phone"></i>
+                            <span>{{ candidato.telefone }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="candidato-card-info">
+                            <i class="mdi mdi-calendar"></i>
+                            <span>
+                                {% if candidato.data_candidatura %}
+                                    {% set data_parts = candidato.data_candidatura[:10].split('-') %}
+                                    {{ data_parts[2] }}/{{ data_parts[1] }}/{{ data_parts[0] }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        {% if candidato.fonte_candidatura %}
+                        <span class="candidato-card-fonte">
+                            <i class="mdi mdi-source-branch"></i> {{ candidato.fonte_candidatura }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    {% if candidatos|length == 0 %}
+                    <div class="text-center text-muted py-4">
+                        <i class="mdi mdi-inbox-outline" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <p class="mb-0 mt-2 small">Nenhum candidato</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-        
     </div>
 
-</div>
+</div> <!-- Fecha rh-container -->
 
 <!-- Modal de Detalhes do Candidato -->
 <div class="modal fade" id="modalDetalhesCandidato" tabindex="-1" aria-hidden="true">
@@ -289,5 +567,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=3"></script>
+<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=6"></script>
 {% endblock %}
