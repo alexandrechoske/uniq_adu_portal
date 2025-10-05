@@ -76,6 +76,9 @@ def novo_colaborador():
         return redirect(url_for('auth.login'))
     
     try:
+        # Data de hoje para validação de datas
+        hoje = datetime.now().strftime('%Y-%m-%d')
+        
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
         departamentos = supabase_admin.table('rh_departamentos').select('*').order('nome_departamento').execute()
@@ -91,6 +94,7 @@ def novo_colaborador():
         return render_template(
             'colaboradores/form_colaborador.html',
             modo='novo',
+            hoje=hoje,
             cargos=cargos.data if cargos.data else [],
             departamentos=departamentos.data if departamentos.data else [],
             empresas=empresas.data if empresas.data else [],
@@ -109,6 +113,9 @@ def editar_colaborador(colaborador_id):
         return redirect(url_for('auth.login'))
     
     try:
+        # Data de hoje para validação de datas
+        hoje = datetime.now().strftime('%Y-%m-%d')
+        
         # Buscar colaborador
         colab_response = supabase_admin.table('rh_colaboradores')\
             .select('*')\
@@ -146,6 +153,7 @@ def editar_colaborador(colaborador_id):
         return render_template(
             'colaboradores/form_colaborador.html',
             modo='editar',
+            hoje=hoje,
             colaborador=colab_response.data,
             ultimo_historico=ultimo_historico,
             cargos=cargos.data if cargos.data else [],
