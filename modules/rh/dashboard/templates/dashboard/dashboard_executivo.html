@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Executivo RH - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.css') }}?v=2.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-executivo-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Recursos Humanos', 'icon': 'mdi mdi-account-group'},
+                {'name': 'Dashboard Executivo', 'icon': 'mdi mdi-chart-box-multiple-outline'}
+            ], 'rh') }}
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="last-update">Carregando dados do dashboard executivo...</p>
+        </div>
+    </div>
+    
+    <!-- Filter Section - Filtros Globais Inteligentes -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="periodo-filter">
+                    <i class="mdi mdi-calendar-range"></i>
+                    Período
+                </label>
+                <select id="periodo-filter" class="form-select">
+                    <option value="este_ano" selected>Este Ano</option>
+                    <option value="este_mes">Este Mês</option>
+                    <option value="ultimos_12_meses">Últimos 12 Meses</option>
+                    <option value="ano_anterior">Ano Anterior</option>
+                    <option value="trimestre_atual">Trimestre Atual</option>
+                    <option value="personalizado">Personalizado...</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="custom-date-group" style="display: none;">
+                <label for="data-inicio">Data Início</label>
+                <input type="date" id="data-inicio" class="form-control">
+            </div>
+            
+            <div class="filter-group" id="custom-date-end-group" style="display: none;">
+                <label for="data-fim">Data Fim</label>
+                <input type="date" id="data-fim" class="form-control">
+            </div>
+            
+            <div class="filter-group">
+                <label for="empresa-filter">
+                    <i class="mdi mdi-domain"></i>
+                    Empresa
+                </label>
+                <select id="empresa-filter" class="form-select">
+                    <option value="todas" selected>Todas as Empresas</option>
+                    <!-- Opções carregadas dinamicamente -->
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="departamento-filter">
+                    <i class="mdi mdi-office-building"></i>
+                    Departamento
+                </label>
+                <select id="departamento-filter" class="form-select">
+                    <option value="todos" selected>Todos os Departamentos</option>
+                    <!-- Opções carregadas dinamicamente -->
+                </select>
+            </div>
+            
+            <div class="filter-actions">
+                <button id="refresh-data" class="btn btn-primary" onclick="atualizarDashboard()">
+                    <i class="mdi mdi-refresh"></i>
+                    Atualizar Dados
+                </button>
+                <button id="reset-filters" class="btn btn-secondary" style="display: none;" onclick="limparFiltros()">
+                    <i class="mdi mdi-filter-off"></i>
+                    Limpar Filtros
+                </button>
+            </div>
+        </div>
+        
+        <!-- Resumo dos Filtros Aplicados -->
+        <div class="filter-summary" id="filter-summary" style="display: none;">
+            <span class="filter-summary-label">
+                <i class="mdi mdi-filter"></i>
+                Filtros aplicados:
+            </span>
+            <span id="filter-summary-text"></span>
+        </div>
+    </div>
+    
+    <!-- KPI Cards Principais - Seção 1: At-a-Glance -->
+    <div class="kpi-section">
+        <div class="kpi-grid-executive">
+            <!-- KPIs serão adicionados aqui -->
+            <div class="placeholder-message">
+                <i class="mdi mdi-gauge-empty"></i>
+                <p>KPIs serão configurados em breve</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Grid - Seção 2: Análise Detalhada -->
+    <div class="dashboard-sections">
+        <!-- Gráficos serão adicionados aqui -->
+        <div class="placeholder-message">
+            <i class="mdi mdi-chart-line-variant"></i>
+            <p>Gráficos serão configurados em breve</p>
+        </div>
+    </div>
+    
+    <!-- Tabelas Detalhadas - Seção 3 -->
+    <div class="tables-section">
+        <!-- Tabelas serão adicionadas aqui -->
+        <div class="placeholder-message">
+            <i class="mdi mdi-table-large"></i>
+            <p>Tabelas serão configuradas em breve</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=2.0"></script>
+{% endblock %}

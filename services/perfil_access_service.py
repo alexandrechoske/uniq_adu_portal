@@ -639,6 +639,7 @@ class PerfilAccessService:
                 'icone': 'fas fa-users',
                 'url': '/rh/colaboradores',
                 'paginas': {
+                    'dashboard': {'nome': 'Dashboard Executivo', 'url': '/rh/dashboard'},
                     'colaboradores': {'nome': 'Gestão de Colaboradores', 'url': '/rh/colaboradores'},
                     'estrutura_cargos': {'nome': 'Gestão de Cargos', 'url': '/rh/estrutura/cargos'},
                     'estrutura_departamentos': {'nome': 'Gestão de Departamentos', 'url': '/rh/estrutura/departamentos'},

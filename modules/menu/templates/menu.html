@@ -194,6 +194,12 @@
             <!-- Tab: RH -->
             <div class="tab-content" data-content="rh">
                 <div class="cards-grid">
+                    <a href="{{ url_for('dashboard_rh.dashboard_executivo') }}" class="module-card" data-module="rh_dashboard">
+                        <div class="module-icon"><i class="mdi mdi-chart-box-multiple-outline"></i></div>
+                        <h4 class="module-title">Dashboard Executivo</h4>
+                        <p class="module-desc">Visão estratégica com indicadores e métricas de RH.</p>
+                    </a>
+                    
                     <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="module-card" data-module="rh_colaboradores">
                         <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
                         <h4 class="module-title">Colaboradores</h4>

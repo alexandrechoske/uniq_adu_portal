@@ -20,10 +20,12 @@ def register_rh_blueprints(app):
     from modules.rh.colaboradores.routes import colaboradores_bp
     from modules.rh.estrutura_org import estrutura_org_bp
     from modules.rh.recrutamento import recrutamento_bp
+    from modules.rh.dashboard import dashboard_rh_bp
     
     # Registrar blueprints
     app.register_blueprint(colaboradores_bp)
     app.register_blueprint(estrutura_org_bp)
     app.register_blueprint(recrutamento_bp)
+    app.register_blueprint(dashboard_rh_bp)
     
-    print("✅ Módulo de RH registrado com sucesso (Colaboradores + Estrutura + Recrutamento)")
+    print("✅ Módulo de RH registrado com sucesso (Colaboradores + Estrutura + Recrutamento + Dashboard)")

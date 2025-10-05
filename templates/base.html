@@ -942,6 +942,13 @@
                         <span>Recursos Humanos</span>
                     </div>
                     
+                    <a href="{{ url_for('dashboard_rh.dashboard_executivo') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('dashboard_rh.') %}active{% endif %}"
+                       title="Dashboard Executivo de RH">
+                        <i class="mdi mdi-chart-box-outline"></i>
+                        <span class="sidebar-text">Dashboard Executivo</span>
+                    </a>
+                    
                     <a href="{{ url_for('colaboradores.lista_colaboradores') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}"
                        title="Gestão de Colaboradores">
