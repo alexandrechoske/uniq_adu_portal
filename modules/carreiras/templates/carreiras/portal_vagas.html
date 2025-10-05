@@ -7,215 +7,436 @@
     <link rel="icon" type="image/png" href="/static/medias/Logo_Unique.png">
     
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Material Design Icons -->
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- AOS Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
     <style>
         :root {
             --unique-primary: #6f42c1;
             --unique-dark: #5a32a3;
             --unique-light: #9b72d4;
+            --unique-gradient-start: #667eea;
+            --unique-gradient-end: #764ba2;
+            --text-dark: #2c3e50;
+            --text-light: #6c757d;
+            --bg-light: #f8f9fa;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            overflow-x: hidden;
         }
         
-        .header-carreiras {
-            text-align: center;
-            color: white;
-            margin-bottom: 50px;
-        }
-        
-        .header-carreiras img {
-            width: 150px;
-            margin-bottom: 20px;
+        /* ===== NAVIGATION BAR ===== */
+        .navbar-carreiras {
             background: white;
-            padding: 10px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 20px rgba(111, 66, 193, 0.1);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
         }
         
-        .header-carreiras h1 {
-            font-size: 2.5rem;
+        .navbar-carreiras.scrolled {
+            box-shadow: 0 4px 30px rgba(111, 66, 193, 0.15);
+        }
+        
+        .navbar-brand-custom {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+        }
+        
+        .navbar-brand-custom img {
+            height: 50px;
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand-custom:hover img {
+            transform: scale(1.05);
+        }
+        
+        .navbar-brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        
+        .navbar-brand-text .brand-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--unique-primary);
+            letter-spacing: -0.5px;
+        }
+        
+        .navbar-brand-text .brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        .nav-link-custom {
+            color: var(--text-dark);
+            font-weight: 600;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            position: relative;
+        }
+        
+        .nav-link-custom::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: var(--unique-primary);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link-custom:hover::after,
+        .nav-link-custom.active::after {
+            width: 80%;
+        }
+        
+        .nav-link-custom:hover,
+        .nav-link-custom.active {
+            color: var(--unique-primary);
+            background: rgba(111, 66, 193, 0.05);
+        }
+        
+        /* Mega Menu */
+        .dropdown-megamenu {
+            position: static;
+        }
+        
+        .dropdown-megamenu .dropdown-menu {
+            width: 100%;
+            left: 0;
+            right: 0;
+            padding: 2rem;
+            border: none;
+            border-top: 3px solid var(--unique-primary);
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 10px 40px rgba(111, 66, 193, 0.15);
+            margin-top: 0;
+        }
+        
+        .dropdown-header-custom {
             font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            color: var(--unique-primary);
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--unique-light);
         }
         
-        .header-carreiras p {
-            font-size: 1.2rem;
-            opacity: 0.95;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-        }
-        
-        .vagas-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        /* Filtros */
-        .filtros-container {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .filtros-header {
+        .dropdown-item-custom {
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            color: var(--text-dark);
+            text-decoration: none;
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 20px;
+        }
+        
+        .dropdown-item-custom i {
+            color: var(--unique-primary);
+            font-size: 1.2rem;
+        }
+        
+        .dropdown-item-custom:hover {
+            background: rgba(111, 66, 193, 0.08);
+            color: var(--unique-dark);
+            transform: translateX(5px);
+        }
+        
+        /* ===== HERO SECTION ===== */
+        .hero-section {
+            background: linear-gradient(135deg, var(--unique-gradient-start) 0%, var(--unique-gradient-end) 100%);
+            padding: 80px 0 100px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>');
+            animation: float 20s infinite linear;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(-100px) translateX(100px); }
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            color: white;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1.2;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.4rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            font-weight: 400;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 3rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+            font-weight: 600;
+        }
+        
+        /* ===== SECTION STYLES ===== */
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--unique-primary);
+            margin-bottom: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: var(--unique-primary);
+            border-radius: 2px;
+        }
+        
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 3rem;
+        }
+        
+        /* ===== FILTER SECTION ===== */
+        .filters-section {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(111, 66, 193, 0.1);
+            margin: -50px auto 50px;
+            max-width: 1200px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-label i {
             color: var(--unique-primary);
         }
         
-        .filtros-header i {
-            font-size: 1.5rem;
-        }
-        
-        .filtros-header h3 {
-            margin: 0;
-            font-size: 1.3rem;
-            font-weight: 600;
-        }
-        
-        .filtros-row {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        
-        .filtro-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .filtro-group label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .filtro-group select {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 0.95rem;
+        .form-select-custom {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
             transition: all 0.3s ease;
         }
         
-        .filtro-group select:focus {
-            outline: none;
+        .form-select-custom:focus {
             border-color: var(--unique-primary);
+            box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.15);
         }
         
-        .btn-limpar-filtros {
-            background: #f0f0f0;
-            color: #666;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+        .btn-clear-filters {
+            background: transparent;
+            border: 2px solid var(--unique-primary);
+            color: var(--unique-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
             font-weight: 600;
-            cursor: pointer;
             transition: all 0.3s ease;
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 8px;
-            margin-top: 22px;
+            width: 100%;
+            justify-content: center;
         }
         
-        .btn-limpar-filtros:hover {
-            background: #e0e0e0;
-        }
-        
-        .vagas-count {
-            text-align: center;
+        .btn-clear-filters:hover {
+            background: var(--unique-primary);
             color: white;
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            font-weight: 500;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
         }
         
-        /* Gallery Grid */
-        .vagas-gallery {
+        /* ===== VAGAS GRID ===== */
+        .vagas-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .vagas-count-badge {
+            display: inline-block;
+            background: var(--unique-primary);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+        }
+        
+        .vagas-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 30px;
+            margin-bottom: 80px;
         }
         
         .vaga-card {
             background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            border-top: 4px solid var(--unique-primary);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .vaga-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--unique-gradient-start), var(--unique-gradient-end));
         }
         
         .vaga-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(111, 66, 193, 0.2);
+            border-color: var(--unique-light);
         }
         
-        .vaga-badge {
-            display: inline-block;
-            background: var(--unique-light);
+        .vaga-badge-new {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            padding: 4px 12px;
+            padding: 0.4rem 1rem;
             border-radius: 20px;
             font-size: 0.75rem;
-            font-weight: 600;
-            margin-bottom: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(111, 66, 193, 0.3);
         }
         
-        .vaga-titulo {
-            font-size: 1.4rem;
+        .vaga-title {
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--unique-primary);
-            margin-bottom: 15px;
+            margin-bottom: 1.5rem;
+            margin-top: 0.5rem;
             line-height: 1.3;
         }
         
-        .vaga-info {
+        .vaga-meta {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-bottom: 15px;
-            font-size: 0.9rem;
-            color: #666;
+            gap: 12px;
+            margin-bottom: 1.5rem;
         }
         
-        .vaga-info-item {
+        .vaga-meta-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+            color: var(--text-light);
+            font-size: 0.95rem;
         }
         
-        .vaga-info-item i {
+        .vaga-meta-item i {
             color: var(--unique-primary);
-            font-size: 1.1rem;
-            width: 20px;
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
         }
         
-        .vaga-descricao {
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 20px;
-            flex-grow: 1;
+        .vaga-description {
+            color: var(--text-dark);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
@@ -223,168 +444,320 @@
             font-size: 0.95rem;
         }
         
-        .btn-candidatar {
-            background: var(--unique-primary);
+        .btn-apply {
+            background: linear-gradient(135deg, var(--unique-gradient-start), var(--unique-gradient-end));
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-weight: 700;
             text-decoration: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
             transition: all 0.3s ease;
-            margin-top: auto;
+            width: 100%;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        .btn-candidatar:hover {
-            background: var(--unique-dark);
+        .btn-apply:hover {
             color: white;
-            transform: scale(1.02);
+            transform: scale(1.03);
+            box-shadow: 0 8px 20px rgba(111, 66, 193, 0.4);
         }
         
+        /* ===== EMPTY STATE ===== */
         .empty-state {
-            grid-column: 1 / -1;
             text-align: center;
+            padding: 80px 30px;
             background: white;
-            border-radius: 12px;
-            padding: 60px 30px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
         
         .empty-state i {
-            font-size: 4rem;
-            color: #ddd;
-            margin-bottom: 20px;
+            font-size: 5rem;
+            color: var(--unique-light);
+            margin-bottom: 2rem;
+            opacity: 0.5;
         }
         
         .empty-state h3 {
-            color: #666;
-            margin-bottom: 10px;
+            color: var(--text-dark);
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
         }
         
         .empty-state p {
-            color: #999;
+            color: var(--text-light);
+            font-size: 1.1rem;
         }
         
-        @media (max-width: 768px) {
-            .vagas-gallery {
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 992px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .vagas-grid {
                 grid-template-columns: 1fr;
             }
             
-            .header-carreiras h1 {
+            .navbar-brand-text .brand-name {
+                font-size: 1.2rem;
+            }
+            
+            .filters-section {
+                margin: -30px 15px 30px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .hero-title {
                 font-size: 2rem;
             }
             
-            .filtros-row {
-                flex-direction: column;
+            .hero-stats {
+                gap: 30px;
             }
             
-            .filtro-group {
-                width: 100%;
+            .stat-number {
+                font-size: 2.5rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container vagas-container">
-        <!-- Header -->
-        <div class="header-carreiras">
-            <img src="/static/medias/Logo_Unique.png" alt="Unique Aduaneira">
-            <h1>Venha Fazer Parte do Nosso Time!</h1>
-            <p>Encontre a vaga ideal para você e impulsione sua carreira na Unique Aduaneira</p>
+
+    
+    <!-- ===== NAVIGATION BAR ===== -->
+    <nav class="navbar navbar-expand-lg navbar-carreiras">
+        <div class="container">
+            <a href="/" class="navbar-brand-custom">
+                <img src="/static/medias/Logo_Unique.png" alt="Unique Aduaneira">
+                <div class="navbar-brand-text">
+                    <span class="brand-name">UNIQUE ADUANEIRA</span>
+                    <span class="brand-subtitle">CARREIRAS</span>
+                </div>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link-custom active" href="/carreiras/">
+                            <i class="mdi mdi-briefcase-outline me-1"></i> Vagas Abertas
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown dropdown-megamenu">
+                        <a class="nav-link-custom dropdown-toggle" href="#" id="megamenuDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="mdi mdi-information-outline me-1"></i> Sobre Nós
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="megamenuDropdown">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="dropdown-header-custom">A Empresa</h6>
+                                    <a class="dropdown-item-custom" href="#cultura">
+                                        <i class="mdi mdi-heart"></i>
+                                        Nossa Cultura
+                                    </a>
+                                    <a class="dropdown-item-custom" href="#valores">
+                                        <i class="mdi mdi-star"></i>
+                                        Valores e Missão
+                                    </a>
+                                    <a class="dropdown-item-custom" href="#equipe">
+                                        <i class="mdi mdi-account-group"></i>
+                                        Nossa Equipe
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="dropdown-header-custom">Benefícios</h6>
+                                    <a class="dropdown-item-custom" href="#beneficios">
+                                        <i class="mdi mdi-gift"></i>
+                                        Pacote de Benefícios
+                                    </a>
+                                    <a class="dropdown-item-custom" href="#desenvolvimento">
+                                        <i class="mdi mdi-school"></i>
+                                        Desenvolvimento Profissional
+                                    </a>
+                                    <a class="dropdown-item-custom" href="#ambiente">
+                                        <i class="mdi mdi-home-city"></i>
+                                        Ambiente de Trabalho
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link-custom" href="#contato">
+                            <i class="mdi mdi-email-outline me-1"></i> Contato
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
+    </nav>
+    
+    <!-- ===== HERO SECTION ===== -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-content" data-aos="fade-up">
+                <h1 class="hero-title">Construa Sua Carreira Conosco</h1>
+                <p class="hero-subtitle">
+                    Faça parte de uma equipe inovadora e apaixonada por descomplicar o comércio exterior
+                </p>
+                
+                <div class="hero-stats" data-aos="fade-up" data-aos-delay="200">
+                    <div class="stat-item">
+                        <span class="stat-number">{{ vagas|length if vagas else 0 }}+</span>
+                        <span class="stat-label">Vagas Abertas</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Colaboradores</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">15+</span>
+                        <span class="stat-label">Anos de Mercado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="container vagas-container">
         
         {% if vagas and vagas|length > 0 %}
-            <!-- Filtros -->
-            <div class="filtros-container">
-                <div class="filtros-header">
-                    <i class="mdi mdi-filter-variant"></i>
-                    <h3>Filtrar Vagas</h3>
-                </div>
-                <div class="filtros-row">
-                    <div class="filtro-group">
-                        <label for="filtro-localizacao">Localização</label>
-                        <select id="filtro-localizacao" class="form-select">
+            <!-- ===== FILTERS SECTION ===== -->
+            <section class="filters-section" data-aos="fade-up" data-aos-delay="100">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="filter-label">
+                            <i class="mdi mdi-map-marker"></i>
+                            Localização
+                        </label>
+                        <select id="filtro-localizacao" class="form-select form-select-custom">
                             <option value="">Todas as localizações</option>
                         </select>
                     </div>
-                    <div class="filtro-group">
-                        <label for="filtro-tipo">Tipo de Contratação</label>
-                        <select id="filtro-tipo" class="form-select">
+                    <div class="col-md-4">
+                        <label class="filter-label">
+                            <i class="mdi mdi-briefcase"></i>
+                            Tipo de Contratação
+                        </label>
+                        <select id="filtro-tipo" class="form-select form-select-custom">
                             <option value="">Todos os tipos</option>
                         </select>
                     </div>
-                    <button class="btn-limpar-filtros" id="btn-limpar">
-                        <i class="mdi mdi-refresh"></i>
-                        Limpar Filtros
-                    </button>
+                    <div class="col-md-4">
+                        <button class="btn-clear-filters" id="btn-limpar">
+                            <i class="mdi mdi-refresh"></i>
+                            Limpar Filtros
+                        </button>
+                    </div>
                 </div>
+            </section>
+            
+            <!-- ===== VAGAS COUNT ===== -->
+            <div class="text-center mb-4" data-aos="fade-up" data-aos-delay="200">
+                <span class="vagas-count-badge">
+                    <i class="mdi mdi-briefcase me-2"></i>
+                    <span id="vagas-visiveis">{{ vagas|length }}</span> vaga(s) disponível(is)
+                </span>
             </div>
             
-            <!-- Contador de Vagas -->
-            <div class="vagas-count">
-                <span id="vagas-visiveis">{{ vagas|length }}</span> vaga(s) disponível(is)
-            </div>
-            
-            <!-- Gallery de Vagas -->
-            <div class="vagas-gallery" id="vagas-gallery">
+            <!-- ===== VAGAS GRID ===== -->
+            <section class="vagas-grid" id="vagas-grid">
                 {% for vaga in vagas %}
                 <div class="vaga-card" 
                      data-localizacao="{{ vaga.localizacao or 'Não informado' }}"
                      data-tipo="{{ vaga.tipo_contratacao or 'CLT' }}"
-                     data-data="{{ vaga.data_abertura }}">
+                     data-aos="fade-up"
+                     data-aos-delay="{{ loop.index * 50 }}">
                     
-                    <div class="vaga-badge">Nova Oportunidade</div>
+                    <span class="vaga-badge-new">
+                        <i class="mdi mdi-star"></i> Nova
+                    </span>
                     
-                    <h2 class="vaga-titulo">{{ vaga.titulo }}</h2>
+                    <h2 class="vaga-title">{{ vaga.titulo }}</h2>
                     
-                    <div class="vaga-info">
-                        <div class="vaga-info-item">
+                    <div class="vaga-meta">
+                        <div class="vaga-meta-item">
                             <i class="mdi mdi-map-marker"></i>
                             <span>{{ vaga.localizacao or 'Não informado' }}</span>
                         </div>
-                        <div class="vaga-info-item">
-                            <i class="mdi mdi-briefcase"></i>
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-briefcase-outline"></i>
                             <span>{{ vaga.tipo_contratacao or 'CLT' }}</span>
                         </div>
-                        <div class="vaga-info-item">
-                            <i class="mdi mdi-calendar"></i>
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-calendar-clock"></i>
                             <span>Publicada em {{ vaga.data_abertura[:10] if vaga.data_abertura else 'N/A' }}</span>
                         </div>
                     </div>
                     
                     {% if vaga.descricao %}
-                    <div class="vaga-descricao">
+                    <div class="vaga-description">
                         {{ vaga.descricao }}
                     </div>
                     {% endif %}
                     
-                    <a href="{{ url_for('carreiras.detalhe_vaga', vaga_id=vaga.id) }}" class="btn-candidatar">
-                        <i class="mdi mdi-file-document-outline"></i>
-                        Ver Detalhes e Candidatar-se
+                    <a href="{{ url_for('carreiras.detalhe_vaga', vaga_id=vaga.id) }}" class="btn-apply">
+                        <i class="mdi mdi-send"></i>
+                        Candidatar-se Agora
                     </a>
                 </div>
                 {% endfor %}
-            </div>
+            </section>
+            
         {% else %}
-            <div class="vagas-gallery">
-                <div class="empty-state">
-                    <i class="mdi mdi-briefcase-search-outline"></i>
-                    <h3>Nenhuma vaga aberta no momento</h3>
-                    <p>Volte em breve para conferir novas oportunidades!</p>
-                </div>
-            </div>
+            <!-- ===== EMPTY STATE ===== -->
+            <section class="empty-state" data-aos="zoom-in">
+                <i class="mdi mdi-briefcase-search-outline"></i>
+                <h3>Nenhuma vaga aberta no momento</h3>
+                <p>Estamos sempre buscando novos talentos. Volte em breve para conferir novas oportunidades!</p>
+            </section>
         {% endif %}
     </div>
     
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
     <script>
-        // Preencher filtros dinamicamente
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            offset: 100
+        });
+        
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar-carreiras');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+        
+        // Filters functionality
         document.addEventListener('DOMContentLoaded', function() {
             const vagasCards = document.querySelectorAll('.vaga-card');
             const filtroLocalizacao = document.getElementById('filtro-localizacao');
@@ -392,7 +765,9 @@
             const btnLimpar = document.getElementById('btn-limpar');
             const vagasVisiveis = document.getElementById('vagas-visiveis');
             
-            // Extrair valores únicos
+            if (!filtroLocalizacao || !filtroTipo) return;
+            
+            // Extract unique values
             const localizacoes = new Set();
             const tipos = new Set();
             
@@ -403,7 +778,7 @@
                 if (tipo) tipos.add(tipo);
             });
             
-            // Preencher selects
+            // Populate selects
             [...localizacoes].sort().forEach(loc => {
                 const option = document.createElement('option');
                 option.value = loc;
@@ -418,7 +793,7 @@
                 filtroTipo.appendChild(option);
             });
             
-            // Aplicar filtros
+            // Apply filters
             function aplicarFiltros() {
                 const locSelecionada = filtroLocalizacao.value;
                 const tipoSelecionado = filtroTipo.value;
@@ -439,18 +814,22 @@
                     }
                 });
                 
-                vagasVisiveis.textContent = vagasVisiveis_count;
+                if (vagasVisiveis) {
+                    vagasVisiveis.textContent = vagasVisiveis_count;
+                }
             }
             
             // Event listeners
             filtroLocalizacao.addEventListener('change', aplicarFiltros);
             filtroTipo.addEventListener('change', aplicarFiltros);
             
-            btnLimpar.addEventListener('click', function() {
-                filtroLocalizacao.value = '';
-                filtroTipo.value = '';
-                aplicarFiltros();
-            });
+            if (btnLimpar) {
+                btnLimpar.addEventListener('click', function() {
+                    filtroLocalizacao.value = '';
+                    filtroTipo.value = '';
+                    aplicarFiltros();
+                });
+            }
         });
     </script>
 </body>

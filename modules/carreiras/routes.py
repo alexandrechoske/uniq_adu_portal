@@ -162,14 +162,33 @@ def aplicar_vaga(vaga_id):
         
         candidato_id = insert_response.data[0]['id']
         
-        # 5. Disparar webhook para n8n (processamento assíncrono com IA)
+        # 5. Gerar URL assinada do currículo (válida por 1 hora)
+        curriculo_url_assinada = None
+        if curriculo_path:
+            try:
+                # Gera URL pública temporária (3600 segundos = 1 hora)
+                signed_response = supabase_admin.storage\
+                    .from_('curriculos')\
+                    .create_signed_url(curriculo_path, 3600)
+                
+                curriculo_url_assinada = signed_response.get('signedURL')
+                print(f"✅ URL assinada gerada para {curriculo_path}")
+            
+            except Exception as url_error:
+                print(f"⚠️  Erro ao gerar URL assinada: {str(url_error)}")
+        
+        # 6. Disparar webhook para n8n (processamento assíncrono com IA)
         if WEBHOOK_N8N_URL and curriculo_path:
             try:
                 webhook_payload = {
                     'candidato_id': candidato_id,
                     'vaga_id': str(vaga_id),
                     'curriculo_path': curriculo_path,
-                    'email': email
+                    'curriculo_url': curriculo_url_assinada,  # URL pronta para download
+                    'email': email,
+                    'nome_completo': nome_completo,
+                    'telefone': telefone if telefone else None,
+                    'linkedin_url': linkedin_url if linkedin_url else None
                 }
                 
                 webhook_response = requests.post(
@@ -180,6 +199,7 @@ def aplicar_vaga(vaga_id):
                 
                 if webhook_response.status_code == 200:
                     print(f"✅ Webhook n8n disparado para candidato {candidato_id}")
+                    print(f"   URL assinada enviada: {curriculo_url_assinada[:50] if curriculo_url_assinada else 'N/A'}...")
                     
                     # Atualizar status para 'Em Processamento'
                     supabase_admin.table('rh_candidatos')\
@@ -193,7 +213,7 @@ def aplicar_vaga(vaga_id):
                 print(f"⚠️ Erro ao disparar webhook: {str(webhook_error)}")
                 # Não retornar erro para o usuário - o processamento pode ser feito manualmente
         
-        # 6. Redirecionar para página de sucesso
+        # 7. Redirecionar para página de sucesso
         return redirect(url_for('carreiras.sucesso'))
     
     except Exception as e:
