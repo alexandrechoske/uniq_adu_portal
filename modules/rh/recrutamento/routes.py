@@ -49,6 +49,12 @@ def gestao_vagas():
         vagas = vagas_response.data if vagas_response.data else []
         print(f"   ✅ {len(vagas)} vaga(s) encontrada(s)")
         
+        # Calcular KPIs
+        total_vagas = len(vagas)
+        vagas_abertas = len([v for v in vagas if v.get('status') == 'Aberta'])
+        vagas_fechadas = len([v for v in vagas if v.get('status') == 'Fechada'])
+        total_candidatos_geral = 0
+        
         # Contar candidatos para cada vaga (com tratamento de erro)
         for vaga in vagas:
             try:
@@ -58,45 +64,60 @@ def gestao_vagas():
                     .execute()
                 
                 vaga['total_candidatos'] = candidatos_response.count if candidatos_response.count else 0
+                total_candidatos_geral += vaga['total_candidatos']
             except Exception as e:
                 print(f"   ⚠️ Erro ao contar candidatos da vaga {vaga.get('titulo')}: {str(e)}")
                 vaga['total_candidatos'] = 0
         
-        print("\n2️⃣ Buscando cargos para dropdown...")
-        print(f"   supabase_admin = {supabase_admin}")
-        print(f"   supabase_admin type = {type(supabase_admin)}")
+        # Calcular média de candidatos por vaga
+        candidatos_media = round(total_candidatos_geral / total_vagas, 1) if total_vagas > 0 else 0
         
-        # Buscar cargos para o dropdown (usando * em vez de campos específicos)
+        print(f"\n📊 KPIs Calculados:")
+        print(f"   Total de Vagas: {total_vagas}")
+        print(f"   Vagas Abertas: {vagas_abertas}")
+        print(f"   Vagas Fechadas: {vagas_fechadas}")
+        print(f"   Média Candidatos/Vaga: {candidatos_media}")
+        
+        print("\n2️⃣ Buscando cargos para dropdown...")
+        # Buscar cargos para o dropdown
         cargos_response = supabase_admin.table('rh_cargos')\
             .select('*')\
             .order('nome_cargo')\
             .execute()
         
-        print(f"   Response: {cargos_response}")
-        print(f"   Response.data: {cargos_response.data}")
-        print(f"   Response.data type: {type(cargos_response.data)}")
-        
         cargos = cargos_response.data if cargos_response.data else []
         
         print(f"\n3️⃣ Total de cargos carregados: {len(cargos)}")
-        if cargos:
-            print(f"   Primeiro cargo: {cargos[0]}")
-        else:
-            print("   ⚠️ LISTA DE CARGOS ESTÁ VAZIA!")
         
         print(f"\n4️⃣ Renderizando template...")
         print(f"   vagas = {len(vagas)} itens")
         print(f"   cargos = {len(cargos)} itens")
         print("="*70 + "\n")
         
-        return render_template('recrutamento/gestao_vagas.html', vagas=vagas, cargos=cargos)
+        return render_template(
+            'recrutamento/gestao_vagas.html', 
+            vagas=vagas, 
+            cargos=cargos,
+            total_vagas=total_vagas,
+            vagas_abertas=vagas_abertas,
+            vagas_fechadas=vagas_fechadas,
+            candidatos_media=candidatos_media
+        )
     
     except Exception as e:
         print(f"\n❌ ERRO ao carregar vagas: {str(e)}")
         import traceback
         traceback.print_exc()
         print("="*70 + "\n")
-        return render_template('recrutamento/gestao_vagas.html', vagas=[], cargos=[])
+        return render_template(
+            'recrutamento/gestao_vagas.html', 
+            vagas=[], 
+            cargos=[],
+            total_vagas=0,
+            vagas_abertas=0,
+            vagas_fechadas=0,
+            candidatos_media=0
+        )
 
 
 @recrutamento_bp.route('/vagas/<vaga_id>/candidatos')
@@ -208,7 +229,7 @@ def api_get_vaga(vaga_id):
             .execute()
         
         if response.data and len(response.data) > 0:
-            return jsonify({'data': response.data[0]})
+            return jsonify({'success': True, 'vaga': response.data[0]})
         else:
             return jsonify({'success': False, 'message': 'Vaga não encontrada'}), 404
     
