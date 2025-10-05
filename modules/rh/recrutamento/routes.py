@@ -148,6 +148,18 @@ def gestao_candidatos(vaga_id):
         
         candidatos = candidatos_response.data if candidatos_response.data else []
         
+        # Calcular KPIs
+        total_candidatos = len(candidatos)
+        
+        # Candidatos em processo (não são Aprovado, Reprovado, Contratado, Refutado)
+        em_processo = len([c for c in candidatos if c.get('status_processo') not in ['Aprovado', 'Reprovado', 'Contratado', 'Refutado']])
+        
+        # Candidatos aprovados (Aprovado + Contratado)
+        aprovados = len([c for c in candidatos if c.get('status_processo') in ['Aprovado', 'Contratado']])
+        
+        # Taxa de conversão (aprovados / total * 100)
+        taxa_conversao = round((aprovados / total_candidatos * 100), 1) if total_candidatos > 0 else 0
+        
         # Agrupar candidatos por status
         candidatos_por_status = {
             'Triagem': [],
@@ -170,7 +182,11 @@ def gestao_candidatos(vaga_id):
         return render_template(
             'recrutamento/gestao_candidatos.html',
             vaga=vaga,
-            candidatos_por_status=candidatos_por_status
+            candidatos_por_status=candidatos_por_status,
+            total_candidatos=total_candidatos,
+            em_processo=em_processo,
+            aprovados=aprovados,
+            taxa_conversao=taxa_conversao
         )
     
     except Exception as e:
