@@ -2,70 +2,65 @@
 
 {% block title %}Gestão de Colaboradores - RH{% endblock %}
 
-{% block styles %}
-<link rel="stylesheet" href="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.css') }}">
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- Cabeçalho -->
-    <div class="rh-header mb-4">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h2><i class="fas fa-users"></i> Gestão de Colaboradores</h2>
-                <p class="text-muted mb-0">Cadastro e gerenciamento de colaboradores</p>
-            </div>
-            <div class="col-md-6 text-end">
-                <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-rh">
-                    <i class="fas fa-plus"></i> Novo Colaborador
-                </a>
-            </div>
+<div class="rh-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'RH', 'icon': 'mdi mdi-account-group', 'url': '#'},
+                {'name': 'Colaboradores', 'icon': 'mdi mdi-account-multiple'}
+            ], 'rh') }}
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-primary">
+                <i class="mdi mdi-account-plus"></i>
+                Novo Colaborador
+            </a>
         </div>
     </div>
-
+    
     <!-- Cards de Resumo -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card rh-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="rh-icon-circle bg-success me-3">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0">Colaboradores Ativos</h6>
-                            <h3 class="mb-0">{{ ativos }}</h3>
-                        </div>
+    <div class="kpi-section">
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">
+                <i class="mdi mdi-chart-box-outline"></i>
+                Resumo Geral
+            </h5>
+            <div class="kpi-grid-rh">
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-account-check"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Colaboradores Ativos</p>
+                        <p class="kpi-value">{{ ativos }}</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card rh-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="rh-icon-circle bg-danger me-3">
-                            <i class="fas fa-user-times"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0">Inativos</h6>
-                            <h3 class="mb-0">{{ inativos }}</h3>
-                        </div>
+                
+                <div class="kpi-card kpi-danger">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-account-off"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Inativos</p>
+                        <p class="kpi-value">{{ inativos }}</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card rh-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="rh-icon-circle bg-primary me-3">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0">Total</h6>
-                            <h3 class="mb-0">{{ total }}</h3>
-                        </div>
+                
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-account-multiple"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total</p>
+                        <p class="kpi-value">{{ total }}</p>
                     </div>
                 </div>
             </div>
@@ -75,10 +70,12 @@
     <!-- Filtros e Busca -->
     <div class="card rh-card mb-4">
         <div class="card-body">
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
                     <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <span class="input-group-text">
+                            <i class="mdi mdi-magnify"></i>
+                        </span>
                         <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome, CPF, matrícula...">
                     </div>
                 </div>
@@ -93,18 +90,19 @@
                 </div>
                 <div class="col-md-3">
                     <button id="btnLimparFiltros" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-eraser"></i> Limpar Filtros
+                        <i class="mdi mdi-filter-off"></i>
+                        Limpar Filtros
                     </button>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <!-- Tabela de Colaboradores -->
     <div class="card rh-card">
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover" id="tabelaColaboradores">
+                <table class="table table-hover mb-0" id="tabelaColaboradores">
                     <thead class="rh-table-header">
                         <tr>
                             <th>Matrícula</th>
@@ -139,48 +137,55 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-center">
-                                    <div class="btn-group btn-group-sm">
+                                    <div class="btn-group btn-group-sm" role="group">
                                         <a href="{{ url_for('colaboradores.visualizar_colaborador', colaborador_id=colab.id) }}" 
-                                           class="btn btn-outline-info" title="Visualizar">
-                                            <i class="fas fa-eye"></i>
+                                           class="btn btn-outline-info" 
+                                           title="Visualizar"
+                                           data-bs-toggle="tooltip">
+                                            <i class="mdi mdi-eye"></i>
                                         </a>
                                         <a href="{{ url_for('colaboradores.editar_colaborador', colaborador_id=colab.id) }}" 
-                                           class="btn btn-outline-primary" title="Editar">
-                                            <i class="fas fa-edit"></i>
+                                           class="btn btn-outline-primary" 
+                                           title="Editar"
+                                           data-bs-toggle="tooltip">
+                                            <i class="mdi mdi-pencil"></i>
                                         </a>
                                         
                                         <!-- Dropdown de Ações Rápidas -->
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" 
-                                                    data-bs-toggle="dropdown" aria-expanded="false" title="Mais ações">
-                                                <i class="fas fa-ellipsis-v"></i>
+                                            <button type="button" 
+                                                    class="btn btn-outline-secondary dropdown-toggle" 
+                                                    data-bs-toggle="dropdown" 
+                                                    aria-expanded="false" 
+                                                    title="Mais ações">
+                                                <i class="mdi mdi-dots-vertical"></i>
                                             </button>
-                                            <ul class="dropdown-menu">
+                                            <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
                                                     <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Promoção em desenvolvimento'); return false;">
-                                                        <i class="fas fa-arrow-up text-success"></i> Promover
+                                                        <i class="mdi mdi-arrow-up-circle text-success"></i> Promover
                                                     </a>
                                                 </li>
                                                 <li>
                                                     <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Transferência em desenvolvimento'); return false;">
-                                                        <i class="fas fa-exchange-alt text-info"></i> Transferir
+                                                        <i class="mdi mdi-swap-horizontal text-info"></i> Transferir
                                                     </a>
                                                 </li>
                                                 <li>
                                                     <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Alterar Salário em desenvolvimento'); return false;">
-                                                        <i class="fas fa-dollar-sign text-warning"></i> Alterar Salário
+                                                        <i class="mdi mdi-cash text-warning"></i> Alterar Salário
                                                     </a>
                                                 </li>
                                                 <li>
                                                     <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Férias em desenvolvimento'); return false;">
-                                                        <i class="fas fa-umbrella-beach text-primary"></i> Férias
+                                                        <i class="mdi mdi-beach text-primary"></i> Férias
                                                     </a>
                                                 </li>
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
                                                     <a class="dropdown-item text-danger" href="#" 
                                                        onclick="confirmarDesligamento('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
-                                                        <i class="fas fa-user-times"></i> Desligar
+                                                        <i class="mdi mdi-account-remove"></i> Desligar
                                                     </a>
                                                 </li>
                                             </ul>
@@ -192,11 +197,14 @@
                         {% else %}
                             <tr>
                                 <td colspan="8" class="text-center py-5">
-                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">Nenhum colaborador cadastrado</p>
-                                    <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-rh">
-                                        <i class="fas fa-plus"></i> Cadastrar Primeiro Colaborador
-                                    </a>
+                                    <div class="empty-state">
+                                        <i class="mdi mdi-account-off-outline mdi-48px text-muted mb-3"></i>
+                                        <p class="text-muted mb-3">Nenhum colaborador cadastrado</p>
+                                        <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-primary">
+                                            <i class="mdi mdi-account-plus"></i>
+                                            Cadastrar Primeiro Colaborador
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         {% endif %}

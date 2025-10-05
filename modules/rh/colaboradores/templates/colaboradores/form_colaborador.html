@@ -4,8 +4,8 @@
     {% if modo == 'novo' %}Novo Colaborador{% else %}Editar Colaborador{% endif %} - RH
 {% endblock %}
 
-{% block styles %}
-<link rel="stylesheet" href="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.css') }}">
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.0">
 {% endblock %}
 
 {% block content %}

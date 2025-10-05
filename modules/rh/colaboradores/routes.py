@@ -14,7 +14,8 @@ colaboradores_bp = Blueprint(
     __name__,
     url_prefix='/rh/colaboradores',
     template_folder='templates',
-    static_folder='static'
+    static_folder='static',
+    static_url_path='/rh/colaboradores/static'
 )
 
 # API Bypass para testes
@@ -501,3 +502,41 @@ def api_delete_colaborador(colaborador_id):
     except Exception as e:
         print(f"[ERRO] Erro ao deletar colaborador: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+# =====================================================================
+# ROTA DE DEBUG PARA CSS
+# =====================================================================
+@colaboradores_bp.route('/debug/css-test')
+def debug_css_test():
+    """Página de teste para verificar se o CSS está carregando"""
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Teste CSS RH</title>
+        <link rel="stylesheet" href="{url_for('colaboradores.static', filename='colaboradores/colaboradores.css')}?v=2.0">
+    </head>
+    <body>
+        <h1>Teste de CSS - Módulo RH</h1>
+        <p>URL do CSS: {url_for('colaboradores.static', filename='colaboradores/colaboradores.css')}</p>
+        <p>Blueprint name: {colaboradores_bp.name}</p>
+        <p>Static URL path: {colaboradores_bp.static_url_path}</p>
+        
+        <div class="btn-group btn-group-sm" style="margin: 20px;">
+            <button class="btn btn-outline-info">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-primary">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-secondary">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+        </div>
+        
+        <p>Se os botões acima aparecerem corretamente estilizados, o CSS está carregando!</p>
+    </body>
+    </html>
+    """
+
