@@ -176,8 +176,9 @@ async function editarDepartamento(deptoId) {
         });
         const data = await response.json();
         
-        if (data.data) {
-            const depto = data.data;
+        // API retorna: {success: true, departamento: {...}}
+        if (data.success && data.departamento) {
+            const depto = data.departamento;
             
             // Preencher formulário
             document.getElementById('modalTitleDepto').textContent = 'Editar Departamento';
@@ -190,11 +191,11 @@ async function editarDepartamento(deptoId) {
             const modal = new bootstrap.Modal(document.getElementById('modalDepartamento'));
             modal.show();
         } else {
-            alert('❌ Erro ao carregar dados do departamento');
+            alert('❌ Erro ao carregar dados do departamento: ' + (data.message || 'Erro desconhecido'));
         }
     } catch (error) {
         console.error('Erro:', error);
-        alert('❌ Erro ao carregar departamento');
+        alert('❌ Erro ao carregar departamento: ' + error.message);
     }
 }
 

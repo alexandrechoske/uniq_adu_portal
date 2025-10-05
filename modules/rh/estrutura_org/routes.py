@@ -359,9 +359,9 @@ def api_get_departamento(departamento_id):
             .execute()
         
         if response.data:
-            return jsonify({'data': response.data})
+            return jsonify({'success': True, 'departamento': response.data})
         else:
-            return jsonify({'message': 'Departamento não encontrado'}), 404
+            return jsonify({'success': False, 'message': 'Departamento não encontrado'}), 404
     
     except Exception as e:
         print(f"❌ Erro ao buscar departamento: {str(e)}")
