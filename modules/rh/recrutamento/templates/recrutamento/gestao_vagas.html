@@ -119,12 +119,13 @@
                         <span class="input-group-text bg-white border-end-0">
                             <i class="mdi mdi-magnify text-muted"></i>
                         </span>
-                        <input type="text" id="searchInputVagas" class="form-control border-start-0" 
-                               placeholder="Buscar por título...">
+                        <input type="text" id="searchVaga" class="form-control border-start-0" 
+                               placeholder="Buscar por título..." 
+                               onkeyup="filtrarTabelaVagas()">
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <select id="filterStatus" class="form-select">
+                    <select id="filterStatus" class="form-select" onchange="filtrarTabelaVagas()">
                         <option value="">Todos os Status</option>
                         <option value="aberta">Aberta</option>
                         <option value="pausada">Pausada</option>
@@ -132,10 +133,12 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <input type="date" id="filterDataInicio" class="form-control" placeholder="Data Início">
+                    <input type="date" id="filterDataInicio" class="form-control" 
+                           placeholder="Data Início" onchange="filtrarTabelaVagas()">
                 </div>
                 <div class="col-md-2">
-                    <input type="date" id="filterDataFim" class="form-control" placeholder="Data Fim">
+                    <input type="date" id="filterDataFim" class="form-control" 
+                           placeholder="Data Fim" onchange="filtrarTabelaVagas()">
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosVagas()">
@@ -151,7 +154,7 @@
         <div class="card-body p-0">
             {% if vagas|length > 0 %}
             <div class="table-responsive">
-                <table class="table mb-0" id="tableVagas">
+                <table class="table mb-0" id="tabelaVagas">
                     <thead class="rh-table-header" style="background: linear-gradient(135deg, var(--recrutamento-primary) 0%, var(--recrutamento-primary-dark) 100%);">
                         <tr>
                             <th style="width: 3%;">#</th>
@@ -253,7 +256,8 @@
             {% endif %}
         </div>
     </div>
-</div>
+
+</div> <!-- Fecha rh-container -->
 
 <!-- Modal de Vaga (Criar/Editar) -->
 <div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
@@ -373,11 +377,10 @@
     </div>
 </div>
 
-</div> <!-- Fecha rh-container -->
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=3"></script>
+<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=4"></script>
 <script>
 // Inicializar tooltips
 document.addEventListener('DOMContentLoaded', function() {
@@ -436,20 +439,16 @@ function filtrarTabelaVagas() {
             show = false;
         }
         
-        // Filtro de data início
+        // Filtro de data início (data_abertura já está em formato ISO YYYY-MM-DD)
         if (dataInicio && dataAbertura) {
-            const [dia, mes, ano] = dataAbertura.split('/');
-            const dataVagaISO = `${ano}-${mes}-${dia}`;
-            if (dataVagaISO < dataInicio) {
+            if (dataAbertura < dataInicio) {
                 show = false;
             }
         }
         
-        // Filtro de data fim
+        // Filtro de data fim (data_abertura já está em formato ISO YYYY-MM-DD)
         if (dataFim && dataAbertura) {
-            const [dia, mes, ano] = dataAbertura.split('/');
-            const dataVagaISO = `${ano}-${mes}-${dia}`;
-            if (dataVagaISO > dataFim) {
+            if (dataAbertura > dataFim) {
                 show = false;
             }
         }

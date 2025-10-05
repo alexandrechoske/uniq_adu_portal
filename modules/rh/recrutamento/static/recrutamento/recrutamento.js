@@ -26,8 +26,8 @@ async function editarVaga(vagaId) {
         });
         const data = await response.json();
         
-        if (data.data) {
-            const vaga = data.data;
+        if (data.success && data.vaga) {
+            const vaga = data.vaga;
             
             // Preencher formulário
             document.getElementById('modalVagaLabel').textContent = 'Editar Vaga';
@@ -43,7 +43,7 @@ async function editarVaga(vagaId) {
             const modal = new bootstrap.Modal(document.getElementById('modalVaga'));
             modal.show();
         } else {
-            alert('❌ Erro ao carregar dados da vaga');
+            alert('❌ Erro ao carregar dados da vaga: ' + (data.message || 'Erro desconhecido'));
         }
     } catch (error) {
         console.error('Erro:', error);
