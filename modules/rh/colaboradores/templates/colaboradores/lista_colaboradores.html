@@ -12,11 +12,13 @@
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar module-header-rh">
         <div class="actions-left">
-            {{ get_breadcrumb_with_module_colors([
-                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
-                {'name': 'RH', 'icon': 'mdi mdi-account-group', 'url': '#'},
-                {'name': 'Colaboradores', 'icon': 'mdi mdi-account-multiple'}
-            ], 'rh') }}
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/"><i class="mdi mdi-menu"></i> Menu</a></li>
+                    <li class="breadcrumb-item"><i class="mdi mdi-account-group"></i> RH</li>
+                    <li class="breadcrumb-item active" aria-current="page"><i class="mdi mdi-account-multiple"></i> Colaboradores</li>
+                </ol>
+            </nav>
         </div>
         <div class="actions-right">
             <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-primary">

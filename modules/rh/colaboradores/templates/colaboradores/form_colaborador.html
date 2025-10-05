@@ -5,36 +5,37 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- Cabeçalho -->
-    <div class="rh-header mb-4">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2>
-                    <i class="fas {% if modo == 'novo' %}fa-user-plus{% else %}fa-user-edit{% endif %}"></i>
-                    {% if modo == 'novo' %}Novo Colaborador{% else %}Editar Colaborador{% endif %}
-                </h2>
-                <p class="text-muted mb-0">Preencha os dados do colaborador</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </a>
-            </div>
+<div class="rh-container">
+    <!-- Actions Bar com Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">RH</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">Colaboradores</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% if modo == 'novo' %}Novo{% else %}Editar{% endif %}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
+                <i class="mdi mdi-arrow-left"></i> Voltar
+            </a>
         </div>
     </div>
 
     <!-- Formulário -->
     <form id="formColaborador" method="POST">
         <!-- Seção: Dados Pessoais -->
-        <div class="card rh-card mb-4">
+        <div class="rh-card mb-4">
             <div class="card-body">
                 <div class="form-section">
-                    <h5><i class="fas fa-user"></i> Dados Pessoais</h5>
+                    <h5><i class="mdi mdi-account"></i> Dados Pessoais</h5>
                     
                     <div class="row">
                         <div class="col-md-8 mb-3">
@@ -97,10 +98,10 @@
         </div>
 
         <!-- Seção: Documentação -->
-        <div class="card rh-card mb-4">
+        <div class="rh-card mb-4">
             <div class="card-body">
                 <div class="form-section">
-                    <h5><i class="fas fa-id-card"></i> Documentação</h5>
+                    <h5><i class="mdi mdi-card-account-details"></i> Documentação</h5>
                     
                     <div class="row">
                         <div class="col-md-3 mb-3">
@@ -148,10 +149,10 @@
         </div>
 
         <!-- Seção: Dados Corporativos -->
-        <div class="card rh-card mb-4">
+        <div class="rh-card mb-4">
             <div class="card-body">
                 <div class="form-section">
-                    <h5><i class="fas fa-briefcase"></i> Dados Corporativos</h5>
+                    <h5><i class="mdi mdi-briefcase"></i> Dados Corporativos</h5>
                     
                     <div class="row">
                         <div class="col-md-4 mb-3">
@@ -253,19 +254,15 @@
         </div>
 
         <!-- Botões de Ação -->
-        <div class="card rh-card mb-4">
+        <div class="rh-card">
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Cancelar
-                        </a>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <button type="submit" class="btn btn-rh" id="btnSalvar">
-                            <i class="fas fa-save"></i> Salvar Colaborador
-                        </button>
-                    </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
+                        <i class="mdi mdi-close"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">
+                        <i class="mdi mdi-content-save"></i> Salvar Colaborador
+                    </button>
                 </div>
             </div>
         </div>
@@ -283,7 +280,7 @@ document.getElementById('formColaborador').addEventListener('submit', async func
     const btnSalvar = document.getElementById('btnSalvar');
     const textoOriginal = btnSalvar.innerHTML;
     btnSalvar.disabled = true;
-    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
     
     // Coletar dados do formulário
     const formData = new FormData(this);

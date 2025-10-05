@@ -3,27 +3,31 @@
 {% block title %}Perfil do Colaborador - RH{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- Cabeçalho -->
-    <div class="rh-header mb-4">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2><i class="fas fa-user-circle"></i> Perfil do Colaborador</h2>
-                <p class="text-muted mb-0">{{ colaborador.nome_completo }}</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="{{ url_for('colaboradores.editar_colaborador', colaborador_id=colaborador.id) }}" 
-                   class="btn btn-rh me-2">
-                    <i class="fas fa-edit"></i> Editar
-                </a>
-                <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </a>
-            </div>
+<div class="rh-container">
+    <!-- Actions Bar com Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">RH</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">Colaboradores</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ colaborador.nome_completo }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('colaboradores.editar_colaborador', colaborador_id=colaborador.id) }}" 
+               class="btn btn-primary me-2">
+                <i class="mdi mdi-pencil"></i> Editar
+            </a>
+            <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
+                <i class="mdi mdi-arrow-left"></i> Voltar
+            </a>
         </div>
     </div>
 
@@ -31,11 +35,9 @@
         <!-- Coluna Principal -->
         <div class="col-md-8">
             <!-- Dados Pessoais -->
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-user"></i> Dados Pessoais</h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-account"></i> Dados Pessoais</h5>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <strong>Nome Completo:</strong><br>
@@ -74,11 +76,9 @@
             </div>
 
             <!-- Documentação -->
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-id-card"></i> Documentação</h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-card-account-details"></i> Documentação</h5>
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <strong>RG:</strong><br>
@@ -112,15 +112,13 @@
 
             <!-- Jornada de Recrutamento (se houver) -->
             {% if candidatura %}
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-briefcase text-primary"></i> Jornada de Recrutamento
-                    </h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3">
+                        <i class="mdi mdi-briefcase text-primary"></i> Jornada de Recrutamento
+                    </h5>
                     <div class="alert alert-info mb-3">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="mdi mdi-information"></i>
                         <strong>Este colaborador foi contratado através do processo seletivo</strong>
                         <br>
                         <small class="text-muted">Vaga: {{ candidatura.vaga.titulo_vaga if candidatura.vaga else 'N/A' }}</small>
@@ -130,10 +128,10 @@
                         <!-- 1. Candidatura -->
                         <div class="timeline-item">
                             <div class="timeline-date">
-                                <i class="fas fa-calendar"></i> {{ candidatura.data_candidatura }}
+                                <i class="mdi mdi-calendar"></i> {{ candidatura.data_candidatura }}
                             </div>
                             <div class="timeline-type">
-                                <i class="fas fa-paper-plane text-primary"></i>
+                                <i class="mdi mdi-email-fast text-primary"></i>
                                 Candidatura
                             </div>
                             <div class="row mt-2">
@@ -158,10 +156,10 @@
                         {% if candidatura.ai_status == 'Concluído' %}
                         <div class="timeline-item">
                             <div class="timeline-date">
-                                <i class="fas fa-robot"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
+                                <i class="mdi mdi-robot"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
                             </div>
                             <div class="timeline-type">
-                                <i class="fas fa-brain text-info"></i>
+                                <i class="mdi mdi-brain text-info"></i>
                                 Análise de IA
                             </div>
                             <div class="row mt-2">
@@ -197,23 +195,23 @@
                         {% if candidatura.status_kanban and candidatura.status_kanban != 'Candidatura' %}
                         <div class="timeline-item">
                             <div class="timeline-date">
-                                <i class="fas fa-calendar"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
+                                <i class="mdi mdi-calendar"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
                             </div>
                             <div class="timeline-type">
                                 {% if candidatura.status_kanban == 'Triagem' %}
-                                    <i class="fas fa-filter text-secondary"></i>
+                                    <i class="mdi mdi-filter text-secondary"></i>
                                 {% elif candidatura.status_kanban == 'Entrevista RH' %}
-                                    <i class="fas fa-comments text-primary"></i>
+                                    <i class="mdi mdi-comment-multiple text-primary"></i>
                                 {% elif candidatura.status_kanban == 'Entrevista Técnica' %}
-                                    <i class="fas fa-code text-info"></i>
+                                    <i class="mdi mdi-code-tags text-info"></i>
                                 {% elif candidatura.status_kanban == 'Proposta' %}
-                                    <i class="fas fa-file-contract text-warning"></i>
+                                    <i class="mdi mdi-file-document text-warning"></i>
                                 {% elif candidatura.status_kanban == 'Aprovado' %}
-                                    <i class="fas fa-check-circle text-success"></i>
+                                    <i class="mdi mdi-check-circle text-success"></i>
                                 {% elif candidatura.status_kanban == 'Reprovado' %}
-                                    <i class="fas fa-times-circle text-danger"></i>
+                                    <i class="mdi mdi-close-circle text-danger"></i>
                                 {% else %}
-                                    <i class="fas fa-stream"></i>
+                                    <i class="mdi mdi-timeline"></i>
                                 {% endif %}
                                 Processo: {{ candidatura.status_kanban }}
                             </div>
@@ -223,10 +221,10 @@
                         <!-- 4. Aprovação Final -->
                         <div class="timeline-item">
                             <div class="timeline-date">
-                                <i class="fas fa-calendar"></i> {{ colaborador.data_admissao }}
+                                <i class="mdi mdi-calendar"></i> {{ colaborador.data_admissao }}
                             </div>
                             <div class="timeline-type">
-                                <i class="fas fa-thumbs-up text-success"></i>
+                                <i class="mdi mdi-thumb-up text-success"></i>
                                 Aprovado e Contratado
                             </div>
                             <div class="mt-2">
@@ -239,29 +237,27 @@
             {% endif %}
 
             <!-- Histórico de RH -->
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-history"></i> Linha do Tempo - RH</h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-history"></i> Linha do Tempo - RH</h5>
                     {% if historico %}
                     <div class="timeline">
                         {% for evento in historico %}
                         <div class="timeline-item">
                             <div class="timeline-date">
-                                <i class="fas fa-calendar"></i> {{ evento.data_evento }}
+                                <i class="mdi mdi-calendar"></i> {{ evento.data_evento }}
                             </div>
                             <div class="timeline-type">
                                 {% if evento.tipo_evento == 'Admissão' %}
-                                    <i class="fas fa-user-plus text-success"></i>
+                                    <i class="mdi mdi-account-plus text-success"></i>
                                 {% elif evento.tipo_evento == 'Promoção' %}
-                                    <i class="fas fa-arrow-up text-primary"></i>
+                                    <i class="mdi mdi-arrow-up-circle text-primary"></i>
                                 {% elif evento.tipo_evento == 'Alteração Salarial' %}
-                                    <i class="fas fa-dollar-sign text-info"></i>
+                                    <i class="mdi mdi-cash text-info"></i>
                                 {% elif evento.tipo_evento == 'Demissão' %}
-                                    <i class="fas fa-user-times text-danger"></i>
+                                    <i class="mdi mdi-account-remove text-danger"></i>
                                 {% else %}
-                                    <i class="fas fa-edit text-secondary"></i>
+                                    <i class="mdi mdi-pencil text-secondary"></i>
                                 {% endif %}
                                 {{ evento.tipo_evento }}
                             </div>
@@ -312,11 +308,9 @@
         <!-- Coluna Lateral -->
         <div class="col-md-4">
             <!-- Status e Info Rápida -->
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informações</h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-information"></i> Informações</h5>
                     <div class="mb-3">
                         <strong>Status:</strong><br>
                         {% if colaborador.status == 'Ativo' %}
@@ -356,11 +350,9 @@
 
             <!-- Contato -->
             {% if colaborador.telefones_jsonb %}
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-phone"></i> Contato</h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-phone"></i> Contato</h5>
                     {% set telefones = colaborador.telefones_jsonb %}
                     {% if telefones.celular %}
                     <div class="mb-2">
@@ -381,11 +373,9 @@
 
             <!-- Endereço -->
             {% if colaborador.endereco_jsonb %}
-            <div class="card rh-card mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Endereço</h5>
-                </div>
+            <div class="rh-card mb-4">
                 <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-map-marker"></i> Endereço</h5>
                     {% set endereco = colaborador.endereco_jsonb %}
                     <p class="mb-0 text-muted">
                         {% if endereco.logradouro %}{{ endereco.logradouro }}{% endif %}

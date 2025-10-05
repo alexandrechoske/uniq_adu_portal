@@ -465,6 +465,127 @@
     border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+/* ==================== FORMULÁRIOS ==================== */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-size: 0.9375rem;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.form-section h5 {
+    color: var(--rh-primary);
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.form-section h5 i {
+    font-size: 1.25rem;
+}
+
+/* Campo obrigatório */
+.required::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* ==================== TIMELINE ==================== */
+.timeline {
+    position: relative;
+    padding-left: 50px;
+    margin-top: 1.5rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--rh-primary) 0%, var(--rh-primary-light) 100%);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+    padding: 1.25rem;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    border-left: 3px solid var(--rh-primary);
+    transition: all 0.3s ease;
+}
+
+.timeline-item:hover {
+    background-color: white;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    transform: translateX(5px);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -38px;
+    top: 22px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--rh-primary);
+    border: 4px solid white;
+    box-shadow: 0 0 0 3px var(--rh-primary);
+}
+
+.timeline-date {
+    color: var(--rh-primary);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-date i {
+    font-size: 1rem;
+}
+
+.timeline-type {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ==================== INFO SECTIONS (Visualizar) ==================== */
+.info-row {
+    margin-bottom: 1.5rem;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    color: #6c757d;
+    font-size: 0.9375rem;
+}
+
 /* ==================== RESPONSIVIDADE ==================== */
 @media (max-width: 992px) {
     .kpi-grid-rh {
@@ -504,6 +625,18 @@
     
     #tabelaColaboradores tbody td {
         padding: 0.75rem;
+    }
+    
+    .timeline {
+        padding-left: 30px;
+    }
+    
+    .timeline::before {
+        left: 10px;
+    }
+    
+    .timeline-item::before {
+        left: -28px;
     }
 }
 
