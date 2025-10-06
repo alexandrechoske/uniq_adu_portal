@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Menu Principal - Portal UniSystem{% endblock %}
+{% block title %}{{ t('menu.main_menu') }} - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
@@ -11,7 +11,7 @@
     <div class="actions-bar module-header-menu">
         <div class="actions-left">
             {{ get_breadcrumb_with_module_colors([
-                {'name': 'Menu Principal', 'icon': 'mdi mdi-view-dashboard'}
+                {'name': t('menu.main_menu'), 'icon': 'mdi mdi-view-dashboard'}
             ], 'menu') }}
         </div>
     </div>
@@ -27,28 +27,28 @@
                 {% if 'dashboard_executivo' in accessible_modules or 'dashboard_operacional' in accessible_modules or 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
                 <button class="menu-tab active" data-tab="importacoes">
                     <i class="mdi mdi-ship-wheel"></i>
-                    <span>Importações</span>
+                    <span>{{ t('menu.importacoes') }}</span>
                 </button>
                 {% endif %}
                 
                 {% if 'financeiro' in accessible_modules %}
                 <button class="menu-tab" data-tab="financeiro">
                     <i class="mdi mdi-cash-multiple"></i>
-                    <span>Financeiro</span>
+                    <span>{{ t('menu.financeiro') }}</span>
                 </button>
                 {% endif %}
                 
                 {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules %}
                 <button class="menu-tab" data-tab="ferramentas">
                     <i class="mdi mdi-tools"></i>
-                    <span>Ferramentas</span>
+                    <span>{{ t('menu.ferramentas') }}</span>
                 </button>
                 {% endif %}
                 
                 {% if 'rh' in accessible_modules %}
                 <button class="menu-tab" data-tab="rh">
                     <i class="mdi mdi-account-tie"></i>
-                    <span>RH</span>
+                    <span>{{ t('menu.rh') }}</span>
                 </button>
                 {% endif %}
             </div>
