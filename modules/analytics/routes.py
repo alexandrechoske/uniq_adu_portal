@@ -18,6 +18,7 @@ def check_api_auth():
     """
     Verifica autenticação tanto por sessão quanto por API key
     Retorna True se autenticado, False caso contrário
+    Aceita: Master Admin (role='admin') ou Module Admins (role='interno_unique' com perfil_principal=admin_*)
     """
     # Verificar API key bypass primeiro
     api_bypass_key = os.getenv('API_BYPASS_KEY')
@@ -26,12 +27,22 @@ def check_api_auth():
     if api_bypass_key and request_api_key == api_bypass_key:
         return True
     
-    # Verificar autenticação de sessão (seguindo o mesmo padrão do role_required)
+    # Verificar autenticação de sessão
     try:
         if 'user' in session and session.get('user') and isinstance(session['user'], dict):
             user_data = session['user']
-            if user_data.get('role') == 'admin':
+            user_role = user_data.get('role')
+            
+            # Master Admin sempre tem acesso
+            if user_role == 'admin':
                 return True
+            
+            # Module Admins (interno_unique com perfil admin_*)
+            if user_role == 'interno_unique':
+                perfil_principal = user_data.get('perfil_principal', '')
+                # Qualquer perfil que comece com 'admin_' tem acesso ao analytics
+                if perfil_principal.startswith('admin_'):
+                    return True
     except:
         pass
     

@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil do Colaborador - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
+{% endblock %}
+
+{% block content %}
+<div class="rh-container">
+    <!-- Actions Bar com Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">RH</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">Colaboradores</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ colaborador.nome_completo }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('colaboradores.editar_colaborador', colaborador_id=colaborador.id) }}" 
+               class="btn btn-primary me-2">
+                <i class="mdi mdi-pencil"></i> Editar
+            </a>
+            <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
+                <i class="mdi mdi-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Coluna Principal -->
+        <div class="col-md-8">
+            <!-- Dados Pessoais -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-account"></i> Dados Pessoais</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Nome Completo:</strong><br>
+                            <span class="text-muted">{{ colaborador.nome_completo }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Nome Social:</strong><br>
+                            <span class="text-muted">{{ colaborador.nome_social or '-' }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>CPF:</strong><br>
+                            <span class="text-muted">{{ colaborador.cpf }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Data de Nascimento:</strong><br>
+                            <span class="text-muted">{{ colaborador.data_nascimento }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Gênero:</strong><br>
+                            <span class="text-muted">{{ colaborador.genero or '-' }}</span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Raça/Cor:</strong><br>
+                            <span class="text-muted">{{ colaborador.raca_cor or '-' }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Nacionalidade:</strong><br>
+                            <span class="text-muted">{{ colaborador.nacionalidade or 'Brasileira' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentação -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-card-account-details"></i> Documentação</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>RG:</strong><br>
+                            <span class="text-muted">{{ colaborador.rg or '-' }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Órgão Emissor:</strong><br>
+                            <span class="text-muted">{{ colaborador.rg_orgao_emissor or '-' }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Data Expedição:</strong><br>
+                            <span class="text-muted">{{ colaborador.rg_data_expedicao or '-' }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>PIS/PASEP:</strong><br>
+                            <span class="text-muted">{{ colaborador.pis_pasep or '-' }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>CTPS:</strong><br>
+                            <span class="text-muted">{{ colaborador.ctps_numero or '-' }}{% if colaborador.ctps_serie %} / {{ colaborador.ctps_serie }}{% endif %}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>CNH:</strong><br>
+                            <span class="text-muted">{{ colaborador.cnh_numero or '-' }}{% if colaborador.cnh_categoria %} ({{ colaborador.cnh_categoria }}){% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jornada de Recrutamento (se houver) -->
+            {% if candidatura %}
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3">
+                        <i class="mdi mdi-briefcase text-primary"></i> Jornada de Recrutamento
+                    </h5>
+                    <div class="alert alert-info mb-3">
+                        <i class="mdi mdi-information"></i>
+                        <strong>Este colaborador foi contratado através do processo seletivo</strong>
+                        <br>
+                        <small class="text-muted">Vaga: {{ candidatura.vaga.titulo_vaga if candidatura.vaga else 'N/A' }}</small>
+                    </div>
+
+                    <div class="timeline">
+                        <!-- 1. Candidatura -->
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="mdi mdi-calendar"></i> {{ candidatura.data_candidatura }}
+                            </div>
+                            <div class="timeline-type">
+                                <i class="mdi mdi-email-fast text-primary"></i>
+                                Candidatura
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Vaga:</small><br>
+                                    <strong>{{ candidatura.vaga.titulo_vaga if candidatura.vaga else 'N/A' }}</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Tipo:</small><br>
+                                    <strong>{{ candidatura.vaga.tipo_vaga if candidatura.vaga else 'N/A' }}</strong>
+                                </div>
+                            </div>
+                            {% if candidatura.vaga and candidatura.vaga.local_trabalho %}
+                            <div class="mt-2">
+                                <small class="text-muted">Local:</small><br>
+                                {{ candidatura.vaga.local_trabalho }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 2. Análise de IA (se houver) -->
+                        {% if candidatura.ai_status == 'Concluído' %}
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="mdi mdi-robot"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
+                            </div>
+                            <div class="timeline-type">
+                                <i class="mdi mdi-brain text-info"></i>
+                                Análise de IA
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Score de Compatibilidade:</small><br>
+                                    <strong>
+                                        {% if candidatura.ai_match_score >= 80 %}
+                                            <span class="text-success">{{ candidatura.ai_match_score }}%</span>
+                                        {% elif candidatura.ai_match_score >= 50 %}
+                                            <span class="text-warning">{{ candidatura.ai_match_score }}%</span>
+                                        {% else %}
+                                            <span class="text-danger">{{ candidatura.ai_match_score }}%</span>
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Pré-filtro:</small><br>
+                                    <strong>
+                                        {% if candidatura.ai_pre_filter_status == 'Aprovado' %}
+                                            <span class="badge bg-success">Aprovado</span>
+                                        {% elif candidatura.ai_pre_filter_status == 'Reprovado' %}
+                                            <span class="badge bg-danger">Reprovado</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Revisar</span>
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 3. Movimentações no Kanban -->
+                        {% if candidatura.status_kanban and candidatura.status_kanban != 'Candidatura' %}
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="mdi mdi-calendar"></i> {{ candidatura.updated_at[:10] if candidatura.updated_at else candidatura.data_candidatura }}
+                            </div>
+                            <div class="timeline-type">
+                                {% if candidatura.status_kanban == 'Triagem' %}
+                                    <i class="mdi mdi-filter text-secondary"></i>
+                                {% elif candidatura.status_kanban == 'Entrevista RH' %}
+                                    <i class="mdi mdi-comment-multiple text-primary"></i>
+                                {% elif candidatura.status_kanban == 'Entrevista Técnica' %}
+                                    <i class="mdi mdi-code-tags text-info"></i>
+                                {% elif candidatura.status_kanban == 'Proposta' %}
+                                    <i class="mdi mdi-file-document text-warning"></i>
+                                {% elif candidatura.status_kanban == 'Aprovado' %}
+                                    <i class="mdi mdi-check-circle text-success"></i>
+                                {% elif candidatura.status_kanban == 'Reprovado' %}
+                                    <i class="mdi mdi-close-circle text-danger"></i>
+                                {% else %}
+                                    <i class="mdi mdi-timeline"></i>
+                                {% endif %}
+                                Processo: {{ candidatura.status_kanban }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- 4. Aprovação Final -->
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="mdi mdi-calendar"></i> {{ colaborador.data_admissao }}
+                            </div>
+                            <div class="timeline-type">
+                                <i class="mdi mdi-thumb-up text-success"></i>
+                                Aprovado e Contratado
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">O candidato foi aprovado no processo seletivo e passou a integrar a equipe.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Histórico de RH -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-history"></i> Linha do Tempo - RH</h5>
+                    {% if historico %}
+                    <div class="timeline">
+                        {% for evento in historico %}
+                        <div class="timeline-item">
+                            <div class="timeline-date">
+                                <i class="mdi mdi-calendar"></i> {{ evento.data_evento }}
+                            </div>
+                            <div class="timeline-type">
+                                {% if evento.tipo_evento == 'Admissão' %}
+                                    <i class="mdi mdi-account-plus text-success"></i>
+                                {% elif evento.tipo_evento == 'Promoção' %}
+                                    <i class="mdi mdi-arrow-up-circle text-primary"></i>
+                                {% elif evento.tipo_evento == 'Alteração Salarial' %}
+                                    <i class="mdi mdi-cash text-info"></i>
+                                {% elif evento.tipo_evento == 'Demissão' %}
+                                    <i class="mdi mdi-account-remove text-danger"></i>
+                                {% else %}
+                                    <i class="mdi mdi-pencil text-secondary"></i>
+                                {% endif %}
+                                {{ evento.tipo_evento }}
+                            </div>
+                            
+                            <div class="row mt-2">
+                                {% if evento.cargo %}
+                                <div class="col-md-6">
+                                    <small class="text-muted">Cargo:</small><br>
+                                    <strong>{{ evento.cargo.nome_cargo if evento.cargo else '-' }}</strong>
+                                </div>
+                                {% endif %}
+                                
+                                {% if evento.departamento %}
+                                <div class="col-md-6">
+                                    <small class="text-muted">Departamento:</small><br>
+                                    <strong>{{ evento.departamento.nome_departamento if evento.departamento else '-' }}</strong>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if evento.salario_mensal %}
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Salário:</small><br>
+                                    <strong>R$ {{ "%.2f"|format(evento.salario_mensal) }}</strong>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if evento.descricao_e_motivos %}
+                            <div class="mt-2">
+                                <small class="text-muted">Observações:</small><br>
+                                {{ evento.descricao_e_motivos }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-center text-muted py-4">
+                        <i class="fas fa-info-circle"></i> Nenhum histórico registrado
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna Lateral -->
+        <div class="col-md-4">
+            <!-- Status e Info Rápida -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-information"></i> Informações</h5>
+                    <div class="mb-3">
+                        <strong>Status:</strong><br>
+                        {% if colaborador.status == 'Ativo' %}
+                            <span class="badge bg-success">Ativo</span>
+                        {% elif colaborador.status == 'Inativo' %}
+                            <span class="badge bg-danger">Inativo</span>
+                        {% elif colaborador.status == 'Férias' %}
+                            <span class="badge bg-info">Férias</span>
+                        {% else %}
+                            <span class="badge bg-warning">{{ colaborador.status }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Matrícula:</strong><br>
+                        <span class="text-muted">{{ colaborador.matricula or '-' }}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Data de Admissão:</strong><br>
+                        <span class="text-muted">{{ colaborador.data_admissao }}</span>
+                    </div>
+                    
+                    {% if colaborador.data_desligamento %}
+                    <div class="mb-3">
+                        <strong>Data de Desligamento:</strong><br>
+                        <span class="text-muted text-danger">{{ colaborador.data_desligamento }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <strong>Email Corporativo:</strong><br>
+                        <span class="text-muted">{{ colaborador.email_corporativo or '-' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contato -->
+            {% if colaborador.telefones_jsonb %}
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-phone"></i> Contato</h5>
+                    {% set telefones = colaborador.telefones_jsonb %}
+                    {% if telefones.celular %}
+                    <div class="mb-2">
+                        <strong>Celular:</strong><br>
+                        <span class="text-muted">{{ telefones.celular }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if telefones.residencial %}
+                    <div class="mb-2">
+                        <strong>Residencial:</strong><br>
+                        <span class="text-muted">{{ telefones.residencial }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Endereço -->
+            {% if colaborador.endereco_jsonb %}
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="mdi mdi-map-marker"></i> Endereço</h5>
+                    {% set endereco = colaborador.endereco_jsonb %}
+                    <p class="mb-0 text-muted">
+                        {% if endereco.logradouro %}{{ endereco.logradouro }}{% endif %}
+                        {% if endereco.numero %}, {{ endereco.numero }}{% endif %}<br>
+                        {% if endereco.bairro %}{{ endereco.bairro }}<br>{% endif %}
+                        {% if endereco.cidade and endereco.estado %}
+                            {{ endereco.cidade }} - {{ endereco.estado }}<br>
+                        {% endif %}
+                        {% if endereco.cep %}CEP: {{ endereco.cep }}{% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
+{% endblock %}

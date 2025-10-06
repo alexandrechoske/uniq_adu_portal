@@ -1,5 +1,4 @@
 from flask import Flask, render_template, redirect, url_for, session, jsonify, request
-from flask import Flask, session, request, render_template, redirect, url_for, jsonify
 from config import Config
 import os
 import signal
@@ -35,7 +34,6 @@ print("\n[DEBUG] ===== Configuração da Aplicação =====")
 print(f"[DEBUG] Diretório atual: {os.getcwd()}")
 print(f"[DEBUG] Arquivo .env existe: {os.path.exists('.env')}")
 print(f"[DEBUG] SUPABASE_URL: {app.config['SUPABASE_URL']}")
-print(f"[DEBUG] SUPABASE_SERVICE_KEY (primeiros 10 caracteres): {app.config['SUPABASE_SERVICE_KEY'][:10] if app.config['SUPABASE_SERVICE_KEY'] else 'None'}")
 print(f"[DEBUG] SUPABASE_SERVICE_KEY (primeiros 10 caracteres): {app.config['SUPABASE_SERVICE_KEY'][:10] if app.config['SUPABASE_SERVICE_KEY'] else 'None'}")
 print(f"[DEBUG] SECRET_KEY: {app.config['SECRET_KEY']}")
 print(f"[DEBUG] DEBUG: {app.config['DEBUG']}")
@@ -87,6 +85,12 @@ from modules.importacoes import register_importacoes_blueprints
 # Import financeiro blueprint and registration function
 from modules.financeiro.routes import register_financeiro_blueprints
 
+# Import RH blueprint and registration function
+from modules.rh import register_rh_blueprints
+
+# Import Carreiras blueprint (portal público de vagas)
+from modules.carreiras import carreiras_bp
+
 # Import analytics blueprint
 from modules.analytics.routes import bp as analytics_bp
 
@@ -131,6 +135,12 @@ register_importacoes_blueprints(app)
 
 # Register financeiro blueprints (módulo financeiro completo)
 register_financeiro_blueprints(app)
+
+# Register RH blueprints (módulo de RH completo)
+register_rh_blueprints(app)
+
+# Register Carreiras blueprint (portal público de vagas)
+app.register_blueprint(carreiras_bp)
 
 # Register analytics blueprint
 app.register_blueprint(analytics_bp)

@@ -1,4 +1,5 @@
 // Analytics Module JavaScript - Funcionalidade completa com gráficos e filtros
+const ANALYTICS_DEBUG = false; // Ativar para logs detalhados
 let analyticsData = {};
 let charts = {};
 let currentFilters = {
@@ -13,26 +14,25 @@ let isLoading = false;
 let loadAttempts = 0;
 const maxLoadAttempts = 3;
 
+// Helper para logs condicionais
+function logDebug(message, ...args) {
+    if (ANALYTICS_DEBUG) {
+        console.log(message, ...args);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[ANALYTICS] Module loaded');
+    console.log('[ANALYTICS] Module loaded - Starting initialization');
     
-    // Aguardar sistema unificado de loading estar pronto
-    const waitForUnifiedSystem = () => {
-        if (window.unifiedLoadingManager) {
-            console.log('[ANALYTICS] Sistema unificado detectado');
-            initializeAnalytics();
-            setupEventListeners();
-            
-            // Aguardar um pouco antes de carregar para permitir que outros scripts inicializem
-            setTimeout(() => {
-                loadAnalyticsStats();
-            }, 500);
-        } else {
-            setTimeout(waitForUnifiedSystem, 100);
-        }
-    };
+    // Inicializar imediatamente - não depender de unifiedLoadingManager
+    initializeAnalytics();
+    setupEventListeners();
     
-    waitForUnifiedSystem();
+    // Aguardar um pouco antes de carregar para permitir que outros scripts inicializem
+    setTimeout(() => {
+        console.log('[ANALYTICS] Calling loadAnalyticsStats()');
+        loadAnalyticsStats();
+    }, 500);
 });
 
 function initializeAnalytics() {
@@ -72,8 +72,10 @@ function setupEventListeners() {
 }
 
 async function loadAnalyticsStats() {
+    console.log('[ANALYTICS] loadAnalyticsStats called - isLoading:', isLoading);
+    
     if (isLoading) {
-        console.log('[ANALYTICS] Já está carregando, aguardando...');
+        logDebug('[ANALYTICS] Já está carregando, aguardando...');
         return;
     }
     
@@ -81,7 +83,7 @@ async function loadAnalyticsStats() {
     loadAttempts++;
     
     try {
-        console.log('[ANALYTICS] Carregando estatísticas... (tentativa', loadAttempts, ')');
+        console.log('[ANALYTICS] Fetching data - attempt', loadAttempts);
         
         // Fazer requisições em paralelo
         const [statsResponse, chartsResponse, usersResponse, activityResponse] = await Promise.all([
@@ -91,8 +93,16 @@ async function loadAnalyticsStats() {
             fetch('/analytics/api/recent-activity?' + new URLSearchParams(currentFilters))
         ]);
         
+        console.log('[ANALYTICS] Responses received:', {
+            stats: statsResponse.status,
+            charts: chartsResponse.status,
+            users: usersResponse.status,
+            activity: activityResponse.status
+        });
+        
         if (!statsResponse.ok || !chartsResponse.ok || !usersResponse.ok || !activityResponse.ok) {
-            throw new Error('Erro ao carregar dados');
+            throw new Error('Erro ao carregar dados - Status codes: ' + 
+                [statsResponse.status, chartsResponse.status, usersResponse.status, activityResponse.status].join(','));
         }
         
         const [stats, charts, users, activity] = await Promise.all([
@@ -101,6 +111,8 @@ async function loadAnalyticsStats() {
             usersResponse.json(),
             activityResponse.json()
         ]);
+        
+        console.log('[ANALYTICS] Data parsed successfully');
         
         analyticsData = { stats, charts, users, activity };
         
@@ -111,21 +123,22 @@ async function loadAnalyticsStats() {
         updateRecentActivityTable(activity);
         updateFilterSummary();
         
-        console.log('[ANALYTICS] Dados carregados com sucesso');
+        console.log('[ANALYTICS] ✅ All data loaded and rendered successfully');
         loadAttempts = 0; // Reset attempts on success
         
         // Notificar sistema unificado que o carregamento foi concluído
         if (window.unifiedLoadingManager && window.unifiedLoadingManager.isTransitioning) {
-            console.log('[ANALYTICS] Notificando sistema unificado - dados carregados');
+            logDebug('[ANALYTICS] Notificando sistema unificado - dados carregados');
             // O sistema unificado detectará automaticamente que os dados carregaram
         }
         
     } catch (error) {
-        console.error('[ANALYTICS] Erro ao carregar dados:', error);
+        console.error('[ANALYTICS] ❌ ERROR loading data:', error);
+        console.error('[ANALYTICS] Error stack:', error.stack);
         
         // Tentar novamente se não atingiu o máximo
         if (loadAttempts < maxLoadAttempts) {
-            console.log('[ANALYTICS] Tentando novamente em 2 segundos...');
+            console.warn('[ANALYTICS] Retrying in 2 seconds... (attempt', loadAttempts + 1, 'of', maxLoadAttempts, ')');
             setTimeout(() => {
                 isLoading = false;
                 loadAnalyticsStats();
@@ -148,7 +161,7 @@ function updateStatsCards(data) {
     updateKPIValue('total-logins', data.total_logins || 0);
     updateKPIValue('avg-session', data.avg_session_minutes || 0, 'min');
     
-    console.log('[ANALYTICS] Cards atualizados');
+    logDebug('[ANALYTICS] Cards atualizados');
 }
 
 function updateCharts(chartsData) {
@@ -168,7 +181,7 @@ function updateCharts(chartsData) {
         createUsersActivityChart(chartsData.users_activity || []);
         createHourlyHeatmapChart(chartsData.hourly_heatmap || []);
         
-        console.log('[ANALYTICS] Gráficos atualizados');
+        logDebug('[ANALYTICS] Gráficos atualizados');
     }, 100);
 }
 
@@ -197,9 +210,9 @@ function createDailyAccessChart(data) {
     const accessValues = accessData.map(item => item.count || 0);
     const usersValues = usersData.map(item => item.count || 0);
 
-    console.log('[ANALYTICS] Daily Chart - Access Values:', accessValues);
-    console.log('[ANALYTICS] Daily Chart - Users Values:', usersValues);
-    console.log('[ANALYTICS] Daily Chart - Labels:', labels);
+    logDebug('[ANALYTICS] Daily Chart - Access Values:', accessValues);
+    logDebug('[ANALYTICS] Daily Chart - Users Values:', usersValues);
+    logDebug('[ANALYTICS] Daily Chart - Labels:', labels);
 
     charts.dailyAccess = new Chart(ctx, {
         type: 'line',
@@ -643,20 +656,20 @@ function refreshData() {
 }
 
 function refreshData() {
-    console.log('[ANALYTICS] Refresh manual iniciado');
+    logDebug('[ANALYTICS] Refresh manual iniciado');
     loadAnalyticsStats();
 }
 
 async function silentRefresh() {
-    console.log('[ANALYTICS] Refresh silencioso iniciado');
+    logDebug('[ANALYTICS] Refresh silencioso iniciado');
     if (isLoading) {
-        console.log('[ANALYTICS] Já está carregando, pulando refresh silencioso');
+        logDebug('[ANALYTICS] Já está carregando, pulando refresh silencioso');
         return;
     }
     
     try {
         await loadAnalyticsStats();
-        console.log('[ANALYTICS] Refresh silencioso concluído com sucesso');
+        logDebug('[ANALYTICS] Refresh silencioso concluído com sucesso');
         return true;
     } catch (error) {
         console.error('[ANALYTICS] Erro no refresh silencioso:', error);
@@ -723,12 +736,12 @@ function updateFilterSummary() {
 // Loading States - Integrado com sistema unificado
 function showLoading() {
     // Sistema unificado gerencia loading - manter apenas para compatibilidade
-    console.log('[ANALYTICS] showLoading chamado - gerenciado por sistema unificado');
+    logDebug('[ANALYTICS] showLoading chamado - gerenciado por sistema unificado');
 }
 
 function hideLoading() {
     // Sistema unificado gerencia loading - manter apenas para compatibilidade
-    console.log('[ANALYTICS] hideLoading chamado - gerenciado por sistema unificado');
+    logDebug('[ANALYTICS] hideLoading chamado - gerenciado por sistema unificado');
 }
 
 function showError(message) {
@@ -738,7 +751,7 @@ function showError(message) {
 
 // Auto-refresh a cada 5 minutos
 setInterval(() => {
-    console.log('[ANALYTICS] Auto-refresh das estatísticas');
+    logDebug('[ANALYTICS] Auto-refresh das estatísticas');
     loadAnalyticsStats();
 }, 300000);
 
