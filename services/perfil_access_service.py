@@ -66,7 +66,7 @@ class PerfilAccessService:
         if user_role == 'admin' and user_perfil_principal == 'master_admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
-                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh',
+                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh', 'analytics',
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual',
                 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 'rh_estrutura_departamentos', 
@@ -84,7 +84,7 @@ class PerfilAccessService:
                 # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações + Analytics
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 
-                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config',
+                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config', 'analytics',
                     'analytics_portal', 'analytics_agente',  # Analytics disponíveis para todos os admins
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
@@ -95,7 +95,7 @@ class PerfilAccessService:
                 # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários + Analytics
                 accessible_modules.update([
                     'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
-                    'despesas_anual', 'faturamento_anual', 'usuarios',
+                    'despesas_anual', 'faturamento_anual', 'usuarios', 'analytics',
                     'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_financeiro) - módulos disponíveis: {list(accessible_modules)}")
@@ -104,7 +104,7 @@ class PerfilAccessService:
                 # Admin de RH - APENAS módulos de RH + gestão de usuários + Analytics
                 accessible_modules.update([
                     'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
-                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho', 'usuarios',
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho', 'usuarios', 'analytics',
                     'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_recursos_humanos) - módulos disponíveis: {list(accessible_modules)}")
@@ -681,6 +681,15 @@ class PerfilAccessService:
                     'estrutura_departamentos': {'nome': 'Gestão de Departamentos', 'url': '/rh/estrutura/departamentos'},
                     'recrutamento': {'nome': 'Recrutamento', 'url': '/rh/recrutamento'},
                     'desempenho': {'nome': 'Avaliações', 'url': '/rh/desempenho'}
+                }
+            },
+            'analytics': {
+                'nome': 'Analytics',
+                'icone': 'fas fa-chart-bar',
+                'url': '/analytics',
+                'paginas': {
+                    'portal': {'nome': 'Analytics do Portal', 'url': '/analytics'},
+                    'agente': {'nome': 'Analytics do Agente', 'url': '/analytics/agente'}
                 }
             }
         }

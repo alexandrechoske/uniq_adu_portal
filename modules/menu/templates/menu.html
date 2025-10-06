@@ -162,9 +162,27 @@
             {% endif %}
 
             <!-- Tab: Ferramentas -->
-            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules %}
+            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'analytics' in accessible_modules %}
             <div class="tab-content" data-content="ferramentas">
                 <div class="cards-grid">
+                    {% if 'analytics' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}" class="module-card" data-module="analytics">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-chart-bar"></i></div>
+                        <h4 class="module-title">Analytics do Portal</h4>
+                        <p class="module-desc">Estatísticas de uso e acesso ao sistema.</p>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'analytics' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_agente') }}" class="module-card" data-module="analytics">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-whatsapp"></i></div>
+                        <h4 class="module-title">Analytics do Agente</h4>
+                        <p class="module-desc">Estatísticas de uso do agente WhatsApp.</p>
+                    </a>
+                    {% endif %}
+                    
                     {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules %}
                     <a href="{{ url_for('export_relatorios.index') }}" class="module-card" data-module="export_relatorios">
                         <div class="module-icon"><i class="mdi mdi-file-export"></i></div>
