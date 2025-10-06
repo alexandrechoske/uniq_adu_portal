@@ -48,6 +48,96 @@
     "coming_soon": "More tools will be available soon",
     "select_module": "Select a module above to get started"
   },
+  "modules": {
+    "dashboard_executivo": {
+      "title": "Executive Dashboard",
+      "desc": "Consolidated strategic view of imports."
+    },
+    "dashboard_operacional": {
+      "title": "Operational Dashboard",
+      "desc": "Detailed operational monitoring."
+    },
+    "dashboard_tv": {
+      "title": "TV Dashboard",
+      "desc": "Summarized monitoring of active processes."
+    },
+    "fin_dashboard_executivo": {
+      "title": "Executive Dashboard",
+      "desc": "Executive view of the financial module."
+    },
+    "fluxo_caixa": {
+      "title": "Cash Flow",
+      "desc": "Financial control of inflows and outflows."
+    },
+    "despesas": {
+      "title": "Expenses",
+      "desc": "Operational expense management."
+    },
+    "faturamento": {
+      "title": "Billing",
+      "desc": "Revenue and billing control."
+    },
+    "conciliacao": {
+      "title": "Reconciliation",
+      "desc": "Reconcile transactions with bank statements."
+    },
+    "projecoes_metas": {
+      "title": "Projections & Goals",
+      "desc": "Planning and control of financial goals."
+    },
+    "export_bases": {
+      "title": "Database Export",
+      "desc": "Export financial databases in CSV format."
+    },
+    "categorizacao_clientes": {
+      "title": "Categorization",
+      "desc": "Manage client categories and profiles."
+    },
+    "export_relatorios": {
+      "title": "Reports Export",
+      "desc": "Extract old processes (> 6 months)."
+    },
+    "logos_clientes": {
+      "title": "Client Registration",
+      "desc": "Manage visual identity of linked companies."
+    },
+    "usuarios": {
+      "title": "User Management",
+      "desc": "Access control, account creation and maintenance."
+    },
+    "analytics_portal": {
+      "title": "Portal Analytics",
+      "desc": "System usage analysis and metrics."
+    },
+    "analytics_agente": {
+      "title": "Agent Analytics",
+      "desc": "WhatsApp agent metrics and performance."
+    },
+    "rh_dashboard": {
+      "title": "Executive Dashboard",
+      "desc": "Strategic view with HR indicators and metrics."
+    },
+    "rh_colaboradores": {
+      "title": "Employees",
+      "desc": "Complete employee management and history."
+    },
+    "rh_cargos": {
+      "title": "Position Management",
+      "desc": "Manage positions, groups and salary ranges."
+    },
+    "rh_departamentos": {
+      "title": "Department Management",
+      "desc": "Manage departments and cost centers."
+    },
+    "rh_recrutamento": {
+      "title": "Recruitment",
+      "desc": "Job opening management and candidate pipeline."
+    },
+    "rh_carreiras": {
+      "title": "Careers Portal",
+      "desc": "Public job portal with integrated AI."
+    }
+  },
   "auth": {
     "login_title": "Access System",
     "email": "Email",

@@ -64,24 +64,24 @@
                     {% if ('dashboard_executivo' in accessible_modules and ('*' in importacao_pages or 'dashboard_executivo' in importacao_pages)) or (role in ['admin'] and 'dashboard_executivo' in accessible_modules) %}
                     <a href="{{ url_for('dashboard_executivo.index') }}" class="module-card" data-module="dashboard_executivo">
                         <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
-                        <h4 class="module-title">Dashboard Executivo</h4>
-                        <p class="module-desc">Visão estratégica consolidada de importações.</p>
+                        <h4 class="module-title">{{ t('modules.dashboard_executivo.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.dashboard_executivo.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if 'dashboard_operacional' in accessible_modules %}
                     <a href="{{ url_for('dashboard_operacional.index') }}" class="module-card" data-module="dashboard_operacional">
                         <div class="module-icon"><i class="mdi mdi-monitor-dashboard"></i></div>
-                        <h4 class="module-title">Dashboard Operacional</h4>
-                        <p class="module-desc">Monitoramento operacional detalhado.</p>
+                        <h4 class="module-title">{{ t('modules.dashboard_operacional.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.dashboard_operacional.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
                         <div class="module-icon"><i class="mdi mdi-television-guide"></i></div>
-                        <h4 class="module-title">Dashboard TV</h4>
-                        <p class="module-desc">Monitoramento resumido dos processos ativos.</p>
+                        <h4 class="module-title">{{ t('modules.dashboard_tv.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.dashboard_tv.desc') }}</p>
                     </a>
                     {% endif %}
                 </div>
@@ -97,64 +97,64 @@
                     {% if '*' in financeiro_pages or 'dashboard_executivo' in financeiro_pages %}
                     <a href="{{ url_for('fin_dashboard_executivo.index') }}" class="module-card" data-module="fin_dashboard_executivo">
                         <div class="module-icon"><i class="mdi mdi-chart-box"></i></div>
-                        <h4 class="module-title">Dashboard Executivo</h4>
-                        <p class="module-desc">Visão executiva do módulo financeiro.</p>
+                        <h4 class="module-title">{{ t('modules.fin_dashboard_executivo.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.fin_dashboard_executivo.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'fluxo_caixa' in financeiro_pages %}
                     <a href="{{ url_for('fin_fluxo_de_caixa.index') }}" class="module-card" data-module="fluxo_caixa">
                         <div class="module-icon"><i class="mdi mdi-chart-timeline-variant"></i></div>
-                        <h4 class="module-title">Fluxo de Caixa</h4>
-                        <p class="module-desc">Controle financeiro de entradas e saídas.</p>
+                        <h4 class="module-title">{{ t('modules.fluxo_caixa.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.fluxo_caixa.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'despesas' in financeiro_pages %}
                     <a href="{{ url_for('fin_despesas.index') }}" class="module-card" data-module="despesas">
                         <div class="module-icon"><i class="mdi mdi-credit-card-minus"></i></div>
-                        <h4 class="module-title">Despesas</h4>
-                        <p class="module-desc">Gestão de despesas operacionais.</p>
+                        <h4 class="module-title">{{ t('modules.despesas.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.despesas.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'faturamento' in financeiro_pages %}
                     <a href="{{ url_for('fin_faturamento.index') }}" class="module-card" data-module="receitas">
                         <div class="module-icon"><i class="mdi mdi-receipt"></i></div>
-                        <h4 class="module-title">Faturamento</h4>
-                        <p class="module-desc">Controle de receitas e faturamento.</p>
+                        <h4 class="module-title">{{ t('modules.faturamento.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.faturamento.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'conciliacao_lancamentos' in financeiro_pages %}
                     <a href="{{ url_for('fin_conciliacao_lancamentos.index') }}" class="module-card" data-module="conciliacao_lancamentos">
                         <div class="module-icon"><i class="mdi mdi-bank"></i></div>
-                        <h4 class="module-title">Conciliação</h4>
-                        <p class="module-desc">Concilie lançamentos com extratos bancários.</p>
+                        <h4 class="module-title">{{ t('modules.conciliacao.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.conciliacao.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'projecoes_metas' in financeiro_pages %}
                     <a href="{{ url_for('fin_projecoes_metas.index') }}" class="module-card" data-module="projecoes_metas">
                         <div class="module-icon"><i class="mdi mdi-trending-up"></i></div>
-                        <h4 class="module-title">Projeções e Metas</h4>
-                        <p class="module-desc">Planejamento e controle de metas financeiras.</p>
+                        <h4 class="module-title">{{ t('modules.projecoes_metas.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.projecoes_metas.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'export_bases' in financeiro_pages %}
                     <a href="{{ url_for('fin_export_bases.index') }}" class="module-card" data-module="export_bases">
                         <div class="module-icon"><i class="mdi mdi-download"></i></div>
-                        <h4 class="module-title">Exportação de Bases</h4>
-                        <p class="module-desc">Exporte bases financeiras em formato CSV.</p>
+                        <h4 class="module-title">{{ t('modules.export_bases.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.export_bases.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if '*' in financeiro_pages or 'categorizacao_clientes' in financeiro_pages %}
                     <a href="{{ url_for('fin_categorizacao_clientes.index') }}" class="module-card" data-module="categorizacao_clientes">
                         <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
-                        <h4 class="module-title">Categorização</h4>
-                        <p class="module-desc">Gerencie categorias e perfis de clientes.</p>
+                        <h4 class="module-title">{{ t('modules.categorizacao_clientes.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.categorizacao_clientes.desc') }}</p>
                     </a>
                     {% endif %}
                 </div>
@@ -168,16 +168,16 @@
                     {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules %}
                     <a href="{{ url_for('export_relatorios.index') }}" class="module-card" data-module="export_relatorios">
                         <div class="module-icon"><i class="mdi mdi-file-export"></i></div>
-                        <h4 class="module-title">Exportação Relatórios</h4>
-                        <p class="module-desc">Extrair processos antigos (&gt; 6 meses).</p>
+                        <h4 class="module-title">{{ t('modules.export_relatorios.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.export_relatorios.desc') }}</p>
                     </a>
                     {% endif %}
                     
                     {% if 'config' in accessible_modules %}
                     <a href="{{ url_for('config.logos_clientes') }}" class="module-card" data-module="logos_clientes">
                         <div class="module-icon"><i class="mdi mdi-domain"></i></div>
-                        <h4 class="module-title">Cadastro de Clientes</h4>
-                        <p class="module-desc">Gerencie a identidade visual das empresas vinculadas.</p>
+                        <h4 class="module-title">{{ t('modules.logos_clientes.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.logos_clientes.desc') }}</p>
                     </a>
                     {% endif %}
                     
@@ -185,8 +185,8 @@
                     <a href="{{ url_for('usuarios.index') }}" class="module-card" data-module="usuarios">
                         <span class="role-badge admin">ADMIN</span>
                         <div class="module-icon"><i class="mdi mdi-account-multiple"></i></div>
-                        <h4 class="module-title">Gerenciar Usuários</h4>
-                        <p class="module-desc">Controle de acessos, criação e manutenção de contas.</p>
+                        <h4 class="module-title">{{ t('modules.usuarios.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.usuarios.desc') }}</p>
                     </a>
                     {% endif %}
                     
@@ -194,8 +194,8 @@
                     <a href="{{ url_for('analytics.analytics_dashboard') }}" class="module-card" data-module="analytics_portal">
                         <span class="role-badge admin">ADMIN</span>
                         <div class="module-icon"><i class="mdi mdi-chart-line"></i></div>
-                        <h4 class="module-title">Analytics do Portal</h4>
-                        <p class="module-desc">Análises e métricas de uso do sistema.</p>
+                        <h4 class="module-title">{{ t('modules.analytics_portal.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.analytics_portal.desc') }}</p>
                     </a>
                     {% endif %}
                     
@@ -203,8 +203,8 @@
                     <a href="{{ url_for('analytics.analytics_agente') }}" class="module-card" data-module="analytics_agente">
                         <span class="role-badge admin">ADMIN</span>
                         <div class="module-icon"><i class="mdi mdi-robot"></i></div>
-                        <h4 class="module-title">Analytics do Agente</h4>
-                        <p class="module-desc">Métricas e performance do agente WhatsApp.</p>
+                        <h4 class="module-title">{{ t('modules.analytics_agente.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.analytics_agente.desc') }}</p>
                     </a>
                     {% endif %}
                 </div>
@@ -217,38 +217,38 @@
                 <div class="cards-grid">
                     <a href="{{ url_for('dashboard_rh.dashboard_executivo') }}" class="module-card" data-module="rh_dashboard">
                         <div class="module-icon"><i class="mdi mdi-chart-box-multiple-outline"></i></div>
-                        <h4 class="module-title">Dashboard Executivo</h4>
-                        <p class="module-desc">Visão estratégica com indicadores e métricas de RH.</p>
+                        <h4 class="module-title">{{ t('modules.rh_dashboard.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.rh_dashboard.desc') }}</p>
                     </a>
                     
                     <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="module-card" data-module="rh_colaboradores">
                         <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
-                        <h4 class="module-title">Colaboradores</h4>
-                        <p class="module-desc">Gestão completa de colaboradores e histórico.</p>
+                        <h4 class="module-title">{{ t('modules.rh_colaboradores.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.rh_colaboradores.desc') }}</p>
                     </a>
                     
                     <a href="{{ url_for('estrutura_org.gestao_cargos') }}" class="module-card" data-module="rh_cargos">
                         <div class="module-icon"><i class="mdi mdi-briefcase"></i></div>
-                        <h4 class="module-title">Gestão de Cargos</h4>
-                        <p class="module-desc">Gerencie cargos, grupos e faixas salariais.</p>
+                        <h4 class="module-title">{{ t('modules.rh_cargos.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.rh_cargos.desc') }}</p>
                     </a>
                     
                     <a href="{{ url_for('estrutura_org.gestao_departamentos') }}" class="module-card" data-module="rh_departamentos">
                         <div class="module-icon"><i class="mdi mdi-domain"></i></div>
-                        <h4 class="module-title">Gestão de Departamentos</h4>
-                        <p class="module-desc">Gerencie departamentos e centros de custo.</p>
+                        <h4 class="module-title">{{ t('modules.rh_departamentos.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.rh_departamentos.desc') }}</p>
                     </a>
                     
                     <a href="{{ url_for('recrutamento.gestao_vagas') }}" class="module-card" data-module="rh_recrutamento">
                         <div class="module-icon"><i class="mdi mdi-briefcase-search"></i></div>
-                        <h4 class="module-title">Recrutamento</h4>
-                        <p class="module-desc">Gestão de vagas e pipeline de candidatos.</p>
+                        <h4 class="module-title">{{ t('modules.rh_recrutamento.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.rh_recrutamento.desc') }}</p>
                     </a>
                     
                     <a href="{{ url_for('carreiras.portal_vagas') }}" class="module-card" data-module="rh_carreiras" target="_blank">
                         <div class="module-icon"><i class="mdi mdi-web"></i></div>
-                        <h4 class="module-title">Portal de Carreiras</h4>
-                        <p class="module-desc">Portal público de vagas com IA integrada.</p>
+                        <h4 class="module-title">{{ t('modules.rh_carreiras.title') }}</h4>
+                        <p class="module-desc">{{ t('modules.rh_carreiras.desc') }}</p>
                     </a>
                 </div>
             </div>

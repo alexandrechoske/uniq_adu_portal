@@ -48,6 +48,96 @@
     "coming_soon": "Em breve, mais ferramentas estarão disponíveis",
     "select_module": "Selecione um módulo acima para começar"
   },
+  "modules": {
+    "dashboard_executivo": {
+      "title": "Dashboard Executivo",
+      "desc": "Visão estratégica consolidada de importações."
+    },
+    "dashboard_operacional": {
+      "title": "Dashboard Operacional",
+      "desc": "Monitoramento operacional detalhado."
+    },
+    "dashboard_tv": {
+      "title": "Dashboard TV",
+      "desc": "Monitoramento resumido dos processos ativos."
+    },
+    "fin_dashboard_executivo": {
+      "title": "Dashboard Executivo",
+      "desc": "Visão executiva do módulo financeiro."
+    },
+    "fluxo_caixa": {
+      "title": "Fluxo de Caixa",
+      "desc": "Controle financeiro de entradas e saídas."
+    },
+    "despesas": {
+      "title": "Despesas",
+      "desc": "Gestão de despesas operacionais."
+    },
+    "faturamento": {
+      "title": "Faturamento",
+      "desc": "Controle de receitas e faturamento."
+    },
+    "conciliacao": {
+      "title": "Conciliação",
+      "desc": "Concilie lançamentos com extratos bancários."
+    },
+    "projecoes_metas": {
+      "title": "Projeções e Metas",
+      "desc": "Planejamento e controle de metas financeiras."
+    },
+    "export_bases": {
+      "title": "Exportação de Bases",
+      "desc": "Exporte bases financeiras em formato CSV."
+    },
+    "categorizacao_clientes": {
+      "title": "Categorização",
+      "desc": "Gerencie categorias e perfis de clientes."
+    },
+    "export_relatorios": {
+      "title": "Exportação Relatórios",
+      "desc": "Extrair processos antigos (> 6 meses)."
+    },
+    "logos_clientes": {
+      "title": "Cadastro de Clientes",
+      "desc": "Gerencie a identidade visual das empresas vinculadas."
+    },
+    "usuarios": {
+      "title": "Gerenciar Usuários",
+      "desc": "Controle de acessos, criação e manutenção de contas."
+    },
+    "analytics_portal": {
+      "title": "Analytics do Portal",
+      "desc": "Análises e métricas de uso do sistema."
+    },
+    "analytics_agente": {
+      "title": "Analytics do Agente",
+      "desc": "Métricas e performance do agente WhatsApp."
+    },
+    "rh_dashboard": {
+      "title": "Dashboard Executivo",
+      "desc": "Visão estratégica com indicadores e métricas de RH."
+    },
+    "rh_colaboradores": {
+      "title": "Colaboradores",
+      "desc": "Gestão completa de colaboradores e histórico."
+    },
+    "rh_cargos": {
+      "title": "Gestão de Cargos",
+      "desc": "Gerencie cargos, grupos e faixas salariais."
+    },
+    "rh_departamentos": {
+      "title": "Gestão de Departamentos",
+      "desc": "Gerencie departamentos e centros de custo."
+    },
+    "rh_recrutamento": {
+      "title": "Recrutamento",
+      "desc": "Gestão de vagas e pipeline de candidatos."
+    },
+    "rh_carreiras": {
+      "title": "Portal de Carreiras",
+      "desc": "Portal público de vagas com IA integrada."
+    }
+  },
   "auth": {
     "login_title": "Acessar o Sistema",
     "email": "E-mail",
