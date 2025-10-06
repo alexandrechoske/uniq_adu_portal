@@ -10,10 +10,11 @@
 {% endblock %}
 
 {% block content %}
-<!-- Disable global auto-refresh for analytics page -->
+<!-- Disable global auto-refresh and page validator for analytics page -->
 <script>
     window.DISABLE_GLOBAL_REFRESH = true;
-    console.log('[ANALYTICS_PORTAL] Global refresh disabled');
+    window.DISABLE_PAGE_VALIDATOR = true;
+    console.log('[ANALYTICS_PORTAL] Global refresh and page validator disabled');
 </script>
 
 <div class="dashboard-container analytics-portal">
