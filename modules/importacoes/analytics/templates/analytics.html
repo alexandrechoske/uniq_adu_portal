@@ -10,6 +10,12 @@
 {% endblock %}
 
 {% block content %}
+<!-- Disable global auto-refresh for analytics page -->
+<script>
+    window.DISABLE_GLOBAL_REFRESH = true;
+    console.log('[ANALYTICS_PORTAL] Global refresh disabled');
+</script>
+
 <div class="dashboard-container analytics-portal">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar module-header-analytics">

@@ -10,6 +10,33 @@
 {% endblock %}
 
 {% block content %}
+<!-- Disable global auto-refresh for analytics page -->
+<script>
+    // CRITICAL: Force disable ANY auto-refresh mechanisms
+    window.DISABLE_GLOBAL_REFRESH = true;
+    window.DISABLE_AUTO_REFRESH = true;
+    
+    // Clear any existing intervals that might be running
+    if (typeof window.globalRefreshInterval !== 'undefined') {
+        clearInterval(window.globalRefreshInterval);
+        window.globalRefreshInterval = null;
+        console.log('[ANALYTICS_AGENTE] Cleared global refresh interval');
+    }
+    
+    // Override setInterval to prevent analytics page from being refreshed
+    const originalSetInterval = window.setInterval;
+    window.setInterval = function(func, delay, ...args) {
+        // Block any 5-second intervals that might cause page refresh
+        if (delay === 5000 || delay === 5 * 1000) {
+            console.warn('[ANALYTICS_AGENTE] Blocked 5-second interval:', func.toString().substring(0, 100));
+            return -1; // Return invalid ID
+        }
+        return originalSetInterval(func, delay, ...args);
+    };
+    
+    console.log('[ANALYTICS_AGENTE] Global refresh disabled and 5-second intervals blocked');
+</script>
+
 <div class="dashboard-container analytics-portal">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar">

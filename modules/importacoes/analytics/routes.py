@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, session
+from flask import Blueprint, render_template, jsonify, request, session, flash, redirect, url_for
 from datetime import datetime, timedelta
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
@@ -17,6 +17,7 @@ def check_api_auth():
     """
     Verifica autenticação tanto por sessão quanto por API key
     Retorna True se autenticado, False caso contrário
+    Aceita: Master Admin (role='admin') ou Module Admins (role='interno_unique' com perfil_principal=admin_*)
     """
     # Verificar API key bypass primeiro
     api_bypass_key = os.getenv('API_BYPASS_KEY')
@@ -25,12 +26,22 @@ def check_api_auth():
     if api_bypass_key and request_api_key == api_bypass_key:
         return True
     
-    # Verificar autenticação de sessão (seguindo o mesmo padrão do role_required)
+    # Verificar autenticação de sessão
     try:
         if 'user' in session and session.get('user') and isinstance(session['user'], dict):
             user_data = session['user']
-            if user_data.get('role') == 'admin':
+            user_role = user_data.get('role')
+            
+            # Master Admin sempre tem acesso
+            if user_role == 'admin':
                 return True
+            
+            # Module Admins (interno_unique com perfil admin_*)
+            if user_role == 'interno_unique':
+                perfil_principal = user_data.get('perfil_principal', '')
+                # Qualquer perfil que comece com 'admin_' tem acesso ao analytics
+                if perfil_principal.startswith('admin_'):
+                    return True
     except:
         pass
     
@@ -80,44 +91,59 @@ def _format_ts_with_policy(ts_value, policy: str = 'none'):
         return str(ts_value)
 
 @bp.route('/')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])  # Permitir admins de módulos também
 def analytics_dashboard():
     """
     Página principal do Analytics do Portal
+    Acessível para: Admin Master e todos os Module Admins (operacional, financeiro, RH)
     """
     try:
-        return render_template('analytics.html', analytics_type='portal')
+        # Verificar se é um admin de módulo com permissão
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
+        
+        # Admin Master sempre tem acesso
+        if user_role == 'admin' and user_perfil_principal == 'master_admin':
+            return render_template('analytics.html', analytics_type='portal')
+        
+        # Module Admins (admin_operacao, admin_financeiro, admin_recursos_humanos) também têm acesso
+        if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
+            return render_template('analytics.html', analytics_type='portal')
+        
+        # Se não é admin, redirecionar
+        flash('Acesso restrito a administradores.', 'error')
+        return redirect(url_for('menu.menu_home'))
+        
     except Exception as e:
         logger.error(f"Erro ao carregar página de analytics: {e}")
         return f"Erro ao carregar página: {str(e)}", 500
 
 @bp.route('/agente')
+@role_required(['admin', 'interno_unique'])  # Permitir admins de módulos também
 def analytics_agente():
     """
     Página principal do Analytics do Agente
+    Acessível para: Admin Master e todos os Module Admins (operacional, financeiro, RH)
     """
     try:
-        # Debug: verificar qual template está sendo carregado
-        import os
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        template_path = os.path.join(current_dir, 'templates', 'analytics_agente.html')
-        print(f"[DEBUG] Carregando template: {template_path}")
-        print(f"[DEBUG] Template exists: {os.path.exists(template_path)}")
-        if os.path.exists(template_path):
-            print(f"[DEBUG] Template size: {os.path.getsize(template_path)} bytes")
+        # Verificar se é um admin de módulo com permissão
+        user = session.get('user', {})
+        user_role = user.get('role')
+        user_perfil_principal = user.get('perfil_principal', 'basico')
         
-        # Hack temporário para desenvolvimento: se não há usuário na sessão, criar um mock
-        if 'user' not in session or not session.get('user'):
-            # Criar usuário mock para desenvolvimento
-            session['user'] = {
-                'id': 'test-user-id',
-                'name': 'Test User',
-                'role': 'admin',
-                'email': 'test@example.com'
-            }
-            session.permanent = True
+        # Admin Master sempre tem acesso
+        if user_role == 'admin' and user_perfil_principal == 'master_admin':
+            return render_template('analytics_agente.html', analytics_type='agente')
         
-        return render_template('analytics_agente.html', analytics_type='agente')
+        # Module Admins (admin_operacao, admin_financeiro, admin_recursos_humanos) também têm acesso
+        if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
+            return render_template('analytics_agente.html', analytics_type='agente')
+        
+        # Se não é admin, redirecionar
+        flash('Acesso restrito a administradores.', 'error')
+        return redirect(url_for('menu.menu_home'))
+        
     except Exception as e:
         logger.error(f"Erro ao carregar página de analytics do agente: {e}")
         return f"Erro ao carregar página: {str(e)}", 500
@@ -130,7 +156,7 @@ def analytics_agente_test_simple():
     return "<h1>Analytics do Agente - Teste</h1><p>Se você vê esta página, a rota está funcionando!</p>"
 
 @bp.route('/agente/test')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def analytics_agente_test():
     """
     Página de teste do Analytics do Agente
@@ -142,7 +168,7 @@ def analytics_agente_test():
         return f"Erro ao carregar página de teste: {str(e)}", 500
 
 @bp.route('/api/stats')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_stats():
     """
     API para estatísticas básicas do Analytics
@@ -253,7 +279,7 @@ def get_stats():
         })
 
 @bp.route('/api/charts')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_charts():
     """
     API para dados dos gráficos
@@ -447,7 +473,7 @@ def get_charts():
         })
 
 @bp.route('/api/top-users')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_top_users():
     """
     API para dados dos top usuários
@@ -536,7 +562,7 @@ def get_top_users():
         return jsonify([])  # Retornar lista vazia
 
 @bp.route('/api/recent-activity')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_recent_activity():
     """
     API para atividade recente
@@ -671,7 +697,7 @@ def format_response_time(ms):
         return "N/A"
 
 @bp.route('/api/agente/stats')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_agente_stats():
     """
     API para estatísticas básicas do Analytics do Agente
@@ -765,7 +791,7 @@ def get_agente_stats():
         })
 
 @bp.route('/api/agente/interactions-chart')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_agente_interactions_chart():
     """
     API para gráfico de interações do agente ao longo do tempo
@@ -908,7 +934,7 @@ def get_agente_interactions_chart():
         return jsonify([])
 
 @bp.route('/api/agente/top-companies')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_agente_top_companies():
     """
     API para empresas que mais usam o agente
@@ -1023,7 +1049,7 @@ def get_agente_top_companies():
         })
 
 @bp.route('/api/agente/top-users')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_agente_top_users():
     """
     API para usuários que mais usam o agente
@@ -1146,7 +1172,7 @@ def get_agente_top_users():
         })
 
 @bp.route('/api/agente/recent-interactions')
-@role_required(['admin'])
+@role_required(['admin', 'interno_unique'])
 def get_agente_recent_interactions():
     """
     API para interações recentes do agente com paginação
@@ -2076,3 +2102,4 @@ def get_agente_interaction_types():
                 'total': 0
             }
         })
+

@@ -930,7 +930,24 @@
                     </a>
                     {% endif %}
                     
-                    <!-- REMOVED ANALYTICS FROM SIDEBAR -->
+                    <!-- Analytics - Todos os Admins -->
+                    {% if 'analytics_portal' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+                       title="Analytics do Portal">
+                        <i class="mdi mdi-chart-line"></i>
+                        <span class="sidebar-text">Analytics do Portal</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'analytics_agente' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_agente') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_agente' %}active{% endif %}"
+                       title="Analytics do Agente">
+                        <i class="mdi mdi-robot"></i>
+                        <span class="sidebar-text">Analytics do Agente</span>
+                    </a>
+                    {% endif %}
                 </div>
                 {% endif %}
                 

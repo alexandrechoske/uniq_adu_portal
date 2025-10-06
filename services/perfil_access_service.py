@@ -70,7 +70,8 @@ class PerfilAccessService:
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual',
                 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 'rh_estrutura_departamentos', 
-                'rh_recrutamento', 'rh_desempenho'
+                'rh_recrutamento', 'rh_desempenho',
+                'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
             ]
             print(f"[ACCESS_SERVICE] Master Admin (master_admin) - módulos disponíveis: {accessible_modules}")
             return accessible_modules
@@ -80,28 +81,31 @@ class PerfilAccessService:
             accessible_modules = set()
             
             if user_perfil_principal == 'admin_operacao':
-                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações
+                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações + Analytics
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 
                     'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config',
+                    'analytics_portal', 'analytics_agente',  # Analytics disponíveis para todos os admins
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_operacao) - módulos disponíveis: {list(accessible_modules)}")
                 
             elif user_perfil_principal == 'admin_financeiro':
-                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários
+                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários + Analytics
                 accessible_modules.update([
                     'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
-                    'despesas_anual', 'faturamento_anual', 'usuarios'
+                    'despesas_anual', 'faturamento_anual', 'usuarios',
+                    'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_financeiro) - módulos disponíveis: {list(accessible_modules)}")
             
             elif user_perfil_principal == 'admin_recursos_humanos':
-                # Admin de RH - APENAS módulos de RH + gestão de usuários
+                # Admin de RH - APENAS módulos de RH + gestão de usuários + Analytics
                 accessible_modules.update([
                     'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
-                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho', 'usuarios'
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho', 'usuarios',
+                    'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_recursos_humanos) - módulos disponíveis: {list(accessible_modules)}")
             
@@ -301,26 +305,32 @@ class PerfilAccessService:
             user_manages_module = False
             
             if user_perfil_principal == 'admin_operacao':
-                # Mapear módulos operacionais: Importações, Consultoria, Exportação, Configurações
+                # Mapear módulos operacionais: Importações, Consultoria, Exportação, Configurações, Analytics
                 operational_modules = [
                     'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'relatorios',
                     'conferencia', 'agente',  # Existing importacao modules
                     'consultoria', 'con',  # Future consultoria modules 
                     'exportacao', 'exp',  # Future exportacao modules
-                    'config'  # Configuration module for system setup
+                    'config',  # Configuration module for system setup
+                    'analytics_portal', 'analytics_agente'  # Analytics modules - todos os admins
                 ]
                 user_manages_module = modulo_codigo in operational_modules
                 
             elif user_perfil_principal == 'admin_financeiro':
-                # Mapear módulos financeiros
-                financeiro_modules = ['financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual']
+                # Mapear módulos financeiros + Analytics
+                financeiro_modules = [
+                    'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
+                    'despesas_anual', 'faturamento_anual',
+                    'analytics_portal', 'analytics_agente'  # Analytics modules - todos os admins
+                ]
                 user_manages_module = modulo_codigo in financeiro_modules
             
             elif user_perfil_principal == 'admin_recursos_humanos':
-                # Mapear módulos de RH
+                # Mapear módulos de RH + Analytics
                 rh_modules = [
                     'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
-                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho'
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho',
+                    'analytics_portal', 'analytics_agente'  # Analytics modules - todos os admins
                 ]
                 user_manages_module = modulo_codigo in rh_modules
             
