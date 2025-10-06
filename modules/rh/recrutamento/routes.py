@@ -4,6 +4,9 @@ Rotas para gestão de vagas e candidatos
 """
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 from extensions import supabase_admin
+from modules.auth.routes import login_required
+from decorators.perfil_decorators import perfil_required
+from functools import wraps
 import os
 
 # Criar Blueprint
@@ -21,22 +24,33 @@ def check_api_bypass():
     request_key = request.headers.get('X-API-Key')
     return api_bypass_key and request_key == api_bypass_key
 
+def perfil_or_bypass_required(modulo, pagina=None):
+    """Decorator que permite acesso por perfil OU bypass key"""
+    def decorator(f):
+        decorated = perfil_required(modulo, pagina)(f)
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if check_api_bypass():
+                return f(*args, **kwargs)
+            return decorated(*args, **kwargs)
+        wrapper.__name__ = f.__name__
+        return wrapper
+    return decorator
+
 # ========================================
 # ROTAS HTML - GESTÃO DE VAGAS
 # ========================================
 
 @recrutamento_bp.route('/vagas')
+@login_required
+@perfil_required('rh', 'recrutamento')
 def gestao_vagas():
     """Página de gerenciamento de vagas"""
     print("\n" + "="*70)
     print("🔍 DEBUG: Acessando rota /rh/recrutamento/vagas")
     print("="*70)
     
-    if not check_api_bypass() and 'user' not in session:
-        print("⚠️ DEBUG: Usuário não autenticado, redirecionando para login")
-        return redirect(url_for('auth.login'))
-    
-    print("✅ DEBUG: Usuário autenticado ou bypass ativo")
+    print("✅ DEBUG: Usuário autenticado")
     
     try:
         print("\n1️⃣ Buscando vagas...")
@@ -121,11 +135,10 @@ def gestao_vagas():
 
 
 @recrutamento_bp.route('/vagas/<vaga_id>/candidatos')
+@login_required
+@perfil_required('rh', 'recrutamento')
 def gestao_candidatos(vaga_id):
     """Página Kanban de gestão de candidatos de uma vaga"""
-    if not check_api_bypass() and 'user' not in session:
-        return redirect(url_for('auth.login'))
-    
     try:
         # Buscar detalhes da vaga
         vaga_response = supabase_admin.table('rh_vagas')\
@@ -199,11 +212,9 @@ def gestao_candidatos(vaga_id):
 # ========================================
 
 @recrutamento_bp.route('/api/vagas', methods=['GET'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_list_vagas():
     """API: Listar todas as vagas"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_vagas')\
             .select('*')\
@@ -233,11 +244,9 @@ def api_list_vagas():
 
 
 @recrutamento_bp.route('/api/vagas/<vaga_id>', methods=['GET'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_get_vaga(vaga_id):
     """API: Buscar vaga por ID"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_vagas')\
             .select('*')\
@@ -255,11 +264,9 @@ def api_get_vaga(vaga_id):
 
 
 @recrutamento_bp.route('/api/vagas', methods=['POST'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_create_vaga():
     """API: Criar nova vaga"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json()
         
@@ -309,11 +316,9 @@ def api_create_vaga():
 
 
 @recrutamento_bp.route('/api/vagas/<vaga_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_update_vaga(vaga_id):
     """API: Atualizar vaga"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json(silent=True) or {}
         
@@ -368,11 +373,9 @@ def api_update_vaga(vaga_id):
 
 
 @recrutamento_bp.route('/api/vagas/<vaga_id>/status', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_update_vaga_status(vaga_id):
     """API: Alterar status da vaga (Aberta/Pausada/Fechada)"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json()
         novo_status = data.get('status', '').strip()
@@ -400,11 +403,9 @@ def api_update_vaga_status(vaga_id):
 
 
 @recrutamento_bp.route('/api/vagas/<vaga_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_delete_vaga(vaga_id):
     """API: Deletar vaga (com verificação de candidatos)"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         # Verificar se vaga tem candidatos
         candidatos_response = supabase_admin.table('rh_candidatos')\
@@ -439,11 +440,9 @@ def api_delete_vaga(vaga_id):
 # ========================================
 
 @recrutamento_bp.route('/api/candidatos', methods=['GET'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_list_candidatos():
     """API: Listar candidatos de uma vaga"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         vaga_id = request.args.get('vaga_id')
         
@@ -470,11 +469,9 @@ def api_list_candidatos():
 
 
 @recrutamento_bp.route('/api/candidatos/<candidato_id>/mover', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_mover_candidato(candidato_id):
     """API: Mover candidato para outro status (drag-and-drop no Kanban)"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json()
         novo_status = data.get('novo_status', '').strip()
@@ -538,11 +535,9 @@ def api_mover_candidato(candidato_id):
 
 
 @recrutamento_bp.route('/api/candidatos/<candidato_id>', methods=['GET'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_get_candidato(candidato_id):
     """API: Buscar detalhes de um candidato"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_candidatos')\
             .select('*')\
@@ -596,11 +591,9 @@ def api_get_observacoes(candidato_id):
 
 
 @recrutamento_bp.route('/api/candidatos/<candidato_id>/observacoes', methods=['POST'])
+@perfil_or_bypass_required('rh', 'recrutamento')
 def api_add_observacao(candidato_id):
     """API: Adicionar nova observação ao histórico do candidato"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json()
         nova_observacao = data.get('observacao', '').strip()

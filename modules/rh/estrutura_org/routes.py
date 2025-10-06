@@ -10,6 +10,8 @@ IMPORTANTE: Mapeamento de colunas do banco:
 
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session
 from extensions import supabase_admin
+from modules.auth.routes import login_required
+from decorators.perfil_decorators import perfil_required
 import os
 from datetime import datetime
 
@@ -36,11 +38,33 @@ def check_auth():
         return True
     return 'user' in session
 
+# Decorator personalizado que permite perfil OU bypass
+def perfil_or_bypass_required(modulo, pagina=None):
+    """
+    Decorator que permite acesso por perfil OU por API bypass
+    Usado para rotas que precisam de testes via API
+    """
+    def decorator(f):
+        # Aplicar primeiro o decorator de perfil
+        decorated = perfil_required(modulo, pagina)(f)
+        
+        # Wrapper para verificar bypass ANTES do perfil
+        def wrapper(*args, **kwargs):
+            if check_api_bypass():
+                return f(*args, **kwargs)
+            return decorated(*args, **kwargs)
+        
+        wrapper.__name__ = f.__name__
+        wrapper.__doc__ = f.__doc__
+        return wrapper
+    return decorator
+
 # ========================================
 # ROTA RAIZ - REDIRECT
 # ========================================
 
 @estrutura_org_bp.route('/')
+@login_required
 def index():
     """Rota raiz - redireciona para cargos"""
     return redirect(url_for('estrutura_org.gestao_cargos'))
@@ -50,11 +74,10 @@ def index():
 # ========================================
 
 @estrutura_org_bp.route('/cargos')
+@login_required
+@perfil_required('rh', 'estrutura_cargos')
 def gestao_cargos():
     """Página de gestão de cargos"""
-    if not check_auth():
-        return redirect('/login')
-    
     try:
         response = supabase_admin.table('rh_cargos')\
             .select('*')\
@@ -84,11 +107,10 @@ def gestao_cargos():
 # ========================================
 
 @estrutura_org_bp.route('/departamentos')
+@login_required
+@perfil_required('rh', 'estrutura_departamentos')
 def gestao_departamentos():
     """Página de gestão de departamentos"""
-    if not check_auth():
-        return redirect('/login')
-    
     try:
         response = supabase_admin.table('rh_departamentos')\
             .select('*')\
@@ -116,11 +138,9 @@ def gestao_departamentos():
 # ========================================
 
 @estrutura_org_bp.route('/api/cargos', methods=['GET'])
+@perfil_or_bypass_required('rh', 'estrutura_cargos')
 def api_list_cargos():
     """API: Listar todos os cargos"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_cargos')\
             .select('*')\
@@ -141,11 +161,9 @@ def api_list_cargos():
 
 
 @estrutura_org_bp.route('/api/cargos/<cargo_id>', methods=['GET'])
+@perfil_or_bypass_required('rh', 'estrutura_cargos')
 def api_get_cargo(cargo_id):
     """API: Buscar cargo específico por ID"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_cargos')\
             .select('*')\
@@ -163,11 +181,9 @@ def api_get_cargo(cargo_id):
 
 
 @estrutura_org_bp.route('/api/cargos', methods=['POST'])
+@perfil_or_bypass_required('rh', 'estrutura_cargos')
 def api_create_cargo():
     """API: Criar novo cargo"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json()
         
@@ -210,11 +226,9 @@ def api_create_cargo():
 
 
 @estrutura_org_bp.route('/api/cargos/<cargo_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'estrutura_cargos')
 def api_update_cargo(cargo_id):
     """API: Atualizar cargo"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json(silent=True) or {}
         
@@ -270,11 +284,9 @@ def api_update_cargo(cargo_id):
 
 
 @estrutura_org_bp.route('/api/cargos/<cargo_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'estrutura_cargos')
 def api_delete_cargo(cargo_id):
     """API: Deletar cargo (com verificação de dependências)"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         # Verificar se cargo existe
         check_response = supabase_admin.table('rh_cargos')\
@@ -321,11 +333,9 @@ def api_delete_cargo(cargo_id):
 # ========================================
 
 @estrutura_org_bp.route('/api/departamentos', methods=['GET'])
+@perfil_or_bypass_required('rh', 'estrutura_departamentos')
 def api_list_departamentos():
     """API: Listar todos os departamentos"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_departamentos')\
             .select('*')\
@@ -346,11 +356,9 @@ def api_list_departamentos():
 
 
 @estrutura_org_bp.route('/api/departamentos/<departamento_id>', methods=['GET'])
+@perfil_or_bypass_required('rh', 'estrutura_departamentos')
 def api_get_departamento(departamento_id):
     """API: Buscar departamento específico por ID"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         response = supabase_admin.table('rh_departamentos')\
             .select('*')\
@@ -369,11 +377,9 @@ def api_get_departamento(departamento_id):
 
 
 @estrutura_org_bp.route('/api/departamentos', methods=['POST'])
+@perfil_or_bypass_required('rh', 'estrutura_departamentos')
 def api_create_departamento():
     """API: Criar novo departamento"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json()
         
@@ -416,11 +422,9 @@ def api_create_departamento():
 
 
 @estrutura_org_bp.route('/api/departamentos/<departamento_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'estrutura_departamentos')
 def api_update_departamento(departamento_id):
     """API: Atualizar departamento"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         data = request.get_json(silent=True) or {}
         
@@ -476,11 +480,9 @@ def api_update_departamento(departamento_id):
 
 
 @estrutura_org_bp.route('/api/departamentos/<departamento_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'estrutura_departamentos')
 def api_delete_departamento(departamento_id):
     """API: Deletar departamento (com verificação de dependências)"""
-    if not check_api_bypass() and 'user' not in session:
-        return jsonify({'success': False, 'message': 'Não autenticado'}), 401
-    
     try:
         # Verificar se departamento existe
         check_response = supabase_admin.table('rh_departamentos')\

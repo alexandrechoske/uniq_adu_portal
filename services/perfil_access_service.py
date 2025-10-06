@@ -13,6 +13,7 @@ class PerfilAccessService:
         'imp': 'importacoes',  # Mapear 'imp' para 'importacoes' (com S para coincidir com menu)
         'exp': 'exportacao',  # Mapear 'exp' para 'exportacao' (futuro)
         'con': 'consultoria', # Mapear 'con' para 'consultoria' (futuro)
+        'rh': 'rh',  # Mapear 'rh' para 'rh' (recursos humanos)
     }
     
     # Mapeamento de códigos de páginas para endpoints/módulos
@@ -34,7 +35,14 @@ class PerfilAccessService:
         'conciliacao_lancamentos': 'fin_conciliacao_lancamentos',  # Conciliação de Lançamentos
         'categorizacao_clientes': 'fin_categorizacao_clientes',  # Categorização de Clientes
         'projecoes_metas': 'fin_projecoes_metas',  # Projeções e Metas
-        # 'dashboard_executivo' já mapeado acima (compartilhado)
+        
+        # Páginas do módulo RH (rh)
+        'rh_dashboard': 'rh_dashboard',  # Dashboard Executivo RH
+        'rh_colaboradores': 'rh_colaboradores',  # Gestão de Colaboradores
+        'rh_estrutura_cargos': 'rh_estrutura_cargos',  # Gestão de Cargos
+        'rh_estrutura_departamentos': 'rh_estrutura_departamentos',  # Gestão de Departamentos
+        'rh_recrutamento': 'rh_recrutamento',  # Recrutamento e Seleção
+        'rh_desempenho': 'rh_desempenho',  # Avaliações de Desempenho
     }
     
     @staticmethod
@@ -60,12 +68,14 @@ class PerfilAccessService:
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
                 'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh',
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
-                'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
+                'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual',
+                'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 'rh_estrutura_departamentos', 
+                'rh_recrutamento', 'rh_desempenho'
             ]
             print(f"[ACCESS_SERVICE] Master Admin (master_admin) - módulos disponíveis: {accessible_modules}")
             return accessible_modules
         
-        # Module Admins: interno_unique + admin_operacao/admin_financeiro
+        # Module Admins: interno_unique + admin_operacao/admin_financeiro/admin_recursos_humanos
         if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
             accessible_modules = set()
             
@@ -86,6 +96,14 @@ class PerfilAccessService:
                     'despesas_anual', 'faturamento_anual', 'usuarios'
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_financeiro) - módulos disponíveis: {list(accessible_modules)}")
+            
+            elif user_perfil_principal == 'admin_recursos_humanos':
+                # Admin de RH - APENAS módulos de RH + gestão de usuários
+                accessible_modules.update([
+                    'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho', 'usuarios'
+                ])
+                print(f"[ACCESS_SERVICE] Module Admin (admin_recursos_humanos) - módulos disponíveis: {list(accessible_modules)}")
             
             return list(accessible_modules)
         
@@ -297,6 +315,14 @@ class PerfilAccessService:
                 # Mapear módulos financeiros
                 financeiro_modules = ['financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual']
                 user_manages_module = modulo_codigo in financeiro_modules
+            
+            elif user_perfil_principal == 'admin_recursos_humanos':
+                # Mapear módulos de RH
+                rh_modules = [
+                    'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho'
+                ]
+                user_manages_module = modulo_codigo in rh_modules
             
             # Todos os Module Admins podem acessar gestão de usuários
             if modulo_codigo == 'usuarios':

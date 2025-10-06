@@ -5,6 +5,7 @@ Endpoints para visualização de indicadores executivos de RH
 
 from flask import render_template, jsonify, request
 from modules.auth.routes import login_required
+from decorators.perfil_decorators import perfil_required
 from . import dashboard_rh_bp
 from extensions import supabase_admin as supabase
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ from dateutil.relativedelta import relativedelta
 
 @dashboard_rh_bp.route('/')
 @login_required
+@perfil_required('rh', 'dashboard')
 def dashboard_executivo():
     """
     Página principal do Dashboard Executivo de RH
@@ -50,6 +52,7 @@ def dashboard_executivo():
 
 @dashboard_rh_bp.route('/api/dados', methods=['GET'])
 @login_required
+@perfil_required('rh', 'dashboard')
 def api_dados_dashboard():
     """
     API: Retorna dados consolidados do dashboard
@@ -108,6 +111,7 @@ def api_dados_dashboard():
 
 @dashboard_rh_bp.route('/api/refresh', methods=['POST'])
 @login_required
+@perfil_required('rh', 'dashboard')
 def api_refresh_dados():
     """
     API: Força atualização dos dados do dashboard

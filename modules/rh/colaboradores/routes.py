@@ -5,6 +5,8 @@ Gerencia o CRUD completo de colaboradores
 
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash
 from extensions import supabase_admin
+from modules.auth.routes import login_required
+from decorators.perfil_decorators import perfil_required
 from datetime import datetime
 import os
 
@@ -32,16 +34,36 @@ def check_auth():
         return True
     return 'user' in session
 
+# Decorator personalizado que permite perfil OU bypass
+def perfil_or_bypass_required(modulo, pagina=None):
+    """
+    Decorator que permite acesso por perfil OU por API bypass
+    Usado para rotas que precisam de testes via API
+    """
+    def decorator(f):
+        # Aplicar primeiro o decorator de perfil
+        decorated = perfil_required(modulo, pagina)(f)
+        
+        # Wrapper para verificar bypass ANTES do perfil
+        def wrapper(*args, **kwargs):
+            if check_api_bypass():
+                return f(*args, **kwargs)
+            return decorated(*args, **kwargs)
+        
+        wrapper.__name__ = f.__name__
+        wrapper.__doc__ = f.__doc__
+        return wrapper
+    return decorator
+
 # =====================================================================
 # ROTAS DE VISUALIZAÇÃO (HTML)
 # =====================================================================
 
 @colaboradores_bp.route('/')
+@login_required
+@perfil_required('rh', 'colaboradores')
 def lista_colaboradores():
     """Página principal - Lista de colaboradores"""
-    if not check_auth():
-        return redirect(url_for('auth.login'))
-    
     try:
         # Buscar todos os colaboradores usando a view
         response = supabase_admin.table('vw_colaboradores_atual')\
@@ -224,11 +246,9 @@ def visualizar_colaborador(colaborador_id):
 # =====================================================================
 
 @colaboradores_bp.route('/api/colaboradores', methods=['GET'])
+@perfil_or_bypass_required('rh', 'colaboradores')
 def api_get_colaboradores():
     """API: Lista todos os colaboradores"""
-    if not check_auth():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
     try:
         status = request.args.get('status')
         
@@ -249,11 +269,9 @@ def api_get_colaboradores():
         return jsonify({'error': str(e)}), 500
 
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>', methods=['GET'])
+@perfil_or_bypass_required('rh', 'colaboradores')
 def api_get_colaborador(colaborador_id):
     """API: Detalhes de um colaborador específico"""
-    if not check_auth():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
     try:
         colab_response = supabase_admin.table('rh_colaboradores')\
             .select('*')\
@@ -273,11 +291,9 @@ def api_get_colaborador(colaborador_id):
         return jsonify({'error': str(e)}), 500
 
 @colaboradores_bp.route('/api/colaboradores', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
 def api_create_colaborador():
     """API: Criar novo colaborador"""
-    if not check_auth():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
     try:
         data = request.get_json()
         
@@ -363,11 +379,9 @@ def api_create_colaborador():
         return jsonify({'error': str(e)}), 500
 
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'colaboradores')
 def api_update_colaborador(colaborador_id):
     """API: Atualizar colaborador existente"""
-    if not check_auth():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
     try:
         data = request.get_json()
         
@@ -452,11 +466,9 @@ def api_update_colaborador(colaborador_id):
         return jsonify({'error': str(e)}), 500
 
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'colaboradores')
 def api_delete_colaborador(colaborador_id):
     """API: Deletar colaborador (soft delete - marca como inativo)"""
-    if not check_auth():
-        return jsonify({'error': 'Unauthorized'}), 401
-    
     try:
         # Verificar se colaborador existe
         existing = supabase_admin.table('rh_colaboradores')\
