@@ -25,6 +25,9 @@
     <!-- CORES OFICIAIS DA UNIQUE ADUANEIRA -->
     <link href="{{ url_for('static', filename='css/unique-colors.css') }}" rel="stylesheet">
     
+    <!-- Language Selector CSS -->
+    <link href="{{ url_for('static', filename='css/language-selector.css') }}" rel="stylesheet">
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -691,6 +694,9 @@
                             </div>
                         </div>
 
+                        <!-- Seletor de Idioma -->
+                        {% include 'shared/language_selector.html' %}
+
                         <!-- Botão de Sair -->
                         <a href="{{ url_for('auth.logout') }}"
                            title="Sair do sistema"
@@ -1273,6 +1279,9 @@
     </script>
     <script src="{{ url_for('static', filename='js/unified-loading.js') }}"></script>
     <script src="{{ url_for('static', filename='js/page-validator.js') }}"></script>
+    
+    <!-- Language Selector Script -->
+    <script src="{{ url_for('static', filename='js/language-selector.js') }}"></script>
     {% endif %}
 </body>
 </html>

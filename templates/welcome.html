@@ -1,20 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Portal UniSystem{% endblock %}
+{% block title %}{{ t('welcome.title') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 text-center">
-        <h1 class="display-4 mb-4">Bem-vindo ao Portal UniSystem</h1>
+        <h1 class="display-4 mb-4">{{ t('dashboard.welcome_message') }}</h1>
         <p class="lead mb-5">
-            Sistema integrado para gestão de operações aduaneiras.
-            Acesse o dashboard para visualizar suas operações e relatórios.
+            {{ t('welcome.description') }}
         </p>
         
         {% if not session.get('user') %}
             <div class="d-flex justify-content-center gap-3">
                 <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
-                    Acessar o Sistema
+                    {{ t('welcome.access_system') }}
                 </a>
             </div>
         {% else %}
@@ -22,10 +21,10 @@
                 <div class="col-md-4">
                     <div class="card mb-4">
                         <div class="card-body text-center">
-                            <h5 class="card-title">Dashboard</h5>
-                            <p class="card-text">Visualize suas operações e estatísticas.</p>
+                            <h5 class="card-title">{{ t('welcome.dashboard_card_title') }}</h5>
+                            <p class="card-text">{{ t('welcome.dashboard_card_desc') }}</p>
                             <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
-                                Acessar Dashboard
+                                {{ t('welcome.access_dashboard') }}
                             </a>
                         </div>
                     </div>
@@ -33,10 +32,10 @@
                 <div class="col-md-4">
                     <div class="card mb-4">
                         <div class="card-body text-center">
-                            <h5 class="card-title">Relatórios</h5>
-                            <p class="card-text">Gere relatórios personalizados.</p>
+                            <h5 class="card-title">{{ t('welcome.reports_card_title') }}</h5>
+                            <p class="card-text">{{ t('welcome.reports_card_desc') }}</p>
                             <a href="{{ url_for('relatorios.index') }}" class="btn btn-primary">
-                                Ver Relatórios
+                                {{ t('welcome.view_reports') }}
                             </a>
                         </div>
                     </div>
@@ -45,10 +44,10 @@
                     <div class="col-md-4">
                         <div class="card mb-4">
                             <div class="card-body text-center">
-                                <h5 class="card-title">Usuários</h5>
-                                <p class="card-text">Gerencie usuários do sistema.</p>
+                                <h5 class="card-title">{{ t('welcome.users_card_title') }}</h5>
+                                <p class="card-text">{{ t('welcome.users_card_desc') }}</p>
                                 <a href="{{ url_for('usuarios.index') }}" class="btn btn-primary">
-                                    Gerenciar Usuários
+                                    {{ t('welcome.manage_users') }}
                                 </a>
                             </div>
                         </div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Executivo - Portal UniSystem{% endblock %}
+{% block title %}{{ t('importacoes.dashboard_executivo.title') }} - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard.css') }}">
@@ -36,23 +36,23 @@
     <div class="actions-bar module-header-importacoes">
         <div class="actions-left">
             {{ get_breadcrumb_with_module_colors([
-                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
-                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
-                {'name': 'Dashboard Executivo', 'icon': 'mdi mdi-chart-line'}
+                {'name': t('menu.main_menu'), 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': t('modules.dashboard_executivo.title'), 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
+                {'name': t('importacoes.dashboard_executivo.title'), 'icon': 'mdi mdi-chart-line'}
             ], 'importacoes') }}
             <!-- Resumo de Filtros -->
             <div id="filter-summary" class="filter-summary">
-                <span id="filter-summary-text">Analisando dados completos</span>
+                <span id="filter-summary-text">{{ t('importacoes.dashboard_executivo.subtitle') }}</span>
             </div>
         </div>
         <div class="actions-right">
             <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
-                Remover Filtros
+                {{ t('importacoes.dashboard_operacional.limpar_filtros') }}
             </button>
             <button id="open-filters" class="btn btn-light">
                 <i class="mdi mdi-filter"></i>
-                Filtros
+                {{ t('importacoes.dashboard_operacional.filtros') }}
             </button>
         </div>
     </div>
@@ -98,41 +98,41 @@
                 <i class="mdi mdi-shield-check"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Agd Liberação</p>
+                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.agd_liberacao') }}</p>
                 <p class="kpi-value" id="kpi-agd-liberacao">-</p>
             </div>
         </div>
         
         <!-- Card 5: Agd Fechamento -->
-        <div class="kpi-card kpi-success kpi-clickable" data-kpi-status="agd_fechamento" title="Clique para filtrar processos aguardando fechamento">
+        <div class="kpi-card kpi-success kpi-clickable" data-kpi-status="agd_fechamento" title="{{ t('importacoes.dashboard_executivo.click_filtrar_agd_fechamento') }}">
             <div class="kpi-icon">
                 <i class="mdi mdi-file-check"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Agd Fechamento</p>
+                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.agd_fechamento') }}</p>
                 <p class="kpi-value" id="kpi-agd-fechamento">-</p>
             </div>
         </div>
         
         <!-- Card 6: Chegando Esta Semana -->
-        <div class="kpi-card kpi-teal kpi-clickable" data-kpi-status="chegando_semana" title="Clique para filtrar processos chegando esta semana">
+        <div class="kpi-card kpi-teal kpi-clickable" data-kpi-status="chegando_semana" title="{{ t('importacoes.dashboard_executivo.click_filtrar_chegando_semana') }}">
             <div class="kpi-icon">
                 <i class="mdi mdi-calendar-week"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Chegando Esta Semana</p>
+                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.chegando_esta_semana') }}</p>
                 <p class="kpi-value" id="kpi-chegando-semana">-</p>
                 <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
             </div>
         </div>
         
         <!-- Card 7: Chegando Este Mês -->
-        <div class="kpi-card kpi-emerald kpi-clickable" data-kpi-status="chegando_mes" title="Clique para filtrar processos chegando este mês">
+        <div class="kpi-card kpi-emerald kpi-clickable" data-kpi-status="chegando_mes" title="{{ t('importacoes.dashboard_executivo.click_filtrar_chegando_mes') }}">
             <div class="kpi-icon">
                 <i class="mdi mdi-calendar-month"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Chegando Este Mês</p>
+                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.chegando_este_mes') }}</p>
                 <p class="kpi-value" id="kpi-chegando-mes">-</p>
                 <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
             </div>
@@ -144,7 +144,7 @@
                 <i class="mdi mdi-currency-usd"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">Total Despesas</p>
+                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.total_despesas') }}</p>
                 <p class="kpi-value" id="kpi-total-despesas">-</p>
             </div>
         </div>
@@ -161,11 +161,11 @@
         <!-- Monthly Evolution Chart -->
         <div class="chart-section chart-linha-1">
             <div class="chart-header">
-                <h2 class="chart-title">Evolução Mensal</h2>
+                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.evolucao_mensal') }}</h2>
                 <div class="period-controls">
-                    <button class="period-btn active" data-period="mensal">Mensal</button>
-                    <button class="period-btn" data-period="semanal">Semanal</button>
-                    <button class="period-btn" data-period="diario">Diário</button>
+                    <button class="period-btn active" data-period="mensal">{{ t('importacoes.dashboard_executivo.mensal') }}</button>
+                    <button class="period-btn" data-period="semanal">{{ t('importacoes.dashboard_executivo.semanal') }}</button>
+                    <button class="period-btn" data-period="diario">{{ t('importacoes.dashboard_executivo.diario') }}</button>
                 </div>
             </div>
             <div class="chart-container">
@@ -178,7 +178,7 @@
         <div class="chart-section chart-linha-1">
             <div class="chart-header">
                 <h2 class="chart-title">
-                    Países de Procedência
+                    {{ t('importacoes.dashboard_executivo.paises_procedencia') }}
                 </h2>
             </div>
             <div class="table-container">
@@ -186,9 +186,9 @@
                 <table id="paises-procedencia-table" class="data-table">
                     <thead>
                         <tr>
-                            <th>País</th>
-                            <th class="text-center">Total Processos</th>
-                            <th class="text-center">Total Custo</th>
+                            <th>{{ t('importacoes.dashboard_executivo.pais') }}</th>
+                            <th class="text-center">{{ t('importacoes.dashboard_executivo.total_processos') }}</th>
+                            <th class="text-center">{{ t('importacoes.dashboard_executivo.total_custo') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -201,7 +201,7 @@
         <!-- Destinos por Processos (URF Chart) -->
         <div class="chart-section chart-linha-1">
             <div class="chart-header">
-                <h2 class="chart-title">Destinos por Processos</h2>
+                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.destinos_processos') }}</h2>
             </div>
             <div class="chart-container">
                 <div id="urf-loading" class="component-loading"><div class="spinner"></div></div>
@@ -215,7 +215,7 @@
         <!-- Status Chart -->
         <div class="chart-section chart-linha-2">
             <div class="chart-header">
-                <h2 class="chart-title">Distribuição por Status</h2>
+                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.distribuicao_status') }}</h2>
             </div>
             <div class="chart-container">
                 <div id="status-loading" class="component-loading"><div class="spinner"></div></div>
@@ -226,7 +226,7 @@
         <!-- Modal Chart -->
         <div class="chart-section chart-linha-2">
             <div class="chart-header">
-                <h2 class="chart-title">Processos e Custos por Modal</h2>
+                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.processos_custos_modal') }}</h2>
             </div>
             <div class="chart-container">
                 <div id="modal-loading" class="component-loading"><div class="spinner"></div></div>
@@ -237,17 +237,17 @@
         <!-- Material Chart/Table - Apenas para usuários KINGSPAN/CISER -->
         <div class="chart-section chart-linha-2" id="material-chart-section" style="display: none;">
             <div class="chart-header">
-                <h2 class="chart-title">Principais Materiais</h2>
+                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.principais_materiais') }}</h2>
             </div>
             <div class="table-container">
                 <div id="material-loading" class="component-loading"><div class="spinner"></div></div>
                 <table id="principais-materiais-table" class="data-table">
                     <thead>
                         <tr>
-                            <th>Material</th>
-                            <th>Processos</th>
-                            <th>Custo Total</th>
-                            <th>Próxima Chegada</th>
+                            <th>{{ t('importacoes.dashboard_executivo.material') }}</th>
+                            <th>{{ t('importacoes.dashboard_executivo.processos') }}</th>
+                            <th>{{ t('importacoes.dashboard_executivo.custo_total') }}</th>
+                            <th>{{ t('importacoes.dashboard_executivo.proxima_chegada') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -263,13 +263,13 @@
         <div class="enhanced-table-header">
             <h2 class="enhanced-table-title">
                 <i class="mdi mdi-format-list-bulleted"></i>
-                Operações Recentes
+                {{ t('importacoes.dashboard_executivo.operacoes_recentes') }}
             </h2>
             <div class="enhanced-table-controls">
                 <div class="enhanced-search-container">
                     <i class="mdi mdi-magnify enhanced-search-icon"></i>
                     <input type="text" id="recent-operations-search" class="enhanced-search-input" 
-                           placeholder="Buscar por processo, importador, material...">
+                           placeholder="{{ t('importacoes.dashboard_executivo.buscar_processo') }}">
                 </div>
             </div>
         </div>
@@ -278,17 +278,17 @@
             <table id="recent-operations-table" class="enhanced-data-table">
                 <thead>
                     <tr>
-                        <th>Ações</th>
-                        <th class="sortable" data-sort="ref_importador">Pedido</th>
-                        <th class="sortable" data-sort="importador">Importador</th>
-                        <th class="sortable" data-sort="data_abertura">Data Abertura</th>
-                        <th class="sortable" data-sort="exportador_fornecedor">Exportador</th>
-                        <th class="sortable" data-sort="modal">Modal</th>
-                        <th class="sortable" data-sort="status">Status</th>
-                        <th class="sortable" data-sort="custo_total">Custo Total</th>
-                        <th class="sortable" data-sort="data_chegada">Data Chegada</th>
-                        <th class="sortable" data-sort="material">Material</th>
-                        <th class="sortable" data-sort="urf_despacho">URF</th>
+                        <th>{{ t('importacoes.dashboard_executivo.acoes') }}</th>
+                        <th class="sortable" data-sort="ref_importador">{{ t('importacoes.dashboard_executivo.pedido') }}</th>
+                        <th class="sortable" data-sort="importador">{{ t('importacoes.dashboard_executivo.importador') }}</th>
+                        <th class="sortable" data-sort="data_abertura">{{ t('importacoes.dashboard_executivo.data_abertura') }}</th>
+                        <th class="sortable" data-sort="exportador_fornecedor">{{ t('importacoes.dashboard_executivo.exportador') }}</th>
+                        <th class="sortable" data-sort="modal">{{ t('importacoes.dashboard_operacional.modal') }}</th>
+                        <th class="sortable" data-sort="status">{{ t('importacoes.dashboard_operacional.status') }}</th>
+                        <th class="sortable" data-sort="custo_total">{{ t('importacoes.dashboard_executivo.custo_total') }}</th>
+                        <th class="sortable" data-sort="data_chegada">{{ t('importacoes.dashboard_executivo.data_chegada') }}</th>
+                        <th class="sortable" data-sort="material">{{ t('importacoes.dashboard_executivo.material') }}</th>
+                        <th class="sortable" data-sort="urf_despacho">{{ t('importacoes.dashboard_executivo.urf') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -303,7 +303,7 @@
         <div class="modal-container">
             <!-- Modal Header -->
             <div class="modal-header">
-                <h2 class="modal-title" id="modal-title">Detalhes do Processo</h2>
+                <h2 class="modal-title" id="modal-title">{{ t('importacoes.dashboard_executivo.detalhes_processo') }}</h2>
                 <button class="modal-close" id="modal-close">
                     <i class="mdi mdi-close"></i>
                 </button>
@@ -317,37 +317,37 @@
                         <div class="timeline-icon">
                             <i class="mdi mdi-file-document-outline"></i>
                         </div>
-                        <div class="timeline-label">Abertura</div>
+                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.abertura') }}</div>
                     </div>
                     <div class="timeline-step" data-step="2">
                         <div class="timeline-icon">
                             <i class="mdi mdi-truck"></i>
                         </div>
-                        <div class="timeline-label">Embarque</div>
+                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.embarque') }}</div>
                     </div>
                     <div class="timeline-step" data-step="3">
                         <div class="timeline-icon">
                             <i class="mdi mdi-airplane-landing"></i>
                         </div>
-                        <div class="timeline-label">Chegada</div>
+                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.chegada') }}</div>
                     </div>
                     <div class="timeline-step" data-step="4">
                         <div class="timeline-icon">
                             <i class="mdi mdi-file-document-edit"></i>
                         </div>
-                        <div class="timeline-label">Registro</div>
+                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.registro') }}</div>
                     </div>
                     <div class="timeline-step" data-step="5">
                         <div class="timeline-icon">
                             <i class="mdi mdi-check-circle-outline"></i>
                         </div>
-                        <div class="timeline-label">Desembaraço</div>
+                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.desembaraco') }}</div>
                     </div>
                     <div class="timeline-step" data-step="6">
                         <div class="timeline-icon">
                             <i class="mdi mdi-flag-checkered"></i>
                         </div>
-                        <div class="timeline-label">Finalizado</div>
+                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.finalizado') }}</div>
                     </div>
                 </div>
 
@@ -355,38 +355,38 @@
                 <div class="modal-cards">
                     <!-- Card 1: Informações Gerais -->
                     <div class="info-card">
-                        <h3 class="card-title">Informações Gerais</h3>
+                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_gerais') }}</h3>
                         <div class="card-grid-3">
                             <div class="info-item">
-                                <label>Ref. Unique:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.ref_unique') }}:</label>
                                 <span id="detail-ref-unique">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Ref. Importador:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.ref_importador') }}:</label>
                                 <span id="detail-ref-importador">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Data de Abertura:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.data_abertura') }}:</label>
                                 <span id="detail-data-abertura">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Importador:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.importador') }}:</label>
                                 <span id="detail-importador">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Exportador:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.exportador') }}:</label>
                                 <span id="detail-exportador">-</span>
                             </div>
                             <div class="info-item">
-                                <label>CNPJ:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.cnpj') }}:</label>
                                 <span id="detail-cnpj">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Status Atual:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.status_atual') }}:</label>
                                 <span id="detail-status" class="status-badge">-</span>
                             </div>
                             <div class="info-item">
-                                <label>País de Procedência:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.pais_procedencia') }}:</label>
                                 <span id="detail-pais-procedencia" class="country-info">
                                     <img id="detail-country-flag" src="" alt="" class="country-flag" style="width: 20px; height: 15px; margin-right: 8px; display: none;">
                                     <span id="detail-country-name">-</span>
@@ -397,41 +397,41 @@
 
                     <!-- Card 2: Detalhes da Carga e Transporte -->
                     <div class="info-card">
-                        <h3 class="card-title">Detalhes da Carga e Transporte</h3>
+                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.detalhes_carga_transporte') }}</h3>
                         <div class="card-grid-2">
                             <!-- Linha 1: Modal - Peso -->
                             <div class="info-item">
-                                <label>Modal:</label>
+                                <label>{{ t('importacoes.dashboard_operacional.modal') }}:</label>
                                 <span id="detail-modal">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Peso Bruto (Kg):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.peso_bruto') }}:</label>
                                 <span id="detail-peso-bruto">-</span>
                             </div>
                             
                             <!-- Linha 2: Data Embarque - Data Chegada -->
                             <div class="info-item">
-                                <label>Data de Embarque:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.data_embarque') }}:</label>
                                 <span id="detail-data-embarque">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Data de Chegada:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.data_chegada') }}:</label>
                                 <span id="detail-data-chegada">-</span>
                             </div>
                             
                             <!-- Linha 3: Data Fechamento - Transit Time -->
                             <div class="info-item">
-                                <label>Data de Fechamento:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.data_fechamento') }}:</label>
                                 <span id="detail-data-fechamento">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Transit Time (dias):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.transit_time') }}:</label>
                                 <span id="detail-transit-time">-</span>
                             </div>
                             
                             <!-- Linha 4: Containers (ocupa toda a linha) -->
                             <div class="info-item container-item" style="grid-column: 1 / -1;">
-                                <label>Container(s):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.containers') }}:</label>
                                 <div id="detail-container" class="container-list">-</div>
                             </div>
                         </div>
@@ -440,26 +440,26 @@
 
                     <!-- Card 3: Informações Aduaneiras -->
                     <div class="info-card">
-                        <h3 class="card-title">Informações Aduaneiras</h3>
+                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_aduaneiras') }}</h3>
                         <div class="card-grid-2">
                             <div class="info-item">
-                                <label>Número da DI:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.numero_di') }}:</label>
                                 <span id="detail-numero-di">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Data de Registro DI:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.data_registro_di') }}:</label>
                                 <span id="detail-data-registro">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Canal:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.canal') }}:</label>
                                 <span id="detail-canal">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Data do Desembaraço:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.data_desembaraco') }}:</label>
                                 <span id="detail-data-desembaraco">-</span>
                             </div>
                             <div class="info-item">
-                                <label>URF de Despacho:</label>
+                                <label>{{ t('importacoes.dashboard_executivo.urf_despacho') }}:</label>
                                 <span id="detail-urf-despacho">-</span>
                             </div>
                         </div>
@@ -467,30 +467,30 @@
 
                     <!-- Card 4: Resumo Financeiro -->
                     <div class="info-card">
-                        <h3 class="card-title">Resumo Financeiro</h3>
+                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.resumo_financeiro') }}</h3>
                         <div class="card-grid-2">
                             <div class="info-item">
-                                <label>Valor CIF (R$):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.valor_cif') }}:</label>
                                 <span id="detail-valor-cif">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Frete Internacional (R$):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.frete_internacional') }}:</label>
                                 <span id="detail-frete-inter">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Armazenagem (R$):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.armazenagem') }}:</label>
                                 <span id="detail-armazenagem">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Honorários (R$):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.honorarios') }}:</label>
                                 <span id="detail-honorarios">-</span>
                             </div>
                             <div class="info-item">
-                                <label>Outras Despesas (R$):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.outras_despesas') }}:</label>
                                 <span id="detail-outras-despesas">-</span>
                             </div>
                             <div class="info-item total-item">
-                                <label>Custo Total (R$):</label>
+                                <label>{{ t('importacoes.dashboard_executivo.custo_total') }}:</label>
                                 <span id="detail-custo-total" class="total-value">-</span>
                             </div>
                         </div>
@@ -500,7 +500,7 @@
                     <div class="info-card">
                         <h3 class="card-title">
                             <i class="mdi mdi-file-document-multiple"></i>
-                            Documentos Anexados
+                            {{ t('importacoes.dashboard_executivo.documentos_anexados') }}
                         </h3>
                         
                         <!-- Lista de documentos -->
@@ -508,7 +508,7 @@
                             <div class="documents-list" id="documents-list">
                                 <div class="no-documents">
                                     <i class="mdi mdi-file-document-outline"></i>
-                                    <p>Carregando documentos...</p>
+                                    <p>{{ t('importacoes.dashboard_executivo.carregando_documentos') }}</p>
                                 </div>
                             </div>
                             
@@ -516,7 +516,7 @@
                             <div class="upload-document-section" id="upload-section" style="display: none;">
                                 <button type="button" class="btn-upload" id="upload-document-btn">
                                     <i class="mdi mdi-plus"></i>
-                                    Anexar Documento
+                                    {{ t('importacoes.dashboard_executivo.anexar_documento') }}
                                 </button>
                             </div>
                         </div>
@@ -530,7 +530,7 @@
     <div id="document-upload-modal" class="document-upload-modal">
         <div class="upload-modal-content">
             <div class="upload-modal-header">
-                <h3>Anexar Documento</h3>
+                <h3>{{ t('importacoes.dashboard_executivo.anexar_documento') }}</h3>
                 <button type="button" class="close-upload-btn" id="close-upload-modal">
                     <i class="mdi mdi-close"></i>
                 </button>
@@ -538,14 +538,14 @@
             
             <form id="document-upload-form" enctype="multipart/form-data">
                 <div class="upload-form-group">
-                    <label for="document-file">Selecionar Arquivo *</label>
+                    <label for="document-file">{{ t('importacoes.dashboard_executivo.selecionar_arquivo') }} *</label>
                     <div class="file-input-wrapper">
                         <input type="file" id="document-file" name="file" class="file-input-custom" required 
                                accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.xlsx,.xls,.docx,.doc,.txt,.csv,.zip">
                         <label for="document-file" class="file-input-label">
                             <i class="mdi mdi-cloud-upload"></i>
-                            <strong>Clique para selecionar</strong> ou arraste o arquivo aqui
-                            <br><small>Tipos permitidos: PDF, Imagens, Excel, Word, TXT, CSV, ZIP (máx. 50MB)</small>
+                            <strong>{{ t('importacoes.dashboard_executivo.clique_selecionar') }}</strong> {{ t('importacoes.dashboard_executivo.ou_arraste') }}
+                            <br><small>{{ t('importacoes.dashboard_executivo.tipos_permitidos') }}</small>
                         </label>
                     </div>
                     <div id="file-preview" class="file-preview"></div>

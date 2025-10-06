@@ -3,6 +3,8 @@ pycache/
 
 *.py[cod]
 
+*.md
+
 *.pyc
 
 Virtual environment (incluindo sua pasta 'unique')
