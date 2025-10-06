@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Departamentos - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="rh-container">
+    <!-- Actions Bar -->
+    <div class="actions-bar module-header-rh">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/" style="color: #6f42c1;"><i class="mdi mdi-home-outline"></i> Início</a></li>
+                <li class="breadcrumb-item"><a href="#" style="color: #6f42c1;">RH</a></li>
+                <li class="breadcrumb-item active">Gestão de Departamentos</li>
+            </ol>
+        </nav>
+        <div class="actions-buttons">
+            <button class="btn btn-rh-primary" data-bs-toggle="modal" data-bs-target="#modalDepartamento" onclick="abrirModalNovoDepartamento()">
+                <i class="mdi mdi-plus"></i> Novo Departamento
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-section">
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">Resumo Geral</h5>
+            <div class="kpi-grid-rh">
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-domain"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total de Departamentos</p>
+                        <p class="kpi-value">{{ total_departamentos }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-danger">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-cash-multiple"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Com Centro de Custo</p>
+                        <p class="kpi-value">{{ com_centro_custo }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-check-circle"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Sistema</p>
+                        <p class="kpi-value">{{ total_departamentos + com_centro_custo }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Busca e Filtros -->
+    <div class="card rh-card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="mdi mdi-magnify text-muted"></i>
+                        </span>
+                        <input type="text" id="searchInputDepto" class="form-control border-start-0" 
+                               placeholder="Buscar por nome ou centro de custo...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosDepto()">
+                        <i class="mdi mdi-eraser"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Departamentos -->
+    <div class="card rh-card">
+        <div class="card-body p-0">
+            {% if departamentos|length > 0 %}
+            <div class="table-responsive">
+                <table class="table mb-0" id="tableDepartamentos">
+                    <thead class="rh-table-header">
+                        <tr>
+                            <th style="width: 3%;">#</th>
+                            <th style="width: 30%;">Nome do Departamento</th>
+                            <th style="width: 15%;">Centro de Custo</th>
+                            <th style="width: 37%;">Descrição</th>
+                            <th style="width: 15%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for depto in departamentos %}
+                        <tr data-nome="{{ depto.nome_departamento }}" data-centro="{{ depto.codigo_centro_custo or '' }}">
+                            <td class="text-muted small">{{ loop.index }}</td>
+                            <td>
+                                <strong class="text-dark">{{ depto.nome_departamento }}</strong>
+                            </td>
+                            <td>
+                                {% if depto.codigo_centro_custo %}
+                                <span class="badge bg-info text-dark" style="font-size: 0.875rem;">
+                                    <i class="mdi mdi-tag"></i> {{ depto.codigo_centro_custo }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if depto.descricao %}
+                                <span class="text-muted" style="font-size: 0.875rem; line-height: 1.4;">
+                                    {{ depto.descricao[:100] }}{% if depto.descricao|length > 100 %}...{% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">Sem descrição</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <!-- Botão Visualizar -->
+                                    <button class="btn btn-outline-info" 
+                                            onclick="visualizarDepartamento('{{ depto.id }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Visualizar detalhes">
+                                        <i class="mdi mdi-eye"></i>
+                                    </button>
+                                    
+                                    <!-- Botão Editar -->
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editarDepartamento('{{ depto.id }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Editar">
+                                        <i class="mdi mdi-pencil"></i>
+                                    </button>
+                                    
+                                    <!-- Botão Excluir -->
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="confirmarExclusaoDepto('{{ depto.id }}', '{{ depto.nome_departamento }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Excluir">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="mdi mdi-domain" style="font-size: 4rem; color: #6f42c1; opacity: 0.3;"></i>
+                <h5>Nenhum departamento cadastrado</h5>
+                <p>Clique em "Novo Departamento" para adicionar o primeiro departamento</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Departamento -->
+<div class="modal fade" id="modalDepartamento" tabindex="-1" aria-labelledby="modalDepartamentoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header module-header-rh">
+                <h5 class="modal-title text-white" id="modalDepartamentoLabel">
+                    <i class="mdi mdi-domain"></i> <span id="modalTitleDepto">Novo Departamento</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formDepartamento">
+                    <input type="hidden" id="departamento_id" name="departamento_id">
+                    
+                    <div class="row g-3">
+                        <!-- Nome do Departamento -->
+                        <div class="col-md-8">
+                            <label for="nome_depto" class="form-label">
+                                <i class="mdi mdi-domain"></i> Nome do Departamento <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome_depto" name="nome" 
+                                   placeholder="Ex: Financeiro, Importação, RH" required>
+                        </div>
+                        
+                        <!-- Centro de Custo -->
+                        <div class="col-md-4">
+                            <label for="codigo_centro_custo" class="form-label">
+                                <i class="mdi mdi-tag"></i> Centro de Custo
+                            </label>
+                            <input type="text" class="form-control" id="codigo_centro_custo" 
+                                   name="codigo_centro_custo" 
+                                   placeholder="Ex: FIN-001">
+                        </div>
+                        
+                        <!-- Descrição -->
+                        <div class="col-12">
+                            <label for="descricao_depto" class="form-label">
+                                <i class="mdi mdi-text"></i> Descrição
+                            </label>
+                            <textarea class="form-control" id="descricao_depto" name="descricao" 
+                                      rows="4" placeholder="Atribuições e responsabilidades do departamento..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-rh-primary" onclick="salvarDepartamento()">
+                    <i class="mdi mdi-content-save"></i> Salvar Departamento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar Exclusão -->
+<div class="modal fade" id="modalExcluirDepto" tabindex="-1" aria-labelledby="modalExcluirDeptoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalExcluirDeptoLabel">
+                    <i class="mdi mdi-alert"></i> Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Você tem certeza que deseja excluir o departamento:</p>
+                <p class="text-center">
+                    <strong class="fs-5 text-danger" id="deptoNomeExcluir"></strong>
+                </p>
+                <div class="alert alert-warning">
+                    <i class="mdi mdi-alert-circle"></i>
+                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. O departamento só será excluído se não estiver associado a colaboradores.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusaoDepto">
+                    <i class="mdi mdi-delete"></i> Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('estrutura_org.static', filename='estrutura_org/estrutura.js') }}?v=4"></script>
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Busca em tempo real
+document.getElementById('searchInputDepto').addEventListener('keyup', filtrarTabelaDepto);
+
+function filtrarTabelaDepto() {
+    const searchValue = document.getElementById('searchInputDepto').value.toLowerCase();
+    const rows = document.querySelectorAll('#tableDepartamentos tbody tr');
+    
+    rows.forEach(row => {
+        const nome = row.dataset.nome.toLowerCase();
+        const centro = row.dataset.centro.toLowerCase();
+        
+        const matchSearch = nome.includes(searchValue) || centro.includes(searchValue);
+        
+        if (matchSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function limparFiltrosDepto() {
+    document.getElementById('searchInputDepto').value = '';
+    filtrarTabelaDepto();
+}
+
+// Função para visualizar detalhes do departamento
+function visualizarDepartamento(deptoId) {
+    // Buscar dados do departamento na API
+    fetch(`/rh/estrutura/api/departamentos/${deptoId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const depto = data.departamento;
+            
+            // Criar modal de visualização
+            const modalHtml = `
+                <div class="modal fade" id="modalVisualizarDepto" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header module-header-rh">
+                                <h5 class="modal-title text-white">
+                                    <i class="mdi mdi-eye"></i> Detalhes do Departamento
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-4">
+                                    <div class="col-md-8">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-domain"></i> Nome do Departamento
+                                        </label>
+                                        <p class="fs-5 text-dark">${depto.nome_departamento}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-tag"></i> Centro de Custo
+                                        </label>
+                                        <p>
+                                            ${depto.codigo_centro_custo ? 
+                                                `<span class="badge bg-info text-dark" style="font-size: 1rem; padding: 0.5rem 1rem;">${depto.codigo_centro_custo}</span>` 
+                                                : '<span class="text-muted">Não definido</span>'}
+                                        </p>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-text"></i> Descrição
+                                        </label>
+                                        <div class="p-3 bg-light rounded">
+                                            ${depto.descricao ? 
+                                                `<p class="mb-0" style="white-space: pre-wrap; line-height: 1.6;">${depto.descricao}</p>` 
+                                                : '<p class="text-muted mb-0">Sem descrição cadastrada</p>'}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-calendar-plus"></i> Criado em
+                                        </label>
+                                        <p>${depto.criado_em ? new Date(depto.criado_em).toLocaleString('pt-BR') : '-'}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted">
+                                            <i class="mdi mdi-calendar-edit"></i> Atualizado em
+                                        </label>
+                                        <p>${depto.atualizado_em ? new Date(depto.atualizado_em).toLocaleString('pt-BR') : '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="mdi mdi-close"></i> Fechar
+                                </button>
+                                <button type="button" class="btn btn-rh-primary" onclick="editarDepartamento('${depto.id}'); $('#modalVisualizarDepto').modal('hide');">
+                                    <i class="mdi mdi-pencil"></i> Editar Departamento
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remover modal antigo se existir
+            const oldModal = document.getElementById('modalVisualizarDepto');
+            if (oldModal) {
+                oldModal.remove();
+            }
+            
+            // Adicionar novo modal ao body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Abrir modal
+            const modal = new bootstrap.Modal(document.getElementById('modalVisualizarDepto'));
+            modal.show();
+            
+            // Remover modal do DOM quando fechado
+            document.getElementById('modalVisualizarDepto').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        } else {
+            alert('Erro ao carregar dados do departamento: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao carregar dados do departamento');
+    });
+}
+</script>
+{% endblock %}

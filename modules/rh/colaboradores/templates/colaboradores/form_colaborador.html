@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if modo == 'novo' %}Novo Colaborador{% else %}Editar Colaborador{% endif %} - RH
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
+{% endblock %}
+
+{% block content %}
+<div class="rh-container">
+    <!-- Actions Bar com Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">RH</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">Colaboradores</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{% if modo == 'novo' %}Novo{% else %}Editar{% endif %}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="actions-right">
+            <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
+                <i class="mdi mdi-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulário -->
+    <form id="formColaborador" method="POST">
+        <!-- Seção: Dados Pessoais -->
+        <div class="rh-card mb-4">
+            <div class="card-body">
+                <div class="form-section">
+                    <h5><i class="mdi mdi-account"></i> Dados Pessoais</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label required">Nome Completo</label>
+                            <input type="text" class="form-control" id="nome_completo" name="nome_completo" 
+                                   value="{{ colaborador.nome_completo if colaborador else '' }}" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Nome Social</label>
+                            <input type="text" class="form-control" id="nome_social" name="nome_social"
+                                   value="{{ colaborador.nome_social if colaborador else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label required">CPF</label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" 
+                                   value="{{ colaborador.cpf if colaborador else '' }}" 
+                                   placeholder="000.000.000-00" 
+                                   maxlength="14"
+                                   pattern="\d{3}\.\d{3}\.\d{3}-\d{2}"
+                                   required
+                                   {% if colaborador %}readonly{% endif %}>
+                            <small class="text-muted">Formato: 000.000.000-00</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label required">Data de Nascimento</label>
+                            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento"
+                                   value="{{ colaborador.data_nascimento if colaborador else '' }}" 
+                                   max="{{ hoje }}"
+                                   required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Gênero</label>
+                            <select class="form-select" id="genero" name="genero">
+                                <option value="">Selecione...</option>
+                                <option value="Masculino" {% if colaborador and colaborador.genero == 'Masculino' %}selected{% endif %}>Masculino</option>
+                                <option value="Feminino" {% if colaborador and colaborador.genero == 'Feminino' %}selected{% endif %}>Feminino</option>
+                                <option value="Não-binário" {% if colaborador and colaborador.genero == 'Não-binário' %}selected{% endif %}>Não-binário</option>
+                                <option value="Prefiro não informar" {% if colaborador and colaborador.genero == 'Prefiro não informar' %}selected{% endif %}>Prefiro não informar</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Raça/Cor</label>
+                            <select class="form-select" id="raca_cor" name="raca_cor">
+                                <option value="">Selecione...</option>
+                                <option value="Branca" {% if colaborador and colaborador.raca_cor == 'Branca' %}selected{% endif %}>Branca</option>
+                                <option value="Preta" {% if colaborador and colaborador.raca_cor == 'Preta' %}selected{% endif %}>Preta</option>
+                                <option value="Parda" {% if colaborador and colaborador.raca_cor == 'Parda' %}selected{% endif %}>Parda</option>
+                                <option value="Amarela" {% if colaborador and colaborador.raca_cor == 'Amarela' %}selected{% endif %}>Amarela</option>
+                                <option value="Indígena" {% if colaborador and colaborador.raca_cor == 'Indígena' %}selected{% endif %}>Indígena</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nacionalidade</label>
+                            <input type="text" class="form-control" id="nacionalidade" name="nacionalidade"
+                                   value="{{ colaborador.nacionalidade if colaborador else 'Brasileira' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção: Documentação -->
+        <div class="rh-card mb-4">
+            <div class="card-body">
+                <div class="form-section">
+                    <h5><i class="mdi mdi-card-account-details"></i> Documentação</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">RG</label>
+                            <input type="text" class="form-control" id="rg" name="rg"
+                                   value="{{ colaborador.rg if colaborador else '' }}"
+                                   maxlength="20"
+                                   placeholder="Ex: 12.345.678-9">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Órgão Emissor</label>
+                            <input type="text" class="form-control" id="rg_orgao_emissor" name="rg_orgao_emissor"
+                                   value="{{ colaborador.rg_orgao_emissor if colaborador else '' }}"
+                                   maxlength="10"
+                                   placeholder="Ex: SSP/SP">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Data Expedição</label>
+                            <input type="date" class="form-control" id="rg_data_expedicao" name="rg_data_expedicao"
+                                   value="{{ colaborador.rg_data_expedicao if colaborador else '' }}"
+                                   max="{{ hoje }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">PIS/PASEP</label>
+                            <input type="text" class="form-control" id="pis_pasep" name="pis_pasep"
+                                   value="{{ colaborador.pis_pasep if colaborador else '' }}"
+                                   maxlength="14"
+                                   placeholder="000.00000.00-0">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">CTPS Número</label>
+                            <input type="text" class="form-control" id="ctps_numero" name="ctps_numero"
+                                   value="{{ colaborador.ctps_numero if colaborador else '' }}"
+                                   maxlength="10">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">CTPS Série</label>
+                            <input type="text" class="form-control" id="ctps_serie" name="ctps_serie"
+                                   value="{{ colaborador.ctps_serie if colaborador else '' }}"
+                                   maxlength="10">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">CNH</label>
+                            <input type="text" class="form-control" id="cnh_numero" name="cnh_numero"
+                                   value="{{ colaborador.cnh_numero if colaborador else '' }}"
+                                   maxlength="11"
+                                   pattern="\d{11}"
+                                   placeholder="Apenas números (11 dígitos)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção: Dados Corporativos -->
+        <div class="rh-card mb-4">
+            <div class="card-body">
+                <div class="form-section">
+                    <h5><i class="mdi mdi-briefcase"></i> Dados Corporativos</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Matrícula</label>
+                            <input type="text" class="form-control bg-light" id="matricula" name="matricula"
+                                   value="{{ colaborador.matricula if colaborador else '' }}"
+                                   readonly
+                                   placeholder="Gerado automaticamente">
+                            <small class="text-muted">Será gerado automaticamente (ex: UN001, UN002...)</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Email Corporativo</label>
+                            <input type="email" class="form-control" id="email_corporativo" name="email_corporativo"
+                                   value="{{ colaborador.email_corporativo if colaborador else '' }}"
+                                   placeholder="nome@unique.com.br"
+                                   pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$">
+                            <small class="text-muted">Digite um email válido</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label required">Data de Admissão</label>
+                            <input type="date" class="form-control" id="data_admissao" name="data_admissao"
+                                   value="{{ colaborador.data_admissao if colaborador else '' }}" 
+                                   max="{{ hoje }}"
+                                   required
+                                   {% if colaborador %}readonly{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Cargo</label>
+                            <select class="form-select" id="cargo_id" name="cargo_id">
+                                <option value="">Selecione...</option>
+                                {% for cargo in cargos %}
+                                <option value="{{ cargo.id }}" 
+                                    {% if ultimo_historico and ultimo_historico.cargo_id == cargo.id %}selected{% endif %}>
+                                    {{ cargo.nome_cargo }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Departamento</label>
+                            <select class="form-select" id="departamento_id" name="departamento_id">
+                                <option value="">Selecione...</option>
+                                {% for depto in departamentos %}
+                                <option value="{{ depto.id }}"
+                                    {% if ultimo_historico and ultimo_historico.departamento_id == depto.id %}selected{% endif %}>
+                                    {{ depto.nome_departamento }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Gestor</label>
+                            <select class="form-select" id="gestor_id" name="gestor_id">
+                                <option value="">Selecione...</option>
+                                {% for gestor in gestores %}
+                                <option value="{{ gestor.id }}"
+                                    {% if ultimo_historico and ultimo_historico.gestor_id == gestor.id %}selected{% endif %}>
+                                    {{ gestor.nome_completo }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Salário Mensal</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" 
+                                       step="0.01" 
+                                       min="0"
+                                       max="999999.99"
+                                       value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}"
+                                       placeholder="0.00">
+                            </div>
+                            <small class="text-muted">Apenas números</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tipo de Contrato</label>
+                            <select class="form-select" id="tipo_contrato" name="tipo_contrato">
+                                <option value="">Selecione...</option>
+                                <option value="CLT" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'CLT' %}selected{% endif %}>CLT</option>
+                                <option value="PJ" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'PJ' %}selected{% endif %}>PJ</option>
+                                <option value="Estágio" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'Estágio' %}selected{% endif %}>Estágio</option>
+                                <option value="Temporário" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'Temporário' %}selected{% endif %}>Temporário</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Modelo de Trabalho</label>
+                            <select class="form-select" id="modelo_trabalho" name="modelo_trabalho">
+                                <option value="">Selecione...</option>
+                                <option value="Presencial" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Presencial' %}selected{% endif %}>Presencial</option>
+                                <option value="Remoto" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Remoto' %}selected{% endif %}>Remoto</option>
+                                <option value="Híbrido" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Híbrido' %}selected{% endif %}>Híbrido</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3"
+                                      placeholder="Observações sobre esta alteração..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="rh-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="btn btn-outline-secondary">
+                        <i class="mdi mdi-close"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="btnSalvar">
+                        <i class="mdi mdi-content-save"></i> Salvar Colaborador
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
+<script>
+// ===================================================================
+// MÁSCARAS E VALIDAÇÕES
+// ===================================================================
+
+// Máscara de CPF
+document.getElementById('cpf')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = value;
+    }
+});
+
+// Máscara de PIS/PASEP
+document.getElementById('pis_pasep')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{5})(\d)/, '$1.$2');
+        value = value.replace(/(\d{2})(\d{1})$/, '$1-$2');
+        e.target.value = value;
+    }
+});
+
+// Apenas números para CNH
+document.getElementById('cnh_numero')?.addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/\D/g, '').substring(0, 11);
+});
+
+// Validação de email em tempo real
+document.getElementById('email_corporativo')?.addEventListener('blur', function(e) {
+    const email = e.target.value;
+    if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        e.target.classList.add('is-invalid');
+        if (!e.target.nextElementSibling?.classList.contains('invalid-feedback')) {
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = 'Digite um email válido';
+            e.target.parentNode.appendChild(feedback);
+        }
+    } else {
+        e.target.classList.remove('is-invalid');
+        e.target.nextElementSibling?.remove();
+    }
+});
+
+// ===================================================================
+// GERAÇÃO AUTOMÁTICA DE MATRÍCULA
+// ===================================================================
+
+async function gerarProximaMatricula() {
+    const modo = '{{ modo }}';
+    const matriculaInput = document.getElementById('matricula');
+    
+    // Se estiver editando, não gera nova matrícula
+    if (modo !== 'novo' || matriculaInput.value) {
+        return;
+    }
+    
+    try {
+        console.log('[RH] Gerando próxima matrícula...');
+        
+        // Buscar última matrícula via API
+        const response = await fetch('/rh/colaboradores/api/colaboradores');
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            // Filtrar apenas matrículas que começam com UN
+            const matriculas = data.data
+                .map(c => c.matricula)
+                .filter(m => m && m.startsWith('UN'))
+                .map(m => parseInt(m.replace('UN', '')))
+                .filter(n => !isNaN(n));
+            
+            // Pegar o maior número
+            const maiorNumero = matriculas.length > 0 ? Math.max(...matriculas) : 0;
+            const proximoNumero = maiorNumero + 1;
+            
+            // Formatar com zeros à esquerda (UN001, UN002, etc)
+            const novaMatricula = 'UN' + String(proximoNumero).padStart(3, '0');
+            
+            matriculaInput.value = novaMatricula;
+            console.log(`[RH] Matrícula gerada: ${novaMatricula}`);
+        }
+    } catch (error) {
+        console.error('[RH] Erro ao gerar matrícula:', error);
+        // Em caso de erro, gera uma matrícula padrão
+        matriculaInput.value = 'UN001';
+    }
+}
+
+// Gerar matrícula quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    gerarProximaMatricula();
+});
+
+// ===================================================================
+// SUBMISSÃO DO FORMULÁRIO
+// ===================================================================
+
+// Submissão do formulário via AJAX
+document.getElementById('formColaborador').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btnSalvar = document.getElementById('btnSalvar');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+    
+    // Coletar dados do formulário
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Preparar telefones e endereço como JSON
+    data.telefones_jsonb = {
+        celular: document.getElementById('telefone_celular')?.value || '',
+        residencial: document.getElementById('telefone_residencial')?.value || ''
+    };
+    
+    try {
+        const modo = '{{ modo }}';
+        const url = modo === 'novo' 
+            ? '/rh/colaboradores/api/colaboradores'
+            : '/rh/colaboradores/api/colaboradores/{{ colaborador.id if colaborador else "" }}';
+        
+        const method = modo === 'novo' ? 'POST' : 'PUT';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            mostrarAlerta('Colaborador salvo com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("colaboradores.lista_colaboradores") }}';
+            }, 1500);
+        } else {
+            throw new Error(result.error || 'Erro ao salvar colaborador');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarAlerta(`Erro ao salvar: ${error.message}`, 'danger');
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = textoOriginal;
+    }
+});
+</script>
+{% endblock %}

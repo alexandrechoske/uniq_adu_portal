@@ -42,6 +42,12 @@ class PageValidator {
     }
     
     startValidation() {
+        // Verificar se o page validator está desabilitado globalmente
+        if (window.DISABLE_PAGE_VALIDATOR === true) {
+            this.log('[PAGE_VALIDATOR] Desabilitado globalmente via flag');
+            return;
+        }
+        
         // Não iniciar validação para páginas financeiras
         if (this.page === 'financeiro_skip') {
             this.log('[PAGE_VALIDATOR] Página financeira detectada - validação desabilitada');

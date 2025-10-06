@@ -930,21 +930,77 @@
                     </a>
                     {% endif %}
                     
-                    {% if 'analytics' in accessible_modules %}
+                    <!-- Analytics - Todos os Admins -->
+                    {% if 'analytics_portal' in accessible_modules %}
                     <a href="{{ url_for('analytics.analytics_dashboard') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
-                       title="Analytics Portal">
-                        <i class="mdi mdi-chart-bar"></i>
-                        <span class="sidebar-text">Analytics Portal</span>
-                    </a>
-                    
-                    <a href="{{ url_for('analytics.analytics_agente') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint == 'analytics.analytics_agente' %}active{% endif %}"
-                       title="Analytics Agente">
-                        <i class="mdi mdi-whatsapp"></i>
-                        <span class="sidebar-text">Analytics Agente</span>
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_dashboard' %}active{% endif %}"
+                       title="Analytics do Portal">
+                        <i class="mdi mdi-chart-line"></i>
+                        <span class="sidebar-text">Analytics do Portal</span>
                     </a>
                     {% endif %}
+                    
+                    {% if 'analytics_agente' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_agente') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'analytics.analytics_agente' %}active{% endif %}"
+                       title="Analytics do Agente">
+                        <i class="mdi mdi-robot"></i>
+                        <span class="sidebar-text">Analytics do Agente</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Seção Recursos Humanos -->
+                {% if 'rh' in accessible_modules %}
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">
+                        <i class="mdi mdi-account-group text-sm"></i>
+                        <span>Recursos Humanos</span>
+                    </div>
+                    
+                    <a href="{{ url_for('dashboard_rh.dashboard_executivo') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('dashboard_rh.') %}active{% endif %}"
+                       title="Dashboard Executivo de RH">
+                        <i class="mdi mdi-chart-box-outline"></i>
+                        <span class="sidebar-text">Dashboard Executivo</span>
+                    </a>
+                    
+                    <a href="{{ url_for('colaboradores.lista_colaboradores') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}"
+                       title="Gestão de Colaboradores">
+                        <i class="mdi mdi-account-multiple"></i>
+                        <span class="sidebar-text">Gestão de Colaboradores</span>
+                    </a>
+                    
+                    <a href="{{ url_for('estrutura_org.gestao_cargos') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'estrutura_org.gestao_cargos' %}active{% endif %}"
+                       title="Gestão de Cargos">
+                        <i class="mdi mdi-briefcase"></i>
+                        <span class="sidebar-text">Gestão de Cargos</span>
+                    </a>
+                    
+                    <a href="{{ url_for('estrutura_org.gestao_departamentos') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint == 'estrutura_org.gestao_departamentos' %}active{% endif %}"
+                       title="Gestão de Departamentos">
+                        <i class="mdi mdi-domain"></i>
+                        <span class="sidebar-text">Gestão de Departamentos</span>
+                    </a>
+                    
+                    <a href="{{ url_for('recrutamento.gestao_vagas') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('recrutamento.') %}active{% endif %}"
+                       title="Recrutamento e Seleção">
+                        <i class="mdi mdi-briefcase-search"></i>
+                        <span class="sidebar-text">Recrutamento</span>
+                    </a>
+                    
+                    <a href="{{ url_for('carreiras.portal_vagas') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('carreiras.') %}active{% endif %}"
+                       title="Portal Público de Carreiras"
+                       target="_blank">
+                        <i class="mdi mdi-web"></i>
+                        <span class="sidebar-text">Portal de Carreiras</span>
+                    </a>
                 </div>
                 {% endif %}
             

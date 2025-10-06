@@ -57,6 +57,19 @@ const MODULOS_SISTEMA = {
             { code: 'despesas', name: 'Despesas', icon: 'mdi-receipt' },
             { code: 'faturamento', name: 'Faturamento', icon: 'mdi-file-invoice-dollar' }
         ]
+    },
+    rh: {
+        nome: 'Recursos Humanos',
+        icon: 'mdi-account-group',
+        color: 'purple',
+        pages: [
+            { code: 'dashboard', name: 'Dashboard Executivo RH', icon: 'mdi-chart-box-outline' },
+            { code: 'colaboradores', name: 'Gestão de Colaboradores', icon: 'mdi-account-multiple' },
+            { code: 'estrutura_cargos', name: 'Cargos', icon: 'mdi-briefcase' },
+            { code: 'estrutura_departamentos', name: 'Departamentos', icon: 'mdi-office-building' },
+            { code: 'recrutamento', name: 'Recrutamento e Seleção', icon: 'mdi-account-search' },
+            { code: 'desempenho', name: 'Avaliação de Desempenho', icon: 'mdi-star' }
+        ]
     }
     // Future modules (exp: Exportação, con: Consultoria) will be added when implemented
 };

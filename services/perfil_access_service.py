@@ -13,6 +13,7 @@ class PerfilAccessService:
         'imp': 'importacoes',  # Mapear 'imp' para 'importacoes' (com S para coincidir com menu)
         'exp': 'exportacao',  # Mapear 'exp' para 'exportacao' (futuro)
         'con': 'consultoria', # Mapear 'con' para 'consultoria' (futuro)
+        'rh': 'rh',  # Mapear 'rh' para 'rh' (recursos humanos)
     }
     
     # Mapeamento de códigos de páginas para endpoints/módulos
@@ -34,7 +35,14 @@ class PerfilAccessService:
         'conciliacao_lancamentos': 'fin_conciliacao_lancamentos',  # Conciliação de Lançamentos
         'categorizacao_clientes': 'fin_categorizacao_clientes',  # Categorização de Clientes
         'projecoes_metas': 'fin_projecoes_metas',  # Projeções e Metas
-        # 'dashboard_executivo' já mapeado acima (compartilhado)
+        
+        # Páginas do módulo RH (rh)
+        'rh_dashboard': 'rh_dashboard',  # Dashboard Executivo RH
+        'rh_colaboradores': 'rh_colaboradores',  # Gestão de Colaboradores
+        'rh_estrutura_cargos': 'rh_estrutura_cargos',  # Gestão de Cargos
+        'rh_estrutura_departamentos': 'rh_estrutura_departamentos',  # Gestão de Departamentos
+        'rh_recrutamento': 'rh_recrutamento',  # Recrutamento e Seleção
+        'rh_desempenho': 'rh_desempenho',  # Avaliações de Desempenho
     }
     
     @staticmethod
@@ -58,34 +66,48 @@ class PerfilAccessService:
         if user_role == 'admin' and user_perfil_principal == 'master_admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
-                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'analytics',
+                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh', 'analytics',
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
-                'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual'
+                'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual',
+                'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 'rh_estrutura_departamentos', 
+                'rh_recrutamento', 'rh_desempenho',
+                'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
             ]
             print(f"[ACCESS_SERVICE] Master Admin (master_admin) - módulos disponíveis: {accessible_modules}")
             return accessible_modules
         
-        # Module Admins: interno_unique + admin_operacao/admin_financeiro
+        # Module Admins: interno_unique + admin_operacao/admin_financeiro/admin_recursos_humanos
         if user_role == 'interno_unique' and user_perfil_principal.startswith('admin_'):
             accessible_modules = set()
             
             if user_perfil_principal == 'admin_operacao':
-                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações + analytics
+                # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações + Analytics
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 
                     'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config', 'analytics',
+                    'analytics_portal', 'analytics_agente',  # Analytics disponíveis para todos os admins
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_operacao) - módulos disponíveis: {list(accessible_modules)}")
                 
             elif user_perfil_principal == 'admin_financeiro':
-                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários + analytics
+                # Admin de Financeiro - APENAS módulos financeiros + gestão de usuários + Analytics
                 accessible_modules.update([
                     'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
-                    'despesas_anual', 'faturamento_anual', 'usuarios', 'analytics'
+                    'despesas_anual', 'faturamento_anual', 'usuarios', 'analytics',
+                    'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
                 ])
                 print(f"[ACCESS_SERVICE] Module Admin (admin_financeiro) - módulos disponíveis: {list(accessible_modules)}")
+            
+            elif user_perfil_principal == 'admin_recursos_humanos':
+                # Admin de RH - APENAS módulos de RH + gestão de usuários + Analytics
+                accessible_modules.update([
+                    'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho', 'usuarios', 'analytics',
+                    'analytics_portal', 'analytics_agente'  # Analytics disponíveis para todos os admins
+                ])
+                print(f"[ACCESS_SERVICE] Module Admin (admin_recursos_humanos) - módulos disponíveis: {list(accessible_modules)}")
             
             return list(accessible_modules)
         
@@ -283,20 +305,34 @@ class PerfilAccessService:
             user_manages_module = False
             
             if user_perfil_principal == 'admin_operacao':
-                # Mapear módulos operacionais: Importações, Consultoria, Exportação, Configurações
+                # Mapear módulos operacionais: Importações, Consultoria, Exportação, Configurações, Analytics
                 operational_modules = [
                     'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'relatorios',
                     'conferencia', 'agente',  # Existing importacao modules
                     'consultoria', 'con',  # Future consultoria modules 
                     'exportacao', 'exp',  # Future exportacao modules
-                    'config'  # Configuration module for system setup
+                    'config',  # Configuration module for system setup
+                    'analytics_portal', 'analytics_agente'  # Analytics modules - todos os admins
                 ]
                 user_manages_module = modulo_codigo in operational_modules
                 
             elif user_perfil_principal == 'admin_financeiro':
-                # Mapear módulos financeiros
-                financeiro_modules = ['financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual']
+                # Mapear módulos financeiros + Analytics
+                financeiro_modules = [
+                    'financeiro', 'fin_dashboard_executivo', 'fluxo_de_caixa', 
+                    'despesas_anual', 'faturamento_anual',
+                    'analytics_portal', 'analytics_agente'  # Analytics modules - todos os admins
+                ]
                 user_manages_module = modulo_codigo in financeiro_modules
+            
+            elif user_perfil_principal == 'admin_recursos_humanos':
+                # Mapear módulos de RH + Analytics
+                rh_modules = [
+                    'rh', 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 
+                    'rh_estrutura_departamentos', 'rh_recrutamento', 'rh_desempenho',
+                    'analytics_portal', 'analytics_agente'  # Analytics modules - todos os admins
+                ]
+                user_manages_module = modulo_codigo in rh_modules
             
             # Todos os Module Admins podem acessar gestão de usuários
             if modulo_codigo == 'usuarios':
@@ -634,8 +670,21 @@ class PerfilAccessService:
                     'sistema': {'nome': 'Sistema', 'url': '/config/sistema'}
                 }
             },
+            'rh': {
+                'nome': 'Recursos Humanos',
+                'icone': 'fas fa-users',
+                'url': '/rh/colaboradores',
+                'paginas': {
+                    'dashboard': {'nome': 'Dashboard Executivo', 'url': '/rh/dashboard'},
+                    'colaboradores': {'nome': 'Gestão de Colaboradores', 'url': '/rh/colaboradores'},
+                    'estrutura_cargos': {'nome': 'Gestão de Cargos', 'url': '/rh/estrutura/cargos'},
+                    'estrutura_departamentos': {'nome': 'Gestão de Departamentos', 'url': '/rh/estrutura/departamentos'},
+                    'recrutamento': {'nome': 'Recrutamento', 'url': '/rh/recrutamento'},
+                    'desempenho': {'nome': 'Avaliações', 'url': '/rh/desempenho'}
+                }
+            },
             'analytics': {
-                'nome': 'Ferramentas',
+                'nome': 'Analytics',
                 'icone': 'fas fa-chart-bar',
                 'url': '/analytics',
                 'paginas': {

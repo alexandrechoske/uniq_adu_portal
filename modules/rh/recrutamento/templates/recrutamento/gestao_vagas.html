@@ -1,0 +1,605 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Vagas - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<style>
+/* Cores do Recrutamento (Verde) */
+:root {
+    --recrutamento-primary: #28a745;
+    --recrutamento-primary-dark: #1e7e34;
+    --recrutamento-primary-light: #5cb85c;
+}
+
+.btn-recrutamento-primary {
+    background: linear-gradient(135deg, var(--recrutamento-primary) 0%, var(--recrutamento-primary-dark) 100%);
+    border: none;
+    color: white !important;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-recrutamento-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.module-header-recrutamento {
+    background: linear-gradient(135deg, var(--recrutamento-primary) 0%, var(--recrutamento-primary-dark) 100%);
+    color: white !important;
+    border-bottom: none;
+}
+
+.badge-status.aberta { background-color: #28a745; color: white; }
+.badge-status.pausada { background-color: #ffc107; color: #000; }
+.badge-status.fechada { background-color: #dc3545; color: white; }
+.badge-status { padding: 0.35rem 0.75rem; font-size: 0.8125rem; border-radius: 0.375rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rh-container">
+    <!-- Actions Bar -->
+    <div class="actions-bar module-header-rh">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/"><i class="mdi mdi-home-outline"></i> Início</a></li>
+                <li class="breadcrumb-item"><a href="#">RH</a></li>
+                <li class="breadcrumb-item active">Gestão de Vagas</li>
+            </ol>
+        </nav>
+        <div class="actions-buttons">
+            <button class="btn btn-recrutamento-primary" data-bs-toggle="modal" data-bs-target="#modalVaga" onclick="abrirModalNovaVaga()">
+                <i class="mdi mdi-plus"></i> Nova Vaga
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-section">
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">
+                <i class="mdi mdi-chart-box-outline"></i>
+                Resumo Geral
+            </h5>
+            <div class="kpi-grid-rh" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-briefcase-search"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total de Vagas</p>
+                        <p class="kpi-value">{{ total_vagas }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-briefcase-check"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Vagas Abertas</p>
+                        <p class="kpi-value">{{ vagas_abertas }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-danger">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-briefcase-remove"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Vagas Fechadas</p>
+                        <p class="kpi-value">{{ vagas_fechadas }}</p>
+                    </div>
+                </div>
+                
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-account-multiple"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Média Candidatos/Vaga</p>
+                        <p class="kpi-value">{{ candidatos_media }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Busca e Filtros -->
+    <div class="card rh-card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="mdi mdi-magnify text-muted"></i>
+                        </span>
+                        <input type="text" id="searchVaga" class="form-control border-start-0" 
+                               placeholder="Buscar por título..." 
+                               onkeyup="filtrarTabelaVagas()">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select id="filterStatus" class="form-select" onchange="filtrarTabelaVagas()">
+                        <option value="">Todos os Status</option>
+                        <option value="aberta">Aberta</option>
+                        <option value="pausada">Pausada</option>
+                        <option value="fechada">Fechada</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="filterDataInicio" class="form-control" 
+                           placeholder="Data Início" onchange="filtrarTabelaVagas()">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="filterDataFim" class="form-control" 
+                           placeholder="Data Fim" onchange="filtrarTabelaVagas()">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosVagas()">
+                        <i class="mdi mdi-eraser"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Vagas -->
+    <div class="card rh-card">
+        <div class="card-body p-0">
+            {% if vagas|length > 0 %}
+            <div class="table-responsive">
+                <table class="table mb-0" id="tabelaVagas">
+                    <thead class="rh-table-header" style="background: linear-gradient(135deg, var(--recrutamento-primary) 0%, var(--recrutamento-primary-dark) 100%);">
+                        <tr>
+                            <th style="width: 3%;">#</th>
+                            <th style="width: 25%;">Título da Vaga</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 8%;" class="text-center">Candidatos</th>
+                            <th style="width: 10%;">Data Abertura</th>
+                            <th style="width: 12%;">Localização</th>
+                            <th style="width: 17%;">Tipo Contratação</th>
+                            <th style="width: 15%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vaga in vagas %}
+                        <tr data-titulo="{{ vaga.titulo }}" 
+                            data-status="{{ vaga.status|lower }}"
+                            data-data="{{ vaga.data_abertura[:10] if vaga.data_abertura else '' }}">
+                            <td class="text-muted small">{{ loop.index }}</td>
+                            <td>
+                                <strong class="text-dark">{{ vaga.titulo }}</strong>
+                            </td>
+                            <td>
+                                {% if vaga.status == 'Aberta' %}
+                                <span class="badge badge-status aberta">
+                                    <i class="mdi mdi-circle"></i> Aberta
+                                </span>
+                                {% elif vaga.status == 'Pausada' %}
+                                <span class="badge badge-status pausada">
+                                    <i class="mdi mdi-pause-circle"></i> Pausada
+                                </span>
+                                {% else %}
+                                <span class="badge badge-status fechada">
+                                    <i class="mdi mdi-close-circle"></i> Fechada
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info text-dark" style="font-size: 0.875rem;">
+                                    <i class="mdi mdi-account-multiple"></i> {{ vaga.total_candidatos }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="mdi mdi-calendar"></i>
+                                    {% if vaga.data_abertura %}
+                                        {% set data_parts = vaga.data_abertura[:10].split('-') %}
+                                        {{ data_parts[2] }}/{{ data_parts[1] }}/{{ data_parts[0] }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ vaga.localizacao or 'Não informado' }}</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="mdi mdi-briefcase-outline"></i> {{ vaga.tipo_contratacao or 'CLT' }}
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <!-- Botão Visualizar -->
+                                    <button class="btn btn-outline-info" 
+                                            onclick="visualizarVaga('{{ vaga.id }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Visualizar detalhes">
+                                        <i class="mdi mdi-eye"></i>
+                                    </button>
+                                    
+                                    <!-- Botão Candidatos -->
+                                    <a href="{{ url_for('recrutamento.gestao_candidatos', vaga_id=vaga.id) }}"
+                                       class="btn btn-outline-success"
+                                       data-bs-toggle="tooltip"
+                                       title="Gerenciar candidatos">
+                                        <i class="mdi mdi-account-multiple"></i>
+                                    </a>
+                                    
+                                    <!-- Botão Editar -->
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="editarVaga('{{ vaga.id }}')" 
+                                            data-bs-toggle="tooltip"
+                                            title="Editar">
+                                        <i class="mdi mdi-pencil"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="mdi mdi-briefcase-search" style="font-size: 4rem; color: #28a745; opacity: 0.3;"></i>
+                <h5>Nenhuma vaga cadastrada</h5>
+                <p>Clique em "Nova Vaga" para adicionar a primeira vaga</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div> <!-- Fecha rh-container -->
+
+<!-- Modal de Vaga (Criar/Editar) -->
+<div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalVagaLabel">Nova Vaga</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formVaga">
+                    <input type="hidden" id="vaga_id" name="vaga_id">
+                    
+                    <div class="row g-3">
+                        <!-- Título -->
+                        <div class="col-md-8">
+                            <label for="titulo" class="form-label">
+                                Título da Vaga <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="titulo" name="titulo" 
+                                   placeholder="Ex: Analista de Importação Pleno" required>
+                        </div>
+                        
+                        <!-- Tipo de Contratação -->
+                        <div class="col-md-4">
+                            <label for="tipo_contratacao" class="form-label">Tipo de Contratação</label>
+                            <select class="form-select" id="tipo_contratacao" name="tipo_contratacao">
+                                <option value="CLT" selected>CLT</option>
+                                <option value="PJ">PJ</option>
+                                <option value="Estágio">Estágio</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Cargo Oficial -->
+                        <div class="col-md-6">
+                            <label for="cargo_id" class="form-label">
+                                Cargo Oficial <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="cargo_id" name="cargo_id" required>
+                                <option value="">Selecione um cargo...</option>
+                                {% if cargos %}
+                                    {% for cargo in cargos %}
+                                    <option value="{{ cargo.id }}">{{ cargo.nome_cargo }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option disabled>⚠️ Nenhum cargo cadastrado</option>
+                                {% endif %}
+                            </select>
+                            <small class="text-muted">
+                                {{ cargos|length if cargos else 0 }} cargo(s) disponível(is)
+                            </small>
+                        </div>
+                        
+                        <!-- Localização -->
+                        <div class="col-md-6">
+                            <label for="localizacao" class="form-label">Localização</label>
+                            <input type="text" class="form-control" id="localizacao" name="localizacao" 
+                                   placeholder="Ex: Joinville - SC / Remoto">
+                        </div>
+                        
+                        <!-- Descrição da Vaga -->
+                        <div class="col-12">
+                            <label for="descricao" class="form-label">
+                                Descrição da Vaga <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="descricao" name="descricao" 
+                                      rows="4" placeholder="Detalhe as responsabilidades da posição..." required></textarea>
+                        </div>
+                        
+                        <!-- Requisitos -->
+                        <div class="col-12">
+                            <label for="requisitos" class="form-label">
+                                Requisitos <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="requisitos" name="requisitos" 
+                                      rows="4" placeholder="Detalhe as qualificações e experiências necessárias..." required></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-recrutamento-primary" onclick="salvarVaga()">
+                    <i class="mdi mdi-content-save"></i> Salvar Vaga
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalConfirmarExclusao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="mdi mdi-alert"></i> Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a vaga:</p>
+                <p class="fw-bold" id="vagaNomeExcluir"></p>
+                <p class="text-danger">
+                    <i class="mdi mdi-alert-circle"></i> Esta ação não pode ser desfeita.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">
+                    <i class="mdi mdi-delete"></i> Confirmar Exclusão
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=4"></script>
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Função para filtrar a tabela de vagas
+function filtrarTabelaVagas() {
+    console.log('[FILTRO] Iniciando filtro de vagas');
+    
+    const searchTerm = document.getElementById('searchVaga').value.toLowerCase().trim();
+    const statusFilter = document.getElementById('filterStatus').value;
+    const dataInicio = document.getElementById('filterDataInicio').value;
+    const dataFim = document.getElementById('filterDataFim').value;
+    
+    console.log('[FILTRO] Critérios:', {searchTerm, statusFilter, dataInicio, dataFim});
+    
+    const table = document.getElementById('tabelaVagas');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    const emptyState = document.getElementById('emptyState');
+    let visibleCount = 0;
+    
+    // Se não há filtros ativos, mostrar todas as linhas
+    if (!searchTerm && !statusFilter && !dataInicio && !dataFim) {
+        for (let row of rows) {
+            if (!row.classList.contains('empty-state')) {
+                row.style.display = '';
+                visibleCount++;
+            }
+        }
+        if (emptyState) emptyState.style.display = 'none';
+        console.log('[FILTRO] Sem filtros ativos - mostrando todas');
+        return;
+    }
+    
+    // Filtrar cada linha
+    for (let row of rows) {
+        if (row.classList.contains('empty-state')) continue;
+        
+        const titulo = row.getAttribute('data-titulo') || '';
+        const status = row.getAttribute('data-status') || '';
+        const dataAbertura = row.getAttribute('data-data') || '';
+        
+        let show = true;
+        
+        // Filtro de busca (título)
+        if (searchTerm && !titulo.toLowerCase().includes(searchTerm)) {
+            show = false;
+        }
+        
+        // Filtro de status
+        if (statusFilter && status !== statusFilter) {
+            show = false;
+        }
+        
+        // Filtro de data início (data_abertura já está em formato ISO YYYY-MM-DD)
+        if (dataInicio && dataAbertura) {
+            if (dataAbertura < dataInicio) {
+                show = false;
+            }
+        }
+        
+        // Filtro de data fim (data_abertura já está em formato ISO YYYY-MM-DD)
+        if (dataFim && dataAbertura) {
+            if (dataAbertura > dataFim) {
+                show = false;
+            }
+        }
+        
+        row.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    }
+    
+    // Exibir empty state se não houver resultados
+    if (emptyState) {
+        emptyState.style.display = visibleCount === 0 ? '' : 'none';
+    }
+    
+    console.log('[FILTRO] Resultados visíveis:', visibleCount);
+}
+
+// Função para limpar filtros
+function limparFiltrosVagas() {
+    console.log('[FILTRO] Limpando todos os filtros');
+    
+    document.getElementById('searchVaga').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterDataInicio').value = '';
+    document.getElementById('filterDataFim').value = '';
+    
+    filtrarTabelaVagas();
+}
+
+// Função para visualizar detalhes da vaga em modal
+function visualizarVaga(vagaId) {
+    console.log('[VISUALIZAR] Carregando vaga ID:', vagaId);
+    
+    fetch(`/rh/recrutamento/api/vagas/${vagaId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('[VISUALIZAR] Response:', data);
+        
+        if (data.success && data.vaga) {
+            const vaga = data.vaga;
+            
+            // Criar modal dinamicamente
+            const modalHtml = `
+                <div class="modal fade" id="modalVisualizarVaga" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
+                                <h5 class="modal-title">
+                                    <i class="mdi mdi-briefcase-eye me-2"></i>
+                                    Detalhes da Vaga
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-muted small">Título da Vaga</label>
+                                        <p class="mb-0 fs-5">${vaga.titulo || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Status</label>
+                                        <p class="mb-0">
+                                            <span class="badge ${vaga.status === 'Aberta' ? 'bg-success' : 'bg-secondary'}">
+                                                ${vaga.status || '-'}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Cargo</label>
+                                        <p class="mb-0">${vaga.cargo_nome || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Data de Abertura</label>
+                                        <p class="mb-0">${vaga.data_abertura || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Data de Fechamento</label>
+                                        <p class="mb-0">${vaga.data_fechamento || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Localização</label>
+                                        <p class="mb-0">${vaga.localizacao || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Tipo de Contratação</label>
+                                        <p class="mb-0">${vaga.tipo_contratacao || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-muted small">Total de Candidatos</label>
+                                        <p class="mb-0">
+                                            <span class="badge bg-primary">${vaga.total_candidatos || 0}</span>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-muted small">Descrição</label>
+                                        <p class="mb-0" style="white-space: pre-wrap;">${vaga.descricao || '-'}</p>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-muted small">Requisitos</label>
+                                        <p class="mb-0" style="white-space: pre-wrap;">${vaga.requisitos || '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="mdi mdi-close me-1"></i>Fechar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remover modal anterior se existir
+            const oldModal = document.getElementById('modalVisualizarVaga');
+            if (oldModal) {
+                oldModal.remove();
+            }
+            
+            // Adicionar novo modal ao body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Abrir modal
+            const modal = new bootstrap.Modal(document.getElementById('modalVisualizarVaga'));
+            modal.show();
+            
+            // Remover modal do DOM quando fechado
+            document.getElementById('modalVisualizarVaga').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+        } else {
+            alert('Erro ao carregar dados da vaga: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('[VISUALIZAR] Erro:', error);
+        alert('Erro ao carregar dados da vaga');
+    });
+}
+</script>
+{% endblock %}

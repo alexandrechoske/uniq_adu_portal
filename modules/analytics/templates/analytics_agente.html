@@ -10,6 +10,32 @@
 {% endblock %}
 
 {% block content %}
+<!-- Disable global auto-refresh and prevent 5-second intervals -->
+<script>
+    window.DISABLE_GLOBAL_REFRESH = true;
+    window.DISABLE_AUTO_REFRESH = true;
+    
+    // Clear any existing global refresh interval
+    if (window.globalRefreshInterval) {
+        clearInterval(window.globalRefreshInterval);
+    }
+    
+    // Override setInterval to block 5-second intervals
+    (function() {
+        const originalSetInterval = window.setInterval;
+        window.setInterval = function(func, delay, ...args) {
+            // Block any 5-second (5000ms) intervals
+            if (delay === 5000) {
+                console.warn('[ANALYTICS_AGENTE] Blocked 5-second interval attempt');
+                return -1; // Return dummy interval ID
+            }
+            return originalSetInterval(func, delay, ...args);
+        };
+    })();
+    
+    console.log('[ANALYTICS_AGENTE] Global refresh and 5-second intervals blocked');
+</script>
+
 <div class="dashboard-container analytics-agente">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar module-header-analytics">

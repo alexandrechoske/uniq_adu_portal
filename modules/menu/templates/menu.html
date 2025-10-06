@@ -38,10 +38,17 @@
                 </button>
                 {% endif %}
                 
-                {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules %}
+                {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules %}
                 <button class="menu-tab" data-tab="ferramentas">
                     <i class="mdi mdi-tools"></i>
                     <span>Ferramentas</span>
+                </button>
+                {% endif %}
+                
+                {% if 'rh' in accessible_modules %}
+                <button class="menu-tab" data-tab="rh">
+                    <i class="mdi mdi-account-tie"></i>
+                    <span>RH</span>
                 </button>
                 {% endif %}
             </div>
@@ -155,7 +162,7 @@
             {% endif %}
 
             <!-- Tab: Ferramentas -->
-            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics' in accessible_modules %}
+            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'analytics' in accessible_modules %}
             <div class="tab-content" data-content="ferramentas">
                 <div class="cards-grid">
                     {% if 'analytics' in accessible_modules %}
@@ -200,6 +207,67 @@
                         <p class="module-desc">Controle de acessos, criação e manutenção de contas.</p>
                     </a>
                     {% endif %}
+                    
+                    {% if 'analytics_portal' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_dashboard') }}" class="module-card" data-module="analytics_portal">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-chart-line"></i></div>
+                        <h4 class="module-title">Analytics do Portal</h4>
+                        <p class="module-desc">Análises e métricas de uso do sistema.</p>
+                    </a>
+                    {% endif %}
+                    
+                    {% if 'analytics_agente' in accessible_modules %}
+                    <a href="{{ url_for('analytics.analytics_agente') }}" class="module-card" data-module="analytics_agente">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-robot"></i></div>
+                        <h4 class="module-title">Analytics do Agente</h4>
+                        <p class="module-desc">Métricas e performance do agente WhatsApp.</p>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tab: RH -->
+            {% if 'rh' in accessible_modules %}
+            <div class="tab-content" data-content="rh">
+                <div class="cards-grid">
+                    <a href="{{ url_for('dashboard_rh.dashboard_executivo') }}" class="module-card" data-module="rh_dashboard">
+                        <div class="module-icon"><i class="mdi mdi-chart-box-multiple-outline"></i></div>
+                        <h4 class="module-title">Dashboard Executivo</h4>
+                        <p class="module-desc">Visão estratégica com indicadores e métricas de RH.</p>
+                    </a>
+                    
+                    <a href="{{ url_for('colaboradores.lista_colaboradores') }}" class="module-card" data-module="rh_colaboradores">
+                        <div class="module-icon"><i class="mdi mdi-account-group"></i></div>
+                        <h4 class="module-title">Colaboradores</h4>
+                        <p class="module-desc">Gestão completa de colaboradores e histórico.</p>
+                    </a>
+                    
+                    <a href="{{ url_for('estrutura_org.gestao_cargos') }}" class="module-card" data-module="rh_cargos">
+                        <div class="module-icon"><i class="mdi mdi-briefcase"></i></div>
+                        <h4 class="module-title">Gestão de Cargos</h4>
+                        <p class="module-desc">Gerencie cargos, grupos e faixas salariais.</p>
+                    </a>
+                    
+                    <a href="{{ url_for('estrutura_org.gestao_departamentos') }}" class="module-card" data-module="rh_departamentos">
+                        <div class="module-icon"><i class="mdi mdi-domain"></i></div>
+                        <h4 class="module-title">Gestão de Departamentos</h4>
+                        <p class="module-desc">Gerencie departamentos e centros de custo.</p>
+                    </a>
+                    
+                    <a href="{{ url_for('recrutamento.gestao_vagas') }}" class="module-card" data-module="rh_recrutamento">
+                        <div class="module-icon"><i class="mdi mdi-briefcase-search"></i></div>
+                        <h4 class="module-title">Recrutamento</h4>
+                        <p class="module-desc">Gestão de vagas e pipeline de candidatos.</p>
+                    </a>
+                    
+                    <a href="{{ url_for('carreiras.portal_vagas') }}" class="module-card" data-module="rh_carreiras" target="_blank">
+                        <div class="module-icon"><i class="mdi mdi-web"></i></div>
+                        <h4 class="module-title">Portal de Carreiras</h4>
+                        <p class="module-desc">Portal público de vagas com IA integrada.</p>
+                    </a>
                 </div>
             </div>
             {% endif %}

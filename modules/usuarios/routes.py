@@ -253,6 +253,19 @@ def can_assign_perfil(editor_user, perfil_id):
             print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Financeiro pode atribuir {perfil_id}: {can_assign}")
             return can_assign
         
+        # Admin Recursos Humanos pode atribuir perfis relacionados a RH
+        elif editor_perfil_principal == 'admin_recursos_humanos':
+            allowed_perfils = [
+                'cliente_basico', 'basico', 
+                # Perfil administrativo próprio (admin pode manter seu próprio perfil)
+                'admin_recursos_humanos', 'admin_rh',
+                # Perfis de RH
+                'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_org', 'rh_recrutamento'
+            ]
+            can_assign = perfil_id in allowed_perfils or 'rh' in perfil_id or 'recursos_humanos' in perfil_id.lower()
+            print(f"[PERFIL_ASSIGNMENT_CHECK] Admin Recursos Humanos pode atribuir {perfil_id}: {can_assign}")
+            return can_assign
+        
         # Outros Module Admins
         print(f"[PERFIL_ASSIGNMENT_CHECK] Module Admin {editor_perfil_principal} restrito")
         return False
@@ -657,7 +670,7 @@ def salvar_usuario():
         if perfil_principal:
             if role == 'cliente_unique' and perfil_principal != 'basico':
                 errors.append('Clientes só podem ter perfil básico')
-            elif role == 'interno_unique' and perfil_principal not in ['basico', 'admin_operacao', 'admin_financeiro']:
+            elif role == 'interno_unique' and perfil_principal not in ['basico', 'admin_operacao', 'admin_financeiro', 'admin_recursos_humanos']:
                 errors.append('Funcionários internos podem ter perfil básico ou admin de módulo')
             elif role == 'admin' and perfil_principal != 'master_admin':
                 errors.append('Administradores só podem ter perfil master_admin')
@@ -3535,14 +3548,14 @@ def api_update_users_perfis(user_id):
                         user_role = user_data.get('role', 'UNKNOWN')
                         print(f"[PERFIS] DEBUG - User data: {user_data}")
                         print(f"[PERFIS] DEBUG - User role: {user_role}")
-                        print(f"[PERFIS] DEBUG - Admin profiles in functional_profiles: {[p for p in functional_profiles if p in ['admin_operacao', 'admin_financeiro']]}")
+                        print(f"[PERFIS] DEBUG - Admin profiles in functional_profiles: {[p for p in functional_profiles if p in ['admin_operacao', 'admin_financeiro', 'admin_recursos_humanos']]}")
                         
                         # Determine perfil_principal based on role and assigned profiles
                         if user_response.data and len(user_response.data) > 0:
                             user_role = user_response.data[0].get('role')
                             if user_role == 'interno_unique':
                                 # For interno_unique users, check if they have admin profiles
-                                admin_profiles = [p for p in functional_profiles if p in ['admin_operacao', 'admin_financeiro']]
+                                admin_profiles = [p for p in functional_profiles if p in ['admin_operacao', 'admin_financeiro', 'admin_recursos_humanos']]
                                 if admin_profiles:
                                     # Use the first admin profile as principal
                                     update_data['perfil_principal'] = admin_profiles[0]
@@ -3656,7 +3669,7 @@ def api_cleanup_profiles():
                     user_role = user_details.data[0].get('role')
                     if user_role == 'interno_unique':
                         # Check if user has admin profiles
-                        admin_profiles = [p for p in cleaned_profiles if p in ['admin_operacao', 'admin_financeiro']]
+                        admin_profiles = [p for p in cleaned_profiles if p in ['admin_operacao', 'admin_financeiro', 'admin_recursos_humanos']]
                         if admin_profiles:
                             perfil_principal = admin_profiles[0]  # Use first admin profile
                         else:
@@ -3764,6 +3777,33 @@ def can_change_password(editor_user, target_user_data):
         # Pode alterar senha apenas de equipe interna básica
         if target_role == 'interno_unique' and target_perfil_principal == 'basico':
             print(f"[PASSWORD_CHANGE_CHECK] Admin Financeiro pode alterar senha de equipe interna básica")
+            return True
+    
+    # Admin Recursos Humanos pode alterar senha de:
+    # - Equipe interna básica (interno_unique + basico)
+    # NÃO PODE alterar senha de:
+    # - Master Admins
+    # - Module Admins
+    # - Clientes
+    if editor_role == 'interno_unique' and editor_perfil_principal == 'admin_recursos_humanos':
+        # Não pode alterar senha de Master Admin
+        if target_role == 'admin':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin RH não pode alterar senha de Master Admin")
+            return False
+        
+        # Não pode alterar senha de outros Module Admins
+        if target_role == 'interno_unique' and target_perfil_principal.startswith('admin_'):
+            print(f"[PASSWORD_CHANGE_CHECK] Admin RH não pode alterar senha de Module Admin")
+            return False
+        
+        # Não pode alterar senha de clientes
+        if target_role == 'cliente_unique':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin RH não pode alterar senha de cliente")
+            return False
+        
+        # Pode alterar senha apenas de equipe interna básica
+        if target_role == 'interno_unique' and target_perfil_principal == 'basico':
+            print(f"[PASSWORD_CHANGE_CHECK] Admin RH pode alterar senha de equipe interna básica")
             return True
     
     # Outros usuários não podem alterar senhas
