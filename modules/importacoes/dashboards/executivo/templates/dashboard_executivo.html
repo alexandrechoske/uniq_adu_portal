@@ -18,12 +18,12 @@
     <div style="display: flex; align-items: center; gap: 12px;">
         <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #f39c12;"></i>
         <div>
-            <h4 style="margin: 0 0 8px 0; color: #856404;">Acesso Restrito - Empresas Não Vinculadas</h4>
+            <h4 style="margin: 0 0 8px 0; color: #856404;">{{ t('common.acesso_restrito') }}</h4>
             <p style="margin: 0; font-size: 14px; line-height: 1.4;">
-                Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o administrador do sistema para associar as empresas adequadas ao seu perfil.
+                {{ t('common.mensagem_sem_empresas') }}
             </p>
             <p style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d;">
-                <i class="mdi mdi-information"></i> Por questões de segurança e privacidade, o acesso aos dados é restrito às empresas associadas à sua conta.
+                <i class="mdi mdi-information"></i> {{ t('common.aviso_seguranca') }}
             </p>
         </div>
     </div>
@@ -589,7 +589,7 @@
     <div id="filter-modal" class="filter-modal">
         <div class="filter-modal-content">
             <div class="filter-modal-header">
-                <h2 class="filter-modal-title">🔍 Filtros do Dashboard</h2>
+                <h2 class="filter-modal-title">{{ t('importacoes.dashboard_executivo.filtros_avancados.titulo') }}</h2>
                 <button class="filter-modal-close" id="close-modal">
                     <i class="mdi mdi-close"></i>
                 </button>
@@ -597,20 +597,20 @@
             <div class="filter-modal-body">
                 <!-- Período -->
                 <div class="filter-section">
-                    <h3 class="filter-section-title">📅 Período</h3>
+                    <h3 class="filter-section-title">{{ t('importacoes.dashboard_executivo.filtros_avancados.periodo_titulo') }}</h3>
                     <div class="filter-quick-buttons">
-                        <button class="btn-quick" data-days="30">30 dias</button>
-                        <button class="btn-quick" data-days="60">60 dias</button>
-                        <button class="btn-quick" data-days="90">90 dias</button>
-                        <button class="btn-quick" data-days="180">6 meses</button>
+                        <button class="btn-quick" data-days="30">{{ t('importacoes.dashboard_executivo.filtros_avancados.periodo_30_dias') }}</button>
+                        <button class="btn-quick" data-days="60">{{ t('importacoes.dashboard_executivo.filtros_avancados.periodo_60_dias') }}</button>
+                        <button class="btn-quick" data-days="90">{{ t('importacoes.dashboard_executivo.filtros_avancados.periodo_90_dias') }}</button>
+                        <button class="btn-quick" data-days="180">{{ t('importacoes.dashboard_executivo.filtros_avancados.periodo_6_meses') }}</button>
                     </div>
                     <div class="filter-date-inputs">
                         <div class="filter-input-group">
-                            <label for="data-inicio">Data Início</label>
+                            <label for="data-inicio">{{ t('importacoes.dashboard_executivo.filtros_avancados.data_inicio') }}</label>
                             <input type="date" id="data-inicio" name="data_inicio">
                         </div>
                         <div class="filter-input-group">
-                            <label for="data-fim">Data Fim</label>
+                            <label for="data-fim">{{ t('importacoes.dashboard_executivo.filtros_avancados.data_fim') }}</label>
                             <input type="date" id="data-fim" name="data_fim">
                         </div>
                     </div>
@@ -618,16 +618,16 @@
 
                 <!-- Material - Apenas para usuários KINGSPAN/CISER -->
                 <div class="filter-section" id="material-filter-section" style="display: none;">
-                    <h3 class="filter-section-title">📦 Material</h3>
+                    <h3 class="filter-section-title">{{ t('importacoes.dashboard_executivo.filtros_avancados.material_titulo') }}</h3>
                     <div class="filter-input-group">
                         <div class="multi-select-container">
                             <div class="multi-select-header" id="material-header">
-                                <span class="multi-select-placeholder">Todos os materiais</span>
+                                <span class="multi-select-placeholder">{{ t('importacoes.dashboard_executivo.filtros_avancados.todos_materiais') }}</span>
                                 <i class="mdi mdi-chevron-down"></i>
                             </div>
                             <div class="multi-select-dropdown" id="material-dropdown">
                                 <div class="multi-select-search">
-                                    <input type="text" placeholder="Buscar material..." id="material-search">
+                                    <input type="text" placeholder="{{ t('importacoes.dashboard_executivo.filtros_avancados.buscar_material') }}" id="material-search">
                                 </div>
                                 <div class="multi-select-options" id="material-options">
                                     <!-- Opções carregadas dinamicamente -->
@@ -639,16 +639,16 @@
 
                 <!-- Cliente -->
                 <div class="filter-section">
-                    <h3 class="filter-section-title">🏢 Cliente</h3>
+                    <h3 class="filter-section-title">{{ t('importacoes.dashboard_executivo.filtros_avancados.cliente_titulo') }}</h3>
                     <div class="filter-input-group">
                         <div class="multi-select-container">
                             <div class="multi-select-header" id="cliente-header">
-                                <span class="multi-select-placeholder">Todos os clientes</span>
+                                <span class="multi-select-placeholder">{{ t('importacoes.dashboard_executivo.filtros_avancados.todos_clientes') }}</span>
                                 <i class="mdi mdi-chevron-down"></i>
                             </div>
                             <div class="multi-select-dropdown" id="cliente-dropdown">
                                 <div class="multi-select-search">
-                                    <input type="text" placeholder="Buscar cliente..." id="cliente-search">
+                                    <input type="text" placeholder="{{ t('importacoes.dashboard_executivo.filtros_avancados.buscar_cliente') }}" id="cliente-search">
                                 </div>
                                 <div class="multi-select-options" id="cliente-options">
                                     <!-- Opções carregadas dinamicamente -->
@@ -660,11 +660,11 @@
 
                 <!-- Modal -->
                 <div class="filter-section">
-                    <h3 class="filter-section-title">🚛 Modal</h3>
+                    <h3 class="filter-section-title">{{ t('importacoes.dashboard_executivo.filtros_avancados.modal_titulo') }}</h3>
                     <div class="filter-input-group">
                         <div class="multi-select-container">
                             <div class="multi-select-header" id="modal-header">
-                                <span class="multi-select-placeholder">Todos os modais</span>
+                                <span class="multi-select-placeholder">{{ t('importacoes.dashboard_executivo.filtros_avancados.todos_modais') }}</span>
                                 <i class="mdi mdi-chevron-down"></i>
                             </div>
                             <div class="multi-select-dropdown" id="modal-dropdown">
@@ -678,11 +678,11 @@
 
                 <!-- Canal -->
                 <div class="filter-section">
-                    <h3 class="filter-section-title">🚦 Canal</h3>
+                    <h3 class="filter-section-title">{{ t('importacoes.dashboard_executivo.filtros_avancados.canal_titulo') }}</h3>
                     <div class="filter-input-group">
                         <div class="multi-select-container">
                             <div class="multi-select-header" id="canal-header">
-                                <span class="multi-select-placeholder">Todos os canais</span>
+                                <span class="multi-select-placeholder">{{ t('importacoes.dashboard_executivo.filtros_avancados.todos_canais') }}</span>
                                 <i class="mdi mdi-chevron-down"></i>
                             </div>
                             <div class="multi-select-dropdown" id="canal-dropdown">
@@ -697,11 +697,11 @@
             <div class="filter-modal-footer">
                 <button id="clear-filters" class="btn btn-secondary">
                     <i class="mdi mdi-refresh"></i>
-                    Limpar Filtros
+                    {{ t('importacoes.dashboard_executivo.filtros_avancados.limpar_filtros') }}
                 </button>
                 <button id="apply-filters" class="btn btn-primary">
                     <i class="mdi mdi-check"></i>
-                    Aplicar Filtros
+                    {{ t('importacoes.dashboard_executivo.filtros_avancados.aplicar_filtros') }}
                 </button>
             </div>
         </div>

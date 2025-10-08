@@ -80,3 +80,12 @@ def test_page():
     """
     from flask import render_template
     return render_template('test_traducao.html')
+
+@i18n_bp.route('/clear-cache', methods=['POST', 'GET'])
+def clear_cache():
+    """
+    Limpa o cache de traduções (desenvolvimento)
+    """
+    from utils.i18n_helper import clear_translations_cache
+    clear_translations_cache()
+    return jsonify({'success': True, 'message': 'Cache de traduções limpo'})

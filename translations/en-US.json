@@ -25,7 +25,10 @@
     "actions": "Actions",
     "details": "Details",
     "close": "Close",
-    "open": "Open"
+    "open": "Open",
+    "acesso_restrito": "Restricted Access - No Linked Companies",
+    "mensagem_sem_empresas": "Your account has no linked companies. To access dashboard data, please contact the system administrator to associate the appropriate companies to your profile.",
+    "aviso_seguranca": "For security and privacy reasons, data access is restricted to companies associated with your account."
   },
   "navigation": {
     "home": "Home",
@@ -36,6 +39,46 @@
     "profile": "Profile",
     "help": "Help",
     "about": "About"
+  },
+  "sidebar": {
+    "sections": {
+      "importacoes": "Imports",
+      "financeiro": "Financial",
+      "configuracoes": "Settings",
+      "recursos_humanos": "Human Resources"
+    },
+    "importacoes": {
+      "dashboard_executivo": "Executive Imports Dashboard",
+      "dashboard_operacional": "Operational Dashboard",
+      "dashboard_importacoes": "Imports Dashboard",
+      "conferencia_documental": "Document Review",
+      "exportacao_relatorios": "Reports Export"
+    },
+    "financeiro": {
+      "dashboard_executivo": "Executive Financial Dashboard",
+      "fluxo_caixa": "Cash Flow",
+      "despesas": "Expenses",
+      "faturamento": "Billing",
+      "conciliacao": "Reconciliation",
+      "categorizacao": "Categorization",
+      "projecoes_metas": "Projections & Goals",
+      "exportar_bases": "Export Databases"
+    },
+    "configuracoes": {
+      "usuarios": "Users",
+      "perfis": "Profiles",
+      "clientes": "Clients",
+      "analytics_portal": "Portal Analytics",
+      "analytics_agente": "Agent Analytics"
+    },
+    "recursos_humanos": {
+      "dashboard_executivo": "Executive Dashboard",
+      "gestao_colaboradores": "Employee Management",
+      "gestao_cargos": "Job Positions Management",
+      "gestao_departamentos": "Departments Management",
+      "recrutamento": "Recruitment",
+      "portal_carreiras": "Careers Portal"
+    }
   },
   "menu": {
     "main_menu": "Main Menu",
@@ -317,7 +360,29 @@
       "selecionar_arquivo": "Select File",
       "clique_selecionar": "Click to select",
       "ou_arraste": "or drag the file here",
-      "tipos_permitidos": "Allowed types: PDF, Images, Excel, Word, TXT, CSV, ZIP (max. 50MB)"
+      "tipos_permitidos": "Allowed types: PDF, Images, Excel, Word, TXT, CSV, ZIP (max. 50MB)",
+      "filtros_avancados": {
+        "titulo": "🔍 Dashboard Filters",
+        "periodo_titulo": "📅 Period",
+        "periodo_30_dias": "30 days",
+        "periodo_60_dias": "60 days",
+        "periodo_90_dias": "90 days",
+        "periodo_6_meses": "6 months",
+        "data_inicio": "Start Date",
+        "data_fim": "End Date",
+        "material_titulo": "📦 Material",
+        "todos_materiais": "All materials",
+        "buscar_material": "Search material...",
+        "cliente_titulo": "🏢 Client",
+        "todos_clientes": "All clients",
+        "buscar_cliente": "Search client...",
+        "modal_titulo": "🚛 Modal",
+        "todos_modais": "All modals",
+        "canal_titulo": "🚦 Channel",
+        "todos_canais": "All channels",
+        "limpar_filtros": "Clear Filters",
+        "aplicar_filtros": "Apply Filters"
+      }
     },
     "dashboard_operacional": {
       "title": "Operational Dashboard",
@@ -347,8 +412,116 @@
       "carregando": "Loading processes..."
     },
     "dashboard_tv": {
-      "title": "TV Dashboard",
+      "title": "Imports Dashboard Summary",
       "subtitle": "Visual process monitoring",
+      "modo_tv": "TV Mode",
+      "configuracoes": "Settings",
+      "carregando_dados": "Loading data...",
+      "total_processos": "TOTAL: {count} PROCESSES",
+      "maritimo": "Maritime",
+      "aereo": "Air",
+      "terrestre": "Ground",
+      "tabela": {
+        "modal": "MODAL",
+        "num": "NUM",
+        "numero_di": "DI NUMBER",
+        "origem": "ORIGIN",
+        "ref_importador": "IMPORTER REF",
+        "data_embarque": "SHIPMENT DATE",
+        "data_chegada": "ARRIVAL DATE",
+        "data_registro": "REGISTRATION DATE",
+        "canal": "CHANNEL",
+        "data_entrega": "DELIVERY DATE",
+        "destino": "DESTINATION"
+      },
+      "paginacao": {
+        "pagina_de": "Page {current} of {total}",
+        "loop_ativo": "Auto Loop Active"
+      },
+      "legenda": {
+        "embarque_futuro": "Future or Today Shipment",
+        "embarque_passado": "Past Shipment",
+        "chegada_hoje": "Arrival Today"
+      },
+      "footer": {
+        "copyright": "Copyright © 2024 All rights reserved."
+      },
+      "modal_config": {
+        "titulo": "Dashboard Settings",
+        "loop_automatico": {
+          "titulo": "Auto Loop",
+          "ativar": "Enable Loop",
+          "intervalo": "Interval (seconds):",
+          "pausa_apos_interacao": "Pause After Interaction:"
+        },
+        "atualizacao": {
+          "titulo": "Update",
+          "auto_refresh": "Auto Refresh",
+          "intervalo": "Interval (seconds):",
+          "atualizar_agora": "Update Now"
+        },
+        "exibicao": {
+          "titulo": "Display",
+          "registros_por_pagina": "Records per page:",
+          "registros_opcao": "{count} records",
+          "modo_compacto": "Compact Mode"
+        },
+        "filtros": {
+          "titulo": "Filters",
+          "data_embarque": "Shipment Date",
+          "filtrar_empresa": "Filter by Company",
+          "pesquisar_empresa": "Search Company:",
+          "placeholder_empresa": "Type name or CNPJ...",
+          "empresas": "Companies:",
+          "carregando_empresas": "Loading companies...",
+          "selecionar_todas": "All",
+          "limpar": "Clear"
+        },
+        "interface": {
+          "titulo": "Interface",
+          "tema": "Theme:",
+          "tema_automatico": "Automatic",
+          "tema_claro": "Light",
+          "tema_escuro": "Dark",
+          "animacoes": "Animations"
+        },
+        "controles": {
+          "titulo": "Controls",
+          "parar_loop": "Stop Loop",
+          "iniciar_loop": "Start Loop",
+          "restaurar_padroes": "Restore Defaults"
+        },
+        "footer": {
+          "config_salvas": "Settings saved automatically",
+          "aplicar_filtros": "Apply Filters",
+          "fechar": "Close"
+        }
+      },
+      "js_strings": {
+        "total_processos_count": "TOTAL: {count} PROCESSES",
+        "meses": {
+          "janeiro": "JANUARY",
+          "fevereiro": "FEBRUARY",
+          "marco": "MARCH",
+          "abril": "APRIL",
+          "maio": "MAY",
+          "junho": "JUNE",
+          "julho": "JULY",
+          "agosto": "AUGUST",
+          "setembro": "SEPTEMBER",
+          "outubro": "OCTOBER",
+          "novembro": "NOVEMBER",
+          "dezembro": "DECEMBER"
+        },
+        "filtro_empresa_necessario": {
+          "titulo": "Company Filter Required",
+          "mensagem_selecione": "Select one or more of your {count} companies to load the dashboard",
+          "voce_tem_acesso": "You have access to {count}",
+          "todas_empresas": "all companies",
+          "empresas_count": "{count} companies",
+          "use_filtro": "Use the company filter in the top bar to select and load data."
+        }
+      },
       "processos_em_andamento": "Processes in Progress",
       "alertas": "Alerts",
       "ultimas_atualizacoes": "Latest Updates",

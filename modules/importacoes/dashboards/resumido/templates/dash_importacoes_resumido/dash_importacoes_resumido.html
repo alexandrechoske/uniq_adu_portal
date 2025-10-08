@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Importações Resumido - Portal UniSystem{% endblock %}
+{% block title %}{{ t('importacoes.dashboard_tv.title') }} - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('dash_importacoes_resumido.static', filename='dash_importacoes_resumido/dashboard.css') }}">
@@ -13,12 +13,12 @@
     <div style="display: flex; align-items: center; gap: 12px;">
         <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #f39c12;"></i>
         <div>
-            <h4 style="margin: 0 0 8px 0; color: #856404;">Acesso Restrito - Empresas Não Vinculadas</h4>
+            <h4 style="margin: 0 0 8px 0; color: #856404;">{{ t('common.acesso_restrito') }}</h4>
             <p style="margin: 0; font-size: 14px; line-height: 1.4;">
-                Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o administrador do sistema para associar as empresas adequadas ao seu perfil.
+                {{ t('common.mensagem_sem_empresas') }}
             </p>
             <p style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d;">
-                <i class="mdi mdi-information"></i> Por questões de segurança e privacidade, o acesso aos dados é restrito às empresas associadas à sua conta.
+                <i class="mdi mdi-information"></i> {{ t('common.aviso_seguranca') }}
             </p>
         </div>
     </div>
@@ -31,7 +31,7 @@
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <p>Carregando dados...</p>
+            <p>{{ t('importacoes.dashboard_tv.carregando_dados') }}</p>
         </div>
     </div>
 
@@ -39,19 +39,19 @@
     <div class="actions-bar">
         <div class="actions-left">
             {{ breadcrumb([
-                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
-                {'name': 'Dashboards', 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
-                {'name': 'Dashboard Importações', 'icon': 'mdi mdi-ship'}
+                {'name': t('menu.main_menu'), 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': t('modules.dashboard_executivo.title'), 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
+                {'name': t('importacoes.dashboard_tv.title'), 'icon': 'mdi mdi-ship'}
             ]) }}
         </div>
         <div class="actions-right">
             <button id="btn-fullscreen-tv" class="btn btn-secondary">
                 <i class="mdi mdi-fullscreen"></i>
-                Modo TV
+                {{ t('importacoes.dashboard_tv.modo_tv') }}
             </button>
             <button id="btn-settings" class="btn btn-primary">
                 <i class="mdi mdi-cog"></i>
-                Configurações
+                {{ t('importacoes.dashboard_tv.configuracoes') }}
             </button>
         </div>
     </div>
@@ -124,17 +124,17 @@
             <table class="custom-table" id="data-table">
                 <thead>
                     <tr>
-                        <th>MODAL</th>
-                        <th>NUM</th>
-                        <th>NÚMERO DI</th>
-                        <th>ORIGEM</th>
-                        <th>REF IMPORTADOR</th>
-                        <th>DATA EMBARQUE</th>
-                        <th>DATA CHEGADA</th>
-                        <th>DATA REGISTRO</th>
-                        <th>CANAL</th>
-                        <th>DATA ENTREGA</th>
-                        <th>DESTINO</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.modal') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.num') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.numero_di') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.origem') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.ref_importador') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.data_embarque') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.data_chegada') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.data_registro') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.canal') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.data_entrega') }}</th>
+                        <th>{{ t('importacoes.dashboard_tv.tabela.destino') }}</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
@@ -146,10 +146,10 @@
         <!-- Paginação simplificada -->
         <div class="pagination-container">
             <div class="page-info-container">
-                <span id="page-info" class="page-info">Página 1 de 1</span>
+                <span id="page-info" class="page-info">{{ t('importacoes.dashboard_tv.paginacao.pagina_de', current=1, total=1) }}</span>
                 <div id="auto-loop-indicator" class="auto-loop-indicator">
                     <i class="mdi mdi-autorenew"></i>
-                    <span>Loop Automático Ativo</span>
+                    <span>{{ t('importacoes.dashboard_tv.paginacao.loop_ativo') }}</span>
                 </div>
             </div>
         </div>
@@ -158,18 +158,18 @@
         <div class="date-legend">
             <div class="legend-item">
                 <span class="legend-sample legend-dot embarque-red"></span>
-                <span>Embarque Futuro ou Hoje</span>
+                <span>{{ t('importacoes.dashboard_tv.legenda.embarque_futuro') }}</span>
             </div>
             
             <div class="legend-item">
                 <span class="legend-sample legend-dot embarque-past"></span>
-                <span>Embarque Passado</span>
+                <span>{{ t('importacoes.dashboard_tv.legenda.embarque_passado') }}</span>
             </div>
             
             <div class="legend-item">
                 <span class="legend-sample chegada-today">
                     <i class="mdi mdi-clock"></i>
-                    Chegada Hoje
+                    {{ t('importacoes.dashboard_tv.legenda.chegada_hoje') }}
                 </span>
             </div>
         </div>
@@ -178,7 +178,7 @@
         <div class="footer-section">
             <div class="footer-center">
                 <div class="copyright">
-                    <span>Copyright © 2024 Todos os direitos reservados.</span>
+                    <span>{{ t('importacoes.dashboard_tv.footer.copyright') }}</span>
                     <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="Unique" class="footer-logo">
                 </div>
             </div>
@@ -191,7 +191,7 @@
             <div class="settings-modal-header">
                 <h2>
                     <i class="mdi mdi-cog"></i>
-                    Configurações do Dashboard
+                    {{ t('importacoes.dashboard_tv.modal_config.titulo') }}
                 </h2>
                 <button id="btn-close-settings" class="btn-close-settings">
                     <i class="mdi mdi-close"></i>
@@ -207,22 +207,22 @@
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <i class="mdi mdi-autorenew"></i>
-                                <h3>Loop Automático</h3>
+                                <h3>{{ t('importacoes.dashboard_tv.modal_config.loop_automatico.titulo') }}</h3>
                             </div>
                             <div class="settings-card-body">
                                 <div class="settings-row">
                                     <label for="auto-loop-enabled" class="toggle-label">
                                         <input type="checkbox" id="auto-loop-enabled" checked>
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Ativar Loop</span>
+                                        <span class="toggle-text">{{ t('importacoes.dashboard_tv.modal_config.loop_automatico.ativar') }}</span>
                                     </label>
                                 </div>
                                 <div class="settings-row">
-                                    <label for="auto-loop-interval">Intervalo (segundos):</label>
+                                    <label for="auto-loop-interval">{{ t('importacoes.dashboard_tv.modal_config.loop_automatico.intervalo') }}</label>
                                     <input type="number" id="auto-loop-interval" min="5" max="120" value="15" class="settings-input">
                                 </div>
                                 <div class="settings-row">
-                                    <label for="auto-loop-pause-duration">Pausa após Interação:</label>
+                                    <label for="auto-loop-pause-duration">{{ t('importacoes.dashboard_tv.modal_config.loop_automatico.pausa_apos_interacao') }}</label>
                                     <input type="number" id="auto-loop-pause-duration" min="5" max="60" value="10" class="settings-input">
                                 </div>
                             </div>
@@ -232,24 +232,24 @@
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <i class="mdi mdi-refresh"></i>
-                                <h3>Atualização</h3>
+                                <h3>{{ t('importacoes.dashboard_tv.modal_config.atualizacao.titulo') }}</h3>
                             </div>
                             <div class="settings-card-body">
                                 <div class="settings-row">
                                     <label for="auto-refresh-enabled" class="toggle-label">
                                         <input type="checkbox" id="auto-refresh-enabled" checked>
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Auto Refresh</span>
+                                        <span class="toggle-text">{{ t('importacoes.dashboard_tv.modal_config.atualizacao.auto_refresh') }}</span>
                                     </label>
                                 </div>
                                 <div class="settings-row">
-                                    <label for="auto-refresh-interval">Intervalo (segundos):</label>
+                                    <label for="auto-refresh-interval">{{ t('importacoes.dashboard_tv.modal_config.atualizacao.intervalo') }}</label>
                                     <input type="number" id="auto-refresh-interval" min="10" max="300" value="30" class="settings-input">
                                 </div>
                                 <div class="settings-row">
                                     <button id="btn-manual-refresh" type="button" class="btn btn-secondary btn-full">
                                         <i class="mdi mdi-refresh"></i>
-                                        Atualizar Agora
+                                        {{ t('importacoes.dashboard_tv.modal_config.atualizacao.atualizar_agora') }}
                                     </button>
                                 </div>
                             </div>
@@ -259,24 +259,24 @@
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <i class="mdi mdi-table"></i>
-                                <h3>Exibição</h3>
+                                <h3>{{ t('importacoes.dashboard_tv.modal_config.exibicao.titulo') }}</h3>
                             </div>
                             <div class="settings-card-body">
                                 <div class="settings-row">
-                                    <label for="records-per-page">Registros por página:</label>
+                                    <label for="records-per-page">{{ t('importacoes.dashboard_tv.modal_config.exibicao.registros_por_pagina') }}</label>
                                     <select id="records-per-page" class="settings-select">
-                                        <option value="5">5 registros</option>
-                                        <option value="10" selected>10 registros</option>
-                                        <option value="15">15 registros</option>
-                                        <option value="20">20 registros</option>
-                                        <option value="25">25 registros</option>
+                                        <option value="5">5 {{ t('importacoes.dashboard_tv.modal_config.exibicao.registros_opcao', count='').split()[1] }}</option>
+                                        <option value="10" selected>10 {{ t('importacoes.dashboard_tv.modal_config.exibicao.registros_opcao', count='').split()[1] }}</option>
+                                        <option value="15">15 {{ t('importacoes.dashboard_tv.modal_config.exibicao.registros_opcao', count='').split()[1] }}</option>
+                                        <option value="20">20 {{ t('importacoes.dashboard_tv.modal_config.exibicao.registros_opcao', count='').split()[1] }}</option>
+                                        <option value="25">25 {{ t('importacoes.dashboard_tv.modal_config.exibicao.registros_opcao', count='').split()[1] }}</option>
                                     </select>
                                 </div>
                                 <div class="settings-row">
                                     <label for="compact-mode" class="toggle-label">
                                         <input type="checkbox" id="compact-mode">
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Modo Compacto</span>
+                                        <span class="toggle-text">{{ t('importacoes.dashboard_tv.modal_config.exibicao.modo_compacto') }}</span>
                                     </label>
                                 </div>
                             </div>
@@ -286,14 +286,14 @@
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <i class="mdi mdi-filter"></i>
-                                <h3>Filtros</h3>
+                                <h3>{{ t('importacoes.dashboard_tv.modal_config.filtros.titulo') }}</h3>
                             </div>
                             <div class="settings-card-body">
                                 <div class="settings-row">
                                     <label for="filter-embarque-default" class="toggle-label">
                                         <input type="checkbox" id="filter-embarque-default">
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Data de Embarque</span>
+                                        <span class="toggle-text">{{ t('importacoes.dashboard_tv.modal_config.filtros.data_embarque') }}</span>
                                     </label>
                                 </div>
                                 
@@ -302,19 +302,19 @@
                                     <label for="company-filter-enabled" class="toggle-label">
                                         <input type="checkbox" id="company-filter-enabled">
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Filtrar por Empresa</span>
+                                        <span class="toggle-text">{{ t('importacoes.dashboard_tv.modal_config.filtros.filtrar_empresa') }}</span>
                                     </label>
                                 </div>
                                 
                                 <div class="settings-row company-filter-section" style="display: none;">
-                                    <label for="company-search">Pesquisar Empresa:</label>
-                                    <input type="text" id="company-search" class="settings-input" placeholder="Digite o nome ou CNPJ...">
+                                    <label for="company-search">{{ t('importacoes.dashboard_tv.modal_config.filtros.pesquisar_empresa') }}</label>
+                                    <input type="text" id="company-search" class="settings-input" placeholder="{{ t('importacoes.dashboard_tv.modal_config.filtros.placeholder_empresa') }}">
                                 </div>
                                 
                                 <div class="settings-row company-filter-section" style="display: none;">
-                                    <label>Empresas:</label>
+                                    <label>{{ t('importacoes.dashboard_tv.modal_config.filtros.empresas') }}</label>
                                     <div id="company-list" class="company-list-compact">
-                                        <div class="loading-text">Carregando empresas...</div>
+                                        <div class="loading-text">{{ t('importacoes.dashboard_tv.modal_config.filtros.carregando_empresas') }}</div>
                                     </div>
                                 </div>
                                 
@@ -322,11 +322,11 @@
                                     <div class="company-actions-compact">
                                         <button id="btn-select-all-companies" type="button" class="btn btn-secondary btn-mini">
                                             <i class="mdi mdi-check-all"></i>
-                                            Todas
+                                            {{ t('importacoes.dashboard_tv.modal_config.filtros.selecionar_todas') }}
                                         </button>
                                         <button id="btn-clear-company-filter" type="button" class="btn btn-secondary btn-mini">
                                             <i class="mdi mdi-filter-remove"></i>
-                                            Limpar
+                                            {{ t('importacoes.dashboard_tv.modal_config.filtros.limpar') }}
                                         </button>
                                     </div>
                                 </div>
@@ -337,22 +337,22 @@
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <i class="mdi mdi-palette"></i>
-                                <h3>Interface</h3>
+                                <h3>{{ t('importacoes.dashboard_tv.modal_config.interface.titulo') }}</h3>
                             </div>
                             <div class="settings-card-body">
                                 <div class="settings-row">
-                                    <label for="theme-mode">Tema:</label>
+                                    <label for="theme-mode">{{ t('importacoes.dashboard_tv.modal_config.interface.tema') }}</label>
                                     <select id="theme-mode" class="settings-select">
-                                        <option value="auto" selected>Automático</option>
-                                        <option value="light">Claro</option>
-                                        <option value="dark">Escuro</option>
+                                        <option value="auto" selected>{{ t('importacoes.dashboard_tv.modal_config.interface.tema_automatico') }}</option>
+                                        <option value="light">{{ t('importacoes.dashboard_tv.modal_config.interface.tema_claro') }}</option>
+                                        <option value="dark">{{ t('importacoes.dashboard_tv.modal_config.interface.tema_escuro') }}</option>
                                     </select>
                                 </div>
                                 <div class="settings-row">
                                     <label for="animations-enabled" class="toggle-label">
                                         <input type="checkbox" id="animations-enabled" checked>
                                         <span class="toggle-slider"></span>
-                                        <span class="toggle-text">Animações</span>
+                                        <span class="toggle-text">{{ t('importacoes.dashboard_tv.modal_config.interface.animacoes') }}</span>
                                     </label>
                                 </div>
                             </div>
@@ -362,19 +362,19 @@
                         <div class="settings-card">
                             <div class="settings-card-header">
                                 <i class="mdi mdi-play-pause"></i>
-                                <h3>Controles</h3>
+                                <h3>{{ t('importacoes.dashboard_tv.modal_config.controles.titulo') }}</h3>
                             </div>
                             <div class="settings-card-body">
                                 <div class="settings-row">
                                     <button id="btn-toggle-loop" type="button" class="btn btn-secondary btn-full">
                                         <i id="loop-control-icon" class="mdi mdi-pause"></i>
-                                        <span id="loop-control-text">Parar Loop</span>
+                                        <span id="loop-control-text">{{ t('importacoes.dashboard_tv.modal_config.controles.parar_loop') }}</span>
                                     </button>
                                 </div>
                                 <div class="settings-row">
                                     <button id="btn-reset-settings" type="button" class="btn btn-warning btn-full">
                                         <i class="mdi mdi-restore"></i>
-                                        Restaurar Padrões
+                                        {{ t('importacoes.dashboard_tv.modal_config.controles.restaurar_padroes') }}
                                     </button>
                                 </div>
                             </div>
@@ -386,16 +386,16 @@
             
             <div class="settings-modal-footer">
                 <div class="settings-footer-left">
-                    <span class="settings-status">Configurações salvas automaticamente</span>
+                    <span class="settings-status">{{ t('importacoes.dashboard_tv.modal_config.footer.config_salvas') }}</span>
                 </div>
                 <div class="settings-footer-actions">
                     <button id="btn-apply-all-filters" class="btn btn-primary">
                         <i class="mdi mdi-filter-check"></i>
-                        Aplicar Filtros
+                        {{ t('importacoes.dashboard_tv.modal_config.footer.aplicar_filtros') }}
                     </button>
                     <button id="btn-cancel-settings" class="btn btn-secondary">
                         <i class="mdi mdi-close"></i>
-                        Fechar
+                        {{ t('importacoes.dashboard_tv.modal_config.footer.fechar') }}
                     </button>
                 </div>
             </div>
@@ -408,6 +408,42 @@
 <script>
 // Set warning state for JavaScript
 window.showCompanyWarning = {{ 'true' if show_company_warning else 'false' }};
+
+// Inject translations for JavaScript
+window.i18n = {
+    total_processos: "{{ t('importacoes.dashboard_tv.js_strings.total_processos_count') }}",
+    meses: [
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.janeiro') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.fevereiro') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.marco') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.abril') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.maio') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.junho') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.julho') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.agosto') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.setembro') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.outubro') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.novembro') }}",
+        "{{ t('importacoes.dashboard_tv.js_strings.meses.dezembro') }}"
+    ],
+    filtro_empresa: {
+        titulo: "{{ t('importacoes.dashboard_tv.js_strings.filtro_empresa_necessario.titulo') }}",
+        mensagem_selecione: "{{ t('importacoes.dashboard_tv.js_strings.filtro_empresa_necessario.mensagem_selecione') }}",
+        voce_tem_acesso: "{{ t('importacoes.dashboard_tv.js_strings.filtro_empresa_necessario.voce_tem_acesso') }}",
+        todas_empresas: "{{ t('importacoes.dashboard_tv.js_strings.filtro_empresa_necessario.todas_empresas') }}",
+        empresas_count: "{{ t('importacoes.dashboard_tv.js_strings.filtro_empresa_necessario.empresas_count') }}",
+        use_filtro: "{{ t('importacoes.dashboard_tv.js_strings.filtro_empresa_necessario.use_filtro') }}"
+    }
+};
+
+// Helper function to replace placeholders
+window.i18nReplace = function(str, replacements) {
+    let result = str;
+    for (let key in replacements) {
+        result = result.replace(new RegExp(`{${key}}`, 'g'), replacements[key]);
+    }
+    return result;
+};
 </script>
 <script src="{{ url_for('dash_importacoes_resumido.static', filename='dash_importacoes_resumido/dashboard.js') }}"></script>
 {% endblock %}

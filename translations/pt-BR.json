@@ -25,7 +25,10 @@
     "actions": "Ações",
     "details": "Detalhes",
     "close": "Fechar",
-    "open": "Abrir"
+    "open": "Abrir",
+    "acesso_restrito": "Acesso Restrito - Empresas Não Vinculadas",
+    "mensagem_sem_empresas": "Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o administrador do sistema para associar as empresas adequadas ao seu perfil.",
+    "aviso_seguranca": "Por questões de segurança e privacidade, o acesso aos dados é restrito às empresas associadas à sua conta."
   },
   "navigation": {
     "home": "Início",
@@ -36,6 +39,46 @@
     "profile": "Perfil",
     "help": "Ajuda",
     "about": "Sobre"
+  },
+  "sidebar": {
+    "sections": {
+      "importacoes": "Importações",
+      "financeiro": "Financeiro",
+      "configuracoes": "Configurações",
+      "recursos_humanos": "Recursos Humanos"
+    },
+    "importacoes": {
+      "dashboard_executivo": "Dashboard Executivo Importações",
+      "dashboard_operacional": "Dashboard Operacional",
+      "dashboard_importacoes": "Dashboard Importações",
+      "conferencia_documental": "Conferência Documental",
+      "exportacao_relatorios": "Exportação de Relatórios"
+    },
+    "financeiro": {
+      "dashboard_executivo": "Dashboard Executivo Financeiro",
+      "fluxo_caixa": "Fluxo de Caixa",
+      "despesas": "Despesas",
+      "faturamento": "Faturamento",
+      "conciliacao": "Conciliação",
+      "categorizacao": "Categorização",
+      "projecoes_metas": "Projeções & Metas",
+      "exportar_bases": "Exportar Bases"
+    },
+    "configuracoes": {
+      "usuarios": "Usuários",
+      "perfis": "Perfis",
+      "clientes": "Clientes",
+      "analytics_portal": "Analytics do Portal",
+      "analytics_agente": "Analytics do Agente"
+    },
+    "recursos_humanos": {
+      "dashboard_executivo": "Dashboard Executivo",
+      "gestao_colaboradores": "Gestão de Colaboradores",
+      "gestao_cargos": "Gestão de Cargos",
+      "gestao_departamentos": "Gestão de Departamentos",
+      "recrutamento": "Recrutamento",
+      "portal_carreiras": "Portal de Carreiras"
+    }
   },
   "menu": {
     "main_menu": "Menu Principal",
@@ -317,7 +360,29 @@
       "selecionar_arquivo": "Selecionar Arquivo",
       "clique_selecionar": "Clique para selecionar",
       "ou_arraste": "ou arraste o arquivo aqui",
-      "tipos_permitidos": "Tipos permitidos: PDF, Imagens, Excel, Word, TXT, CSV, ZIP (máx. 50MB)"
+      "tipos_permitidos": "Tipos permitidos: PDF, Imagens, Excel, Word, TXT, CSV, ZIP (máx. 50MB)",
+      "filtros_avancados": {
+        "titulo": "🔍 Filtros do Dashboard",
+        "periodo_titulo": "📅 Período",
+        "periodo_30_dias": "30 dias",
+        "periodo_60_dias": "60 dias",
+        "periodo_90_dias": "90 dias",
+        "periodo_6_meses": "6 meses",
+        "data_inicio": "Data Início",
+        "data_fim": "Data Fim",
+        "material_titulo": "📦 Material",
+        "todos_materiais": "Todos os materiais",
+        "buscar_material": "Buscar material...",
+        "cliente_titulo": "🏢 Cliente",
+        "todos_clientes": "Todos os clientes",
+        "buscar_cliente": "Buscar cliente...",
+        "modal_titulo": "🚛 Modal",
+        "todos_modais": "Todos os modais",
+        "canal_titulo": "🚦 Canal",
+        "todos_canais": "Todos os canais",
+        "limpar_filtros": "Limpar Filtros",
+        "aplicar_filtros": "Aplicar Filtros"
+      }
     },
     "dashboard_operacional": {
       "title": "Dashboard Operacional",
@@ -347,8 +412,116 @@
       "carregando": "Carregando processos..."
     },
     "dashboard_tv": {
-      "title": "Dashboard TV",
+      "title": "Dashboard Importações Resumido",
       "subtitle": "Monitoramento visual de processos",
+      "modo_tv": "Modo TV",
+      "configuracoes": "Configurações",
+      "carregando_dados": "Carregando dados...",
+      "total_processos": "TOTAL: {count} PROCESSOS",
+      "maritimo": "Marítimo",
+      "aereo": "Aéreo",
+      "terrestre": "Terrestre",
+      "tabela": {
+        "modal": "MODAL",
+        "num": "NUM",
+        "numero_di": "NÚMERO DI",
+        "origem": "ORIGEM",
+        "ref_importador": "REF IMPORTADOR",
+        "data_embarque": "DATA EMBARQUE",
+        "data_chegada": "DATA CHEGADA",
+        "data_registro": "DATA REGISTRO",
+        "canal": "CANAL",
+        "data_entrega": "DATA ENTREGA",
+        "destino": "DESTINO"
+      },
+      "paginacao": {
+        "pagina_de": "Página {current} de {total}",
+        "loop_ativo": "Loop Automático Ativo"
+      },
+      "legenda": {
+        "embarque_futuro": "Embarque Futuro ou Hoje",
+        "embarque_passado": "Embarque Passado",
+        "chegada_hoje": "Chegada Hoje"
+      },
+      "footer": {
+        "copyright": "Copyright © 2024 Todos os direitos reservados."
+      },
+      "modal_config": {
+        "titulo": "Configurações do Dashboard",
+        "loop_automatico": {
+          "titulo": "Loop Automático",
+          "ativar": "Ativar Loop",
+          "intervalo": "Intervalo (segundos):",
+          "pausa_apos_interacao": "Pausa após Interação:"
+        },
+        "atualizacao": {
+          "titulo": "Atualização",
+          "auto_refresh": "Auto Refresh",
+          "intervalo": "Intervalo (segundos):",
+          "atualizar_agora": "Atualizar Agora"
+        },
+        "exibicao": {
+          "titulo": "Exibição",
+          "registros_por_pagina": "Registros por página:",
+          "registros_opcao": "{count} registros",
+          "modo_compacto": "Modo Compacto"
+        },
+        "filtros": {
+          "titulo": "Filtros",
+          "data_embarque": "Data de Embarque",
+          "filtrar_empresa": "Filtrar por Empresa",
+          "pesquisar_empresa": "Pesquisar Empresa:",
+          "placeholder_empresa": "Digite o nome ou CNPJ...",
+          "empresas": "Empresas:",
+          "carregando_empresas": "Carregando empresas...",
+          "selecionar_todas": "Todas",
+          "limpar": "Limpar"
+        },
+        "interface": {
+          "titulo": "Interface",
+          "tema": "Tema:",
+          "tema_automatico": "Automático",
+          "tema_claro": "Claro",
+          "tema_escuro": "Escuro",
+          "animacoes": "Animações"
+        },
+        "controles": {
+          "titulo": "Controles",
+          "parar_loop": "Parar Loop",
+          "iniciar_loop": "Iniciar Loop",
+          "restaurar_padroes": "Restaurar Padrões"
+        },
+        "footer": {
+          "config_salvas": "Configurações salvas automaticamente",
+          "aplicar_filtros": "Aplicar Filtros",
+          "fechar": "Fechar"
+        }
+      },
+      "js_strings": {
+        "total_processos_count": "TOTAL: {count} PROCESSOS",
+        "meses": {
+          "janeiro": "JANEIRO",
+          "fevereiro": "FEVEREIRO",
+          "marco": "MARÇO",
+          "abril": "ABRIL",
+          "maio": "MAIO",
+          "junho": "JUNHO",
+          "julho": "JULHO",
+          "agosto": "AGOSTO",
+          "setembro": "SETEMBRO",
+          "outubro": "OUTUBRO",
+          "novembro": "NOVEMBRO",
+          "dezembro": "DEZEMBRO"
+        },
+        "filtro_empresa_necessario": {
+          "titulo": "Filtro de Empresa Necessário",
+          "mensagem_selecione": "Selecione uma ou mais das suas {count} empresas para carregar o dashboard",
+          "voce_tem_acesso": "Você tem acesso a {count}",
+          "todas_empresas": "todas as empresas",
+          "empresas_count": "{count} empresas",
+          "use_filtro": "Use o filtro de empresas na barra superior para selecionar e carregar os dados."
+        }
+      },
       "processos_em_andamento": "Processos em Andamento",
       "alertas": "Alertas",
       "ultimas_atualizacoes": "Últimas Atualizações",

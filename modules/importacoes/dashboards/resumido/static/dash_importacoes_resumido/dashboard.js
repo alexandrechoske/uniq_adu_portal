@@ -567,7 +567,8 @@ class DashboardImportacoesResumido {
             hour12: false 
         });
         
-        const months = [
+        // Use translated months from window.i18n
+        const months = window.i18n?.meses || [
             'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
             'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
         ];
@@ -647,20 +648,23 @@ class DashboardImportacoesResumido {
         // Mostra mensagem informando que é necessário selecionar empresas
         const tbody = document.getElementById('table-body');
         if (tbody) {
-            const countText = companyCount === 'all' ? 'todas as empresas' : `${companyCount} empresas`;
+            const countText = companyCount === 'all' 
+                ? (window.i18n?.filtro_empresa?.todas_empresas || 'todas as empresas')
+                : window.i18nReplace?.(window.i18n?.filtro_empresa?.empresas_count || '{count} empresas', { count: companyCount });
+            
             tbody.innerHTML = `
                 <tr>
                     <td colspan="11" style="text-align: center; padding: 3rem; color: #374151;">
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
                             <i class="mdi mdi-filter-variant" style="font-size: 4rem; color: #3B82F6;"></i>
                             <div>
-                                <h3 style="margin: 0; color: #374151; font-size: 1.5rem;">Filtro de Empresa Necessário</h3>
+                                <h3 style="margin: 0; color: #374151; font-size: 1.5rem;">${window.i18n?.filtro_empresa?.titulo || 'Filtro de Empresa Necessário'}</h3>
                                 <p style="margin: 0.75rem 0; color: #6B7280; font-size: 1.1rem; max-width: 500px;">
                                     ${message}
                                 </p>
                                 <p style="margin: 0.5rem 0 0 0; color: #6B7280; font-size: 0.9rem;">
-                                    <strong>Você tem acesso a ${countText}</strong><br>
-                                    Use o filtro de empresas na barra superior para selecionar e carregar os dados.
+                                    <strong>${window.i18nReplace?.(window.i18n?.filtro_empresa?.voce_tem_acesso || 'Você tem acesso a {count}', { count: countText })}</strong><br>
+                                    ${window.i18n?.filtro_empresa?.use_filtro || 'Use o filtro de empresas na barra superior para selecionar e carregar os dados.'}
                                 </p>
                             </div>
                         </div>
@@ -781,8 +785,11 @@ class DashboardImportacoesResumido {
     
     loadBasicHeader() {
         // Carrega header básico sem dados específicos
-        document.getElementById('total-processos').textContent = 
-            'TOTAL: 0 PROCESSOS';
+        const totalText = window.i18nReplace?.(
+            window.i18n?.total_processos || 'TOTAL: {count} PROCESSOS', 
+            { count: 0 }
+        );
+        document.getElementById('total-processos').textContent = totalText;
         
         document.getElementById('count-maritimo').textContent = '0';
         document.getElementById('count-aereo').textContent = '0';
@@ -801,8 +808,11 @@ class DashboardImportacoesResumido {
     
     updateHeader(headerData) {
         // Atualizar métricas do cabeçalho
-        document.getElementById('total-processos').textContent = 
-            `TOTAL: ${headerData.total_processos} PROCESSOS`;
+        const totalText = window.i18nReplace?.(
+            window.i18n?.total_processos || 'TOTAL: {count} PROCESSOS', 
+            { count: headerData.total_processos }
+        );
+        document.getElementById('total-processos').textContent = totalText;
         
         document.getElementById('count-maritimo').textContent = headerData.count_maritimo || 0;
         document.getElementById('count-aereo').textContent = headerData.count_aereo || 0;
@@ -1068,7 +1078,8 @@ class DashboardImportacoesResumido {
     
     getCurrentDate() {
         const now = new Date();
-        const months = [
+        // Use translated months from window.i18n
+        const months = window.i18n?.meses || [
             'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
             'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
         ];

@@ -13,6 +13,15 @@ DEFAULT_LANGUAGE = 'pt-BR'
 # Cache de traduções carregadas
 _translations_cache = {}
 
+def clear_translations_cache():
+    """
+    Limpa o cache de traduções
+    Útil durante desenvolvimento quando os arquivos JSON são alterados
+    """
+    global _translations_cache
+    _translations_cache = {}
+    print("[INFO] Cache de traduções limpo")
+
 def get_current_language():
     """
     Retorna o idioma atual da sessão
