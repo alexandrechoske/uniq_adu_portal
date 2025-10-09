@@ -61,7 +61,29 @@ async function salvarVaga() {
     const tipo_contratacao = document.getElementById('tipo_contratacao').value.trim();
     const localizacao = document.getElementById('localizacao').value.trim();
     const descricao = document.getElementById('descricao').value.trim();
-    const requisitos = document.getElementById('requisitos').value.trim();
+    const requisitos_obrigatorios = document.getElementById('requisitos_obrigatorios').value.trim();
+    const requisitos_desejaveis = document.getElementById('requisitos_desejaveis').value.trim();
+    const diferenciais = document.getElementById('diferenciais').value.trim();
+    
+    // Novos campos
+    const faixa_salarial_min = document.getElementById('faixa_salarial_min').value;
+    const faixa_salarial_max = document.getElementById('faixa_salarial_max').value;
+    
+    // Benefícios (array JSON)
+    let beneficios = [];
+    try {
+        const beneficiosValue = document.getElementById('beneficios').value;
+        if (beneficiosValue) {
+            beneficios = JSON.parse(beneficiosValue);
+        }
+    } catch (e) {
+        console.warn('Erro ao parsear benefícios, usando array vazio:', e);
+    }
+    
+    const nivel_senioridade = document.getElementById('nivel_senioridade').value;
+    const quantidade_vagas = document.getElementById('quantidade_vagas').value;
+    const regime_trabalho = document.getElementById('regime_trabalho').value;
+    const carga_horaria = document.getElementById('carga_horaria').value.trim();
     
     // Validação
     if (!titulo) {
@@ -79,8 +101,8 @@ async function salvarVaga() {
         return;
     }
     
-    if (!requisitos) {
-        alert('⚠️ Requisitos são obrigatórios');
+    if (!requisitos_obrigatorios) {
+        alert('⚠️ Requisitos obrigatórios são necessários');
         return;
     }
     
@@ -91,7 +113,19 @@ async function salvarVaga() {
         tipo_contratacao: tipo_contratacao || 'CLT',
         localizacao: localizacao || null,
         descricao: descricao,
-        requisitos: requisitos
+        requisitos: requisitos_obrigatorios, // Campo antigo (compatibilidade)
+        requisitos_obrigatorios: requisitos_obrigatorios,
+        requisitos_desejaveis: requisitos_desejaveis || null,
+        diferenciais: diferenciais || null,
+        // Novos campos de remuneração
+        faixa_salarial_min: faixa_salarial_min ? parseFloat(faixa_salarial_min) : null,
+        faixa_salarial_max: faixa_salarial_max ? parseFloat(faixa_salarial_max) : null,
+        beneficios: beneficios.length > 0 ? beneficios : null,
+        // Novos campos de detalhes
+        nivel_senioridade: nivel_senioridade || null,
+        quantidade_vagas: quantidade_vagas ? parseInt(quantidade_vagas) : 1,
+        regime_trabalho: regime_trabalho || null,
+        carga_horaria: carga_horaria || null
     };
     
     try {

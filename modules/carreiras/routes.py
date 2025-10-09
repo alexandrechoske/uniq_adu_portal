@@ -272,6 +272,38 @@ def atualizar_dados_ia(candidato_id):
         if extracted_data.get('telefone') and not data.get('telefone_original'):
             update_data['telefone'] = extracted_data['telefone']
         
+        # NOVOS CAMPOS DEMOGRÁFICOS (extraídos pela IA)
+        if extracted_data.get('sexo'):
+            update_data['sexo'] = extracted_data['sexo']
+        
+        if extracted_data.get('data_nascimento'):
+            update_data['data_nascimento'] = extracted_data['data_nascimento']
+        
+        if extracted_data.get('estado_civil'):
+            update_data['estado_civil'] = extracted_data['estado_civil']
+        
+        if extracted_data.get('cidade'):
+            update_data['cidade'] = extracted_data['cidade']
+        
+        if extracted_data.get('estado'):
+            update_data['estado'] = extracted_data['estado']
+        
+        # Formação e Experiência (extraídos pela IA)
+        if extracted_data.get('formacao_academica'):
+            update_data['formacao_academica'] = extracted_data['formacao_academica']
+        
+        if extracted_data.get('curso_especifico'):
+            update_data['curso_especifico'] = extracted_data['curso_especifico']
+        
+        if extracted_data.get('area_objetivo'):
+            update_data['area_objetivo'] = extracted_data['area_objetivo']
+        
+        if 'trabalha_atualmente' in extracted_data:
+            update_data['trabalha_atualmente'] = extracted_data['trabalha_atualmente']
+        
+        if 'experiencia_na_area' in extracted_data:
+            update_data['experiencia_na_area'] = extracted_data['experiencia_na_area']
+        
         # Atualizar registro
         response = supabase_admin.table('rh_candidatos')\
             .update(update_data)\

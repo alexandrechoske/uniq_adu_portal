@@ -38,6 +38,37 @@
 .badge-status.pausada { background-color: #ffc107; color: #000; }
 .badge-status.fechada { background-color: #dc3545; color: white; }
 .badge-status { padding: 0.35rem 0.75rem; font-size: 0.8125rem; border-radius: 0.375rem; }
+
+/* Estilos para tags de benefícios */
+#beneficios_tags {
+    min-height: 40px;
+    padding: 0.5rem;
+    border: 1px dashed #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+}
+
+#beneficios_tags:empty::before {
+    content: 'Nenhum benefício adicionado';
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.875rem;
+}
+
+#beneficios_tags .badge {
+    animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
 </style>
 {% endblock %}
 
@@ -114,7 +145,8 @@
     <div class="card rh-card mb-4">
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-4">
+                <!-- Busca por título -->
+                <div class="col-md-3">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0">
                             <i class="mdi mdi-magnify text-muted"></i>
@@ -124,26 +156,86 @@
                                onkeyup="filtrarTabelaVagas()">
                     </div>
                 </div>
+                
+                <!-- Filtro Status -->
                 <div class="col-md-2">
                     <select id="filterStatus" class="form-select" onchange="filtrarTabelaVagas()">
-                        <option value="">Todos os Status</option>
+                        <option value="">Status: Todos</option>
                         <option value="aberta">Aberta</option>
                         <option value="pausada">Pausada</option>
                         <option value="fechada">Fechada</option>
                     </select>
                 </div>
+                
+                <!-- Filtro Tipo de Contratação -->
+                <div class="col-md-2">
+                    <select id="filterTipo" class="form-select" onchange="filtrarTabelaVagas()">
+                        <option value="">Tipo: Todos</option>
+                        <option value="CLT">CLT</option>
+                        <option value="PJ">PJ</option>
+                        <option value="Estágio">Estágio</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Nível -->
+                <div class="col-md-2">
+                    <select id="filterNivel" class="form-select" onchange="filtrarTabelaVagas()">
+                        <option value="">Nível: Todos</option>
+                        <option value="Estágio">Estágio</option>
+                        <option value="Júnior">Júnior</option>
+                        <option value="Pleno">Pleno</option>
+                        <option value="Sênior">Sênior</option>
+                        <option value="Especialista">Especialista</option>
+                        <option value="Liderança">Liderança</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Regime -->
+                <div class="col-md-2">
+                    <select id="filterRegime" class="form-select" onchange="filtrarTabelaVagas()">
+                        <option value="">Regime: Todos</option>
+                        <option value="Presencial">Presencial</option>
+                        <option value="Híbrido">Híbrido</option>
+                        <option value="Remoto">Remoto</option>
+                    </select>
+                </div>
+                
+                <!-- Botão Limpar -->
+                <div class="col-md-1">
+                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosVagas()" 
+                            data-bs-toggle="tooltip" title="Limpar filtros">
+                        <i class="mdi mdi-eraser"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Segunda linha: Data e Localização -->
+            <div class="row g-3 mt-2">
+                <!-- Filtro Localização -->
+                <div class="col-md-3">
+                    <select id="filterLocalizacao" class="form-select" onchange="filtrarTabelaVagas()">
+                        <option value="">Localização: Todas</option>
+                    </select>
+                </div>
+                
+                <!-- Filtro Data Início -->
                 <div class="col-md-2">
                     <input type="date" id="filterDataInicio" class="form-control" 
                            placeholder="Data Início" onchange="filtrarTabelaVagas()">
                 </div>
+                
+                <!-- Filtro Data Fim -->
                 <div class="col-md-2">
                     <input type="date" id="filterDataFim" class="form-control" 
                            placeholder="Data Fim" onchange="filtrarTabelaVagas()">
                 </div>
-                <div class="col-md-2">
-                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosVagas()">
-                        <i class="mdi mdi-eraser"></i> Limpar
-                    </button>
+                
+                <!-- Contador de resultados -->
+                <div class="col-md-5 text-end d-flex align-items-center justify-content-end">
+                    <small class="text-muted">
+                        <i class="mdi mdi-information-outline"></i>
+                        <span id="filtroResultados">Exibindo todas as vagas</span>
+                    </small>
                 </div>
             </div>
         </div>
@@ -171,7 +263,11 @@
                         {% for vaga in vagas %}
                         <tr data-titulo="{{ vaga.titulo }}" 
                             data-status="{{ vaga.status|lower }}"
-                            data-data="{{ vaga.data_abertura[:10] if vaga.data_abertura else '' }}">
+                            data-data="{{ vaga.data_abertura[:10] if vaga.data_abertura else '' }}"
+                            data-localizacao="{{ vaga.localizacao|lower if vaga.localizacao else '' }}"
+                            data-tipo="{{ vaga.tipo_contratacao|lower if vaga.tipo_contratacao else 'clt' }}"
+                            data-nivel="{{ vaga.nivel_senioridade|lower if vaga.nivel_senioridade else '' }}"
+                            data-regime="{{ vaga.regime_trabalho|lower if vaga.regime_trabalho else '' }}">
                             <td class="text-muted small">{{ loop.index }}</td>
                             <td>
                                 <strong class="text-dark">{{ vaga.titulo }}</strong>
@@ -318,6 +414,107 @@
                                    placeholder="Ex: Joinville - SC / Remoto">
                         </div>
                         
+                        <!-- NOVOS CAMPOS: Remuneração e Benefícios -->
+                        <div class="col-12">
+                            <hr class="my-3">
+                            <h6 class="mb-3">
+                                <i class="mdi mdi-currency-usd"></i> Remuneração e Benefícios
+                            </h6>
+                            <div class="alert alert-info mb-3">
+                                <i class="mdi mdi-information-outline"></i>
+                                <strong>Informação:</strong> Os dados de remuneração e benefícios são <strong>apenas para controle interno</strong> 
+                                e <strong>não são exibidos</strong> no portal de carreiras público.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="faixa_salarial_min" class="form-label">
+                                <i class="mdi mdi-currency-usd"></i> Faixa Salarial Mínima
+                            </label>
+                            <input type="number" step="0.01" class="form-control" id="faixa_salarial_min" 
+                                   name="faixa_salarial_min" placeholder="Ex: 3000.00">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="faixa_salarial_max" class="form-label">
+                                <i class="mdi mdi-currency-usd"></i> Faixa Salarial Máxima
+                            </label>
+                            <input type="number" step="0.01" class="form-control" id="faixa_salarial_max" 
+                                   name="faixa_salarial_max" placeholder="Ex: 5000.00">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="beneficios_input" class="form-label">
+                                <i class="mdi mdi-gift"></i> Benefícios
+                            </label>
+                            <input type="text" class="form-control" id="beneficios_input" 
+                                   placeholder="Digite um benefício e pressione Enter">
+                            <div id="beneficios_tags" class="mt-2 d-flex flex-wrap gap-2"></div>
+                            <input type="hidden" id="beneficios" name="beneficios">
+                            <small class="text-muted">
+                                Ex: Vale Transporte, Vale Refeição, Plano de Saúde, etc.
+                            </small>
+                        </div>
+                        
+                        <!-- NOVOS CAMPOS: Detalhes da Vaga -->
+                        <div class="col-12">
+                            <hr class="my-3">
+                            <h6 class="mb-3">
+                                <i class="mdi mdi-information-outline"></i> Detalhes da Vaga
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="nivel_senioridade" class="form-label">
+                                <i class="mdi mdi-star-outline"></i> Nível de Senioridade
+                            </label>
+                            <select class="form-select" id="nivel_senioridade" name="nivel_senioridade">
+                                <option value="">Selecione...</option>
+                                <option value="Estágio">Estágio</option>
+                                <option value="Júnior">Júnior</option>
+                                <option value="Pleno">Pleno</option>
+                                <option value="Sênior">Sênior</option>
+                                <option value="Especialista">Especialista</option>
+                                <option value="Liderança">Liderança</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="regime_trabalho" class="form-label">
+                                <i class="mdi mdi-home-city-outline"></i> Regime de Trabalho
+                            </label>
+                            <select class="form-select" id="regime_trabalho" name="regime_trabalho">
+                                <option value="">Selecione...</option>
+                                <option value="Presencial">Presencial</option>
+                                <option value="Híbrido">Híbrido</option>
+                                <option value="Remoto">Remoto</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="quantidade_vagas" class="form-label">
+                                <i class="mdi mdi-account-multiple"></i> Quantidade de Vagas
+                            </label>
+                            <input type="number" class="form-control" id="quantidade_vagas" 
+                                   name="quantidade_vagas" value="1" min="1">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="carga_horaria" class="form-label">
+                                <i class="mdi mdi-clock-outline"></i> Carga Horária
+                            </label>
+                            <input type="text" class="form-control" id="carga_horaria" 
+                                   name="carga_horaria" placeholder="Ex: 40h/semana, 44h/semana">
+                        </div>
+                        
+                        <!-- NOVOS CAMPOS: Requisitos Detalhados -->
+                        <div class="col-12">
+                            <hr class="my-3">
+                            <h6 class="mb-3">
+                                <i class="mdi mdi-clipboard-check-outline"></i> Requisitos Detalhados
+                            </h6>
+                        </div>
+                        
                         <!-- Descrição da Vaga -->
                         <div class="col-12">
                             <label for="descricao" class="form-label">
@@ -327,8 +524,35 @@
                                       rows="4" placeholder="Detalhe as responsabilidades da posição..." required></textarea>
                         </div>
                         
-                        <!-- Requisitos -->
+                        <!-- Requisitos Obrigatórios -->
                         <div class="col-12">
+                            <label for="requisitos_obrigatorios" class="form-label">
+                                Requisitos Obrigatórios <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="requisitos_obrigatorios" name="requisitos_obrigatorios" 
+                                      rows="3" placeholder="Liste os requisitos essenciais para a vaga..." required></textarea>
+                        </div>
+                        
+                        <!-- Requisitos Desejáveis -->
+                        <div class="col-12">
+                            <label for="requisitos_desejaveis" class="form-label">
+                                Requisitos Desejáveis
+                            </label>
+                            <textarea class="form-control" id="requisitos_desejaveis" name="requisitos_desejaveis" 
+                                      rows="3" placeholder="Liste os requisitos opcionais mas valorizados..."></textarea>
+                        </div>
+                        
+                        <!-- Diferenciais -->
+                        <div class="col-12">
+                            <label for="diferenciais" class="form-label">
+                                Diferenciais
+                            </label>
+                            <textarea class="form-control" id="diferenciais" name="diferenciais" 
+                                      rows="2" placeholder="Conhecimentos que são diferenciais competitivos..."></textarea>
+                        </div>
+                        
+                        <!-- Requisitos (campo antigo - manter por compatibilidade) -->
+                        <div class="col-12" style="display: none;">
                             <label for="requisitos" class="form-label">
                                 Requisitos <span class="text-danger">*</span>
                             </label>
@@ -384,37 +608,123 @@
 <script>
 // Inicializar tooltips
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tooltips Bootstrap
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // Popular filtro de localização dinamicamente
+    popularFiltroLocalizacao();
+    
+    // Event listener para input de benefícios (Enter para adicionar)
+    const beneficiosInput = document.getElementById('beneficios_input');
+    if (beneficiosInput) {
+        beneficiosInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                adicionarBeneficio(this.value);
+            }
+        });
+        
+        // Autocomplete simples para benefícios
+        beneficiosInput.addEventListener('input', function(e) {
+            const valor = this.value.toLowerCase();
+            if (valor.length >= 2) {
+                const sugestoes = beneficiosComuns.filter(b => 
+                    b.toLowerCase().includes(valor) && !beneficiosArray.includes(b)
+                );
+                
+                // Exibir primeira sugestão como hint
+                if (sugestoes.length > 0) {
+                    this.setAttribute('placeholder', `Pressione Enter para adicionar: ${sugestoes[0]}`);
+                }
+            }
+        });
+    }
 });
+
+// Função para popular o filtro de localização com valores únicos da tabela
+function popularFiltroLocalizacao() {
+    const table = document.getElementById('tabelaVagas');
+    if (!table) return;
+    
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    const localizacoes = new Set();
+    
+    for (let row of rows) {
+        if (row.classList.contains('empty-state')) continue;
+        const loc = row.getAttribute('data-localizacao');
+        if (loc && loc.trim()) {
+            localizacoes.add(loc.trim());
+        }
+    }
+    
+    // Ordenar alfabeticamente
+    const locArray = Array.from(localizacoes).sort();
+    
+    // Popular o select
+    const select = document.getElementById('filterLocalizacao');
+    if (select && locArray.length > 0) {
+        // Limpar opções existentes (exceto a primeira)
+        select.innerHTML = '<option value="">Localização: Todas</option>';
+        
+        // Adicionar cada localização
+        locArray.forEach(loc => {
+            const option = document.createElement('option');
+            option.value = loc;
+            // Capitalizar primeira letra de cada palavra
+            option.textContent = loc.split(' ').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+            select.appendChild(option);
+        });
+        
+        console.log('[FILTRO] Localizações carregadas:', locArray.length);
+    }
+}
 
 // Função para filtrar a tabela de vagas
 function filtrarTabelaVagas() {
     console.log('[FILTRO] Iniciando filtro de vagas');
     
     const searchTerm = document.getElementById('searchVaga').value.toLowerCase().trim();
-    const statusFilter = document.getElementById('filterStatus').value;
+    const statusFilter = document.getElementById('filterStatus').value.toLowerCase();
+    const tipoFilter = document.getElementById('filterTipo').value.toLowerCase();
+    const nivelFilter = document.getElementById('filterNivel').value.toLowerCase();
+    const regimeFilter = document.getElementById('filterRegime').value.toLowerCase();
+    const localizacaoFilter = document.getElementById('filterLocalizacao').value.toLowerCase();
     const dataInicio = document.getElementById('filterDataInicio').value;
     const dataFim = document.getElementById('filterDataFim').value;
     
-    console.log('[FILTRO] Critérios:', {searchTerm, statusFilter, dataInicio, dataFim});
+    console.log('[FILTRO] Critérios:', {
+        searchTerm, statusFilter, tipoFilter, nivelFilter, 
+        regimeFilter, localizacaoFilter, dataInicio, dataFim
+    });
     
     const table = document.getElementById('tabelaVagas');
     const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-    const emptyState = document.getElementById('emptyState');
+    const filtroResultados = document.getElementById('filtroResultados');
     let visibleCount = 0;
+    let totalCount = 0;
+    
+    // Contar linhas válidas
+    for (let row of rows) {
+        if (!row.classList.contains('empty-state')) totalCount++;
+    }
     
     // Se não há filtros ativos, mostrar todas as linhas
-    if (!searchTerm && !statusFilter && !dataInicio && !dataFim) {
+    if (!searchTerm && !statusFilter && !tipoFilter && !nivelFilter && 
+        !regimeFilter && !localizacaoFilter && !dataInicio && !dataFim) {
         for (let row of rows) {
             if (!row.classList.contains('empty-state')) {
                 row.style.display = '';
                 visibleCount++;
             }
         }
-        if (emptyState) emptyState.style.display = 'none';
+        if (filtroResultados) {
+            filtroResultados.textContent = `Exibindo todas as ${totalCount} vagas`;
+        }
         console.log('[FILTRO] Sem filtros ativos - mostrando todas');
         return;
     }
@@ -423,19 +733,43 @@ function filtrarTabelaVagas() {
     for (let row of rows) {
         if (row.classList.contains('empty-state')) continue;
         
-        const titulo = row.getAttribute('data-titulo') || '';
-        const status = row.getAttribute('data-status') || '';
+        const titulo = (row.getAttribute('data-titulo') || '').toLowerCase();
+        const status = (row.getAttribute('data-status') || '').toLowerCase();
+        const tipo = (row.getAttribute('data-tipo') || '').toLowerCase();
+        const nivel = (row.getAttribute('data-nivel') || '').toLowerCase();
+        const regime = (row.getAttribute('data-regime') || '').toLowerCase();
+        const localizacao = (row.getAttribute('data-localizacao') || '').toLowerCase();
         const dataAbertura = row.getAttribute('data-data') || '';
         
         let show = true;
         
         // Filtro de busca (título)
-        if (searchTerm && !titulo.toLowerCase().includes(searchTerm)) {
+        if (searchTerm && !titulo.includes(searchTerm)) {
             show = false;
         }
         
         // Filtro de status
         if (statusFilter && status !== statusFilter) {
+            show = false;
+        }
+        
+        // Filtro de tipo de contratação
+        if (tipoFilter && tipo !== tipoFilter) {
+            show = false;
+        }
+        
+        // Filtro de nível de senioridade
+        if (nivelFilter && nivel !== nivelFilter) {
+            show = false;
+        }
+        
+        // Filtro de regime de trabalho
+        if (regimeFilter && regime !== regimeFilter) {
+            show = false;
+        }
+        
+        // Filtro de localização
+        if (localizacaoFilter && !localizacao.includes(localizacaoFilter)) {
             show = false;
         }
         
@@ -457,12 +791,18 @@ function filtrarTabelaVagas() {
         if (show) visibleCount++;
     }
     
-    // Exibir empty state se não houver resultados
-    if (emptyState) {
-        emptyState.style.display = visibleCount === 0 ? '' : 'none';
+    // Atualizar contador de resultados
+    if (filtroResultados) {
+        if (visibleCount === 0) {
+            filtroResultados.innerHTML = '<i class="mdi mdi-alert-circle text-warning"></i> Nenhuma vaga encontrada';
+        } else if (visibleCount === totalCount) {
+            filtroResultados.textContent = `Exibindo todas as ${totalCount} vagas`;
+        } else {
+            filtroResultados.textContent = `Exibindo ${visibleCount} de ${totalCount} vagas`;
+        }
     }
     
-    console.log('[FILTRO] Resultados visíveis:', visibleCount);
+    console.log('[FILTRO] Resultados visíveis:', visibleCount, 'de', totalCount);
 }
 
 // Função para limpar filtros
@@ -471,6 +811,10 @@ function limparFiltrosVagas() {
     
     document.getElementById('searchVaga').value = '';
     document.getElementById('filterStatus').value = '';
+    document.getElementById('filterTipo').value = '';
+    document.getElementById('filterNivel').value = '';
+    document.getElementById('filterRegime').value = '';
+    document.getElementById('filterLocalizacao').value = '';
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
     
@@ -494,80 +838,208 @@ function visualizarVaga(vagaId) {
         if (data.success && data.vaga) {
             const vaga = data.vaga;
             
-            // Criar modal dinamicamente
+            // Formatar data (ISO para DD/MM/YYYY)
+            const formatarData = (dataISO) => {
+                if (!dataISO) return '-';
+                try {
+                    const data = new Date(dataISO);
+                    return data.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                } catch {
+                    return dataISO;
+                }
+            };
+            
+            // Formatar benefícios
+            const formatarBeneficios = (beneficios) => {
+                if (!beneficios) return '-';
+                if (Array.isArray(beneficios)) {
+                    return beneficios.map(b => `<span class="badge bg-info text-dark me-1 mb-1">${b}</span>`).join('');
+                }
+                return beneficios;
+            };
+            
+            // Formatar salário
+            const formatarSalario = (min, max) => {
+                if (!min && !max) return '<span class="text-muted">Não informado</span>';
+                if (min && max) return `R$ ${parseFloat(min).toLocaleString('pt-BR', {minimumFractionDigits: 2})} - R$ ${parseFloat(max).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                if (min) return `A partir de R$ ${parseFloat(min).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                return `Até R$ ${parseFloat(max).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            };
+            
+            // Criar modal dinamicamente com TODOS os campos
             const modalHtml = `
                 <div class="modal fade" id="modalVisualizarVaga" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
+                    <div class="modal-dialog modal-xl">
                         <div class="modal-content">
                             <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
                                 <h5 class="modal-title">
                                     <i class="mdi mdi-briefcase-eye me-2"></i>
-                                    Detalhes da Vaga
+                                    ${vaga.titulo || 'Detalhes da Vaga'}
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="row g-3">
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-bold text-muted small">Título da Vaga</label>
-                                        <p class="mb-0 fs-5">${vaga.titulo || '-'}</p>
+                                
+                                <!-- Informações Gerais -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="mdi mdi-information-outline me-2"></i>Informações Gerais</h6>
                                     </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Status</label>
-                                        <p class="mb-0">
-                                            <span class="badge ${vaga.status === 'Aberta' ? 'bg-success' : 'bg-secondary'}">
-                                                ${vaga.status || '-'}
-                                            </span>
-                                        </p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Cargo</label>
-                                        <p class="mb-0">${vaga.cargo_nome || '-'}</p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Data de Abertura</label>
-                                        <p class="mb-0">${vaga.data_abertura || '-'}</p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Data de Fechamento</label>
-                                        <p class="mb-0">${vaga.data_fechamento || '-'}</p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Localização</label>
-                                        <p class="mb-0">${vaga.localizacao || '-'}</p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Tipo de Contratação</label>
-                                        <p class="mb-0">${vaga.tipo_contratacao || '-'}</p>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold text-muted small">Total de Candidatos</label>
-                                        <p class="mb-0">
-                                            <span class="badge bg-primary">${vaga.total_candidatos || 0}</span>
-                                        </p>
-                                    </div>
-                                    
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-bold text-muted small">Descrição</label>
-                                        <p class="mb-0" style="white-space: pre-wrap;">${vaga.descricao || '-'}</p>
-                                    </div>
-                                    
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-bold text-muted small">Requisitos</label>
-                                        <p class="mb-0" style="white-space: pre-wrap;">${vaga.requisitos || '-'}</p>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold text-muted small">Status</label>
+                                                <p class="mb-0">
+                                                    <span class="badge ${vaga.status === 'Aberta' ? 'bg-success' : vaga.status === 'Pausada' ? 'bg-warning' : 'bg-secondary'}">
+                                                        <i class="mdi mdi-circle me-1"></i>${vaga.status || '-'}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold text-muted small">Cargo</label>
+                                                <p class="mb-0">${vaga.cargo_nome || '-'}</p>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold text-muted small">Total de Candidatos</label>
+                                                <p class="mb-0">
+                                                    <span class="badge bg-primary"><i class="mdi mdi-account-multiple me-1"></i>${vaga.total_candidatos || 0}</span>
+                                                </p>
+                                            </div>
+                                            
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold text-muted small">Data de Abertura</label>
+                                                <p class="mb-0"><i class="mdi mdi-calendar text-muted me-1"></i>${formatarData(vaga.data_abertura)}</p>
+                                            </div>
+                                            
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold text-muted small">Data de Fechamento</label>
+                                                <p class="mb-0"><i class="mdi mdi-calendar-remove text-muted me-1"></i>${formatarData(vaga.data_fechamento)}</p>
+                                            </div>
+                                            
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold text-muted small">Localização</label>
+                                                <p class="mb-0"><i class="mdi mdi-map-marker text-muted me-1"></i>${vaga.localizacao || '-'}</p>
+                                            </div>
+                                            
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold text-muted small">Tipo de Contratação</label>
+                                                <p class="mb-0"><i class="mdi mdi-briefcase-outline text-muted me-1"></i>${vaga.tipo_contratacao || '-'}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Remuneração e Benefícios -->
+                                ${vaga.faixa_salarial_min || vaga.faixa_salarial_max || vaga.beneficios ? `
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="mdi mdi-cash-multiple me-2"></i>Remuneração e Benefícios</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            ${vaga.faixa_salarial_min || vaga.faixa_salarial_max ? `
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-bold text-muted small">Faixa Salarial</label>
+                                                <p class="mb-0 fs-5 text-success">${formatarSalario(vaga.faixa_salarial_min, vaga.faixa_salarial_max)}</p>
+                                            </div>
+                                            ` : ''}
+                                            
+                                            ${vaga.beneficios ? `
+                                            <div class="col-md-${vaga.faixa_salarial_min || vaga.faixa_salarial_max ? '6' : '12'}">
+                                                <label class="form-label fw-bold text-muted small">Benefícios</label>
+                                                <p class="mb-0">${formatarBeneficios(vaga.beneficios)}</p>
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- Detalhes da Vaga -->
+                                ${vaga.nivel_senioridade || vaga.regime_trabalho || vaga.carga_horaria ? `
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="mdi mdi-cog-outline me-2"></i>Detalhes da Vaga</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            ${vaga.nivel_senioridade ? `
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold text-muted small">Nível de Senioridade</label>
+                                                <p class="mb-0"><i class="mdi mdi-trending-up text-muted me-1"></i>${vaga.nivel_senioridade}</p>
+                                            </div>
+                                            ` : ''}
+                                            
+                                            ${vaga.regime_trabalho ? `
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold text-muted small">Regime de Trabalho</label>
+                                                <p class="mb-0"><i class="mdi mdi-laptop text-muted me-1"></i>${vaga.regime_trabalho}</p>
+                                            </div>
+                                            ` : ''}
+                                            
+                                            ${vaga.carga_horaria ? `
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold text-muted small">Carga Horária</label>
+                                                <p class="mb-0"><i class="mdi mdi-clock-outline text-muted me-1"></i>${vaga.carga_horaria}</p>
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- Descrição -->
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="mdi mdi-text-box-outline me-2"></i>Descrição da Vaga</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-0" style="white-space: pre-wrap;">${vaga.descricao || '-'}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Requisitos -->
+                                <div class="card mb-0">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="mdi mdi-check-circle-outline me-2"></i>Requisitos</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-12">
+                                                <label class="form-label fw-bold text-danger small">Requisitos Obrigatórios</label>
+                                                <p class="mb-0" style="white-space: pre-wrap;">${vaga.requisitos_obrigatorios || vaga.requisitos || '-'}</p>
+                                            </div>
+                                            
+                                            ${vaga.requisitos_desejaveis ? `
+                                            <div class="col-md-12">
+                                                <label class="form-label fw-bold text-warning small">Requisitos Desejáveis</label>
+                                                <p class="mb-0" style="white-space: pre-wrap;">${vaga.requisitos_desejaveis}</p>
+                                            </div>
+                                            ` : ''}
+                                            
+                                            ${vaga.diferenciais ? `
+                                            <div class="col-md-12">
+                                                <label class="form-label fw-bold text-success small">Diferenciais</label>
+                                                <p class="mb-0" style="white-space: pre-wrap;">${vaga.diferenciais}</p>
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                     <i class="mdi mdi-close me-1"></i>Fechar
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="editarVaga('${vaga.id}'); bootstrap.Modal.getInstance(document.getElementById('modalVisualizarVaga')).hide();">
+                                    <i class="mdi mdi-pencil me-1"></i>Editar Vaga
                                 </button>
                             </div>
                         </div>
@@ -598,8 +1070,146 @@ function visualizarVaga(vagaId) {
     })
     .catch(error => {
         console.error('[VISUALIZAR] Erro:', error);
+            alert('Erro ao carregar dados da vaga');
+        });
+}
+
+// ============================================
+// SISTEMA DE TAGS PARA BENEFÍCIOS
+// ============================================
+let beneficiosArray = [];
+
+function adicionarBeneficio(beneficio) {
+    beneficio = beneficio.trim();
+    if (beneficio && !beneficiosArray.includes(beneficio)) {
+        beneficiosArray.push(beneficio);
+        renderizarBeneficios();
+        document.getElementById('beneficios_input').value = '';
+    }
+}
+
+function removerBeneficio(index) {
+    beneficiosArray.splice(index, 1);
+    renderizarBeneficios();
+}
+
+function renderizarBeneficios() {
+    const container = document.getElementById('beneficios_tags');
+    container.innerHTML = '';
+    
+    beneficiosArray.forEach((beneficio, index) => {
+        const tag = document.createElement('span');
+        tag.className = 'badge bg-primary d-flex align-items-center gap-1';
+        tag.style.fontSize = '0.9rem';
+        tag.style.padding = '0.5rem 0.75rem';
+        tag.innerHTML = `
+            ${beneficio}
+            <i class="mdi mdi-close" style="cursor: pointer;" onclick="removerBeneficio(${index})"></i>
+        `;
+        container.appendChild(tag);
+    });
+    
+    // Atualizar campo hidden com array
+    document.getElementById('beneficios').value = JSON.stringify(beneficiosArray);
+}
+
+// Sugestões de benefícios comuns
+const beneficiosComuns = [
+    'Vale Transporte',
+    'Vale Refeição',
+    'Vale Alimentação',
+    'Plano de Saúde',
+    'Plano Odontológico',
+    'Seguro de Vida',
+    'Day Off de Aniversário',
+    'Auxílio Home Office',
+    'Gympass',
+    'Convênio Farmácia'
+];
+
+// ============================================
+// FUNÇÃO DE EDIÇÃO DE VAGA
+// ============================================
+function editarVaga(vagaId) {
+    console.log('[EDITAR] Carregando vaga ID:', vagaId);
+    
+    fetch(`/rh/recrutamento/api/vagas/${vagaId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.vaga) {
+            const vaga = data.vaga;
+            console.log('[EDITAR] Vaga carregada:', vaga);
+            
+            // Preencher modal com dados da vaga
+            document.getElementById('vaga_id').value = vaga.id;
+            document.getElementById('titulo').value = vaga.titulo || '';
+            document.getElementById('cargo_id').value = vaga.cargo_id || '';
+            document.getElementById('tipo_contratacao').value = vaga.tipo_contratacao || 'CLT';
+            document.getElementById('localizacao').value = vaga.localizacao || '';
+            document.getElementById('descricao').value = vaga.descricao || '';
+            
+            // Campos de remuneração
+            document.getElementById('faixa_salarial_min').value = vaga.faixa_salarial_min || '';
+            document.getElementById('faixa_salarial_max').value = vaga.faixa_salarial_max || '';
+            
+            // Benefícios (array)
+            beneficiosArray = [];
+            if (vaga.beneficios) {
+                if (Array.isArray(vaga.beneficios)) {
+                    beneficiosArray = [...vaga.beneficios];
+                } else if (typeof vaga.beneficios === 'string') {
+                    try {
+                        beneficiosArray = JSON.parse(vaga.beneficios);
+                    } catch {
+                        beneficiosArray = vaga.beneficios.split(',').map(b => b.trim());
+                    }
+                }
+            }
+            renderizarBeneficios();
+            
+            // Detalhes da vaga
+            document.getElementById('nivel_senioridade').value = vaga.nivel_senioridade || '';
+            document.getElementById('quantidade_vagas').value = vaga.quantidade_vagas || 1;
+            document.getElementById('regime_trabalho').value = vaga.regime_trabalho || '';
+            document.getElementById('carga_horaria').value = vaga.carga_horaria || '';
+            
+            // Requisitos detalhados
+            document.getElementById('requisitos_obrigatorios').value = vaga.requisitos_obrigatorios || vaga.requisitos || '';
+            document.getElementById('requisitos_desejaveis').value = vaga.requisitos_desejaveis || '';
+            document.getElementById('diferenciais').value = vaga.diferenciais || '';
+            
+            // Atualizar título do modal
+            document.getElementById('modalVagaLabel').textContent = 'Editar Vaga';
+            
+            // Abrir modal
+            const modal = new bootstrap.Modal(document.getElementById('modalVaga'));
+            modal.show();
+        } else {
+            alert('Erro ao carregar dados da vaga: ' + (data.message || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('[EDITAR] Erro:', error);
         alert('Erro ao carregar dados da vaga');
     });
+}
+
+// Função para abrir modal de nova vaga
+function abrirModalNovaVaga() {
+    // Limpar formulário
+    document.getElementById('formVaga').reset();
+    document.getElementById('vaga_id').value = '';
+    beneficiosArray = [];
+    renderizarBeneficios();
+    
+    // Atualizar título do modal
+    document.getElementById('modalVagaLabel').textContent = 'Nova Vaga';
 }
 </script>
 {% endblock %}
