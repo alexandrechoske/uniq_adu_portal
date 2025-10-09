@@ -6,6 +6,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 <style>
+/* ============================================================================
+   ESTILOS ESPECÍFICOS DA GESTÃO DE VAGAS - RECRUTAMENTO
+   Versão: 2.0 - Com tabela Excel e Header Verde
+   ============================================================================ */
+
 /* Cores do Recrutamento (Verde) */
 :root {
     --recrutamento-primary: #28a745;
@@ -68,6 +73,302 @@
         opacity: 1;
         transform: translateX(0);
     }
+}
+
+/* ============================================================================
+   TABELA DE VAGAS - ESTILO EXCEL
+   ============================================================================ */
+
+/* Container da tabela com scroll suave */
+.table-responsive {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+/* Tabela base */
+#tabelaVagas {
+    margin-bottom: 0 !important;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* ============================================================================
+   OVERRIDE FORÇADO - FUNDO VERDE E TEXTO BRANCO NO HEADER
+   Máxima especificidade para sobrescrever Bootstrap e outros CSS
+   ============================================================================ */
+
+/* FUNDO VERDE no thead - Prioridade máxima */
+table#tabelaVagas > thead.rh-table-header,
+#tabelaVagas > thead.rh-table-header,
+#tabelaVagas thead.rh-table-header {
+    background: #28a745 !important;
+    background-image: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+    background-color: #28a745 !important;
+    color: white !important;
+}
+
+/* TEXTO BRANCO em todos os th - Prioridade máxima */
+table#tabelaVagas > thead.rh-table-header > tr > th,
+#tabelaVagas > thead.rh-table-header > tr > th,
+#tabelaVagas > thead > tr > th,
+#tabelaVagas thead th {
+    color: white !important;
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.2) !important;
+}
+
+/* Header com ordenação clicável */
+#tabelaVagas thead th {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    padding: 1rem 0.75rem;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(255,255,255,0.2);
+    transition: all 0.2s ease;
+}
+
+/* Cor do texto no header - BRANCO fixo */
+#tabelaVagas > thead.rh-table-header > tr > th {
+    color: white !important;
+}
+
+#tabelaVagas thead th:not(.sortable) {
+    cursor: default;
+}
+
+#tabelaVagas thead th.sortable:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+#tabelaVagas thead th.sortable {
+    padding-right: 2rem;
+}
+
+/* Indicador de ordenação */
+#tabelaVagas thead th.sortable::after {
+    content: '\F0143'; /* mdi-chevron-up */
+    font-family: 'Material Design Icons';
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.3;
+    font-size: 1.125rem;
+    transition: all 0.2s ease;
+}
+
+#tabelaVagas thead th.sortable:hover::after {
+    opacity: 0.6;
+}
+
+#tabelaVagas thead th.sort-asc::after {
+    content: '\F0143'; /* mdi-chevron-up */
+    opacity: 1;
+    color: #ffc107;
+}
+
+#tabelaVagas thead th.sort-desc::after {
+    content: '\F0140'; /* mdi-chevron-down */
+    opacity: 1;
+    color: #ffc107;
+}
+
+/* Zebramento leve (alternado) */
+#tabelaVagas tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+#tabelaVagas tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+/* Hover na linha */
+#tabelaVagas tbody tr:hover {
+    background-color: #e8f5e9 !important;
+    transform: scale(1.002);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+    transition: all 0.2s ease;
+}
+
+/* Células do corpo */
+#tabelaVagas tbody td {
+    padding: 0.875rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+/* Primeira coluna (numeração) */
+#tabelaVagas tbody td:first-child {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+/* Título da vaga */
+#tabelaVagas tbody td:nth-child(2) strong {
+    font-size: 0.9375rem;
+    color: #2c3e50;
+    transition: color 0.2s ease;
+}
+
+#tabelaVagas tbody tr:hover td:nth-child(2) strong {
+    color: var(--recrutamento-primary);
+}
+
+/* Badges de status melhorados */
+#tabelaVagas .badge-status {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+#tabelaVagas .badge-status.aberta {
+    background: #d4edda;
+    color: #155724;
+}
+
+#tabelaVagas .badge-status.pausada {
+    background: #fff3cd;
+    color: #856404;
+}
+
+#tabelaVagas .badge-status.fechada {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+#tabelaVagas .badge-status i {
+    font-size: 0.875rem;
+}
+
+/* Badge de candidatos */
+#tabelaVagas .badge.bg-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+    color: white !important;
+    padding: 0.375rem 0.625rem;
+    font-weight: 600;
+}
+
+/* Botões de ação */
+#tabelaVagas .btn-group-sm .btn {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+#tabelaVagas .btn-outline-info {
+    color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+#tabelaVagas .btn-outline-info:hover {
+    background: #17a2b8;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+#tabelaVagas .btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+}
+
+#tabelaVagas .btn-outline-success:hover {
+    background: #28a745;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+#tabelaVagas .btn-outline-primary {
+    color: #007bff;
+    border-color: #007bff;
+}
+
+#tabelaVagas .btn-outline-primary:hover {
+    background: #007bff;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Ícones nas células */
+#tabelaVagas tbody td i.mdi {
+    margin-right: 0.25rem;
+    opacity: 0.7;
+}
+
+/* Estado de loading durante ordenação */
+#tabelaVagas.sorting {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Animação de ordenação */
+@keyframes sortAnimation {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+#tabelaVagas.sorting tbody {
+    animation: sortAnimation 0.3s ease;
+}
+
+/* Responsividade */
+@media (max-width: 1200px) {
+    #tabelaVagas thead th,
+    #tabelaVagas tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #tabelaVagas {
+        font-size: 0.75rem;
+    }
+    
+    #tabelaVagas thead th,
+    #tabelaVagas tbody td {
+        padding: 0.625rem 0.375rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* ============================================================================
+   CORREÇÃO DE BOTÕES - btn-outline-secondary
+   ============================================================================ */
+.btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+    background-color: white !important;
+}
+
+.btn-outline-secondary:hover {
+    color: white !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.btn-outline-secondary:active,
+.btn-outline-secondary:focus {
+    color: white !important;
+    background-color: #5c636a !important;
+    border-color: #5c636a !important;
 }
 </style>
 {% endblock %}
@@ -247,16 +548,28 @@
             {% if vagas|length > 0 %}
             <div class="table-responsive">
                 <table class="table mb-0" id="tabelaVagas">
-                    <thead class="rh-table-header" style="background: linear-gradient(135deg, var(--recrutamento-primary) 0%, var(--recrutamento-primary-dark) 100%);">
+                    <thead class="rh-table-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important; color: white !important;">
                         <tr>
-                            <th style="width: 3%;">#</th>
-                            <th style="width: 25%;">Título da Vaga</th>
-                            <th style="width: 10%;">Status</th>
-                            <th style="width: 8%;" class="text-center">Candidatos</th>
-                            <th style="width: 10%;">Data Abertura</th>
-                            <th style="width: 12%;">Localização</th>
-                            <th style="width: 17%;">Tipo Contratação</th>
-                            <th style="width: 15%;" class="text-center">Ações</th>
+                            <th style="width: 3%; color: white !important;" class="text-center">#</th>
+                            <th style="width: 25%; color: white !important;" class="sortable" data-column="titulo" data-type="text">
+                                Título da Vaga
+                            </th>
+                            <th style="width: 10%; color: white !important;" class="sortable" data-column="status" data-type="text">
+                                Status
+                            </th>
+                            <th style="width: 8%; color: white !important;" class="text-center sortable" data-column="candidatos" data-type="number">
+                                Candidatos
+                            </th>
+                            <th style="width: 10%; color: white !important;" class="sortable" data-column="data" data-type="date">
+                                Data Abertura
+                            </th>
+                            <th style="width: 12%; color: white !important;" class="sortable" data-column="localizacao" data-type="text">
+                                Localização
+                            </th>
+                            <th style="width: 17%; color: white !important;" class="sortable" data-column="tipo" data-type="text">
+                                Tipo Contratação
+                            </th>
+                            <th style="width: 15%; color: white !important;" class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -359,7 +672,7 @@
 <div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
                 <h5 class="modal-title" id="modalVagaLabel">Nova Vaga</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1211,5 +1524,157 @@ function abrirModalNovaVaga() {
     // Atualizar título do modal
     document.getElementById('modalVagaLabel').textContent = 'Nova Vaga';
 }
+
+// ============================================================================
+// SISTEMA DE ORDENAÇÃO DE TABELA - ESTILO EXCEL
+// ============================================================================
+
+let currentSort = {
+    column: null,
+    direction: null // 'asc' ou 'desc'
+};
+
+/**
+ * Inicializa os event listeners para ordenação
+ */
+function inicializarOrdenacao() {
+    console.log('[SORT] Inicializando sistema de ordenação');
+    
+    const headers = document.querySelectorAll('#tabelaVagas thead th.sortable');
+    
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            const type = this.dataset.type;
+            
+            // Determinar direção
+            let direction = 'asc';
+            if (currentSort.column === column && currentSort.direction === 'asc') {
+                direction = 'desc';
+            }
+            
+            ordenarTabela(column, type, direction);
+        });
+    });
+    
+    console.log('[SORT] Sistema de ordenação inicializado');
+}
+
+/**
+ * Ordena a tabela por coluna
+ */
+function ordenarTabela(column, type, direction) {
+    console.log(`[SORT] Ordenando por ${column} (${type}) - ${direction}`);
+    
+    const table = document.getElementById('tabelaVagas');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Adicionar classe de loading
+    table.classList.add('sorting');
+    
+    // Remover classes de ordenação antigas
+    const headers = table.querySelectorAll('thead th.sortable');
+    headers.forEach(h => {
+        h.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    // Adicionar classe de ordenação atual
+    const currentHeader = table.querySelector(`thead th[data-column="${column}"]`);
+    if (currentHeader) {
+        currentHeader.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+    
+    // Filtrar linhas válidas (não vazias)
+    const validRows = rows.filter(row => !row.classList.contains('empty-state'));
+    
+    // Ordenar linhas
+    validRows.sort((a, b) => {
+        let valueA, valueB;
+        
+        switch(column) {
+            case 'titulo':
+                valueA = a.dataset.titulo || '';
+                valueB = b.dataset.titulo || '';
+                break;
+            case 'status':
+                valueA = a.dataset.status || '';
+                valueB = b.dataset.status || '';
+                break;
+            case 'candidatos':
+                // Extrair número de candidatos do badge
+                const badgeA = a.querySelector('.badge.bg-info');
+                const badgeB = b.querySelector('.badge.bg-info');
+                valueA = badgeA ? parseInt(badgeA.textContent.match(/\d+/)[0]) : 0;
+                valueB = badgeB ? parseInt(badgeB.textContent.match(/\d+/)[0]) : 0;
+                break;
+            case 'data':
+                valueA = a.dataset.data || '';
+                valueB = b.dataset.data || '';
+                break;
+            case 'localizacao':
+                valueA = a.dataset.localizacao || '';
+                valueB = b.dataset.localizacao || '';
+                break;
+            case 'tipo':
+                valueA = a.dataset.tipo || '';
+                valueB = b.dataset.tipo || '';
+                break;
+            default:
+                return 0;
+        }
+        
+        // Comparar valores
+        let comparison = 0;
+        if (type === 'number') {
+            comparison = valueA - valueB;
+        } else if (type === 'date') {
+            comparison = new Date(valueA) - new Date(valueB);
+        } else {
+            comparison = valueA.toString().localeCompare(valueB.toString(), 'pt-BR', { 
+                sensitivity: 'base' 
+            });
+        }
+        
+        return direction === 'asc' ? comparison : -comparison;
+    });
+    
+    // Reaplicar linhas ordenadas
+    validRows.forEach(row => tbody.appendChild(row));
+    
+    // Renumerar linhas
+    renumerarLinhas();
+    
+    // Atualizar estado atual
+    currentSort = { column, direction };
+    
+    // Remover classe de loading após animação
+    setTimeout(() => {
+        table.classList.remove('sorting');
+    }, 300);
+    
+    console.log(`[SORT] Ordenação concluída: ${validRows.length} linhas`);
+}
+
+/**
+ * Renumera as linhas visíveis da tabela
+ */
+function renumerarLinhas() {
+    const tbody = document.querySelector('#tabelaVagas tbody');
+    const rows = tbody.querySelectorAll('tr:not(.empty-state)');
+    
+    let visibleIndex = 1;
+    rows.forEach((row) => {
+        const firstCell = row.querySelector('td:first-child');
+        if (firstCell && row.style.display !== 'none') {
+            firstCell.textContent = visibleIndex++;
+        }
+    });
+}
+
+// Chamar inicialização de ordenação no DOMContentLoaded existente
+const originalDOMReady = document.readyState === 'loading' ? 
+    document.addEventListener('DOMContentLoaded', function() { inicializarOrdenacao(); }) :
+    inicializarOrdenacao();
 </script>
 {% endblock %}

@@ -223,6 +223,305 @@
     background: #fff3cd;
     color: #856404;
 }
+
+/* ============================================================================
+   SISTEMA DE FILTROS E CONTROLES DO KANBAN OTIMIZADO
+   ============================================================================ */
+
+/* Barra de Controles do Kanban */
+.kanban-controls-bar {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.controls-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.controls-title i {
+    color: var(--recrutamento-primary);
+    font-size: 1.125rem;
+}
+
+/* Filtros de Visibilidade de Colunas */
+.column-visibility-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.column-filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    background: #f8f9fa;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.column-filter-checkbox:hover {
+    background: #e9ecef;
+    border-color: var(--recrutamento-primary);
+}
+
+.column-filter-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--recrutamento-primary);
+}
+
+.column-filter-checkbox input[type="checkbox"]:checked + span {
+    color: var(--recrutamento-primary);
+    font-weight: 600;
+}
+
+/* Filtros Inteligentes */
+.smart-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.smart-filters .form-select,
+.smart-filters .form-control {
+    font-size: 0.875rem;
+}
+
+/* Toggle de Densidade */
+.density-toggle .btn-group {
+    width: 100%;
+}
+
+.density-toggle .btn {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+/* Resumo de Resultados */
+.results-summary {
+    background: #e8f5e9;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #2e7d32;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.results-summary i {
+    font-size: 1.125rem;
+}
+
+.results-summary strong {
+    color: #1b5e20;
+}
+
+/* Estados de Densidade dos Cards */
+.kanban-container.density-compact .candidato-card {
+    padding: 0.75rem;
+    min-height: 80px;
+}
+
+.kanban-container.density-compact .candidato-card-nome {
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+}
+
+.kanban-container.density-compact .candidato-card-info:not(.show-in-compact) {
+    display: none;
+}
+
+.kanban-container.density-compact .candidato-card-fonte {
+    font-size: 0.6875rem;
+    padding: 0.125rem 0.5rem;
+}
+
+.kanban-container.density-normal .candidato-card {
+    padding: 0.875rem;
+    min-height: 120px;
+}
+
+.kanban-container.density-comfortable .candidato-card {
+    padding: 1rem;
+    min-height: 160px;
+}
+
+/* Quick Actions (aparecem no hover em modo compacto) */
+.candidato-card-quick-actions {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    display: none;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.kanban-container.density-compact .candidato-card:hover .candidato-card-quick-actions {
+    display: flex;
+    opacity: 1;
+}
+
+.quick-action-btn {
+    background: white;
+    border: 1px solid #dee2e6;
+    width: 28px;
+    height: 28px;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.quick-action-btn.btn-success-action {
+    color: #28a745;
+}
+
+.quick-action-btn.btn-success-action:hover {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.quick-action-btn.btn-danger-action {
+    color: #dc3545;
+}
+
+.quick-action-btn.btn-danger-action:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.quick-action-btn.btn-info-action {
+    color: #17a2b8;
+}
+
+.quick-action-btn.btn-info-action:hover {
+    background: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+}
+
+/* Badge de Urgência (tempo desde candidatura) */
+.candidato-urgencia-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.candidato-urgencia-badge.urgente {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.candidato-urgencia-badge.atencao {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.candidato-urgencia-badge.normal {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Animação de Collapse das Colunas */
+.kanban-column.hidden {
+    display: none;
+    animation: fadeOut 0.3s ease;
+}
+
+.kanban-column.visible {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Card Filtrado (oculto) */
+.candidato-card.filtered-hidden {
+    display: none;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .kanban-controls-bar {
+        padding: 1rem;
+    }
+    
+    .column-visibility-filters {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .smart-filters {
+        grid-template-columns: 1fr;
+    }
+    
+    .density-toggle .btn-group {
+        flex-direction: column;
+    }
+}
 </style>
 {% endblock %}
 
@@ -319,6 +618,94 @@
         </div>
     </div>
 
+    <!-- Barra de Controles do Kanban -->
+    <div class="kanban-controls-bar">
+        <div class="controls-section">
+            <h6 class="controls-title">
+                <i class="mdi mdi-eye-outline"></i> Visibilidade de Colunas
+            </h6>
+            <div class="column-visibility-filters">
+                {% for status in candidatos_por_status.keys() %}
+                <label class="column-filter-checkbox">
+                    <input type="checkbox" checked data-column="{{ status }}">
+                    <span>{{ status }} (<span id="count-{{ status|lower|replace(' ', '-') }}">{{ candidatos_por_status[status]|length }}</span>)</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <h6 class="controls-title">
+                <i class="mdi mdi-filter-outline"></i> Filtros Inteligentes
+            </h6>
+            <div class="smart-filters">
+                <select id="filterScoreIA" class="form-select form-select-sm">
+                    <option value="">Todos os Scores</option>
+                    <option value="high">Score Alto (>80%)</option>
+                    <option value="medium">Score Médio (50-80%)</option>
+                    <option value="low">Score Baixo (<50%)</option>
+                    <option value="no-score">Sem Score IA</option>
+                </select>
+                
+                <select id="filterUrgencia" class="form-select form-select-sm">
+                    <option value="">Todas as Datas</option>
+                    <option value="24h">Últimas 24h</option>
+                    <option value="3d">Últimos 3 dias</option>
+                    <option value="1w">Última semana</option>
+                    <option value="older">Mais antigas</option>
+                </select>
+                
+                <select id="filterFonte" class="form-select form-select-sm">
+                    <option value="">Todas as Fontes</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="site">Site Corporativo</option>
+                    <option value="indicacao">Indicação</option>
+                    <option value="indeed">Indeed</option>
+                    <option value="outros">Outros</option>
+                </select>
+                
+                <input type="text" 
+                       id="searchCandidato" 
+                       class="form-control form-control-sm" 
+                       placeholder="🔍 Buscar por nome...">
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <h6 class="controls-title">
+                <i class="mdi mdi-view-compact-outline"></i> Densidade dos Cards
+            </h6>
+            <div class="density-toggle">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="densidade" id="densidadeCompacta" value="compact" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="densidadeCompacta">
+                        <i class="mdi mdi-format-align-justify"></i> Compacto
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="densidade" id="densidadeNormal" value="normal">
+                    <label class="btn btn-outline-secondary btn-sm" for="densidadeNormal">
+                        <i class="mdi mdi-view-headline"></i> Normal
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="densidade" id="densidadeConfortavel" value="comfortable">
+                    <label class="btn btn-outline-secondary btn-sm" for="densidadeConfortavel">
+                        <i class="mdi mdi-view-stream"></i> Confortável
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <div class="results-summary">
+                <i class="mdi mdi-information-outline"></i>
+                <span>Mostrando <strong id="candidatosVisiveis">0</strong> de <strong id="candidatosTotais">0</strong> candidatos</span>
+            </div>
+            <button class="btn btn-sm btn-outline-danger" onclick="limparFiltrosKanban()">
+                <i class="mdi mdi-filter-off"></i> Limpar Filtros
+            </button>
+        </div>
+    </div>
+
     <!-- Kanban de Candidatos -->
     <div class="kanban-wrapper">
         <div class="kanban-container">
@@ -378,7 +765,7 @@
                         </div>
                         {% endif %}
                         
-                        <div class="candidato-card-info">
+                        <div class="candidato-card-info show-in-compact">
                             <i class="mdi mdi-calendar"></i>
                             <span>
                                 {% if candidato.data_candidatura %}
@@ -568,4 +955,366 @@
 
 {% block extra_js %}
 <script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=6"></script>
+<script>
+// ============================================================================
+// SISTEMA DE FILTROS E DENSIDADE DO KANBAN
+// ============================================================================
+
+// Variáveis globais
+let filtrosAtivos = {
+    colunas: new Set({{ candidatos_por_status.keys()|list|tojson }}),
+    scoreIA: '',
+    urgencia: '',
+    fonte: '',
+    busca: ''
+};
+
+let densidadeAtual = 'compact';
+
+// ============================================================================
+// INICIALIZAÇÃO
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎨 Inicializando Sistema de Filtros Kanban');
+    
+    // Aplicar densidade padrão
+    aplicarDensidade('compact');
+    
+    // Calcular urgências
+    calcularUrgenciasCandidatos();
+    
+    // Adicionar quick actions
+    adicionarQuickActions();
+    
+    // Atualizar contadores iniciais
+    atualizarContadores();
+    
+    // Inicializar event listeners
+    inicializarEventListeners();
+    
+    // Aplicar filtros iniciais
+    aplicarFiltros();
+});
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
+function inicializarEventListeners() {
+    // Filtros de visibilidade de colunas
+    document.querySelectorAll('.column-filter-checkbox input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const coluna = this.dataset.column;
+            if (this.checked) {
+                filtrosAtivos.colunas.add(coluna);
+            } else {
+                filtrosAtivos.colunas.delete(coluna);
+            }
+            aplicarFiltros();
+        });
+    });
+    
+    // Filtro de Score IA
+    const filterScoreIA = document.getElementById('filterScoreIA');
+    if (filterScoreIA) {
+        filterScoreIA.addEventListener('change', function() {
+            filtrosAtivos.scoreIA = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    // Filtro de Urgência
+    const filterUrgencia = document.getElementById('filterUrgencia');
+    if (filterUrgencia) {
+        filterUrgencia.addEventListener('change', function() {
+            filtrosAtivos.urgencia = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    // Filtro de Fonte
+    const filterFonte = document.getElementById('filterFonte');
+    if (filterFonte) {
+        filterFonte.addEventListener('change', function() {
+            filtrosAtivos.fonte = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    // Busca por nome
+    const searchCandidato = document.getElementById('searchCandidato');
+    if (searchCandidato) {
+        searchCandidato.addEventListener('input', function() {
+            filtrosAtivos.busca = this.value.toLowerCase();
+            aplicarFiltros();
+        });
+    }
+    
+    // Densidade
+    document.querySelectorAll('input[name="densidade"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            aplicarDensidade(this.value);
+        });
+    });
+}
+
+// ============================================================================
+// APLICAR FILTROS
+// ============================================================================
+
+function aplicarFiltros() {
+    console.log('🔍 Aplicando filtros:', filtrosAtivos);
+    
+    let candidatosVisiveis = 0;
+    let candidatosTotais = 0;
+    
+    // Filtrar colunas
+    document.querySelectorAll('.kanban-column').forEach(coluna => {
+        const status = coluna.querySelector('.kanban-column-title').textContent.trim();
+        
+        if (filtrosAtivos.colunas.has(status)) {
+            coluna.classList.remove('hidden');
+            coluna.classList.add('visible');
+        } else {
+            coluna.classList.add('hidden');
+            coluna.classList.remove('visible');
+            return; // Pula cards desta coluna
+        }
+        
+        // Filtrar cards dentro da coluna
+        const cards = coluna.querySelectorAll('.candidato-card');
+        let cardVisiveisColuna = 0;
+        
+        cards.forEach(card => {
+            candidatosTotais++;
+            
+            // Verificar todos os filtros
+            let mostrar = true;
+            
+            // Filtro de Score IA
+            if (filtrosAtivos.scoreIA) {
+                const scoreElement = card.querySelector('.ai-score-badge span');
+                if (filtrosAtivos.scoreIA === 'no-score') {
+                    mostrar = mostrar && !scoreElement;
+                } else if (scoreElement) {
+                    const score = parseInt(scoreElement.textContent);
+                    if (filtrosAtivos.scoreIA === 'high') {
+                        mostrar = mostrar && score > 80;
+                    } else if (filtrosAtivos.scoreIA === 'medium') {
+                        mostrar = mostrar && score >= 50 && score <= 80;
+                    } else if (filtrosAtivos.scoreIA === 'low') {
+                        mostrar = mostrar && score < 50;
+                    }
+                } else if (filtrosAtivos.scoreIA !== 'no-score') {
+                    mostrar = false;
+                }
+            }
+            
+            // Filtro de Urgência
+            if (filtrosAtivos.urgencia) {
+                const urgenciaBadge = card.querySelector('.candidato-urgencia-badge');
+                if (urgenciaBadge) {
+                    const urgencia = urgenciaBadge.dataset.urgencia;
+                    mostrar = mostrar && urgencia === filtrosAtivos.urgencia;
+                } else {
+                    mostrar = false;
+                }
+            }
+            
+            // Filtro de Fonte
+            if (filtrosAtivos.fonte) {
+                const fonteElement = card.querySelector('.candidato-card-fonte');
+                if (fonteElement) {
+                    const fonte = fonteElement.textContent.toLowerCase();
+                    mostrar = mostrar && fonte.includes(filtrosAtivos.fonte.toLowerCase());
+                } else {
+                    mostrar = false;
+                }
+            }
+            
+            // Busca por nome
+            if (filtrosAtivos.busca) {
+                const nome = card.querySelector('.candidato-card-nome').textContent.toLowerCase();
+                mostrar = mostrar && nome.includes(filtrosAtivos.busca);
+            }
+            
+            // Aplicar visibilidade
+            if (mostrar) {
+                card.classList.remove('filtered-hidden');
+                candidatosVisiveis++;
+                cardVisiveisColuna++;
+            } else {
+                card.classList.add('filtered-hidden');
+            }
+        });
+        
+        // Atualizar contador da coluna
+        const contador = coluna.querySelector('.kanban-column-count');
+        contador.textContent = cardVisiveisColuna;
+    });
+    
+    // Atualizar resumo
+    const candidatosVisiveisEl = document.getElementById('candidatosVisiveis');
+    const candidatosTotaisEl = document.getElementById('candidatosTotais');
+    if (candidatosVisiveisEl) candidatosVisiveisEl.textContent = candidatosVisiveis;
+    if (candidatosTotaisEl) candidatosTotaisEl.textContent = candidatosTotais;
+    
+    console.log(`✅ Filtros aplicados: ${candidatosVisiveis}/${candidatosTotais} candidatos visíveis`);
+}
+
+// ============================================================================
+// DENSIDADE DOS CARDS
+// ============================================================================
+
+function aplicarDensidade(densidade) {
+    console.log('📦 Aplicando densidade:', densidade);
+    
+    const kanbanContainer = document.querySelector('.kanban-container');
+    
+    // Remover classes antigas
+    kanbanContainer.classList.remove('density-compact', 'density-normal', 'density-comfortable');
+    
+    // Adicionar nova classe
+    kanbanContainer.classList.add(`density-${densidade}`);
+    
+    densidadeAtual = densidade;
+    
+    console.log('✅ Densidade aplicada:', densidade);
+}
+
+// ============================================================================
+// CALCULAR URGÊNCIAS
+// ============================================================================
+
+function calcularUrgenciasCandidatos() {
+    console.log('⏱️ Calculando urgências dos candidatos');
+    
+    document.querySelectorAll('.candidato-card').forEach(card => {
+        const dataInfo = card.querySelector('.candidato-card-info.show-in-compact span');
+        if (dataInfo) {
+            const dataTexto = dataInfo.textContent.trim();
+            if (dataTexto !== 'N/A') {
+                const [dia, mes, ano] = dataTexto.split('/');
+                const dataCandidatura = new Date(ano, mes - 1, dia);
+                const agora = new Date();
+                const diffMs = agora - dataCandidatura;
+                const diffHoras = diffMs / (1000 * 60 * 60);
+                const diffDias = diffHoras / 24;
+                
+                // Criar badge de urgência
+                const urgenciaBadge = document.createElement('div');
+                urgenciaBadge.className = 'candidato-urgencia-badge';
+                
+                let urgencia, texto;
+                
+                if (diffHoras < 24) {
+                    urgencia = '24h';
+                    texto = 'NOVO';
+                    urgenciaBadge.classList.add('urgente');
+                } else if (diffDias <= 3) {
+                    urgencia = '3d';
+                    texto = `${Math.floor(diffDias)}d`;
+                    urgenciaBadge.classList.add('atencao');
+                } else if (diffDias <= 7) {
+                    urgencia = '1w';
+                    texto = `${Math.floor(diffDias)}d`;
+                    urgenciaBadge.classList.add('normal');
+                } else {
+                    urgencia = 'older';
+                    texto = `${Math.floor(diffDias)}d`;
+                    urgenciaBadge.classList.add('normal');
+                }
+                
+                urgenciaBadge.dataset.urgencia = urgencia;
+                urgenciaBadge.innerHTML = `<i class="mdi mdi-clock-outline"></i> ${texto}`;
+                
+                // Inserir badge no card
+                card.style.position = 'relative';
+                card.insertBefore(urgenciaBadge, card.firstChild);
+            }
+        }
+    });
+    
+    console.log('✅ Urgências calculadas');
+}
+
+// ============================================================================
+// QUICK ACTIONS
+// ============================================================================
+
+function adicionarQuickActions() {
+    console.log('⚡ Adicionando Quick Actions');
+    
+    document.querySelectorAll('.candidato-card').forEach(card => {
+        const candidatoId = card.dataset.candidatoId;
+        
+        const quickActions = document.createElement('div');
+        quickActions.className = 'candidato-card-quick-actions';
+        quickActions.innerHTML = `
+            <div class="quick-action-btn btn-info-action" 
+                 onclick="verDetalhesCandidato('${candidatoId}'); event.stopPropagation();" 
+                 title="Ver Detalhes">
+                <i class="mdi mdi-eye"></i>
+            </div>
+        `;
+        
+        card.style.position = 'relative';
+        card.appendChild(quickActions);
+    });
+    
+    console.log('✅ Quick Actions adicionadas');
+}
+
+// ============================================================================
+// ATUALIZAR CONTADORES
+// ============================================================================
+
+function atualizarContadores() {
+    document.querySelectorAll('.kanban-column').forEach(coluna => {
+        const status = coluna.querySelector('.kanban-column-title').textContent.trim();
+        const statusId = status.toLowerCase().replace(/\\s+/g, '-');
+        const cards = coluna.querySelectorAll('.candidato-card:not(.filtered-hidden)');
+        const contador = document.getElementById(`count-${statusId}`);
+        if (contador) {
+            contador.textContent = cards.length;
+        }
+    });
+}
+
+// ============================================================================
+// LIMPAR FILTROS
+// ============================================================================
+
+function limparFiltrosKanban() {
+    console.log('🧹 Limpando filtros');
+    
+    // Resetar checkboxes de colunas
+    document.querySelectorAll('.column-filter-checkbox input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    filtrosAtivos.colunas = new Set({{ candidatos_por_status.keys()|list|tojson }});
+    
+    // Resetar selects
+    const filterScoreIA = document.getElementById('filterScoreIA');
+    const filterUrgencia = document.getElementById('filterUrgencia');
+    const filterFonte = document.getElementById('filterFonte');
+    const searchCandidato = document.getElementById('searchCandidato');
+    
+    if (filterScoreIA) filterScoreIA.value = '';
+    if (filterUrgencia) filterUrgencia.value = '';
+    if (filterFonte) filterFonte.value = '';
+    if (searchCandidato) searchCandidato.value = '';
+    
+    filtrosAtivos.scoreIA = '';
+    filtrosAtivos.urgencia = '';
+    filtrosAtivos.fonte = '';
+    filtrosAtivos.busca = '';
+    
+    // Reaplicar filtros
+    aplicarFiltros();
+    
+    console.log('✅ Filtros limpos');
+}
+</script>
 {% endblock %}
