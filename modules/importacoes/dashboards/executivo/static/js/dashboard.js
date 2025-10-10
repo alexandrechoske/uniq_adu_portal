@@ -841,10 +841,19 @@ function initializeEnhancedTable() {
             ? exportadorFull.substring(0, 18) + '…'
             : exportadorFull;
         
-        // CORREÇÃO: Status com fallback, ignorando N/A
-        let statusDisplay = operation.status_timeline;
-        if (!statusDisplay || statusDisplay.toUpperCase() === 'N/A' || statusDisplay.trim() === '') {
-            statusDisplay = operation.status_macro_sistema || operation.status_processo || operation.status || 'Sem Info';
+        // CORREÇÃO: Mostrar status_sistema (campo existe na view vw_importacoes_6_meses_abertos_dash)
+        // Se não houver status_sistema, usar fallback
+        let statusDisplay = operation.status_sistema;
+        
+        // Debug para identificar problema
+        if (!statusDisplay && globalIndex === 0) {
+            console.warn('[STATUS_DEBUG] Primeiro registro sem status_sistema:', operation);
+            console.warn('[STATUS_DEBUG] Campos disponíveis:', Object.keys(operation));
+        }
+        
+        // Fallback se status_sistema estiver vazio
+        if (!statusDisplay || statusDisplay.trim() === '') {
+            statusDisplay = operation.status_processo || operation.status || 'Sem Info';
         }
         
         return `
@@ -2176,22 +2185,20 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-exportador', operation.exportador_fornecedor);
     updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
     
-    // CORREÇÃO: Processar status com prioridade para status_timeline, ignorando N/A
-    let statusToDisplay = operation.status_timeline;
+    // CORREÇÃO: Mostrar status_sistema (campo existe na view vw_importacoes_6_meses_abertos_dash)
+    let statusToDisplay = operation.status_sistema;
     
     console.log('[MODAL_DEBUG] ========================================');
     console.log('[MODAL_DEBUG] DASHBOARD.JS - STATUS PROCESSING');
-    console.log('[MODAL_DEBUG] status_timeline:', operation.status_timeline);
-    console.log('[MODAL_DEBUG] status_macro_sistema:', operation.status_macro_sistema);
-    console.log('[MODAL_DEBUG] status_processo:', operation.status_processo);
+    console.log('[MODAL_DEBUG] status_sistema:', operation.status_sistema);
+    console.log('[MODAL_DEBUG] Campos disponíveis:', Object.keys(operation));
     
-    // Se status_timeline for N/A, null, undefined ou vazio, usar fallback
-    if (!statusToDisplay || statusToDisplay.toUpperCase() === 'N/A' || statusToDisplay.trim() === '') {
-        console.log('[MODAL_DEBUG] status_timeline inválido, usando fallback...');
-        statusToDisplay = operation.status_macro_sistema || operation.status_processo || operation.status_macro || 'Sem Informação';
+    // Fallback se status_sistema estiver vazio
+    if (!statusToDisplay || statusToDisplay.trim() === '') {
+        console.log('[MODAL_DEBUG] status_sistema vazio, usando fallback...');
+        statusToDisplay = operation.status_processo || operation.status || 'Sem Informação';
     }
     
-    // Se o status tem formato "2 - AG EMBARQUE", manter completo (não extrair só a segunda parte)
     console.log('[MODAL_DEBUG] Status final para exibição:', statusToDisplay);
     console.log('[MODAL_DEBUG] ========================================');
     
