@@ -1668,6 +1668,16 @@ function updateRecentOperationsTable(operations) {
     // Then set data to enhanced table (this triggers render)
     recentOperationsTable.setData(sortedOperations);
     
+    // Inicializar filtros de coluna após carregar dados
+    if (typeof window.initColumnFilters === 'function') {
+        console.log('[DASHBOARD_EXECUTIVO] Inicializando filtros de coluna...');
+        setTimeout(() => {
+            window.initColumnFilters('recent-operations-table');
+        }, 500);
+    } else {
+        console.warn('[DASHBOARD_EXECUTIVO] Função initColumnFilters não encontrada');
+    }
+    
     // Debug: mostrar primeiros 10 processos do array global com detalhes
     console.log('[DASHBOARD_EXECUTIVO] Primeiros 10 processos no array global:');
     sortedOperations.slice(0, 10).forEach((op, idx) => {

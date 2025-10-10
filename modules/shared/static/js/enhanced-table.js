@@ -284,8 +284,8 @@ class EnhancedDataTable {
         console.log(`[ENHANCED_TABLE] Sorting by column ${this.sortColumn} (${columnKey}), direction: ${this.sortDirection}`);
 
         this.filteredData.sort((a, b) => {
-            let aVal = a[columnKey];
-            let bVal = b[columnKey];
+            let aVal = this.getValueForSorting(a, columnKey);
+            let bVal = this.getValueForSorting(b, columnKey);
 
             // Handle null/undefined values
             if (aVal === null || aVal === undefined) aVal = '';
@@ -381,7 +381,7 @@ class EnhancedDataTable {
             return this.config.columns[columnIndex].key;
         }
 
-        // Default mapping based on common column names
+        // PRIORIZAR data-sort attribute do HTML (mais confiável)
         const headers = Array.from(this.table.querySelectorAll('thead th'));
         const headerElement = headers[columnIndex];
         
@@ -390,6 +390,22 @@ class EnhancedDataTable {
             return `column_${columnIndex}`;
         }
         
+        // 1. Tentar obter de data-sort (MELHOR OPÇÃO)
+        const dataSortAttr = headerElement.getAttribute('data-sort');
+        if (dataSortAttr) {
+            console.log(`[ENHANCED_TABLE] Using data-sort="${dataSortAttr}" for column ${columnIndex}`);
+            
+            // Aplicar mapeamento se necessário (mesma lógica dos filtros)
+            const columnMap = {
+                'status': 'status_sistema',        // data-sort="status" → status_sistema
+                'material': 'mercadoria',          // data-sort="material" → mercadoria
+                'urf_despacho': 'urf_despacho_normalizado' // data-sort="urf_despacho" → normalizado
+            };
+            
+            return columnMap[dataSortAttr] || dataSortAttr;
+        }
+        
+        // 2. Fallback: usar texto do header (menos confiável por causa de traduções)
         const headerText = headerElement.textContent?.trim()?.toLowerCase();
         
         if (!headerText) {
@@ -400,16 +416,17 @@ class EnhancedDataTable {
         const keyMap = {
             'ações': 'actions',
             'ref. unique': 'ref_unique',
+            'pedido': 'ref_importador',
             'importador': 'importador',
             'data abertura': 'data_abertura',
-            'exportador': 'exportador',
+            'exportador': 'exportador_fornecedor',
             'modal': 'modal',
-            'status': 'status',
+            'status': 'status_sistema',     // CORRIGIDO
             'custo total': 'custo_total',
             'data chegada': 'data_chegada',
-            'material': 'material',
-            'urf': 'urf_despacho',
-            'urf despacho': 'urf_despacho',
+            'material': 'mercadoria',        // CORRIGIDO
+            'urf': 'urf_despacho_normalizado', // CORRIGIDO
+            'urf despacho': 'urf_despacho_normalizado',
             'número pedido': 'numero_pedido',
             'cliente': 'cliente',
             'data embarque': 'data_embarque',
@@ -418,6 +435,26 @@ class EnhancedDataTable {
         };
 
         return keyMap[headerText] || headerText.replace(/[^a-z0-9]/g, '_');
+    }
+
+    getValueForSorting(item, columnKey) {
+        // Special handling for URF column - implement fallback logic matching dashboard.js
+        if (columnKey === 'urf_despacho_normalizado') {
+            const normalizedValue = item.urf_despacho_normalizado;
+            const originalValue = item.urf_despacho;
+            
+            // If normalized value exists and is not 'N/A', use it; otherwise fallback to original
+            if (normalizedValue && normalizedValue !== 'N/A') {
+                // console.log(`[ENHANCED_TABLE] URF - using normalized: "${normalizedValue}"`);
+                return normalizedValue;
+            }
+            
+            // console.log(`[ENHANCED_TABLE] URF - using fallback: "${originalValue}"`);
+            return originalValue || '';
+        }
+
+        // Standard field access for all other columns
+        return item[columnKey];
     }
 
     render() {
