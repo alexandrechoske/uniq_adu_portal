@@ -63,33 +63,39 @@ def gestao_vagas():
         vagas = vagas_response.data if vagas_response.data else []
         print(f"   ✅ {len(vagas)} vaga(s) encontrada(s)")
         
-        # Parse benefícios (de string JSON para array)
-        import json
-        for vaga in vagas:
-            if vaga.get('beneficios') and isinstance(vaga['beneficios'], str):
-                try:
-                    vaga['beneficios'] = json.loads(vaga['beneficios'])
-                except:
-                    pass
-        
         # Calcular KPIs
         total_vagas = len(vagas)
         vagas_abertas = len([v for v in vagas if v.get('status') == 'Aberta'])
         vagas_fechadas = len([v for v in vagas if v.get('status') == 'Fechada'])
-        total_candidatos_geral = 0
         
-        # Contar candidatos para cada vaga (com tratamento de erro)
-        for vaga in vagas:
-            try:
-                candidatos_response = supabase_admin.table('rh_candidatos')\
-                    .select('id', count='exact')\
-                    .eq('vaga_id', vaga['id'])\
-                    .execute()
-                
-                vaga['total_candidatos'] = candidatos_response.count if candidatos_response.count else 0
+        # 🚀 OTIMIZAÇÃO: Buscar TODOS os candidatos de uma vez (1 requisição ao invés de N)
+        print("\n   🚀 Buscando candidatos (requisição única otimizada)...")
+        try:
+            todos_candidatos_response = supabase_admin.table('rh_candidatos')\
+                .select('vaga_id')\
+                .execute()
+            
+            # Agrupar candidatos por vaga_id em memória (processamento local = rápido)
+            candidatos_por_vaga = {}
+            for candidato in (todos_candidatos_response.data or []):
+                vaga_id = candidato.get('vaga_id')
+                if vaga_id:
+                    candidatos_por_vaga[vaga_id] = candidatos_por_vaga.get(vaga_id, 0) + 1
+            
+            print(f"   ✅ Total de candidatos encontrados: {len(todos_candidatos_response.data or [])}")
+            print(f"   ✅ Distribuídos em {len(candidatos_por_vaga)} vagas")
+            
+            # Associar contagens às vagas
+            total_candidatos_geral = 0
+            for vaga in vagas:
+                vaga['total_candidatos'] = candidatos_por_vaga.get(vaga['id'], 0)
                 total_candidatos_geral += vaga['total_candidatos']
-            except Exception as e:
-                print(f"   ⚠️ Erro ao contar candidatos da vaga {vaga.get('titulo')}: {str(e)}")
+            
+        except Exception as e:
+            print(f"   ⚠️ Erro ao buscar candidatos: {str(e)}")
+            # Fallback: zerar contagens
+            total_candidatos_geral = 0
+            for vaga in vagas:
                 vaga['total_candidatos'] = 0
         
         # Calcular média de candidatos por vaga
@@ -232,15 +238,6 @@ def api_list_vagas():
         
         vagas = response.data if response.data else []
         
-        # Parse benefícios (de string JSON para array)
-        import json
-        for vaga in vagas:
-            if vaga.get('beneficios') and isinstance(vaga['beneficios'], str):
-                try:
-                    vaga['beneficios'] = json.loads(vaga['beneficios'])
-                except:
-                    pass
-        
         # Contar candidatos para cada vaga
         for vaga in vagas:
             candidatos_response = supabase_admin.table('rh_candidatos')\
@@ -272,18 +269,7 @@ def api_get_vaga(vaga_id):
             .execute()
         
         if response.data and len(response.data) > 0:
-            vaga = response.data[0]
-            
-            # Converter beneficios de string JSON para array (se necessário)
-            if vaga.get('beneficios') and isinstance(vaga['beneficios'], str):
-                try:
-                    import json
-                    vaga['beneficios'] = json.loads(vaga['beneficios'])
-                except:
-                    # Se não conseguir parsear, manter como string
-                    pass
-            
-            return jsonify({'success': True, 'vaga': vaga})
+            return jsonify({'success': True, 'vaga': response.data[0]})
         else:
             return jsonify({'success': False, 'message': 'Vaga não encontrada'}), 404
     
@@ -316,17 +302,6 @@ def api_create_vaga():
         if not requisitos:
             return jsonify({'success': False, 'message': 'Requisitos são obrigatórios'}), 400
         
-        # Processar benefícios (array)
-        beneficios = data.get('beneficios')
-        if isinstance(beneficios, str):
-            # Se veio como string, converter para array
-            beneficios = [b.strip() for b in beneficios.split(',') if b.strip()] if beneficios else None
-        elif isinstance(beneficios, list):
-            # Se já é array, apenas limpar espaços
-            beneficios = [b.strip() for b in beneficios if b.strip()] if beneficios else None
-        else:
-            beneficios = None
-        
         # Criar vaga
         vaga_data = {
             'titulo': titulo,
@@ -335,20 +310,7 @@ def api_create_vaga():
             'requisitos': requisitos,
             'localizacao': data.get('localizacao', '').strip() or None,
             'tipo_contratacao': data.get('tipo_contratacao', '').strip() or 'CLT',
-            'status': 'Aberta',
-            # Novos campos de remuneração e benefícios
-            'faixa_salarial_min': data.get('faixa_salarial_min'),
-            'faixa_salarial_max': data.get('faixa_salarial_max'),
-            'beneficios': beneficios,
-            # Novos campos de detalhes da vaga
-            'nivel_senioridade': data.get('nivel_senioridade', '').strip() or None,
-            'quantidade_vagas': data.get('quantidade_vagas', 1),
-            'regime_trabalho': data.get('regime_trabalho', '').strip() or None,
-            'carga_horaria': data.get('carga_horaria', '').strip() or None,
-            # Novos campos de requisitos detalhados
-            'requisitos_obrigatorios': data.get('requisitos_obrigatorios', '').strip() or None,
-            'requisitos_desejaveis': data.get('requisitos_desejaveis', '').strip() or None,
-            'diferenciais': data.get('diferenciais', '').strip() or None
+            'status': 'Aberta'
         }
         
         response = supabase_admin.table('rh_vagas').insert(vaga_data).execute()
@@ -387,81 +349,24 @@ def api_update_vaga(vaga_id):
         # Atualizar vaga
         update_data = {}
         if 'titulo' in data:
-            titulo = data['titulo']
+            titulo = data['titulo'].strip()
             if titulo:
-                titulo = titulo.strip()
-                if titulo:
-                    update_data['titulo'] = titulo
+                update_data['titulo'] = titulo
         
         if 'cargo_id' in data:
             update_data['cargo_id'] = data['cargo_id']
         
         if 'descricao' in data:
-            descricao = data['descricao']
-            if descricao:
-                update_data['descricao'] = descricao.strip()
+            update_data['descricao'] = data['descricao'].strip()
         
         if 'requisitos' in data:
-            requisitos = data['requisitos']
-            if requisitos:
-                update_data['requisitos'] = requisitos.strip()
+            update_data['requisitos'] = data['requisitos'].strip()
         
         if 'localizacao' in data:
-            localizacao = data['localizacao']
-            update_data['localizacao'] = localizacao.strip() if localizacao else None
+            update_data['localizacao'] = data['localizacao'].strip() or None
         
         if 'tipo_contratacao' in data:
-            tipo = data['tipo_contratacao']
-            if tipo:
-                update_data['tipo_contratacao'] = tipo.strip()
-        
-        # Novos campos de remuneração e benefícios
-        if 'faixa_salarial_min' in data:
-            update_data['faixa_salarial_min'] = data['faixa_salarial_min']
-        
-        if 'faixa_salarial_max' in data:
-            update_data['faixa_salarial_max'] = data['faixa_salarial_max']
-        
-        if 'beneficios' in data:
-            beneficios = data['beneficios']
-            if isinstance(beneficios, str):
-                # Se veio como string, converter para array
-                beneficios = [b.strip() for b in beneficios.split(',') if b.strip()] if beneficios else None
-            elif isinstance(beneficios, list):
-                # Se já é array, apenas limpar espaços
-                beneficios = [b.strip() for b in beneficios if b and b.strip()] if beneficios else None
-            else:
-                beneficios = None
-            update_data['beneficios'] = beneficios
-        
-        # Novos campos de detalhes da vaga
-        if 'nivel_senioridade' in data:
-            nivel = data['nivel_senioridade']
-            update_data['nivel_senioridade'] = nivel.strip() if nivel else None
-        
-        if 'quantidade_vagas' in data:
-            update_data['quantidade_vagas'] = data['quantidade_vagas']
-        
-        if 'regime_trabalho' in data:
-            regime = data['regime_trabalho']
-            update_data['regime_trabalho'] = regime.strip() if regime else None
-        
-        if 'carga_horaria' in data:
-            carga = data['carga_horaria']
-            update_data['carga_horaria'] = carga.strip() if carga else None
-        
-        # Novos campos de requisitos detalhados
-        if 'requisitos_obrigatorios' in data:
-            req_obrig = data['requisitos_obrigatorios']
-            update_data['requisitos_obrigatorios'] = req_obrig.strip() if req_obrig else None
-        
-        if 'requisitos_desejaveis' in data:
-            req_desej = data['requisitos_desejaveis']
-            update_data['requisitos_desejaveis'] = req_desej.strip() if req_desej else None
-        
-        if 'diferenciais' in data:
-            difer = data['diferenciais']
-            update_data['diferenciais'] = difer.strip() if difer else None
+            update_data['tipo_contratacao'] = data['tipo_contratacao'].strip()
         
         response = supabase_admin.table('rh_vagas')\
             .update(update_data)\
