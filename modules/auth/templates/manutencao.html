@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Portal em Manutenção{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/unique-colors.css') }}">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .maintenance-container {
+            max-width: 600px;
+            width: 90%;
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .maintenance-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #FF6B6B, #FFD93D, #6BCF7F, #4ECDC4, #A8E6CF);
+            background-size: 200% 100%;
+            animation: gradientMove 3s ease infinite;
+        }
+
+        @keyframes gradientMove {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .maintenance-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .maintenance-icon svg {
+            width: 100%;
+            height: 100%;
+            color: #667eea;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .maintenance-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .maintenance-subtitle {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .maintenance-message {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .maintenance-message p {
+            color: #2d3748;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .maintenance-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #edf2f7;
+            border-radius: 8px;
+        }
+
+        .maintenance-info svg {
+            width: 20px;
+            height: 20px;
+            color: #667eea;
+            flex-shrink: 0;
+        }
+
+        .maintenance-info span {
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .refresh-button {
+            margin-top: 2rem;
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .refresh-button:active {
+            transform: translateY(0);
+        }
+
+        .logo-section {
+            margin-bottom: 2rem;
+        }
+
+        .logo-section img {
+            height: 60px;
+            width: auto;
+            margin: 0 auto;
+        }
+
+        .estimated-time {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #fff5f5;
+            border-radius: 8px;
+            border: 1px solid #feb2b2;
+        }
+
+        .estimated-time p {
+            color: #c53030;
+            font-size: 0.9rem;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        @media (max-width: 640px) {
+            .maintenance-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .maintenance-title {
+                font-size: 1.5rem;
+            }
+
+            .maintenance-subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block auth_content %}
+<div class="maintenance-container">
+    {# Logo #}
+    <div class="logo-section">
+        <img src="{{ url_for('static', filename='medias/Logo_Unique.png') }}" alt="UniSystem">
+    </div>
+
+    {# Ícone de Manutenção #}
+    <div class="maintenance-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    </div>
+
+    {# Título #}
+    <h1 class="maintenance-title">Portal em Manutenção</h1>
+    <p class="maintenance-subtitle">
+        Estamos realizando melhorias no sistema para oferecer uma experiência ainda melhor
+    </p>
+
+    {# Mensagem Customizada (se houver) #}
+    {% if mensagem_customizada %}
+    <div class="maintenance-message">
+        <p>{{ mensagem_customizada }}</p>
+    </div>
+    {% endif %}
+
+    {# Tempo Estimado (se houver) #}
+    {% if data_prevista_fim %}
+    <div class="estimated-time">
+        <p>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline; width: 16px; height: 16px; vertical-align: middle; margin-right: 5px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Previsão de retorno: {{ data_prevista_fim }}
+        </p>
+    </div>
+    {% endif %}
+
+    {# Informação de Contato #}
+    <div class="maintenance-info">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Em caso de urgência, entre em contato com o suporte</span>
+    </div>
+
+    {# Botão de Atualizar #}
+    <button onclick="location.reload()" class="refresh-button">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline; width: 18px; height: 18px; vertical-align: middle; margin-right: 8px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Tentar Novamente
+    </button>
+</div>
+{% endblock %}
