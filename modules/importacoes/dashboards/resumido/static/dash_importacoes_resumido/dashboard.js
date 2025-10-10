@@ -614,9 +614,9 @@ class DashboardImportacoesResumido {
                 this.showCompanyMessage(data.message, 'info');
                 this.loadData();
                 
-            } else if (data.require_filter) {
-                // Múltiplas empresas ou admin - exigir filtro
-                console.log('[DASHBOARD] Usuário requer filtro - mostrando mensagem de seleção');
+            } else if (data.require_filter && (data.company_count === 'all' || data.company_count > 1)) {
+                // Múltiplas empresas ou admin com acesso a todas - exigir filtro
+                console.log('[DASHBOARD] Usuário com múltiplas empresas ou admin - mostrando mensagem de seleção');
                 this.showFilterRequiredMessage(data.message, data.company_count);
                 // Ativar filtro de empresa automaticamente
                 this.settings.companyFilterEnabled = true;
@@ -627,9 +627,10 @@ class DashboardImportacoesResumido {
                 this.loadBasicHeader();
                 
             } else if (data.company_count === 0) {
-                // Nenhuma empresa
+                // Nenhuma empresa - somente neste caso mostrar warning
                 console.log('[DASHBOARD] Usuário sem empresas vinculadas');
                 this.showCompanyMessage(data.message, 'warning');
+                this.hideLoading();
                 
             } else {
                 // Fallback - carregar normalmente
