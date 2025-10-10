@@ -484,7 +484,8 @@ function atualizarContadores() {
 }
 
 /**
- * Abrir detalhes do candidato
+ * Abrir detalhes COMPLETOS do candidato - FASE 2
+ * Preenche todos os 37 campos do modal organizado
  */
 async function verDetalhesCandidato(candidatoId) {
     try {
@@ -495,33 +496,153 @@ async function verDetalhesCandidato(candidatoId) {
         
         if (data.data) {
             const candidato = data.data;
+            console.log('📄 Candidato carregado (FASE 2):', candidato);
             
-            // Preencher modal com detalhes
-            document.getElementById('detalheCandidatoNome').textContent = candidato.nome_completo;
-            document.getElementById('detalheCandidatoEmail').textContent = candidato.email || 'Não informado';
-            document.getElementById('detalheCandidatoTelefone').textContent = candidato.telefone || 'Não informado';
-            document.getElementById('detalheCandidatoData').textContent = candidato.data_candidatura ? 
-                new Date(candidato.data_candidatura).toLocaleDateString('pt-BR') : 'Não informado';
-            document.getElementById('detalheCandidatoFonte').textContent = candidato.fonte_candidatura || 'Não informado';
-            document.getElementById('detalheCandidatoStatus').textContent = candidato.status_processo || 'Triagem';
+            // Armazenar ID do candidato
+            document.getElementById('candidatoIdAtual').value = candidato.id;
             document.getElementById('candidatoIdObservacoes').value = candidato.id;
             
-            // Link de currículo
-            if (candidato.url_curriculo) {
-                document.getElementById('btnDownloadCurriculo').href = candidato.url_curriculo;
-                document.getElementById('btnDownloadCurriculo').style.display = 'inline-flex';
+            // Atualizar título do modal
+            document.getElementById('modalCandidatoTitulo').textContent = 
+                `${candidato.nome_completo || 'Candidato'}`;
+            
+            // ============================================
+            // SEÇÃO 1: INFORMAÇÕES PESSOAIS
+            // ============================================
+            setText('view_nome_completo', candidato.nome_completo);
+            
+            // Data de nascimento + idade
+            let dataNascTexto = '-';
+            if (candidato.data_nascimento) {
+                const dataNasc = new Date(candidato.data_nascimento);
+                const idade = calcularIdade(dataNasc);
+                dataNascTexto = `${formatarData(candidato.data_nascimento)} (${idade} anos)`;
+            } else if (candidato.idade) {
+                dataNascTexto = `${candidato.idade} anos`;
+            }
+            setText('view_data_nascimento', dataNascTexto);
+            
+            setText('view_email', candidato.email);
+            setText('view_telefone', candidato.telefone);
+            setText('view_sexo', candidato.sexo);
+            setText('view_estado_civil', candidato.estado_civil);
+            setText('view_cidade_estado', candidato.cidade_estado);
+            
+            // ============================================
+            // SEÇÃO 2: FORMAÇÃO E EXPERIÊNCIA
+            // ============================================
+            setText('view_formacao_academica', candidato.formacao_academica);
+            setText('view_curso_especifico', candidato.curso_especifico);
+            setText('view_area_objetivo', candidato.area_objetivo);
+            setText('view_experiencia_na_area', candidato.experiencia_na_area);
+            setText('view_trabalha_atualmente', formatarBoolean(candidato.trabalha_atualmente));
+            
+            // ============================================
+            // SEÇÃO 3: CANDIDATURA
+            // ============================================
+            setText('view_fonte_candidatura', candidato.fonte_candidatura);
+            setText('view_data_candidatura', formatarData(candidato.data_candidatura));
+            setText('view_foi_indicacao', formatarBoolean(candidato.foi_indicacao));
+            setText('view_indicado_por', candidato.indicado_por);
+            
+            // LinkedIn (com link clicável)
+            setLink('view_linkedin_url', candidato.linkedin_url);
+            
+            // Portfólio (com link clicável)
+            setLink('view_portfolio_url', candidato.portfolio_url);
+            
+            // Currículo
+            if (candidato.url_curriculo || candidato.curriculo_path) {
+                const curriculoUrl = candidato.url_curriculo || candidato.curriculo_path;
+                document.getElementById('btnDownloadCurriculo').href = curriculoUrl;
+                document.getElementById('btnDownloadCurriculo').style.display = 'inline-block';
             } else {
                 document.getElementById('btnDownloadCurriculo').style.display = 'none';
             }
             
-            // Exibir análise de IA (se disponível)
-            exibirAnaliseIA(candidato);
+            // ============================================
+            // SEÇÃO 4: ANÁLISE DA IA
+            // ============================================
+            const secaoIA = document.getElementById('secaoIA');
+            if (candidato.ai_status && candidato.ai_status !== 'pending') {
+                secaoIA.style.display = 'block';
+                
+                setHTML('view_ai_status', formatarAIStatus(candidato.ai_status));
+                setHTML('view_ai_pre_filter_status', formatarPreFilterStatus(candidato.ai_pre_filter_status));
+                setHTML('view_ai_match_score', formatarScore(candidato.ai_match_score));
+                
+                // Análise completa - extrair do JSONB
+                if (candidato.ai_extracted_data_jsonb) {
+                    try {
+                        // Parsear JSONB se for string, ou usar diretamente se já for objeto
+                        const aiData = typeof candidato.ai_extracted_data_jsonb === 'string' 
+                            ? JSON.parse(candidato.ai_extracted_data_jsonb)
+                            : candidato.ai_extracted_data_jsonb;
+                        
+                        if (aiData && aiData.analise) {
+                            setText('view_ai_analise', aiData.analise);
+                        } else {
+                            setText('view_ai_analise', 'Análise não disponível.');
+                        }
+                    } catch (e) {
+                        console.error('Erro ao parsear análise da IA:', e);
+                        setText('view_ai_analise', 'Erro ao carregar análise.');
+                    }
+                } else {
+                    setText('view_ai_analise', 'Análise em processamento...');
+                }
+            } else {
+                secaoIA.style.display = 'none';
+            }
             
-            // Carregar histórico de observações
+            // ============================================
+            // SEÇÃO 5: PROCESSO SELETIVO
+            // ============================================
+            setText('view_status_processo', candidato.status_processo || 'Triagem');
+            setText('view_realizou_entrevista', formatarBoolean(candidato.realizou_entrevista));
+            setText('view_data_entrevista', formatarData(candidato.data_entrevista));
+            
+            // ============================================
+            // SEÇÃO 6: CONTRATAÇÃO
+            // ============================================
+            const secaoContratacao = document.getElementById('secaoContratacao');
+            const btnEfetivar = document.getElementById('btnEfetivarColaborador');
+            
+            if (candidato.status_processo === 'Contratado' || candidato.foi_contratado) {
+                secaoContratacao.style.display = 'block';
+                
+                setText('view_foi_contratado', formatarBoolean(candidato.foi_contratado));
+                setText('view_data_contratacao', formatarData(candidato.data_contratacao));
+                
+                if (candidato.colaborador_id) {
+                    const linkColaborador = `<a href="/rh/colaboradores/${candidato.colaborador_id}" target="_blank" class="btn btn-sm btn-success">
+                        <i class="mdi mdi-account-check"></i> Ver Colaborador
+                    </a>`;
+                    document.getElementById('view_colaborador_id').innerHTML = linkColaborador;
+                    btnEfetivar.style.display = 'none'; // Já efetivado
+                } else {
+                    setText('view_colaborador_id', 'Não efetivado ainda');
+                    btnEfetivar.style.display = 'inline-block'; // Mostrar botão
+                }
+            } else {
+                secaoContratacao.style.display = 'none';
+                btnEfetivar.style.display = 'none';
+            }
+            
+            // ============================================
+            // SEÇÃO 7: OBSERVAÇÕES
+            // ============================================
             await carregarHistoricoObservacoes(candidato.id);
             
             // Limpar campo de nova observação
             document.getElementById('novaObservacao').value = '';
+            
+            // Garantir que está em modo visualização
+            document.getElementById('modoEdicao').value = 'false';
+            document.getElementById('modo-visualizacao').style.display = 'block';
+            document.getElementById('modo-edicao').style.display = 'none';
+            document.getElementById('btnEditarCandidato').innerHTML = '<i class="mdi mdi-pencil"></i> Editar';
+            document.getElementById('btnSalvarEdicao').style.display = 'none';
             
             // Abrir modal
             const modal = new bootstrap.Modal(document.getElementById('modalDetalhesCandidato'));
@@ -530,8 +651,231 @@ async function verDetalhesCandidato(candidatoId) {
             alert('❌ Erro ao carregar dados do candidato');
         }
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro ao carregar candidato (FASE 2):', error);
         alert('❌ Erro ao carregar candidato');
+    }
+}
+
+// ========================================
+// FUNÇÕES AUXILIARES - FASE 2
+// ========================================
+
+/**
+ * Define texto em um elemento (ou "-" se vazio)
+ */
+function setText(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value || '-';
+    }
+}
+
+/**
+ * Define HTML em um elemento
+ */
+function setHTML(elementId, html) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = html || '-';
+    }
+}
+
+/**
+ * Define link clicável (ou "-" se vazio)
+ */
+function setLink(elementId, url) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        if (url) {
+            element.innerHTML = `<a href="${url}" target="_blank" class="text-primary">
+                <i class="mdi mdi-open-in-new"></i> Acessar
+            </a>`;
+        } else {
+            element.textContent = '-';
+        }
+    }
+}
+
+/**
+ * Formatar data DD/MM/YYYY
+ */
+function formatarData(dataStr) {
+    if (!dataStr) return '-';
+    try {
+        const data = new Date(dataStr);
+        if (isNaN(data.getTime())) return '-';
+        return data.toLocaleDateString('pt-BR');
+    } catch {
+        return '-';
+    }
+}
+
+/**
+ * Formatar boolean como Sim/Não
+ */
+function formatarBoolean(valor) {
+    if (valor === null || valor === undefined) return '-';
+    return valor ? 'Sim' : 'Não';
+}
+
+/**
+ * Calcular idade a partir de data de nascimento
+ */
+function calcularIdade(dataNascimento) {
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - dataNascimento.getFullYear();
+    const mes = hoje.getMonth() - dataNascimento.getMonth();
+    if (mes < 0 || (mes === 0 && hoje.getDate() < dataNascimento.getDate())) {
+        idade--;
+    }
+    return idade;
+}
+
+/**
+ * Formatar status da IA
+ */
+function formatarAIStatus(status) {
+    const statusMap = {
+        'pending': '<span class="badge bg-warning">Pendente</span>',
+        'processing': '<span class="badge bg-info">Processando</span>',
+        'completed': '<span class="badge bg-success">Concluído</span>',
+        'error': '<span class="badge bg-danger">Erro</span>'
+    };
+    return statusMap[status] || status || '-';
+}
+
+/**
+ * Formatar pré-filtro
+ */
+function formatarPreFilterStatus(status) {
+    const statusMap = {
+        'approved': '<span class="badge bg-success"><i class="mdi mdi-check"></i> Aprovado</span>',
+        'rejected': '<span class="badge bg-danger"><i class="mdi mdi-close"></i> Reprovado</span>',
+        'pending': '<span class="badge bg-warning">Pendente</span>'
+    };
+    return statusMap[status] || status || '-';
+}
+
+/**
+ * Formatar score (0-100)
+ */
+function formatarScore(score) {
+    if (!score && score !== 0) return '-';
+    const scoreNum = parseFloat(score);
+    let badgeClass = 'secondary';
+    if (scoreNum >= 80) badgeClass = 'success';
+    else if (scoreNum >= 60) badgeClass = 'warning';
+    else badgeClass = 'danger';
+    
+    return `<span class="badge bg-${badgeClass}" style="font-size: 1.1rem; padding: 0.5rem 1rem;">
+        ${scoreNum}%
+    </span>`;
+}
+
+/**
+ * Exibir dados extraídos pela IA (JSONB) - REMOVIDA FASE 2
+ * Motivo: Campo bugado mostrando [object Object], análise completa já tem tudo
+ */
+/*
+function exibirDadosExtraidosIA(jsonData) {
+    const container = document.getElementById('view_ai_extracted_data');
+    
+    try {
+        // Se vier como string, fazer parse
+        const dados = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+        
+        if (!dados || Object.keys(dados).length === 0) {
+            container.innerHTML = '<p class="text-muted mb-0">Nenhum dado extraído</p>';
+            return;
+        }
+        
+        // Criar grid de dados
+        let html = '';
+        
+        for (const [chave, valor] of Object.entries(dados)) {
+            if (valor) {
+                const chaveFormatada = chave.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                html += `
+                    <div class="ai-extracted-item">
+                        <div class="ai-extracted-item-label">${chaveFormatada}</div>
+                        <div class="ai-extracted-item-value">${valor}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Erro ao parsear dados extraídos:', error);
+        container.innerHTML = '<p class="text-muted mb-0">Erro ao carregar dados extraídos</p>';
+    }
+}
+*/
+
+// ========================================
+// MODO EDIÇÃO (FASE 2 - PREPARAÇÃO)
+// ========================================
+
+/**
+ * Toggle entre modo visualização e edição
+ */
+function toggleModoEdicao() {
+    const modoAtual = document.getElementById('modoEdicao').value;
+    const btnEditar = document.getElementById('btnEditarCandidato');
+    const btnSalvar = document.getElementById('btnSalvarEdicao');
+    
+    if (modoAtual === 'false') {
+        // Ativar modo edição
+        document.getElementById('modoEdicao').value = 'true';
+        document.getElementById('modo-visualizacao').style.display = 'none';
+        document.getElementById('modo-edicao').style.display = 'block';
+        btnEditar.innerHTML = '<i class="mdi mdi-close"></i> Cancelar';
+        btnSalvar.style.display = 'inline-block';
+        
+        // Construir formulário de edição
+        construirFormularioEdicao();
+    } else {
+        // Voltar para visualização
+        document.getElementById('modoEdicao').value = 'false';
+        document.getElementById('modo-visualizacao').style.display = 'block';
+        document.getElementById('modo-edicao').style.display = 'none';
+        btnEditar.innerHTML = '<i class="mdi mdi-pencil"></i> Editar';
+        btnSalvar.style.display = 'none';
+    }
+}
+
+/**
+ * Construir formulário de edição (preparação FASE 2)
+ */
+function construirFormularioEdicao() {
+    const form = document.getElementById('formEditarCandidato');
+    form.innerHTML = `
+        <div class="alert alert-info">
+            <i class="mdi mdi-information"></i>
+            <strong>Modo Edição</strong> - Em desenvolvimento (FASE 2)
+        </div>
+        <p class="text-muted">
+            Esta funcionalidade será implementada na próxima etapa com todos os campos editáveis.
+        </p>
+    `;
+}
+
+/**
+ * Salvar edição do candidato (preparação FASE 2)
+ */
+async function salvarEdicaoCandidato() {
+    alert('⚠️ Funcionalidade de edição em desenvolvimento (FASE 2)');
+    // TODO: Coletar dados do formulário e enviar para API
+}
+
+/**
+ * Efetivar candidato como colaborador (FASE 3)
+ */
+function efetivarColaborador() {
+    const candidatoId = document.getElementById('candidatoIdAtual').value;
+    if (confirm('Deseja efetivar este candidato como colaborador?')) {
+        // Redirecionar para página de novo colaborador com dados pré-preenchidos
+        window.open(`/rh/colaboradores/novo?candidato_id=${candidatoId}`, '_blank');
     }
 }
 
