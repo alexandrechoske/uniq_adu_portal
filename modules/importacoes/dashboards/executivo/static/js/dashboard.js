@@ -273,7 +273,9 @@ window.updateDashboardKPIs = function(kpis) {
     try {
         if (!kpis || typeof kpis !== 'object') return;
         const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        setText('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
+        // CORREÇÃO: Mostrar total_processos (1128) ao invés de processos_abertos (1101)
+        // para corresponder ao total da tabela
+        setText('kpi-processos-abertos', formatNumber(kpis.total_processos || 0));
         setText('kpi-chegando-mes', formatNumber(kpis.chegando_mes || 0));
         setText('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
         setText('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
