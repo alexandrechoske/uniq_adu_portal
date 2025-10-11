@@ -1251,8 +1251,8 @@ def recent_operations():
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
             'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'custo_total_view', 'data_chegada',
             
-            # CORREÇÃO: Incluir status_timeline para mini popups funcionarem
-            'status_timeline',
+            # CORREÇÃO: Incluir status_timeline e status_sistema para exibição
+            'status_timeline', 'status_sistema',
             
             # Colunas adicionais para o modal
             'ref_importador', 'cnpj_importador', 'status_macro', 'data_embarque', 'data_fechamento',
