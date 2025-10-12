@@ -170,9 +170,10 @@ async function salvarVaga() {
  */
 async function alterarStatusVaga(vagaId, novoStatus) {
     const statusDescricao = {
-        'Aberta': 'reabrir',
+        'Aberta': 'ativar',
         'Pausada': 'pausar',
-        'Fechada': 'fechar'
+        'Fechada': 'desativar',
+        'Cancelada': 'cancelar'
     };
     
     const acao = statusDescricao[novoStatus] || 'alterar';
@@ -201,6 +202,17 @@ async function alterarStatusVaga(vagaId, novoStatus) {
         console.error('Erro:', error);
         alert('❌ Erro ao alterar status da vaga');
     }
+}
+
+/**
+ * Helpers para ativar/desativar com semântica clara na camada de UI
+ */
+function desativarVaga(vagaId) {
+    alterarStatusVaga(vagaId, 'Fechada');
+}
+
+function ativarVaga(vagaId) {
+    alterarStatusVaga(vagaId, 'Aberta');
 }
 
 /**

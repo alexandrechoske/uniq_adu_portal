@@ -42,6 +42,7 @@
 .badge-status.aberta { background-color: #28a745; color: white; }
 .badge-status.pausada { background-color: #ffc107; color: #000; }
 .badge-status.fechada { background-color: #dc3545; color: white; }
+.badge-status.cancelada { background-color: #6c757d; color: white; }
 .badge-status { padding: 0.35rem 0.75rem; font-size: 0.8125rem; border-radius: 0.375rem; }
 
 /* Estilos para tags de benefícios */
@@ -594,6 +595,10 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
                                 <span class="badge badge-status pausada">
                                     <i class="mdi mdi-pause-circle"></i> Pausada
                                 </span>
+                                {% elif vaga.status == 'Cancelada' %}
+                                <span class="badge badge-status cancelada">
+                                    <i class="mdi mdi-cancel"></i> Cancelada
+                                </span>
                                 {% else %}
                                 <span class="badge badge-status fechada">
                                     <i class="mdi mdi-close-circle"></i> Fechada
@@ -649,6 +654,24 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
                                             title="Editar">
                                         <i class="mdi mdi-pencil"></i>
                                     </button>
+
+                                    {% if vaga.status == 'Aberta' or vaga.status == 'Pausada' %}
+                                    <!-- Botão Desativar -->
+                                    <button class="btn btn-outline-danger"
+                                            onclick="desativarVaga('{{ vaga.id }}')"
+                                            data-bs-toggle="tooltip"
+                                            title="Desativar vaga">
+                                        <i class="mdi mdi-power"></i>
+                                    </button>
+                                    {% else %}
+                                    <!-- Botão Ativar -->
+                                    <button class="btn btn-outline-secondary"
+                                            onclick="ativarVaga('{{ vaga.id }}')"
+                                            data-bs-toggle="tooltip"
+                                            title="Ativar vaga">
+                                        <i class="mdi mdi-refresh"></i>
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
