@@ -6,6 +6,13 @@
 let colaboradorIdParaDesligar = null;
 let colaboradorIdParaReativar = null;
 const colaboradorCache = new Map();
+let linhasFiltradas = [];
+let paginaAtual = 1;
+const itensPorPagina = 12;
+
+// Variáveis globais para ordenação
+let currentSortColumn = null;
+let currentSortDirection = 'asc';
 
 // ===================================================================
 // INICIALIZAÇÃO
@@ -15,6 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar filtros e busca
     inicializarFiltros();
+    
+    // Inicializar ordenação de tabela
+    inicializarOrdenacao();
     
     // Inicializar modal de desligamento
     inicializarModalDesligamento();
@@ -30,6 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    filtrarTabela();
 });
 
 // ===================================================================
@@ -38,6 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function inicializarFiltros() {
     const searchInput = document.getElementById('searchInput');
     const filterStatus = document.getElementById('filterStatus');
+    const filterCargo = document.getElementById('filterCargo');
+    const filterDepartamento = document.getElementById('filterDepartamento');
     const btnLimpar = document.getElementById('btnLimparFiltros');
     
     if (searchInput) {
@@ -46,6 +60,14 @@ function inicializarFiltros() {
     
     if (filterStatus) {
         filterStatus.addEventListener('change', filtrarTabela);
+    }
+
+    if (filterCargo) {
+        filterCargo.addEventListener('change', filtrarTabela);
+    }
+
+    if (filterDepartamento) {
+        filterDepartamento.addEventListener('change', filtrarTabela);
     }
     
     if (btnLimpar) {
@@ -56,58 +78,193 @@ function inicializarFiltros() {
 function filtrarTabela() {
     const searchInput = document.getElementById('searchInput');
     const filterStatus = document.getElementById('filterStatus');
+    const filterCargo = document.getElementById('filterCargo');
+    const filterDepartamento = document.getElementById('filterDepartamento');
     const tabela = document.getElementById('tabelaColaboradores');
     
     if (!tabela) return;
     
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
     const statusFiltro = filterStatus ? filterStatus.value : '';
+    const cargoFiltro = filterCargo ? filterCargo.value.toLowerCase() : '';
+    const departamentoFiltro = filterDepartamento ? filterDepartamento.value.toLowerCase() : '';
     
     const linhas = tabela.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-    let visibleCount = 0;
-    
+    linhasFiltradas = [];
+
     Array.from(linhas).forEach(linha => {
-        // Ignorar linha de "nenhum colaborador"
-        if (linha.cells.length === 1) return;
-        
-        // Buscar especificamente nas colunas de dados (não incluir botões)
-        const matricula = linha.cells[0] ? linha.cells[0].textContent.toLowerCase() : '';
-        const nome = linha.cells[1] ? linha.cells[1].textContent.toLowerCase() : '';
-        const cpf = linha.cells[2] ? linha.cells[2].textContent.toLowerCase() : '';
-        const cargo = linha.cells[3] ? linha.cells[3].textContent.toLowerCase() : '';
-        const departamento = linha.cells[4] ? linha.cells[4].textContent.toLowerCase() : '';
-        
-        const status = linha.getAttribute('data-status');
-        
-        // Verificar se o termo de busca existe em qualquer campo
-        const matchSearch = !searchTerm || 
-                          matricula.includes(searchTerm) || 
-                          nome.includes(searchTerm) || 
-                          cpf.includes(searchTerm) ||
-                          cargo.includes(searchTerm) ||
-                          departamento.includes(searchTerm);
-        
+        if (linha.classList.contains('empty-state-row') || linha.getAttribute('data-empty-result') === 'true') {
+            linha.style.display = 'none';
+            return;
+        }
+
+        const colunaMatricula = linha.cells[0] ? linha.cells[0].textContent.toLowerCase() : '';
+        const colunaColaborador = linha.cells[1] ? linha.cells[1].textContent.toLowerCase() : '';
+        const colunaCargo = linha.cells[2] ? linha.cells[2].textContent.toLowerCase() : '';
+        const colunaDepartamento = linha.cells[3] ? linha.cells[3].textContent.toLowerCase() : '';
+        const colunaAdmissao = linha.cells[4] ? linha.cells[4].textContent.toLowerCase() : '';
+
+    const status = linha.getAttribute('data-status');
+    const cargo = (linha.getAttribute('data-cargo') || '').toLowerCase();
+    const departamento = (linha.getAttribute('data-departamento') || '').toLowerCase();
+
+        const matchSearch = !searchTerm ||
+            colunaMatricula.includes(searchTerm) ||
+            colunaColaborador.includes(searchTerm) ||
+            colunaCargo.includes(searchTerm) ||
+            colunaDepartamento.includes(searchTerm) ||
+            colunaAdmissao.includes(searchTerm);
+
         const matchStatus = !statusFiltro || status === statusFiltro;
-        
-        if (matchSearch && matchStatus) {
-            linha.style.display = '';
-            visibleCount++;
+        const matchCargo = !cargoFiltro || cargo === cargoFiltro;
+        const matchDepartamento = !departamentoFiltro || departamento === departamentoFiltro;
+
+        if (matchSearch && matchStatus && matchCargo && matchDepartamento) {
+            linhasFiltradas.push(linha);
         } else {
             linha.style.display = 'none';
         }
     });
-    
-    console.log(`[RH] Filtros aplicados: ${visibleCount} colaboradores visíveis (busca: "${searchTerm}", status: "${statusFiltro}")`);
+
+    paginaAtual = 1;
+    aplicarPaginacao();
+
+    console.log(`[RH] Filtros aplicados: ${linhasFiltradas.length} registros após filtragem (busca: "${searchTerm}", status: "${statusFiltro}", cargo: "${cargoFiltro}", departamento: "${departamentoFiltro}")`);
 }
 
 function limparFiltros() {
     const searchInput = document.getElementById('searchInput');
     const filterStatus = document.getElementById('filterStatus');
+    const filterCargo = document.getElementById('filterCargo');
+    const filterDepartamento = document.getElementById('filterDepartamento');
     
     if (searchInput) searchInput.value = '';
-    if (filterStatus) filterStatus.value = '';
+    if (filterStatus) filterStatus.value = 'Ativo';
+    if (filterCargo) filterCargo.value = '';
+    if (filterDepartamento) filterDepartamento.value = '';
     
     filtrarTabela();
+}
+
+function aplicarPaginacao() {
+    const tabela = document.getElementById('tabelaColaboradores');
+    if (!tabela) return;
+
+    const linhaSemCadastro = tabela.querySelector('tr.empty-state-row');
+    const linhasExistentes = tabela.querySelectorAll('tbody tr:not(.empty-state-row):not([data-empty-result="true"])');
+
+    if (linhasExistentes.length === 0) {
+        if (linhaSemCadastro) {
+            linhaSemCadastro.style.display = '';
+        }
+        exibirLinhaSemResultados(false);
+        atualizarPaginacaoInfo(0, 0, 0, true);
+        renderizarPaginacao(0);
+        return;
+    }
+
+    if (linhaSemCadastro) {
+        linhaSemCadastro.style.display = 'none';
+    }
+
+    const totalRegistros = linhasFiltradas.length;
+    const totalPaginas = Math.ceil(totalRegistros / itensPorPagina);
+    const paginaValida = totalPaginas > 0 ? Math.min(paginaAtual, totalPaginas) : 1;
+    paginaAtual = Math.max(paginaValida, 1);
+
+    linhasFiltradas.forEach(linha => {
+        linha.style.display = 'none';
+    });
+
+    if (totalRegistros === 0) {
+        exibirLinhaSemResultados(true);
+        atualizarPaginacaoInfo(0, 0, 0);
+        renderizarPaginacao(0);
+        return;
+    }
+
+    exibirLinhaSemResultados(false);
+
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    const fim = inicio + itensPorPagina;
+
+    linhasFiltradas.forEach((linha, index) => {
+        if (index >= inicio && index < fim) {
+            linha.style.display = '';
+        }
+    });
+
+    atualizarPaginacaoInfo(paginaAtual, totalPaginas, totalRegistros);
+    renderizarPaginacao(totalPaginas);
+}
+
+function renderizarPaginacao(totalPaginas) {
+    const container = document.getElementById('paginacao');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (totalPaginas <= 1) {
+        return;
+    }
+
+    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+        const item = document.createElement('li');
+        item.className = `page-item ${pagina === paginaAtual ? 'active' : ''}`;
+
+        const link = document.createElement('a');
+        link.className = 'page-link';
+        link.href = '#';
+        link.textContent = pagina;
+        link.addEventListener('click', function(event) {
+            event.preventDefault();
+            navegarParaPagina(pagina);
+        });
+
+        item.appendChild(link);
+        container.appendChild(item);
+    }
+}
+
+function atualizarPaginacaoInfo(pagina, totalPaginas, totalRegistros, contextoVazio) {
+    const info = document.getElementById('paginacaoInfo');
+    if (!info) return;
+
+    if (totalRegistros === 0) {
+        info.textContent = contextoVazio ? '' : 'Nenhum colaborador encontrado com os filtros atuais';
+        return;
+    }
+
+    const inicio = (pagina - 1) * itensPorPagina + 1;
+    const fim = Math.min(pagina * itensPorPagina, totalRegistros);
+    info.textContent = `Exibindo ${inicio}-${fim} de ${totalRegistros} colaboradores`;
+}
+
+function navegarParaPagina(novaPagina) {
+    if (novaPagina === paginaAtual) return;
+    paginaAtual = novaPagina;
+    aplicarPaginacao();
+}
+
+function exibirLinhaSemResultados(deveExibir) {
+    const tabela = document.getElementById('tabelaColaboradores');
+    if (!tabela) return;
+
+    let linha = tabela.querySelector('tr[data-empty-result="true"]');
+    if (!linha) {
+        linha = document.createElement('tr');
+        linha.setAttribute('data-empty-result', 'true');
+
+        const coluna = document.createElement('td');
+        coluna.colSpan = tabela.querySelectorAll('thead th').length;
+        coluna.className = 'text-center py-4 text-muted';
+        coluna.innerHTML = '<i class="mdi mdi-account-search mdi-24px me-2"></i>Nenhum colaborador encontrado com os filtros aplicados';
+
+        linha.appendChild(coluna);
+        tabela.querySelector('tbody').appendChild(linha);
+    }
+
+    linha.style.display = deveExibir ? '' : 'none';
 }
 
 // ===================================================================
@@ -680,6 +837,141 @@ window.confirmarDesligamento = confirmarDesligamento;
 window.mostrarAlerta = mostrarAlerta;
 window.formatarCPF = formatarCPF;
 window.formatarTelefone = formatarTelefone;
+
+// ===================================================================
+// ORDENAÇÃO DE TABELA
+// ===================================================================
+
+/**
+ * Inicializa a funcionalidade de ordenação na tabela
+ */
+function inicializarOrdenacao() {
+    const tabela = document.getElementById('tabelaColaboradores');
+    if (!tabela) return;
+
+    const headers = tabela.querySelectorAll('thead th.sortable');
+    
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-column');
+            const type = this.getAttribute('data-type');
+            ordenarTabela(column, type);
+        });
+    });
+    
+    console.log('[ORDENAÇÃO] Sistema de ordenação inicializado para', headers.length, 'colunas');
+}
+
+/**
+ * Ordena a tabela por uma coluna específica
+ * @param {string} column - Nome da coluna (data attribute)
+ * @param {string} type - Tipo de dado (text, number, date)
+ */
+function ordenarTabela(column, type) {
+    const tabela = document.getElementById('tabelaColaboradores');
+    const tbody = tabela.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.empty-state-row)'));
+    
+    // Determinar direção de ordenação
+    if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc';
+    }
+    
+    // Adicionar classe de loading
+    tabela.classList.add('sorting');
+    
+    // Ordenar as linhas
+    rows.sort((a, b) => {
+        let valueA, valueB;
+        
+        // Extrair valores baseado no tipo de coluna
+        switch(column) {
+            case 'matricula':
+                valueA = a.getAttribute('data-matricula') || '';
+                valueB = b.getAttribute('data-matricula') || '';
+                break;
+            case 'nome':
+                valueA = a.getAttribute('data-nome') || '';
+                valueB = b.getAttribute('data-nome') || '';
+                break;
+            case 'cargo':
+                valueA = a.getAttribute('data-cargo') || '';
+                valueB = b.getAttribute('data-cargo') || '';
+                break;
+            case 'departamento':
+                valueA = a.getAttribute('data-departamento') || '';
+                valueB = b.getAttribute('data-departamento') || '';
+                break;
+            case 'admissao':
+                valueA = a.getAttribute('data-admissao') || '';
+                valueB = b.getAttribute('data-admissao') || '';
+                break;
+            case 'status':
+                valueA = a.getAttribute('data-status') || '';
+                valueB = b.getAttribute('data-status') || '';
+                break;
+            default:
+                valueA = '';
+                valueB = '';
+        }
+        
+        // Comparar valores baseado no tipo
+        let comparison = 0;
+        
+        if (type === 'number') {
+            const numA = parseFloat(valueA) || 0;
+            const numB = parseFloat(valueB) || 0;
+            comparison = numA - numB;
+        } else if (type === 'date') {
+            const dateA = valueA ? new Date(valueA) : new Date(0);
+            const dateB = valueB ? new Date(valueB) : new Date(0);
+            comparison = dateA - dateB;
+        } else {
+            // text comparison
+            comparison = valueA.toLowerCase().localeCompare(valueB.toLowerCase());
+        }
+        
+        return currentSortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    // Atualizar indicadores visuais no header
+    atualizarIndicadoresOrdenacao(column);
+    
+    // Reorganizar as linhas na tabela
+    setTimeout(() => {
+        rows.forEach(row => tbody.appendChild(row));
+        tabela.classList.remove('sorting');
+        
+        // Reaplicar paginação após ordenação
+        aplicarPaginacao();
+        
+        console.log(`[ORDENAÇÃO] Tabela ordenada por ${column} (${currentSortDirection})`);
+    }, 150);
+}
+
+/**
+ * Atualiza os indicadores visuais de ordenação nos headers
+ * @param {string} activeColumn - Coluna atualmente ordenada
+ */
+function atualizarIndicadoresOrdenacao(activeColumn) {
+    const tabela = document.getElementById('tabelaColaboradores');
+    const headers = tabela.querySelectorAll('thead th.sortable');
+    
+    headers.forEach(header => {
+        const column = header.getAttribute('data-column');
+        
+        // Remover classes de ordenação antigas
+        header.classList.remove('sort-asc', 'sort-desc');
+        
+        // Adicionar classe na coluna ativa
+        if (column === activeColumn) {
+            header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+}
 window.formatarData = formatarData;
 window.abrirModalPromocao = abrirModalPromocao;
 window.abrirModalReajuste = abrirModalReajuste;
