@@ -152,8 +152,16 @@
                                            data-bs-toggle="tooltip">
                                             <i class="mdi mdi-pencil"></i>
                                         </a>
-                                        
-                                        <!-- Dropdown de Ações Rápidas -->
+
+                                        {% if colab.status == 'Inativo' %}
+                                        <button type="button"
+                                                class="btn btn-outline-success"
+                                                title="Reativar"
+                                                data-bs-toggle="tooltip"
+                                                onclick="confirmarReativacao('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
+                                            <i class="mdi mdi-account-check"></i>
+                                        </button>
+                                        {% else %}
                                         <div class="btn-group btn-group-sm" role="group">
                                             <button type="button" 
                                                     class="btn btn-outline-secondary dropdown-toggle" 
@@ -164,22 +172,22 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Promoção em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalPromocao('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-arrow-up-circle text-success"></i> Promover
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Transferência em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalTransferencia('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-swap-horizontal text-info"></i> Transferir
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Alterar Salário em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalReajuste('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-cash text-warning"></i> Alterar Salário
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Férias em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalFerias('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-beach text-primary"></i> Férias
                                                     </a>
                                                 </li>
@@ -192,6 +200,7 @@
                                                 </li>
                                             </ul>
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -241,8 +250,185 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Reativação -->
+<div class="modal fade" id="modalReativacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-user-check"></i> Confirmar Reativação</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Deseja reativar o colaborador <strong id="nomeColaboradorReativar"></strong>?</p>
+                <div class="mb-3">
+                    <label class="form-label">Data de Retorno</label>
+                    <input type="date" class="form-control" id="dataReativacao" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-control" id="descricaoReativacao" rows="3" placeholder="Ex: Retorno após acordo"></textarea>
+                </div>
+                <input type="hidden" id="colaboradorIdReativar">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarReativacao">
+                    <i class="fas fa-check"></i> Confirmar Reativação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Promoção -->
+<div class="modal fade" id="modalPromocao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Registrar Promoção para: <span id="nomeColaboradorPromocao"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formPromocao">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdPromocao" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data do Evento</label>
+                        <input type="date" class="form-control" id="dataPromocao" name="data_evento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Cargo</label>
+                        <select class="form-select" id="novoCargo" name="novo_cargo_id" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Salário Mensal</label>
+                        <input type="number" step="0.01" class="form-control" id="novoSalarioPromocao" name="novo_salario" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição / Motivo</label>
+                        <textarea class="form-control" id="descricaoPromocao" name="descricao" rows="3" placeholder="Ex: Promoção por mérito"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Promoção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reajuste Salarial -->
+<div class="modal fade" id="modalReajuste" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Registrar Reajuste para: <span id="nomeColaboradorReajuste"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formReajuste">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdReajuste" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data do Evento</label>
+                        <input type="date" class="form-control" id="dataReajuste" name="data_evento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Salário Mensal</label>
+                        <input type="number" step="0.01" class="form-control" id="novoSalarioReajuste" name="novo_salario" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição / Motivo</label>
+                        <textarea class="form-control" id="descricaoReajuste" name="descricao" rows="3" placeholder="Justificativa do reajuste"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Salvar Reajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Transferência -->
+<div class="modal fade" id="modalTransferencia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Registrar Transferência para: <span id="nomeColaboradorTransferencia"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formTransferencia">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdTransferencia" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data do Evento</label>
+                        <input type="date" class="form-control" id="dataTransferencia" name="data_evento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Departamento</label>
+                        <select class="form-select" id="novoDepartamento" name="novo_departamento_id" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Gestor</label>
+                        <select class="form-select" id="novoGestor" name="novo_gestor_id">
+                            <option value="">Manter gestor atual</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição / Motivo</label>
+                        <textarea class="form-control" id="descricaoTransferencia" name="descricao" rows="3" placeholder="Motivo da transferência"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white">Salvar Transferência</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Férias -->
+<div class="modal fade" id="modalFerias" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Registrar Férias para: <span id="nomeColaboradorFerias"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formFerias">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdFerias" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data de Início</label>
+                        <input type="date" class="form-control" id="dataInicioFerias" name="data_inicio" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data de Fim</label>
+                        <input type="date" class="form-control" id="dataFimFerias" name="data_fim" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricaoFerias" name="descricao" rows="3" placeholder="Ex: Período aquisitivo 2024/2025"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    window.RH_CARGOS = JSON.parse('{{ cargos | tojson | safe }}');
+    window.RH_DEPARTAMENTOS = JSON.parse('{{ departamentos | tojson | safe }}');
+    window.RH_GESTORES = JSON.parse('{{ gestores | tojson | safe }}');
+</script>
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 {% endblock %}

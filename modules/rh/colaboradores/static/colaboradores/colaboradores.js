@@ -2,8 +2,10 @@
 // JAVASCRIPT DO MÓDULO RH - COLABORADORES
 // ===================================================================
 
-// Variável global para armazenar ID do colaborador a ser desligado
+// Variáveis globais para armazenar IDs de ações críticas
 let colaboradorIdParaDesligar = null;
+let colaboradorIdParaReativar = null;
+const colaboradorCache = new Map();
 
 // ===================================================================
 // INICIALIZAÇÃO
@@ -16,7 +18,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar modal de desligamento
     inicializarModalDesligamento();
+    inicializarModalReativacao();
     
+    inicializarPromocao();
+    inicializarReajuste();
+    inicializarTransferencia();
+    inicializarFerias();
+
     // Inicializar tooltips do Bootstrap
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -113,6 +121,13 @@ function inicializarModalDesligamento() {
     }
 }
 
+function inicializarModalReativacao() {
+    const btnConfirmar = document.getElementById('btnConfirmarReativacao');
+    if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', executarReativacao);
+    }
+}
+
 function confirmarDesligamento(colaboradorId, nomeColaborador) {
     console.log(`[RH] Solicitando confirmação de desligamento: ${colaboradorId}`);
     
@@ -192,11 +207,408 @@ async function executarDesligamento() {
     }
 }
 
+function confirmarReativacao(colaboradorId, nomeColaborador) {
+    colaboradorIdParaReativar = colaboradorId;
+
+    const nomeElement = document.getElementById('nomeColaboradorReativar');
+    if (nomeElement) {
+        nomeElement.textContent = nomeColaborador;
+    }
+
+    const dataInput = document.getElementById('dataReativacao');
+    definirDataHoje(dataInput);
+
+    const descricao = document.getElementById('descricaoReativacao');
+    if (descricao) {
+        descricao.value = '';
+    }
+
+    const hiddenId = document.getElementById('colaboradorIdReativar');
+    if (hiddenId) {
+        hiddenId.value = colaboradorId;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('modalReativacao'));
+    modal.show();
+}
+
+async function executarReativacao() {
+    if (!colaboradorIdParaReativar) {
+        mostrarAlerta('Erro ao identificar colaborador', 'danger');
+        return;
+    }
+
+    const dataReativacao = document.getElementById('dataReativacao');
+    const descricao = document.getElementById('descricaoReativacao');
+    const dataValor = dataReativacao ? dataReativacao.value : '';
+
+    if (!dataValor) {
+        mostrarAlerta('Informe a data de retorno', 'warning');
+        return;
+    }
+
+    const btnConfirmar = document.getElementById('btnConfirmarReativacao');
+    if (!btnConfirmar) {
+        mostrarAlerta('Componente de reativação não está disponível.', 'danger');
+        return;
+    }
+
+    const textoOriginal = btnConfirmar.innerHTML;
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+    try {
+        const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorIdParaReativar}/reativar`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                data_evento: dataValor,
+                descricao: descricao ? descricao.value : ''
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Erro ao reativar colaborador');
+        }
+
+        mostrarAlerta('Colaborador reativado com sucesso', 'success');
+        colaboradorCache.delete(colaboradorIdParaReativar);
+        colaboradorIdParaReativar = null;
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalReativacao'));
+        modal.hide();
+        setTimeout(() => window.location.reload(), 800);
+    } catch (error) {
+        console.error('[RH] Erro ao reativar colaborador:', error);
+        mostrarAlerta(error.message, 'danger');
+    } finally {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = textoOriginal;
+    }
+}
+
+// ===================================================================
+// MOVIMENTAÇÕES DE CARREIRA
+// ===================================================================
+function inicializarPromocao() {
+    const form = document.getElementById('formPromocao');
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const colaboradorId = document.getElementById('colaboradorIdPromocao').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const textoOriginal = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        const payload = {
+            data_evento: document.getElementById('dataPromocao').value,
+            novo_cargo_id: document.getElementById('novoCargo').value,
+            novo_salario: document.getElementById('novoSalarioPromocao').value,
+            descricao: document.getElementById('descricaoPromocao').value
+        };
+
+        try {
+            const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorId}/promover`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Erro ao registrar promoção');
+            }
+
+            mostrarAlerta('Promoção registrada com sucesso', 'success');
+            colaboradorCache.delete(colaboradorId);
+            bootstrap.Modal.getInstance(document.getElementById('modalPromocao')).hide();
+            form.reset();
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            console.error('[RH] Erro ao registrar promoção:', error);
+            mostrarAlerta(error.message, 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = textoOriginal;
+        }
+    });
+}
+
+async function abrirModalPromocao(colaboradorId, nomeColaborador) {
+    try {
+        const dados = await obterDadosColaborador(colaboradorId);
+        document.getElementById('colaboradorIdPromocao').value = colaboradorId;
+        document.getElementById('nomeColaboradorPromocao').textContent = nomeColaborador;
+        definirDataHoje(document.getElementById('dataPromocao'));
+        popularSelect(document.getElementById('novoCargo'), window.RH_CARGOS, 'id', 'nome_cargo', 'Selecione um cargo');
+        document.getElementById('novoCargo').value = dados.cargo_id || '';
+        document.getElementById('novoSalarioPromocao').value = dados.salario_mensal || '';
+        document.getElementById('descricaoPromocao').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalPromocao'));
+        modal.show();
+    } catch (error) {
+        console.error('[RH] Erro ao abrir modal de promoção:', error);
+        mostrarAlerta('Não foi possível carregar dados do colaborador.', 'danger');
+    }
+}
+
+function inicializarReajuste() {
+    const form = document.getElementById('formReajuste');
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const colaboradorId = document.getElementById('colaboradorIdReajuste').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const textoOriginal = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        const payload = {
+            data_evento: document.getElementById('dataReajuste').value,
+            novo_salario: document.getElementById('novoSalarioReajuste').value,
+            descricao: document.getElementById('descricaoReajuste').value
+        };
+
+        try {
+            const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorId}/reajustar`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Erro ao registrar reajuste');
+            }
+
+            mostrarAlerta('Reajuste registrado com sucesso', 'success');
+            colaboradorCache.delete(colaboradorId);
+            bootstrap.Modal.getInstance(document.getElementById('modalReajuste')).hide();
+            form.reset();
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            console.error('[RH] Erro ao registrar reajuste:', error);
+            mostrarAlerta(error.message, 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = textoOriginal;
+        }
+    });
+}
+
+async function abrirModalReajuste(colaboradorId, nomeColaborador) {
+    try {
+        const dados = await obterDadosColaborador(colaboradorId);
+        document.getElementById('colaboradorIdReajuste').value = colaboradorId;
+        document.getElementById('nomeColaboradorReajuste').textContent = nomeColaborador;
+        definirDataHoje(document.getElementById('dataReajuste'));
+        document.getElementById('novoSalarioReajuste').value = dados.salario_mensal || '';
+        document.getElementById('descricaoReajuste').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalReajuste'));
+        modal.show();
+    } catch (error) {
+        console.error('[RH] Erro ao abrir modal de reajuste:', error);
+        mostrarAlerta('Não foi possível carregar dados do colaborador.', 'danger');
+    }
+}
+
+function inicializarTransferencia() {
+    const form = document.getElementById('formTransferencia');
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const colaboradorId = document.getElementById('colaboradorIdTransferencia').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const textoOriginal = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        const payload = {
+            data_evento: document.getElementById('dataTransferencia').value,
+            novo_departamento_id: document.getElementById('novoDepartamento').value,
+            novo_gestor_id: document.getElementById('novoGestor').value,
+            descricao: document.getElementById('descricaoTransferencia').value
+        };
+
+        try {
+            const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorId}/transferir`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Erro ao registrar transferência');
+            }
+
+            mostrarAlerta('Transferência registrada com sucesso', 'success');
+            colaboradorCache.delete(colaboradorId);
+            bootstrap.Modal.getInstance(document.getElementById('modalTransferencia')).hide();
+            form.reset();
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            console.error('[RH] Erro ao registrar transferência:', error);
+            mostrarAlerta(error.message, 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = textoOriginal;
+        }
+    });
+}
+
+async function abrirModalTransferencia(colaboradorId, nomeColaborador) {
+    try {
+        const dados = await obterDadosColaborador(colaboradorId);
+        document.getElementById('colaboradorIdTransferencia').value = colaboradorId;
+        document.getElementById('nomeColaboradorTransferencia').textContent = nomeColaborador;
+        definirDataHoje(document.getElementById('dataTransferencia'));
+        popularSelect(document.getElementById('novoDepartamento'), window.RH_DEPARTAMENTOS, 'id', 'nome_departamento', 'Selecione um departamento');
+        document.getElementById('novoDepartamento').value = dados.departamento_id || '';
+        popularSelectGestores(document.getElementById('novoGestor'), window.RH_GESTORES);
+        document.getElementById('novoGestor').value = dados.gestor_id || '';
+        document.getElementById('descricaoTransferencia').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalTransferencia'));
+        modal.show();
+    } catch (error) {
+        console.error('[RH] Erro ao abrir modal de transferência:', error);
+        mostrarAlerta('Não foi possível carregar dados do colaborador.', 'danger');
+    }
+}
+
+function inicializarFerias() {
+    const form = document.getElementById('formFerias');
+    if (!form) return;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const colaboradorId = document.getElementById('colaboradorIdFerias').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const textoOriginal = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        const payload = {
+            tipo_evento: 'Férias',
+            data_inicio: document.getElementById('dataInicioFerias').value,
+            data_fim: document.getElementById('dataFimFerias').value,
+            descricao: document.getElementById('descricaoFerias').value
+        };
+
+        try {
+            const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorId}/registrar-evento`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Erro ao registrar férias');
+            }
+
+            mostrarAlerta('Férias registradas com sucesso', 'success');
+            colaboradorCache.delete(colaboradorId);
+            bootstrap.Modal.getInstance(document.getElementById('modalFerias')).hide();
+            form.reset();
+            setTimeout(() => window.location.reload(), 800);
+        } catch (error) {
+            console.error('[RH] Erro ao registrar férias:', error);
+            mostrarAlerta(error.message, 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = textoOriginal;
+        }
+    });
+}
+
+function abrirModalFerias(colaboradorId, nomeColaborador) {
+    document.getElementById('colaboradorIdFerias').value = colaboradorId;
+    document.getElementById('nomeColaboradorFerias').textContent = nomeColaborador;
+    definirDataHoje(document.getElementById('dataInicioFerias'));
+    definirDataHoje(document.getElementById('dataFimFerias'));
+    document.getElementById('descricaoFerias').value = '';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalFerias'));
+    modal.show();
+}
+
 // ===================================================================
 // UTILITÁRIOS
 // ===================================================================
+async function obterDadosColaborador(colaboradorId) {
+    if (colaboradorCache.has(colaboradorId)) {
+        return colaboradorCache.get(colaboradorId);
+    }
+
+    const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorId}`, {
+        credentials: 'same-origin'
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao buscar colaborador');
+    }
+
+    colaboradorCache.set(colaboradorId, data.data);
+    return data.data;
+}
+
+function definirDataHoje(input) {
+    if (!input) return;
+    const hoje = new Date().toISOString().split('T')[0];
+    input.value = hoje;
+}
+
+function popularSelect(select, dados, valueKey, labelKey, placeholder) {
+    if (!select) return;
+    select.innerHTML = '';
+    if (placeholder) {
+        const optionPlaceholder = document.createElement('option');
+        optionPlaceholder.value = '';
+        optionPlaceholder.textContent = placeholder;
+        select.appendChild(optionPlaceholder);
+    }
+
+    (dados || []).forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueKey];
+        option.textContent = item[labelKey];
+        select.appendChild(option);
+    });
+}
+
+function popularSelectGestores(select, gestores) {
+    if (!select) return;
+    const manterOption = select.querySelector('option[value=""]');
+    select.innerHTML = '';
+    if (manterOption) {
+        select.appendChild(manterOption);
+    } else {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Manter gestor atual';
+        select.appendChild(opt);
+    }
+
+    (gestores || []).forEach(gestor => {
+        const option = document.createElement('option');
+        option.value = gestor.id;
+        const matricula = gestor.matricula ? ` (${gestor.matricula})` : '';
+        option.textContent = `${gestor.nome_completo}${matricula}`;
+        select.appendChild(option);
+    });
+}
+
 function mostrarAlerta(mensagem, tipo = 'info') {
-    // Criar elemento de alerta
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
     alertDiv.style.zIndex = '9999';
@@ -205,10 +617,9 @@ function mostrarAlerta(mensagem, tipo = 'info') {
         ${mensagem}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
+
     document.body.appendChild(alertDiv);
-    
-    // Remover após 5 segundos
+
     setTimeout(() => {
         alertDiv.remove();
     }, 5000);
@@ -270,3 +681,8 @@ window.mostrarAlerta = mostrarAlerta;
 window.formatarCPF = formatarCPF;
 window.formatarTelefone = formatarTelefone;
 window.formatarData = formatarData;
+window.abrirModalPromocao = abrirModalPromocao;
+window.abrirModalReajuste = abrirModalReajuste;
+window.abrirModalTransferencia = abrirModalTransferencia;
+window.abrirModalFerias = abrirModalFerias;
+window.confirmarReativacao = confirmarReativacao;
