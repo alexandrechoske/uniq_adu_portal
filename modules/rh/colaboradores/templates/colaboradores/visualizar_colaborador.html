@@ -349,43 +349,24 @@
             </div>
 
             <!-- Contato -->
-            {% if colaborador.telefones_jsonb %}
+            {% if colaborador.tel_contato %}
             <div class="rh-card mb-4">
                 <div class="card-body">
                     <h5 class="mb-3"><i class="mdi mdi-phone"></i> Contato</h5>
-                    {% set telefones = colaborador.telefones_jsonb %}
-                    {% if telefones.celular %}
                     <div class="mb-2">
-                        <strong>Celular:</strong><br>
-                        <span class="text-muted">{{ telefones.celular }}</span>
+                        <strong>Telefone:</strong><br>
+                        <span class="text-muted">{{ colaborador.tel_contato }}</span>
                     </div>
-                    {% endif %}
-                    
-                    {% if telefones.residencial %}
-                    <div class="mb-2">
-                        <strong>Residencial:</strong><br>
-                        <span class="text-muted">{{ telefones.residencial }}</span>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
             {% endif %}
 
             <!-- Endereço -->
-            {% if colaborador.endereco_jsonb %}
+            {% if colaborador.endereco_completo %}
             <div class="rh-card mb-4">
                 <div class="card-body">
                     <h5 class="mb-3"><i class="mdi mdi-map-marker"></i> Endereço</h5>
-                    {% set endereco = colaborador.endereco_jsonb %}
-                    <p class="mb-0 text-muted">
-                        {% if endereco.logradouro %}{{ endereco.logradouro }}{% endif %}
-                        {% if endereco.numero %}, {{ endereco.numero }}{% endif %}<br>
-                        {% if endereco.bairro %}{{ endereco.bairro }}<br>{% endif %}
-                        {% if endereco.cidade and endereco.estado %}
-                            {{ endereco.cidade }} - {{ endereco.estado }}<br>
-                        {% endif %}
-                        {% if endereco.cep %}CEP: {{ endereco.cep }}{% endif %}
-                    </p>
+                    <p class="mb-0 text-muted">{{ colaborador.endereco_completo }}</p>
                 </div>
             </div>
             {% endif %}
@@ -394,6 +375,6 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 {% endblock %}

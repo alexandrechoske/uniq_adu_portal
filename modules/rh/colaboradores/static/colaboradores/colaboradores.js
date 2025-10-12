@@ -219,11 +219,33 @@ function formatarCPF(cpf) {
 }
 
 function formatarTelefone(telefone) {
-    if (telefone.length === 11) {
-        return telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else if (telefone.length === 10) {
-        return telefone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    if (!telefone) {
+        return '-';
     }
+
+    const digits = telefone.replace(/\D/g, '');
+
+    if (digits.length === 11) {
+        return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+
+    if (digits.length === 10) {
+        return digits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+
+    if (digits.length > 0 && digits.length <= 9) {
+        return digits.replace(/(\d{2})(\d{0,4})(\d{0,4})/, function(_, ddd, parte1, parte2) {
+            let resultado = '(' + ddd;
+            if (parte1) {
+                resultado += ') ' + parte1;
+            }
+            if (parte2) {
+                resultado += '-' + parte2;
+            }
+            return resultado;
+        });
+    }
+
     return telefone;
 }
 

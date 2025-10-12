@@ -93,13 +93,35 @@ def lista_colaboradores():
 
 @colaboradores_bp.route('/novo')
 def novo_colaborador():
-    """Página para cadastrar novo colaborador"""
+    """Página para cadastrar novo colaborador
+    
+    Se receber ?candidato_id=UUID, pré-preenche com dados do candidato
+    """
     if not check_auth():
         return redirect(url_for('auth.login'))
     
     try:
         # Data de hoje para validação de datas
         hoje = datetime.now().strftime('%Y-%m-%d')
+        
+        # 🔥 NOVO: Detectar se vem de um candidato contratado
+        candidato_id = request.args.get('candidato_id')
+        candidato = None
+        
+        if candidato_id:
+            print(f"📥 Detectado candidato_id: {candidato_id}")
+            # Buscar dados do candidato para pré-preencher
+            candidato_response = supabase_admin.table('rh_candidatos')\
+                .select('*')\
+                .eq('id', candidato_id)\
+                .single()\
+                .execute()
+            
+            if candidato_response.data:
+                candidato = candidato_response.data
+                print(f"✅ Candidato encontrado: {candidato.get('nome_completo')}")
+            else:
+                print(f"⚠️ Candidato {candidato_id} não encontrado")
         
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
@@ -117,6 +139,8 @@ def novo_colaborador():
             'colaboradores/form_colaborador.html',
             modo='novo',
             hoje=hoje,
+            candidato_id=candidato_id,  # Passar para template
+            candidato=candidato,  # Passar dados do candidato
             cargos=cargos.data if cargos.data else [],
             departamentos=departamentos.data if departamentos.data else [],
             empresas=empresas.data if empresas.data else [],
@@ -322,14 +346,19 @@ def api_create_colaborador():
         }
         
         # Campos opcionais
-        optional_fields = ['nome_social', 'email_corporativo', 'matricula', 'genero', 
-                          'raca_cor', 'nacionalidade', 'rg', 'rg_orgao_emissor', 
-                          'rg_data_expedicao', 'pis_pasep', 'ctps_numero', 'ctps_serie',
-                          'cnh_numero', 'cnh_categoria', 'telefones_jsonb', 'endereco_jsonb']
+        optional_fields = [
+            'email_corporativo', 'matricula', 'genero', 'raca_cor', 'nacionalidade',
+            'pis_pasep', 'ctps_numero', 'ctps_serie', 'cnh_numero', 'tel_contato',
+            'endereco_completo', 'escolaridade'
+        ]
         
         for field in optional_fields:
             if field in data:
-                colaborador_data[field] = data[field]
+                value = data[field]
+                # Evita persistir strings vazias como valores válidos
+                if isinstance(value, str) and value.strip() == '':
+                    continue
+                colaborador_data[field] = value
         
         # Inserir colaborador
         colab_response = supabase_admin.table('rh_colaboradores')\
@@ -350,23 +379,33 @@ def api_create_colaborador():
         }
         
         # Dados opcionais do histórico
-        if 'cargo_id' in data:
-            historico_data['cargo_id'] = data['cargo_id']
-        if 'departamento_id' in data:
-            historico_data['departamento_id'] = data['departamento_id']
-        if 'empresa_id' in data:
-            historico_data['empresa_id'] = data['empresa_id']
-        if 'gestor_id' in data:
-            historico_data['gestor_id'] = data['gestor_id']
-        if 'salario_mensal' in data:
-            historico_data['salario_mensal'] = data['salario_mensal']
-        if 'tipo_contrato' in data:
-            historico_data['tipo_contrato'] = data['tipo_contrato']
-        if 'modelo_trabalho' in data:
-            historico_data['modelo_trabalho'] = data['modelo_trabalho']
+        def set_if_present(dest, field_name):
+            if field_name in data:
+                value = data[field_name]
+                if isinstance(value, str):
+                    value = value.strip()
+                if value not in (None, '', []):
+                    dest[field_name] = value
+
+        set_if_present(historico_data, 'cargo_id')
+        set_if_present(historico_data, 'departamento_id')
+        set_if_present(historico_data, 'empresa_id')
+        set_if_present(historico_data, 'gestor_id')
+        set_if_present(historico_data, 'salario_mensal')
+        set_if_present(historico_data, 'tipo_contrato')
+        set_if_present(historico_data, 'modelo_trabalho')
         
         # Inserir no histórico
         supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        
+        # 🔥 NOVO: Se veio de um candidato, vincular
+        if 'candidato_id' in data and data['candidato_id']:
+            print(f"🔗 Vinculando candidato {data['candidato_id']} ao colaborador {colaborador_id}")
+            supabase_admin.table('rh_candidatos')\
+                .update({'colaborador_id': colaborador_id, 'foi_contratado': True})\
+                .eq('id', data['candidato_id'])\
+                .execute()
+            print("✅ Vínculo criado com sucesso!")
         
         return jsonify({
             'success': True,
@@ -399,15 +438,19 @@ def api_update_colaborador(colaborador_id):
         update_data = {}
         
         # Campos que podem ser atualizados
-        updatable_fields = ['nome_completo', 'nome_social', 'email_corporativo', 'matricula',
-                           'data_nascimento', 'genero', 'raca_cor', 'nacionalidade',
-                           'rg', 'rg_orgao_emissor', 'rg_data_expedicao', 'pis_pasep',
-                           'ctps_numero', 'ctps_serie', 'cnh_numero', 'cnh_categoria',
-                           'telefones_jsonb', 'endereco_jsonb', 'status']
+        updatable_fields = [
+            'nome_completo', 'email_corporativo', 'matricula', 'data_nascimento',
+            'genero', 'raca_cor', 'nacionalidade', 'pis_pasep', 'ctps_numero',
+            'ctps_serie', 'cnh_numero', 'tel_contato', 'endereco_completo',
+            'status', 'escolaridade'
+        ]
         
         for field in updatable_fields:
             if field in data:
-                update_data[field] = data[field]
+                value = data[field]
+                if isinstance(value, str) and value.strip() == '':
+                    continue
+                update_data[field] = value
         
         # Atualizar colaborador
         update_response = supabase_admin.table('rh_colaboradores')\
@@ -423,24 +466,22 @@ def api_update_colaborador(colaborador_id):
             'tipo_evento': data.get('tipo_evento', 'Alteração Estrutural')
         }
         
-        if 'cargo_id' in data:
-            historico_data['cargo_id'] = data['cargo_id']
-            criar_historico = True
-        if 'departamento_id' in data:
-            historico_data['departamento_id'] = data['departamento_id']
-            criar_historico = True
-        if 'salario_mensal' in data:
-            historico_data['salario_mensal'] = data['salario_mensal']
-            criar_historico = True
-        if 'gestor_id' in data:
-            historico_data['gestor_id'] = data['gestor_id']
-            criar_historico = True
-        if 'tipo_contrato' in data:
-            historico_data['tipo_contrato'] = data['tipo_contrato']
-            criar_historico = True
-        if 'modelo_trabalho' in data:
-            historico_data['modelo_trabalho'] = data['modelo_trabalho']
-            criar_historico = True
+        def marcar_historico(field_name):
+            nonlocal criar_historico
+            if field_name in data:
+                value = data[field_name]
+                if isinstance(value, str):
+                    value = value.strip()
+                if value not in (None, '', []):
+                    historico_data[field_name] = value
+                    criar_historico = True
+
+        marcar_historico('cargo_id')
+        marcar_historico('departamento_id')
+        marcar_historico('salario_mensal')
+        marcar_historico('gestor_id')
+        marcar_historico('tipo_contrato')
+        marcar_historico('modelo_trabalho')
         
         if 'observacoes' in data:
             historico_data['descricao_e_motivos'] = data['observacoes']

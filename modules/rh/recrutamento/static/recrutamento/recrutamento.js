@@ -397,6 +397,15 @@ async function moverCandidato(candidatoId, novoStatus) {
             console.log('✅ Candidato movido com sucesso!');
             // Atualizar KPIs após mover com sucesso
             atualizarKPIs();
+            
+            // 🔥 NOVO: Se moveu para "Contratado", adicionar botão de efetivação
+            if (novoStatus === 'Contratado' && data.data && !data.data.colaborador_id) {
+                const card = document.querySelector(`.candidato-card[data-candidato-id="${candidatoId}"]`);
+                if (card) {
+                    console.log('🎯 Candidato movido para Contratado - adicionando botão');
+                    adicionarBotaoEfetivacao(card, candidatoId);
+                }
+            }
         }
     } catch (error) {
         console.error('❌ Erro na requisição:', error);
@@ -603,10 +612,9 @@ async function verDetalhesCandidato(candidatoId) {
             setText('view_data_entrevista', formatarData(candidato.data_entrevista));
             
             // ============================================
-            // SEÇÃO 6: CONTRATAÇÃO
+            // SEÇÃO 6: CONTRATAÇÃO (apenas visualização, ação está no card)
             // ============================================
             const secaoContratacao = document.getElementById('secaoContratacao');
-            const btnEfetivar = document.getElementById('btnEfetivarColaborador');
             
             if (candidato.status_processo === 'Contratado' || candidato.foi_contratado) {
                 secaoContratacao.style.display = 'block';
@@ -614,19 +622,20 @@ async function verDetalhesCandidato(candidatoId) {
                 setText('view_foi_contratado', formatarBoolean(candidato.foi_contratado));
                 setText('view_data_contratacao', formatarData(candidato.data_contratacao));
                 
+                // Mostrar link para colaborador se já foi efetivado
                 if (candidato.colaborador_id) {
-                    const linkColaborador = `<a href="/rh/colaboradores/${candidato.colaborador_id}" target="_blank" class="btn btn-sm btn-success">
-                        <i class="mdi mdi-account-check"></i> Ver Colaborador
+                    const linkColaborador = `<a href="/rh/colaboradores/visualizar/${candidato.colaborador_id}" 
+                                                class="btn btn-sm btn-info">
+                        <i class="mdi mdi-account-eye"></i> Ver Colaborador
                     </a>`;
                     document.getElementById('view_colaborador_id').innerHTML = linkColaborador;
-                    btnEfetivar.style.display = 'none'; // Já efetivado
                 } else {
-                    setText('view_colaborador_id', 'Não efetivado ainda');
-                    btnEfetivar.style.display = 'inline-block'; // Mostrar botão
+                    // Instruir usuário a usar o botão no card
+                    document.getElementById('view_colaborador_id').innerHTML = 
+                        '<span class="text-warning"><i class="mdi mdi-alert"></i> Use o botão "Efetivar Contratação" no card do Kanban</span>';
                 }
             } else {
                 secaoContratacao.style.display = 'none';
-                btnEfetivar.style.display = 'none';
             }
             
             // ============================================
@@ -869,14 +878,47 @@ async function salvarEdicaoCandidato() {
 }
 
 /**
- * Efetivar candidato como colaborador (FASE 3)
+ * Efetivar candidato como colaborador - Redireciona para formulário de criação
+ */
+function efetivarContratacao(candidatoId) {
+    console.log('🎯 Efetivando contratação do candidato:', candidatoId);
+    window.location.href = `/rh/colaboradores/novo?candidato_id=${candidatoId}`;
+}
+
+/**
+ * DEPRECATED: Manter por compatibilidade (remover em versão futura)
  */
 function efetivarColaborador() {
     const candidatoId = document.getElementById('candidatoIdAtual').value;
-    if (confirm('Deseja efetivar este candidato como colaborador?')) {
-        // Redirecionar para página de novo colaborador com dados pré-preenchidos
-        window.open(`/rh/colaboradores/novo?candidato_id=${candidatoId}`, '_blank');
+    if (candidatoId) {
+        efetivarContratacao(candidatoId);
     }
+}
+
+/**
+ * Adicionar botão de efetivação ao card após mover para "Contratado"
+ */
+function adicionarBotaoEfetivacao(card, candidatoId) {
+    // Verificar se já não tem o botão
+    if (card.querySelector('.card-footer')) {
+        console.log('⚠️ Card já possui footer, não adicionando botão duplicado');
+        return;
+    }
+    
+    console.log('✨ Adicionando botão de efetivação ao card');
+    const footer = document.createElement('div');
+    footer.className = 'card-footer bg-success text-center p-2 mt-2';
+    footer.style.cssText = 'margin: -1rem -1rem -1rem; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;';
+    footer.innerHTML = `
+        <button 
+            class="btn btn-light btn-sm w-100 fw-bold" 
+            onclick="efetivarContratacao('${candidatoId}'); event.stopPropagation();"
+            title="Efetivar este candidato como colaborador"
+            style="box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <i class="mdi mdi-account-check"></i> Efetivar Contratação
+        </button>
+    `;
+    card.appendChild(footer);
 }
 
 /**

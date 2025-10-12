@@ -171,14 +171,21 @@
             <div class="card-body">
                 <div class="form-section">
                     <h5><i class="mdi mdi-phone"></i> Contato</h5>
-
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Telefone de Contato</label>
-                            <input type="text" class="form-control" id="tel_contato" name="tel_contato"
-                                   value="{{ colaborador.tel_contato if colaborador else (candidato.telefone if candidato else '') }}"
+                            <label class="form-label">Telefone Celular</label>
+                            <input type="text" class="form-control" id="telefone_celular" name="telefone_celular"
+                                   value="{{ colaborador.telefones_jsonb.celular if colaborador and colaborador.telefones_jsonb else (candidato.telefone if candidato else '') }}"
                                    placeholder="(41) 99999-9999"
-                                   maxlength="20">
+                                   maxlength="15">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefone Fixo</label>
+                            <input type="text" class="form-control" id="telefone_fixo" name="telefone_fixo"
+                                   value="{{ colaborador.telefones_jsonb.fixo if colaborador and colaborador.telefones_jsonb else '' }}"
+                                   placeholder="(41) 3333-4444"
+                                   maxlength="14">
                         </div>
                     </div>
                 </div>
@@ -190,13 +197,54 @@
             <div class="card-body">
                 <div class="form-section">
                     <h5><i class="mdi mdi-map-marker"></i> Endereço</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">CEP</label>
+                            <input type="text" class="form-control" id="endereco_cep" name="endereco_cep"
+                                   value="{{ colaborador.endereco_jsonb.cep if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="00000-000"
+                                   maxlength="9">
+                        </div>
+                        <div class="col-md-7 mb-3">
+                            <label class="form-label">Rua/Avenida</label>
+                            <input type="text" class="form-control" id="endereco_rua" name="endereco_rua"
+                                   value="{{ colaborador.endereco_jsonb.rua if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="Nome da rua">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Número</label>
+                            <input type="text" class="form-control" id="endereco_numero" name="endereco_numero"
+                                   value="{{ colaborador.endereco_jsonb.numero if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="123">
+                        </div>
+                    </div>
 
                     <div class="row">
-                        <div class="col-12 mb-3">
-                            <label class="form-label">Endereço Completo</label>
-                            <textarea class="form-control" id="endereco_completo" name="endereco_completo" rows="3"
-                                      placeholder="Rua, número, complemento, bairro, cidade/UF, CEP">{{ colaborador.endereco_completo if colaborador else '' }}</textarea>
-                            <small class="text-muted">Campo livre para registrar o endereço como será utilizado em documentos oficiais.</small>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Complemento</label>
+                            <input type="text" class="form-control" id="endereco_complemento" name="endereco_complemento"
+                                   value="{{ colaborador.endereco_jsonb.complemento if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="Apto, Bloco, etc.">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Bairro</label>
+                            <input type="text" class="form-control" id="endereco_bairro" name="endereco_bairro"
+                                   value="{{ colaborador.endereco_jsonb.bairro if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="Nome do bairro">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Cidade</label>
+                            <input type="text" class="form-control" id="endereco_cidade" name="endereco_cidade"
+                                   value="{{ colaborador.endereco_jsonb.cidade if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="Nome da cidade">
+                        </div>
+                        <div class="col-md-1 mb-3">
+                            <label class="form-label">UF</label>
+                            <input type="text" class="form-control text-uppercase" id="endereco_estado" name="endereco_estado"
+                                   value="{{ colaborador.endereco_jsonb.estado if colaborador and colaborador.endereco_jsonb else '' }}"
+                                   placeholder="PR"
+                                   maxlength="2">
                         </div>
                     </div>
                 </div>
@@ -337,7 +385,7 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 <script>
 // ===================================================================
@@ -366,6 +414,42 @@ window.salvarColaborador = async function() {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     console.log('📦 Dados coletados:', data);
+    
+    // 🔥 Converter campos de telefone em JSON
+    const telefones = {};
+    if (document.getElementById('telefone_celular')?.value) {
+        telefones.celular = document.getElementById('telefone_celular').value;
+    }
+    if (document.getElementById('telefone_fixo')?.value) {
+        telefones.fixo = document.getElementById('telefone_fixo').value;
+    }
+    if (Object.keys(telefones).length > 0) {
+        data.telefones_jsonb = telefones;
+    }
+    
+    // 🔥 Converter campos de endereço em JSON
+    const endereco = {};
+    if (document.getElementById('endereco_cep')?.value) endereco.cep = document.getElementById('endereco_cep').value;
+    if (document.getElementById('endereco_rua')?.value) endereco.rua = document.getElementById('endereco_rua').value;
+    if (document.getElementById('endereco_numero')?.value) endereco.numero = document.getElementById('endereco_numero').value;
+    if (document.getElementById('endereco_complemento')?.value) endereco.complemento = document.getElementById('endereco_complemento').value;
+    if (document.getElementById('endereco_bairro')?.value) endereco.bairro = document.getElementById('endereco_bairro').value;
+    if (document.getElementById('endereco_cidade')?.value) endereco.cidade = document.getElementById('endereco_cidade').value;
+    if (document.getElementById('endereco_estado')?.value) endereco.estado = document.getElementById('endereco_estado').value.toUpperCase();
+    if (Object.keys(endereco).length > 0) {
+        data.endereco_jsonb = endereco;
+    }
+    
+    // Remover campos individuais
+    delete data.telefone_celular;
+    delete data.telefone_fixo;
+    delete data.endereco_cep;
+    delete data.endereco_rua;
+    delete data.endereco_numero;
+    delete data.endereco_complemento;
+    delete data.endereco_bairro;
+    delete data.endereco_cidade;
+    delete data.endereco_estado;
     
     try {
         const modo = '{{ modo }}';
@@ -419,23 +503,6 @@ document.getElementById('cpf')?.addEventListener('input', function(e) {
         value = value.replace(/(\d{3})(\d)/, '$1.$2');
         value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
         e.target.value = value;
-    }
-});
-
-// Máscara simples para telefone de contato
-document.getElementById('tel_contato')?.addEventListener('input', function(e) {
-    let value = e.target.value.replace(/\D/g, '').substring(0, 11);
-
-    if (value.length >= 11) {
-        e.target.value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else if (value.length >= 7) {
-        e.target.value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
-    } else if (value.length > 2) {
-        e.target.value = value.replace(/(\d{2})(\d{0,4})/, '($1) $2');
-    } else if (value.length > 0) {
-        e.target.value = '(' + value;
-    } else {
-        e.target.value = '';
     }
 });
 
@@ -522,6 +589,105 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🔧 DOM carregado, inicializando form...');
     gerarProximaMatricula();
 });
+
+</script>
+{% endblock %}
+    console.log('� salvarColaborador() chamada!');
+    
+    const form = document.getElementById('formColaborador');
+    const btnSalvar = document.getElementById('btnSalvar');
+    console.log('� Form:', form);
+    console.log('📍 Botão:', btnSalvar);
+    
+    if (!form) {
+        console.error('❌ Formulário não encontrado!');
+        return;
+    }
+    
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+    
+    // Coletar dados do formulário
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    console.log('📦 Dados coletados:', data);    // 🔥 Converter campos de telefone em JSON
+    const telefones = {};
+    if (document.getElementById('telefone_celular')?.value) {
+        telefones.celular = document.getElementById('telefone_celular').value;
+    }
+    if (document.getElementById('telefone_fixo')?.value) {
+        telefones.fixo = document.getElementById('telefone_fixo').value;
+    }
+    // Só adicionar se tiver pelo menos um telefone
+    if (Object.keys(telefones).length > 0) {
+        data.telefones_jsonb = telefones;
+    }
+    
+    // 🔥 Converter campos de endereço em JSON
+    const endereco = {};
+    if (document.getElementById('endereco_cep')?.value) endereco.cep = document.getElementById('endereco_cep').value;
+    if (document.getElementById('endereco_rua')?.value) endereco.rua = document.getElementById('endereco_rua').value;
+    if (document.getElementById('endereco_numero')?.value) endereco.numero = document.getElementById('endereco_numero').value;
+    if (document.getElementById('endereco_complemento')?.value) endereco.complemento = document.getElementById('endereco_complemento').value;
+    if (document.getElementById('endereco_bairro')?.value) endereco.bairro = document.getElementById('endereco_bairro').value;
+    if (document.getElementById('endereco_cidade')?.value) endereco.cidade = document.getElementById('endereco_cidade').value;
+    if (document.getElementById('endereco_estado')?.value) endereco.estado = document.getElementById('endereco_estado').value.toUpperCase();
+    // Só adicionar se tiver pelo menos um campo de endereço
+    if (Object.keys(endereco).length > 0) {
+        data.endereco_jsonb = endereco;
+    }
+    
+    // Remover campos individuais que foram convertidos em JSON
+    delete data.telefone_celular;
+    delete data.telefone_fixo;
+    delete data.endereco_cep;
+    delete data.endereco_rua;
+    delete data.endereco_numero;
+    delete data.endereco_complemento;
+    delete data.endereco_bairro;
+    delete data.endereco_cidade;
+    delete data.endereco_estado;
+    
+    try {
+        const modo = '{{ modo }}';
+        const url = modo === 'novo' 
+            ? '/rh/colaboradores/api/colaboradores'
+            : '/rh/colaboradores/api/colaboradores/{{ colaborador.id if colaborador else "" }}';
+        
+        const method = modo === 'novo' ? 'POST' : 'PUT';
+        
+        console.log('🎯 Enviando para:', url);
+        console.log('📡 Método:', method);
+        console.log('📄 Payload:', JSON.stringify(data, null, 2));
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        console.log('✅ Response status:', response.status);
+        const result = await response.json();
+        console.log('📥 Result:', result);
+        
+        if (response.ok && result.success) {
+            mostrarAlerta('Colaborador salvo com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.href = '{{ url_for("colaboradores.lista_colaboradores") }}';
+            }, 1500);
+        } else {
+            throw new Error(result.error || 'Erro ao salvar colaborador');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarAlerta(`Erro ao salvar: ${error.message}`, 'danger');
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = textoOriginal;
+    }
+}
 
 </script>
 {% endblock %}

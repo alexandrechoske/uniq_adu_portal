@@ -422,19 +422,46 @@ def api_update_vaga_status(vaga_id):
 def api_delete_vaga(vaga_id):
     """API: Deletar vaga (com verificação de candidatos)"""
     try:
-        # Verificar se vaga tem candidatos
+        # Verificar se vaga existe
+        check_response = supabase_admin.table('rh_vagas')\
+            .select('*')\
+            .eq('id', vaga_id)\
+            .execute()
+        
+        if not check_response.data or len(check_response.data) == 0:
+            return jsonify({'success': False, 'message': 'Vaga não encontrada'}), 404
+
+        vaga = check_response.data[0]
+
+        # Se existirem candidatos vinculados, aplica soft delete (status Cancelada)
         candidatos_response = supabase_admin.table('rh_candidatos')\
             .select('id', count='exact')\
             .eq('vaga_id', vaga_id)\
             .execute()
-        
-        if candidatos_response.count and candidatos_response.count > 0:
+
+        candidatos_vinculados = candidatos_response.count or 0
+
+        if candidatos_vinculados > 0:
+            print(f"[WARN] Vaga {vaga_id} possui {candidatos_vinculados} candidato(s); aplicando soft delete.")
+
+            # Atualiza status somente se já não estiver marcado como Cancelada
+            if vaga.get('status') != 'Cancelada':
+                update_response = supabase_admin.table('rh_vagas')\
+                    .update({'status': 'Cancelada'})\
+                    .eq('id', vaga_id)\
+                    .execute()
+                vaga_atualizada = update_response.data[0] if update_response.data else None
+            else:
+                vaga_atualizada = vaga
+
             return jsonify({
-                'success': False,
-                'message': f'Não é possível excluir. Esta vaga possui {candidatos_response.count} candidato(s) associado(s).'
-            }), 409
-        
-        # Deletar vaga
+                'success': True,
+                'soft_delete': True,
+                'message': 'Vaga possui candidatos vinculados e foi marcada como Cancelada.',
+                'candidatos_vinculados': candidatos_vinculados,
+                'data': vaga_atualizada
+            }), 200
+
         response = supabase_admin.table('rh_vagas')\
             .delete()\
             .eq('id', vaga_id)\

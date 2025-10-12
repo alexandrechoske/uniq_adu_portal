@@ -999,6 +999,28 @@
                             <i class="mdi mdi-source-branch"></i> {{ candidato.fonte_candidatura }}
                         </span>
                         {% endif %}
+                        
+                        <!-- 🔥 NOVO: Botão de Efetivação (aparece apenas quando Contratado e sem colaborador_id) -->
+                        {% if candidato.status_processo == 'Contratado' and not candidato.colaborador_id %}
+                        <div class="card-footer bg-success text-center p-2 mt-2" style="margin: -1rem -1rem -1rem; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;">
+                            <button 
+                                class="btn btn-light btn-sm w-100 fw-bold" 
+                                onclick="efetivarContratacao('{{ candidato.id }}'); event.stopPropagation();"
+                                title="Efetivar este candidato como colaborador"
+                                style="box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <i class="mdi mdi-account-check"></i> Efetivar Contratação
+                            </button>
+                        </div>
+                        {% elif candidato.colaborador_id %}
+                        <div class="card-footer bg-info text-center p-2 mt-2" style="margin: -1rem -1rem -1rem; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;">
+                            <a href="/rh/colaboradores/visualizar/{{ candidato.colaborador_id }}" 
+                               class="btn btn-light btn-sm w-100 fw-bold"
+                               onclick="event.stopPropagation();"
+                               style="box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <i class="mdi mdi-account-eye"></i> Ver Colaborador
+                            </a>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                     

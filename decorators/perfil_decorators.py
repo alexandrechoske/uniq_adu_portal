@@ -8,6 +8,7 @@ from functools import wraps
 from flask import session, render_template, jsonify, request
 from services.perfil_access_service import PerfilAccessService
 import json
+import os
 
 def perfil_required(modulo_codigo, pagina_codigo=None):
     """
@@ -25,6 +26,14 @@ def perfil_required(modulo_codigo, pagina_codigo=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # Verificar bypass via API key para testes
+            api_bypass_key = os.getenv('API_BYPASS_KEY')
+            request_api_key = request.headers.get('X-API-Key')
+            
+            if api_bypass_key and request_api_key == api_bypass_key:
+                print(f"[SECURITY] ⚠️ Bypass de segurança ativado via API Key para teste")
+                return f(*args, **kwargs)
+            
             # Primeiro verificar se usuário está logado
             user = session.get('user', {})
             if not user:
