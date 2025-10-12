@@ -163,7 +163,10 @@ def novo_colaborador():
             cargos=cargos.data if cargos.data else [],
             departamentos=departamentos.data if departamentos.data else [],
             empresas=empresas.data if empresas.data else [],
-            gestores=colaboradores.data if colaboradores.data else []
+            gestores=colaboradores.data if colaboradores.data else [],
+            ultimo_historico=None,
+            info_atual=None,
+            is_editing=False
         )
     
     except Exception as e:
@@ -214,6 +217,18 @@ def editar_colaborador(colaborador_id):
             .execute()
         
         ultimo_historico = historico.data[0] if historico.data else {}
+
+        info_atual = None
+        try:
+            rpc_response = supabase_admin.rpc(
+                'get_colaborador_info_atual',
+                {'p_colaborador_id': colaborador_id}
+            ).execute()
+            if rpc_response.data:
+                info_atual = rpc_response.data[0]
+        except Exception as rpc_error:
+            print(f"[AVISO] Falha ao obter info atual via RPC: {rpc_error}")
+            info_atual = None
         
         return render_template(
             'colaboradores/form_colaborador.html',
@@ -224,7 +239,9 @@ def editar_colaborador(colaborador_id):
             cargos=cargos.data if cargos.data else [],
             departamentos=departamentos.data if departamentos.data else [],
             empresas=empresas.data if empresas.data else [],
-            gestores=colaboradores.data if colaboradores.data else []
+            gestores=colaboradores.data if colaboradores.data else [],
+            info_atual=info_atual,
+            is_editing=True
         )
     
     except Exception as e:
@@ -452,6 +469,9 @@ def api_update_colaborador(colaborador_id):
         
         if not existing.data:
             return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        # Campos que não podem ser atualizados diretamente nesta rota
+        data.pop('salario_mensal', None)
         
         # Preparar dados para atualização
         update_data = {}
@@ -472,40 +492,53 @@ def api_update_colaborador(colaborador_id):
                 update_data[field] = value
         
         # Atualizar colaborador
-        update_response = supabase_admin.table('rh_colaboradores')\
-            .update(update_data)\
-            .eq('id', colaborador_id)\
-            .execute()
-        
-        # Se houver mudanças que geram histórico (cargo, salário, etc)
-        criar_historico = False
-        historico_data = {
-            'colaborador_id': colaborador_id,
-            'data_evento': data.get('data_evento', datetime.now().strftime('%Y-%m-%d')),
-            'tipo_evento': data.get('tipo_evento', 'Alteração Estrutural')
-        }
-        
-        def marcar_historico(field_name):
-            nonlocal criar_historico
-            if field_name in data:
-                value = data[field_name]
-                if isinstance(value, str):
-                    value = value.strip()
-                if value not in (None, '', []):
-                    historico_data[field_name] = value
-                    criar_historico = True
+        if update_data:
+            supabase_admin.table('rh_colaboradores')\
+                .update(update_data)\
+                .eq('id', colaborador_id)\
+                .execute()
 
-        marcar_historico('cargo_id')
-        marcar_historico('departamento_id')
-        marcar_historico('salario_mensal')
-        marcar_historico('gestor_id')
-        marcar_historico('tipo_contrato')
-        marcar_historico('modelo_trabalho')
-        
-        if 'observacoes' in data:
-            historico_data['descricao_e_motivos'] = data['observacoes']
-        
-        if criar_historico:
+        # Registrar alterações estruturais no histórico (sem alterar salário por aqui)
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+        campos_movimentacao = ['cargo_id', 'departamento_id', 'gestor_id', 'tipo_contrato', 'modelo_trabalho']
+        houve_alteracao = False
+        snapshot = {}
+
+        for campo in campos_movimentacao:
+            valor_novo = data.get(campo)
+            valor_novo_normalizado = valor_novo.strip() if isinstance(valor_novo, str) else valor_novo
+            valor_atual = ultimo_historico.get(campo) if ultimo_historico else None
+
+            if valor_novo_normalizado not in (None, '', []):
+                snapshot[campo] = valor_novo_normalizado
+                if str(valor_novo_normalizado) != str(valor_atual):
+                    houve_alteracao = True
+            elif valor_atual not in (None, '', []):
+                snapshot[campo] = valor_atual
+
+        observacoes = data.get('observacoes')
+        if isinstance(observacoes, str):
+            observacoes = observacoes.strip()
+        if observacoes:
+            houve_alteracao = True
+
+        if houve_alteracao:
+            historico_data = {
+                'colaborador_id': colaborador_id,
+                'data_evento': data.get('data_evento') or datetime.now().strftime('%Y-%m-%d'),
+                'tipo_evento': 'Alteração Estrutural',
+                'descricao_e_motivos': observacoes or 'Atualização cadastral'
+            }
+
+            historico_data.update(snapshot)
+
+            # Garantir consistência das informações copiando valores já existentes
+            _copiar_campos_validos(
+                historico_data,
+                ultimo_historico,
+                ['empresa_id', 'salario_mensal']
+            )
+
             supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
         
         # Buscar dados atualizados do colaborador

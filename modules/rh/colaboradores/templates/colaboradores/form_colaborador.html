@@ -125,78 +125,61 @@
             </div>
         </div>
 
-        <!-- Seção: Documentação -->
+        <!-- Seção: Documentação, Contato e Endereço -->
         <div class="rh-card mb-4">
             <div class="card-body">
-                <div class="form-section">
-                    <h5><i class="mdi mdi-card-account-details"></i> Documentação</h5>
-                    
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">PIS/PASEP</label>
-                            <input type="text" class="form-control" id="pis_pasep" name="pis_pasep"
-                                   value="{{ colaborador.pis_pasep if colaborador else '' }}"
-                                   maxlength="20"
-                                   placeholder="000.00000.00-0">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">CTPS Número</label>
-                            <input type="text" class="form-control" id="ctps_numero" name="ctps_numero"
-                                   value="{{ colaborador.ctps_numero if colaborador else '' }}"
-                                   maxlength="20">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">CTPS Série</label>
-                            <input type="text" class="form-control" id="ctps_serie" name="ctps_serie"
-                                   value="{{ colaborador.ctps_serie if colaborador else '' }}"
-                                   maxlength="20">
+                <div class="row g-4 align-items-stretch">
+                    <div class="col-lg-4">
+                        <div class="form-section h-100">
+                            <h5><i class="mdi mdi-card-account-details"></i> Documentação</h5>
+                            <div class="row">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">PIS/PASEP</label>
+                                    <input type="text" class="form-control" id="pis_pasep" name="pis_pasep"
+                                           value="{{ colaborador.pis_pasep if colaborador else '' }}"
+                                           maxlength="20"
+                                           placeholder="000.00000.00-0">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">CTPS Número</label>
+                                    <input type="text" class="form-control" id="ctps_numero" name="ctps_numero"
+                                           value="{{ colaborador.ctps_numero if colaborador else '' }}"
+                                           maxlength="20">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">CTPS Série</label>
+                                    <input type="text" class="form-control" id="ctps_serie" name="ctps_serie"
+                                           value="{{ colaborador.ctps_serie if colaborador else '' }}"
+                                           maxlength="20">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">CNH Número</label>
+                                    <input type="text" class="form-control" id="cnh_numero" name="cnh_numero"
+                                           value="{{ colaborador.cnh_numero if colaborador else '' }}"
+                                           maxlength="20"
+                                           placeholder="Número da CNH">
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">CNH Número</label>
-                            <input type="text" class="form-control" id="cnh_numero" name="cnh_numero"
-                                   value="{{ colaborador.cnh_numero if colaborador else '' }}"
-                                   maxlength="20"
-                                   placeholder="Número da CNH">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seção: Contato -->
-        <div class="rh-card mb-4">
-            <div class="card-body">
-                <div class="form-section">
-                    <h5><i class="mdi mdi-phone"></i> Contato</h5>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <div class="col-lg-4">
+                        <div class="form-section h-100">
+                            <h5><i class="mdi mdi-phone"></i> Contato</h5>
                             <label class="form-label">Telefone de Contato</label>
                             <input type="text" class="form-control" id="tel_contato" name="tel_contato"
                                    value="{{ colaborador.tel_contato if colaborador else (candidato.telefone if candidato else '') }}"
                                    placeholder="(41) 99999-9999"
                                    maxlength="20">
+                            <small class="text-muted d-block mt-2">Use somente números; formatação aplicada automaticamente.</small>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seção: Endereço -->
-        <div class="rh-card mb-4">
-            <div class="card-body">
-                <div class="form-section">
-                    <h5><i class="mdi mdi-map-marker"></i> Endereço</h5>
-
-                    <div class="row">
-                        <div class="col-12 mb-3">
+                    <div class="col-lg-4">
+                        <div class="form-section h-100">
+                            <h5><i class="mdi mdi-map-marker"></i> Endereço</h5>
                             <label class="form-label">Endereço Completo</label>
-                            <textarea class="form-control" id="endereco_completo" name="endereco_completo" rows="3"
+                            <textarea class="form-control" id="endereco_completo" name="endereco_completo" rows="5"
                                       placeholder="Rua, número, complemento, bairro, cidade/UF, CEP">{{ colaborador.endereco_completo if colaborador else '' }}</textarea>
-                            <small class="text-muted">Campo livre para registrar o endereço como será utilizado em documentos oficiais.</small>
+                            <small class="text-muted">Campo livre conforme utilizado em documentos oficiais.</small>
                         </div>
                     </div>
                 </div>
@@ -208,7 +191,9 @@
             <div class="card-body">
                 <div class="form-section">
                     <h5><i class="mdi mdi-briefcase"></i> Dados Corporativos</h5>
-                    
+
+                    {% set info_carreira = info_atual if info_atual else (ultimo_historico if ultimo_historico else {}) %}
+
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Matrícula</label>
@@ -228,7 +213,7 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label required">Data de Admissão</label>
                             <input type="date" class="form-control" id="data_admissao" name="data_admissao"
-                                   value="{{ colaborador.data_admissao if colaborador else '' }}" 
+                                   value="{{ colaborador.data_admissao if colaborador else '' }}"
                                    max="{{ hoje }}"
                                    required
                                    {% if colaborador %}readonly{% endif %}>
@@ -237,75 +222,106 @@
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Cargo</label>
-                            <select class="form-select" id="cargo_id" name="cargo_id">
-                                <option value="">Selecione...</option>
-                                {% for cargo in cargos %}
-                                <option value="{{ cargo.id }}" 
-                                    {% if ultimo_historico and ultimo_historico.cargo_id == cargo.id %}selected{% endif %}>
-                                    {{ cargo.nome_cargo }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label {% if not is_editing %}required{% endif %}">Cargo Atual</label>
+                            {% if is_editing %}
+                                <input type="text" class="form-control bg-light" value="{{ info_carreira.nome_cargo or 'Não informado' }}" readonly>
+                                <small class="text-muted">Use o atalho "Promover" para alterar.</small>
+                            {% else %}
+                                <select class="form-select" id="cargo_id" name="cargo_id" required>
+                                    <option value="">Selecione o cargo inicial...</option>
+                                    {% for cargo in cargos %}
+                                    <option value="{{ cargo.id }}" {% if ultimo_historico and ultimo_historico.cargo_id == cargo.id %}selected{% endif %}>{{ cargo.nome_cargo }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Campo obrigatório</small>
+                            {% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Departamento</label>
-                            <select class="form-select" id="departamento_id" name="departamento_id">
-                                <option value="">Selecione...</option>
-                                {% for depto in departamentos %}
-                                <option value="{{ depto.id }}"
-                                    {% if ultimo_historico and ultimo_historico.departamento_id == depto.id %}selected{% endif %}>
-                                    {{ depto.nome_departamento }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label {% if not is_editing %}required{% endif %}">Departamento Atual</label>
+                            {% if is_editing %}
+                                <input type="text" class="form-control bg-light" value="{{ info_carreira.nome_departamento or 'Não informado' }}" readonly>
+                                <small class="text-muted">Use o atalho "Transferir" para alterar.</small>
+                            {% else %}
+                                <select class="form-select" id="departamento_id" name="departamento_id" required>
+                                    <option value="">Selecione o departamento inicial...</option>
+                                    {% for depto in departamentos %}
+                                    <option value="{{ depto.id }}" {% if ultimo_historico and ultimo_historico.departamento_id == depto.id %}selected{% endif %}>{{ depto.nome_departamento }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Campo obrigatório</small>
+                            {% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Gestor</label>
-                            <select class="form-select" id="gestor_id" name="gestor_id">
-                                <option value="">Selecione...</option>
-                                {% for gestor in gestores %}
-                                <option value="{{ gestor.id }}"
-                                    {% if ultimo_historico and ultimo_historico.gestor_id == gestor.id %}selected{% endif %}>
-                                    {{ gestor.nome_completo }}
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label">Gestor Atual</label>
+                            {% if is_editing %}
+                                {% if info_carreira.nome_gestor %}
+                                    <input type="text" class="form-control bg-light" value="{{ info_carreira.nome_gestor }}" readonly>
+                                {% else %}
+                                    <input type="text" class="form-control bg-light" value="Sem gestor definido" readonly>
+                                {% endif %}
+                                <small class="text-muted">Use o atalho "Transferir" para alterar.</small>
+                            {% else %}
+                                <select class="form-select" id="gestor_id" name="gestor_id">
+                                    <option value="">Selecione o gestor inicial (opcional)...</option>
+                                    {% for gestor in gestores %}
+                                    <option value="{{ gestor.id }}" {% if ultimo_historico and ultimo_historico.gestor_id == gestor.id %}selected{% endif %}>{{ gestor.nome_completo }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Opcional</small>
+                            {% endif %}
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Salário Mensal</label>
-                            <div class="input-group">
-                                <span class="input-group-text">R$</span>
-                                <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" 
-                                       step="0.01" 
-                                       min="0"
-                                       max="999999.99"
-                                       value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}"
-                                       placeholder="0.00">
-                            </div>
-                            <small class="text-muted">Apenas números</small>
+                            <label class="form-label {% if not is_editing %}required{% endif %}">Salário Mensal</label>
+                            {% if is_editing %}
+                                <div class="form-control-plaintext fw-semibold">
+                                    {% if info_carreira.salario_mensal %}
+                                        R$ {{ '%.2f' | format(info_carreira.salario_mensal) }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">Use o atalho "Reajustar Salário" na lista de colaboradores para alterar este valor.</small>
+                            {% else %}
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" step="0.01" min="0" max="999999.99" value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}" placeholder="0.00" required>
+                                </div>
+                                <small class="text-muted">Campo obrigatório - informe apenas números</small>
+                            {% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Tipo de Contrato</label>
-                            <select class="form-select" id="tipo_contrato" name="tipo_contrato">
-                                <option value="">Selecione...</option>
-                                <option value="CLT" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'CLT' %}selected{% endif %}>CLT</option>
-                                <option value="PJ" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'PJ' %}selected{% endif %}>PJ</option>
-                                <option value="Estágio" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'Estágio' %}selected{% endif %}>Estágio</option>
-                                <option value="Temporário" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'Temporário' %}selected{% endif %}>Temporário</option>
-                            </select>
+                            <label class="form-label {% if not is_editing %}required{% endif %}">Tipo de Contrato</label>
+                            {% if is_editing %}
+                                <input type="text" class="form-control bg-light" value="{{ info_carreira.tipo_contrato or 'Não informado' }}" readonly>
+                                <small class="text-muted">Atualize esse campo pelos atalhos de movimentação.</small>
+                            {% else %}
+                                <select class="form-select" id="tipo_contrato" name="tipo_contrato" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="CLT" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'CLT' %}selected{% endif %}>CLT</option>
+                                    <option value="PJ" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'PJ' %}selected{% endif %}>PJ</option>
+                                    <option value="Estágio" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'Estágio' %}selected{% endif %}>Estágio</option>
+                                    <option value="Temporário" {% if ultimo_historico and ultimo_historico.tipo_contrato == 'Temporário' %}selected{% endif %}>Temporário</option>
+                                </select>
+                                <small class="text-muted">Campo obrigatório</small>
+                            {% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Modelo de Trabalho</label>
-                            <select class="form-select" id="modelo_trabalho" name="modelo_trabalho">
-                                <option value="">Selecione...</option>
-                                <option value="Presencial" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Presencial' %}selected{% endif %}>Presencial</option>
-                                <option value="Remoto" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Remoto' %}selected{% endif %}>Remoto</option>
-                                <option value="Híbrido" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Híbrido' %}selected{% endif %}>Híbrido</option>
-                            </select>
+                            <label class="form-label {% if not is_editing %}required{% endif %}">Modelo de Trabalho</label>
+                            {% if is_editing %}
+                                <input type="text" class="form-control bg-light" value="{{ info_carreira.modelo_trabalho or 'Não informado' }}" readonly>
+                                <small class="text-muted">Atualize esse campo pelos atalhos de movimentação.</small>
+                            {% else %}
+                                <select class="form-select" id="modelo_trabalho" name="modelo_trabalho" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="Presencial" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Presencial' %}selected{% endif %}>Presencial</option>
+                                    <option value="Remoto" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Remoto' %}selected{% endif %}>Remoto</option>
+                                    <option value="Híbrido" {% if ultimo_historico and ultimo_historico.modelo_trabalho == 'Híbrido' %}selected{% endif %}>Híbrido</option>
+                                </select>
+                                <small class="text-muted">Campo obrigatório</small>
+                            {% endif %}
                         </div>
                     </div>
 
@@ -365,10 +381,26 @@ window.salvarColaborador = async function() {
     // Coletar dados do formulário
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+
+    // Remover campos vazios para evitar sobrescrever com strings em branco
+    Object.keys(data).forEach((key) => {
+        if (data[key] === '') {
+            delete data[key];
+        }
+    });
+
+    const modo = '{{ modo }}';
+    if (modo !== 'novo') {
+        delete data.salario_mensal;
+        delete data.cargo_id;
+        delete data.departamento_id;
+        delete data.gestor_id;
+        delete data.tipo_contrato;
+        delete data.modelo_trabalho;
+    }
     console.log('📦 Dados coletados:', data);
     
     try {
-        const modo = '{{ modo }}';
         const url = modo === 'novo' 
             ? '/rh/colaboradores/api/colaboradores'
             : '/rh/colaboradores/api/colaboradores/{{ colaborador.id if colaborador else "" }}';
