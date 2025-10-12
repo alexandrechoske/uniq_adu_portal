@@ -94,6 +94,9 @@ from modules.carreiras import carreiras_bp
 # Import analytics blueprint
 from modules.analytics.routes import bp as analytics_bp
 
+# Import portal contabilidade blueprint
+from modules.contabilidade_externa import contabilidade_externa_bp
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -145,6 +148,10 @@ app.register_blueprint(carreiras_bp)
 # Register analytics blueprint
 app.register_blueprint(analytics_bp)
 print("✅ Analytics blueprint registrado")
+
+# Register external accounting portal blueprint
+app.register_blueprint(contabilidade_externa_bp)
+print("✅ Portal contabilidade externo registrado")
 
 # Register module color helpers for templates
 register_module_color_helpers(app)
