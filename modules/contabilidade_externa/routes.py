@@ -12,6 +12,8 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from extensions import supabase_admin
 
+from services.event_notification_service import EventNotificationService
+
 contabilidade_externa_bp = Blueprint(
     "contabilidade_externa",
     __name__,
@@ -21,6 +23,8 @@ contabilidade_externa_bp = Blueprint(
     static_url_path="/portal-contabilidade/static"
 )
 
+
+event_notifier = EventNotificationService()
 
 
 def _is_password_hash(value: str) -> bool:
@@ -281,5 +285,10 @@ def concluir_evento(evento_id):
     except Exception as exc:
         print(f"[CONTABILIDADE] Erro ao atualizar evento {evento_id}: {exc}")
         return jsonify({"success": False, "message": "Não foi possível concluir o evento."}), 500
+
+    try:
+        event_notifier.notify_rh_event_closed(str(evento_id))
+    except Exception as exc:  # pragma: no cover
+        print(f"[NOTIFY] Falha ao notificar RH sobre conclusão: {exc}")
 
     return jsonify({"success": True, "message": "Evento marcado como concluído."})

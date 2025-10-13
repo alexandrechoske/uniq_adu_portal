@@ -10,6 +10,8 @@ from decorators.perfil_decorators import perfil_required
 from datetime import datetime
 import os
 
+from services.event_notification_service import EventNotificationService
+
 # Criar blueprint
 colaboradores_bp = Blueprint(
     'colaboradores',
@@ -22,6 +24,8 @@ colaboradores_bp = Blueprint(
 
 # API Bypass para testes
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
+
+event_notifier = EventNotificationService()
 
 def check_api_bypass():
     """Verifica se a requisição usa a chave de bypass para testes"""
@@ -437,7 +441,7 @@ def api_create_colaborador():
         set_if_present(historico_data, 'modelo_trabalho')
         
         # Inserir no histórico
-        supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        _registrar_evento_historico(historico_data)
         
         # 🔥 NOVO: Se veio de um candidato, vincular
         if 'candidato_id' in data and data['candidato_id']:
@@ -544,7 +548,7 @@ def api_update_colaborador(colaborador_id):
                 ['empresa_id', 'salario_mensal']
             )
 
-            supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+            _registrar_evento_historico(historico_data)
         
         # Buscar dados atualizados do colaborador
         colab_atualizado = supabase_admin.table('rh_colaboradores')\
@@ -583,6 +587,26 @@ def _buscar_ultimo_historico(colaborador_id):
     if response.data:
         return response.data[0]
     return None
+
+
+def _registrar_evento_historico(historico_data):
+    payload = dict(historico_data)
+    payload['status_contabilidade'] = payload.get('status_contabilidade') or 'Pendente'
+
+    response = supabase_admin.table('rh_historico_colaborador').insert(payload).execute()
+    if not response.data:
+        return None
+
+    evento = response.data[0]
+    evento_id = evento.get('id')
+
+    if evento_id:
+        try:
+            event_notifier.notify_accounting_new_event(str(evento_id))
+        except Exception as exc:  # pragma: no cover
+            print(f"[NOTIFY] Falha ao notificar contabilidade: {exc}")
+
+    return evento
 
 
 def _copiar_campos_validos(destino, origem, campos):
@@ -669,7 +693,7 @@ def api_promover_colaborador(colaborador_id):
         if dados_adicionais:
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
-        supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        _registrar_evento_historico(historico_data)
 
         return jsonify({'success': True}), 201
     except Exception as e:
@@ -723,7 +747,7 @@ def api_reajustar_salario(colaborador_id):
         if dados_adicionais:
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
-        supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        _registrar_evento_historico(historico_data)
 
         return jsonify({'success': True}), 201
     except Exception as e:
@@ -776,7 +800,7 @@ def api_transferir_colaborador(colaborador_id):
         if dados_adicionais:
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
-        supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        _registrar_evento_historico(historico_data)
 
         return jsonify({'success': True}), 201
     except Exception as e:
@@ -859,7 +883,7 @@ def api_reativar_colaborador(colaborador_id):
             ['cargo_id', 'departamento_id', 'gestor_id', 'salario_mensal', 'empresa_id', 'tipo_contrato', 'modelo_trabalho']
         )
 
-        supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        _registrar_evento_historico(historico_data)
 
         return jsonify({'success': True}), 200
     except Exception as e:
@@ -900,12 +924,13 @@ def api_delete_colaborador(colaborador_id):
             pass
         
         # Criar registro de demissão no histórico
-        supabase_admin.table('rh_historico_colaborador').insert({
+        historico_demissao = {
             'colaborador_id': colaborador_id,
             'data_evento': datetime.now().strftime('%Y-%m-%d'),
             'tipo_evento': 'Demissão',
             'descricao_e_motivos': motivo
-        }).execute()
+        }
+        _registrar_evento_historico(historico_demissao)
         
         # Buscar dados atualizados do colaborador
         colab_atualizado = supabase_admin.table('rh_colaboradores')\
