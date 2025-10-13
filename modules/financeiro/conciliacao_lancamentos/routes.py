@@ -24,11 +24,9 @@ from .conciliacao_service import (
 )
 
 # Configurar blueprint
-# Configurar blueprint
 conciliacao_lancamentos_bp = Blueprint('fin_conciliacao_lancamentos', __name__, 
                                       template_folder='templates',
-                                      static_folder='static', 
-                                      static_url_path='/static/fin_conciliacao_lancamentos',
+                                      static_folder='static',
                                       url_prefix='/financeiro/conciliacao-lancamentos')
 
 # Configurar logging
@@ -36,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 # Configurações de upload
 UPLOAD_FOLDER = '/tmp/conciliacao_uploads'
-ALLOWED_EXTENSIONS = {'ofx'}  # Apenas arquivos OFX para nova conciliação
+ALLOWED_EXTENSIONS = {'ofx', 'xlsx', 'txt'}  # Formatos suportados na conciliação
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Criar pasta de upload se não existir
@@ -994,12 +992,18 @@ def carregar_dados_conciliacao():
         
         logger.info("[PROCESSAR] Autenticação/bypass verificado com sucesso")
         
-        # Verificar se o arquivo foi enviado corretamente
-        if 'arquivo' not in request.files:
-            logger.error("[PROCESSAR] Campo 'arquivo' não encontrado nos files")
+        arquivos_recebidos = request.files.getlist('arquivo_bancario')
+        if not arquivos_recebidos:
+            arquivos_recebidos = request.files.getlist('arquivo')
+
+        if not arquivos_recebidos:
+            logger.error("[PROCESSAR] Campo de arquivo não encontrado nos files")
             return jsonify({'success': False, 'error': 'Nenhum arquivo enviado'}), 400
-        
-        arquivo = request.files['arquivo']
+
+        if len(arquivos_recebidos) > 1:
+            logger.info(f"[PROCESSAR] {len(arquivos_recebidos)} arquivos recebidos - processando apenas o primeiro")
+
+        arquivo = arquivos_recebidos[0]
         if not arquivo or arquivo.filename == '':
             logger.error("[PROCESSAR] Arquivo vazio ou sem nome")
             return jsonify({'success': False, 'error': 'Nenhum arquivo selecionado'}), 400
@@ -1009,7 +1013,7 @@ def carregar_dados_conciliacao():
         # Verificar se é um tipo de arquivo permitido
         if not allowed_file(arquivo.filename):
             logger.error(f"[PROCESSAR] Tipo de arquivo não permitido: {arquivo.filename}")
-            return jsonify({'success': False, 'error': 'Apenas arquivos OFX são aceitos. Exporte do internet banking como .ofx'}), 400
+            return jsonify({'success': False, 'error': 'Formato não suportado. Aceitamos arquivos OFX, XLSX ou TXT exportados do internet banking.'}), 400
         
         # Processar o arquivo
         resultado = processar_arquivo_extrato(arquivo)
@@ -1159,12 +1163,19 @@ def upload_arquivo_banco():
 
         logger.info("[UPLOAD] Iniciando upload de arquivo bancário")
 
-        # Verificar se o arquivo foi enviado
-        if 'arquivo' not in request.files:
+        # Compatibilidade com novos frontends (permite múltiplos arquivos)
+        arquivos_env = request.files.getlist('arquivo_bancario')
+        if not arquivos_env:
+            arquivos_env = request.files.getlist('arquivo')
+
+        if not arquivos_env:
             logger.warning("[UPLOAD] Nenhum arquivo foi enviado")
             return jsonify({'success': False, 'error': 'Nenhum arquivo foi enviado'}), 400
 
-        file = request.files['arquivo']
+        if len(arquivos_env) > 1:
+            logger.info(f"[UPLOAD] {len(arquivos_env)} arquivos recebidos - processando apenas o primeiro")
+
+        file = arquivos_env[0]
         banco_selecionado = request.form.get('banco_origem', '').strip()
 
         if file.filename == '':
@@ -1173,7 +1184,7 @@ def upload_arquivo_banco():
 
         if not allowed_file(file.filename):
             logger.warning(f"[UPLOAD] Extensão de arquivo não permitida: {file.filename}")
-            return jsonify({'success': False, 'error': 'Apenas arquivos OFX são aceitos. Exporte do internet banking como .ofx'}), 400
+            return jsonify({'success': False, 'error': 'Formato não suportado. Aceitamos arquivos OFX, XLSX ou TXT exportados do internet banking.'}), 400
 
         # Verificar tamanho do arquivo
         file.seek(0, 2)  # Mover para o final do arquivo
