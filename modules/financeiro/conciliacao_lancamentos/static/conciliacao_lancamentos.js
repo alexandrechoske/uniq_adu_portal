@@ -20,6 +20,12 @@ class ConciliacaoBancaria {
         // Ordenação
         this.ordenacaoSistema = { campo: 'data', ordem: 'desc' };
         this.ordenacaoBanco = { campo: 'data', ordem: 'desc' };
+
+        // Resumo da última conciliação
+        this.statusResumo = null;
+        this.relatorioConciliacao = null;
+
+        this.notificationTimeout = null;
         
         this.init();
     }
@@ -279,6 +285,10 @@ class ConciliacaoBancaria {
         
         const arquivos = document.getElementById('arquivo_banco').files;
         const bancoOrigem = document.getElementById('banco_origem').value;
+
+        this.statusResumo = null;
+        this.relatorioConciliacao = null;
+        this.atualizarResumo(null);
         
         if (arquivos.length === 0) {
             this.showError('Por favor, selecione pelo menos um arquivo para upload.');
@@ -787,27 +797,28 @@ class ConciliacaoBancaria {
             const result = await response.json();
             
             if (result.success) {
-                // Atualizar dados com a resposta da conciliação hierárquica
-                const responseData = result.data;
-                
-                // Processar dados_aberta (sistema) - estrutura direta sem .dados
-                if (responseData.dados_aberta) {
-                    this.dadosSistema = responseData.dados_aberta;
-                    this.dadosSistemaOriginais = responseData.dados_aberta;
-                }
-                
-                // Processar dados_banco - estrutura direta sem .dados
-                if (responseData.dados_banco) {
-                    this.dadosBanco = responseData.dados_banco;
-                    this.dadosBancoOriginais = responseData.dados_banco;
-                }
-                
-                // Renderizar dados atualizados
+                const responseData = result.data || {};
+
+                const dadosSistema = Array.isArray(responseData.dados_aberta) ? responseData.dados_aberta : [];
+                const dadosBanco = Array.isArray(responseData.dados_banco) ? responseData.dados_banco : [];
+
+                this.dadosSistemaOriginais = [...dadosSistema];
+                this.dadosSistema = [...dadosSistema];
+                this.dadosBancoOriginais = [...dadosBanco];
+                this.dadosBanco = [...dadosBanco];
+
+                this.statusResumo = responseData.status || null;
+                this.relatorioConciliacao = responseData.relatorio || null;
+
                 this.renderizarDados();
                 this.atualizarResumo();
-                
-                const stats = responseData.status;
-                this.showSuccess(`Conciliação automática concluída! ${stats.conciliados_automatico} conciliações automáticas realizadas.`);
+
+                if (this.statusResumo) {
+                    const stats = this.statusResumo;
+                    this.showSuccess(`Conciliação automática concluída! Conciliados: ${stats.conciliados_automatico} | Divergentes: ${stats.divergencias} | Pendentes: ${stats.pendentes_manual}`);
+                } else {
+                    this.showSuccess('Conciliação automática concluída!');
+                }
             } else {
                 this.showError(result.error || 'Erro na conciliação automática');
             }
@@ -923,20 +934,74 @@ class ConciliacaoBancaria {
     }
 
     showSuccess(message) {
-        // Implementar notificação de sucesso
-        console.log('Sucesso:', message);
-        alert('Sucesso: ' + message);
+        this.showNotification(message, 'success');
     }
 
     showError(message) {
-        // Implementar notificação de erro
-        console.error('Erro:', message);
-        alert('Erro: ' + message);
+        this.showNotification(message, 'error');
     }
 
-    atualizarResumo() {
-        // Implementar atualização do resumo
-        console.log('Atualizando resumo...');
+    showNotification(message, type = 'success') {
+        const bar = document.getElementById('notification-bar');
+        if (!bar) {
+            if (type === 'success') {
+                console.log('Sucesso:', message);
+            } else {
+                console.error('Erro:', message);
+            }
+            return;
+        }
+
+        bar.innerHTML = `
+            <i class="mdi ${type === 'success' ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline'}"></i>
+            <span>${message}</span>
+        `;
+        bar.classList.remove('success', 'error');
+        bar.classList.add(type);
+        bar.style.display = 'flex';
+
+        if (this.notificationTimeout) {
+            clearTimeout(this.notificationTimeout);
+        }
+
+        this.notificationTimeout = setTimeout(() => {
+            bar.style.display = 'none';
+        }, 6000);
+    }
+
+    atualizarResumo(status = this.statusResumo) {
+        const summaryWrapper = document.getElementById('status-summary');
+        const summaryText = document.getElementById('status-summary-text');
+
+        if (!summaryText) {
+            return;
+        }
+
+        if (!status) {
+            summaryText.textContent = 'Ferramenta automatizada para conciliação de extratos bancários';
+            if (summaryWrapper) {
+                summaryWrapper.classList.remove('has-summary');
+            }
+            return;
+        }
+
+        const conc = status.conciliados_automatico || 0;
+        const pend = status.pendentes_manual || 0;
+        const divg = status.divergencias || 0;
+        const taxa = status.taxa_conciliacao || 0;
+    const valorConciliado = status.valor_conciliado || 0;
+
+        summaryText.innerHTML = `
+            <span class="summary-chip chip-conciliado"><i class="mdi mdi-check-circle-outline"></i> Conciliados: <strong>${conc}</strong></span>
+            <span class="summary-chip chip-divergente"><i class="mdi mdi-alert-outline"></i> Divergentes: <strong>${divg}</strong></span>
+            <span class="summary-chip chip-pendente"><i class="mdi mdi-clock-outline"></i> Pendentes: <strong>${pend}</strong></span>
+            <span class="summary-chip chip-info"><i class="mdi mdi-chart-line"></i> Taxa: <strong>${taxa.toFixed(2)}%</strong></span>
+            <span class="summary-chip chip-info"><i class="mdi mdi-currency-brl"></i> Valor Conciliado: <strong>${this.formatarValor(valorConciliado)}</strong></span>
+        `;
+
+        if (summaryWrapper) {
+            summaryWrapper.classList.add('has-summary');
+        }
     }
 
     // Métodos aprimorados para funcionalidades implementadas
@@ -957,10 +1022,13 @@ class ConciliacaoBancaria {
             this.selecionadosSistema.clear();
             this.selecionadosBanco.clear();
             this.conciliacoes = [];
+            this.statusResumo = null;
+            this.relatorioConciliacao = null;
             this.renderizarDados();
             this.atualizarSomatorio();
             this.showSections([]);
             this.showSuccess('Dados limpos com sucesso!');
+            this.atualizarResumo(null);
         }
     }
 

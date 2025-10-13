@@ -17,6 +17,11 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from .bank_parser import BankFileParser  # Importa parser atualizado
+from .conciliacao_service import (
+    ConciliacaoService,
+    MovimentoBanco as MovimentoBancoDTO,
+    MovimentoSistema as MovimentoSistemaDTO
+)
 
 # Configurar blueprint
 # Configurar blueprint
@@ -1199,11 +1204,63 @@ def upload_arquivo_banco():
             }), 400
         
         # Extrair dados do resultado
-        banco_identificado = resultado.get('banco_identificado', 'desconhecido')
-        lancamentos = resultado.get('lancamentos', [])
-        
+        banco_identificado = resultado.get('banco_identificado') or resultado.get('codigo_banco') or 'desconhecido'
+        conta_identificada = resultado.get('conta') or resultado.get('info_adicional', {}).get('conta') or ''
+        banco_legivel = resultado.get('banco_nome') or resultado.get('banco') or banco_identificado
+        dados_brutos = resultado.get('lancamentos') or resultado.get('movimentos') or []
+
         logger.info(f"[UPLOAD] Banco identificado: {banco_identificado}")
-        logger.info(f"[UPLOAD] {len(lancamentos)} lançamentos processados")
+        logger.info(f"[UPLOAD] {len(dados_brutos)} lançamentos processados")
+
+        # Normalizar lançamentos para manter estrutura consistente
+        lancamentos = []
+        for idx, movimento in enumerate(dados_brutos):
+            item = dict(movimento)
+
+            # Garantir identificador único
+            if not item.get('id'):
+                item['id'] = f"{banco_identificado}_{uuid.uuid4().hex}"
+
+            # Normalizar datas para formato ISO (YYYY-MM-DD)
+            data_valor = item.get('data') or item.get('data_movimento') or item.get('data_lancamento')
+            if isinstance(data_valor, str) and '/' in data_valor:
+                try:
+                    data_obj = datetime.strptime(data_valor, '%d/%m/%Y')
+                    item['data'] = data_obj.strftime('%Y-%m-%d')
+                except ValueError:
+                    item['data'] = data_valor
+            elif data_valor:
+                item['data'] = str(data_valor)
+
+            # Garantir valor numérico
+            try:
+                item['valor'] = float(item.get('valor', 0))
+            except (TypeError, ValueError):
+                item['valor'] = 0.0
+
+            # Determinar tipo de movimento
+            tipo_movimento = (item.get('tipo') or item.get('tipo_movimento') or '').upper()
+            if tipo_movimento not in ['CREDITO', 'DEBITO']:
+                tipo_movimento = 'CREDITO' if item['valor'] >= 0 else 'DEBITO'
+            item['tipo'] = tipo_movimento
+
+            # Normalizar referências UN/US
+            ref_origem = item.get('ref_unique') or item.get('codigo_referencia') or item.get('descricao') or ''
+            ref_normalizada = processador.normalize_ref(ref_origem)
+            if ref_normalizada:
+                item['codigo_referencia'] = ref_normalizada
+            item['ref_unique_norm'] = ref_normalizada
+
+            # Enriquecer metadados do banco
+            item['banco_origem'] = banco_identificado
+            item['banco'] = banco_legivel
+            item['nome_banco'] = banco_legivel
+            item['conta'] = conta_identificada
+            item['numero_conta'] = item.get('numero_conta') or conta_identificada
+            item['linha_origem'] = item.get('linha_origem') or (idx + 1)
+            item['status'] = item.get('status', 'pendente').lower()
+
+            lancamentos.append(item)
 
         # Limpar arquivo temporário
         try:
@@ -1212,14 +1269,29 @@ def upload_arquivo_banco():
         except Exception as e:
             logger.warning(f"[UPLOAD] Erro ao remover arquivo temporário: {e}")
 
-        # Armazenar na sessão
-        session['movimentos_banco'] = lancamentos
+        # Armazenar na sessão e em arquivos temporários
+        session_id = session.get('session_id')
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+
         session['arquivo_processado'] = {
             'nome': filename,
             'banco': banco_identificado,
+            'banco_nome': banco_legivel,
+            'conta': conta_identificada,
             'total_registros': len(lancamentos),
             'data_upload': datetime.now().isoformat()
         }
+        session['registros_banco'] = len(lancamentos)
+        session['ultimo_upload_banco'] = {
+            'banco_identificado': banco_identificado,
+            'conta': conta_identificada,
+            'total_registros': len(lancamentos)
+        }
+
+        salvar_dados_temporarios(session_id, 'banco', lancamentos)
+        session.modified = True
 
         logger.info(f"[UPLOAD] Upload concluído com sucesso: {len(lancamentos)} lançamentos processados")
 
@@ -1229,6 +1301,8 @@ def upload_arquivo_banco():
             'data': {
                 'total_registros': len(lancamentos),
                 'banco_identificado': banco_identificado,
+                'banco_nome': banco_legivel,
+                'conta': conta_identificada,
                 'nome_arquivo': filename,
                 'lancamentos': lancamentos  # Retornar todos os lançamentos
             }
@@ -1333,6 +1407,8 @@ def movimentos_sistema():
             data_fim = hoje.strftime('%Y-%m-%d')
         
         logger.info(f"[CONCILIACAO] Filtros - Banco: {banco_filtro}, Data: {data_inicio} a {data_fim}")
+
+        processador = ProcessadorBancos()
         
         # Construir query base
         query = supabase.table('fin_conciliacao_movimentos').select(
@@ -1356,6 +1432,8 @@ def movimentos_sistema():
                 # Normalizar nome do banco para ficar igual aos identificadores OFX
                 nome_banco_original = item.get('nome_banco', 'N/A')
                 nome_banco_normalizado = normalizar_nome_banco(nome_banco_original)
+                ref_original = item.get('ref_unique') or ''
+                ref_normalizada = processador.normalize_ref(ref_original)
                 
                 movimento = {
                     'id': item.get('id'),
@@ -1367,11 +1445,28 @@ def movimentos_sistema():
                     'valor': float(item.get('valor', 0)),
                     'descricao': item.get('descricao') or 'Sem descrição',
                     'ref_unique': item.get('ref_unique'),
+                    'ref_unique_norm': ref_normalizada,
                     'status': item.get('status', 'PENDENTE').lower()
                 }
                 movimentos.append(movimento)
             
             logger.info(f"[CONCILIACAO] Encontrados {len(movimentos)} movimentos do sistema")
+
+            # Persistir dados para conciliação automática
+            session_id = session.get('session_id')
+            if not session_id:
+                session_id = str(uuid.uuid4())
+                session['session_id'] = session_id
+
+            session['registros_sistema'] = len(movimentos)
+            session['ultimo_carregamento_sistema'] = {
+                'banco': banco_filtro,
+                'data_inicio': data_inicio,
+                'data_fim': data_fim,
+                'total_registros': len(movimentos)
+            }
+            salvar_dados_temporarios(session_id, 'sistema', movimentos)
+            session.modified = True
             
             return jsonify({
                 'success': True,
@@ -1496,8 +1591,17 @@ def limpar_sessao():
             limpar_dados_temporarios(session_id)
             
         # Limpar dados da sessão
-        keys_to_remove = ['session_id', 'banco_identificado', 'arquivo_processado', 
-                         'registros_banco', 'registros_sistema', 'periodo_conciliacao']
+        keys_to_remove = [
+            'session_id',
+            'banco_identificado',
+            'arquivo_processado',
+            'registros_banco',
+            'registros_sistema',
+            'periodo_conciliacao',
+            'movimentos_sistema',
+            'movimentos_banco',
+            'resultado_conciliacao'
+        ]
         for key in keys_to_remove:
             session.pop(key, None)
             
@@ -1517,65 +1621,62 @@ def processar_conciliacao():
             logger.warning("[CONCILIACAO] Acesso negado - sem bypass ou autenticação")
             return jsonify({'error': 'Acesso negado'}), 403
         logger.info("[CONCILIACAO] Iniciando processamento de conciliação")
-        
-        # Carregar dados dos arquivos temporários em vez da sessão
+
         session_id = session.get('session_id')
-        if not session_id:
-            logger.error("[CONCILIACAO] Session ID não encontrado")
-            return jsonify({'success': False, 'error': 'Sessão inválida'})
-        
-        movimentos_sistema = carregar_dados_temporarios(session_id, 'sistema')
-        movimentos_banco = carregar_dados_temporarios(session_id, 'banco')
-        
-        logger.info(f"[CONCILIACAO] Dados carregados - Sistema: {len(movimentos_sistema)}, Banco: {len(movimentos_banco)}")
-        
+        movimentos_sistema = []
+        movimentos_banco = []
+
+        if session_id:
+            movimentos_sistema = carregar_dados_temporarios(session_id, 'sistema') or []
+            movimentos_banco = carregar_dados_temporarios(session_id, 'banco') or []
+
+        # Fallback para dados em sessão caso temporários estejam vazios
         if not movimentos_sistema:
-            logger.error("[CONCILIACAO] Movimentos do sistema não encontrados na sessão")
-            return jsonify({'success': False, 'error': 'Movimentos do sistema não encontrados'})
-        
+            movimentos_sistema = session.get('movimentos_sistema', [])
         if not movimentos_banco:
-            logger.warning("[CONCILIACAO] Movimentos bancários não encontrados na sessão")
-            return jsonify({'success': False, 'error': 'Movimentos bancários não encontrados'})
-        
-        # Processar conciliação automática
+            movimentos_banco = session.get('movimentos_banco', [])
+
+        if not session_id:
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+
+        logger.info(
+            "[CONCILIACAO] Dados carregados - Sistema: %s | Banco: %s",
+            len(movimentos_sistema),
+            len(movimentos_banco)
+        )
+
+        if not movimentos_sistema:
+            return jsonify({'success': False, 'error': 'Movimentos do sistema não encontrados'}), 400
+        if not movimentos_banco:
+            return jsonify({'success': False, 'error': 'Movimentos bancários não encontrados'}), 400
+
         resultado = executar_conciliacao_automatica(movimentos_sistema, movimentos_banco)
-        
-        # Salvar resultados na sessão
+        if resultado.get('erro'):
+            logger.error("[CONCILIACAO] Erro na conciliação: %s", resultado['erro'])
+            return jsonify({'success': False, 'error': resultado['erro']}), 500
+
         session['resultado_conciliacao'] = resultado
-        
-        logger.info(f"[CONCILIACAO] Conciliação processada: {resultado.get('conciliados_automatico', 0)} automáticos")
-        
-        # Retornar estrutura JSON conforme especificação
-        response_data = {
-            'dados_aberta': {
-                'conciliados': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'conciliado']),
-                'pendentes': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'pendente']),
-                'duplicados': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'duplicado']),
-                'divergentes': len([mov for mov in resultado.get('movimentos_sistema', []) if mov.get('status') == 'divergente']),
-                'dados': resultado.get('movimentos_sistema', [])
-            },
-            'dados_banco': {
-                'conciliados': len([mov for mov in resultado.get('movimentos_banco', []) if mov.get('status') == 'conciliado']),
-                'pendentes': len([mov for mov in resultado.get('movimentos_banco', []) if mov.get('status') == 'pendente']),
-                'duplicados': len([mov for mov in resultado.get('movimentos_banco', []) if mov.get('status') == 'duplicado']),
-                'dados': resultado.get('movimentos_banco', [])
-            },
-            'status': {
-                'total_sistema': len(resultado.get('movimentos_sistema', [])),
-                'total_banco': len(resultado.get('movimentos_banco', [])),
-                'conciliados_automatico': resultado.get('conciliados_automatico', 0),
-                'pendentes_manual': resultado.get('pendentes_manual', 0),
-                'divergencias': resultado.get('divergencias', 0),
-                'duplicatas': resultado.get('duplicatas', 0)
-            },
+
+        # Persistir datasets atualizados
+        salvar_dados_temporarios(session_id, 'sistema', movimentos_sistema)
+        salvar_dados_temporarios(session_id, 'banco', movimentos_banco)
+
+        response_payload = {
+            'dados_aberta': resultado.get('dados_aberta', []),
+            'dados_banco': resultado.get('dados_banco', []),
+            'status': resultado.get('status', {}),
+            'relatorio': resultado.get('relatorio'),
             'id_conciliacao': session_id,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        
-        return jsonify({
-            'success': True,
-            'data': response_data
-        })
+
+        logger.info(
+            "[CONCILIACAO] Conciliação concluída - %s registros conciliados",
+            resultado.get('status', {}).get('conciliados_automatico', 0)
+        )
+
+        return jsonify({'success': True, 'data': response_payload})
         
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro no processamento: {str(e)}")
@@ -1632,6 +1733,23 @@ def carregar_dados_temporarios(session_id, tipo):
     except Exception as e:
         logger.error(f"Erro ao carregar dados temporários {tipo}: {e}")
         return []
+
+
+def salvar_dados_temporarios(session_id, tipo, dados):
+    """Persiste dados de conciliação em arquivos temporários"""
+    try:
+        import tempfile
+        import pickle
+
+        temp_dir = tempfile.gettempdir()
+        arquivo = os.path.join(temp_dir, f"{tipo}_{session_id}.pkl")
+
+        with open(arquivo, 'wb') as handler:
+            pickle.dump(dados, handler, protocol=pickle.HIGHEST_PROTOCOL)
+
+        logger.debug(f"Dados temporários salvos: {arquivo} ({len(dados)} registros)")
+    except Exception as e:
+        logger.error(f"Erro ao salvar dados temporários {tipo}: {e}")
 
 def limpar_dados_temporarios(session_id):
     """Remove arquivos temporários da sessão"""
@@ -1891,273 +2009,194 @@ def identificar_banco(filename, df):
         return 'GENERICO'
 
 
-def executar_conciliacao_automatica(movimentos_sistema, movimentos_banco):
-    """
-    Executar conciliação automática conforme especificação hierárquica:
-    Passo 1: Match de Alta Precisão (data + valor + ref_unique_norm)
-    Passo 2: Match de Média Precisão (data + valor único)
-    Passo 3: Finalização (marcar duplicados e pendentes)
-    """
+def executar_conciliacao_automatica(movimentos_sistema_raw, movimentos_banco_raw):
+    """Executa conciliação automática utilizando ConciliacaoService."""
     try:
-        logger.info(f"[CONCILIACAO] Iniciando conciliação hierárquica - Sistema: {len(movimentos_sistema)}, Banco: {len(movimentos_banco)}")
-        
-        import uuid
-        from collections import defaultdict
-        
-        # Listas de trabalho (cópias para não modificar originais)
-        pendentes_sistema = list(movimentos_sistema)
-        pendentes_banco = list(movimentos_banco)
-        conciliados = []
-        
-        # ========== PASSO 1: MATCH DE ALTA PRECISÃO (data + valor + ref_unique_norm) ==========
-        logger.info("[CONCILIACAO] Passo 1: Match de Alta Precisão (data + valor + ref_unique_norm)")
-        
-        for mov_sistema in movimentos_sistema[:]:
-            if mov_sistema not in pendentes_sistema:
-                continue
-                
-            try:
-                # Dados do sistema
-                valor_sistema = float(mov_sistema.get('valor', 0))
-                data_sistema = mov_sistema.get('data_lancamento') or mov_sistema.get('data_movimento')
-                ref_norm_sistema = mov_sistema.get('ref_unique_norm')
-                
-                # Pular se não tem referência normalizada
-                if not ref_norm_sistema:
-                    continue
-                
-                # Converter data do sistema para comparação
+        logger.info(
+            "[CONCILIACAO] Iniciando conciliação - Sistema: %s registros | Banco: %s registros",
+            len(movimentos_sistema_raw),
+            len(movimentos_banco_raw)
+        )
+
+        if not movimentos_sistema_raw:
+            return {'erro': 'Nenhum movimento do sistema carregado'}
+        if not movimentos_banco_raw:
+            return {'erro': 'Nenhum movimento bancário carregado'}
+
+        service = ConciliacaoService()
+        processador = ProcessadorBancos()
+
+        banco_service_map = {
+            'banco_brasil': 'BANCO DO BRASIL',
+            'bb': 'BANCO DO BRASIL',
+            'banco do brasil': 'BANCO DO BRASIL',
+            'itau': 'ITAU',
+            'itaú': 'ITAU',
+            'banco itau': 'ITAU',
+            'santander': 'SANTANDER',
+            'banco santander': 'SANTANDER',
+            'bradesco': 'BRADESCO'
+        }
+
+        def mapear_banco(valor: str) -> str:
+            if not valor:
+                return 'DESCONHECIDO'
+            normalizado = normalizar_nome_banco(valor)
+            return banco_service_map.get(normalizado, valor.upper())
+
+        def garantir_iso(data_valor: str) -> str:
+            if not data_valor:
+                return ''
+            texto = str(data_valor)
+            if len(texto) >= 10 and texto[4] == '-' and texto[7] == '-':
+                return texto[:10]
+            if '/' in texto:
                 try:
-                    if '/' in data_sistema:
-                        data_sistema_obj = datetime.strptime(data_sistema, '%d/%m/%Y').date()
-                    else:
-                        data_sistema_obj = datetime.strptime(data_sistema, '%Y-%m-%d').date()
+                    return datetime.strptime(texto[:10], '%d/%m/%Y').strftime('%Y-%m-%d')
                 except ValueError:
-                    continue
-                
-                # Procurar match exato no banco
-                for mov_banco in movimentos_banco[:]:
-                    if mov_banco not in pendentes_banco:
-                        continue
-                        
-                    try:
-                        valor_banco = float(mov_banco.get('valor', 0))
-                        data_banco = mov_banco.get('data_lancamento') or mov_banco.get('data')
-                        ref_norm_banco = mov_banco.get('ref_unique_norm')
-                        
-                        # Verificar se tem referência normalizada
-                        if not ref_norm_banco:
-                            continue
-                        
-                        # Converter data do banco
-                        try:
-                            if '/' in data_banco:
-                                data_banco_obj = datetime.strptime(data_banco, '%d/%m/%Y').date()
-                            else:
-                                data_banco_obj = datetime.strptime(data_banco, '%Y-%m-%d').date()
-                        except ValueError:
-                            continue
-                        
-                        # MATCH EXATO: data + valor + ref_unique_norm
-                        if (data_sistema_obj == data_banco_obj and 
-                            abs(valor_sistema - valor_banco) < 0.01 and 
-                            ref_norm_sistema == ref_norm_banco):
-                            
-                            # Conciliação de Alta Precisão encontrada
-                            id_conciliacao = str(uuid.uuid4())
-                            
-                            # Atualizar status nos objetos
-                            mov_sistema['status'] = 'CONCILIADO_AUTO_REF'
-                            mov_sistema['id_conciliacao'] = id_conciliacao
-                            mov_banco['status'] = 'CONCILIADO_AUTO_REF'
-                            mov_banco['id_conciliacao'] = id_conciliacao
-                            
-                            conciliacao = {
-                                'id_conciliacao': id_conciliacao,
-                                'tipo': 'CONCILIADO_AUTO_REF',
-                                'sistema_id': mov_sistema.get('id'),
-                                'banco_id': mov_banco.get('id'),
-                                'sistema': mov_sistema,
-                                'banco': mov_banco,
-                                'data_conciliacao': datetime.now().isoformat(),
-                                'valor': valor_sistema,
-                                'criterios': 'data + valor + ref_unique_norm'
-                            }
-                            
-                            conciliados.append(conciliacao)
-                            
-                            # Remover das listas de pendentes
-                            pendentes_sistema.remove(mov_sistema)
-                            pendentes_banco.remove(mov_banco)
-                            
-                            logger.debug(f"[CONCILIACAO] Alta Precisão: {ref_norm_sistema} - R$ {valor_sistema}")
-                            break
-                    
-                    except Exception as banco_error:
-                        continue
-            
-            except Exception as sistema_error:
-                continue
-        
-        logger.info(f"[CONCILIACAO] Passo 1 concluído: {len(conciliados)} matches de alta precisão")
-        
-        # ========== PASSO 2: MATCH DE MÉDIA PRECISÃO (data + valor único) ==========
-        logger.info("[CONCILIACAO] Passo 2: Match de Média Precisão (data + valor)")
-        
-        # Agrupar pendentes por data+valor para identificar únicos
-        grupos_sistema = defaultdict(list)
-        grupos_banco = defaultdict(list)
-        
-        for mov in pendentes_sistema:
-            try:
-                valor = float(mov.get('valor', 0))
-                data = mov.get('data_lancamento') or mov.get('data_movimento')
-                
-                if '/' in data:
-                    data_obj = datetime.strptime(data, '%d/%m/%Y').date()
-                else:
-                    data_obj = datetime.strptime(data, '%Y-%m-%d').date()
-                
-                chave = (data_obj, valor)
-                grupos_sistema[chave].append(mov)
-            except:
-                continue
-        
-        for mov in pendentes_banco:
-            try:
-                valor = float(mov.get('valor', 0))
-                data = mov.get('data_lancamento') or mov.get('data')
-                
-                if '/' in data:
-                    data_obj = datetime.strptime(data, '%d/%m/%Y').date()
-                else:
-                    data_obj = datetime.strptime(data, '%Y-%m-%d').date()
-                
-                chave = (data_obj, valor)
-                grupos_banco[chave].append(mov)
-            except:
-                continue
-        
-        # Processar matches únicos (1 para 1)
-        for chave, lista_sistema in grupos_sistema.items():
-            if len(lista_sistema) == 1 and chave in grupos_banco and len(grupos_banco[chave]) == 1:
-                mov_sistema = lista_sistema[0]
-                mov_banco = grupos_banco[chave][0]
-                
-                # Match de Média Precisão encontrado
-                id_conciliacao = str(uuid.uuid4())
-                
-                # Atualizar status
-                mov_sistema['status'] = 'CONCILIADO_AUTO_VALOR'
-                mov_sistema['id_conciliacao'] = id_conciliacao
-                mov_banco['status'] = 'CONCILIADO_AUTO_VALOR'
-                mov_banco['id_conciliacao'] = id_conciliacao
-                
-                conciliacao = {
-                    'id_conciliacao': id_conciliacao,
-                    'tipo': 'CONCILIADO_AUTO_VALOR',
-                    'sistema_id': mov_sistema.get('id'),
-                    'banco_id': mov_banco.get('id'),
-                    'sistema': mov_sistema,
-                    'banco': mov_banco,
-                    'data_conciliacao': datetime.now().isoformat(),
-                    'valor': float(mov_sistema.get('valor', 0)),
-                    'criterios': 'data + valor (único)'
-                }
-                
-                conciliados.append(conciliacao)
-                
-                # Remover das listas de pendentes
-                if mov_sistema in pendentes_sistema:
-                    pendentes_sistema.remove(mov_sistema)
-                if mov_banco in pendentes_banco:
-                    pendentes_banco.remove(mov_banco)
-                
-                logger.debug(f"[CONCILIACAO] Média Precisão: {chave} - R$ {mov_sistema.get('valor', 0)}")
-        
-        logger.info(f"[CONCILIACAO] Passo 2 concluído: {len(conciliados)} matches total")
-        
-        # ========== PASSO 3: FINALIZAÇÃO (marcar duplicados e pendentes) ==========
-        logger.info("[CONCILIACAO] Passo 3: Finalização (duplicados e pendentes)")
-        
-        # Marcar registros com múltiplos candidatos como PENDENTE_DUPLICADO
-        for chave, lista_sistema in grupos_sistema.items():
-            if len(lista_sistema) > 1 or (chave in grupos_banco and len(grupos_banco[chave]) > 1):
-                for mov in lista_sistema:
-                    if mov.get('status') == 'PENDENTE':
-                        mov['status'] = 'PENDENTE_DUPLICADO'
-        
-        for chave, lista_banco in grupos_banco.items():
-            if len(lista_banco) > 1 or (chave in grupos_sistema and len(grupos_sistema[chave]) > 1):
-                for mov in lista_banco:
-                    if mov.get('status') == 'PENDENTE':
-                        mov['status'] = 'PENDENTE_DUPLICADO'
-        
-        # Marcar demais como PENDENTE
-        for mov in pendentes_sistema:
-            if mov.get('status') not in ['CONCILIADO_AUTO_REF', 'CONCILIADO_AUTO_VALOR', 'PENDENTE_DUPLICADO']:
-                mov['status'] = 'PENDENTE'
-        
-        for mov in pendentes_banco:
-            if mov.get('status') not in ['CONCILIADO_AUTO_REF', 'CONCILIADO_AUTO_VALOR', 'PENDENTE_DUPLICADO']:
-                mov['status'] = 'PENDENTE'
-        
-        # Calcular estatísticas finais
-        total_sistema = len(movimentos_sistema)
-        total_banco = len(movimentos_banco)
-        total_conciliados = len(conciliados)
-        
-        valor_sistema = sum(float(m.get('valor', 0)) for m in movimentos_sistema)
-        valor_banco = sum(float(m.get('valor', 0)) for m in movimentos_banco)
-        valor_conciliado = sum(float(c.get('valor', 0)) for c in conciliados)
-        
-        # Contar por status
-        status_counts_sistema = defaultdict(int)
-        status_counts_banco = defaultdict(int)
-        
-        for mov in movimentos_sistema:
-            status_counts_sistema[mov.get('status', 'PENDENTE')] += 1
-        
-        for mov in movimentos_banco:
-            status_counts_banco[mov.get('status', 'PENDENTE')] += 1
-        
-        resultado = {
+                    return texto
+            return texto
+
+        movimentos_sistema_objs: List[MovimentoSistemaDTO] = []
+        movimentos_banco_objs: List[MovimentoBancoDTO] = []
+        sistema_payload: List[Dict] = []
+        banco_payload: List[Dict] = []
+        sistema_index_map: Dict[int, int] = {}
+        banco_index_map: Dict[int, int] = {}
+
+        # Preparar movimentos do sistema
+        for movimento in movimentos_sistema_raw:
+            payload = dict(movimento)
+            payload['valor'] = float(payload.get('valor', 0) or 0)
+            payload['data_lancamento'] = garantir_iso(
+                payload.get('data_lancamento') or payload.get('data_movimento') or payload.get('data')
+            )
+            payload['status'] = payload.get('status', 'pendente').lower()
+
+            ref_norm = payload.get('ref_unique_norm')
+            if not ref_norm:
+                ref_norm = processador.normalize_ref(payload.get('ref_unique') or payload.get('descricao') or '')
+                payload['ref_unique_norm'] = ref_norm
+
+            tipo_lancamento = (payload.get('tipo_lancamento') or '').upper()
+            if tipo_lancamento not in ['RECEITA', 'DESPESA']:
+                tipo_lancamento = 'RECEITA' if payload['valor'] >= 0 else 'DESPESA'
+
+            banco_sistema = mapear_banco(payload.get('nome_banco_original') or payload.get('nome_banco'))
+
+            movimento_obj = MovimentoSistemaDTO(
+                id=str(payload.get('id')),
+                data_lancamento=payload['data_lancamento'],
+                nome_banco=banco_sistema,
+                numero_conta=str(payload.get('numero_conta') or ''),
+                tipo_lancamento=tipo_lancamento,
+                valor=payload['valor'],
+                descricao=payload.get('descricao', ''),
+                ref_unique=ref_norm or payload.get('ref_unique')
+            )
+
+            movimentos_sistema_objs.append(movimento_obj)
+            sistema_index_map[id(movimento_obj)] = len(sistema_payload)
+            sistema_payload.append(payload)
+
+        # Preparar movimentos bancários
+        for movimento in movimentos_banco_raw:
+            payload = dict(movimento)
+            payload['valor'] = float(payload.get('valor', 0) or 0)
+            payload['data'] = garantir_iso(payload.get('data') or payload.get('data_lancamento'))
+            payload['status'] = payload.get('status', 'pendente').lower()
+
+            ref_norm = payload.get('ref_unique_norm')
+            if not ref_norm:
+                ref_norm = processador.normalize_ref(
+                    payload.get('codigo_referencia') or payload.get('ref_unique') or payload.get('descricao') or ''
+                )
+                payload['ref_unique_norm'] = ref_norm
+
+            tipo_movimento = (payload.get('tipo') or payload.get('tipo_movimento') or '').upper()
+            if tipo_movimento not in ['CREDITO', 'DEBITO']:
+                tipo_movimento = 'CREDITO' if payload['valor'] >= 0 else 'DEBITO'
+            payload['tipo'] = tipo_movimento
+
+            banco_boleto = mapear_banco(payload.get('banco') or payload.get('banco_origem'))
+
+            movimento_obj = MovimentoBancoDTO(
+                data=payload['data'],
+                data_original=str(payload.get('data_original') or payload['data']),
+                descricao=payload.get('descricao') or payload.get('historico') or '',
+                valor=payload['valor'],
+                valor_original=str(payload.get('valor_original') or payload['valor']),
+                tipo=tipo_movimento,
+                codigo_referencia=ref_norm,
+                linha_origem=int(payload.get('linha_origem') or 0),
+                banco=banco_boleto,
+                conta=str(payload.get('conta') or payload.get('numero_conta') or '')
+            )
+
+            movimentos_banco_objs.append(movimento_obj)
+            banco_index_map[id(movimento_obj)] = len(banco_payload)
+            banco_payload.append(payload)
+
+        # Executar conciliação
+        resultados = service.conciliar_movimentos(movimentos_sistema_objs, movimentos_banco_objs)
+        relatorio = service.gerar_relatorio_conciliacao(resultados)
+
+        status_map = {
+            'CONCILIADO': 'conciliado',
+            'PARCIAL': 'divergente',
+            'NAO_CONCILIADO': 'pendente'
+        }
+
+        for resultado in resultados:
+            idx_sistema = sistema_index_map.get(id(resultado.movimento_sistema))
+            if idx_sistema is not None:
+                sistema_payload[idx_sistema]['status'] = status_map.get(resultado.status, 'pendente')
+                sistema_payload[idx_sistema]['match_score'] = round(resultado.score_match, 2)
+                sistema_payload[idx_sistema]['criterios'] = resultado.criterios_atendidos
+                sistema_payload[idx_sistema]['match_observacoes'] = resultado.observacoes
+
+            if resultado.movimento_banco:
+                idx_banco = banco_index_map.get(id(resultado.movimento_banco))
+                if idx_banco is not None:
+                    banco_payload[idx_banco]['status'] = status_map.get(resultado.status, 'pendente')
+                    banco_payload[idx_banco]['match_score'] = round(resultado.score_match, 2)
+                    banco_payload[idx_banco]['criterios'] = resultado.criterios_atendidos
+                    banco_payload[idx_banco]['match_observacoes'] = resultado.observacoes
+
+                if idx_banco is not None and idx_sistema is not None:
+                    banco_payload[idx_banco]['match_id_sistema'] = sistema_payload[idx_sistema].get('id')
+                    sistema_payload[idx_sistema]['match_id_banco'] = banco_payload[idx_banco].get('id')
+
+        # Estatísticas resumidas
+        total_sistema = len(sistema_payload)
+        total_banco = len(banco_payload)
+        conciliados = sum(1 for item in sistema_payload if item.get('status') == 'conciliado')
+        divergentes = sum(1 for item in sistema_payload if item.get('status') == 'divergente')
+        pendentes = sum(1 for item in sistema_payload if item.get('status') == 'pendente')
+
+        resumo_status = {
             'total_sistema': total_sistema,
-            'total_extratos': total_banco,
-            'conciliados_automatico': total_conciliados,
-            'pendentes_sistema': status_counts_sistema['PENDENTE'] + status_counts_sistema['PENDENTE_DUPLICADO'],
-            'pendentes_banco': status_counts_banco['PENDENTE'] + status_counts_banco['PENDENTE_DUPLICADO'],
-            'valor_sistema': valor_sistema,
-            'valor_extratos': valor_banco,
-            'valor_conciliado': valor_conciliado,
-            'conciliados': conciliados,
-            'movimentos_sistema': movimentos_sistema,  # Com status atualizados
-            'movimentos_banco': movimentos_banco,      # Com status atualizados
-            'status_detalhado': {
-                'sistema': dict(status_counts_sistema),
-                'banco': dict(status_counts_banco)
-            }
+            'total_banco': total_banco,
+            'conciliados_automatico': conciliados,
+            'pendentes_manual': divergentes + pendentes,
+            'divergencias': divergentes,
+            'duplicatas': 0,
+            'valor_total_sistema': sum(item.get('valor', 0) for item in sistema_payload),
+            'valor_total_banco': sum(item.get('valor', 0) for item in banco_payload),
+            'valor_conciliado': relatorio.get('valores', {}).get('valor_conciliado', 0),
+            'taxa_conciliacao': round((conciliados / total_sistema * 100), 2) if total_sistema else 0.0
         }
-        
-        logger.info(f"[CONCILIACAO] Conciliação hierárquica concluída:")
-        logger.info(f"  - Total conciliado: {total_conciliados}")
-        logger.info(f"  - CONCILIADO_AUTO_REF: {status_counts_sistema.get('CONCILIADO_AUTO_REF', 0)} sistema, {status_counts_banco.get('CONCILIADO_AUTO_REF', 0)} banco")
-        logger.info(f"  - CONCILIADO_AUTO_VALOR: {status_counts_sistema.get('CONCILIADO_AUTO_VALOR', 0)} sistema, {status_counts_banco.get('CONCILIADO_AUTO_VALOR', 0)} banco")
-        logger.info(f"  - PENDENTE_DUPLICADO: {status_counts_sistema.get('PENDENTE_DUPLICADO', 0)} sistema, {status_counts_banco.get('PENDENTE_DUPLICADO', 0)} banco")
-        logger.info(f"  - PENDENTE: {status_counts_sistema.get('PENDENTE', 0)} sistema, {status_counts_banco.get('PENDENTE', 0)} banco")
-        
-        return resultado
-        
-    except Exception as e:
-        logger.error(f"[CONCILIACAO] Erro na conciliação hierárquica: {str(e)}")
+
         return {
-            'total_sistema': 0,
-            'total_extratos': 0,
-            'conciliados_automatico': 0,
-            'pendentes_sistema': 0,
-            'pendentes_banco': 0,
-            'error': str(e)
+            'dados_aberta': sistema_payload,
+            'dados_banco': banco_payload,
+            'status': resumo_status,
+            'relatorio': relatorio
         }
+
+    except Exception as e:
+        logger.error(f"[CONCILIACAO] Erro na conciliação automática: {e}", exc_info=True)
+        return {'erro': str(e)}
 
 
 def executar_conciliacao_manual(sistema_ids, banco_ids):

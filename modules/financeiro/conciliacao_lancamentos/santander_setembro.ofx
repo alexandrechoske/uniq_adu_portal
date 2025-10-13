@@ -1,0 +1,2138 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+<OFX>
+    <SIGNONMSGSRSV1>
+        <SONRS>
+            <STATUS>
+                <CODE>0
+                <SEVERITY>INFO
+            </STATUS>
+            <DTSERVER>20251091781[-3:GMT]
+            <LANGUAGE>ENG
+            <FI>
+                <ORG>SANTANDER
+                <FID>SANTANDER
+            </FI>
+        </SONRS>
+    </SIGNONMSGSRSV1>
+    <BANKMSGSRSV1>
+        <STMTTRNRS>
+            <TRNUID>1
+            <STATUS>
+                <CODE>0
+                <SEVERITY>INFO
+            </STATUS>
+            <STMTRS>
+                <CURDEF>BRC
+                <BANKACCTFROM>
+                    <BANKID>033
+                    <ACCTID>4390130062442
+                    <ACCTTYPE>CHECKING
+                </BANKACCTFROM>
+                <BANKTRANLIST>
+                    <DTSTART>20250901000000[-3:GMT]
+                    <DTEND>20251009000000[-3:GMT]
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-31,16
+                        <FITID>0109202508363116
+                        <CHECKNUM>0109202508363116
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     TAIS GONCALVES DA S FIGUE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-450,00
+                        <FITID>08383264
+                        <CHECKNUM>08383264
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LUCAS VEXANI DA SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-192,90
+                        <FITID>01092025084119290
+                        <CHECKNUM>01092025084119290
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-4400,00
+                        <FITID>010920251400440000
+                        <CHECKNUM>010920251400440000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     TRANSTUSA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-80,00
+                        <FITID>0109202517468000
+                        <CHECKNUM>0109202517468000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ASSOC COM IND JOINVILLE -
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-37,50
+                        <FITID>0109202517523750
+                        <CHECKNUM>0109202517523750
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     DANIELLE FELLIPE DUARTE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-37,50
+                        <FITID>0109202517523750
+                        <CHECKNUM>0109202517523750
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ISABELA LEMOS FRANCELINA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-2,61
+                        <FITID>020920250356261
+                        <CHECKNUM>020920250356261
+                        <PAYEEID>0
+                        <MEMO>IOF IMPOSTO OPERACOES FINANCEIRAS     PERIODO: 01/08 A 31/08/25
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>-37,77
+                        <FITID>0209202503563777
+                        <CHECKNUM>0209202503563777
+                        <PAYEEID>0
+                        <MEMO>IOF ADICIONAL - AUTOMATICO     PERIODO: 01/08 A 31/08/25
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250901000000[-3:GMT]
+                        <TRNAMT>5269,44
+                        <FITID>020920250513526944
+                        <CHECKNUM>020920250513526944
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250902000000[-3:GMT]
+                        <TRNAMT>-25147,53
+                        <FITID>0209202511452514753
+                        <CHECKNUM>0209202511452514753
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250902000000[-3:GMT]
+                        <TRNAMT>-213,00
+                        <FITID>02092025144221300
+                        <CHECKNUM>02092025144221300
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     VALORIZA COMERCIO LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250902000000[-3:GMT]
+                        <TRNAMT>-357,00
+                        <FITID>02092025144235700
+                        <CHECKNUM>02092025144235700
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     JOINVILLE EXPRESS EMPREEN
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250902000000[-3:GMT]
+                        <TRNAMT>-462,88
+                        <FITID>17163723
+                        <CHECKNUM>17163723
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ADH HOTELARIA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250902000000[-3:GMT]
+                        <TRNAMT>26180,41
+                        <FITID>0309202503452618041
+                        <CHECKNUM>0309202503452618041
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250903000000[-3:GMT]
+                        <TRNAMT>-60,14
+                        <FITID>0309202513036014
+                        <CHECKNUM>0309202513036014
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     IFOOD COM AGENCIA DE REST
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250903000000[-3:GMT]
+                        <TRNAMT>-577,27
+                        <FITID>03092025184757727
+                        <CHECKNUM>03092025184757727
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250903000000[-3:GMT]
+                        <TRNAMT>-170,65
+                        <FITID>03092025191117065
+                        <CHECKNUM>03092025191117065
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     HOTEL PRINCIPE LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250903000000[-3:GMT]
+                        <TRNAMT>808,06
+                        <FITID>04092025052680806
+                        <CHECKNUM>04092025052680806
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250904000000[-3:GMT]
+                        <TRNAMT>-140,00
+                        <FITID>04092025134114000
+                        <CHECKNUM>04092025134114000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     KI LAVANDERIA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250904000000[-3:GMT]
+                        <TRNAMT>130000,00
+                        <FITID>04092025163213000000
+                        <CHECKNUM>04092025163213000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250904000000[-3:GMT]
+                        <TRNAMT>-670,20
+                        <FITID>04092025191667020
+                        <CHECKNUM>04092025191667020
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ICATU SEGUROS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250904000000[-3:GMT]
+                        <TRNAMT>-129189,80
+                        <FITID>05092025033912918980
+                        <CHECKNUM>05092025033912918980
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-115645,68
+                        <FITID>010905
+                        <CHECKNUM>010905
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:         45 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-543,85
+                        <FITID>05092025131354385
+                        <CHECKNUM>05092025131354385
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     JVPL PRODUTOS DE LIMPEZA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-8396,66
+                        <FITID>050920251313839666
+                        <CHECKNUM>050920251313839666
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     WELO ADMINISTRADORA DE BE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>25000,00
+                        <FITID>0509202513212500000
+                        <CHECKNUM>0509202513212500000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-600,00
+                        <FITID>05092025132760000
+                        <CHECKNUM>05092025132760000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LINDALVA DE LIMA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-6840,00
+                        <FITID>050920251328684000
+                        <CHECKNUM>050920251328684000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ALEXANDRE WOJCIECHOWSKI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-12000,00
+                        <FITID>13300005
+                        <CHECKNUM>13300005
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     JMP SERVICOS ADMINISTRATI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-8119,00
+                        <FITID>050920251406811900
+                        <CHECKNUM>050920251406811900
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CARLA REGINA PINHEIRO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>150000,00
+                        <FITID>05092025150715000000
+                        <CHECKNUM>05092025150715000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-150000,00
+                        <FITID>05092025151915000000
+                        <CHECKNUM>05092025151915000000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     UNIQUE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-2273,67
+                        <FITID>050920251530227367
+                        <CHECKNUM>050920251530227367
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ARC APOIO ADMINISTRATIVO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-4874,17
+                        <FITID>010905
+                        <CHECKNUM>010905
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:          1 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-84,70
+                        <FITID>0509202515398470
+                        <CHECKNUM>0509202515398470
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     BALKON TECNOLOGIA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>6000,00
+                        <FITID>050920251843600000
+                        <CHECKNUM>050920251843600000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>-541,55
+                        <FITID>05092025185054155
+                        <CHECKNUM>05092025185054155
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     MARIA CAROLINE LAURINDO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250905000000[-3:GMT]
+                        <TRNAMT>128919,28
+                        <FITID>06092025055912891928
+                        <CHECKNUM>06092025055912891928
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-4857,46
+                        <FITID>060920251100485746
+                        <CHECKNUM>060920251100485746
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>30000,00
+                        <FITID>0609202515543000000
+                        <CHECKNUM>0609202515543000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-2561,22
+                        <FITID>060920251557256122
+                        <CHECKNUM>060920251557256122
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     IBIS BUDGET TAMBORE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-7254,40
+                        <FITID>0000005650
+                        <CHECKNUM>0000005650
+                        <PAYEEID>0
+                        <MEMO>PREST. EMPREST/FINANC. C/ GARANTIA     PARC 002/048 860000005650
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-310,90
+                        <FITID>08092025120331090
+                        <CHECKNUM>08092025120331090
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     PAES E DOCES ECATARINA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-4980,00
+                        <FITID>080920251904498000
+                        <CHECKNUM>080920251904498000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     OST SISTEMAS LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-531,56
+                        <FITID>08092025190453156
+                        <CHECKNUM>08092025190453156
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ASSOC COM IND JOINVILLE -
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-2912,43
+                        <FITID>080920251904291243
+                        <CHECKNUM>080920251904291243
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     WELO ADMINISTRADORA DE BE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-1263,26
+                        <FITID>080920252008126326
+                        <CHECKNUM>080920252008126326
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ITAU UNIBANCO HOLDING S.A
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-230,00
+                        <FITID>08092025203723000
+                        <CHECKNUM>08092025203723000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     VALDINEI JOSE PEREIRA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250908000000[-3:GMT]
+                        <TRNAMT>-5098,77
+                        <FITID>090920250332509877
+                        <CHECKNUM>090920250332509877
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-850,40
+                        <FITID>09092025001885040
+                        <CHECKNUM>09092025001885040
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     PAGBRASIL
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-150,00
+                        <FITID>09092025104915000
+                        <CHECKNUM>09092025104915000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     FACEBOOK SERVICOS ONLINE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-212,50
+                        <FITID>09092025140721250
+                        <CHECKNUM>09092025140721250
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     GIDION TRANSPORTES E TURI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-490,68
+                        <FITID>09092025140949068
+                        <CHECKNUM>09092025140949068
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-389,67
+                        <FITID>09092025161538967
+                        <CHECKNUM>09092025161538967
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CEF MATRIZ
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>50000,00
+                        <FITID>0909202516295000000
+                        <CHECKNUM>0909202516295000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-19588,80
+                        <FITID>0909202516381958880
+                        <CHECKNUM>0909202516381958880
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-12809,02
+                        <FITID>0909202516431280902
+                        <CHECKNUM>0909202516431280902
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CEF MATRIZ
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-194,00
+                        <FITID>09092025173419400
+                        <CHECKNUM>09092025173419400
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     REA SOLUCOES EMPRESARIAIS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-620,51
+                        <FITID>09092025181862051
+                        <CHECKNUM>09092025181862051
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     CIA LATINO AMERICANA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-389,23
+                        <FITID>09092025191738923
+                        <CHECKNUM>09092025191738923
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     AIBR INSTITUICAO DE PAGAM
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250909000000[-3:GMT]
+                        <TRNAMT>-14305,19
+                        <FITID>1009202503341430519
+                        <CHECKNUM>1009202503341430519
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-440,14
+                        <FITID>10092025011444014
+                        <CHECKNUM>10092025011444014
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     AIBR INSTITUICAO DE PAGAM
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-1612,25
+                        <FITID>010910
+                        <CHECKNUM>010910
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:          3 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-174,80
+                        <FITID>10092025091917480
+                        <CHECKNUM>10092025091917480
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     JOINVIXBRASIL SERVICOS DE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-11000,00
+                        <FITID>1009202516221100000
+                        <CHECKNUM>1009202516221100000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     UNIQUE CONSULTORIA ADUANE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-2775,29
+                        <FITID>100920251631277529
+                        <CHECKNUM>100920251631277529
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ABERTA INFORMATICA LTDA -
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-1099,51
+                        <FITID>100920251631109951
+                        <CHECKNUM>100920251631109951
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     FLEXUS TELECOM LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-443,98
+                        <FITID>10092025163144398
+                        <CHECKNUM>10092025163144398
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     FLEXUS COMEX DESENVOLVIME
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-289,90
+                        <FITID>10092025163128990
+                        <CHECKNUM>10092025163128990
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SIM INTERNET PROVEDORES D
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-389,00
+                        <FITID>10092025163138900
+                        <CHECKNUM>10092025163138900
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SOLUCAO IDEAL TECNOLOGIA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-2586,07
+                        <FITID>100920251745258607
+                        <CHECKNUM>100920251745258607
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     R & A CONTABILIDADE LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-4865,75
+                        <FITID>100920251745486575
+                        <CHECKNUM>100920251745486575
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO     UNIMED DE JOINVILLE COOPE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-623,75
+                        <FITID>10092025174562375
+                        <CHECKNUM>10092025174562375
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     REDBOX REPRESENTACAO COME
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-4074,50
+                        <FITID>100920251745407450
+                        <CHECKNUM>100920251745407450
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     HENN TECNOLOGIA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>50000,00
+                        <FITID>1009202517495000000
+                        <CHECKNUM>1009202517495000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-5298,64
+                        <FITID>17510173
+                        <CHECKNUM>17510173
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-25191,44
+                        <FITID>1009202517552519144
+                        <CHECKNUM>1009202517552519144
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO     UNIMED DE JOINVILLE COOPE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-1000,00
+                        <FITID>100920251801100000
+                        <CHECKNUM>100920251801100000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SANDRO LUIZ SORDI DIAS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-2300,00
+                        <FITID>100920251803230000
+                        <CHECKNUM>100920251803230000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     51 304 601 FABIO ZEFERINO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-100,00
+                        <FITID>10092025180410000
+                        <CHECKNUM>10092025180410000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ASS DE PAIS E AMIGOS DOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>-400,00
+                        <FITID>10092025180840000
+                        <CHECKNUM>10092025180840000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     51 626 447 MAGNA TATIA DE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250910000000[-3:GMT]
+                        <TRNAMT>14665,02
+                        <FITID>1109202504261466502
+                        <CHECKNUM>1109202504261466502
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-480,00
+                        <FITID>11092025113848000
+                        <CHECKNUM>11092025113848000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LINDALVA DE LIMA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-700,00
+                        <FITID>11092025162970000
+                        <CHECKNUM>11092025162970000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LNPBR TECH
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-315,28
+                        <FITID>11092025163531528
+                        <CHECKNUM>11092025163531528
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     VR BENEFICIOS E SERV PROC
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-282,54
+                        <FITID>18113484
+                        <CHECKNUM>18113484
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ADH HOTELARIA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-1703,10
+                        <FITID>010911
+                        <CHECKNUM>010911
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:          1 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-2289,94
+                        <FITID>20590508
+                        <CHECKNUM>20590508
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     BANCO SANTANDER BRASIL S
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>-12425,51
+                        <FITID>20594847
+                        <CHECKNUM>20594847
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     BANCO SANTANDER BRASIL S
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250911000000[-3:GMT]
+                        <TRNAMT>5016,44
+                        <FITID>120920250515501644
+                        <CHECKNUM>120920250515501644
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>15000,00
+                        <FITID>1209202508261500000
+                        <CHECKNUM>1209202508261500000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>15000,00
+                        <FITID>1209202508321500000
+                        <CHECKNUM>1209202508321500000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-2036,00
+                        <FITID>120920250856203600
+                        <CHECKNUM>120920250856203600
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SANDRO LUIZ SORDI DIAS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-17649,64
+                        <FITID>1209202513531764964
+                        <CHECKNUM>1209202513531764964
+                        <PAYEEID>0
+                        <MEMO>PGTO TRIBUTOS MUNICIPAIS-CANAIS     INTERNET PM JOINVILLE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-259,90
+                        <FITID>12092025151525990
+                        <CHECKNUM>12092025151525990
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     TABUA E CONCEITO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-862,00
+                        <FITID>12092025180086200
+                        <CHECKNUM>12092025180086200
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     IPAG PAGAMENTOS DIGITAIS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>30000,00
+                        <FITID>1209202518063000000
+                        <CHECKNUM>1209202518063000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-260,00
+                        <FITID>12092025190226000
+                        <CHECKNUM>12092025190226000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     NOTEBOOK DOCTOR
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-50,00
+                        <FITID>1209202519025000
+                        <CHECKNUM>1209202519025000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-380,22
+                        <FITID>12092025190338022
+                        <CHECKNUM>12092025190338022
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     MARIA CAROLINE LAURINDO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-136,97
+                        <FITID>12092025190513697
+                        <CHECKNUM>12092025190513697
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ELISETE DE OLIVEIRA ARAUJ
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-548,90
+                        <FITID>12092025192554890
+                        <CHECKNUM>12092025192554890
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250912000000[-3:GMT]
+                        <TRNAMT>-24636,44
+                        <FITID>1309202506262463644
+                        <CHECKNUM>1309202506262463644
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>-1316,16
+                        <FITID>150920250019131616
+                        <CHECKNUM>150920250019131616
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     MAXMILHAS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>-64,00
+                        <FITID>1509202511066400
+                        <CHECKNUM>1509202511066400
+                        <PAYEEID>0
+                        <MEMO>DEBITO AUT. FAT.CARTAO MASTER CARD     FINAL 2295
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>-749,58
+                        <FITID>15092025195174958
+                        <CHECKNUM>15092025195174958
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     CELESC DISTRIBUICAO SA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>-362,84
+                        <FITID>15092025195136284
+                        <CHECKNUM>15092025195136284
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     UNIFIQUE TELECOMUNICACOES
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>-154,50
+                        <FITID>20051610
+                        <CHECKNUM>20051610
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LUCAS VEXANI DA SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>-103,12
+                        <FITID>16092025052510312
+                        <CHECKNUM>16092025052510312
+                        <PAYEEID>0
+                        <MEMO>JUROS SALDO UTILIZ ATE LIMITE     PERIODO: 15/08 A 14/09/25
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250915000000[-3:GMT]
+                        <TRNAMT>2750,20
+                        <FITID>160920250622275020
+                        <CHECKNUM>160920250622275020
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250916000000[-3:GMT]
+                        <TRNAMT>-70,00
+                        <FITID>1609202508447000
+                        <CHECKNUM>1609202508447000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     GRAFICA MOVA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250916000000[-3:GMT]
+                        <TRNAMT>-213,00
+                        <FITID>16092025084421300
+                        <CHECKNUM>16092025084421300
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     VALORIZA COMERCIO LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250916000000[-3:GMT]
+                        <TRNAMT>-540,00
+                        <FITID>16092025084454000
+                        <CHECKNUM>16092025084454000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     VALORIZA COMERCIO LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250916000000[-3:GMT]
+                        <TRNAMT>-18786,30
+                        <FITID>1609202510271878630
+                        <CHECKNUM>1609202510271878630
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250916000000[-3:GMT]
+                        <TRNAMT>19609,30
+                        <FITID>1709202505391960930
+                        <CHECKNUM>1709202505391960930
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250917000000[-3:GMT]
+                        <TRNAMT>-5,00
+                        <FITID>170920250933500
+                        <CHECKNUM>170920250933500
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     GRAFICA MOVA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250917000000[-3:GMT]
+                        <TRNAMT>5,00
+                        <FITID>180920250419500
+                        <CHECKNUM>180920250419500
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250918000000[-3:GMT]
+                        <TRNAMT>-15,09
+                        <FITID>1809202508171509
+                        <CHECKNUM>1809202508171509
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ARTEZAN MEGA PADARIA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250918000000[-3:GMT]
+                        <TRNAMT>-167,40
+                        <FITID>18092025114816740
+                        <CHECKNUM>18092025114816740
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     PREMIER ELETRICA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250918000000[-3:GMT]
+                        <TRNAMT>-50,00
+                        <FITID>1809202519305000
+                        <CHECKNUM>1809202519305000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250918000000[-3:GMT]
+                        <TRNAMT>232,49
+                        <FITID>19092025041823249
+                        <CHECKNUM>19092025041823249
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-50,00
+                        <FITID>010919
+                        <CHECKNUM>010919
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:          1 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-10938,51
+                        <FITID>1909202507201093851
+                        <CHECKNUM>1909202507201093851
+                        <PAYEEID>0
+                        <MEMO>PIX AGENDADO     CEF MATRIZ
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>100000,00
+                        <FITID>19092025080210000000
+                        <CHECKNUM>19092025080210000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-15412,76
+                        <FITID>2330624653
+                        <CHECKNUM>2330624653
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DARF EM CANAIS     INTERNET TRIBUTOS FEDERAI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-64436,60
+                        <FITID>2460624666
+                        <CHECKNUM>2460624666
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DARF EM CANAIS     INTERNET SIMPLES NACIONAL
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-588,00
+                        <FITID>19092025151858800
+                        <CHECKNUM>19092025151858800
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-1880,26
+                        <FITID>010919
+                        <CHECKNUM>010919
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:          2 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-600,00
+                        <FITID>19092025160860000
+                        <CHECKNUM>19092025160860000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LINDALVA DE LIMA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-48,00
+                        <FITID>1909202516114800
+                        <CHECKNUM>1909202516114800
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     TAIS GONCALVES DA S FIGUE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-51,40
+                        <FITID>16125673
+                        <CHECKNUM>16125673
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LUCAS VEXANI DA SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-749,02
+                        <FITID>19092025161474902
+                        <CHECKNUM>19092025161474902
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250919000000[-3:GMT]
+                        <TRNAMT>-5245,45
+                        <FITID>200920250456524545
+                        <CHECKNUM>200920250456524545
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250922000000[-3:GMT]
+                        <TRNAMT>-83,11
+                        <FITID>2209202508598311
+                        <CHECKNUM>2209202508598311
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     FLEXUS TELECOM LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250922000000[-3:GMT]
+                        <TRNAMT>-1554,00
+                        <FITID>220920250859155400
+                        <CHECKNUM>220920250859155400
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     REDBOX REPRESENTACAO COME
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250922000000[-3:GMT]
+                        <TRNAMT>-628,71
+                        <FITID>22092025085962871
+                        <CHECKNUM>22092025085962871
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     JVPL PRODUTOS DE LIMPEZA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250922000000[-3:GMT]
+                        <TRNAMT>-165,00
+                        <FITID>22092025110616500
+                        <CHECKNUM>22092025110616500
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     REA SOLUCOES EMPRESARIAIS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250922000000[-3:GMT]
+                        <TRNAMT>2430,82
+                        <FITID>230920250637243082
+                        <CHECKNUM>230920250637243082
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>-50,00
+                        <FITID>2309202509005000
+                        <CHECKNUM>2309202509005000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>-80,00
+                        <FITID>141420
+                        <CHECKNUM>141420
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DARF EM CANAIS     INTERNET TRIBUTOS FEDERAI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>30000,00
+                        <FITID>2309202514243000000
+                        <CHECKNUM>2309202514243000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>20000,00
+                        <FITID>2309202514432000000
+                        <CHECKNUM>2309202514432000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>-29711,02
+                        <FITID>2309202516142971102
+                        <CHECKNUM>2309202516142971102
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>-30402,70
+                        <FITID>2309202516253040270
+                        <CHECKNUM>2309202516253040270
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>6000,00
+                        <FITID>230920251657600000
+                        <CHECKNUM>230920251657600000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>-1499,00
+                        <FITID>230920251715149900
+                        <CHECKNUM>230920251715149900
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     PAGBRASIL
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250923000000[-3:GMT]
+                        <TRNAMT>4854,16
+                        <FITID>240920250328485416
+                        <CHECKNUM>240920250328485416
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250924000000[-3:GMT]
+                        <TRNAMT>-120,44
+                        <FITID>24092025082812044
+                        <CHECKNUM>24092025082812044
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     AMOR  CANELA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250924000000[-3:GMT]
+                        <TRNAMT>-49,90
+                        <FITID>2409202511424990
+                        <CHECKNUM>2409202511424990
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CACAU SHOW COSTA E SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250924000000[-3:GMT]
+                        <TRNAMT>-289,56
+                        <FITID>24092025114228956
+                        <CHECKNUM>24092025114228956
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     MUNICIPIO DE ITAJAI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250924000000[-3:GMT]
+                        <TRNAMT>-440,00
+                        <FITID>24092025161344000
+                        <CHECKNUM>24092025161344000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     22 326 667 CIBELE PINHO S
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250924000000[-3:GMT]
+                        <TRNAMT>-635,00
+                        <FITID>24092025200363500
+                        <CHECKNUM>24092025200363500
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250925000000[-3:GMT]
+                        <TRNAMT>-362,48
+                        <FITID>25092025075136248
+                        <CHECKNUM>25092025075136248
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     CONTABILISTA SUPR PARA ES
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250925000000[-3:GMT]
+                        <TRNAMT>30000,00
+                        <FITID>2509202508533000000
+                        <CHECKNUM>2509202508533000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250925000000[-3:GMT]
+                        <TRNAMT>-7474,00
+                        <FITID>250920251809747400
+                        <CHECKNUM>250920251809747400
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     BCO MERCEDES BENZ DO BRAS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250925000000[-3:GMT]
+                        <TRNAMT>-40,17
+                        <FITID>2509202518094017
+                        <CHECKNUM>2509202518094017
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO     SERASA SA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250925000000[-3:GMT]
+                        <TRNAMT>-19699,89
+                        <FITID>2609202503101969989
+                        <CHECKNUM>2609202503101969989
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250926000000[-3:GMT]
+                        <TRNAMT>-55,00
+                        <FITID>2609202512355500
+                        <CHECKNUM>2609202512355500
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CLIOMED
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250926000000[-3:GMT]
+                        <TRNAMT>-4025,00
+                        <FITID>260920251802402500
+                        <CHECKNUM>260920251802402500
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     GIDION TRANSPORTES E TURI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250926000000[-3:GMT]
+                        <TRNAMT>-600,00
+                        <FITID>26092025183860000
+                        <CHECKNUM>26092025183860000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LINDALVA DE LIMA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250926000000[-3:GMT]
+                        <TRNAMT>-10000,00
+                        <FITID>2609202520121000000
+                        <CHECKNUM>2609202520121000000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     UNIQUE CONSULTORIA ADUANE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250926000000[-3:GMT]
+                        <TRNAMT>14680,00
+                        <FITID>2709202503511468000
+                        <CHECKNUM>2709202503511468000
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-1308,53
+                        <FITID>290920250005130853
+                        <CHECKNUM>290920250005130853
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     DEMERGE BRASIL FACILITADO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-398,11
+                        <FITID>29092025002539811
+                        <CHECKNUM>29092025002539811
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EBANX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-179,88
+                        <FITID>29092025004417988
+                        <CHECKNUM>29092025004417988
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EBANX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-78,99
+                        <FITID>2909202514537899
+                        <CHECKNUM>2909202514537899
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     IFOOD COM AGENCIA DE REST
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-57,99
+                        <FITID>2909202514595799
+                        <CHECKNUM>2909202514595799
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     IFOOD COM AGENCIA DE REST
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-35,98
+                        <FITID>2909202515183598
+                        <CHECKNUM>2909202515183598
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     IFOOD COM AGENCIA DE REST
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-391,00
+                        <FITID>29092025182239100
+                        <CHECKNUM>29092025182239100
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ASSOC COM IND JOINVILLE -
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>-160,00
+                        <FITID>29092025182316000
+                        <CHECKNUM>29092025182316000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     QUASA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250929000000[-3:GMT]
+                        <TRNAMT>2610,48
+                        <FITID>300920250337261048
+                        <CHECKNUM>300920250337261048
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-260,00
+                        <FITID>30092025114126000
+                        <CHECKNUM>30092025114126000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     MAKYELE LUIZ PEREIRA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-133,50
+                        <FITID>30092025114413350
+                        <CHECKNUM>30092025114413350
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     TAIS GONCALVES DA S FIGUE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-274,50
+                        <FITID>30092025115127450
+                        <CHECKNUM>30092025115127450
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ELISETE DE OLIVEIRA ARAUJ
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-399,00
+                        <FITID>11523987
+                        <CHECKNUM>11523987
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LUCAS VEXANI DA SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-51,00
+                        <FITID>3009202511545100
+                        <CHECKNUM>3009202511545100
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-40,00
+                        <FITID>11581410
+                        <CHECKNUM>11581410
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LUCAS VEXANI DA SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-5,70
+                        <FITID>300920251159570
+                        <CHECKNUM>300920251159570
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     MARIA CAROLINE LAURINDO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-166,48
+                        <FITID>12011206
+                        <CHECKNUM>12011206
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LUCAS VEXANI DA SILVA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-670,20
+                        <FITID>30092025190167020
+                        <CHECKNUM>30092025190167020
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ICATU SEGUROS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>-1749,38
+                        <FITID>300920251901174938
+                        <CHECKNUM>300920251901174938
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20250930000000[-3:GMT]
+                        <TRNAMT>2409,44
+                        <FITID>011020250343240944
+                        <CHECKNUM>011020250343240944
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251001000000[-3:GMT]
+                        <TRNAMT>-80,00
+                        <FITID>0110202519058000
+                        <CHECKNUM>0110202519058000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ASSOC COM IND JOINVILLE -
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251001000000[-3:GMT]
+                        <TRNAMT>-1,46
+                        <FITID>021020250238146
+                        <CHECKNUM>021020250238146
+                        <PAYEEID>0
+                        <MEMO>IOF IMPOSTO OPERACOES FINANCEIRAS     PERIODO: 01/09 A 30/09/25
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251001000000[-3:GMT]
+                        <TRNAMT>-64,37
+                        <FITID>0210202502386437
+                        <CHECKNUM>0210202502386437
+                        <PAYEEID>0
+                        <MEMO>IOF ADICIONAL - AUTOMATICO     PERIODO: 01/09 A 30/09/25
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251002000000[-3:GMT]
+                        <TRNAMT>-324,80
+                        <FITID>02102025093532480
+                        <CHECKNUM>02102025093532480
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     JOINVIXBRASIL SERVICOS DE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251002000000[-3:GMT]
+                        <TRNAMT>20000,00
+                        <FITID>0210202509392000000
+                        <CHECKNUM>0210202509392000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251002000000[-3:GMT]
+                        <TRNAMT>-74,08
+                        <FITID>0210202512307408
+                        <CHECKNUM>0210202512307408
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251002000000[-3:GMT]
+                        <TRNAMT>-18114,97
+                        <FITID>0310202503171811497
+                        <CHECKNUM>0310202503171811497
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>-100,00
+                        <FITID>03102025090210000
+                        <CHECKNUM>03102025090210000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     QUASA LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>-445,01
+                        <FITID>03102025103344501
+                        <CHECKNUM>03102025103344501
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     RENTCARS LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>-600,00
+                        <FITID>03102025182360000
+                        <CHECKNUM>03102025182360000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LINDALVA DE LIMA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>-515,26
+                        <FITID>03102025182551526
+                        <CHECKNUM>03102025182551526
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     GILLIANE PEREIRA FERNANDE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>-42,89
+                        <FITID>0310202519034289
+                        <CHECKNUM>0310202519034289
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ELISETE DE OLIVEIRA ARAUJ
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>-7020,00
+                        <FITID>031020251904702000
+                        <CHECKNUM>031020251904702000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ALEXANDRE WOJCIECHOWSKI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251003000000[-3:GMT]
+                        <TRNAMT>8723,16
+                        <FITID>041020250342872316
+                        <CHECKNUM>041020250342872316
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-20,00
+                        <FITID>0510202512492000
+                        <CHECKNUM>0510202512492000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     G C PARTICIPACOES LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>130000,00
+                        <FITID>06102025085513000000
+                        <CHECKNUM>06102025085513000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-5471,29
+                        <FITID>061020250857547129
+                        <CHECKNUM>061020250857547129
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     SELMA CAMPOS DA COSTA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-12000,00
+                        <FITID>09022912
+                        <CHECKNUM>09022912
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     JMP SERVICOS ADMINISTRATI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-5000,00
+                        <FITID>061020250909500000
+                        <CHECKNUM>061020250909500000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     ARC APOIO ADMINISTRATIVO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-693,33
+                        <FITID>06102025100369333
+                        <CHECKNUM>06102025100369333
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     RENAN CAIO CABRAL
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-377,50
+                        <FITID>10173081
+                        <CHECKNUM>10173081
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     MONICA DA SILVA CORREA AB
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-273,34
+                        <FITID>06102025101927334
+                        <CHECKNUM>06102025101927334
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     RICARDO BILLIERI
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-1326,11
+                        <FITID>061020251028132611
+                        <CHECKNUM>061020251028132611
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     RAFAEL DA SILVA DE ALMEID
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-3717,17
+                        <FITID>061020251031371717
+                        <CHECKNUM>061020251031371717
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     LEONARDO GOES CATAO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-8119,00
+                        <FITID>061020251432811900
+                        <CHECKNUM>061020251432811900
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CARLA REGINA PINHEIRO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>50000,00
+                        <FITID>0610202515175000000
+                        <CHECKNUM>0610202515175000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-8396,66
+                        <FITID>061020251529839666
+                        <CHECKNUM>061020251529839666
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     WELO ADMINISTRADORA DE BE
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-4980,00
+                        <FITID>061020251529498000
+                        <CHECKNUM>061020251529498000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     OST SISTEMAS LTDA
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>-133294,21
+                        <FITID>011006
+                        <CHECKNUM>011006
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:         43 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251006000000[-3:GMT]
+                        <TRNAMT>3668,61
+                        <FITID>071020250334366861
+                        <CHECKNUM>071020250334366861
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>-20631,43
+                        <FITID>0710202510532063143
+                        <CHECKNUM>0710202510532063143
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>-531,56
+                        <FITID>07102025105553156
+                        <CHECKNUM>07102025105553156
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ASSOC COM IND JOINVILLE -
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>-50,00
+                        <FITID>0710202510555000
+                        <CHECKNUM>0710202510555000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>30000,00
+                        <FITID>0710202516433000000
+                        <CHECKNUM>0710202516433000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>-215,44
+                        <FITID>19061784
+                        <CHECKNUM>19061784
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     TAIS GONCALVES DA SILVA F
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>-17868,43
+                        <FITID>0710202521401786843
+                        <CHECKNUM>0710202521401786843
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     ITAU UNIBANCO HOLDING S.A
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251007000000[-3:GMT]
+                        <TRNAMT>5723,23
+                        <FITID>081020250340572323
+                        <CHECKNUM>081020250340572323
+                        <PAYEEID>0
+                        <MEMO>RESGATE CONTAMAX AUTOMATICO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-7254,40
+                        <FITID>0000005650
+                        <CHECKNUM>0000005650
+                        <PAYEEID>0
+                        <MEMO>PREST. EMPREST/FINANC. C/ GARANTIA     PARC 003/048 860000005650
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-3000,00
+                        <FITID>011008
+                        <CHECKNUM>011008
+                        <PAYEEID>0
+                        <MEMO>DEBITO PAGAMENTO DE SALARIO     PAGSAL:          1 PAGTOS
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-5000,00
+                        <FITID>081020250842500000
+                        <CHECKNUM>081020250842500000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-50,00
+                        <FITID>0810202509385000
+                        <CHECKNUM>0810202509385000
+                        <PAYEEID>0
+                        <MEMO>PAGAMENTO DE BOLETO OUTROS BANCOS     SWILE DO BRASIL S.A.
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>CREDIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>50000,00
+                        <FITID>0810202509415000000
+                        <CHECKNUM>0810202509415000000
+                        <PAYEEID>0
+                        <MEMO>PIX RECEBIDO     21598910000198
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-2824,37
+                        <FITID>081020250942282437
+                        <CHECKNUM>081020250942282437
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     EDGAR DO NASCIMENTO
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-17369,31
+                        <FITID>09452903
+                        <CHECKNUM>09452903
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     BANCO SANTANDER BRASIL S
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-250,00
+                        <FITID>08102025101725000
+                        <CHECKNUM>08102025101725000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     AMARILDO JOAO FURTADO 660
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-400,00
+                        <FITID>08102025101740000
+                        <CHECKNUM>08102025101740000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     53 649 082 ROBERTA MARTIN
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-1950,00
+                        <FITID>081020251017195000
+                        <CHECKNUM>081020251017195000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     CRISTIANE DELLA GUSTINA 0
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251008000000[-3:GMT]
+                        <TRNAMT>-8328,29
+                        <FITID>091020250306832829
+                        <CHECKNUM>091020250306832829
+                        <PAYEEID>0
+                        <MEMO>APLICACAO CONTAMAX
+                    </STMTTRN>
+                    <STMTTRN>
+                        <TRNTYPE>DEBIT
+                        <DTPOSTED>20251009000000[-3:GMT]
+                        <TRNAMT>-510,00
+                        <FITID>09102025093251000
+                        <CHECKNUM>09102025093251000
+                        <PAYEEID>0
+                        <MEMO>PIX ENVIADO     FABIO ZEFERINO RAMOS
+                    </STMTTRN>
+                </BANKTRANLIST>
+                <LEDGERBAL>
+                    <BALAMT>-510,00
+                    <DTASOF>20251091781[-3:GMT]
+                </LEDGERBAL>
+            </STMTRS>
+        </STMTTRNRS>
+    </BANKMSGSRSV1>
+</OFX>

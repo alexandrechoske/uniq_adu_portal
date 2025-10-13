@@ -39,8 +39,82 @@
     font-style: italic;
 }
 
+.filter-summary.has-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-style: normal;
+    align-items: center;
+    color: #37474f;
+}
+
+.summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: #f1f5f9;
+    color: #37474f;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.summary-chip i {
+    font-size: 1rem;
+}
+
+.chip-conciliado {
+    background: rgba(76, 175, 80, 0.12);
+    color: #2e7d32;
+}
+
+.chip-divergente {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ef6c00;
+}
+
+.chip-pendente {
+    background: rgba(96, 125, 139, 0.15);
+    color: #455a64;
+}
+
+.chip-info {
+    background: rgba(33, 150, 243, 0.12);
+    color: #1565c0;
+}
+
 .page-header {
     margin-bottom: 30px;
+}
+
+.notification-bar {
+    margin-bottom: 20px;
+    padding: 14px 18px;
+    border-radius: 6px;
+    border-left: 4px solid transparent;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+.notification-bar i {
+    font-size: 1.2rem;
+}
+
+.notification-bar.success {
+    background: rgba(76, 175, 80, 0.12);
+    border-left-color: #4caf50;
+    color: #1b5e20;
+}
+
+.notification-bar.error {
+    background: rgba(244, 67, 54, 0.12);
+    border-left-color: #f44336;
+    color: #c62828;
 }
 
 /* Seção de Upload */
