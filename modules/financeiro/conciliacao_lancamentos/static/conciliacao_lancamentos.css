@@ -415,16 +415,21 @@
     border-radius: 12px;
     padding: 25px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    position: sticky;
-    bottom: 20px;
-    z-index: 30;
+    position: fixed;
+    bottom: 24px;
+    left: 50px;
+    right: 50px;
+    max-width: 820px;
+    margin: 0 auto;
+    z-index: 1030;
 }
 
 .totals-display {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: 30px;
+    gap: 24px;
+    flex-wrap: wrap;
 }
 
 .total-item {
@@ -444,6 +449,12 @@
     font-size: 1.5rem;
     font-weight: 700;
     color: #2196f3;
+}
+
+.totals-display .btn {
+    min-width: 220px;
+    padding: 10px 16px;
+    align-self: stretch;
 }
 
 .validation-message {
@@ -660,5 +671,22 @@
     .tab-btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .conciliar-action {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        padding: 20px;
+    }
+
+    .totals-display {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .totals-display .btn {
+        width: 100%;
+        min-width: unset;
     }
 }
