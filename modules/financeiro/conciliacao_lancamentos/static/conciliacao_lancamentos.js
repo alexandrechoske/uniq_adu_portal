@@ -1277,8 +1277,106 @@ function gerarConciliacoesAutomaticas(lancamentosSistema, lancamentosBanco) {
     });
 
     const conciliacoes = [];
-    const combinacoesUsadas = new Set();
+    const usadosSistema = new Set();
+    const usadosBanco = new Set();
+    const tokensSistemaCache = new Map();
+    const tokensBancoCache = new Map();
 
+    const obterCacheKey = (item, prefixo) => {
+        if (!item) return `${prefixo}_undefined`;
+        if (item.id) return `${prefixo}_${item.id}`;
+        return `${prefixo}_${item.descricao || ''}_${item.valor || ''}_${item.data || ''}`;
+    };
+
+    const obterTokensSistema = (item) => {
+        const key = obterCacheKey(item, 's');
+        if (!tokensSistemaCache.has(key)) {
+            tokensSistemaCache.set(key, extrairTokensComparacao(item?.descricao || item?.descricao_original || item?.historico));
+        }
+        return tokensSistemaCache.get(key);
+    };
+
+    const obterTokensBanco = (item) => {
+        const key = obterCacheKey(item, 'b');
+        if (!tokensBancoCache.has(key)) {
+            tokensBancoCache.set(key, extrairTokensComparacao(item?.descricao || item?.historico));
+        }
+        return tokensBancoCache.get(key);
+    };
+
+    const registrarConciliacao = (itemSistema, itemBanco, tipo, criterios) => {
+        const valorTotal = Number.parseFloat(itemSistema?.valor ?? itemBanco?.valor ?? 0) || 0;
+        const dataConciliada = obterDataNormalizada(itemSistema) || obterDataNormalizada(itemBanco) || new Date().toISOString().split('T')[0];
+        conciliacoes.push({
+            id: gerarId(),
+            tipo,
+            data: dataConciliada,
+            valorTotal,
+            sistema: [itemSistema],
+            banco: [itemBanco],
+            criterios,
+            timestamp: new Date().toISOString()
+        });
+
+        usadosSistema.add(itemSistema.id);
+        usadosBanco.add(itemBanco.id);
+        itemSistema.status = 'conciliado';
+        itemBanco.status = 'conciliado';
+        itemSistema.match_id_banco = itemBanco.id;
+        itemBanco.match_id_sistema = itemSistema.id;
+    };
+
+    const chaveCodigoDataValor = (item) => {
+        const referencia = (item?.ref_unique || item?.codigo_referencia || item?.ref_unique_norm || '').toUpperCase().trim();
+        if (!referencia) return null;
+        const data = obterDataNormalizada(item);
+        if (!data) return null;
+        const valor = normalizarValorParaChave(item?.valor);
+        if (valor === null) return null;
+        return `${referencia}|${data}|${valor}`;
+    };
+
+    const chaveDataValor = (item) => {
+        const data = obterDataNormalizada(item);
+        if (!data) return null;
+        const valor = normalizarValorParaChave(item?.valor);
+        if (valor === null) return null;
+        return `${data}|${valor}`;
+    };
+
+    const chaveValor = (item) => {
+        const valor = normalizarValorParaChave(item?.valor);
+        if (valor === null) return null;
+        return valor;
+    };
+
+    const criarMapaBanco = (gerarChave) => {
+        const mapa = new Map();
+        lancamentosBanco.forEach(item => {
+            if (!item || usadosBanco.has(item.id)) return;
+            const chave = gerarChave(item);
+            if (!chave) return;
+            if (!mapa.has(chave)) {
+                mapa.set(chave, []);
+            }
+            mapa.get(chave).push(item);
+        });
+        return mapa;
+    };
+
+    const removerDoMapa = (mapa, chave, itemBanco) => {
+        if (!mapa || !mapa.has(chave)) return;
+        const lista = mapa.get(chave);
+        const index = lista.indexOf(itemBanco);
+        if (index !== -1) {
+            lista.splice(index, 1);
+            if (lista.length === 0) {
+                mapa.delete(chave);
+            }
+        }
+    };
+
+    // Passo 0 - conciliações já informadas pelo backend
     lancamentosSistema.forEach(item => {
         if (!item || item.status !== 'conciliado') {
             return;
@@ -1294,25 +1392,180 @@ function gerarConciliacoesAutomaticas(lancamentosSistema, lancamentosBanco) {
             return;
         }
 
-        const chave = `${item.id}|${matchIdBanco}`;
-        if (combinacoesUsadas.has(chave)) {
+        if (usadosSistema.has(item.id) || usadosBanco.has(bancoMatch.id)) {
             return;
         }
 
-        conciliacoes.push({
-            id: gerarId(),
-            tipo: definirTipoConciliacaoAutomatica(item.criterios || item.criterios_conciliacao),
-            data: item.data_lancamento || item.data || new Date().toISOString().split('T')[0],
-            valorTotal: parseFloat(item.valor || 0),
-            sistema: [item],
-            banco: [bancoMatch],
-            timestamp: new Date().toISOString()
+        const criteriosOriginais = Array.isArray(item.criterios) ? item.criterios : item.criterios_conciliacao;
+        registrarConciliacao(item, bancoMatch, definirTipoConciliacaoAutomatica(criteriosOriginais), criteriosOriginais || ['backend_match']);
+    });
+
+    // Passo 1 - Código + Data + Valor
+    const mapaCodigoDataValor = criarMapaBanco(chaveCodigoDataValor);
+    lancamentosSistema.forEach(item => {
+        if (!item || usadosSistema.has(item.id)) return;
+        const chave = chaveCodigoDataValor(item);
+        if (!chave) return;
+        const candidatos = mapaCodigoDataValor.get(chave);
+        if (!candidatos || candidatos.length !== 1) return;
+        const bancoItem = candidatos[0];
+        registrarConciliacao(item, bancoItem, 'auto_ref', ['codigo_data_valor']);
+        removerDoMapa(mapaCodigoDataValor, chave, bancoItem);
+    });
+
+    // Passo 2 - Data + Valor + Descrição aproximada
+    const mapaDataValorTokens = criarMapaBanco(chaveDataValor);
+    lancamentosSistema.forEach(item => {
+        if (!item || usadosSistema.has(item.id)) return;
+        const chave = chaveDataValor(item);
+        if (!chave) return;
+        const candidatos = mapaDataValorTokens.get(chave);
+        if (!candidatos || candidatos.length === 0) return;
+
+        const tokensSistema = obterTokensSistema(item);
+        if (!tokensSistema || tokensSistema.length === 0) return;
+
+        let melhor = null;
+        let intersecMax = 0;
+        let empate = false;
+
+        candidatos.forEach(candidate => {
+            if (usadosBanco.has(candidate.id)) return;
+            const tokensBanco = obterTokensBanco(candidate);
+            const intersec = contarIntersecao(tokensSistema, tokensBanco);
+            if (intersec > intersecMax) {
+                intersecMax = intersec;
+                melhor = candidate;
+                empate = false;
+            } else if (intersec !== 0 && intersec === intersecMax) {
+                empate = true;
+            }
         });
 
-        combinacoesUsadas.add(chave);
+        if (!melhor || intersecMax === 0 || empate) {
+            return;
+        }
+
+        registrarConciliacao(item, melhor, 'auto_valor', ['descricao_match', 'data_igual', 'valor_exato']);
+        removerDoMapa(mapaDataValorTokens, chave, melhor);
+    });
+
+    // Passo 3 - Data + Valor (nível mínimo)
+    const mapaDataValorMinimo = criarMapaBanco(chaveDataValor);
+    const contagemSistemaPorChave = new Map();
+    lancamentosSistema.forEach(item => {
+        if (!item || usadosSistema.has(item.id)) return;
+        const chave = chaveDataValor(item);
+        if (!chave) return;
+        contagemSistemaPorChave.set(chave, (contagemSistemaPorChave.get(chave) || 0) + 1);
+    });
+
+    lancamentosSistema.forEach(item => {
+        if (!item || usadosSistema.has(item.id)) return;
+        const chave = chaveDataValor(item);
+        if (!chave) return;
+        if ((contagemSistemaPorChave.get(chave) || 0) !== 1) return;
+        const candidatos = mapaDataValorMinimo.get(chave);
+        if (!candidatos || candidatos.length !== 1) return;
+        const bancoItem = candidatos[0];
+        registrarConciliacao(item, bancoItem, 'auto_valor', ['data_igual', 'valor_exato', 'nivel_minimo']);
+        removerDoMapa(mapaDataValorMinimo, chave, bancoItem);
+    });
+
+    // Passo 4 - Valor igual com data aproximada
+    const mapaValor = criarMapaBanco(chaveValor);
+    lancamentosSistema.forEach(item => {
+        if (!item || usadosSistema.has(item.id)) return;
+        const chaveValorItem = chaveValor(item);
+        if (!chaveValorItem) return;
+        const candidatos = mapaValor.get(chaveValorItem);
+        if (!candidatos || candidatos.length === 0) return;
+
+        const tokensSistema = obterTokensSistema(item);
+        if (!tokensSistema || tokensSistema.length === 0) return;
+
+        const dataSistema = obterDataNormalizada(item);
+        if (!dataSistema) return;
+
+        let melhor = null;
+        let intersecMax = 0;
+        let melhorDiff = Number.POSITIVE_INFINITY;
+        let empate = false;
+
+        candidatos.forEach(candidate => {
+            if (usadosBanco.has(candidate.id)) return;
+            const dataBanco = obterDataNormalizada(candidate);
+            const diffDias = diferencaDiasDatas(dataSistema, dataBanco);
+            if (diffDias === null || diffDias > 3) return;
+            const tokensBanco = obterTokensBanco(candidate);
+            const intersec = contarIntersecao(tokensSistema, tokensBanco);
+            if (intersec === 0) return;
+
+            if (intersec > intersecMax || (intersec === intersecMax && diffDias < melhorDiff)) {
+                intersecMax = intersec;
+                melhorDiff = diffDias;
+                melhor = candidate;
+                empate = false;
+            } else if (intersec === intersecMax && diffDias === melhorDiff) {
+                empate = true;
+            }
+        });
+
+        if (!melhor || intersecMax === 0 || melhorDiff === Number.POSITIVE_INFINITY || empate) {
+            return;
+        }
+
+        registrarConciliacao(item, melhor, 'auto_valor', ['data_aproximada', 'valor_exato', 'descricao_match']);
+        removerDoMapa(mapaValor, chaveValorItem, melhor);
     });
 
     return conciliacoes;
+}
+
+function diferencaDiasDatas(dataISO1, dataISO2) {
+    if (!dataISO1 || !dataISO2) return null;
+    const time1 = Date.parse(`${dataISO1}T00:00:00`);
+    const time2 = Date.parse(`${dataISO2}T00:00:00`);
+    if (Number.isNaN(time1) || Number.isNaN(time2)) return null;
+    const diffMs = Math.abs(time1 - time2);
+    return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+}
+
+function extrairTokensComparacao(texto) {
+    if (!texto) return [];
+    const normalizado = String(texto)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9\s]/g, ' ');
+    return normalizado
+        .split(/\s+/)
+        .filter(token => token.length >= 4 && !/^\d+$/.test(token));
+}
+
+function contarIntersecao(tokensA, tokensB) {
+    if (!Array.isArray(tokensA) || !Array.isArray(tokensB) || tokensA.length === 0 || tokensB.length === 0) {
+        return 0;
+    }
+    const setB = new Set(tokensB);
+    let count = 0;
+    tokensA.forEach(token => {
+        if (setB.has(token)) {
+            count += 1;
+        }
+    });
+    return count;
+}
+
+function normalizarValorParaChave(valor) {
+    const numero = Number.parseFloat(valor);
+    if (!Number.isFinite(numero)) return null;
+    return numero.toFixed(2);
+}
+
+function obterDataNormalizada(item) {
+    if (!item) return '';
+    return item.data || item.data_lancamento || item.data_movimento || item.data_referencia || '';
 }
 
 function definirTipoConciliacaoAutomatica(criterios) {
