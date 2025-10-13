@@ -260,6 +260,7 @@
    ======================================== */
 .workspace-section {
     margin-bottom: 30px;
+    padding-bottom: 140px;
 }
 
 .workspace-grid {
@@ -364,6 +365,48 @@
     border-top: 1px solid #dee2e6;
 }
 
+.card-footer .card-footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pagination-controls button {
+    border: 1px solid #2196f3;
+    background: white;
+    color: #2196f3;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-controls button:not(:disabled):hover {
+    background: #2196f3;
+    color: white;
+}
+
+.pagination-info {
+    font-size: 0.85rem;
+    color: #495057;
+    font-weight: 500;
+}
+
 /* ========================================
    CONCILIAÇÃO MANUAL
    ======================================== */
@@ -372,6 +415,9 @@
     border-radius: 12px;
     padding: 25px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: sticky;
+    bottom: 20px;
+    z-index: 30;
 }
 
 .totals-display {
@@ -418,6 +464,13 @@
     background: #e8f5e9;
     color: #2e7d32;
     border: 1px solid #66bb6a;
+}
+
+.workspace-section input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #2196f3;
 }
 
 /* ========================================

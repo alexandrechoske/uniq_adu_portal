@@ -30,7 +30,9 @@ const AppState = {
     ordenacaoBanco: { campo: 'data', ordem: 'desc' },
     buscaSistema: '',
     buscaBanco: '',
-    filtroBanco: ''
+    filtroBanco: '',
+    paginacaoSistema: { paginaAtual: 1, itensPorPagina: 100 },
+    paginacaoBanco: { paginaAtual: 1, itensPorPagina: 100 }
 };
 
 // ========================================
@@ -284,6 +286,8 @@ function processarResultados(responseData) {
     AppState.filtroBanco = '';
     AppState.ordenacaoSistema = { campo: 'data', ordem: 'desc' };
     AppState.ordenacaoBanco = { campo: 'data', ordem: 'desc' };
+    AppState.paginacaoSistema.paginaAtual = 1;
+    AppState.paginacaoBanco.paginaAtual = 1;
 
     const searchSistema = document.getElementById('searchSistema');
     const searchBanco = document.getElementById('searchBanco');
@@ -351,18 +355,29 @@ function renderizarTabelaSistema() {
     });
 
     const itensOrdenados = obterItensOrdenados(itensFiltrados, AppState.ordenacaoSistema);
+    const paginacao = AppState.paginacaoSistema;
+    const itensPorPagina = paginacao.itensPorPagina || 100;
+    const totalItens = itensOrdenados.length;
+    const totalPaginas = totalItens > 0 ? Math.ceil(totalItens / itensPorPagina) : 0;
+    const paginaAjustada = totalPaginas === 0 ? 1 : Math.min(Math.max(paginacao.paginaAtual || 1, 1), totalPaginas);
+    paginacao.paginaAtual = paginaAjustada;
 
-    if (itensOrdenados.length === 0) {
+    if (totalItens === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Nenhum lançamento pendente</td></tr>';
         document.getElementById('countSistema').textContent = '0';
         document.getElementById('totalSistema').textContent = 'R$ 0,00';
         const checkAll = document.getElementById('checkAllSistema');
         if (checkAll) checkAll.checked = false;
+        AppState.paginacaoSistema.paginaAtual = 1;
+        atualizarPaginacao('sistema', 0, 1);
         atualizarIndicadoresOrdenacao();
         return;
     }
 
-    tbody.innerHTML = itensOrdenados.map(item => {
+    const startIndex = (paginaAjustada - 1) * itensPorPagina;
+    const itensPagina = itensOrdenados.slice(startIndex, startIndex + itensPorPagina);
+
+    tbody.innerHTML = itensPagina.map(item => {
         const checked = AppState.sistemasSelecionados.has(item.id) ? 'checked' : '';
         const descricao = item.descricao || '-';
         return `
@@ -385,10 +400,11 @@ function renderizarTabelaSistema() {
 
     const checkAll = document.getElementById('checkAllSistema');
     if (checkAll) {
-        const todosSelecionados = itensOrdenados.length > 0 && itensOrdenados.every(item => AppState.sistemasSelecionados.has(item.id));
+        const todosSelecionados = itensPagina.length > 0 && itensPagina.every(item => AppState.sistemasSelecionados.has(item.id));
         checkAll.checked = todosSelecionados;
     }
 
+    atualizarPaginacao('sistema', totalPaginas, paginaAjustada);
     atualizarIndicadoresOrdenacao();
 }
 
@@ -415,18 +431,29 @@ function renderizarTabelaBanco() {
     });
 
     const itensOrdenados = obterItensOrdenados(itensFiltrados, AppState.ordenacaoBanco);
+    const paginacao = AppState.paginacaoBanco;
+    const itensPorPagina = paginacao.itensPorPagina || 100;
+    const totalItens = itensOrdenados.length;
+    const totalPaginas = totalItens > 0 ? Math.ceil(totalItens / itensPorPagina) : 0;
+    const paginaAjustada = totalPaginas === 0 ? 1 : Math.min(Math.max(paginacao.paginaAtual || 1, 1), totalPaginas);
+    paginacao.paginaAtual = paginaAjustada;
 
-    if (itensOrdenados.length === 0) {
+    if (totalItens === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Nenhum lançamento pendente</td></tr>';
         document.getElementById('countBanco').textContent = '0';
         document.getElementById('totalBanco').textContent = 'R$ 0,00';
         const checkAll = document.getElementById('checkAllBanco');
         if (checkAll) checkAll.checked = false;
+        AppState.paginacaoBanco.paginaAtual = 1;
+        atualizarPaginacao('banco', 0, 1);
         atualizarIndicadoresOrdenacao();
         return;
     }
 
-    tbody.innerHTML = itensOrdenados.map(item => {
+    const startIndex = (paginaAjustada - 1) * itensPorPagina;
+    const itensPagina = itensOrdenados.slice(startIndex, startIndex + itensPorPagina);
+
+    tbody.innerHTML = itensPagina.map(item => {
         const checked = AppState.bancosSelecionados.has(item.id) ? 'checked' : '';
         const descricao = item.descricao || item.historico || '-';
         return `
@@ -450,11 +477,56 @@ function renderizarTabelaBanco() {
 
     const checkAll = document.getElementById('checkAllBanco');
     if (checkAll) {
-        const todosSelecionados = itensOrdenados.length > 0 && itensOrdenados.every(item => AppState.bancosSelecionados.has(item.id));
+        const todosSelecionados = itensPagina.length > 0 && itensPagina.every(item => AppState.bancosSelecionados.has(item.id));
         checkAll.checked = todosSelecionados;
     }
 
+    atualizarPaginacao('banco', totalPaginas, paginaAjustada);
     atualizarIndicadoresOrdenacao();
+}
+
+// ========================================
+// PAGINAÇÃO DAS TABELAS
+// ========================================
+function atualizarPaginacao(tabela, totalPaginas, paginaAtual) {
+    const containerId = tabela === 'sistema' ? 'paginationSistema' : 'paginationBanco';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!totalPaginas || totalPaginas <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const anteriorDisabled = paginaAtual <= 1 ? 'disabled' : '';
+    const proximaDisabled = paginaAtual >= totalPaginas ? 'disabled' : '';
+
+    container.innerHTML = `
+        <button type="button" class="page-btn" data-page="${paginaAtual - 1}" ${anteriorDisabled}>Anterior</button>
+        <span class="pagination-info">Página ${paginaAtual} de ${totalPaginas}</span>
+        <button type="button" class="page-btn" data-page="${paginaAtual + 1}" ${proximaDisabled}>Próxima</button>
+    `;
+
+    container.querySelectorAll('button[data-page]').forEach(btn => {
+        if (btn.disabled) return;
+        btn.addEventListener('click', () => alterarPagina(tabela, Number(btn.dataset.page)));
+    });
+}
+
+function alterarPagina(tabela, novaPagina) {
+    if (!Number.isFinite(novaPagina) || novaPagina < 1) {
+        return;
+    }
+
+    if (tabela === 'sistema') {
+        if (AppState.paginacaoSistema.paginaAtual === novaPagina) return;
+        AppState.paginacaoSistema.paginaAtual = novaPagina;
+        renderizarTabelaSistema();
+    } else if (tabela === 'banco') {
+        if (AppState.paginacaoBanco.paginaAtual === novaPagina) return;
+        AppState.paginacaoBanco.paginaAtual = novaPagina;
+        renderizarTabelaBanco();
+    }
 }
 
 function gerarDetalhesConciliados(itens, origem) {
@@ -515,9 +587,15 @@ function renderizarTabelaConciliados() {
 
         const detalhesSistema = gerarDetalhesConciliados(grupo.sistema, 'sistema');
         const detalhesBanco = gerarDetalhesConciliados(grupo.banco, 'banco');
+        const bancosGrupo = Array.isArray(grupo.banco)
+            ? Array.from(new Set(grupo.banco
+                .map(item => item && (item.banco || item.banco_origem || ''))
+                .filter(Boolean)))
+            : [];
+        const bancosDataAttr = bancosGrupo.join(',');
 
         return `
-            <tr>
+            <tr data-tipo="${grupo.tipo}" data-bancos="${bancosDataAttr}">
                 <td>
                     <span class="badge ${tipoClass}">
                         <i class="mdi mdi-${tipoIcon}"></i> ${tipoLabel}
@@ -537,6 +615,8 @@ function renderizarTabelaConciliados() {
             </tr>
         `;
     }).join('');
+
+    filtrarConciliados();
 }
 
 // ========================================
@@ -714,6 +794,7 @@ function atualizarKPIs() {
 function filtrarTabelaSistema() {
     const input = document.getElementById('searchSistema');
     AppState.buscaSistema = input ? input.value.toLowerCase() : '';
+    AppState.paginacaoSistema.paginaAtual = 1;
     renderizarTabelaSistema();
 }
 
@@ -722,25 +803,50 @@ function filtrarTabelaBanco() {
     const selectBanco = document.getElementById('filtroBanco');
     AppState.buscaBanco = input ? input.value.toLowerCase() : '';
     AppState.filtroBanco = selectBanco ? selectBanco.value : '';
+    AppState.paginacaoBanco.paginaAtual = 1;
     renderizarTabelaBanco();
 }
 
 function filtrarConciliados() {
     const tipo = document.getElementById('filtroTipoConciliacao').value;
     const banco = document.getElementById('filtroBancoConciliados').value;
-    const termo = document.getElementById('searchConciliados').value.toLowerCase();
-    
-    const rows = document.querySelectorAll('#tableConciliados tr');
-    
+    const termo = document.getElementById('searchConciliados').value.toLowerCase().trim();
+
+    const rows = document.querySelectorAll('#tableConciliados tr[data-tipo]');
+    if (rows.length === 0) {
+        const emptyRow = document.getElementById('conciliados-empty-filter');
+        if (emptyRow) {
+            emptyRow.style.display = 'none';
+        }
+        return;
+    }
+    let algumVisivel = false;
+
     rows.forEach(row => {
-        if (row.querySelector('td[colspan]')) return; // Skip empty state
-        
-        const tipoMatch = !tipo || row.textContent.includes(tipo);
-        const bancoMatch = !banco; // TODO: implementar filtro de banco
+        const rowTipo = row.dataset.tipo || '';
+        const bancosDataset = row.dataset.bancos ? row.dataset.bancos.split(',').filter(Boolean) : [];
+        const tipoMatch = !tipo || rowTipo === tipo;
+        const bancoMatch = !banco || bancosDataset.includes(banco);
         const termoMatch = !termo || row.textContent.toLowerCase().includes(termo);
-        
-        row.style.display = (tipoMatch && bancoMatch && termoMatch) ? '' : 'none';
+
+        const visivel = tipoMatch && bancoMatch && termoMatch;
+        row.style.display = visivel ? '' : 'none';
+        if (visivel) algumVisivel = true;
     });
+
+    let emptyRow = document.getElementById('conciliados-empty-filter');
+    if (!algumVisivel) {
+        if (!emptyRow) {
+            emptyRow = document.createElement('tr');
+            emptyRow.id = 'conciliados-empty-filter';
+            emptyRow.innerHTML = '<td colspan="6" class="text-center text-muted py-4">Nenhuma conciliação encontrada com os filtros atuais</td>';
+            const tbody = document.getElementById('tableConciliados');
+            if (tbody) tbody.appendChild(emptyRow);
+        }
+        emptyRow.style.display = '';
+    } else if (emptyRow) {
+        emptyRow.style.display = 'none';
+    }
 }
 
 // ========================================
@@ -774,6 +880,8 @@ function limparSessao() {
     AppState.statusResumo = {};
     AppState.sistemasSelecionados.clear();
     AppState.bancosSelecionados.clear();
+    AppState.paginacaoSistema.paginaAtual = 1;
+    AppState.paginacaoBanco.paginaAtual = 1;
     
     document.getElementById('kpisSection').style.display = 'none';
     document.getElementById('workspace').style.display = 'none';
@@ -849,6 +957,8 @@ function prepararNovaSessaoProcessamento() {
     AppState.filtroBanco = '';
     AppState.ordenacaoSistema = { campo: 'data', ordem: 'desc' };
     AppState.ordenacaoBanco = { campo: 'data', ordem: 'desc' };
+    AppState.paginacaoSistema.paginaAtual = 1;
+    AppState.paginacaoBanco.paginaAtual = 1;
 
     ['searchSistema', 'searchBanco'].forEach(id => {
         const campo = document.getElementById(id);
@@ -1116,8 +1226,10 @@ function aplicarOrdenacao(tabela, campo) {
     }
 
     if (tabela === 'banco') {
+        AppState.paginacaoBanco.paginaAtual = 1;
         renderizarTabelaBanco();
     } else {
+        AppState.paginacaoSistema.paginaAtual = 1;
         renderizarTabelaSistema();
     }
 }
