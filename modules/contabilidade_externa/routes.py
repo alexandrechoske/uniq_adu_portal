@@ -30,6 +30,45 @@ def _is_password_hash(value: str) -> bool:
     return value.startswith("pbkdf2:") or value.startswith("scrypt:")
 
 
+def _formatar_evento(item: dict) -> dict:
+    """Normaliza o payload do histórico para consumo no portal externo."""
+    if not item:
+        return {}
+
+    evento = {key: value for key, value in item.items() if key != "senha_hash"}
+
+    colaborador_info = (item.get("colaborador") or {})
+    cargo_info = item.get("cargo") or {}
+    departamento_info = item.get("departamento") or {}
+    empresa_info = item.get("empresa") or {}
+
+    evento["colaborador"] = {
+        "id": colaborador_info.get("id"),
+        "nome_completo": colaborador_info.get("nome_completo"),
+        "cpf": colaborador_info.get("cpf"),
+        "matricula": colaborador_info.get("matricula"),
+        "email_corporativo": colaborador_info.get("email_corporativo"),
+        "data_nascimento": colaborador_info.get("data_nascimento"),
+        "pis_pasep": colaborador_info.get("pis_pasep"),
+    }
+
+    evento["cargo"] = cargo_info
+    evento["departamento"] = departamento_info
+    evento["empresa"] = empresa_info
+
+    evento["cargo_nome"] = cargo_info.get("nome_cargo")
+    evento["departamento_nome"] = departamento_info.get("nome_departamento")
+    evento["empresa_nome"] = empresa_info.get("razao_social")
+
+    evento["dados_adicionais"] = item.get("dados_adicionais_jsonb") or {}
+    evento.pop("dados_adicionais_jsonb", None)
+
+    evento["salario_mensal"] = evento.get("salario_mensal")
+    evento["status_contabilidade"] = evento.get("status_contabilidade") or "Pendente"
+
+    return evento
+
+
 def _contabilidade_autenticada() -> bool:
     """Check if the current session belongs to a logged in accounting user."""
     return session.get("contabilidade_autenticada") is True
@@ -42,7 +81,7 @@ def _coletar_pendencias():
             (
                 "*, "
                 "colaborador:rh_colaboradores!rh_historico_colaborador_colaborador_id_fkey("
-                "id, nome_completo, cpf, matricula, email_corporativo), "
+                "id, nome_completo, cpf, matricula, email_corporativo, data_nascimento, pis_pasep), "
                 "cargo:rh_cargos(nome_cargo), "
                 "departamento:rh_departamentos(nome_departamento), "
                 "empresa:rh_empresas(razao_social)"
@@ -53,31 +92,7 @@ def _coletar_pendencias():
         .execute()
 
     registros = response.data or []
-    pendencias = []
-    for item in registros:
-        pendencia = {key: value for key, value in item.items() if key != "senha_hash"}
-        colaborador_info = item.get("colaborador") or {}
-        cargo_info = item.get("cargo") or {}
-        departamento_info = item.get("departamento") or {}
-        empresa_info = item.get("empresa") or {}
-
-        pendencia.update({
-            "colaborador": {
-                "id": colaborador_info.get("id"),
-                "nome_completo": colaborador_info.get("nome_completo"),
-                "cpf": colaborador_info.get("cpf"),
-                "matricula": colaborador_info.get("matricula"),
-                "email_corporativo": colaborador_info.get("email_corporativo")
-            },
-            "cargo_nome": cargo_info.get("nome_cargo"),
-            "departamento_nome": departamento_info.get("nome_departamento"),
-            "empresa_nome": empresa_info.get("razao_social")
-        })
-        if not pendencia.get("status_contabilidade"):
-            pendencia["status_contabilidade"] = "Pendente"
-        pendencias.append(pendencia)
-
-    return pendencias
+    return [_formatar_evento(item) for item in registros]
 
 
 @contabilidade_externa_bp.route("/")
@@ -174,10 +189,13 @@ def pendencias():
         pendencias_data = []
         flash("Não foi possível carregar as pendências.", "error")
 
+    tipos_evento = sorted({item.get("tipo_evento") for item in pendencias_data if item.get("tipo_evento")})
+
     return render_template(
         "contabilidade_externa/portal_contabilidade.html",
         pendencias=pendencias_data,
-        usuario=session.get("contabilidade_nome")
+        usuario=session.get("contabilidade_nome"),
+        tipos_evento=tipos_evento
     )
 
 
@@ -193,7 +211,7 @@ def obter_evento(evento_id):
                 (
                     "*, "
                     "colaborador:rh_colaboradores!rh_historico_colaborador_colaborador_id_fkey("
-                    "id, nome_completo, cpf, matricula, email_corporativo), "
+                    "id, nome_completo, cpf, matricula, email_corporativo, data_nascimento, pis_pasep), "
                     "cargo:rh_cargos(nome_cargo), "
                     "departamento:rh_departamentos(nome_departamento), "
                     "empresa:rh_empresas(razao_social)"
@@ -209,17 +227,7 @@ def obter_evento(evento_id):
     if not response.data:
         return jsonify({"success": False, "message": "Evento não encontrado"}), 404
 
-    evento = response.data
-    payload = {key: value for key, value in evento.items() if key != "senha_hash"}
-    payload.update({
-        "colaborador": evento.get("colaborador"),
-        "cargo": evento.get("cargo"),
-        "departamento": evento.get("departamento"),
-        "empresa": evento.get("empresa")
-    })
-    if not payload.get("status_contabilidade"):
-        payload["status_contabilidade"] = "Pendente"
-
+    payload = _formatar_evento(response.data)
     return jsonify({"success": True, "data": payload})
 
 

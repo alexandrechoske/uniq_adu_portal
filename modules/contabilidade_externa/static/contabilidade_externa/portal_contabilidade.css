@@ -157,6 +157,64 @@ body.contabilidade-body {
     opacity: 0.4;
 }
 
+.filtros-pendencias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.filtros-pendencias .form-select,
+.filtros-pendencias .form-control {
+    min-width: 200px;
+}
+
+.info-section {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    background: #ffffff;
+}
+
+.info-section + .info-section {
+    margin-top: 1rem;
+}
+
+.info-section h6 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--unique-primary);
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.85rem 1.25rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+}
+
+.info-item strong {
+    font-size: 0.95rem;
+    color: #2c3e50;
+    word-break: break-word;
+}
+
 .detalhes-conteudo {
     display: grid;
     gap: 1rem;
@@ -217,5 +275,14 @@ body.contabilidade-body {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+    }
+
+    .filtros-pendencias {
+        flex-direction: column;
+    }
+
+    .filtros-pendencias .form-select,
+    .filtros-pendencias .form-control {
+        min-width: 100%;
     }
 }

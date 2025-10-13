@@ -273,6 +273,11 @@ def visualizar_colaborador(colaborador_id):
             .eq('colaborador_id', colaborador_id)\
             .order('data_evento', desc=True)\
             .execute()
+
+        historico_data = historico.data if historico.data else []
+        for evento in historico_data:
+            status_atual = (evento.get('status_contabilidade') or '').strip()
+            evento['status_contabilidade'] = status_atual or 'Pendente'
         
         # Buscar dados de candidatura (se houver)
         candidatura = None
@@ -292,7 +297,7 @@ def visualizar_colaborador(colaborador_id):
         return render_template(
             'colaboradores/visualizar_colaborador.html',
             colaborador=colab_response.data,
-            historico=historico.data if historico.data else [],
+            historico=historico_data,
             candidatura=candidatura
         )
     

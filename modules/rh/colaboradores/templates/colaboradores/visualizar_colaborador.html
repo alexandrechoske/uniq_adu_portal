@@ -261,6 +261,25 @@
                                 {% endif %}
                                 {{ evento.tipo_evento }}
                             </div>
+
+                            {% set status_label = evento.status_contabilidade or 'Pendente' %}
+                            {% set status_lower = status_label.lower() %}
+                            {% if 'conclu' in status_lower %}
+                                {% set badge_class = 'bg-success' %}
+                                {% set icon_class = 'mdi mdi-check-circle-outline' %}
+                            {% elif 'pend' in status_lower %}
+                                {% set badge_class = 'bg-warning text-dark' %}
+                                {% set icon_class = 'mdi mdi-timer-sand' %}
+                            {% else %}
+                                {% set badge_class = 'bg-secondary' %}
+                                {% set icon_class = 'mdi mdi-alert-circle-outline' %}
+                            {% endif %}
+                            <div class="timeline-status-contabilidade">
+                                <span class="badge {{ badge_class }} badge-status-contabilidade">
+                                    <i class="{{ icon_class }}"></i>
+                                    Contabilidade: {{ status_label }}
+                                </span>
+                            </div>
                             
                             <div class="row mt-2">
                                 {% if evento.cargo %}

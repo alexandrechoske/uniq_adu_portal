@@ -62,8 +62,31 @@
                         <p>Assim que o RH registrar novos eventos, eles aparecerão por aqui.</p>
                     </div>
                     {% else %}
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                    <div class="filtros-pendencias row g-3 align-items-end mb-4">
+                        <div class="col-md-4">
+                            <label for="filtroTipoEvento" class="form-label">Tipo de evento</label>
+                            <select id="filtroTipoEvento" class="form-select">
+                                <option value="">Todos</option>
+                                {% for tipo in tipos_evento %}
+                                <option value="{{ tipo }}">{{ tipo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="filtroBuscaPendencias" class="form-label">Buscar por colaborador, empresa ou CPF</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="mdi mdi-magnify"></i></span>
+                                <input type="text" id="filtroBuscaPendencias" class="form-control" placeholder="Digite para filtrar resultados">
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-md-end">
+                            <button class="btn btn-outline-secondary w-100 w-md-auto" id="btnLimparFiltros">
+                                <i class="mdi mdi-filter-remove"></i> Limpar filtros
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive" id="listaPendenciasWrapper">
+                        <table class="table table-hover align-middle" id="tabelaPendenciasContabilidade">
                             <thead class="table-light">
                                 <tr>
                                     <th>#</th>
@@ -71,6 +94,9 @@
                                     <th>CPF</th>
                                     <th>Tipo de Evento</th>
                                     <th>Data</th>
+                                    <th>Empresa</th>
+                                    <th>Departamento</th>
+                                    <th>Salário Atual</th>
                                     <th>Status</th>
                                     <th class="text-center">Ações</th>
                                 </tr>
@@ -78,7 +104,7 @@
                             <tbody>
                                 {% for evento in pendencias %}
                                 <tr data-evento-id="{{ evento.id }}"
-                                    data-evento="{{ evento | tojson | e }}">
+                                    data-evento='{{ evento | tojson | safe }}'>
                                     <td>{{ loop.index }}</td>
                                     <td>
                                         <strong>{{ evento.colaborador.nome_completo }}</strong><br>
@@ -87,6 +113,9 @@
                                     <td>{{ evento.colaborador.cpf or '-' }}</td>
                                     <td>{{ evento.tipo_evento }}</td>
                                     <td>{{ evento.data_evento[:10] if evento.data_evento else '-' }}</td>
+                                    <td>{{ evento.empresa_nome or '-' }}</td>
+                                    <td>{{ evento.departamento_nome or '-' }}</td>
+                                    <td>{{ evento.salario_mensal or '-' }}</td>
                                     <td>
                                         <span class="badge bg-warning text-dark">{{ evento.status_contabilidade }}</span>
                                     </td>
@@ -104,6 +133,9 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <div class="alert alert-info text-center mt-3" id="filtroSemResultados" style="display: none;">
+                            <i class="mdi mdi-filter"></i> Nenhum evento encontrado com os filtros aplicados.
+                        </div>
                     </div>
                     {% endif %}
                 </div>
