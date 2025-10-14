@@ -7,6 +7,7 @@ from extensions import supabase_admin
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
 from functools import wraps
+import json
 import os
 
 # Criar Blueprint
@@ -17,6 +18,47 @@ recrutamento_bp = Blueprint(
     template_folder='templates',
     static_folder='static'
 )
+
+TIPOS_CONTRATACAO_VALIDOS = {'CLT', 'PJ', 'Estágio'}
+REGIMES_TRABALHO_VALIDOS = {'Presencial', 'Híbrido', 'Remoto'}
+
+
+def _texto_obrigatorio(valor):
+    return (valor or '').strip()
+
+
+def _texto_opcional(valor):
+    texto = (valor or '').strip()
+    return texto or None
+
+
+def _numero_float(valor):
+    try:
+        if valor in (None, ''):
+            return None
+        return float(valor)
+    except (TypeError, ValueError):
+        return None
+
+
+def _numero_int(valor, default=None):
+    try:
+        if valor in (None, ''):
+            return default
+        return int(valor)
+    except (TypeError, ValueError):
+        return default
+
+
+def _serializar_beneficios(valor):
+    if not valor:
+        return None
+    if isinstance(valor, list):
+        return json.dumps(valor, ensure_ascii=False)
+    if isinstance(valor, str):
+        texto = valor.strip()
+        return texto or None
+    return None
 
 def check_api_bypass():
     """Verifica se a requisição tem a chave de bypass de API"""
@@ -55,10 +97,13 @@ def gestao_vagas():
     try:
         print("\n1️⃣ Buscando vagas...")
         # Buscar todas as vagas
-        vagas_response = supabase_admin.table('rh_vagas')\
-            .select('*')\
-            .order('data_abertura', desc=True)\
+        vagas_response = (
+            supabase_admin
+            .table('rh_vagas')
+            .select('*')
+            .order('data_abertura', desc=True)
             .execute()
+        )
         
         vagas = vagas_response.data if vagas_response.data else []
         print(f"   ✅ {len(vagas)} vaga(s) encontrada(s)")
@@ -67,20 +112,38 @@ def gestao_vagas():
         total_vagas = len(vagas)
         vagas_abertas = len([v for v in vagas if v.get('status') == 'Aberta'])
         vagas_fechadas = len([v for v in vagas if v.get('status') == 'Fechada'])
-        total_candidatos_geral = 0
         
-        # Contar candidatos para cada vaga (com tratamento de erro)
-        for vaga in vagas:
-            try:
-                candidatos_response = supabase_admin.table('rh_candidatos')\
-                    .select('id', count='exact')\
-                    .eq('vaga_id', vaga['id'])\
-                    .execute()
-                
-                vaga['total_candidatos'] = candidatos_response.count if candidatos_response.count else 0
+        # 🚀 OTIMIZAÇÃO: Buscar TODOS os candidatos de uma vez (1 requisição ao invés de N)
+        print("\n   🚀 Buscando candidatos (requisição única otimizada)...")
+        try:
+            todos_candidatos_response = (
+                supabase_admin
+                .table('rh_candidatos')
+                .select('vaga_id')
+                .execute()
+            )
+            
+            # Agrupar candidatos por vaga_id em memória (processamento local = rápido)
+            candidatos_por_vaga = {}
+            for candidato in (todos_candidatos_response.data or []):
+                vaga_id = candidato.get('vaga_id')
+                if vaga_id:
+                    candidatos_por_vaga[vaga_id] = candidatos_por_vaga.get(vaga_id, 0) + 1
+            
+            print(f"   ✅ Total de candidatos encontrados: {len(todos_candidatos_response.data or [])}")
+            print(f"   ✅ Distribuídos em {len(candidatos_por_vaga)} vagas")
+            
+            # Associar contagens às vagas
+            total_candidatos_geral = 0
+            for vaga in vagas:
+                vaga['total_candidatos'] = candidatos_por_vaga.get(vaga['id'], 0)
                 total_candidatos_geral += vaga['total_candidatos']
-            except Exception as e:
-                print(f"   ⚠️ Erro ao contar candidatos da vaga {vaga.get('titulo')}: {str(e)}")
+            
+        except Exception as e:
+            print(f"   ⚠️ Erro ao buscar candidatos: {str(e)}")
+            # Fallback: zerar contagens
+            total_candidatos_geral = 0
+            for vaga in vagas:
                 vaga['total_candidatos'] = 0
         
         # Calcular média de candidatos por vaga
@@ -268,36 +331,68 @@ def api_get_vaga(vaga_id):
 def api_create_vaga():
     """API: Criar nova vaga"""
     try:
-        data = request.get_json()
-        
-        # Validações
-        titulo = data.get('titulo', '').strip()
+        data = request.get_json(silent=True) or {}
+
+        titulo = _texto_obrigatorio(data.get('titulo'))
         if not titulo:
             return jsonify({'success': False, 'message': 'Título da vaga é obrigatório'}), 400
-        
-        cargo_id = data.get('cargo_id', '').strip()
+
+        cargo_id = _texto_obrigatorio(data.get('cargo_id'))
         if not cargo_id:
             return jsonify({'success': False, 'message': 'Cargo é obrigatório'}), 400
-        
-        descricao = data.get('descricao', '').strip()
+
+        descricao = _texto_obrigatorio(data.get('descricao'))
         if not descricao:
             return jsonify({'success': False, 'message': 'Descrição é obrigatória'}), 400
-        
-        requisitos = data.get('requisitos', '').strip()
-        if not requisitos:
-            return jsonify({'success': False, 'message': 'Requisitos são obrigatórios'}), 400
-        
-        # Criar vaga
+
+        requisitos_obrigatorios = _texto_obrigatorio(
+            data.get('requisitos_obrigatorios') or data.get('requisitos')
+        )
+        if not requisitos_obrigatorios:
+            return jsonify({'success': False, 'message': 'Requisitos obrigatórios são necessários'}), 400
+
+        requisitos_desejaveis = _texto_opcional(data.get('requisitos_desejaveis'))
+        diferenciais = _texto_opcional(data.get('diferenciais'))
+        localizacao = _texto_opcional(data.get('localizacao'))
+
+        tipo_contratacao = _texto_obrigatorio(data.get('tipo_contratacao') or 'CLT')
+        if tipo_contratacao not in TIPOS_CONTRATACAO_VALIDOS:
+            tipo_contratacao = 'CLT'
+
+        faixa_salarial_min = _numero_float(data.get('faixa_salarial_min'))
+        faixa_salarial_max = _numero_float(data.get('faixa_salarial_max'))
+        beneficios = _serializar_beneficios(data.get('beneficios'))
+        nivel_senioridade = _texto_opcional(data.get('nivel_senioridade'))
+        quantidade_vagas = _numero_int(data.get('quantidade_vagas'), default=1)
+        if quantidade_vagas is None or quantidade_vagas <= 0:
+            quantidade_vagas = 1
+        regime_trabalho = _texto_opcional(data.get('regime_trabalho'))
+        if regime_trabalho and regime_trabalho not in REGIMES_TRABALHO_VALIDOS:
+            regime_trabalho = None
+        carga_horaria = _texto_opcional(data.get('carga_horaria'))
+
         vaga_data = {
             'titulo': titulo,
             'cargo_id': cargo_id,
             'descricao': descricao,
-            'requisitos': requisitos,
-            'localizacao': data.get('localizacao', '').strip() or None,
-            'tipo_contratacao': data.get('tipo_contratacao', '').strip() or 'CLT',
-            'status': 'Aberta'
+            'requisitos_obrigatorios': requisitos_obrigatorios,
+            'requisitos_desejaveis': requisitos_desejaveis,
+            'diferenciais': diferenciais,
+            'localizacao': localizacao,
+            'tipo_contratacao': tipo_contratacao,
+            'status': 'Aberta',
+            'beneficios': beneficios,
+            'nivel_senioridade': nivel_senioridade,
+            'quantidade_vagas': quantidade_vagas,
+            'regime_trabalho': regime_trabalho,
+            'carga_horaria': carga_horaria
         }
-        
+
+        if faixa_salarial_min is not None:
+            vaga_data['faixa_salarial_min'] = faixa_salarial_min
+        if faixa_salarial_max is not None:
+            vaga_data['faixa_salarial_max'] = faixa_salarial_max
+
         response = supabase_admin.table('rh_vagas').insert(vaga_data).execute()
         
         if response.data:
@@ -331,28 +426,78 @@ def api_update_vaga(vaga_id):
         if not check_response.data or len(check_response.data) == 0:
             return jsonify({'success': False, 'message': 'Vaga não encontrada'}), 404
         
+        vaga_existente = check_response.data[0]
+        
         # Atualizar vaga
         update_data = {}
         if 'titulo' in data:
-            titulo = data['titulo'].strip()
+            titulo = _texto_obrigatorio(data.get('titulo'))
             if titulo:
                 update_data['titulo'] = titulo
-        
+
         if 'cargo_id' in data:
-            update_data['cargo_id'] = data['cargo_id']
-        
+            cargo_id = _texto_obrigatorio(data.get('cargo_id'))
+            if cargo_id:
+                update_data['cargo_id'] = cargo_id
+
         if 'descricao' in data:
-            update_data['descricao'] = data['descricao'].strip()
-        
-        if 'requisitos' in data:
-            update_data['requisitos'] = data['requisitos'].strip()
-        
+            descricao = _texto_obrigatorio(data.get('descricao'))
+            if descricao:
+                update_data['descricao'] = descricao
+
+        if 'requisitos_obrigatorios' in data or 'requisitos' in data:
+            novos_requisitos = data.get('requisitos_obrigatorios')
+            if novos_requisitos is None:
+                novos_requisitos = data.get('requisitos')
+            novos_requisitos = _texto_obrigatorio(novos_requisitos)
+            if not novos_requisitos:
+                return jsonify({'success': False, 'message': 'Requisitos obrigatórios não podem ficar em branco'}), 400
+            update_data['requisitos_obrigatorios'] = novos_requisitos
+
+        if 'requisitos_desejaveis' in data and 'requisitos_desejaveis' in vaga_existente:
+            update_data['requisitos_desejaveis'] = _texto_opcional(data.get('requisitos_desejaveis'))
+
+        if 'diferenciais' in data and 'diferenciais' in vaga_existente:
+            update_data['diferenciais'] = _texto_opcional(data.get('diferenciais'))
+
         if 'localizacao' in data:
-            update_data['localizacao'] = data['localizacao'].strip() or None
-        
+            update_data['localizacao'] = _texto_opcional(data.get('localizacao'))
+
         if 'tipo_contratacao' in data:
-            update_data['tipo_contratacao'] = data['tipo_contratacao'].strip()
-        
+            tipo_contratacao = _texto_obrigatorio(data.get('tipo_contratacao'))
+            if tipo_contratacao not in TIPOS_CONTRATACAO_VALIDOS:
+                tipo_contratacao = 'CLT'
+            update_data['tipo_contratacao'] = tipo_contratacao
+
+        if 'faixa_salarial_min' in data and 'faixa_salarial_min' in vaga_existente:
+            faixa_min = _numero_float(data.get('faixa_salarial_min'))
+            update_data['faixa_salarial_min'] = faixa_min
+
+        if 'faixa_salarial_max' in data and 'faixa_salarial_max' in vaga_existente:
+            faixa_max = _numero_float(data.get('faixa_salarial_max'))
+            update_data['faixa_salarial_max'] = faixa_max
+
+        if 'beneficios' in data and 'beneficios' in vaga_existente:
+            update_data['beneficios'] = _serializar_beneficios(data.get('beneficios'))
+
+        if 'nivel_senioridade' in data and 'nivel_senioridade' in vaga_existente:
+            update_data['nivel_senioridade'] = _texto_opcional(data.get('nivel_senioridade'))
+
+        if 'quantidade_vagas' in data and 'quantidade_vagas' in vaga_existente:
+            quantidade_vagas = _numero_int(data.get('quantidade_vagas'))
+            if quantidade_vagas is None or quantidade_vagas <= 0:
+                quantidade_vagas = 1
+            update_data['quantidade_vagas'] = quantidade_vagas
+
+        if 'regime_trabalho' in data and 'regime_trabalho' in vaga_existente:
+            regime_trabalho = _texto_opcional(data.get('regime_trabalho'))
+            if regime_trabalho and regime_trabalho not in REGIMES_TRABALHO_VALIDOS:
+                regime_trabalho = None
+            update_data['regime_trabalho'] = regime_trabalho
+
+        if 'carga_horaria' in data and 'carga_horaria' in vaga_existente:
+            update_data['carga_horaria'] = _texto_opcional(data.get('carga_horaria'))
+
         response = supabase_admin.table('rh_vagas')\
             .update(update_data)\
             .eq('id', vaga_id)\
@@ -407,19 +552,46 @@ def api_update_vaga_status(vaga_id):
 def api_delete_vaga(vaga_id):
     """API: Deletar vaga (com verificação de candidatos)"""
     try:
-        # Verificar se vaga tem candidatos
+        # Verificar se vaga existe
+        check_response = supabase_admin.table('rh_vagas')\
+            .select('*')\
+            .eq('id', vaga_id)\
+            .execute()
+        
+        if not check_response.data or len(check_response.data) == 0:
+            return jsonify({'success': False, 'message': 'Vaga não encontrada'}), 404
+
+        vaga = check_response.data[0]
+
+        # Se existirem candidatos vinculados, aplica soft delete (status Cancelada)
         candidatos_response = supabase_admin.table('rh_candidatos')\
             .select('id', count='exact')\
             .eq('vaga_id', vaga_id)\
             .execute()
-        
-        if candidatos_response.count and candidatos_response.count > 0:
+
+        candidatos_vinculados = candidatos_response.count or 0
+
+        if candidatos_vinculados > 0:
+            print(f"[WARN] Vaga {vaga_id} possui {candidatos_vinculados} candidato(s); aplicando soft delete.")
+
+            # Atualiza status somente se já não estiver marcado como Cancelada
+            if vaga.get('status') != 'Cancelada':
+                update_response = supabase_admin.table('rh_vagas')\
+                    .update({'status': 'Cancelada'})\
+                    .eq('id', vaga_id)\
+                    .execute()
+                vaga_atualizada = update_response.data[0] if update_response.data else None
+            else:
+                vaga_atualizada = vaga
+
             return jsonify({
-                'success': False,
-                'message': f'Não é possível excluir. Esta vaga possui {candidatos_response.count} candidato(s) associado(s).'
-            }), 409
-        
-        # Deletar vaga
+                'success': True,
+                'soft_delete': True,
+                'message': 'Vaga possui candidatos vinculados e foi marcada como Cancelada.',
+                'candidatos_vinculados': candidatos_vinculados,
+                'data': vaga_atualizada
+            }), 200
+
         response = supabase_admin.table('rh_vagas')\
             .delete()\
             .eq('id', vaga_id)\

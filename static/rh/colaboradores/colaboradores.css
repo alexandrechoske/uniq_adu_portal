@@ -612,6 +612,22 @@
     gap: 0.5rem;
 }
 
+.timeline-status-contabilidade {
+    margin-bottom: 0.75rem;
+}
+
+.badge-status-contabilidade {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.4px;
+}
+
+.badge-status-contabilidade i {
+    font-size: 0.9rem;
+}
+
 /* ==================== INFO SECTIONS (Visualizar) ==================== */
 .info-row {
     margin-bottom: 1.5rem;

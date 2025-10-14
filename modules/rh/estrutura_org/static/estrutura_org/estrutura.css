@@ -143,6 +143,16 @@
     color: white;
 }
 
+.badge.bg-success-subtle {
+    background-color: rgba(40, 167, 69, 0.12);
+    color: #1e7e34;
+}
+
+.badge.bg-secondary {
+    background-color: #adb5bd;
+    color: #212529;
+}
+
 /* Botões de ação */
 .btn-action {
     padding: 0.35rem 0.75rem;

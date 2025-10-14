@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Acessos Contabilidade - RH{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/estrutura_org/estrutura.css') }}?v=1.1">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="rh-container">
+    <div class="actions-bar module-header-rh">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/" style="color: #6f42c1;"><i class="mdi mdi-home-outline"></i> Início</a></li>
+                <li class="breadcrumb-item"><a href="/menu" style="color: #6f42c1;">Menu</a></li>
+                <li class="breadcrumb-item"><a href="#" style="color: #6f42c1;">RH</a></li>
+                <li class="breadcrumb-item active">Acessos Contabilidade</li>
+            </ol>
+        </nav>
+        <div class="actions-buttons">
+            <button class="btn btn-rh-primary" onclick="abrirModalNovoAcesso()" data-bs-toggle="modal" data-bs-target="#modalAcessoContabilidade">
+                <i class="mdi mdi-account-plus"></i> Novo acesso
+            </button>
+        </div>
+    </div>
+
+    <div class="kpi-section">
+        <div class="kpi-group">
+            <h5 class="kpi-group-title">
+                <i class="mdi mdi-shield-account"></i>
+                Resumo dos acessos
+            </h5>
+            <div class="kpi-grid-rh">
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-icon"><i class="mdi mdi-account-group"></i></div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total cadastrados</p>
+                        <p class="kpi-value" id="acessosTotal">{{ acessos|length }}</p>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <div class="kpi-icon"><i class="mdi mdi-account-check"></i></div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Ativos</p>
+                        <p class="kpi-value" id="acessosAtivos">{{ acessos | selectattr('is_active') | list | length }}</p>
+                    </div>
+                </div>
+                <div class="kpi-card kpi-danger">
+                    <div class="kpi-icon"><i class="mdi mdi-account-cancel"></i></div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Inativos</p>
+                        <p class="kpi-value" id="acessosInativos">{{ acessos | rejectattr('is_active') | list | length }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card rh-card">
+        <div class="card-body p-0">
+            {% if acessos %}
+            <div class="table-responsive">
+                <table class="table mb-0" id="tabelaAcessosContabilidade">
+                    <thead class="rh-table-header">
+                        <tr>
+                            <th style="width: 25%;">Usuário</th>
+                            <th style="width: 35%;">Descrição</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 15%;">Atualizado em</th>
+                            <th style="width: 10%;" class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for acesso in acessos %}
+                        <tr data-acesso-id="{{ acesso.id }}" data-acesso="{{ acesso | tojson | e }}">
+                            <td>
+                                <strong>{{ acesso.nome_usuario }}</strong><br>
+                                <small class="text-muted">Criado em {{ acesso.created_at[:10] if acesso.created_at else '-' }}</small>
+                            </td>
+                            <td>{{ acesso.descricao or '-' }}</td>
+                            <td>
+                                {% if acesso.is_active %}
+                                <span class="badge bg-success-subtle text-success">Ativo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ acesso.updated_at[:16] if acesso.updated_at else '-' }}</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary" onclick="editarAcessoContabilidade('{{ acesso.id }}')">
+                                        <i class="mdi mdi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="confirmarAlteracaoStatusAcesso('{{ acesso.id }}')">
+                                        {% if acesso.is_active %}<i class="mdi mdi-account-off"></i>{% else %}<i class="mdi mdi-account-check"></i>{% endif %}
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="mdi mdi-shield-account-outline"></i>
+                <h5>Nenhum acesso configurado</h5>
+                <p>Cadastre o primeiro usuário para o portal externo da contabilidade.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Criar/Editar Acesso -->
+<div class="modal fade" id="modalAcessoContabilidade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header module-header-rh">
+                <h5 class="modal-title text-white"><i class="mdi mdi-shield-account"></i> <span id="modalAcessoTitulo">Novo acesso</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAcessoContabilidade">
+                    <input type="hidden" id="acessoId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="nomeUsuarioAcesso">Usuário <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="nomeUsuarioAcesso" placeholder="Ex: ricardo.contabil" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="descricaoAcesso">Descrição</label>
+                            <input type="text" class="form-control" id="descricaoAcesso" placeholder="Ex: Acesso principal contabilidade">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="senhaAcesso">Senha</label>
+                            <input type="password" class="form-control" id="senhaAcesso" placeholder="Mínimo 8 caracteres">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="confirmacaoSenhaAcesso">Confirmar senha</label>
+                            <input type="password" class="form-control" id="confirmacaoSenhaAcesso" placeholder="Repita a senha">
+                            <div class="form-text">Informe a senha apenas ao criar ou redefinir o acesso.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="statusAcesso" checked>
+                                <label class="form-check-label" for="statusAcesso">Acesso ativo</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-rh-primary" id="btnSalvarAcesso" onclick="salvarAcessoContabilidade()">
+                    <i class="mdi mdi-content-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmar alteração de status -->
+<div class="modal fade" id="modalStatusAcesso" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="mdi mdi-account-alert"></i> Confirmar alteração</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="textoStatusAcesso">Deseja alterar o status deste acesso?</p>
+                <input type="hidden" id="acessoStatusId">
+                <input type="hidden" id="novoStatusAcesso">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="btnConfirmarStatusAcesso" onclick="atualizarStatusAcesso()">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script id="dadosAcessosContabilidade" type="application/json">{{ acessos | tojson | safe }}</script>
+<script src="{{ url_for('static', filename='rh/estrutura_org/estrutura.js') }}?v=1.4"></script>
+<script>
+    if (typeof inicializarGestaoAcessosContabilidade === 'function') {
+        inicializarGestaoAcessosContabilidade();
+    }
+</script>
+{% endblock %}

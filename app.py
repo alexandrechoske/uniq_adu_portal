@@ -94,6 +94,8 @@ from modules.carreiras import carreiras_bp
 # Import analytics blueprint
 from modules.analytics.routes import bp as analytics_bp
 
+# Import portal contabilidade blueprint
+from modules.contabilidade_externa import contabilidade_externa_bp
 # Import i18n blueprint
 from modules.i18n import i18n_bp
 
@@ -149,6 +151,9 @@ app.register_blueprint(carreiras_bp)
 app.register_blueprint(analytics_bp)
 print("✅ Analytics blueprint registrado")
 
+# Register external accounting portal blueprint
+app.register_blueprint(contabilidade_externa_bp)
+print("✅ Portal contabilidade externo registrado")
 # Register i18n blueprint
 app.register_blueprint(i18n_bp)
 print("✅ i18n blueprint registrado")

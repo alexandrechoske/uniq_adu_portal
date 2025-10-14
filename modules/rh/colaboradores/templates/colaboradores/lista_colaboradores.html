@@ -3,11 +3,22 @@
 {% block title %}Gestão de Colaboradores - RH{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=3.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
 {% endblock %}
 
 {% block content %}
+{% set filtros = namespace(cargos=[], departamentos=[]) %}
+{% if colaboradores %}
+    {% for colab in colaboradores %}
+        {% if colab.nome_cargo and colab.nome_cargo not in filtros.cargos %}
+            {% set filtros.cargos = filtros.cargos + [colab.nome_cargo] %}
+        {% endif %}
+        {% if colab.nome_departamento and colab.nome_departamento not in filtros.departamentos %}
+            {% set filtros.departamentos = filtros.departamentos + [colab.nome_departamento] %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
 <div class="rh-container">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar module-header-rh">
@@ -72,26 +83,42 @@
     <!-- Filtros e Busca -->
     <div class="card rh-card mb-4">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-4">
                     <div class="input-group">
                         <span class="input-group-text">
                             <i class="mdi mdi-magnify"></i>
                         </span>
-                        <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome, CPF, matrícula...">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Buscar por nome, matrícula ou e-mail...">
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-lg-2">
                     <select id="filterStatus" class="form-select">
                         <option value="">Todos os Status</option>
-                        <option value="Ativo">Ativo</option>
+                        <option value="Ativo" selected>Ativo</option>
                         <option value="Inativo">Inativo</option>
                         <option value="Férias">Férias</option>
                         <option value="Afastado">Afastado</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <button id="btnLimparFiltros" class="btn btn-outline-secondary w-100">
+                <div class="col-6 col-lg-3">
+                    <select id="filterCargo" class="form-select">
+                        <option value="">Todos os Cargos</option>
+                        {% for cargo in filtros.cargos|sort %}
+                            <option value="{{ cargo }}">{{ cargo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <select id="filterDepartamento" class="form-select">
+                        <option value="">Todos os Departamentos</option>
+                        {% for departamento in filtros.departamentos|sort %}
+                            <option value="{{ departamento }}">{{ departamento }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-lg-12 d-flex justify-content-lg-end">
+                    <button id="btnLimparFiltros" class="btn btn-outline-secondary w-100 w-lg-auto mt-2 mt-lg-0">
                         <i class="mdi mdi-filter-off"></i>
                         Limpar Filtros
                     </button>
@@ -104,42 +131,66 @@
     <div class="card rh-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="tabelaColaboradores">
+                <table class="table mb-0" id="tabelaColaboradores">
                     <thead class="rh-table-header">
                         <tr>
-                            <th>Matrícula</th>
-                            <th>Nome</th>
-                            <th>CPF</th>
-                            <th>Cargo</th>
-                            <th>Departamento</th>
-                            <th>Admissão</th>
-                            <th>Status</th>
-                            <th class="text-center">Ações</th>
+                            <th style="width: 3%;" class="text-center">#</th>
+                            <th style="width: 12%;" class="sortable" data-column="matricula" data-type="text">Matrícula</th>
+                            <th style="width: 25%;" class="sortable" data-column="nome" data-type="text">Colaborador</th>
+                            <th style="width: 15%;" class="sortable" data-column="cargo" data-type="text">Cargo</th>
+                            <th style="width: 15%;" class="sortable" data-column="departamento" data-type="text">Departamento</th>
+                            <th style="width: 10%;" class="sortable" data-column="admissao" data-type="date">Admissão</th>
+                            <th style="width: 8%;" class="sortable" data-column="status" data-type="text">Status</th>
+                            <th style="width: 12%;" class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if colaboradores %}
                             {% for colab in colaboradores %}
-                            <tr data-status="{{ colab.status }}">
-                                <td>{{ colab.matricula or '-' }}</td>
-                                <td><strong>{{ colab.nome_completo }}</strong></td>
-                                <td>{{ colab.cpf }}</td>
-                                <td>{{ colab.nome_cargo or '-' }}</td>
-                                <td>{{ colab.nome_departamento or '-' }}</td>
-                                <td>{{ colab.data_admissao }}</td>
+                            {% set admissao = colab.data_admissao %}
+                            <tr data-status="{{ colab.status }}"
+                                data-cargo="{{ colab.nome_cargo or '' }}"
+                                data-departamento="{{ colab.nome_departamento or '' }}"
+                                data-matricula="{{ colab.matricula or '' }}"
+                                data-nome="{{ colab.nome_completo }}"
+                                data-admissao="{{ admissao or '' }}">
+                                <td class="text-center text-muted small">{{ loop.index }}</td>
+                                <td class="fw-semibold">{{ colab.matricula or '-' }}</td>
+                                <td>
+                                    <div class="colab-info">
+                                        <strong>{{ colab.nome_completo }}</strong>
+                                        <small class="text-muted">{{ colab.email_corporativo or '-' }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ colab.nome_cargo or '-' }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ colab.nome_departamento or '-' }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        <i class="mdi mdi-calendar"></i>
+                                        {% if admissao and '-' in admissao %}
+                                            {{ admissao.split('-')[2] }}/{{ admissao.split('-')[1] }}/{{ admissao.split('-')[0] }}
+                                        {% else %}
+                                            {{ admissao or '-' }}
+                                        {% endif %}
+                                    </small>
+                                </td>
                                 <td>
                                     {% if colab.status == 'Ativo' %}
-                                        <span class="badge bg-success">Ativo</span>
+                                        <span class="badge bg-success"><i class="mdi mdi-check-circle"></i> Ativo</span>
                                     {% elif colab.status == 'Inativo' %}
-                                        <span class="badge bg-danger">Inativo</span>
+                                        <span class="badge bg-danger"><i class="mdi mdi-close-circle"></i> Inativo</span>
                                     {% elif colab.status == 'Férias' %}
-                                        <span class="badge bg-info">Férias</span>
+                                        <span class="badge bg-info"><i class="mdi mdi-beach"></i> Férias</span>
                                     {% else %}
-                                        <span class="badge bg-warning">{{ colab.status }}</span>
+                                        <span class="badge bg-warning"><i class="mdi mdi-alert-circle"></i> {{ colab.status }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-center">
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="btn-group btn-group-sm gap-2 align-items-center justify-content-center" role="group">
                                         <a href="{{ url_for('colaboradores.visualizar_colaborador', colaborador_id=colab.id) }}" 
                                            class="btn btn-outline-info" 
                                            title="Visualizar"
@@ -152,8 +203,16 @@
                                            data-bs-toggle="tooltip">
                                             <i class="mdi mdi-pencil"></i>
                                         </a>
-                                        
-                                        <!-- Dropdown de Ações Rápidas -->
+
+                                        {% if colab.status == 'Inativo' %}
+                                        <button type="button"
+                                                class="btn btn-outline-success"
+                                                title="Reativar"
+                                                data-bs-toggle="tooltip"
+                                                onclick="confirmarReativacao('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
+                                            <i class="mdi mdi-account-check"></i>
+                                        </button>
+                                        {% else %}
                                         <div class="btn-group btn-group-sm" role="group">
                                             <button type="button" 
                                                     class="btn btn-outline-secondary dropdown-toggle" 
@@ -164,22 +223,22 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Promoção em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalPromocao('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-arrow-up-circle text-success"></i> Promover
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Transferência em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalTransferencia('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-swap-horizontal text-info"></i> Transferir
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Alterar Salário em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalReajuste('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-cash text-warning"></i> Alterar Salário
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a class="dropdown-item" href="#" onclick="alert('Funcionalidade de Férias em desenvolvimento'); return false;">
+                                                    <a class="dropdown-item" href="#" onclick="abrirModalFerias('{{ colab.id }}', '{{ colab.nome_completo }}'); return false;">
                                                         <i class="mdi mdi-beach text-primary"></i> Férias
                                                     </a>
                                                 </li>
@@ -192,16 +251,18 @@
                                                 </li>
                                             </ul>
                                         </div>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         {% else %}
-                            <tr>
+                            <tr class="empty-state-row">
                                 <td colspan="8" class="text-center py-5">
                                     <div class="empty-state">
-                                        <i class="mdi mdi-account-off-outline mdi-48px text-muted mb-3"></i>
-                                        <p class="text-muted mb-3">Nenhum colaborador cadastrado</p>
+                                        <i class="mdi mdi-account-off-outline" style="font-size: 4rem; color: #6f42c1; opacity: 0.3;"></i>
+                                        <h5>Nenhum colaborador cadastrado</h5>
+                                        <p class="text-muted mb-3">Clique em "Novo Colaborador" para adicionar o primeiro colaborador</p>
                                         <a href="{{ url_for('colaboradores.novo_colaborador') }}" class="btn btn-primary">
                                             <i class="mdi mdi-account-plus"></i>
                                             Cadastrar Primeiro Colaborador
@@ -214,6 +275,12 @@
                 </table>
             </div>
         </div>
+    </div>
+    <div class="card-footer pagination-container d-flex justify-content-between align-items-center">
+        <div class="text-muted" id="paginacaoInfo"></div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0" id="paginacao"></ul>
+        </nav>
     </div>
 </div>
 
@@ -241,8 +308,185 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Reativação -->
+<div class="modal fade" id="modalReativacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-user-check"></i> Confirmar Reativação</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Deseja reativar o colaborador <strong id="nomeColaboradorReativar"></strong>?</p>
+                <div class="mb-3">
+                    <label class="form-label">Data de Retorno</label>
+                    <input type="date" class="form-control" id="dataReativacao" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-control" id="descricaoReativacao" rows="3" placeholder="Ex: Retorno após acordo"></textarea>
+                </div>
+                <input type="hidden" id="colaboradorIdReativar">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarReativacao">
+                    <i class="fas fa-check"></i> Confirmar Reativação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Promoção -->
+<div class="modal fade" id="modalPromocao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Registrar Promoção para: <span id="nomeColaboradorPromocao"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formPromocao">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdPromocao" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data do Evento</label>
+                        <input type="date" class="form-control" id="dataPromocao" name="data_evento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Cargo</label>
+                        <select class="form-select" id="novoCargo" name="novo_cargo_id" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Salário Mensal</label>
+                        <input type="number" step="0.01" class="form-control" id="novoSalarioPromocao" name="novo_salario" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição / Motivo</label>
+                        <textarea class="form-control" id="descricaoPromocao" name="descricao" rows="3" placeholder="Ex: Promoção por mérito"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Promoção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reajuste Salarial -->
+<div class="modal fade" id="modalReajuste" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">Registrar Reajuste para: <span id="nomeColaboradorReajuste"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formReajuste">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdReajuste" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data do Evento</label>
+                        <input type="date" class="form-control" id="dataReajuste" name="data_evento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Salário Mensal</label>
+                        <input type="number" step="0.01" class="form-control" id="novoSalarioReajuste" name="novo_salario" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição / Motivo</label>
+                        <textarea class="form-control" id="descricaoReajuste" name="descricao" rows="3" placeholder="Justificativa do reajuste"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Salvar Reajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Transferência -->
+<div class="modal fade" id="modalTransferencia" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Registrar Transferência para: <span id="nomeColaboradorTransferencia"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formTransferencia">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdTransferencia" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data do Evento</label>
+                        <input type="date" class="form-control" id="dataTransferencia" name="data_evento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Departamento</label>
+                        <select class="form-select" id="novoDepartamento" name="novo_departamento_id" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Gestor</label>
+                        <select class="form-select" id="novoGestor" name="novo_gestor_id">
+                            <option value="">Manter gestor atual</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição / Motivo</label>
+                        <textarea class="form-control" id="descricaoTransferencia" name="descricao" rows="3" placeholder="Motivo da transferência"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white">Salvar Transferência</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Férias -->
+<div class="modal fade" id="modalFerias" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Registrar Férias para: <span id="nomeColaboradorFerias"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formFerias">
+                <div class="modal-body">
+                    <input type="hidden" id="colaboradorIdFerias" name="colaborador_id">
+                    <div class="mb-3">
+                        <label class="form-label">Data de Início</label>
+                        <input type="date" class="form-control" id="dataInicioFerias" name="data_inicio" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data de Fim</label>
+                        <input type="date" class="form-control" id="dataFimFerias" name="data_fim" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricaoFerias" name="descricao" rows="3" placeholder="Ex: Período aquisitivo 2024/2025"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
+<script>
+    window.RH_CARGOS = JSON.parse('{{ cargos | tojson | safe }}');
+    window.RH_DEPARTAMENTOS = JSON.parse('{{ departamentos | tojson | safe }}');
+    window.RH_GESTORES = JSON.parse('{{ gestores | tojson | safe }}');
+</script>
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 {% endblock %}
