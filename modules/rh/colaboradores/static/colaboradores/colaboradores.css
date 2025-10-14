@@ -164,8 +164,9 @@
 .table-responsive {
     box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     border-radius: 0.75rem;
-    overflow: hidden;
+    overflow: visible; /* Alterado para permitir dropdowns aparecerem */
     border: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative; /* Para referência de posicionamento */
 }
 
 /* Tabela base - SEM table-hover para evitar conflito com Bootstrap */
@@ -567,6 +568,8 @@ table#tabelaColaboradores tbody tr.empty-state-row:hover {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     padding: 0.5rem 0;
     min-width: 200px;
+    position: fixed !important; /* Força dropdown em primeiro plano */
+    z-index: 1050 !important; /* Acima de qualquer conteúdo da tabela */
 }
 
 .dropdown-item {
