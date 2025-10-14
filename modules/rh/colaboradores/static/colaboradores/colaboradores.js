@@ -46,8 +46,38 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
+    // 🔥 FIX: Inicializar dropdowns com boundary="viewport" para evitar corte
+    inicializarDropdownsAcoes();
+
     filtrarTabela();
 });
+
+/**
+ * Inicializa os dropdowns de ações com boundary="viewport"
+ * para garantir que apareçam em primeiro plano mesmo com poucos registros filtrados
+ */
+function inicializarDropdownsAcoes() {
+    const dropdownToggles = document.querySelectorAll('.btn-group .dropdown-toggle');
+    
+    dropdownToggles.forEach(toggle => {
+        new bootstrap.Dropdown(toggle, {
+            boundary: 'viewport',
+            popperConfig: {
+                strategy: 'fixed',
+                modifiers: [
+                    {
+                        name: 'preventOverflow',
+                        options: {
+                            boundary: 'viewport'
+                        }
+                    }
+                ]
+            }
+        });
+    });
+    
+    console.log('[RH] Dropdowns de ações inicializados com boundary="viewport"');
+}
 
 // ===================================================================
 // FILTROS E BUSCA
