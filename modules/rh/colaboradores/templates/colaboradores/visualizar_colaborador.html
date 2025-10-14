@@ -1,20 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Perfil do Colaborador - RH{% endblock %}
+{% block title %}Perfil do Colaborador - Departamento de Gestão de Pessoas{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
 {% endblock %}
 
 {% block content %}
-<div class="rh-container">
+<div class="rh-container" id="colaboradorPerfil"
+    data-colaborador-id="{{ colaborador.id }}"
+    data-beneficios='{{ info_atual.beneficios_jsonb | tojson | safe if info_atual and info_atual.beneficios_jsonb else "{}" }}'
+    data-salario="{{ info_atual.salario_mensal if info_atual else '' }}"
+    data-nome="{{ colaborador.nome_completo }}">
     <!-- Actions Bar com Breadcrumb -->
     <div class="actions-bar module-header-rh">
         <div class="actions-left">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="/">Home</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">RH</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">Departamento de Gestão de Pessoas</a></li>
                     <li class="breadcrumb-item"><a href="{{ url_for('colaboradores.lista_colaboradores') }}">Colaboradores</a></li>
                     <li class="breadcrumb-item active" aria-current="page">{{ colaborador.nome_completo }}</li>
                 </ol>
@@ -107,6 +111,182 @@
                             <span class="text-muted">{{ colaborador.cnh_numero or '-' }}{% if colaborador.cnh_categoria %} ({{ colaborador.cnh_categoria }}){% endif %}</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Remuneração e Benefícios -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    {% set snapshot = info_atual or {} %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="mdi mdi-cash-multiple"></i> Remuneração e Benefícios</h5>
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm"
+                                id="btnAlterarBeneficios"
+                                data-beneficios='{{ snapshot.beneficios_jsonb | tojson | safe if snapshot.beneficios_jsonb else "{}" }}'
+                                data-catalogo='{{ beneficios_catalogo | tojson | safe }}'
+                                data-colaborador-id="{{ colaborador.id }}"
+                                data-nome="{{ colaborador.nome_completo }}"
+                                data-salario="{{ snapshot.salario_mensal if snapshot.salario_mensal is not none else '' }}">
+                            <i class="mdi mdi-plus"></i> Alterar Benefícios
+                        </button>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Salário Mensal Atual</small>
+                            <strong>{{ snapshot.salario_formatado or '-' }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Total de Benefícios</small>
+                            <strong>{{ snapshot.beneficios_total_formatado or 'R$ 0,00' }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Custo Total</small>
+                            <strong>{{ snapshot.total_remuneracao_formatado or (snapshot.salario_formatado if snapshot.salario_formatado else '-') }}</strong>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    {% if snapshot.beneficios_lista %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Benefício</th>
+                                    <th class="text-end">Valor Mensal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for beneficio in snapshot.beneficios_lista %}
+                                <tr>
+                                    <td>{{ beneficio.label }}</td>
+                                    <td class="text-end">{{ beneficio.valor_formatado }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">
+                        <i class="mdi mdi-wallet-outline"></i> Nenhum benefício cadastrado para este colaborador.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dependentes -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="mdi mdi-account-multiple-outline"></i> Dependentes</h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="abrirModalDependente()">
+                            <i class="mdi mdi-plus"></i> Adicionar Dependente
+                        </button>
+                    </div>
+                    {% if dependentes %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nome Completo</th>
+                                    <th>Parentesco</th>
+                                    <th>Data de Nascimento</th>
+                                    <th class="text-center">Idade</th>
+                                    <th class="text-center" style="width: 110px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dependente in dependentes %}
+                                <tr>
+                                    <td>{{ dependente.nome_completo }}</td>
+                                    <td>{{ dependente.parentesco }}</td>
+                                    <td>{{ dependente.data_nascimento_br or '-' }}</td>
+                                    <td class="text-center">{{ dependente.idade if dependente.idade is not none else '-' }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary"
+                                                    title="Editar"
+                                                    data-dependente='{{ dependente | tojson | safe }}'
+                                                    onclick="editarDependente(this)">
+                                                <i class="mdi mdi-pencil"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger"
+                                                    title="Excluir"
+                                                    onclick="confirmarRemocaoDependente('{{ dependente.id }}', '{{ dependente.nome_completo }}')">
+                                                <i class="mdi mdi-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">
+                        <i class="mdi mdi-account-alert"></i> Nenhum dependente cadastrado até o momento.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Contatos de Emergência -->
+            <div class="rh-card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="mdi mdi-phone-alert"></i> Contatos de Emergência</h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="abrirModalContato()">
+                            <i class="mdi mdi-plus"></i> Adicionar Contato
+                        </button>
+                    </div>
+                    {% if contatos_emergencia %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Telefone</th>
+                                    <th>Parentesco</th>
+                                    <th class="text-center" style="width: 110px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contato in contatos_emergencia %}
+                                <tr>
+                                    <td>{{ contato.nome_contato }}</td>
+                                    <td>{{ contato.telefone_contato or '-' }}</td>
+                                    <td>{{ contato.parentesco or '-' }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary"
+                                                    title="Editar"
+                                                    data-contato='{{ contato | tojson | safe }}'
+                                                    onclick="editarContato(this)">
+                                                <i class="mdi mdi-pencil"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger"
+                                                    title="Excluir"
+                                                    onclick="confirmarRemocaoContato('{{ contato.id }}', '{{ contato.nome_contato }}')">
+                                                <i class="mdi mdi-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">
+                        <i class="mdi mdi-phone-off"></i> Nenhum contato de emergência cadastrado.
+                    </p>
+                    {% endif %}
                 </div>
             </div>
 
@@ -396,5 +576,131 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Modal Alteração de Benefícios -->
+<div class="modal fade" id="modalAlterarBeneficios" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="mdi mdi-cash-plus"></i>
+                    Alterar Benefícios de <span id="beneficiosColaboradorNome"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAlterarBeneficios">
+                <div class="modal-body">
+                    <input type="hidden" id="beneficiosColaboradorId">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Data da Alteração</label>
+                            <input type="date" class="form-control" id="beneficiosData" required>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Motivo da Alteração</label>
+                            <textarea class="form-control" id="beneficiosDescricao" rows="2" placeholder="Ex: Reajuste anual do vale alimentação" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0"><i class="mdi mdi-format-list-bulleted"></i> Benefícios</h6>
+                        <button type="button" class="btn btn-outline-success btn-sm" id="btnAdicionarBeneficioLinha">
+                            <i class="mdi mdi-plus"></i> Adicionar Benefício
+                        </button>
+                    </div>
+
+                    <div id="beneficiosLista" class="beneficios-lista"></div>
+
+                    <div class="alert alert-warning mt-3 mb-0" id="beneficiosAviso" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btnSalvarBeneficios">
+                        <i class="mdi mdi-content-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Dependente -->
+<div class="modal fade" id="modalDependente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="mdi mdi-account-plus-outline"></i> <span id="tituloModalDependente">Adicionar Dependente</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formDependente">
+                <div class="modal-body">
+                    <input type="hidden" id="dependenteId">
+                    <div class="mb-3">
+                        <label class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="dependenteNome" placeholder="Nome completo do dependente" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Parentesco</label>
+                        <select class="form-select" id="dependenteParentesco" required>
+                            <option value="">Selecione...</option>
+                            <option value="Filho(a)">Filho(a)</option>
+                            <option value="Cônjuge">Cônjuge</option>
+                            <option value="Enteado(a)">Enteado(a)</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data de Nascimento</label>
+                        <input type="date" class="form-control" id="dependenteDataNascimento" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvarDependente">
+                        <i class="mdi mdi-content-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Contato de Emergência -->
+<div class="modal fade" id="modalContato" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="mdi mdi-phone-plus"></i> <span id="tituloModalContato">Adicionar Contato de Emergência</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formContato">
+                <div class="modal-body">
+                    <input type="hidden" id="contatoId">
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Contato</label>
+                        <input type="text" class="form-control" id="contatoNome" placeholder="Nome completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefone</label>
+                        <input type="text" class="form-control" id="contatoTelefone" placeholder="(00) 00000-0000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Parentesco</label>
+                        <input type="text" class="form-control" id="contatoParentesco" placeholder="Ex: Mãe, Pai, Cônjuge">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white" id="btnSalvarContato">
+                        <i class="mdi mdi-content-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+window.RH_BENEFICIOS_CATALOGO = JSON.parse('{{ beneficios_catalogo | tojson | safe }}');
+</script>
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 {% endblock %}

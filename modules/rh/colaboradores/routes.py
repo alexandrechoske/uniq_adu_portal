@@ -8,7 +8,11 @@ from extensions import supabase_admin
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
 from datetime import datetime, date
+from copy import deepcopy
+import json
 import os
+import re
+import unicodedata
 
 from services.event_notification_service import EventNotificationService
 
@@ -26,6 +30,201 @@ colaboradores_bp = Blueprint(
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
 
 event_notifier = EventNotificationService()
+
+
+BENEFICIOS_CATALOGO = [
+    {'slug': 'vale_alimentacao', 'label': 'Vale Alimentação'},
+    {'slug': 'vale_refeicao', 'label': 'Vale Refeição'},
+    {'slug': 'vale_transporte', 'label': 'Vale Transporte'},
+    {'slug': 'ajuda_de_custo', 'label': 'Ajuda de Custo'},
+    {'slug': 'auxilio_creche', 'label': 'Auxílio Creche'},
+    {'slug': 'plano_saude', 'label': 'Plano de Saúde'},
+    {'slug': 'plano_odontologico', 'label': 'Plano Odontológico'},
+    {'slug': 'seguro_vida', 'label': 'Seguro de Vida'},
+    {'slug': 'auxilio_educacao', 'label': 'Auxílio Educação'},
+    {'slug': 'outros', 'label': 'Outro Benefício'}
+]
+
+
+def _ensure_date(value):
+    """Converte diferentes formatos de data para objeto date."""
+    if not value:
+        return None
+
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+
+        candidate = candidate.replace('Z', '+00:00')
+
+        try:
+            return datetime.fromisoformat(candidate).date()
+        except ValueError:
+            try:
+                return datetime.strptime(candidate.split('T')[0], '%Y-%m-%d').date()
+            except ValueError:
+                try:
+                    return datetime.strptime(candidate, '%d/%m/%Y').date()
+                except ValueError:
+                    return None
+
+    return None
+
+
+def _calculate_age(birth_date):
+    """Calcula idade em anos completos."""
+    reference = _ensure_date(birth_date)
+    if not reference:
+        return None
+
+    today = date.today()
+    years = today.year - reference.year
+    if (today.month, today.day) < (reference.month, reference.day):
+        years -= 1
+    return max(years, 0)
+
+
+def _format_currency_br(value):
+    """Formata número como moeda brasileira."""
+    if value in (None, ''):
+        return '-'
+
+    try:
+        amount = float(value)
+    except (ValueError, TypeError):
+        return '-'
+
+    formatted = f"{amount:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    return f'R$ {formatted}'
+
+
+def _parse_beneficios_payload(payload, prefix='beneficio_'):
+    """Extrai valores numéricos de benefícios a partir do payload recebido."""
+    if not isinstance(payload, dict):
+        return {}
+
+    beneficios = {}
+    for key, value in payload.items():
+        if not key.startswith(prefix):
+            continue
+
+        nome_beneficio = key[len(prefix):]
+        valor_normalizado = _normalizar_valor_decimal(value)
+        if valor_normalizado is not None and valor_normalizado > 0:
+            beneficios[nome_beneficio] = valor_normalizado
+
+    return beneficios
+
+
+def _coletar_beneficios_anteriores(historico):
+    """Obtém benefícios do último histórico garantindo retorno em dict."""
+    if not historico:
+        return {}
+
+    beneficios = historico.get('beneficios_jsonb')
+    if not beneficios:
+        return {}
+
+    if isinstance(beneficios, dict):
+        return deepcopy(beneficios)
+
+    if isinstance(beneficios, str):
+        try:
+            parsed = json.loads(beneficios)
+            return parsed if isinstance(parsed, dict) else {}
+        except json.JSONDecodeError:
+            return {}
+
+    return {}
+
+
+def _beneficio_label(chave):
+    if not chave:
+        return '-'
+
+    chave_normalizada = str(chave).strip()
+    for item in BENEFICIOS_CATALOGO:
+        if item['slug'] == chave_normalizada:
+            return item['label']
+
+    return chave_normalizada.replace('_', ' ').title()
+
+
+def _slugify_beneficio(nome):
+    if not nome:
+        return None
+
+    texto = unicodedata.normalize('NFKD', str(nome)).encode('ascii', 'ignore').decode('ascii')
+    texto = texto.lower()
+    texto = re.sub(r'[^a-z0-9]+', '_', texto)
+    texto = texto.strip('_')
+    return texto or None
+
+
+def _formatar_beneficios_para_view(beneficios_dict):
+    if not isinstance(beneficios_dict, dict):
+        return [], 0.0
+
+    lista = []
+    total = 0.0
+
+    for chave, valor in beneficios_dict.items():
+        valor_float = _normalizar_valor_decimal(valor)
+        if valor_float is None:
+            continue
+
+        lista.append({
+            'chave': chave,
+            'label': _beneficio_label(chave),
+            'valor': valor_float,
+            'valor_formatado': _format_currency_br(valor_float)
+        })
+        total += valor_float
+
+    lista.sort(key=lambda item: item['label'])
+    return lista, total
+
+
+def _normalizar_beneficios_genericos(payload):
+    if not payload:
+        return {}
+
+    itens = []
+
+    if isinstance(payload, dict):
+        itens = payload.items()
+    elif isinstance(payload, list):
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            nome = item.get('slug') or item.get('tipo') or item.get('codigo') or item.get('nome') or item.get('beneficio')
+            valor = item.get('valor')
+            itens.append((nome, valor))
+    else:
+        return {}
+
+    beneficios = {}
+
+    for nome, valor in itens:
+        slug = _slugify_beneficio(nome)
+        if not slug:
+            continue
+
+        valor_normalizado = _normalizar_valor_decimal(valor)
+        if valor_normalizado is None:
+            continue
+
+        beneficios[slug] = valor_normalizado
+
+    return beneficios
+
 
 def format_date_br(value):
     """Converte datas para o formato brasileiro (DD/MM/AAAA)."""
@@ -205,6 +404,8 @@ def novo_colaborador():
             gestores=colaboradores.data if colaboradores.data else [],
             ultimo_historico=None,
             info_atual=None,
+            dependentes=[],
+            beneficios_catalogo=BENEFICIOS_CATALOGO,
             is_editing=False
         )
     
@@ -263,6 +464,20 @@ def editar_colaborador(colaborador_id):
         
         ultimo_historico = historico.data[0] if historico.data else {}
 
+        dependentes = []
+        dependentes_response = supabase_admin.table('rh_colaborador_dependentes')\
+            .select('*')\
+            .eq('colaborador_id', colaborador_id)\
+            .order('nome_completo')\
+            .execute()
+
+        for dependente in dependentes_response.data or []:
+            data_nascimento_dt = _ensure_date(dependente.get('data_nascimento'))
+            dependente['data_nascimento_br'] = format_date_br(data_nascimento_dt)
+            dependente['data_nascimento_iso'] = data_nascimento_dt.isoformat() if data_nascimento_dt else ''
+            dependente['idade'] = _calculate_age(data_nascimento_dt)
+            dependentes.append(dependente)
+
         info_atual = None
         try:
             rpc_response = supabase_admin.rpc(
@@ -274,6 +489,23 @@ def editar_colaborador(colaborador_id):
         except Exception as rpc_error:
             print(f"[AVISO] Falha ao obter info atual via RPC: {rpc_error}")
             info_atual = None
+
+        base_evento = ultimo_historico or _buscar_ultimo_historico(colaborador_id)
+        if base_evento:
+            beneficios_dict = _coletar_beneficios_anteriores(base_evento)
+            beneficios_lista, beneficios_total = _formatar_beneficios_para_view(beneficios_dict)
+            salario_atual = _normalizar_valor_decimal(base_evento.get('salario_mensal'))
+            salario_formatado = _format_currency_br(salario_atual) if salario_atual is not None else None
+
+            info_atual = info_atual or {}
+            info_atual.update({
+                'salario_mensal': salario_atual,
+                'salario_formatado': salario_formatado,
+                'beneficios_jsonb': beneficios_dict,
+                'beneficios_lista': beneficios_lista,
+                'beneficios_total': beneficios_total,
+                'beneficios_total_formatado': _format_currency_br(beneficios_total) if beneficios_total is not None else None
+            })
         
         return render_template(
             'colaboradores/form_colaborador.html',
@@ -286,6 +518,8 @@ def editar_colaborador(colaborador_id):
             empresas=empresas.data if empresas.data else [],
             gestores=colaboradores.data if colaboradores.data else [],
             info_atual=info_atual,
+            dependentes=dependentes,
+            beneficios_catalogo=BENEFICIOS_CATALOGO,
             is_editing=True
         )
     
@@ -330,6 +564,50 @@ def visualizar_colaborador(colaborador_id):
             status_atual = (evento.get('status_contabilidade') or '').strip()
             evento['status_contabilidade'] = status_atual or 'Pendente'
             evento['data_evento_br'] = format_date_br(evento.get('data_evento'))
+
+            beneficios_dict = _coletar_beneficios_anteriores(evento)
+            beneficios_lista = []
+            beneficios_total = 0.0
+
+            for chave, valor in beneficios_dict.items():
+                valor_float = _normalizar_valor_decimal(valor)
+                if valor_float is None:
+                    continue
+                beneficios_lista.append({
+                    'chave': chave,
+                    'label': chave.replace('_', ' ').title(),
+                    'valor': valor_float,
+                    'valor_formatado': _format_currency_br(valor_float)
+                })
+                beneficios_total += valor_float
+
+            salario_atual = _normalizar_valor_decimal(evento.get('salario_mensal')) or 0.0
+            evento['salario_formatado'] = _format_currency_br(salario_atual) if salario_atual else None
+            evento['beneficios_lista'] = beneficios_lista
+            evento['total_remuneracao'] = salario_atual + beneficios_total if (salario_atual or beneficios_lista) else None
+            evento['total_remuneracao_formatado'] = _format_currency_br(evento['total_remuneracao']) if evento['total_remuneracao'] else None
+
+        ultimo_evento = historico_data[0] if historico_data else _buscar_ultimo_historico(colaborador_id)
+        info_atual = None
+
+        if ultimo_evento:
+            beneficios_dict = _coletar_beneficios_anteriores(ultimo_evento)
+            beneficios_lista, beneficios_total = _formatar_beneficios_para_view(beneficios_dict)
+            salario_atual = _normalizar_valor_decimal(ultimo_evento.get('salario_mensal'))
+            salario_para_total = salario_atual if salario_atual is not None else 0.0
+            total_remuneracao = salario_para_total + beneficios_total
+
+            info_atual = {
+                'salario_mensal': salario_atual,
+                'salario_formatado': _format_currency_br(salario_atual) if salario_atual is not None else None,
+                'beneficios_jsonb': beneficios_dict,
+                'beneficios_lista': beneficios_lista,
+                'beneficios_total': beneficios_total,
+                'beneficios_total_formatado': _format_currency_br(beneficios_total) if beneficios_total is not None else None,
+                'total_remuneracao': total_remuneracao,
+                'total_remuneracao_formatado': _format_currency_br(total_remuneracao) if total_remuneracao is not None else None,
+                'data_evento': ultimo_evento.get('data_evento')
+            }
         
         # Buscar dados de candidatura (se houver)
         candidatura = None
@@ -347,12 +625,41 @@ def visualizar_colaborador(colaborador_id):
         except Exception as e:
             print(f"[AVISO] Erro ao buscar candidatura (pode ser que o campo ainda não exista): {str(e)}")
             # Não falha se não encontrar candidatura, é opcional
+
+        dependentes_response = supabase_admin.table('rh_colaborador_dependentes')\
+            .select('*')\
+            .eq('colaborador_id', colaborador_id)\
+            .order('nome_completo')\
+            .execute()
+
+        dependentes = []
+        for dependente in dependentes_response.data or []:
+            data_nascimento_dt = _ensure_date(dependente.get('data_nascimento'))
+            dependente['data_nascimento_br'] = format_date_br(data_nascimento_dt)
+            dependente['data_nascimento_iso'] = data_nascimento_dt.isoformat() if data_nascimento_dt else ''
+            dependente['idade'] = _calculate_age(data_nascimento_dt)
+            dependentes.append(dependente)
+
+        contatos_response = supabase_admin.table('rh_colaborador_contatos_emergencia')\
+            .select('*')\
+            .eq('colaborador_id', colaborador_id)\
+            .order('nome_contato')\
+            .execute()
+
+        contatos_emergencia = []
+        for contato in contatos_response.data or []:
+            contato['telefone_contato'] = (contato.get('telefone_contato') or '').strip()
+            contatos_emergencia.append(contato)
         
         return render_template(
             'colaboradores/visualizar_colaborador.html',
             colaborador=colaborador_data,
             historico=historico_data,
-            candidatura=candidatura
+            candidatura=candidatura,
+            dependentes=dependentes,
+            contatos_emergencia=contatos_emergencia,
+            info_atual=info_atual,
+            beneficios_catalogo=BENEFICIOS_CATALOGO
         )
     
     except Exception as e:
@@ -400,10 +707,22 @@ def api_get_colaborador(colaborador_id):
         
         if not colab_response.data:
             return jsonify({'error': 'Colaborador não encontrado'}), 404
-        
+
+        info_atual = None
+        try:
+            rpc_response = supabase_admin.rpc(
+                'get_colaborador_info_atual',
+                {'p_colaborador_id': colaborador_id}
+            ).execute()
+            if rpc_response.data:
+                info_atual = rpc_response.data[0]
+        except Exception as exc:
+            print(f"[AVISO] Falha ao obter dados atuais do colaborador via RPC: {exc}")
+
         return jsonify({
             'success': True,
-            'data': colab_response.data
+            'data': colab_response.data,
+            'info_atual': info_atual
         }), 200
     
     except Exception as e:
@@ -486,9 +805,16 @@ def api_create_colaborador():
         set_if_present(historico_data, 'departamento_id')
         set_if_present(historico_data, 'empresa_id')
         set_if_present(historico_data, 'gestor_id')
-        set_if_present(historico_data, 'salario_mensal')
         set_if_present(historico_data, 'tipo_contrato')
         set_if_present(historico_data, 'modelo_trabalho')
+
+        salario_inicial = _normalizar_valor_decimal(data.get('salario_mensal'))
+        if salario_inicial is not None:
+            historico_data['salario_mensal'] = salario_inicial
+
+        beneficios_iniciais = _parse_beneficios_payload(data)
+        if beneficios_iniciais:
+            historico_data['beneficios_jsonb'] = beneficios_iniciais
         
         # Inserir no histórico
         _registrar_evento_historico(historico_data)
@@ -643,6 +969,10 @@ def _registrar_evento_historico(historico_data):
     payload = dict(historico_data)
     payload['status_contabilidade'] = payload.get('status_contabilidade') or 'Pendente'
 
+    beneficios = payload.get('beneficios_jsonb')
+    if isinstance(beneficios, dict) and not beneficios:
+        payload.pop('beneficios_jsonb', None)
+
     response = supabase_admin.table('rh_historico_colaborador').insert(payload).execute()
     if not response.data:
         return None
@@ -743,6 +1073,14 @@ def api_promover_colaborador(colaborador_id):
         if dados_adicionais:
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
+        beneficios_novos = _parse_beneficios_payload(payload)
+        if beneficios_novos:
+            historico_data['beneficios_jsonb'] = beneficios_novos
+        else:
+            beneficios_atuais = _coletar_beneficios_anteriores(ultimo_historico)
+            if beneficios_atuais:
+                historico_data['beneficios_jsonb'] = beneficios_atuais
+
         _registrar_evento_historico(historico_data)
 
         return jsonify({'success': True}), 201
@@ -797,12 +1135,93 @@ def api_reajustar_salario(colaborador_id):
         if dados_adicionais:
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
+        beneficios_novos = _parse_beneficios_payload(payload)
+        if beneficios_novos:
+            historico_data['beneficios_jsonb'] = beneficios_novos
+        else:
+            beneficios_atuais = _coletar_beneficios_anteriores(ultimo_historico)
+            if beneficios_atuais:
+                historico_data['beneficios_jsonb'] = beneficios_atuais
+
         _registrar_evento_historico(historico_data)
 
         return jsonify({'success': True}), 201
     except Exception as e:
         print(f"[ERRO] Erro ao reajustar salário: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/alterar-beneficios', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_alterar_beneficios(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+        data_evento = payload.get('data_evento')
+        descricao = (payload.get('descricao') or '').strip()
+        beneficios_payload = payload.get('beneficios')
+
+        if not data_evento or not descricao:
+            return jsonify({'error': 'Informe a data e o motivo da alteração.'}), 400
+
+        colaborador = _buscar_colaborador_ativo(colaborador_id)
+        if not colaborador:
+            return jsonify({'error': 'Colaborador não encontrado.'}), 404
+
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+        if not ultimo_historico:
+            return jsonify({'error': 'Ainda não há histórico para este colaborador.'}), 400
+
+        beneficios_normalizados = _normalizar_beneficios_genericos(beneficios_payload)
+        if not beneficios_normalizados:
+            return jsonify({'error': 'Informe ao menos um benefício válido com valor numérico.'}), 400
+
+        beneficios_anteriores = _coletar_beneficios_anteriores(ultimo_historico)
+
+        historico_data = {
+            'colaborador_id': colaborador_id,
+            'data_evento': data_evento,
+            'tipo_evento': 'Alteração de Benefícios',
+            'descricao_e_motivos': descricao,
+            'beneficios_jsonb': beneficios_normalizados
+        }
+
+        _copiar_campos_validos(
+            historico_data,
+            ultimo_historico,
+            ['cargo_id', 'departamento_id', 'gestor_id', 'empresa_id', 'tipo_contrato', 'modelo_trabalho', 'salario_mensal']
+        )
+
+        if beneficios_anteriores:
+            historico_data['dados_adicionais_jsonb'] = {
+                'beneficios_anteriores': beneficios_anteriores
+            }
+
+        evento = _registrar_evento_historico(historico_data)
+        if not evento:
+            return jsonify({'error': 'Não foi possível registrar o evento de alteração de benefícios.'}), 500
+
+        beneficios_lista, beneficios_total = _formatar_beneficios_para_view(beneficios_normalizados)
+        salario_atual = _normalizar_valor_decimal(historico_data.get('salario_mensal'))
+        salario_para_total = salario_atual if salario_atual is not None else 0.0
+        total_remuneracao = salario_para_total + beneficios_total
+
+        return jsonify({
+            'success': True,
+            'evento': {
+                'id': evento.get('id'),
+                'data_evento': evento.get('data_evento'),
+                'tipo_evento': evento.get('tipo_evento'),
+                'descricao_e_motivos': evento.get('descricao_e_motivos'),
+                'beneficios_lista': beneficios_lista,
+                'beneficios_total_formatado': _format_currency_br(beneficios_total) if beneficios_total is not None else None,
+                'salario_formatado': _format_currency_br(salario_atual) if salario_atual is not None else None,
+                'total_remuneracao_formatado': _format_currency_br(total_remuneracao)
+            }
+        }), 201
+
+    except Exception as exc:
+        print(f"[ERRO] Erro ao alterar benefícios: {exc}")
+        return jsonify({'error': str(exc)}), 500
 
 
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>/transferir', methods=['POST'])
@@ -890,6 +1309,265 @@ def api_registrar_evento(colaborador_id):
     except Exception as e:
         print(f"[ERRO] Erro ao registrar evento de colaborador: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+def _carregar_dependente(dependente_id):
+    return supabase_admin.table('rh_colaborador_dependentes')\
+        .select('*')\
+        .eq('id', dependente_id)\
+        .single()\
+        .execute()
+
+
+def _carregar_contato(contato_id):
+    return supabase_admin.table('rh_colaborador_contatos_emergencia')\
+        .select('*')\
+        .eq('id', contato_id)\
+        .single()\
+        .execute()
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/dependentes', methods=['GET'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_listar_dependentes(colaborador_id):
+    try:
+        resposta = supabase_admin.table('rh_colaborador_dependentes')\
+            .select('*')\
+            .eq('colaborador_id', colaborador_id)\
+            .order('nome_completo')\
+            .execute()
+
+        dependentes = []
+        for dependente in resposta.data or []:
+            data_nascimento = _ensure_date(dependente.get('data_nascimento'))
+            dependente['data_nascimento_br'] = format_date_br(data_nascimento)
+            dependente['data_nascimento_iso'] = data_nascimento.isoformat() if data_nascimento else ''
+            dependente['idade'] = _calculate_age(data_nascimento)
+            dependentes.append(dependente)
+
+        return jsonify({'success': True, 'data': dependentes}), 200
+    except Exception as exc:
+        print(f"[ERRO] Falha ao listar dependentes: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/dependentes', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_criar_dependente(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+
+        nome = (payload.get('nome_completo') or '').strip()
+        parentesco = (payload.get('parentesco') or '').strip()
+        data_nascimento = payload.get('data_nascimento')
+
+        if not nome or not parentesco or not data_nascimento:
+            return jsonify({'error': 'Nome, parentesco e data de nascimento são obrigatórios.'}), 400
+
+        data_dt = _ensure_date(data_nascimento)
+        if not data_dt:
+            return jsonify({'error': 'Data de nascimento inválida.'}), 400
+
+        registro = {
+            'colaborador_id': colaborador_id,
+            'nome_completo': nome,
+            'parentesco': parentesco,
+            'data_nascimento': data_dt.isoformat()
+        }
+
+        resposta = supabase_admin.table('rh_colaborador_dependentes').insert(registro).execute()
+        dependente = resposta.data[0] if resposta.data else None
+
+        if not dependente:
+            return jsonify({'error': 'Não foi possível criar o dependente.'}), 500
+
+        data_dt = _ensure_date(dependente.get('data_nascimento'))
+        dependente['data_nascimento_br'] = format_date_br(data_dt)
+        dependente['data_nascimento_iso'] = data_dt.isoformat() if data_dt else ''
+        dependente['idade'] = _calculate_age(data_dt)
+
+        return jsonify({'success': True, 'data': dependente}), 201
+    except Exception as exc:
+        print(f"[ERRO] Falha ao criar dependente: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/dependentes/<dependente_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_atualizar_dependente(dependente_id):
+    try:
+        payload = request.get_json() or {}
+        resposta = _carregar_dependente(dependente_id)
+
+        if not resposta.data:
+            return jsonify({'error': 'Dependente não encontrado.'}), 404
+
+        atualizacoes = {}
+
+        if 'nome_completo' in payload:
+            nome = (payload.get('nome_completo') or '').strip()
+            if nome:
+                atualizacoes['nome_completo'] = nome
+
+        if 'parentesco' in payload:
+            parentesco = (payload.get('parentesco') or '').strip()
+            if parentesco:
+                atualizacoes['parentesco'] = parentesco
+
+        if 'data_nascimento' in payload:
+            data_dt = _ensure_date(payload.get('data_nascimento'))
+            if not data_dt:
+                return jsonify({'error': 'Data de nascimento inválida.'}), 400
+            atualizacoes['data_nascimento'] = data_dt.isoformat()
+
+        if not atualizacoes:
+            return jsonify({'error': 'Nenhum dado válido para atualizar.'}), 400
+
+        supabase_admin.table('rh_colaborador_dependentes')\
+            .update(atualizacoes)\
+            .eq('id', dependente_id)\
+            .execute()
+
+        resposta = _carregar_dependente(dependente_id)
+        dependente = resposta.data if resposta.data else {}
+        data_dt = _ensure_date(dependente.get('data_nascimento'))
+        dependente['data_nascimento_br'] = format_date_br(data_dt)
+        dependente['data_nascimento_iso'] = data_dt.isoformat() if data_dt else ''
+        dependente['idade'] = _calculate_age(data_dt)
+
+        return jsonify({'success': True, 'data': dependente}), 200
+    except Exception as exc:
+        print(f"[ERRO] Falha ao atualizar dependente: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/dependentes/<dependente_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_excluir_dependente(dependente_id):
+    try:
+        resposta = _carregar_dependente(dependente_id)
+        if not resposta.data:
+            return jsonify({'error': 'Dependente não encontrado.'}), 404
+
+        supabase_admin.table('rh_colaborador_dependentes')\
+            .delete()\
+            .eq('id', dependente_id)\
+            .execute()
+
+        return jsonify({'success': True}), 200
+    except Exception as exc:
+        print(f"[ERRO] Falha ao excluir dependente: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/contatos-emergencia', methods=['GET'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_listar_contatos_emergencia(colaborador_id):
+    try:
+        resposta = supabase_admin.table('rh_colaborador_contatos_emergencia')\
+            .select('*')\
+            .eq('colaborador_id', colaborador_id)\
+            .order('nome_contato')\
+            .execute()
+
+        contatos = resposta.data if resposta.data else []
+        return jsonify({'success': True, 'data': contatos}), 200
+    except Exception as exc:
+        print(f"[ERRO] Falha ao listar contatos de emergência: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/contatos-emergencia', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_criar_contato_emergencia(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+
+        nome = (payload.get('nome_contato') or '').strip()
+        telefone = (payload.get('telefone_contato') or '').strip()
+        parentesco = (payload.get('parentesco') or '').strip() or None
+
+        if not nome or not telefone:
+            return jsonify({'error': 'Nome e telefone são obrigatórios.'}), 400
+
+        registro = {
+            'colaborador_id': colaborador_id,
+            'nome_contato': nome,
+            'telefone_contato': telefone,
+            'parentesco': parentesco
+        }
+
+        resposta = supabase_admin.table('rh_colaborador_contatos_emergencia').insert(registro).execute()
+        contato = resposta.data[0] if resposta.data else None
+
+        if not contato:
+            return jsonify({'error': 'Não foi possível criar o contato de emergência.'}), 500
+
+        return jsonify({'success': True, 'data': contato}), 201
+    except Exception as exc:
+        print(f"[ERRO] Falha ao criar contato de emergência: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/contatos-emergencia/<contato_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_atualizar_contato_emergencia(contato_id):
+    try:
+        payload = request.get_json() or {}
+        resposta = _carregar_contato(contato_id)
+
+        if not resposta.data:
+            return jsonify({'error': 'Contato de emergência não encontrado.'}), 404
+
+        atualizacoes = {}
+
+        if 'nome_contato' in payload:
+            nome = (payload.get('nome_contato') or '').strip()
+            if nome:
+                atualizacoes['nome_contato'] = nome
+
+        if 'telefone_contato' in payload:
+            telefone = (payload.get('telefone_contato') or '').strip()
+            if telefone:
+                atualizacoes['telefone_contato'] = telefone
+
+        if 'parentesco' in payload:
+            parentesco = (payload.get('parentesco') or '').strip()
+            atualizacoes['parentesco'] = parentesco or None
+
+        if not atualizacoes:
+            return jsonify({'error': 'Nenhum dado válido para atualizar.'}), 400
+
+        supabase_admin.table('rh_colaborador_contatos_emergencia')\
+            .update(atualizacoes)\
+            .eq('id', contato_id)\
+            .execute()
+
+        resposta = _carregar_contato(contato_id)
+        contato = resposta.data if resposta.data else {}
+        return jsonify({'success': True, 'data': contato}), 200
+    except Exception as exc:
+        print(f"[ERRO] Falha ao atualizar contato de emergência: {exc}")
+        return jsonify({'error': str(exc)}), 500
+
+
+@colaboradores_bp.route('/api/contatos-emergencia/<contato_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_excluir_contato_emergencia(contato_id):
+    try:
+        resposta = _carregar_contato(contato_id)
+        if not resposta.data:
+            return jsonify({'error': 'Contato de emergência não encontrado.'}), 404
+
+        supabase_admin.table('rh_colaborador_contatos_emergencia')\
+            .delete()\
+            .eq('id', contato_id)\
+            .execute()
+
+        return jsonify({'success': True}), 200
+    except Exception as exc:
+        print(f"[ERRO] Falha ao excluir contato de emergência: {exc}")
+        return jsonify({'error': str(exc)}), 500
 
 
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>/reativar', methods=['POST'])
