@@ -273,7 +273,9 @@ window.updateDashboardKPIs = function(kpis) {
     try {
         if (!kpis || typeof kpis !== 'object') return;
         const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        setText('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
+        // CORREÇÃO: Mostrar total_processos (1128) ao invés de processos_abertos (1101)
+        // para corresponder ao total da tabela
+        setText('kpi-processos-abertos', formatNumber(kpis.total_processos || 0));
         setText('kpi-chegando-mes', formatNumber(kpis.chegando_mes || 0));
         setText('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
         setText('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
@@ -766,7 +768,7 @@ function initializeEnhancedTable() {
         containerId: 'recent-operations-container',
         searchInputId: 'recent-operations-search',
         itemsPerPage: 15,
-        searchFields: ['ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 'status_processo', 'status_macro_sistema', 'mercadoria', 'urf_despacho_normalizado', 'urf_despacho'],
+        searchFields: ['ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 'status_timeline', 'status_processo', 'status_macro_sistema', 'mercadoria', 'urf_despacho_normalizado', 'urf_despacho'],
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
@@ -838,6 +840,22 @@ function initializeEnhancedTable() {
         const exportadorDisplay = (exportadorFull && exportadorFull.length > 18)
             ? exportadorFull.substring(0, 18) + '…'
             : exportadorFull;
+        
+        // CORREÇÃO: Mostrar status_sistema (campo existe na view vw_importacoes_6_meses_abertos_dash)
+        // Se não houver status_sistema, usar fallback
+        let statusDisplay = operation.status_sistema;
+        
+        // Debug para identificar problema
+        if (!statusDisplay && globalIndex === 0) {
+            console.warn('[STATUS_DEBUG] Primeiro registro sem status_sistema:', operation);
+            console.warn('[STATUS_DEBUG] Campos disponíveis:', Object.keys(operation));
+        }
+        
+        // Fallback se status_sistema estiver vazio
+        if (!statusDisplay || statusDisplay.trim() === '') {
+            statusDisplay = operation.status_processo || operation.status || 'Sem Info';
+        }
+        
         return `
             <td>
                 <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
@@ -849,7 +867,7 @@ function initializeEnhancedTable() {
             <td>${formatDate(operation.data_abertura)}</td>
             <td title="${exportadorFull}">${exportadorDisplay}</td>
             <td>${getModalBadge(operation.modal)}</td>
-            <td>${getStatusBadge(operation.status_macro_sistema || operation.status_processo || operation.status)}</td>
+            <td>${getStatusBadge(statusDisplay)}</td>
             <td><span class="currency-value">${formatCurrency(custoTotal)}</span></td>
             <td>${formatDataChegada(operation.data_chegada)}</td>
             ${materialColumn}
@@ -1650,6 +1668,16 @@ function updateRecentOperationsTable(operations) {
     // Then set data to enhanced table (this triggers render)
     recentOperationsTable.setData(sortedOperations);
     
+    // Inicializar filtros de coluna após carregar dados
+    if (typeof window.initColumnFilters === 'function') {
+        console.log('[DASHBOARD_EXECUTIVO] Inicializando filtros de coluna...');
+        setTimeout(() => {
+            window.initColumnFilters('recent-operations-table');
+        }, 500);
+    } else {
+        console.warn('[DASHBOARD_EXECUTIVO] Função initColumnFilters não encontrada');
+    }
+    
     // Debug: mostrar primeiros 10 processos do array global com detalhes
     console.log('[DASHBOARD_EXECUTIVO] Primeiros 10 processos no array global:');
     sortedOperations.slice(0, 10).forEach((op, idx) => {
@@ -2141,18 +2169,23 @@ function openProcessModal(operationIndex) {
         console.log('[DASHBOARD_EXECUTIVO] Título do modal atualizado para:', operation.ref_unique);
     }
     
-    // Update timeline - extract numeric value from status_macro like "5 - AG REGISTRO"
-    const statusMacroNumber = extractStatusMacroNumber(operation.status_macro);
-    console.log('[MODAL_DEBUG] Status macro extraído:', statusMacroNumber);
-    
-    // NOVO: Usar status_timeline ou fallback para status_processo/status_macro_sistema
-    const statusTimeline = operation.status_timeline || operation.status_processo || operation.status_macro_sistema;
+    // Update timeline - extract numeric value from status_timeline like "2 - Agd Embarque"
     console.log('[TIMELINE_DEBUG] Status timeline original:', operation.status_timeline);
     console.log('[TIMELINE_DEBUG] Status processo fallback:', operation.status_processo);
     console.log('[TIMELINE_DEBUG] Status macro fallback:', operation.status_macro_sistema);
-    console.log('[TIMELINE_DEBUG] Status final usado:', statusTimeline);
     
-    updateProcessTimelineFromStatusTimeline(statusTimeline);
+    // CORREÇÃO: Usar função do process_modal.js que suporta 6 etapas
+    if (typeof window.openProcessModal === 'undefined') {
+        // Se a função do process_modal.js não estiver disponível, usar a local
+        const statusTimeline = operation.status_timeline || operation.status_processo || operation.status_macro_sistema;
+        console.log('[TIMELINE_DEBUG] Usando função local - Status final:', statusTimeline);
+        updateProcessTimelineFromStatusTimeline(statusTimeline);
+    } else {
+        // Usar a função correta do process_modal.js (6 etapas)
+        const statusTimelineNumber = extractTimelineNumber(operation.status_timeline);
+        console.log('[TIMELINE_DEBUG] Usando função do process_modal.js - Número extraído:', statusTimelineNumber);
+        updateProcessTimeline(statusTimelineNumber);
+    }
     
     // Update general information
     updateElementValue('detail-ref-unique', operation.ref_unique);
@@ -2161,12 +2194,23 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-importador', operation.importador);
     updateElementValue('detail-exportador', operation.exportador_fornecedor);
     updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
-    // Processar status_macro_sistema para exibição
-    let statusToDisplay = operation.status_macro_sistema || operation.status_processo || operation.status_macro;
-    if (statusToDisplay && typeof statusToDisplay === 'string' && statusToDisplay.includes(' - ')) {
-        statusToDisplay = statusToDisplay.split(' - ')[1].trim();
+    
+    // CORREÇÃO: Mostrar status_sistema (campo existe na view vw_importacoes_6_meses_abertos_dash)
+    let statusToDisplay = operation.status_sistema;
+    
+    console.log('[MODAL_DEBUG] ========================================');
+    console.log('[MODAL_DEBUG] DASHBOARD.JS - STATUS PROCESSING');
+    console.log('[MODAL_DEBUG] status_sistema:', operation.status_sistema);
+    console.log('[MODAL_DEBUG] Campos disponíveis:', Object.keys(operation));
+    
+    // Fallback se status_sistema estiver vazio
+    if (!statusToDisplay || statusToDisplay.trim() === '') {
+        console.log('[MODAL_DEBUG] status_sistema vazio, usando fallback...');
+        statusToDisplay = operation.status_processo || operation.status || 'Sem Informação';
     }
-    console.log('[MODAL_DEBUG] Status processado para exibição:', statusToDisplay);
+    
+    console.log('[MODAL_DEBUG] Status final para exibição:', statusToDisplay);
+    console.log('[MODAL_DEBUG] ========================================');
     
     updateElementValue('detail-status', statusToDisplay);
     
@@ -2733,6 +2777,12 @@ function getStatusBadge(status) {
     if (!status) return '<span class="badge badge-secondary">-</span>';
 
     console.log('[STATUS_BADGE_DEBUG] Status recebido:', status);
+
+    // NOVO: Ignorar "N/A" - retornar badge vazio
+    if (typeof status === 'string' && status.trim().toUpperCase() === 'N/A') {
+        console.log('[STATUS_BADGE_DEBUG] Status é N/A - retornando badge vazio');
+        return '<span class="badge badge-secondary">N/A</span>';
+    }
 
     // Se o status tem formato "2 - AG EMBARQUE", extrair apenas a parte após o traço
     let displayStatus = status;

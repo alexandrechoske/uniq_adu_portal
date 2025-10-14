@@ -12,6 +12,69 @@ from services.auth_logging import safe_log_login_success, safe_log_login_failure
 
 bp = Blueprint('auth', __name__)
 
+# ===========================================================
+# FUNÇÕES DE VERIFICAÇÃO DE MANUTENÇÃO
+# ===========================================================
+
+def check_maintenance_mode():
+    """
+    Verifica se o portal está em modo de manutenção.
+    
+    Returns:
+        tuple: (em_manutencao: bool, dados_manutencao: dict)
+    """
+    try:
+        # Consultar tabela de manutenção usando cliente admin (bypass RLS)
+        response = supabase_admin.table('DANGER_TABLE_MANUTENCAO')\
+            .select('*')\
+            .eq('id', '1')\
+            .single()\
+            .execute()
+        
+        if response.data:
+            dados = response.data
+            em_manutencao = dados.get('manutencao', False)
+            
+            print(f"[MANUTENCAO] Status verificado: {'EM MANUTENÇÃO' if em_manutencao else 'OPERACIONAL'}")
+            
+            return em_manutencao, dados
+        else:
+            print("[MANUTENCAO] ⚠️ Tabela de manutenção não encontrada - assumindo modo operacional")
+            return False, {}
+            
+    except Exception as e:
+        print(f"[MANUTENCAO] ❌ Erro ao verificar modo de manutenção: {e}")
+        # Em caso de erro, permitir acesso (fail-safe)
+        return False, {}
+
+def render_maintenance_page(dados_manutencao):
+    """
+    Renderiza a página de manutenção com informações customizadas.
+    
+    Args:
+        dados_manutencao (dict): Dados da tabela de manutenção
+    
+    Returns:
+        Rendered template
+    """
+    mensagem = dados_manutencao.get('mensagem_customizada', None)
+    data_prevista = dados_manutencao.get('data_prevista_fim', None)
+    
+    # Formatar data prevista se existir
+    if data_prevista:
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(data_prevista.replace('Z', '+00:00'))
+            data_prevista = dt.strftime('%d/%m/%Y às %H:%M')
+        except:
+            pass
+    
+    return render_template(
+        'auth/manutencao.html',
+        mensagem_customizada=mensagem,
+        data_prevista_fim=data_prevista
+    )
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -110,6 +173,18 @@ def test_connection():
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # ===========================================================
+    # 1. VERIFICAR MODO DE MANUTENÇÃO (ANTES DE QUALQUER COISA)
+    # ===========================================================
+    em_manutencao, dados_manutencao = check_maintenance_mode()
+    
+    if em_manutencao:
+        print("[MANUTENCAO] 🚫 Portal em manutenção - bloqueando acesso ao login")
+        return render_maintenance_page(dados_manutencao)
+    
+    # ===========================================================
+    # 2. PROCESSAR LOGIN NORMALMENTE
+    # ===========================================================
     if request.method == 'POST':
         email = request.form.get('email')
         senha = request.form.get('senha')

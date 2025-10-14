@@ -96,6 +96,8 @@ from modules.analytics.routes import bp as analytics_bp
 
 # Import portal contabilidade blueprint
 from modules.contabilidade_externa import contabilidade_externa_bp
+# Import i18n blueprint
+from modules.i18n import i18n_bp
 
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
@@ -152,12 +154,24 @@ print("✅ Analytics blueprint registrado")
 # Register external accounting portal blueprint
 app.register_blueprint(contabilidade_externa_bp)
 print("✅ Portal contabilidade externo registrado")
+# Register i18n blueprint
+app.register_blueprint(i18n_bp)
+print("✅ i18n blueprint registrado")
 
 # Register module color helpers for templates
 register_module_color_helpers(app)
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)
+
+# -------------------------------------------------------------
+# i18n Language Initialization Middleware
+# -------------------------------------------------------------
+@app.before_request
+def init_i18n_language():
+    """Inicializa o idioma na session antes de cada requisição"""
+    from modules.i18n.routes import init_language
+    init_language()
 
 # -------------------------------------------------------------
 # Security Headers Middleware
@@ -218,6 +232,17 @@ def _resolve_client_branding():
 @app.context_processor
 def inject_client_branding():
     return {'client_branding': _resolve_client_branding()}
+
+@app.context_processor
+def inject_i18n_helpers():
+    """Disponibiliza funções de tradução para templates"""
+    from utils.i18n_helper import translate, t, get_current_language, get_all_translations
+    return {
+        'translate': translate,
+        't': t,
+        'current_language': get_current_language,
+        'get_translations': get_all_translations
+    }
 
 @app.context_processor
 def inject_perfil_access_functions():

@@ -14,7 +14,7 @@
 
 {% block content %}
 <div class="conciliacao-container">
-    <!-- Actions Bar with Breadcrumb -->
+    <!-- Header -->
     <div class="actions-bar module-header-financeiro">
         <div class="actions-left">
             {{ get_breadcrumb_with_module_colors([
@@ -22,15 +22,11 @@
                 {'name': 'Financeiro', 'icon': 'mdi mdi-currency-usd', 'url': '#'},
                 {'name': 'Conciliação Bancária', 'icon': 'mdi mdi-file-compare'}
             ], 'financeiro') }}
-            <!-- Resumo de Status -->
-            <div id="status-summary" class="filter-summary">
-                <span id="status-summary-text">Ferramenta automatizada para conciliação de extratos bancários</span>
-            </div>
         </div>
         <div class="actions-right">
-            <button id="btnLimparTudo" class="btn btn-secondary" style="display: none;">
+            <button id="btnLimparSessao" class="btn btn-secondary" style="display: none;">
                 <i class="mdi mdi-refresh"></i>
-                Limpar Dados
+                Nova Sessão
             </button>
             <button id="btnExportarRelatorio" class="btn btn-primary" style="display: none;">
                 <i class="mdi mdi-download"></i>
@@ -38,431 +34,326 @@
             </button>
         </div>
     </div>
-    
+
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay" style="display: none;">
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <p class="last-update">Processando arquivos de conciliação...</p>
+            <p id="loading-message">Processando...</p>
         </div>
     </div>
 
-    <!-- Seção de Carregamento de Dados -->
-    <div class="upload-section">
-        <!-- Upload de Arquivos Bancários -->
-        <div class="card mb-3">
+    <!-- Notification Bar -->
+    <div id="notification-bar" class="notification-bar" style="display: none;"></div>
+
+    <!-- Navegação por Abas -->
+    <div class="tabs-navigation">
+        <button class="tab-btn active" data-tab="conciliar">
+            <i class="mdi mdi-file-compare"></i>
+            Conciliar
+            <span class="tab-badge" id="badge-pendentes">0</span>
+        </button>
+        <button class="tab-btn" data-tab="conciliados">
+            <i class="mdi mdi-check-circle"></i>
+            Conciliados
+            <span class="tab-badge" id="badge-conciliados">0</span>
+        </button>
+    </div>
+
+    <!-- ABA 1: CONCILIAR (Ação) -->
+    <div id="tab-conciliar" class="tab-content active">
+        
+        <!-- Seção 1: Upload e Processamento -->
+        <div class="upload-section card">
             <div class="card-header">
-                <h5 class="card-title">
-                    <i class="mdi mdi-file-upload"></i>
-                    Upload de Arquivos Bancários
-                </h5>
+                <h5><i class="mdi mdi-cloud-upload"></i> Upload e Processamento</h5>
             </div>
             <div class="card-body">
-                <form id="uploadArquivoForm" enctype="multipart/form-data">
+                <form id="uploadForm" enctype="multipart/form-data">
                     <div class="row">
-                        <!-- Seleção do Banco para Upload -->
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
-                                <label for="banco_origem" class="form-label">Banco do Arquivo OFX</label>
-                                <select id="banco_origem" name="banco_origem" class="form-select">
-                                    <option value="auto">🔍 Identificar Automaticamente</option>
-                                    <option value="banco_brasil">🏦 Banco do Brasil</option>
-                                    <option value="santander">🏦 Santander</option>
-                                    <option value="itau">🏦 Itaú</option>
-                                </select>
-                                <div class="form-text">Sistema detecta automaticamente o banco</div>
-                            </div>
-                        </div>
-
-                        <!-- Filtro de Período dos Dados do Sistema -->
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="periodo_sistema" class="form-label">
-                                    <i class="mdi mdi-calendar-range"></i>
-                                    Período dos Lançamentos do Sistema
-                                </label>
-                                <select id="periodo_sistema" name="periodo_sistema" class="form-select">
-                                    <option value="hoje">📅 Hoje</option>
-                                    <option value="ontem">📅 Ontem</option>
-                                    <option value="semana_atual">📅 Esta Semana</option>
+                                <label class="form-label">Período dos Lançamentos do Sistema</label>
+                                <select id="periodo_sistema" class="form-select">
                                     <option value="mes_atual" selected>📅 Mês Atual</option>
                                     <option value="mes_anterior">📅 Mês Anterior</option>
-                                    <option value="ultimos_7_dias">📅 Últimos 7 Dias</option>
-                                    <option value="ultimos_15_dias">📅 Últimos 15 Dias</option>
                                     <option value="ultimos_30_dias">📅 Últimos 30 Dias</option>
-                                    <option value="ultimos_60_dias">📅 Últimos 60 Dias</option>
-                                    <option value="ultimos_90_dias">📅 Últimos 90 Dias</option>
-                                    <option value="personalizado">📅 Período Personalizado</option>
+                                    <option value="ultimos_15_dias">📅 Últimos 15 Dias</option>
+                                    <option value="ultimos_7_dias">📅 Últimos 7 Dias</option>
                                 </select>
-                                <div class="form-text">
-                                    <i class="mdi mdi-information"></i>
-                                    Filtra movimentos do sistema para conciliação com o OFX
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Seleção dos Arquivos -->
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="arquivo_banco" class="form-label">Arquivos dos Extratos Bancários</label>
-                                <input type="file" id="arquivo_banco" name="arquivos" class="form-control" 
-                                       accept=".ofx" multiple required>
-                                <div class="form-text">
-                                    <strong>Formato:</strong> Apenas arquivos OFX (.ofx)<br>
-                                    <small class="text-muted">📁 Múltiplos arquivos aceitos</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campos de Data Personalizada (oculto inicialmente) -->
-                    <div class="row mt-2" id="datas-personalizadas" style="display: none;">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="data_inicio" class="form-label">Data Início</label>
-                                <input type="date" id="data_inicio" name="data_inicio" class="form-control">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="data_fim" class="form-label">Data Fim</label>
-                                <input type="date" id="data_fim" name="data_fim" class="form-control">
+                                <label class="form-label">Banco (opcional, auto-detectado)</label>
+                                <select id="banco_origem" class="form-select">
+                                    <option value="auto">🔍 Identificar Automaticamente</option>
+                                    <option value="itau">🏦 Itaú</option>
+                                    <option value="santander">🏦 Santander</option>
+                                    <option value="banco_brasil">🏦 Banco do Brasil</option>
+                                </select>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Botão de Upload -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <button type="submit" id="btnUploadArquivo" class="btn btn-success">
-                                <i class="mdi mdi-file-upload"></i>
-                                Fazer Upload do Arquivo
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" id="arquivoBancario" name="arquivo_bancario" 
+                               accept=".ofx,.xlsx,.txt" multiple hidden>
+                        <div class="upload-placeholder">
+                            <i class="mdi mdi-cloud-upload upload-icon"></i>
+                            <p class="upload-title">Arraste arquivos aqui ou clique para selecionar</p>
+                            <p class="upload-subtitle">Formatos aceitos: .ofx, .xlsx, .txt</p>
+                            <button type="button" id="btnSelecionarArquivos" class="btn btn-secondary">
+                                Selecionar Arquivos
                             </button>
-                            <div class="upload-progress-arquivo" style="display: none;">
-                                <div class="progress mt-2">
-                                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                                </div>
-                                <small class="text-muted">Processando arquivo...</small>
-                            </div>
                         </div>
+                        <div id="filesList" class="files-list" style="display: none;"></div>
                     </div>
 
-                    <!-- Aviso Informativo -->
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <div class="alert alert-info" style="background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; padding: 12px 16px; margin: 0;">
-                                <i class="mdi mdi-information-outline" style="font-size: 1.2em; margin-right: 8px;"></i>
-                                <strong>Dica:</strong> Selecione o período correspondente aos arquivos OFX que você vai fazer upload para garantir melhor taxa de conciliação.
-                                <br>
-                                <small class="text-muted">
-                                    • Para OFX de <strong>Setembro/2025</strong>, selecione "Mês Anterior"<br>
-                                    • Para OFX de <strong>Outubro/2025</strong>, selecione "Mês Atual"
-                                </small>
-                            </div>
-                        </div>
+                    <div class="text-center mt-3">
+                        <button type="submit" id="btnProcessar" class="btn btn-success btn-lg" disabled>
+                            <i class="mdi mdi-play-circle"></i>
+                            Processar e Conciliar
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-
-
-    <!-- Seção de Dados Processados -->
-    <div class="dados-section" id="dadosSection" style="display: none;">
-        
-        <!-- Filtros por Banco -->
-        <div class="banco-filter-section">
-            <div class="card">
-                <div class="card-body">
-                    <div class="filter-group">
-                        <span class="filter-label">Filtrar por Banco:</span>
-                        <button type="button" class="banco-filter-btn all active" data-banco="todos">
-                            <i class="mdi mdi-bank"></i> Todos 
-                            <span class="counters">
-                                <span class="badge bg-primary" id="contador-todos-sistema">0</span>
-                                <span class="badge bg-success" id="contador-todos-banco">0</span>
-                            </span>
-                        </button>
-                        <button type="button" class="banco-filter-btn" data-banco="itau">
-                            <i class="mdi mdi-bank"></i> Itaú
-                            <span class="counters">
-                                <span class="badge bg-primary" id="contador-itau-sistema">0</span>
-                                <span class="badge bg-success" id="contador-itau-banco">0</span>
-                            </span>
-                        </button>
-                        <button type="button" class="banco-filter-btn" data-banco="bradesco">
-                            <i class="mdi mdi-bank"></i> Bradesco
-                            <span class="counters">
-                                <span class="badge bg-primary" id="contador-bradesco-sistema">0</span>
-                                <span class="badge bg-success" id="contador-bradesco-banco">0</span>
-                            </span>
-                        </button>
-                        <button type="button" class="banco-filter-btn" data-banco="santander">
-                            <i class="mdi mdi-bank"></i> Santander
-                            <span class="counters">
-                                <span class="badge bg-primary" id="contador-santander-sistema">0</span>
-                                <span class="badge bg-success" id="contador-santander-banco">0</span>
-                            </span>
-                        </button>
-                        <button type="button" class="banco-filter-btn" data-banco="banco_brasil">
-                            <i class="mdi mdi-bank"></i> Banco do Brasil
-                            <span class="counters">
-                                <span class="badge bg-primary" id="contador-bb-sistema">0</span>
-                                <span class="badge bg-success" id="contador-bb-banco">0</span>
-                            </span>
-                        </button>
-                    </div>
-                    <div class="mt-2">
-                        <small class="text-muted">
-                            <span class="badge bg-primary">Sistema</span> 
-                            <span class="badge bg-success">Banco</span>
-                            • Contadores atualizados automaticamente
-                        </small>
+        <!-- Seção 2: KPIs (exibido após processamento) -->
+        <div id="kpisSection" class="kpis-section" style="display: none;">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="kpi-card kpi-warning">
+                        <div class="kpi-icon"><i class="mdi mdi-alert-circle"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-label">Pendentes - Sistema</div>
+                            <div class="kpi-value" id="kpi-pendentes-sistema-count">0</div>
+                            <div class="kpi-subtitle" id="kpi-pendentes-sistema-valor">R$ 0,00</div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Filtros Adicionais -->
-                <div class="col-md-6">
-                    <!-- Campo de Pesquisa -->
-                    <div class="search-section mb-3">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="mdi mdi-magnify"></i>
-                            </span>
-                            <input type="text" class="form-control" id="searchInput" placeholder="Pesquisar por código, descrição, referência...">
-                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                <i class="mdi mdi-close"></i>
-                            </button>
+                <div class="col-md-3">
+                    <div class="kpi-card kpi-warning">
+                        <div class="kpi-icon"><i class="mdi mdi-alert-circle"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-label">Pendentes - Banco</div>
+                            <div class="kpi-value" id="kpi-pendentes-banco-count">0</div>
+                            <div class="kpi-subtitle" id="kpi-pendentes-banco-valor">R$ 0,00</div>
                         </div>
-                        <small class="text-muted mt-1">
-                            <i class="mdi mdi-information"></i>
-                            Busca em ambas as tabelas (Sistema e Banco)
-                        </small>
                     </div>
-                    
-                    <div class="filter-section">
-                        <!-- Filtros de Tipo -->
-                        <div class="d-flex flex-wrap gap-2 mb-2">
-                            <button type="button" class="tipo-filter-btn all active" data-tipo="todos">
-                                <i class="mdi mdi-filter"></i> Todos
-                            </button>
-                            <button type="button" class="tipo-filter-btn receita" data-tipo="receita">
-                                <i class="mdi mdi-trending-up"></i> Receitas
-                            </button>
-                            <button type="button" class="tipo-filter-btn despesa" data-tipo="despesa">
-                                <i class="mdi mdi-trending-down"></i> Despesas
-                            </button>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card kpi-success">
+                        <div class="kpi-icon"><i class="mdi mdi-check-circle"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-label">Conciliados (Sessão)</div>
+                            <div class="kpi-value" id="kpi-conciliados-count">0</div>
+                            <div class="kpi-subtitle" id="kpi-conciliados-valor">R$ 0,00</div>
                         </div>
-                        
-                        <!-- Filtros de Status -->  
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="status-filter-btn all active" data-status="todos">
-                                <i class="mdi mdi-check-all"></i> Todos Status
-                            </button>
-                            <button type="button" class="status-filter-btn pendente" data-status="pendente">
-                                <i class="mdi mdi-clock-outline"></i> Pendentes
-                            </button>
-                            <button type="button" class="status-filter-btn conciliado" data-status="conciliado">
-                                <i class="mdi mdi-check-circle"></i> Conciliados
-                            </button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="kpi-card kpi-info">
+                        <div class="kpi-icon"><i class="mdi mdi-information"></i></div>
+                        <div class="kpi-content">
+                            <div class="kpi-label">Total de Registros</div>
+                            <div class="kpi-value" id="kpi-total-sistema">0</div>
+                            <div class="kpi-subtitle"><span id="kpi-total-banco">0</span> banco</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <!-- Lançamentos do Sistema -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="mdi mdi-database"></i>
-                            Lançamentos do Sistema
-                            <span id="countSistema" class="badge bg-primary ms-2">0</span>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-counter">
-                            <strong id="countSistemaSelecionados">0</strong> selecionados de <strong id="countSistemaTotal">0</strong> registros
+        <!-- Seção 3: Área de Trabalho (Tabelas Lado a Lado) -->
+        <div id="workspace" class="workspace-section" style="display: none;">
+            <div class="workspace-grid">
+                
+                <!-- Coluna Esquerda: Sistema -->
+                <div class="workspace-column">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="mdi mdi-database"></i> Sistema Aberta</h5>
+                            <div class="card-controls">
+                                <input type="text" id="searchSistema" class="form-control form-control-sm" 
+                                       placeholder="🔍 Buscar...">
+                            </div>
                         </div>
-                        <div class="table-container">
-                            <table class="table table-hover" id="tabelaSistema">
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm table-hover">
                                 <thead>
                                     <tr>
-                                        <th width="5%" class="checkbox-cell">
-                                            <input type="checkbox" id="selectAllSistema" title="Selecionar todos">
-                                        </th>
-                                        <th width="14%" class="sortable" data-sort="data">
-                                            Data <i class="mdi mdi-sort sort-icon"></i>
-                                        </th>
-                                        <th width="18%">Banco</th>
-                                        <th width="14%" class="sortable" data-sort="valor">
-                                            Valor <i class="mdi mdi-sort sort-icon"></i>
-                                        </th>
-                                        <th width="12%">Tipo</th>
-                                        <th width="37%">Descrição</th>
-                                        <th width="10%">Status</th>
+                                        <th width="40"><input type="checkbox" id="checkAllSistema"></th>
+                                        <th class="sortable" data-table="sistema" data-sort="data">Data</th>
+                                        <th class="sortable" data-table="sistema" data-sort="descricao">Descrição</th>
+                                        <th class="sortable" data-table="sistema" data-sort="ref">Ref. Unique</th>
+                                        <th class="text-end sortable" data-table="sistema" data-sort="valor">Valor (R$)</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <!-- Dados dinâmicos -->
+                                <tbody id="tableSistema">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">
+                                            <i class="mdi mdi-information"></i>
+                                            Nenhum lançamento pendente
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
+                        <div class="card-footer">
+                            <div class="card-footer-content">
+                                <small class="text-muted">
+                                    <span id="countSistema">0</span> lançamento(s) |
+                                    Total: <strong id="totalSistema">R$ 0,00</strong>
+                                </small>
+                                <div id="paginationSistema" class="pagination-controls"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Lançamentos do Banco -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="mdi mdi-bank"></i>
-                            Extrato Bancário
-                            <span id="countBanco" class="badge bg-secondary ms-2">0</span>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-counter">
-                            <strong id="countBancoSelecionados">0</strong> selecionados de <strong id="countBancoTotal">0</strong> registros
+                <!-- Coluna Direita: Banco -->
+                <div class="workspace-column">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="mdi mdi-bank"></i> Extratos Bancários</h5>
+                            <div class="card-controls">
+                                <input type="text" id="searchBanco" class="form-control form-control-sm" 
+                                       placeholder="🔍 Buscar...">
+                                <select id="filtroBanco" class="form-select form-select-sm ms-2">
+                                    <option value="">Todos os bancos</option>
+                                    <option value="itau">Itaú</option>
+                                    <option value="santander">Santander</option>
+                                    <option value="banco_brasil">Banco do Brasil</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="table-container">
-                            <table class="table table-hover" id="tabelaBanco">
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm table-hover">
                                 <thead>
                                     <tr>
-                                        <th width="5%" class="checkbox-cell">
-                                            <input type="checkbox" id="selectAllBanco" title="Selecionar todos">
-                                        </th>
-                                        <th width="14%" class="sortable" data-sort="data">
-                                            Data <i class="mdi mdi-sort sort-icon"></i>
-                                        </th>
-                                        <th width="20%">Banco</th>
-                                        <th width="16%" class="sortable" data-sort="valor">
-                                            Valor <i class="mdi mdi-sort sort-icon"></i>
-                                        </th>
-                                        <th width="12%">Tipo</th>
-                                        <th width="33%">Histórico</th>
-                                        <th width="10%">Status</th>
+                                        <th width="40"><input type="checkbox" id="checkAllBanco"></th>
+                                        <th class="sortable" data-table="banco" data-sort="data">Data</th>
+                                        <th class="sortable" data-table="banco" data-sort="descricao">Descrição</th>
+                                        <th class="sortable" data-table="banco" data-sort="ref">Ref. Unique</th>
+                                        <th class="sortable" data-table="banco" data-sort="banco">Banco</th>
+                                        <th class="text-end sortable" data-table="banco" data-sort="valor">Valor (R$)</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <!-- Dados dinâmicos -->
+                                <tbody id="tableBanco">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">
+                                            <i class="mdi mdi-information"></i>
+                                            Nenhum lançamento pendente
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ações de Conciliação -->
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="action-buttons">
-                            <button type="button" class="btn btn-success" id="btnConciliarAuto">
-                                <i class="mdi mdi-auto-fix"></i>
-                                Conciliação Automática
-                            </button>
-                            <button type="button" class="btn btn-warning" id="btnConciliarManual" disabled>
-                                <i class="mdi mdi-hand-pointing-up"></i>
-                                Conciliar Selecionados
-                            </button>
+                        <div class="card-footer">
+                            <div class="card-footer-content">
+                                <small class="text-muted">
+                                    <span id="countBanco">0</span> lançamento(s) |
+                                    Total: <strong id="totalBanco">R$ 0,00</strong>
+                                </small>
+                                <div id="paginationBanco" class="pagination-controls"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Seção de Somatório dos Selecionados -->
-        <div class="somatorio-section" id="somatorioSection">
-            <div class="somatorio-content">
-                <div class="somatorio-info">
-                    <div class="somatorio-item">
-                        <div class="somatorio-label">Sistema</div>
-                        <div class="somatorio-count" id="somatorioSistemaCount">0 itens</div>
-                        <div class="somatorio-valor" id="somatorioSistemaValor">R$ 0,00</div>
+            </div>
+
+            <!-- Seção 4: Ação de Conciliação Manual -->
+            <div class="conciliar-action">
+                <div class="totals-display">
+                    <div class="total-item">
+                        <span class="total-label">Total Selecionado Sistema:</span>
+                        <span class="total-value" id="totalSelSistema">R$ 0,00</span>
                     </div>
-                    <div class="somatorio-item">
-                        <div class="somatorio-label">Banco</div>
-                        <div class="somatorio-count" id="somatorioBancoCount">0 itens</div>
-                        <div class="somatorio-valor" id="somatorioBancoValor">R$ 0,00</div>
-                    </div>
-                    <div class="somatorio-item">
-                        <div class="somatorio-label">Diferença</div>
-                        <div class="somatorio-valor" id="somatorioDiferenca">R$ 0,00</div>
-                    </div>
-                </div>
-                <div class="somatorio-actions">
-                    <button type="button" class="btn btn-warning btn-conciliar" id="btnConciliarSelecionados" disabled>
-                        <i class="mdi mdi-link"></i>
+                    <button id="btnConciliarManual" class="btn btn-primary btn-lg" disabled>
+                        <i class="mdi mdi-link-variant"></i>
                         Conciliar Selecionados
                     </button>
-                    <button type="button" class="btn btn-secondary" id="btnLimparSelecao">
-                        <i class="mdi mdi-close"></i>
-                        Limpar Seleção
-                    </button>
+                    <div class="total-item">
+                        <span class="total-label">Total Selecionado Banco:</span>
+                        <span class="total-value" id="totalSelBanco">R$ 0,00</span>
+                    </div>
                 </div>
+                <div id="validation-message" class="validation-message" style="display: none;"></div>
             </div>
+
         </div>
+
     </div>
 
-    <!-- Seção de Resumo da Conciliação -->
-    <div class="resumo-section" id="resumoSection" style="display: none;">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title">
-                    <i class="mdi mdi-chart-pie"></i>
-                    Resumo da Conciliação
-                </h5>
-            </div>
+    <!-- ABA 2: CONCILIADOS (Conferência) -->
+    <div id="tab-conciliados" class="tab-content">
+        
+        <!-- Filtros -->
+        <div class="card mb-3">
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-value" id="statConciliados">0</div>
-                            <div class="stat-label">Conciliados</div>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo de Conciliação</label>
+                        <select id="filtroTipoConciliacao" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="auto_ref">Automática por Referência</option>
+                            <option value="auto_valor">Automática por Valor</option>
+                            <option value="manual">Manual</option>
+                        </select>
                     </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-value" id="statPendentes">0</div>
-                            <div class="stat-label">Pendentes</div>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Banco</label>
+                        <select id="filtroBancoConciliados" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="itau">Itaú</option>
+                            <option value="santander">Santander</option>
+                            <option value="banco_brasil">Banco do Brasil</option>
+                        </select>
                     </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-value" id="statDivergencias">0</div>
-                            <div class="stat-label">Divergências</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-value" id="statPercentual">0%</div>
-                            <div class="stat-label">% Conciliado</div>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Buscar</label>
+                        <input type="text" id="searchConciliados" class="form-control" 
+                               placeholder="🔍 Buscar na descrição...">
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Modal de Loading -->
-<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Carregando...</span>
+        <!-- Tabela de Conciliações -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="mdi mdi-check-all"></i> Lançamentos Conciliados</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="80">Status</th>
+                                <th width="100">Data</th>
+                                <th width="120" class="text-end">Valor Total</th>
+                                <th>Lançamentos do Sistema</th>
+                                <th>Lançamentos do Banco</th>
+                                <th width="80" class="text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableConciliados">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-5">
+                                    <i class="mdi mdi-checkbox-blank-circle-outline" style="font-size: 3rem;"></i>
+                                    <p class="mt-2">Nenhuma conciliação realizada ainda</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <p class="mb-0">Processando arquivos...</p>
             </div>
         </div>
-    </div>
-</div>
 
+    </div>
+
+</div>
 {% endblock %}

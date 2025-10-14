@@ -128,6 +128,11 @@ def dashboard():
     user_role = user_data.get('role')
     perfil_principal = user_data.get('perfil_principal', '')
     
+    # Admin operação tem acesso a todas as empresas - nunca mostrar warning
+    if perfil_principal in ['admin_operacao', 'master_admin']:
+        print(f"[DASH_RESUMIDO] Admin {user_data.get('email')} - acesso total, sem warning")
+        return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html', show_company_warning=False)
+    
     if user_role == 'cliente_unique':
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
@@ -136,14 +141,14 @@ def dashboard():
             return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html', show_company_warning=True)
     
     # Verificar se é interno_unique sem empresas associadas (exceto admins)
-    if user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
+    if user_role == 'interno_unique':
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
             print(f"[DASH_RESUMIDO] Usuário interno {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html', show_company_warning=True)
     
-    return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html')
+    return render_template('dash_importacoes_resumido/dash_importacoes_resumido.html', show_company_warning=False)
 
 @dash_importacoes_resumido_bp.route('/api/data')
 @login_required

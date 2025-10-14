@@ -96,12 +96,13 @@ def _format_ts_with_policy(ts_value, policy: str = 'none'):
 def analytics_dashboard():
     """
     Página principal do Analytics do Portal
-    Acesso: admin master, admin_operacao, admin_financeiro
+    Acesso: Todos os admins (master_admin, admin_operacao, admin_financeiro, admin_recursos_humanos)
     """
     try:
-        # Verificar se usuário tem acesso ao módulo analytics
-        if not PerfilAccessService.user_can_access_page('analytics', 'portal'):
-            logger.warning(f"Usuário sem permissão para acessar analytics portal")
+        # Verificar se usuário tem acesso ao analytics_portal
+        accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        if 'analytics_portal' not in accessible_modules and 'analytics' not in accessible_modules:
+            logger.warning(f"Usuário sem permissão para acessar analytics portal. Módulos: {accessible_modules}")
             return render_template('errors/403.html'), 403
             
         return render_template('analytics_portal_new.html', analytics_type='portal')
@@ -114,12 +115,13 @@ def analytics_dashboard():
 def analytics_agente():
     """
     Página principal do Analytics do Agente
-    Acesso: admin master, admin_operacao, admin_financeiro
+    Acesso: Todos os admins (master_admin, admin_operacao, admin_financeiro, admin_recursos_humanos)
     """
     try:
-        # Verificar se usuário tem acesso ao módulo analytics
-        if not PerfilAccessService.user_can_access_page('analytics', 'agente'):
-            logger.warning(f"Usuário sem permissão para acessar analytics agente")
+        # Verificar se usuário tem acesso ao analytics_agente
+        accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        if 'analytics_agente' not in accessible_modules and 'analytics' not in accessible_modules:
+            logger.warning(f"Usuário sem permissão para acessar analytics agente. Módulos: {accessible_modules}")
             return render_template('errors/403.html'), 403
         
         return render_template('analytics_agente.html', analytics_type='agente')

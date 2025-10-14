@@ -14,10 +14,8 @@ from dataclasses import dataclass
 import re
 
 # Configuração de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@dataclass
 @dataclass
 class MovimentoSistema:
     """Representa um movimento do sistema (tabela fin_conciliacao_movimentos)"""

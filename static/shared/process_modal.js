@@ -39,6 +39,9 @@ function openProcessModal(operationIndex) {
     // Update timeline - extract numeric value from status_timeline like "2 - Agd Chegada"
     const statusTimelineNumber = extractTimelineNumber(operation.status_timeline);
     console.log('[MODAL_DEBUG] Status timeline extraído:', statusTimelineNumber);
+    console.log('[MODAL_DEBUG] operation.status_timeline:', operation.status_timeline);
+    console.log('[MODAL_DEBUG] operation.status_processo:', operation.status_processo);
+    console.log('[MODAL_DEBUG] operation.status_macro_sistema:', operation.status_macro_sistema);
     updateProcessTimeline(statusTimelineNumber);
     
     // Update general information
@@ -47,7 +50,39 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-abertura', operation.data_abertura);
     updateElementValue('detail-importador', operation.importador);
     updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
-    updateElementValue('detail-status', operation.status_processo);
+    
+    // CORREÇÃO: Usar status_timeline, mas ignorar "N/A" e usar fallback
+    let statusDisplay = operation.status_timeline;
+    
+    console.log('[MODAL_DEBUG] ========================================');
+    console.log('[MODAL_DEBUG] INÍCIO DO PROCESSAMENTO DE STATUS');
+    console.log('[MODAL_DEBUG] status_timeline original:', operation.status_timeline);
+    console.log('[MODAL_DEBUG] typeof status_timeline:', typeof operation.status_timeline);
+    
+    // Se for N/A, null, undefined ou vazio, tentar fallbacks
+    if (!statusDisplay || statusDisplay.toUpperCase() === 'N/A' || statusDisplay.trim() === '') {
+        console.log('[MODAL_DEBUG] Status timeline é inválido, usando fallback...');
+        statusDisplay = operation.status_macro_sistema || operation.status_processo || 'Sem Informação';
+        console.log('[MODAL_DEBUG] Status após fallback:', statusDisplay);
+    } else {
+        console.log('[MODAL_DEBUG] Status timeline é VÁLIDO:', statusDisplay);
+    }
+    
+    console.log('[MODAL_DEBUG] Status display FINAL:', statusDisplay);
+    console.log('[MODAL_DEBUG] ========================================');
+    
+    // Forçar atualização do elemento
+    const statusElement = document.getElementById('detail-status');
+    if (statusElement) {
+        statusElement.textContent = statusDisplay;
+        console.log('[MODAL_DEBUG] ✅ Elemento detail-status atualizado diretamente!');
+        console.log('[MODAL_DEBUG] Valor no DOM após atualização:', statusElement.textContent);
+    } else {
+        console.error('[MODAL_DEBUG] ❌ Elemento detail-status NÃO ENCONTRADO!');
+    }
+    
+    // Também usar a função helper
+    updateElementValue('detail-status', statusDisplay);
     
     // Update cargo and transport details
     updateElementValue('detail-modal', operation.modal);
@@ -101,14 +136,18 @@ function closeProcessModal() {
 }
 
 /**
- * Extract numeric value from status_timeline like "2 - Agd Chegada"
+ * Extract numeric value from status_timeline like "2 - Agd Embarque"
  */
 function extractTimelineNumber(statusTimeline) {
-    if (!statusTimeline) return 1;
+    if (!statusTimeline) return 1; // Default para Abertura
     
     try {
-        // Extract the first number from strings like "2 - Agd Chegada"
-        const status_str = String(statusTimeline).trim();
+        const status_str = String(statusTimeline).trim().toUpperCase();
+        
+        // Ignorar N/A
+        if (status_str === 'N/A') return 1;
+        
+        // Extract the first number from strings like "2 - Agd Embarque"
         if (/^[1-9]/.test(status_str)) {
             return parseInt(status_str.split(' ')[0].replace('-', '').trim());
         }
@@ -147,26 +186,59 @@ function formatCNPJ(cnpj) {
 }
 
 /**
- * Update process timeline based on status_macro
+ * Update process timeline based on status_timeline
+ * REGRA NOVA: 6 etapas
+ * - 1: Abertura (sempre azul)
+ * - 2: Agd Embarque (azul quando status = 2)
+ * - 3: Agd Chegada (azul quando status = 3)
+ * - 4: Agd Registro (azul quando status = 4)
+ * - 5: Desembaraçado (azul quando status = 5)
+ * - 6: Finalizado (TODAS as bolinhas ficam VERDES quando status = 6)
  */
-function updateProcessTimeline(statusMacro) {
-    console.log('[TIMELINE_DEBUG] Atualizando timeline com status:', statusMacro);
+function updateProcessTimeline(statusNumber) {
+    console.log('[TIMELINE_DEBUG] Atualizando timeline com status:', statusNumber);
     
     const timelineSteps = document.querySelectorAll('.timeline-step');
     console.log('[TIMELINE_DEBUG] Steps encontrados:', timelineSteps.length);
     
+    // REGRA ESPECIAL: Se status = 6 (Finalizado), todas as bolinhas ficam verdes
+    if (statusNumber === 6) {
+        console.log('[TIMELINE_DEBUG] Status 6 - FINALIZADO! Todas as etapas ficam verdes (completed)');
+        timelineSteps.forEach((step, index) => {
+            step.classList.remove('active');
+            step.classList.add('completed');
+            console.log(`[TIMELINE_DEBUG] Step ${index + 1} marcado como completed (verde)`);
+        });
+        return; // Sai da função
+    }
+    
+    // REGRA NORMAL: Etapas progridem de acordo com o status
     timelineSteps.forEach((step, index) => {
         const stepNumber = index + 1;
         step.classList.remove('completed', 'active');
         
-        console.log(`[TIMELINE_DEBUG] Step ${stepNumber}: status=${statusMacro}`);
+        console.log(`[TIMELINE_DEBUG] Step ${stepNumber}: status=${statusNumber}`);
         
-        if (stepNumber < statusMacro) {
-            step.classList.add('completed');
-            console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como completed`);
-        } else if (stepNumber === statusMacro) {
-            step.classList.add('active');
-            console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como active`);
+        // Etapa 1 (Abertura) sempre está azul (active ou completed)
+        if (stepNumber === 1) {
+            if (statusNumber === 1) {
+                step.classList.add('active');
+                console.log(`[TIMELINE_DEBUG] Step 1 (Abertura) marcado como active (azul)`);
+            } else {
+                step.classList.add('completed');
+                console.log(`[TIMELINE_DEBUG] Step 1 (Abertura) marcado como completed (azul)`);
+            }
+        }
+        // Etapas 2-5: Azul se for o status atual, completed se já passou
+        else if (stepNumber > 1 && stepNumber <= 5) {
+            if (stepNumber < statusNumber) {
+                step.classList.add('completed');
+                console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como completed (azul - passou)`);
+            } else if (stepNumber === statusNumber) {
+                step.classList.add('active');
+                console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como active (azul - atual)`);
+            }
+            // Senão, fica cinza (sem classe)
         }
     });
 }
