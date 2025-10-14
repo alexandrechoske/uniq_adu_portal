@@ -1,40 +1,195 @@
-/* Ajuste de Status - Placeholder */
+/* Ajuste de Status - Estilo Minimalista (padrão dashboard) */
 
 .ajuste-status-page {
-    padding: 1rem 1.5rem;
+    padding: 0;
 }
 
-.ajuste-status-placeholder {
-    display: flex;
+/* Usar estilos do enhanced-table já existentes no sistema */
+.enhanced-table-section {
+    margin-top: 1.5rem;
+}
+
+/* Loading spinner (compatível com o sistema) */
+.component-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.component-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Badges minimalistas */
+.status-sistema-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.status-timeline-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.status-timeline-badge.processos-abertos { background: #e8f5e9; color: #2e7d32; }
+.status-timeline-badge.ag-embarque { background: #fff3e0; color: #ef6c00; }
+.status-timeline-badge.ag-chegada { background: #e1f5fe; color: #0277bd; }
+.status-timeline-badge.ag-registro { background: #f3e5f5; color: #7b1fa2; }
+.status-timeline-badge.ag-desembaraco { background: #fce4ec; color: #c2185b; }
+.status-timeline-badge.ag-fechamento { background: #f1f8e9; color: #558b2f; }
+
+.timeline-order-badge {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 50vh;
-    background: #f8f9fb;
-    border: 1px dashed #cbd3db;
-    border-radius: 12px;
-    color: #77838f;
-    font-size: 1.75rem;
+    width: 28px;
+    height: 28px;
+    background: #673ab7;
+    color: white;
+    border-radius: 50%;
     font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-size: 0.875rem;
 }
 
-.in-dev-label {
-    display: inline-block;
-    padding: 0.75rem 2rem;
-    border-radius: 999px;
-    background: #e0e7ff;
-    color: #3f51b5;
-    box-shadow: 0 4px 12px rgba(63, 81, 181, 0.15);
+/* Botões de ação compactos */
+.action-buttons {
+    display: flex;
+    gap: 0.375rem;
+    justify-content: center;
 }
 
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    border-radius: 4px;
+}
+
+/* Modal simplificado */
+.modal-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem 1.25rem;
+}
+
+.modal-header.bg-danger {
+    background: #dc3545 !important;
+}
+
+.modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-body .form-label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.375rem;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.modal-body .form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.modal-footer {
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Estado vazio minimalista */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.empty-state h4 {
+    font-size: 1.125rem;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+/* Toast notifications minimalistas */
+.toast-container {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.toast {
+    min-width: 280px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.toast-header {
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 0.625rem 0.875rem;
+}
+
+.toast-body {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+}
+
+.toast.success .toast-header { background: #d4edda; color: #155724; border-bottom: 1px solid #c3e6cb; }
+.toast.error .toast-header { background: #f8d7da; color: #721c24; border-bottom: 1px solid #f5c6cb; }
+.toast.warning .toast-header { background: #fff3cd; color: #856404; border-bottom: 1px solid #ffeaa7; }
+
+/* Responsividade */
 @media (max-width: 768px) {
-    .ajuste-status-page {
-        padding: 1rem;
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
     }
 
-    .ajuste-status-placeholder {
-        min-height: 35vh;
-        font-size: 1.4rem;
+    .action-buttons .btn {
+        width: 100%;
+        font-size: 0.75rem;
     }
 }

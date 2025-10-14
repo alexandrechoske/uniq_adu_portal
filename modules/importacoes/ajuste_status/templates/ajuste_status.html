@@ -3,6 +3,7 @@
 {% block title %}Ajuste de Status - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
     <link rel="stylesheet" href="{{ url_for('ajuste_status.static', filename='css/ajuste_status.css') }}">
 {% endblock %}
 
@@ -16,10 +17,119 @@
                 {'name': 'Ajuste de Status', 'icon': 'mdi mdi-format-list-checks'}
             ], 'importacoes') }}
         </div>
+        <div class="actions-right">
+            <button id="btn-adicionar" class="btn btn-primary">
+                <i class="mdi mdi-plus-circle"></i>
+                Adicionar
+            </button>
+        </div>
     </div>
 
-    <div class="main-content ajuste-status-placeholder">
-        <span class="in-dev-label">Em Dev</span>
+    <!-- Tabela de Mapeamentos -->
+    <div class="enhanced-table-section">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
+                <i class="mdi mdi-format-list-checks"></i>
+                Mapeamentos de Status
+            </h2>
+            <div class="enhanced-table-controls">
+                <span class="badge bg-primary" id="total-mappings">0 mapeamentos</span>
+            </div>
+        </div>
+        <div class="enhanced-table-container">
+            <div id="mappings-loading" class="component-loading" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+            <table id="mappings-table" class="enhanced-data-table">
+                <thead>
+                    <tr>
+                        <th>Status do Sistema</th>
+                        <th>Status da Timeline</th>
+                        <th>Ordem</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="mappings-tbody">
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Adicionar/Editar Mapeamento -->
+<div class="modal fade" id="mappingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mappingModalLabel">
+                    <i class="mdi mdi-format-list-checks"></i>
+                    <span id="modal-title-text">Adicionar Mapeamento</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mapping-form">
+                    <input type="hidden" id="mapping-mode" value="create">
+                    <input type="hidden" id="original-status-sistema" value="">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status do Sistema <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="status-sistema-input" placeholder="Digite o status (ex: AG. EMBARQUE)" required>
+                        <small class="form-text text-muted">Digite o status do sistema em MAIÚSCULAS</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status da Timeline <span class="text-danger">*</span></label>
+                        <select class="form-select" id="status-timeline" required>
+                            <option value="">Selecione...</option>
+                            <option value="PROCESSOS ABERTOS">PROCESSOS ABERTOS</option>
+                            <option value="AG. EMBARQUE">AG. EMBARQUE</option>
+                            <option value="AG. CHEGADA">AG. CHEGADA</option>
+                            <option value="AG. REGISTRO">AG. REGISTRO</option>
+                            <option value="AG. DESEMBARAÇO">AG. DESEMBARAÇO</option>
+                            <option value="AG. FECHAMENTO">AG. FECHAMENTO</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Ordem na Timeline <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="timeline-order" min="1" max="6" readonly required>
+                        <small class="form-text text-muted">Ordem é preenchida automaticamente: 1-Abertura, 2-Embarque, 3-Chegada, 4-Registro, 5-Desembaraço, 6-Fechamento</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-salvar-mapping">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="mdi mdi-alert-circle"></i>
+                    Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Excluir mapeamento do status "<strong id="delete-status-name"></strong>"?</p>
+                <div class="alert alert-warning mb-0">
+                    <i class="mdi mdi-alert"></i>
+                    Processos com este status aparecerão como "N/A" na timeline.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btn-confirmar-delete">Excluir</button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
