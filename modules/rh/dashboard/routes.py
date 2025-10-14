@@ -10,6 +10,7 @@ from . import dashboard_rh_bp
 from extensions import supabase_admin as supabase
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from dateutil import parser as date_parser
 
 # ========================================
 # PÁGINAS HTML
@@ -76,6 +77,19 @@ def api_dados_dashboard():
         print(f"📊 API Dashboard - Período: {periodo_inicio} a {periodo_fim}")
         print(f"📊 Departamentos filtrados: {departamentos_ids if departamentos_ids else 'Todos'}")
         
+        # 🔥 OTIMIZAÇÃO: Buscar todos os colaboradores ativos de uma vez (apenas IDs para outras queries)
+        response_colabs_ativos = supabase.table('rh_colaboradores')\
+            .select('id, data_admissao, data_nascimento, data_desligamento, status')\
+            .eq('status', 'Ativo')\
+            .is_('data_desligamento', 'null')\
+            .execute()
+        
+        colaboradores_ativos = response_colabs_ativos.data if response_colabs_ativos.data else []
+        headcount_atual = len(colaboradores_ativos)
+        colaboradores_ativos_ids = [c['id'] for c in colaboradores_ativos]
+        
+        print(f"✅ Colaboradores ativos (sem data_desligamento): {headcount_atual}")
+        
         # Calcular KPIs
         kpis = calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids)
         
@@ -139,20 +153,23 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     """
     Calcula os KPIs principais do dashboard
     OTIMIZADO: Busca dados compartilhados uma única vez
+    CORRIGIDO: Usa data_desligamento para verificar status ativo
     """
     print("🚀 [OTIMIZAÇÃO] Carregando dados compartilhados...")
     
     # 🔥 OTIMIZAÇÃO 1: Buscar todos os colaboradores ativos de uma vez (era 11 queries, agora 1)
+    # ✅ CORREÇÃO: Considera ativo apenas quem tem status='Ativo' E data_desligamento NULL
     response_colabs_ativos = supabase.table('rh_colaboradores')\
         .select('id, data_admissao, data_nascimento, data_desligamento, status')\
         .eq('status', 'Ativo')\
+        .is_('data_desligamento', 'null')\
         .execute()
     
     colaboradores_ativos = response_colabs_ativos.data if response_colabs_ativos.data else []
     headcount_atual = len(colaboradores_ativos)
     colaboradores_ativos_ids = [c['id'] for c in colaboradores_ativos]
     
-    print(f"✅ Colaboradores ativos: {headcount_atual}")
+    print(f"✅ Colaboradores ativos (status=Ativo E sem demissão): {headcount_atual}")
     
     # 🔥 OTIMIZAÇÃO 2: Buscar todos os salários de uma vez usando IN (era 9 queries, agora 1)
     massa_salarial_total = 0
@@ -221,18 +238,22 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
 
 def calcular_turnover_otimizado(periodo_inicio, periodo_fim, headcount_atual, departamentos_ids=None):
     """
-    KPI 3: Taxa de Rotatividade (Turnover) - OTIMIZADO
+    KPI 3: Taxa de Rotatividade (Turnover) - OTIMIZADO E CORRIGIDO
     Recebe headcount já calculado para evitar query duplicada
+    CORREÇÃO: Usa data_desligamento da tabela rh_colaboradores ao invés de histórico
     """
     try:
-        response_demissoes = supabase.table('rh_historico_colaborador')\
+        # ✅ CORREÇÃO: Buscar desligamentos pela data_desligamento na tabela principal
+        response_demissoes = supabase.table('rh_colaboradores')\
             .select('id', count='exact')\
-            .eq('tipo_evento', 'Demissão')\
-            .gte('data_evento', periodo_inicio)\
-            .lte('data_evento', periodo_fim)\
+            .not_.is_('data_desligamento', 'null')\
+            .gte('data_desligamento', periodo_inicio)\
+            .lte('data_desligamento', periodo_fim)\
             .execute()
         
         desligamentos = response_demissoes.count if response_demissoes.count is not None else 0
+        
+        print(f"📊 Turnover: {desligamentos} desligamentos no período, headcount: {headcount_atual}")
         
         if headcount_atual == 0:
             turnover_taxa = 0
@@ -704,12 +725,23 @@ def calcular_evolucao_headcount(periodo_inicio, periodo_fim):
             current += relativedelta(months=1)
         
         # 🔥 OTIMIZAÇÃO: Buscar TODOS os eventos do período de uma vez (era 30 queries, agora 1)
+        # ✅ CORREÇÃO: Buscar admissões do histórico mas demissões da tabela principal
         print(f"🚀 [OTIMIZAÇÃO] Buscando histórico completo para período {periodo_inicio} a {periodo_fim}...")
-        response_historico = supabase.table('rh_historico_colaborador')\
-            .select('tipo_evento, data_evento')\
-            .in_('tipo_evento', ['Admissão', 'Demissão'])\
+        
+        # Buscar admissões do histórico (se existir)
+        response_admissoes = supabase.table('rh_historico_colaborador')\
+            .select('data_evento')\
+            .eq('tipo_evento', 'Admissão')\
             .gte('data_evento', periodo_inicio)\
             .lte('data_evento', periodo_fim)\
+            .execute()
+        
+        # Buscar demissões da tabela principal (data_desligamento)
+        response_demissoes = supabase.table('rh_colaboradores')\
+            .select('data_desligamento')\
+            .not_.is_('data_desligamento', 'null')\
+            .gte('data_desligamento', periodo_inicio)\
+            .lte('data_desligamento', periodo_fim)\
             .execute()
         
         # Agrupar eventos por mês em Python (O(n) ao invés de 30 queries)
@@ -717,17 +749,22 @@ def calcular_evolucao_headcount(periodo_inicio, periodo_fim):
         admissoes_por_mes = defaultdict(int)
         demissoes_por_mes = defaultdict(int)
         
-        for evento in (response_historico.data or []):
+        for evento in (response_admissoes.data or []):
             mes = evento['data_evento'][:7]  # YYYY-MM
-            if evento['tipo_evento'] == 'Admissão':
-                admissoes_por_mes[mes] += 1
-            elif evento['tipo_evento'] == 'Demissão':
-                demissoes_por_mes[mes] += 1
+            admissoes_por_mes[mes] += 1
+        
+        for evento in (response_demissoes.data or []):
+            mes = evento['data_desligamento'][:7]  # YYYY-MM
+            demissoes_por_mes[mes] += 1
         
         print(f"✅ Eventos agrupados: {len(admissoes_por_mes)} meses com admissões, {len(demissoes_por_mes)} meses com demissões")
         
         # Buscar headcount atual UMA VEZ (era 10 queries, agora 1)
-        resp_head = supabase.table('rh_colaboradores').select('id', count='exact').eq('status', 'Ativo').execute()
+        resp_head = supabase.table('rh_colaboradores')\
+            .select('id', count='exact')\
+            .eq('status', 'Ativo')\
+            .is_('data_desligamento', 'null')\
+            .execute()
         headcount_atual = resp_head.count if resp_head.count is not None else 0
         
         # Montar arrays de dados
@@ -762,6 +799,7 @@ def calcular_turnover_por_departamento(periodo_inicio, periodo_fim):
     """
     Gráfico 2: Taxa de Turnover por Departamento
     OTIMIZADO: Busca demissões de uma vez e agrupa em Python
+    CORRIGIDO: Usa data_desligamento da tabela principal
     """
     try:
         # Buscar departamentos UMA VEZ
@@ -774,23 +812,48 @@ def calcular_turnover_por_departamento(periodo_inicio, periodo_fim):
         departamentos_ids = [d['id'] for d in departamentos]
         departamentos_map = {d['id']: d['nome_departamento'] for d in departamentos}
         
-        # 🔥 OTIMIZAÇÃO: Buscar TODAS as demissões de uma vez e agrupar em Python
+        # ✅ CORREÇÃO: Buscar colaboradores demitidos no período
         print(f"🚀 [OTIMIZAÇÃO] Buscando demissões por departamento...")
-        resp_dem = supabase.table('rh_historico_colaborador')\
-            .select('departamento_id')\
-            .eq('tipo_evento', 'Demissão')\
-            .in_('departamento_id', departamentos_ids)\
-            .gte('data_evento', periodo_inicio)\
-            .lte('data_evento', periodo_fim)\
+        
+        # Buscar colaboradores demitidos (com data_desligamento no período)
+        resp_demitidos = supabase.table('rh_colaboradores')\
+            .select('id, data_desligamento')\
+            .not_.is_('data_desligamento', 'null')\
+            .gte('data_desligamento', periodo_inicio)\
+            .lte('data_desligamento', periodo_fim)\
             .execute()
         
-        # Agrupar demissões por departamento
+        colaboradores_demitidos_ids = [c['id'] for c in (resp_demitidos.data or [])]
+        
+        # 🔥 OTIMIZAÇÃO CRÍTICA: Buscar TODOS os históricos de uma vez (não um por departamento!)
+        print(f"🚀 [OTIMIZAÇÃO] Buscando histórico completo para cálculo de turnover...")
+        resp_hist_completo = supabase.table('rh_historico_colaborador')\
+            .select('colaborador_id, departamento_id')\
+            .not_.is_('departamento_id', 'null')\
+            .execute()
+        
+        # Mapear departamento de cada colaborador (último registro)
         from collections import defaultdict
+        colaborador_dept_map = {}
+        for hist in (resp_hist_completo.data or []):
+            colab_id = hist['colaborador_id']
+            if colab_id not in colaborador_dept_map:  # Pega o primeiro (mais recente devido ao order)
+                colaborador_dept_map[colab_id] = hist['departamento_id']
+        
+        # Contar demissões por departamento
         demissoes_por_dept = defaultdict(int)
-        for evento in (resp_dem.data or []):
-            dept_id = evento.get('departamento_id')
+        for colab_id in colaboradores_demitidos_ids:
+            dept_id = colaborador_dept_map.get(colab_id)
             if dept_id:
                 demissoes_por_dept[dept_id] += 1
+        
+        # Contar headcount por departamento (colaboradores únicos)
+        headcount_por_dept = defaultdict(set)
+        for colab_id, dept_id in colaborador_dept_map.items():
+            headcount_por_dept[dept_id].add(colab_id)
+        
+        # Converter sets para counts
+        headcount_counts = {dept_id: len(colabs) for dept_id, colabs in headcount_por_dept.items()}
         
         labels = []
         data = []
@@ -799,15 +862,13 @@ def calcular_turnover_por_departamento(periodo_inicio, periodo_fim):
             dept_id = dept['id']
             dept_nome = dept['nome_departamento']
             demissoes = demissoes_por_dept.get(dept_id, 0)
-            
-            # Headcount do departamento (simplificado)
-            # TODO: Implementar contagem correta por departamento
-            headcount_dept = 10  # Placeholder
+            headcount_dept = headcount_counts.get(dept_id, 0)
             
             turnover = (demissoes / headcount_dept * 100) if headcount_dept > 0 else 0
             
-            labels.append(dept_nome)
-            data.append(round(turnover, 1))
+            if headcount_dept > 0:  # Só incluir departamentos com colaboradores
+                labels.append(dept_nome)
+                data.append(round(turnover, 1))
         
         print(f"✅ Turnover calculado para {len(labels)} departamentos")
         
@@ -826,6 +887,7 @@ def calcular_distribuicao_departamento():
     """
     Gráfico 3: Distribuição de Colaboradores Ativos por Departamento
     OTIMIZADO: Busca colaboradores e agrupa em Python
+    CORRIGIDO: Busca departamento do histórico se não existir na tabela principal
     """
     try:
         # Buscar departamentos
@@ -840,20 +902,58 @@ def calcular_distribuicao_departamento():
         # 🔥 OTIMIZAÇÃO: Buscar TODOS colaboradores ativos de uma vez
         print(f"🚀 [OTIMIZAÇÃO] Buscando colaboradores ativos para distribuição...")
         response_colabs = supabase.table('rh_colaboradores')\
-            .select('id, departamento_id')\
+            .select('id, status, data_desligamento')\
             .eq('status', 'Ativo')\
+            .is_('data_desligamento', 'null')\
             .execute()
         
         colaboradores = response_colabs.data if response_colabs.data else []
+        
+        print(f"   Total de colaboradores ativos: {len(colaboradores)}")
+        
+        if not colaboradores:
+            print(f"   ⚠️  Nenhum colaborador ativo encontrado!")
+            return {'labels': [], 'data': []}
+        
+        # ✅ CORREÇÃO: rh_colaboradores NÃO tem departamento_id, buscar do histórico
+        print(f"   📊 Buscando departamentos no histórico para {len(colaboradores)} colaboradores...")
+        
+        colabs_ids = [c['id'] for c in colaboradores]
+        
+        if colabs_ids:
+            response_hist = supabase.table('rh_historico_colaborador')\
+                .select('colaborador_id, departamento_id, data_evento')\
+                .in_('colaborador_id', colabs_ids)\
+                .not_.is_('departamento_id', 'null')\
+                .order('data_evento', desc=True)\
+                .execute()
+            
+            # Mapear departamento mais recente por colaborador
+            dept_map = {}
+            for hist in (response_hist.data or []):
+                colab_id = hist['colaborador_id']
+                if colab_id not in dept_map:
+                    dept_map[colab_id] = hist['departamento_id']
+            
+            print(f"   ✅ {len(dept_map)} colaboradores com departamento via histórico")
+            
+            # Atribuir departamento aos colaboradores
+            for colab in colaboradores:
+                if colab['id'] in dept_map:
+                    colab['departamento_id'] = dept_map[colab['id']]
         
         # Contar colaboradores por departamento (usando defaultdict)
         from collections import defaultdict
         colaboradores_por_dept = defaultdict(int)
         
+        colaboradores_com_dept = 0
         for colab in colaboradores:
             dept_id = colab.get('departamento_id')
             if dept_id:
                 colaboradores_por_dept[dept_id] += 1
+                colaboradores_com_dept += 1
+        
+        print(f"   📊 Total de colaboradores com departamento: {colaboradores_com_dept}/{len(colaboradores)}")
         
         # Montar resposta
         labels = []
@@ -864,8 +964,9 @@ def calcular_distribuicao_departamento():
             dept_nome = dept['nome_departamento']
             count = colaboradores_por_dept.get(dept_id, 0)
             
-            labels.append(dept_nome)
-            data.append(count)
+            if count > 0:  # Só incluir departamentos com colaboradores
+                labels.append(dept_nome)
+                data.append(count)
         
         print(f"✅ Distribuição calculada: {len(labels)} departamentos, {sum(data)} colaboradores")
         
@@ -970,21 +1071,62 @@ def calcular_vagas_abertas():
     """
     Tabela 1: Vagas em Aberto com análise de performance
     OTIMIZADO: Busca candidatos em batch
+    CORRIGIDO V2: rh_cargos NÃO tem departamento_id, usa rh_historico_colaborador para mapear cargo → departamento
     """
     try:
-        # Buscar vagas abertas
+        print(f"🚀 [TABELA VAGAS] Buscando vagas abertas...")
+        
+        # Buscar vagas abertas com cargo
         response = supabase.table('rh_vagas')\
-            .select('id, titulo, data_abertura, departamento_id, rh_departamentos(nome_departamento)')\
+            .select('id, titulo, data_abertura, cargo_id, rh_cargos(nome_cargo)')\
             .eq('status', 'Aberta')\
             .order('data_abertura')\
             .execute()
         
         vagas_data = response.data if response.data else []
         
+        print(f"📊 Vagas abertas encontradas: {len(vagas_data)}")
+        
         if not vagas_data:
             return []
         
         vagas_ids = [v['id'] for v in vagas_data]
+        cargo_ids = list(set([v['cargo_id'] for v in vagas_data if v.get('cargo_id')]))
+        
+        # 🔥 CORREÇÃO: Buscar departamento via rh_historico_colaborador
+        # Pegar o departamento_id mais recente para cada cargo_id
+        print(f"🔍 Mapeando {len(cargo_ids)} cargos para departamentos via histórico...")
+        cargo_dept_map = {}
+        
+        if cargo_ids:
+            resp_historico = supabase.table('rh_historico_colaborador')\
+                .select('cargo_id, departamento_id, data_evento')\
+                .in_('cargo_id', cargo_ids)\
+                .not_.is_('departamento_id', 'null')\
+                .order('data_evento', desc=True)\
+                .execute()
+            
+            # Mapear cargo → departamento (pega o mais recente)
+            for registro in (resp_historico.data or []):
+                cargo_id = registro['cargo_id']
+                if cargo_id not in cargo_dept_map:
+                    cargo_dept_map[cargo_id] = registro['departamento_id']
+            
+            print(f"   ✅ Mapeados {len(cargo_dept_map)} cargos → departamentos")
+            
+            # Buscar nomes dos departamentos
+            dept_ids = list(set(cargo_dept_map.values()))
+            if dept_ids:
+                resp_depts = supabase.table('rh_departamentos')\
+                    .select('id, nome_departamento')\
+                    .in_('id', dept_ids)\
+                    .execute()
+                
+                dept_names = {d['id']: d['nome_departamento'] for d in (resp_depts.data or [])}
+            else:
+                dept_names = {}
+        else:
+            dept_names = {}
         
         # 🔥 OTIMIZAÇÃO: Buscar TODOS candidatos de uma vez
         print(f"🚀 [OTIMIZAÇÃO] Buscando candidatos para {len(vagas_ids)} vagas abertas...")
@@ -1007,12 +1149,28 @@ def calcular_vagas_abertas():
         hoje = datetime.now()
         
         for vaga in vagas_data:
-            # Calcular dias em aberto
-            data_abertura = datetime.strptime(vaga['data_abertura'], '%Y-%m-%d')
-            dias_aberto = (hoje - data_abertura).days
+            # Calcular dias em aberto - suporte a múltiplos formatos de data
+            try:
+                # Formato ISO 8601 com fração de segundos: 2025-10-09T00:30:54.77493+00:00
+                data_abertura = date_parser.isoparse(vaga['data_abertura'])
+            except:
+                # Fallback para formatos antigos
+                try:
+                    data_abertura = datetime.strptime(vaga['data_abertura'], '%Y-%m-%d %H:%M:%S.%f%z')
+                except:
+                    data_abertura = datetime.strptime(vaga['data_abertura'], '%Y-%m-%d')
+            
+            dias_aberto = (hoje.replace(tzinfo=data_abertura.tzinfo) - data_abertura).days if data_abertura.tzinfo else (hoje - data_abertura).days
             
             # Contar candidatos (já calculado)
             num_candidatos = candidatos_por_vaga.get(vaga['id'], 0)
+            
+            # Obter departamento via mapeamento cargo → departamento → nome
+            departamento_nome = 'N/A'
+            cargo_id = vaga.get('cargo_id')
+            if cargo_id and cargo_id in cargo_dept_map:
+                dept_id = cargo_dept_map[cargo_id]
+                departamento_nome = dept_names.get(dept_id, 'N/A')
             
             # TODO: Contar candidatos com score alto (quando implementado)
             candidatos_score_alto = 0
@@ -1020,7 +1178,7 @@ def calcular_vagas_abertas():
             vagas.append({
                 'id': vaga['id'],
                 'titulo': vaga['titulo'],
-                'departamento': vaga['rh_departamentos']['nome_departamento'] if vaga.get('rh_departamentos') else 'N/A',
+                'departamento': departamento_nome,
                 'dias_aberto': dias_aberto,
                 'num_candidatos': num_candidatos,
                 'candidatos_score_alto': candidatos_score_alto,

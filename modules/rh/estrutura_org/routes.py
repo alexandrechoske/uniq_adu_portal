@@ -12,8 +12,9 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from extensions import supabase_admin
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
+from werkzeug.security import generate_password_hash
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Criar blueprint
 estrutura_org_bp = Blueprint(
@@ -58,6 +59,28 @@ def perfil_or_bypass_required(modulo, pagina=None):
         wrapper.__doc__ = f.__doc__
         return wrapper
     return decorator
+
+
+def _sanitize_acesso_contabilidade(registro):
+    """Remove campos sensíveis e normaliza dados de acesso da contabilidade."""
+    if not registro:
+        return {}
+
+    sanitized = {chave: valor for chave, valor in registro.items() if chave != 'senha_hash'}
+    return sanitized
+
+
+def _parse_bool(value, default=False):
+    """Helper para interpretar valores booleanos enviados pelo frontend."""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {'true', '1', 'yes', 'on', 'sim', 'ativo'}
+    return default
 
 # ========================================
 # ROTA RAIZ - REDIRECT
@@ -518,4 +541,160 @@ def api_delete_departamento(departamento_id):
     except Exception as e:
         print(f"❌ Erro ao deletar departamento: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ========================================
+# ROTAS - ACESSOS PORTAL CONTABILIDADE
+# ========================================
+
+
+@estrutura_org_bp.route('/acessos-contabilidade')
+@login_required
+@perfil_required('rh', 'estrutura_acessos_contabilidade')
+def gestao_acessos_contabilidade():
+    """Tela de gestão de acessos externos da contabilidade."""
+    try:
+        response = supabase_admin.table('rh_acesso_contabilidade')\
+            .select('id, nome_usuario, descricao, is_active, created_at, updated_at')\
+            .order('nome_usuario')\
+            .execute()
+        acessos = [_sanitize_acesso_contabilidade(item) for item in (response.data or [])]
+    except Exception as exc:
+        print(f"❌ Erro ao carregar acessos contabilidade: {exc}")
+        acessos = []
+        flash('Erro ao carregar acessos da contabilidade.', 'error')
+
+    return render_template('estrutura_org/acessos_contabilidade.html', acessos=acessos)
+
+
+@estrutura_org_bp.route('/api/acessos-contabilidade', methods=['GET'])
+@perfil_or_bypass_required('rh', 'estrutura_acessos_contabilidade')
+def api_list_acessos_contabilidade():
+    """API: listar acessos cadastrados para o portal da contabilidade."""
+    try:
+        response = supabase_admin.table('rh_acesso_contabilidade')\
+            .select('id, nome_usuario, descricao, is_active, created_at, updated_at')\
+            .order('nome_usuario')\
+            .execute()
+        acessos = [_sanitize_acesso_contabilidade(item) for item in (response.data or [])]
+        return jsonify({'success': True, 'data': acessos, 'count': len(acessos)})
+    except Exception as exc:
+        print(f"❌ Erro ao listar acessos contabilidade: {exc}")
+        return jsonify({'success': False, 'message': 'Erro ao listar acessos.'}), 500
+
+
+@estrutura_org_bp.route('/api/acessos-contabilidade', methods=['POST'])
+@perfil_or_bypass_required('rh', 'estrutura_acessos_contabilidade')
+def api_create_acesso_contabilidade():
+    """API: criar novo usuário para o portal da contabilidade."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        nome_usuario = (payload.get('nome_usuario') or '').strip()
+        senha = payload.get('senha') or ''
+        descricao = (payload.get('descricao') or '').strip() or None
+        is_active = _parse_bool(payload.get('is_active'), default=True)
+
+        if not nome_usuario:
+            return jsonify({'success': False, 'message': 'Nome de usuário é obrigatório.'}), 400
+        if not senha or len(senha) < 8:
+            return jsonify({'success': False, 'message': 'Informe uma senha com pelo menos 8 caracteres.'}), 400
+
+        duplicado = supabase_admin.table('rh_acesso_contabilidade')\
+            .select('id')\
+            .eq('nome_usuario', nome_usuario)\
+            .execute()
+        if duplicado.data:
+            return jsonify({'success': False, 'message': 'Já existe um acesso com este nome de usuário.'}), 409
+
+        insert_payload = {
+            'nome_usuario': nome_usuario,
+            'senha_hash': generate_password_hash(senha),
+            'descricao': descricao,
+            'is_active': is_active
+        }
+
+        response = supabase_admin.table('rh_acesso_contabilidade').insert(insert_payload).execute()
+
+        if not response.data:
+            return jsonify({'success': False, 'message': 'Erro ao criar acesso.'}), 500
+
+        novo_acesso = _sanitize_acesso_contabilidade(response.data[0])
+        return jsonify({'success': True, 'message': 'Acesso criado com sucesso.', 'data': novo_acesso}), 201
+
+    except Exception as exc:
+        print(f"❌ Erro ao criar acesso contabilidade: {exc}")
+        return jsonify({'success': False, 'message': 'Erro interno ao criar acesso.'}), 500
+
+
+@estrutura_org_bp.route('/api/acessos-contabilidade/<acesso_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'estrutura_acessos_contabilidade')
+def api_update_acesso_contabilidade(acesso_id):
+    """API: atualizar dados do acesso (inclui redefinição de senha)."""
+    try:
+        payload = request.get_json(silent=True) or {}
+
+        registro_response = supabase_admin.table('rh_acesso_contabilidade')\
+            .select('id, nome_usuario')\
+            .eq('id', acesso_id)\
+            .single()\
+            .execute()
+
+        if not registro_response.data:
+            return jsonify({'success': False, 'message': 'Acesso não encontrado.'}), 404
+
+        update_payload = {}
+
+        if 'nome_usuario' in payload:
+            novo_usuario = (payload.get('nome_usuario') or '').strip()
+            if not novo_usuario:
+                return jsonify({'success': False, 'message': 'Nome de usuário não pode ser vazio.'}), 400
+
+            if novo_usuario != registro_response.data.get('nome_usuario'):
+                duplicado = supabase_admin.table('rh_acesso_contabilidade')\
+                    .select('id')\
+                    .eq('nome_usuario', novo_usuario)\
+                    .neq('id', acesso_id)\
+                    .execute()
+                if duplicado.data:
+                    return jsonify({'success': False, 'message': 'Já existe outro acesso com este nome de usuário.'}), 409
+            update_payload['nome_usuario'] = novo_usuario
+
+        if 'descricao' in payload:
+            descricao = (payload.get('descricao') or '').strip() or None
+            update_payload['descricao'] = descricao
+
+        if 'is_active' in payload:
+            update_payload['is_active'] = _parse_bool(payload.get('is_active'))
+
+        nova_senha = payload.get('senha') or ''
+        if nova_senha:
+            if len(nova_senha) < 8:
+                return jsonify({'success': False, 'message': 'A nova senha deve ter pelo menos 8 caracteres.'}), 400
+            update_payload['senha_hash'] = generate_password_hash(nova_senha)
+
+        if not update_payload:
+            return jsonify({'success': False, 'message': 'Nenhuma alteração informada.'}), 400
+
+        update_payload['updated_at'] = datetime.now(timezone.utc).isoformat()
+
+        supabase_admin.table('rh_acesso_contabilidade')\
+            .update(update_payload)\
+            .eq('id', acesso_id)\
+            .execute()
+
+        atualizado = supabase_admin.table('rh_acesso_contabilidade')\
+            .select('id, nome_usuario, descricao, is_active, created_at, updated_at')\
+            .eq('id', acesso_id)\
+            .single()\
+            .execute()
+
+        return jsonify({
+            'success': True,
+            'message': 'Acesso atualizado com sucesso.',
+            'data': _sanitize_acesso_contabilidade(atualizado.data)
+        })
+
+    except Exception as exc:
+        print(f"❌ Erro ao atualizar acesso contabilidade: {exc}")
+        return jsonify({'success': False, 'message': 'Erro ao atualizar acesso.'}), 500
 
