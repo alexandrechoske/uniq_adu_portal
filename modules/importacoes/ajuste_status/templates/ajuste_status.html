@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Ajuste de Status - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('ajuste_status.static', filename='css/ajuste_status.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container ajuste-status-page">
+    <div class="actions-bar module-header-importacoes">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Importações', 'icon': 'mdi mdi-ferry', 'url': url_for('dashboard_executivo.index')},
+                {'name': 'Ajuste de Status', 'icon': 'mdi mdi-format-list-checks'}
+            ], 'importacoes') }}
+        </div>
+    </div>
+
+    <div class="main-content ajuste-status-placeholder">
+        <span class="in-dev-label">Em Dev</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{{ url_for('ajuste_status.static', filename='js/ajuste_status.js') }}"></script>
+{% endblock %}

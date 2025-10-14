@@ -1,0 +1,40 @@
+/* Ajuste de Status - Placeholder */
+
+.ajuste-status-page {
+    padding: 1rem 1.5rem;
+}
+
+.ajuste-status-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    background: #f8f9fb;
+    border: 1px dashed #cbd3db;
+    border-radius: 12px;
+    color: #77838f;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.in-dev-label {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    border-radius: 999px;
+    background: #e0e7ff;
+    color: #3f51b5;
+    box-shadow: 0 4px 12px rgba(63, 81, 181, 0.15);
+}
+
+@media (max-width: 768px) {
+    .ajuste-status-page {
+        padding: 1rem;
+    }
+
+    .ajuste-status-placeholder {
+        min-height: 35vh;
+        font-size: 1.4rem;
+    }
+}

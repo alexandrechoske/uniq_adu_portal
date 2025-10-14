@@ -26,6 +26,7 @@ def register_importacoes_blueprints(app):
     from modules.importacoes.dashboards.resumido import dash_importacoes_resumido_bp
     from modules.importacoes.relatorios.routes import relatorios_bp
     from modules.importacoes.export_relatorios.routes import export_relatorios_bp
+    from modules.importacoes.ajuste_status.routes import ajuste_status_bp
     
     # Registrar blueprints
     app.register_blueprint(agente_bp)
@@ -35,5 +36,6 @@ def register_importacoes_blueprints(app):
     app.register_blueprint(dash_importacoes_resumido_bp)
     app.register_blueprint(relatorios_bp)
     app.register_blueprint(export_relatorios_bp)
+    app.register_blueprint(ajuste_status_bp)
     
     print("✅ Módulo de Importações registrado com sucesso")

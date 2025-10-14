@@ -84,6 +84,14 @@
                         <p class="module-desc">{{ t('modules.dashboard_tv.desc') }}</p>
                     </a>
                     {% endif %}
+
+                    {% if 'ajuste_status' in accessible_modules %}
+                    <a href="{{ url_for('ajuste_status.index') }}" class="module-card" data-module="ajuste_status">
+                        <div class="module-icon"><i class="mdi mdi-format-list-checks"></i></div>
+                        <h4 class="module-title">Ajuste de Status</h4>
+                        <p class="module-desc">Gerencie ajustes operacionais de processos internos.</p>
+                    </a>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
