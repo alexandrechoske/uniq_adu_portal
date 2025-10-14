@@ -37,7 +37,15 @@ async function editarVaga(vagaId) {
             document.getElementById('tipo_contratacao').value = vaga.tipo_contratacao || 'CLT';
             document.getElementById('localizacao').value = vaga.localizacao || '';
             document.getElementById('descricao').value = vaga.descricao || '';
-            document.getElementById('requisitos').value = vaga.requisitos || '';
+            document.getElementById('requisitos_obrigatorios').value = vaga.requisitos_obrigatorios || vaga.requisitos || '';
+            document.getElementById('requisitos_desejaveis').value = vaga.requisitos_desejaveis || '';
+            document.getElementById('diferenciais').value = vaga.diferenciais || '';
+            document.getElementById('faixa_salarial_min').value = vaga.faixa_salarial_min || '';
+            document.getElementById('faixa_salarial_max').value = vaga.faixa_salarial_max || '';
+            document.getElementById('nivel_senioridade').value = vaga.nivel_senioridade || '';
+            document.getElementById('quantidade_vagas').value = vaga.quantidade_vagas || 1;
+            document.getElementById('regime_trabalho').value = vaga.regime_trabalho || '';
+            document.getElementById('carga_horaria').value = vaga.carga_horaria || '';
             
             // Abrir modal
             const modal = new bootstrap.Modal(document.getElementById('modalVaga'));
@@ -113,7 +121,6 @@ async function salvarVaga() {
         tipo_contratacao: tipo_contratacao || 'CLT',
         localizacao: localizacao || null,
         descricao: descricao,
-        requisitos: requisitos_obrigatorios, // Campo antigo (compatibilidade)
         requisitos_obrigatorios: requisitos_obrigatorios,
         requisitos_desejaveis: requisitos_desejaveis || null,
         diferenciais: diferenciais || null,
