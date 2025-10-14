@@ -136,7 +136,6 @@ async function deleteMapping(statusSistema) {
         if (result.success) {
             showSuccess('Mapeamento excluído com sucesso!');
             await loadMappings();
-            await loadUnmappedStatuses();
             bootstrap.Modal.getInstance(document.getElementById('deleteModal'))?.hide();
         } else {
             showError(result.error || 'Erro ao excluir mapeamento');
@@ -291,14 +290,11 @@ function saveMappingModal() {
         return;
     }
     
-    const selectElement = document.getElementById('status-sistema-select');
     const inputElement = document.getElementById('status-sistema-input');
     
     let statusSistema;
     if (mode === 'create') {
-        statusSistema = selectElement.style.display === 'none' 
-            ? inputElement.value.trim().toUpperCase()
-            : selectElement.value;
+        statusSistema = inputElement.value.trim().toUpperCase();
     } else {
         statusSistema = document.getElementById('original-status-sistema').value;
     }
