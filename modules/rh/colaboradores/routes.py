@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 from extensions import supabase_admin
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
-from datetime import datetime
+from datetime import datetime, date
 import os
 
 from services.event_notification_service import EventNotificationService
@@ -26,6 +26,41 @@ colaboradores_bp = Blueprint(
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
 
 event_notifier = EventNotificationService()
+
+def format_date_br(value):
+    """Converte datas para o formato brasileiro (DD/MM/AAAA)."""
+    if not value:
+        return None
+
+    if isinstance(value, datetime):
+        return value.strftime('%d/%m/%Y')
+
+    if isinstance(value, date):
+        return value.strftime('%d/%m/%Y')
+
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+
+        candidate = candidate.replace('Z', '+00:00')
+
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            return parsed.strftime('%d/%m/%Y')
+        except ValueError:
+            base = candidate.split('T')[0]
+            try:
+                parsed = datetime.strptime(base, '%Y-%m-%d')
+                return parsed.strftime('%d/%m/%Y')
+            except ValueError:
+                try:
+                    parsed = datetime.strptime(candidate, '%d/%m/%Y')
+                    return parsed.strftime('%d/%m/%Y')
+                except ValueError:
+                    return candidate
+
+    return str(value)
 
 def check_api_bypass():
     """Verifica se a requisição usa a chave de bypass para testes"""
@@ -194,10 +229,16 @@ def editar_colaborador(colaborador_id):
             .eq('id', colaborador_id)\
             .single()\
             .execute()
-        
+
         if not colab_response.data:
             flash('Colaborador não encontrado', 'warning')
             return redirect(url_for('colaboradores.lista_colaboradores'))
+
+        colaborador_data = colab_response.data
+        colaborador_data['data_nascimento_br'] = format_date_br(colaborador_data.get('data_nascimento'))
+        colaborador_data['data_admissao_br'] = format_date_br(colaborador_data.get('data_admissao'))
+        colaborador_data['data_desligamento_br'] = format_date_br(colaborador_data.get('data_desligamento'))
+        colaborador_data['rg_data_expedicao_br'] = format_date_br(colaborador_data.get('rg_data_expedicao'))
         
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
@@ -270,7 +311,13 @@ def visualizar_colaborador(colaborador_id):
         if not colab_response.data:
             flash('Colaborador não encontrado', 'warning')
             return redirect(url_for('colaboradores.lista_colaboradores'))
-        
+
+        colaborador_data = colab_response.data
+        colaborador_data['data_nascimento_br'] = format_date_br(colaborador_data.get('data_nascimento'))
+        colaborador_data['data_admissao_br'] = format_date_br(colaborador_data.get('data_admissao'))
+        colaborador_data['data_desligamento_br'] = format_date_br(colaborador_data.get('data_desligamento'))
+        colaborador_data['rg_data_expedicao_br'] = format_date_br(colaborador_data.get('rg_data_expedicao'))
+
         # Buscar histórico completo de RH
         historico = supabase_admin.table('rh_historico_colaborador')\
             .select('*, cargo:rh_cargos(nome_cargo), departamento:rh_departamentos(nome_departamento), empresa:rh_empresas(razao_social)')\
@@ -282,6 +329,7 @@ def visualizar_colaborador(colaborador_id):
         for evento in historico_data:
             status_atual = (evento.get('status_contabilidade') or '').strip()
             evento['status_contabilidade'] = status_atual or 'Pendente'
+            evento['data_evento_br'] = format_date_br(evento.get('data_evento'))
         
         # Buscar dados de candidatura (se houver)
         candidatura = None
@@ -294,13 +342,15 @@ def visualizar_colaborador(colaborador_id):
             if candidatura_response.data and len(candidatura_response.data) > 0:
                 candidatura = candidatura_response.data[0]
                 print(f"[INFO] Candidatura encontrada para colaborador {colaborador_id}: {candidatura.get('id')}")
+                candidatura['data_candidatura_br'] = format_date_br(candidatura.get('data_candidatura'))
+                candidatura['updated_at_br'] = format_date_br(candidatura.get('updated_at'))
         except Exception as e:
             print(f"[AVISO] Erro ao buscar candidatura (pode ser que o campo ainda não exista): {str(e)}")
             # Não falha se não encontrar candidatura, é opcional
         
         return render_template(
             'colaboradores/visualizar_colaborador.html',
-            colaborador=colab_response.data,
+            colaborador=colaborador_data,
             historico=historico_data,
             candidatura=candidatura
         )
