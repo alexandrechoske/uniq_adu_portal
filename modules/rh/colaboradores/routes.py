@@ -340,7 +340,8 @@ def lista_colaboradores():
             inativos=inativos,
             cargos=cargos_response.data if cargos_response.data else [],
             departamentos=departamentos_response.data if departamentos_response.data else [],
-            gestores=gestores_response.data if gestores_response.data else []
+            gestores=gestores_response.data if gestores_response.data else [],
+            beneficios_catalogo=BENEFICIOS_CATALOGO
         )
     
     except Exception as e:

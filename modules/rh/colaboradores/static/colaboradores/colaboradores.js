@@ -700,7 +700,14 @@ function inicializarDependentesPerfil() {
     });
 }
 
-function abrirModalDependente() {
+function abrirModalDependente(colaboradorId, nomeColaborador) {
+    if (colaboradorId) {
+        atualizarContextoColaborador({
+            colaboradorId,
+            nome: nomeColaborador
+        });
+    }
+
     const form = document.getElementById('formDependente');
     if (!form) return;
 
@@ -816,7 +823,14 @@ function inicializarContatosPerfil() {
     });
 }
 
-function abrirModalContato() {
+function abrirModalContato(colaboradorId, nomeColaborador) {
+    if (colaboradorId) {
+        atualizarContextoColaborador({
+            colaboradorId,
+            nome: nomeColaborador
+        });
+    }
+
     const form = document.getElementById('formContato');
     if (!form) return;
 
@@ -877,7 +891,6 @@ async function confirmarRemocaoContato(contatoId, nomeContato) {
 }
 
 function inicializarBeneficiosPerfil() {
-    const btnAlterar = document.getElementById('btnAlterarBeneficios');
     const modalElement = document.getElementById('modalAlterarBeneficios');
     const form = document.getElementById('formAlterarBeneficios');
     const lista = document.getElementById('beneficiosLista');
@@ -887,8 +900,9 @@ function inicializarBeneficiosPerfil() {
     const descricaoInput = document.getElementById('beneficiosDescricao');
     const colaboradorIdInput = document.getElementById('beneficiosColaboradorId');
     const nomeSpan = document.getElementById('beneficiosColaboradorNome');
+    const btnAlterar = document.getElementById('btnAlterarBeneficios');
 
-    if (!btnAlterar || !modalElement || !form || !lista || !btnAdicionar || !colaboradorIdInput || !nomeSpan) {
+    if (!modalElement || !form || !lista || !btnAdicionar || !colaboradorIdInput || !nomeSpan) {
         return;
     }
 
@@ -1156,24 +1170,50 @@ function inicializarBeneficiosPerfil() {
         adicionarLinha();
     });
 
-    btnAlterar.addEventListener('click', () => {
-        const dados = {
-            colaboradorId: btnAlterar.dataset.colaboradorId || datasetBase.colaboradorId,
-            nome: btnAlterar.dataset.nome || datasetBase.nome,
-            beneficios: btnAlterar.dataset.beneficios || datasetBase.beneficios
-        };
-
-        colaboradorIdInput.value = dados.colaboradorId || '';
-        nomeSpan.textContent = dados.nome || 'Colaborador(a)';
-        definirDataHoje(dataInput);
-        descricaoInput.value = '';
+    async function prepararEMostrarModalBeneficios(config = {}) {
         limparAviso();
 
-        carregarBeneficios(dados.beneficios);
+        const colaboradorId = config.colaboradorId || datasetBase.colaboradorId;
+        if (!colaboradorId) {
+            exibirAviso('Colaborador não identificado para alteração de benefícios.');
+            return;
+        }
+
+        const contexto = atualizarContextoColaborador({
+            colaboradorId,
+            nome: config.nome,
+            salario: config.salario,
+            beneficios: config.beneficios
+        });
+
+        colaboradorIdInput.value = colaboradorId;
+        nomeSpan.textContent = config.nome || contexto.nome || datasetBase.nome || 'Colaborador(a)';
+
+        if (dataInput) {
+            definirDataHoje(dataInput);
+        }
+
+        if (descricaoInput) {
+            descricaoInput.value = '';
+        }
+
+        const beneficiosFonte = config.beneficios !== undefined ? config.beneficios : contexto.beneficios;
+        carregarBeneficios(beneficiosFonte);
 
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
-    });
+    }
+
+    if (btnAlterar) {
+        btnAlterar.addEventListener('click', () => {
+            prepararEMostrarModalBeneficios({
+                colaboradorId: btnAlterar.dataset.colaboradorId || datasetBase.colaboradorId,
+                nome: btnAlterar.dataset.nome || datasetBase.nome,
+                beneficios: btnAlterar.dataset.beneficios || datasetBase.beneficios,
+                salario: btnAlterar.dataset.salario || datasetBase.salario
+            });
+        });
+    }
 
     form.addEventListener('submit', async event => {
         event.preventDefault();
@@ -1246,6 +1286,30 @@ function inicializarBeneficiosPerfil() {
             btnSalvar.innerHTML = textoOriginal;
         }
     });
+    window.abrirModalBeneficios = async function(colaboradorId, nomeColaborador) {
+        if (!colaboradorId) {
+            mostrarAlerta('Colaborador não identificado para alteração de benefícios.', 'danger');
+            return;
+        }
+
+        try {
+            const dados = await obterDadosColaborador(colaboradorId);
+            const beneficiosOrigem = (dados.info_atual && dados.info_atual.beneficios_jsonb) || dados.beneficios_jsonb || {};
+            const salarioAtual = (dados.info_atual && dados.info_atual.salario_mensal !== undefined)
+                ? dados.info_atual.salario_mensal
+                : dados.salario_mensal;
+
+            await prepararEMostrarModalBeneficios({
+                colaboradorId,
+                nome: nomeColaborador,
+                beneficios: beneficiosOrigem,
+                salario: salarioAtual
+            });
+        } catch (error) {
+            console.error('[RH] Falha ao carregar benefícios do colaborador:', error);
+            mostrarAlerta('Não foi possível carregar os benefícios atuais.', 'danger');
+        }
+    };
 }
 
 function inicializarTransferencia() {
@@ -1415,6 +1479,42 @@ async function obterDadosColaborador(colaboradorId) {
 function obterColaboradorIdContexto() {
     const container = document.getElementById('colaboradorPerfil');
     return container ? container.dataset.colaboradorId : null;
+}
+
+function atualizarContextoColaborador(config = {}) {
+    let container = document.getElementById('colaboradorPerfil');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'colaboradorPerfil';
+        container.className = 'd-none';
+        document.body.appendChild(container);
+    }
+
+    if (config.colaboradorId !== undefined) {
+        container.dataset.colaboradorId = config.colaboradorId || '';
+    }
+
+    if (config.nome !== undefined) {
+        container.dataset.nome = config.nome || '';
+    }
+
+    if (config.salario !== undefined) {
+        const valorSalario = config.salario;
+        container.dataset.salario = valorSalario !== null && valorSalario !== undefined ? valorSalario : '';
+    }
+
+    if (config.beneficios !== undefined) {
+        try {
+            container.dataset.beneficios = typeof config.beneficios === 'string'
+                ? config.beneficios
+                : JSON.stringify(config.beneficios || {});
+        } catch (error) {
+            console.warn('[RH] Falha ao serializar benefícios do contexto:', error);
+            container.dataset.beneficios = '{}';
+        }
+    }
+
+    return container.dataset;
 }
 
 function definirDataHoje(input) {
