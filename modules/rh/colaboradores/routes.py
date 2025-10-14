@@ -7,8 +7,10 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 from extensions import supabase_admin
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
-from datetime import datetime
+from datetime import datetime, date
 import os
+
+from services.event_notification_service import EventNotificationService
 
 # Criar blueprint
 colaboradores_bp = Blueprint(
@@ -22,6 +24,43 @@ colaboradores_bp = Blueprint(
 
 # API Bypass para testes
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
+
+event_notifier = EventNotificationService()
+
+def format_date_br(value):
+    """Converte datas para o formato brasileiro (DD/MM/AAAA)."""
+    if not value:
+        return None
+
+    if isinstance(value, datetime):
+        return value.strftime('%d/%m/%Y')
+
+    if isinstance(value, date):
+        return value.strftime('%d/%m/%Y')
+
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+
+        candidate = candidate.replace('Z', '+00:00')
+
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            return parsed.strftime('%d/%m/%Y')
+        except ValueError:
+            base = candidate.split('T')[0]
+            try:
+                parsed = datetime.strptime(base, '%Y-%m-%d')
+                return parsed.strftime('%d/%m/%Y')
+            except ValueError:
+                try:
+                    parsed = datetime.strptime(candidate, '%d/%m/%Y')
+                    return parsed.strftime('%d/%m/%Y')
+                except ValueError:
+                    return candidate
+
+    return str(value)
 
 def check_api_bypass():
     """Verifica se a requisição usa a chave de bypass para testes"""
@@ -78,12 +117,31 @@ def lista_colaboradores():
         ativos = len([c for c in colaboradores if c.get('status') == 'Ativo'])
         inativos = len([c for c in colaboradores if c.get('status') == 'Inativo'])
         
+        cargos_response = supabase_admin.table('rh_cargos')\
+            .select('id, nome_cargo')\
+            .order('nome_cargo')\
+            .execute()
+
+        departamentos_response = supabase_admin.table('rh_departamentos')\
+            .select('id, nome_departamento')\
+            .order('nome_departamento')\
+            .execute()
+
+        gestores_response = supabase_admin.table('rh_colaboradores')\
+            .select('id, nome_completo, matricula')\
+            .eq('status', 'Ativo')\
+            .order('nome_completo')\
+            .execute()
+
         return render_template(
             'colaboradores/lista_colaboradores.html',
             colaboradores=colaboradores,
             total=total,
             ativos=ativos,
-            inativos=inativos
+            inativos=inativos,
+            cargos=cargos_response.data if cargos_response.data else [],
+            departamentos=departamentos_response.data if departamentos_response.data else [],
+            gestores=gestores_response.data if gestores_response.data else []
         )
     
     except Exception as e:
@@ -93,13 +151,35 @@ def lista_colaboradores():
 
 @colaboradores_bp.route('/novo')
 def novo_colaborador():
-    """Página para cadastrar novo colaborador"""
+    """Página para cadastrar novo colaborador
+    
+    Se receber ?candidato_id=UUID, pré-preenche com dados do candidato
+    """
     if not check_auth():
         return redirect(url_for('auth.login'))
     
     try:
         # Data de hoje para validação de datas
         hoje = datetime.now().strftime('%Y-%m-%d')
+        
+        # 🔥 NOVO: Detectar se vem de um candidato contratado
+        candidato_id = request.args.get('candidato_id')
+        candidato = None
+        
+        if candidato_id:
+            print(f"📥 Detectado candidato_id: {candidato_id}")
+            # Buscar dados do candidato para pré-preencher
+            candidato_response = supabase_admin.table('rh_candidatos')\
+                .select('*')\
+                .eq('id', candidato_id)\
+                .single()\
+                .execute()
+            
+            if candidato_response.data:
+                candidato = candidato_response.data
+                print(f"✅ Candidato encontrado: {candidato.get('nome_completo')}")
+            else:
+                print(f"⚠️ Candidato {candidato_id} não encontrado")
         
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
@@ -117,10 +197,15 @@ def novo_colaborador():
             'colaboradores/form_colaborador.html',
             modo='novo',
             hoje=hoje,
+            candidato_id=candidato_id,  # Passar para template
+            candidato=candidato,  # Passar dados do candidato
             cargos=cargos.data if cargos.data else [],
             departamentos=departamentos.data if departamentos.data else [],
             empresas=empresas.data if empresas.data else [],
-            gestores=colaboradores.data if colaboradores.data else []
+            gestores=colaboradores.data if colaboradores.data else [],
+            ultimo_historico=None,
+            info_atual=None,
+            is_editing=False
         )
     
     except Exception as e:
@@ -144,10 +229,16 @@ def editar_colaborador(colaborador_id):
             .eq('id', colaborador_id)\
             .single()\
             .execute()
-        
+
         if not colab_response.data:
             flash('Colaborador não encontrado', 'warning')
             return redirect(url_for('colaboradores.lista_colaboradores'))
+
+        colaborador_data = colab_response.data
+        colaborador_data['data_nascimento_br'] = format_date_br(colaborador_data.get('data_nascimento'))
+        colaborador_data['data_admissao_br'] = format_date_br(colaborador_data.get('data_admissao'))
+        colaborador_data['data_desligamento_br'] = format_date_br(colaborador_data.get('data_desligamento'))
+        colaborador_data['rg_data_expedicao_br'] = format_date_br(colaborador_data.get('rg_data_expedicao'))
         
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
@@ -171,6 +262,18 @@ def editar_colaborador(colaborador_id):
             .execute()
         
         ultimo_historico = historico.data[0] if historico.data else {}
+
+        info_atual = None
+        try:
+            rpc_response = supabase_admin.rpc(
+                'get_colaborador_info_atual',
+                {'p_colaborador_id': colaborador_id}
+            ).execute()
+            if rpc_response.data:
+                info_atual = rpc_response.data[0]
+        except Exception as rpc_error:
+            print(f"[AVISO] Falha ao obter info atual via RPC: {rpc_error}")
+            info_atual = None
         
         return render_template(
             'colaboradores/form_colaborador.html',
@@ -181,7 +284,9 @@ def editar_colaborador(colaborador_id):
             cargos=cargos.data if cargos.data else [],
             departamentos=departamentos.data if departamentos.data else [],
             empresas=empresas.data if empresas.data else [],
-            gestores=colaboradores.data if colaboradores.data else []
+            gestores=colaboradores.data if colaboradores.data else [],
+            info_atual=info_atual,
+            is_editing=True
         )
     
     except Exception as e:
@@ -206,13 +311,25 @@ def visualizar_colaborador(colaborador_id):
         if not colab_response.data:
             flash('Colaborador não encontrado', 'warning')
             return redirect(url_for('colaboradores.lista_colaboradores'))
-        
+
+        colaborador_data = colab_response.data
+        colaborador_data['data_nascimento_br'] = format_date_br(colaborador_data.get('data_nascimento'))
+        colaborador_data['data_admissao_br'] = format_date_br(colaborador_data.get('data_admissao'))
+        colaborador_data['data_desligamento_br'] = format_date_br(colaborador_data.get('data_desligamento'))
+        colaborador_data['rg_data_expedicao_br'] = format_date_br(colaborador_data.get('rg_data_expedicao'))
+
         # Buscar histórico completo de RH
         historico = supabase_admin.table('rh_historico_colaborador')\
             .select('*, cargo:rh_cargos(nome_cargo), departamento:rh_departamentos(nome_departamento), empresa:rh_empresas(razao_social)')\
             .eq('colaborador_id', colaborador_id)\
             .order('data_evento', desc=True)\
             .execute()
+
+        historico_data = historico.data if historico.data else []
+        for evento in historico_data:
+            status_atual = (evento.get('status_contabilidade') or '').strip()
+            evento['status_contabilidade'] = status_atual or 'Pendente'
+            evento['data_evento_br'] = format_date_br(evento.get('data_evento'))
         
         # Buscar dados de candidatura (se houver)
         candidatura = None
@@ -225,14 +342,16 @@ def visualizar_colaborador(colaborador_id):
             if candidatura_response.data and len(candidatura_response.data) > 0:
                 candidatura = candidatura_response.data[0]
                 print(f"[INFO] Candidatura encontrada para colaborador {colaborador_id}: {candidatura.get('id')}")
+                candidatura['data_candidatura_br'] = format_date_br(candidatura.get('data_candidatura'))
+                candidatura['updated_at_br'] = format_date_br(candidatura.get('updated_at'))
         except Exception as e:
             print(f"[AVISO] Erro ao buscar candidatura (pode ser que o campo ainda não exista): {str(e)}")
             # Não falha se não encontrar candidatura, é opcional
         
         return render_template(
             'colaboradores/visualizar_colaborador.html',
-            colaborador=colab_response.data,
-            historico=historico.data if historico.data else [],
+            colaborador=colaborador_data,
+            historico=historico_data,
             candidatura=candidatura
         )
     
@@ -322,14 +441,19 @@ def api_create_colaborador():
         }
         
         # Campos opcionais
-        optional_fields = ['nome_social', 'email_corporativo', 'matricula', 'genero', 
-                          'raca_cor', 'nacionalidade', 'rg', 'rg_orgao_emissor', 
-                          'rg_data_expedicao', 'pis_pasep', 'ctps_numero', 'ctps_serie',
-                          'cnh_numero', 'cnh_categoria', 'telefones_jsonb', 'endereco_jsonb']
+        optional_fields = [
+            'email_corporativo', 'matricula', 'genero', 'raca_cor', 'nacionalidade',
+            'pis_pasep', 'ctps_numero', 'ctps_serie', 'cnh_numero', 'tel_contato',
+            'endereco_completo', 'escolaridade'
+        ]
         
         for field in optional_fields:
             if field in data:
-                colaborador_data[field] = data[field]
+                value = data[field]
+                # Evita persistir strings vazias como valores válidos
+                if isinstance(value, str) and value.strip() == '':
+                    continue
+                colaborador_data[field] = value
         
         # Inserir colaborador
         colab_response = supabase_admin.table('rh_colaboradores')\
@@ -350,23 +474,33 @@ def api_create_colaborador():
         }
         
         # Dados opcionais do histórico
-        if 'cargo_id' in data:
-            historico_data['cargo_id'] = data['cargo_id']
-        if 'departamento_id' in data:
-            historico_data['departamento_id'] = data['departamento_id']
-        if 'empresa_id' in data:
-            historico_data['empresa_id'] = data['empresa_id']
-        if 'gestor_id' in data:
-            historico_data['gestor_id'] = data['gestor_id']
-        if 'salario_mensal' in data:
-            historico_data['salario_mensal'] = data['salario_mensal']
-        if 'tipo_contrato' in data:
-            historico_data['tipo_contrato'] = data['tipo_contrato']
-        if 'modelo_trabalho' in data:
-            historico_data['modelo_trabalho'] = data['modelo_trabalho']
+        def set_if_present(dest, field_name):
+            if field_name in data:
+                value = data[field_name]
+                if isinstance(value, str):
+                    value = value.strip()
+                if value not in (None, '', []):
+                    dest[field_name] = value
+
+        set_if_present(historico_data, 'cargo_id')
+        set_if_present(historico_data, 'departamento_id')
+        set_if_present(historico_data, 'empresa_id')
+        set_if_present(historico_data, 'gestor_id')
+        set_if_present(historico_data, 'salario_mensal')
+        set_if_present(historico_data, 'tipo_contrato')
+        set_if_present(historico_data, 'modelo_trabalho')
         
         # Inserir no histórico
-        supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        _registrar_evento_historico(historico_data)
+        
+        # 🔥 NOVO: Se veio de um candidato, vincular
+        if 'candidato_id' in data and data['candidato_id']:
+            print(f"🔗 Vinculando candidato {data['candidato_id']} ao colaborador {colaborador_id}")
+            supabase_admin.table('rh_candidatos')\
+                .update({'colaborador_id': colaborador_id, 'foi_contratado': True})\
+                .eq('id', data['candidato_id'])\
+                .execute()
+            print("✅ Vínculo criado com sucesso!")
         
         return jsonify({
             'success': True,
@@ -394,59 +528,77 @@ def api_update_colaborador(colaborador_id):
         
         if not existing.data:
             return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        # Campos que não podem ser atualizados diretamente nesta rota
+        data.pop('salario_mensal', None)
         
         # Preparar dados para atualização
         update_data = {}
         
         # Campos que podem ser atualizados
-        updatable_fields = ['nome_completo', 'nome_social', 'email_corporativo', 'matricula',
-                           'data_nascimento', 'genero', 'raca_cor', 'nacionalidade',
-                           'rg', 'rg_orgao_emissor', 'rg_data_expedicao', 'pis_pasep',
-                           'ctps_numero', 'ctps_serie', 'cnh_numero', 'cnh_categoria',
-                           'telefones_jsonb', 'endereco_jsonb', 'status']
+        updatable_fields = [
+            'nome_completo', 'email_corporativo', 'matricula', 'data_nascimento',
+            'genero', 'raca_cor', 'nacionalidade', 'pis_pasep', 'ctps_numero',
+            'ctps_serie', 'cnh_numero', 'tel_contato', 'endereco_completo',
+            'status', 'escolaridade'
+        ]
         
         for field in updatable_fields:
             if field in data:
-                update_data[field] = data[field]
+                value = data[field]
+                if isinstance(value, str) and value.strip() == '':
+                    continue
+                update_data[field] = value
         
         # Atualizar colaborador
-        update_response = supabase_admin.table('rh_colaboradores')\
-            .update(update_data)\
-            .eq('id', colaborador_id)\
-            .execute()
-        
-        # Se houver mudanças que geram histórico (cargo, salário, etc)
-        criar_historico = False
-        historico_data = {
-            'colaborador_id': colaborador_id,
-            'data_evento': data.get('data_evento', datetime.now().strftime('%Y-%m-%d')),
-            'tipo_evento': data.get('tipo_evento', 'Alteração Estrutural')
-        }
-        
-        if 'cargo_id' in data:
-            historico_data['cargo_id'] = data['cargo_id']
-            criar_historico = True
-        if 'departamento_id' in data:
-            historico_data['departamento_id'] = data['departamento_id']
-            criar_historico = True
-        if 'salario_mensal' in data:
-            historico_data['salario_mensal'] = data['salario_mensal']
-            criar_historico = True
-        if 'gestor_id' in data:
-            historico_data['gestor_id'] = data['gestor_id']
-            criar_historico = True
-        if 'tipo_contrato' in data:
-            historico_data['tipo_contrato'] = data['tipo_contrato']
-            criar_historico = True
-        if 'modelo_trabalho' in data:
-            historico_data['modelo_trabalho'] = data['modelo_trabalho']
-            criar_historico = True
-        
-        if 'observacoes' in data:
-            historico_data['descricao_e_motivos'] = data['observacoes']
-        
-        if criar_historico:
-            supabase_admin.table('rh_historico_colaborador').insert(historico_data).execute()
+        if update_data:
+            supabase_admin.table('rh_colaboradores')\
+                .update(update_data)\
+                .eq('id', colaborador_id)\
+                .execute()
+
+        # Registrar alterações estruturais no histórico (sem alterar salário por aqui)
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+        campos_movimentacao = ['cargo_id', 'departamento_id', 'gestor_id', 'tipo_contrato', 'modelo_trabalho']
+        houve_alteracao = False
+        snapshot = {}
+
+        for campo in campos_movimentacao:
+            valor_novo = data.get(campo)
+            valor_novo_normalizado = valor_novo.strip() if isinstance(valor_novo, str) else valor_novo
+            valor_atual = ultimo_historico.get(campo) if ultimo_historico else None
+
+            if valor_novo_normalizado not in (None, '', []):
+                snapshot[campo] = valor_novo_normalizado
+                if str(valor_novo_normalizado) != str(valor_atual):
+                    houve_alteracao = True
+            elif valor_atual not in (None, '', []):
+                snapshot[campo] = valor_atual
+
+        observacoes = data.get('observacoes')
+        if isinstance(observacoes, str):
+            observacoes = observacoes.strip()
+        if observacoes:
+            houve_alteracao = True
+
+        if houve_alteracao:
+            historico_data = {
+                'colaborador_id': colaborador_id,
+                'data_evento': data.get('data_evento') or datetime.now().strftime('%Y-%m-%d'),
+                'tipo_evento': 'Alteração Estrutural',
+                'descricao_e_motivos': observacoes or 'Atualização cadastral'
+            }
+
+            historico_data.update(snapshot)
+
+            # Garantir consistência das informações copiando valores já existentes
+            _copiar_campos_validos(
+                historico_data,
+                ultimo_historico,
+                ['empresa_id', 'salario_mensal']
+            )
+
+            _registrar_evento_historico(historico_data)
         
         # Buscar dados atualizados do colaborador
         colab_atualizado = supabase_admin.table('rh_colaboradores')\
@@ -463,6 +615,329 @@ def api_update_colaborador(colaborador_id):
     
     except Exception as e:
         print(f"[ERRO] Erro ao atualizar colaborador: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _buscar_colaborador_ativo(colaborador_id):
+    response = supabase_admin.table('rh_colaboradores')\
+        .select('*')\
+        .eq('id', colaborador_id)\
+        .single()\
+        .execute()
+    return response.data if response.data else None
+
+
+def _buscar_ultimo_historico(colaborador_id):
+    response = supabase_admin.table('rh_historico_colaborador')\
+        .select('*')\
+        .eq('colaborador_id', colaborador_id)\
+        .order('data_evento', desc=True)\
+        .limit(1)\
+        .execute()
+    if response.data:
+        return response.data[0]
+    return None
+
+
+def _registrar_evento_historico(historico_data):
+    payload = dict(historico_data)
+    payload['status_contabilidade'] = payload.get('status_contabilidade') or 'Pendente'
+
+    response = supabase_admin.table('rh_historico_colaborador').insert(payload).execute()
+    if not response.data:
+        return None
+
+    evento = response.data[0]
+    evento_id = evento.get('id')
+
+    if evento_id:
+        try:
+            event_notifier.notify_accounting_new_event(str(evento_id))
+        except Exception as exc:  # pragma: no cover
+            print(f"[NOTIFY] Falha ao notificar contabilidade: {exc}")
+
+    return evento
+
+
+def _copiar_campos_validos(destino, origem, campos):
+    if not origem:
+        return
+    for campo in campos:
+        valor = origem.get(campo)
+        if valor not in (None, ''):
+            destino[campo] = valor
+
+
+def _montar_dados_adicionais_historico(historico, mapeamentos):
+    if not historico:
+        return {}
+    dados = {}
+    for origem, destino in mapeamentos:
+        valor = historico.get(origem)
+        if valor not in (None, ''):
+            dados[destino] = valor
+    return dados
+
+
+def _normalizar_valor_decimal(valor):
+    if valor in (None, ''):
+        return None
+    if isinstance(valor, (int, float)):
+        return float(valor)
+    try:
+        valor_str = str(valor)
+        valor_str = valor_str.replace('R$', '').replace(' ', '')
+        valor_str = valor_str.replace('.', '').replace(',', '.')
+        if valor_str == '':
+            return None
+        return float(valor_str)
+    except (ValueError, TypeError):
+        return None
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/promover', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_promover_colaborador(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+        data_evento = payload.get('data_evento')
+        novo_cargo_id = payload.get('novo_cargo_id')
+        novo_salario = payload.get('novo_salario')
+
+        if not all([data_evento, novo_cargo_id, novo_salario]):
+            return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+
+        colaborador = _buscar_colaborador_ativo(colaborador_id)
+        if not colaborador:
+            return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        if colaborador.get('status') == 'Inativo':
+            return jsonify({'error': 'Colaborador inativo não pode ser promovido'}), 400
+
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+
+        novo_salario_valor = _normalizar_valor_decimal(novo_salario)
+        if novo_salario_valor is None:
+            return jsonify({'error': 'Valor de salário inválido'}), 400
+
+        dados_adicionais = _montar_dados_adicionais_historico(
+            ultimo_historico,
+            [('cargo_id', 'cargo_anterior_id'), ('salario_mensal', 'salario_anterior')]
+        )
+
+        historico_data = {
+            'colaborador_id': colaborador_id,
+            'data_evento': data_evento,
+            'tipo_evento': 'Promoção',
+            'cargo_id': novo_cargo_id,
+            'salario_mensal': novo_salario_valor,
+            'descricao_e_motivos': payload.get('descricao') or 'Promoção registrada'
+        }
+
+        _copiar_campos_validos(
+            historico_data,
+            ultimo_historico,
+            ['departamento_id', 'gestor_id', 'empresa_id', 'tipo_contrato', 'modelo_trabalho']
+        )
+
+        if dados_adicionais:
+            historico_data['dados_adicionais_jsonb'] = dados_adicionais
+
+        _registrar_evento_historico(historico_data)
+
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        print(f"[ERRO] Erro ao promover colaborador: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/reajustar', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_reajustar_salario(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+        data_evento = payload.get('data_evento')
+        novo_salario = payload.get('novo_salario')
+
+        if not all([data_evento, novo_salario]):
+            return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+
+        colaborador = _buscar_colaborador_ativo(colaborador_id)
+        if not colaborador:
+            return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        if colaborador.get('status') == 'Inativo':
+            return jsonify({'error': 'Colaborador inativo não pode receber reajuste'}), 400
+
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+
+        novo_salario_valor = _normalizar_valor_decimal(novo_salario)
+        if novo_salario_valor is None:
+            return jsonify({'error': 'Valor de salário inválido'}), 400
+
+        dados_adicionais = _montar_dados_adicionais_historico(
+            ultimo_historico,
+            [('salario_mensal', 'salario_anterior')]
+        )
+
+        historico_data = {
+            'colaborador_id': colaborador_id,
+            'data_evento': data_evento,
+            'tipo_evento': 'Alteração Salarial',
+            'salario_mensal': novo_salario_valor,
+            'descricao_e_motivos': payload.get('descricao') or 'Reajuste salarial registrado'
+        }
+
+        _copiar_campos_validos(
+            historico_data,
+            ultimo_historico,
+            ['cargo_id', 'departamento_id', 'gestor_id', 'empresa_id', 'tipo_contrato', 'modelo_trabalho']
+        )
+
+        if dados_adicionais:
+            historico_data['dados_adicionais_jsonb'] = dados_adicionais
+
+        _registrar_evento_historico(historico_data)
+
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        print(f"[ERRO] Erro ao reajustar salário: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/transferir', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_transferir_colaborador(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+        data_evento = payload.get('data_evento')
+        novo_departamento = payload.get('novo_departamento_id')
+
+        if not all([data_evento, novo_departamento]):
+            return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+
+        colaborador = _buscar_colaborador_ativo(colaborador_id)
+        if not colaborador:
+            return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        if colaborador.get('status') == 'Inativo':
+            return jsonify({'error': 'Colaborador inativo não pode ser transferido'}), 400
+
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+
+        dados_adicionais = _montar_dados_adicionais_historico(
+            ultimo_historico,
+            [('departamento_id', 'departamento_anterior_id'), ('gestor_id', 'gestor_anterior_id')]
+        )
+
+        novo_gestor = payload.get('novo_gestor_id')
+
+        historico_data = {
+            'colaborador_id': colaborador_id,
+            'data_evento': data_evento,
+            'tipo_evento': 'Alteração Estrutural',
+            'departamento_id': novo_departamento,
+            'gestor_id': novo_gestor if novo_gestor not in (None, '') else (ultimo_historico.get('gestor_id') if ultimo_historico else None),
+            'descricao_e_motivos': payload.get('descricao') or 'Transferência registrada'
+        }
+
+        _copiar_campos_validos(
+            historico_data,
+            ultimo_historico,
+            ['cargo_id', 'salario_mensal', 'empresa_id', 'tipo_contrato', 'modelo_trabalho']
+        )
+
+        if dados_adicionais:
+            historico_data['dados_adicionais_jsonb'] = dados_adicionais
+
+        _registrar_evento_historico(historico_data)
+
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        print(f"[ERRO] Erro ao transferir colaborador: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/registrar-evento', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_registrar_evento(colaborador_id):
+    try:
+        payload = request.get_json() or {}
+
+        tipo_evento = payload.get('tipo_evento')
+        data_inicio = payload.get('data_inicio')
+        data_fim = payload.get('data_fim')
+
+        if not all([tipo_evento, data_inicio, data_fim]):
+            return jsonify({'error': 'Campos obrigatórios ausentes'}), 400
+
+        colaborador = _buscar_colaborador_ativo(colaborador_id)
+        if not colaborador:
+            return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        evento_data = {
+            'colaborador_id': colaborador_id,
+            'tipo_evento': tipo_evento,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+            'status': payload.get('status') or 'Realizado',
+            'descricao': payload.get('descricao')
+        }
+
+        supabase_admin.table('rh_eventos_colaborador').insert(evento_data).execute()
+
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        print(f"[ERRO] Erro ao registrar evento de colaborador: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/colaboradores/<colaborador_id>/reativar', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_reativar_colaborador(colaborador_id):
+    """API: Reativar colaborador previamente desligado"""
+    try:
+        payload = request.get_json(silent=True) or {}
+
+        existing = supabase_admin.table('rh_colaboradores')\
+            .select('*')\
+            .eq('id', colaborador_id)\
+            .single()\
+            .execute()
+
+        if not existing.data:
+            return jsonify({'error': 'Colaborador não encontrado'}), 404
+
+        if existing.data.get('status') == 'Ativo':
+            return jsonify({'error': 'Colaborador já está ativo'}), 400
+
+        data_evento = payload.get('data_evento') or datetime.now().strftime('%Y-%m-%d')
+        descricao = payload.get('descricao') or 'Reativação do colaborador'
+
+        supabase_admin.table('rh_colaboradores')\
+            .update({'status': 'Ativo', 'data_desligamento': None})\
+            .eq('id', colaborador_id)\
+            .execute()
+
+        historico_data = {
+            'colaborador_id': colaborador_id,
+            'data_evento': data_evento,
+            'tipo_evento': 'Reativação',
+            'descricao_e_motivos': descricao
+        }
+
+        ultimo_historico = _buscar_ultimo_historico(colaborador_id)
+        _copiar_campos_validos(
+            historico_data,
+            ultimo_historico,
+            ['cargo_id', 'departamento_id', 'gestor_id', 'salario_mensal', 'empresa_id', 'tipo_contrato', 'modelo_trabalho']
+        )
+
+        _registrar_evento_historico(historico_data)
+
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        print(f"[ERRO] Erro ao reativar colaborador: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>', methods=['DELETE'])
@@ -499,12 +974,13 @@ def api_delete_colaborador(colaborador_id):
             pass
         
         # Criar registro de demissão no histórico
-        supabase_admin.table('rh_historico_colaborador').insert({
+        historico_demissao = {
             'colaborador_id': colaborador_id,
             'data_evento': datetime.now().strftime('%Y-%m-%d'),
             'tipo_evento': 'Demissão',
             'descricao_e_motivos': motivo
-        }).execute()
+        }
+        _registrar_evento_historico(historico_demissao)
         
         # Buscar dados atualizados do colaborador
         colab_atualizado = supabase_admin.table('rh_colaboradores')\

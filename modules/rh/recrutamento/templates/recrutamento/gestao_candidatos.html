@@ -37,6 +37,43 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border-left: 4px solid var(--recrutamento-primary);
     margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+/* Efeito Sticky - Gruda no topo ao rolar */
+.vaga-info-card.sticky {
+    position: fixed;
+    top: 4rem; /* Altura da navbar */
+    left: 0;
+    right: 0;
+    z-index: 999;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 1rem 2rem;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Placeholder para manter o espaço quando ficar sticky */
+.vaga-info-placeholder {
+    display: none;
+    height: 0;
+}
+
+.vaga-info-placeholder.active {
+    display: block;
+    height: 120px; /* Altura aproximada do card */
 }
 
 .vaga-info-title {
@@ -149,20 +186,36 @@
     font-size: 1rem;
     color: #2c3e50;
     margin-bottom: 0.75rem;
+    line-height: 1.3;
+    padding-right: 80px; /* Espaço para o badge de score */
 }
 
 .candidato-card-info {
     font-size: 0.8125rem;
     color: #6c757d;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.375rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    line-height: 1.4;
 }
 
 .candidato-card-info i {
     color: var(--recrutamento-primary);
     font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.candidato-card-info span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Info destacada (data) */
+.candidato-card-info.show-in-compact {
+    font-weight: 600;
+    color: #495057;
 }
 
 .candidato-card-fonte {
@@ -173,6 +226,7 @@
     font-size: 0.75rem;
     color: #495057;
     margin-top: 0.5rem;
+    font-weight: 500;
 }
 
 /* Badges de IA */
@@ -222,6 +276,468 @@
 .ai-filter-badge.filter-review {
     background: #fff3cd;
     color: #856404;
+}
+
+/* ============================================================================
+   SISTEMA DE FILTROS E CONTROLES DO KANBAN OTIMIZADO
+   ============================================================================ */
+
+/* Barra de Controles do Kanban */
+.kanban-controls-bar {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.controls-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.controls-title i {
+    color: var(--recrutamento-primary);
+    font-size: 1.125rem;
+}
+
+/* Filtros de Visibilidade de Colunas */
+.column-visibility-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.column-filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    background: #f8f9fa;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.column-filter-checkbox:hover {
+    background: #e9ecef;
+    border-color: var(--recrutamento-primary);
+}
+
+.column-filter-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--recrutamento-primary);
+}
+
+.column-filter-checkbox input[type="checkbox"]:checked + span {
+    color: var(--recrutamento-primary);
+    font-weight: 600;
+}
+
+/* Filtros Inteligentes */
+.smart-filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.smart-filters .form-select,
+.smart-filters .form-control {
+    font-size: 0.875rem;
+}
+
+/* Toggle de Densidade */
+.density-toggle .btn-group {
+    width: 100%;
+}
+
+.density-toggle .btn {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+/* Resumo de Resultados */
+.results-summary {
+    background: #e8f5e9;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #2e7d32;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.results-summary i {
+    font-size: 1.125rem;
+}
+
+.results-summary strong {
+    color: #1b5e20;
+}
+
+/* Estados de Densidade dos Cards - OTIMIZADO FASE 2 */
+/* MODO COMPACTO - Minimalista (apenas nome + score) */
+.kanban-container.density-compact .candidato-card {
+    padding: 0.75rem;
+    min-height: 70px !important;
+    max-height: 70px;
+}
+
+.kanban-container.density-compact .candidato-card-nome {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+    font-weight: 600;
+    line-height: 1.3;
+    padding-right: 55px; /* Espaço para score */
+}
+
+/* OCULTAR todos os detalhes no modo compacto */
+.kanban-container.density-compact .candidato-card-info,
+.kanban-container.density-compact .candidato-card-fonte {
+    display: none !important;
+}
+
+/* Score IA menor */
+.kanban-container.density-compact .ai-score-badge {
+    font-size: 0.6875rem;
+    padding: 0.2rem 0.4rem;
+}
+
+/* Badges de filtro menores */
+.kanban-container.density-compact .ai-filter-badge {
+    font-size: 0.625rem;
+    padding: 0.15rem 0.4rem;
+}
+
+/* MODO NORMAL - Informações essenciais */
+.kanban-container.density-normal .candidato-card {
+    padding: 1rem;
+    min-height: 140px !important;
+    max-height: 140px;
+}
+
+.kanban-container.density-normal .candidato-card-nome {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.kanban-container.density-comfortable .candidato-card {
+    padding: 1.25rem;
+    min-height: 200px !important;
+    max-height: none; /* Sem limite de altura */
+}
+
+.kanban-container.density-comfortable .candidato-card-nome {
+    font-size: 1.0625rem;
+    margin-bottom: 0.625rem;
+    font-weight: 600;
+}
+
+/* Quick Actions (aparecem no hover em modo compacto) */
+.candidato-card-quick-actions {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    display: none;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.kanban-container.density-compact .candidato-card:hover .candidato-card-quick-actions {
+    display: flex;
+    opacity: 1;
+}
+
+.quick-action-btn {
+    background: white;
+    border: 1px solid #dee2e6;
+    width: 28px;
+    height: 28px;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.quick-action-btn.btn-success-action {
+    color: #28a745;
+}
+
+.quick-action-btn.btn-success-action:hover {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.quick-action-btn.btn-danger-action {
+    color: #dc3545;
+}
+
+.quick-action-btn.btn-danger-action:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.quick-action-btn.btn-info-action {
+    color: #17a2b8;
+}
+
+.quick-action-btn.btn-info-action:hover {
+    background: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+}
+
+/* Badge de Urgência (tempo desde candidatura) */
+.candidato-urgencia-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.candidato-urgencia-badge.urgente {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.candidato-urgencia-badge.atencao {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.candidato-urgencia-badge.normal {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Animação de Collapse das Colunas */
+.kanban-column.hidden {
+    display: none;
+    animation: fadeOut 0.3s ease;
+}
+
+.kanban-column.visible {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Card Filtrado (oculto) */
+.candidato-card.filtered-hidden {
+    display: none;
+}
+
+/* ========================================
+   ESTILOS DO MODAL COMPLETO - FASE 2
+   ======================================== */
+
+/* Seções do Modal */
+.info-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.info-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #28a745;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-size: 0.9375rem;
+    color: #2c3e50;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+/* Análise da IA */
+.ai-analysis-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-left: 4px solid #0ea5e9;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+.ai-analise-text {
+    background: white;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: #495057;
+}
+
+.ai-extracted-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.ai-extracted-item {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+}
+
+.ai-extracted-item-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.ai-extracted-item-value {
+    font-size: 0.9375rem;
+    color: #2c3e50;
+}
+
+/* Timeline de Observações */
+.timeline-observacoes {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.timeline-item {
+    padding: 1rem;
+    border-left: 2px solid #28a745;
+    margin-left: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.timeline-item::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: #28a745;
+    border-radius: 50%;
+    position: absolute;
+    left: -7px;
+    top: 1.25rem;
+}
+
+.timeline-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-item-usuario {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.timeline-item-date {
+    font-size: 0.8125rem;
+    color: #6c757d;
+}
+
+.timeline-item-content {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: #495057;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .kanban-controls-bar {
+        padding: 1rem;
+    }
+    
+    .column-visibility-filters {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .smart-filters {
+        grid-template-columns: 1fr;
+    }
+    
+    .density-toggle .btn-group {
+        flex-direction: column;
+    }
 }
 </style>
 {% endblock %}
@@ -319,6 +835,94 @@
         </div>
     </div>
 
+    <!-- Barra de Controles do Kanban -->
+    <div class="kanban-controls-bar">
+        <div class="controls-section">
+            <h6 class="controls-title">
+                <i class="mdi mdi-eye-outline"></i> Visibilidade de Colunas
+            </h6>
+            <div class="column-visibility-filters">
+                {% for status in candidatos_por_status.keys() %}
+                <label class="column-filter-checkbox">
+                    <input type="checkbox" checked data-column="{{ status }}">
+                    <span>{{ status }} (<span id="count-{{ status|lower|replace(' ', '-') }}">{{ candidatos_por_status[status]|length }}</span>)</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <h6 class="controls-title">
+                <i class="mdi mdi-filter-outline"></i> Filtros Inteligentes
+            </h6>
+            <div class="smart-filters">
+                <select id="filterScoreIA" class="form-select form-select-sm">
+                    <option value="">Todos os Scores</option>
+                    <option value="high">Score Alto (>80%)</option>
+                    <option value="medium">Score Médio (50-80%)</option>
+                    <option value="low">Score Baixo (<50%)</option>
+                    <option value="no-score">Sem Score IA</option>
+                </select>
+                
+                <select id="filterUrgencia" class="form-select form-select-sm">
+                    <option value="">Todas as Datas</option>
+                    <option value="24h">Últimas 24h</option>
+                    <option value="3d">Últimos 3 dias</option>
+                    <option value="1w">Última semana</option>
+                    <option value="older">Mais antigas</option>
+                </select>
+                
+                <select id="filterFonte" class="form-select form-select-sm">
+                    <option value="">Todas as Fontes</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="site">Site Corporativo</option>
+                    <option value="indicacao">Indicação</option>
+                    <option value="indeed">Indeed</option>
+                    <option value="outros">Outros</option>
+                </select>
+                
+                <input type="text" 
+                       id="searchCandidato" 
+                       class="form-control form-control-sm" 
+                       placeholder="🔍 Buscar por nome...">
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <h6 class="controls-title">
+                <i class="mdi mdi-view-compact-outline"></i> Densidade dos Cards
+            </h6>
+            <div class="density-toggle">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="densidade" id="densidadeCompacta" value="compact" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="densidadeCompacta">
+                        <i class="mdi mdi-format-align-justify"></i> Compacto
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="densidade" id="densidadeNormal" value="normal">
+                    <label class="btn btn-outline-secondary btn-sm" for="densidadeNormal">
+                        <i class="mdi mdi-view-headline"></i> Normal
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="densidade" id="densidadeConfortavel" value="comfortable">
+                    <label class="btn btn-outline-secondary btn-sm" for="densidadeConfortavel">
+                        <i class="mdi mdi-view-stream"></i> Confortável
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <div class="results-summary">
+                <i class="mdi mdi-information-outline"></i>
+                <span>Mostrando <strong id="candidatosVisiveis">0</strong> de <strong id="candidatosTotais">0</strong> candidatos</span>
+            </div>
+            <button class="btn btn-sm btn-outline-danger" onclick="limparFiltrosKanban()">
+                <i class="mdi mdi-filter-off"></i> Limpar Filtros
+            </button>
+        </div>
+    </div>
+
     <!-- Kanban de Candidatos -->
     <div class="kanban-wrapper">
         <div class="kanban-container">
@@ -378,7 +982,7 @@
                         </div>
                         {% endif %}
                         
-                        <div class="candidato-card-info">
+                        <div class="candidato-card-info show-in-compact">
                             <i class="mdi mdi-calendar"></i>
                             <span>
                                 {% if candidato.data_candidatura %}
@@ -394,6 +998,28 @@
                         <span class="candidato-card-fonte">
                             <i class="mdi mdi-source-branch"></i> {{ candidato.fonte_candidatura }}
                         </span>
+                        {% endif %}
+                        
+                        <!-- 🔥 NOVO: Botão de Efetivação (aparece apenas quando Contratado e sem colaborador_id) -->
+                        {% if candidato.status_processo == 'Contratado' and not candidato.colaborador_id %}
+                        <div class="card-footer bg-success text-center p-2 mt-2" style="margin: -1rem -1rem -1rem; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;">
+                            <button 
+                                class="btn btn-light btn-sm w-100 fw-bold" 
+                                onclick="efetivarContratacao('{{ candidato.id }}'); event.stopPropagation();"
+                                title="Efetivar este candidato como colaborador"
+                                style="box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <i class="mdi mdi-account-check"></i> Efetivar Contratação
+                            </button>
+                        </div>
+                        {% elif candidato.colaborador_id %}
+                        <div class="card-footer bg-info text-center p-2 mt-2" style="margin: -1rem -1rem -1rem; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;">
+                            <a href="/rh/colaboradores/visualizar/{{ candidato.colaborador_id }}" 
+                               class="btn btn-light btn-sm w-100 fw-bold"
+                               onclick="event.stopPropagation();"
+                               style="box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <i class="mdi mdi-account-eye"></i> Ver Colaborador
+                            </a>
+                        </div>
                         {% endif %}
                     </div>
                     {% endfor %}
@@ -413,153 +1039,262 @@
 </div> <!-- Fecha rh-container -->
 
 <!-- Modal de Detalhes do Candidato -->
+<!-- Modal de Detalhes do Candidato - VERSÃO COMPLETA FASE 2 -->
 <div class="modal fade" id="modalDetalhesCandidato" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header">
+            <!-- Header -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
                 <h5 class="modal-title">
-                    <i class="mdi mdi-account-details"></i> Detalhes do Candidato
+                    <i class="mdi mdi-account-details"></i> 
+                    <span id="modalCandidatoTitulo">Detalhes do Candidato</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="ms-auto d-flex gap-2 align-items-center">
+                    <!-- Botão Editar -->
+                    <button type="button" class="btn btn-sm btn-light" id="btnEditarCandidato" onclick="toggleModoEdicao()">
+                        <i class="mdi mdi-pencil"></i> Editar
+                    </button>
+                    <!-- Botão Efetivar (aparece se contratado) -->
+                    <button type="button" class="btn btn-sm btn-warning" id="btnEfetivarColaborador" 
+                            onclick="efetivarColaborador()" style="display: none;">
+                        <i class="mdi mdi-account-convert"></i> Efetivar Colaborador
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
             </div>
-            <div class="modal-body">
+            
+            <!-- Body -->
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <input type="hidden" id="candidatoIdAtual">
                 <input type="hidden" id="candidatoIdObservacoes">
+                <input type="hidden" id="modoEdicao" value="false">
                 
-                <div class="candidato-detalhes-grid mb-4">
-                    <div class="candidato-detalhes-item">
-                        <div class="candidato-detalhes-label">
-                            <i class="mdi mdi-account"></i> Nome Completo
-                        </div>
-                        <div class="candidato-detalhes-valor" id="detalheCandidatoNome">-</div>
-                    </div>
+                <!-- Modo: Visualização vs Edição -->
+                <div id="modo-visualizacao">
                     
-                    <div class="candidato-detalhes-item">
-                        <div class="candidato-detalhes-label">
-                            <i class="mdi mdi-email"></i> E-mail
-                        </div>
-                        <div class="candidato-detalhes-valor" id="detalheCandidatoEmail">-</div>
-                    </div>
-                    
-                    <div class="candidato-detalhes-item">
-                        <div class="candidato-detalhes-label">
-                            <i class="mdi mdi-phone"></i> Telefone
-                        </div>
-                        <div class="candidato-detalhes-valor" id="detalheCandidatoTelefone">-</div>
-                    </div>
-                    
-                    <div class="candidato-detalhes-item">
-                        <div class="candidato-detalhes-label">
-                            <i class="mdi mdi-calendar"></i> Data de Candidatura
-                        </div>
-                        <div class="candidato-detalhes-valor" id="detalheCandidatoData">-</div>
-                    </div>
-                    
-                    <div class="candidato-detalhes-item">
-                        <div class="candidato-detalhes-label">
-                            <i class="mdi mdi-source-branch"></i> Fonte
-                        </div>
-                        <div class="candidato-detalhes-valor" id="detalheCandidatoFonte">-</div>
-                    </div>
-                    
-                    <div class="candidato-detalhes-item">
-                        <div class="candidato-detalhes-label">
-                            <i class="mdi mdi-flag"></i> Status Atual
-                        </div>
-                        <div class="candidato-detalhes-valor" id="detalheCandidatoStatus">-</div>
-                    </div>
-                </div>
-                
-                <!-- Botão de Download de Currículo -->
-                <div class="mb-4 text-center">
-                    <a href="#" id="btnDownloadCurriculo" target="_blank" class="btn-download-curriculo" style="display: none;">
-                        <i class="mdi mdi-download"></i> Baixar Currículo
-                    </a>
-                </div>
-                
-                <!-- Análise de IA (se disponível) -->
-                <div id="analiseIAContainer" class="mb-4" style="display: none;">
-                    <h6 class="mb-3">
-                        <i class="mdi mdi-robot"></i> Análise de Inteligência Artificial
-                    </h6>
-                    
-                    <div class="ai-analysis-card">
-                        <!-- Status do Processamento -->
-                        <div class="ai-status-indicator mb-3">
-                            <span id="aiStatusBadge" class="badge">Processando...</span>
-                        </div>
-                        
-                        <!-- Score de Compatibilidade -->
-                        <div class="ai-score-display mb-3" id="aiScoreDisplay" style="display: none;">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="fw-bold">
-                                    <i class="mdi mdi-percent"></i> Score de Compatibilidade:
-                                </span>
-                                <span class="ai-score-value" id="aiScoreValue">0%</span>
+                    <!-- Seção 1: Informações Pessoais -->
+                    <div class="info-section">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-account-circle"></i> Informações Pessoais
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="info-label">Nome Completo</label>
+                                <div class="info-value" id="view_nome_completo">-</div>
                             </div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div id="aiScoreBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            <div class="col-md-4">
+                                <label class="info-label">Data de Nascimento / Idade</label>
+                                <div class="info-value" id="view_data_nascimento">-</div>
                             </div>
-                        </div>
-                        
-                        <!-- Pré-filtro -->
-                        <div class="ai-prefilter mb-3" id="aiPrefilterDisplay" style="display: none;">
-                            <div class="d-flex align-items-center">
-                                <i class="mdi mdi-filter-outline me-2"></i>
-                                <span class="fw-bold">Pré-filtro:</span>
-                                <span id="aiPrefilterValue" class="ms-2 badge">-</span>
+                            <div class="col-md-6">
+                                <label class="info-label">Email</label>
+                                <div class="info-value" id="view_email">-</div>
                             </div>
-                        </div>
-                        
-                        <!-- Dados Extraídos -->
-                        <div id="aiExtractedDataDisplay" style="display: none;">
-                            <div class="ai-extracted-title mb-2">
-                                <i class="mdi mdi-database-outline"></i> Dados Extraídos do Currículo:
+                            <div class="col-md-6">
+                                <label class="info-label">Telefone</label>
+                                <div class="info-value" id="view_telefone">-</div>
                             </div>
-                            
-                            <div class="ai-extracted-grid" id="aiExtractedGrid">
-                                <!-- Será preenchido dinamicamente via JS -->
+                            <div class="col-md-4">
+                                <label class="info-label">Sexo</label>
+                                <div class="info-value" id="view_sexo">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="info-label">Estado Civil</label>
+                                <div class="info-value" id="view_estado_civil">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="info-label">Cidade/Estado</label>
+                                <div class="info-value" id="view_cidade_estado">-</div>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Linha do Tempo de Observações -->
-                <div class="mb-4">
-                    <h6 class="mb-3">
-                        <i class="mdi mdi-timeline-text"></i> Histórico de Observações
-                        <span class="badge bg-secondary ms-2" id="totalObservacoes">0</span>
-                    </h6>
                     
-                    <!-- Lista de observações (timeline) -->
-                    <div id="timelineObservacoes" class="timeline-observacoes">
-                        <div class="text-center text-muted py-4">
-                            <i class="mdi mdi-information-outline" style="font-size: 2rem;"></i>
-                            <p class="mb-0">Nenhuma observação registrada ainda</p>
+                    <!-- Seção 2: Formação e Experiência -->
+                    <div class="info-section">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-school"></i> Formação e Experiência Profissional
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="info-label">Formação Acadêmica</label>
+                                <div class="info-value" id="view_formacao_academica">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="info-label">Curso Específico</label>
+                                <div class="info-value" id="view_curso_especifico">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="info-label">Área/Objetivo</label>
+                                <div class="info-value" id="view_area_objetivo">-</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="info-label">Experiência na Área</label>
+                                <div class="info-value" id="view_experiencia_na_area">-</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="info-label">Trabalha Atualmente</label>
+                                <div class="info-value" id="view_trabalha_atualmente">-</div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <!-- Seção 3: Candidatura -->
+                    <div class="info-section">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-file-document"></i> Informações da Candidatura
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="info-label">Fonte de Candidatura</label>
+                                <div class="info-value" id="view_fonte_candidatura">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="info-label">Data de Candidatura</label>
+                                <div class="info-value" id="view_data_candidatura">-</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="info-label">Foi Indicação?</label>
+                                <div class="info-value" id="view_foi_indicacao">-</div>
+                            </div>
+                            <div class="col-md-9">
+                                <label class="info-label">Indicado Por</label>
+                                <div class="info-value" id="view_indicado_por">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="info-label">LinkedIn</label>
+                                <div class="info-value" id="view_linkedin_url">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="info-label">Portfólio</label>
+                                <div class="info-value" id="view_portfolio_url">-</div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="info-label">Currículo</label>
+                                <div>
+                                    <a href="#" id="btnDownloadCurriculo" target="_blank" class="btn btn-sm btn-outline-primary" style="display: none;">
+                                        <i class="mdi mdi-download"></i> Baixar Currículo
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção 4: Análise da IA -->
+                    <div class="info-section" id="secaoIA" style="display: none;">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-robot"></i> Análise de Inteligência Artificial
+                        </h6>
+                        <div class="ai-analysis-card">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="info-label">Status AI</label>
+                                    <div id="view_ai_status">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="info-label">Pré-filtro</label>
+                                    <div id="view_ai_pre_filter_status">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="info-label">Score de Match</label>
+                                    <div id="view_ai_match_score">-</div>
+                                </div>
+                                <!-- Análise Completa - LARGURA TOTAL -->
+                                <div class="col-12">
+                                    <label class="info-label">Análise Completa da IA</label>
+                                    <div class="ai-analise-text" id="view_ai_analise" style="min-height: 150px; max-height: 400px; overflow-y: auto;">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção 5: Processo Seletivo -->
+                    <div class="info-section">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-clipboard-check"></i> Processo Seletivo
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="info-label">Status Atual</label>
+                                <div class="info-value" id="view_status_processo">-</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="info-label">Realizou Entrevista?</label>
+                                <div class="info-value" id="view_realizou_entrevista">-</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="info-label">Data da Entrevista</label>
+                                <div class="info-value" id="view_data_entrevista">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção 6: Contratação (se aplicável) -->
+                    <div class="info-section" id="secaoContratacao" style="display: none;">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-account-check"></i> Contratação
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="info-label">Foi Contratado?</label>
+                                <div class="info-value" id="view_foi_contratado">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="info-label">Data de Contratação</label>
+                                <div class="info-value" id="view_data_contratacao">-</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="info-label">Colaborador Vinculado</label>
+                                <div class="info-value" id="view_colaborador_id">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção 7: Observações -->
+                    <div class="info-section">
+                        <h6 class="info-section-title">
+                            <i class="mdi mdi-timeline-text"></i> Histórico de Observações
+                            <span class="badge bg-secondary ms-2" id="totalObservacoes">0</span>
+                        </h6>
+                        <div id="timelineObservacoes" class="timeline-observacoes mb-3">
+                            <div class="text-center text-muted py-4">
+                                <i class="mdi mdi-information-outline" style="font-size: 2rem;"></i>
+                                <p class="mb-0">Nenhuma observação registrada</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="novaObservacao" class="form-label">
+                                <i class="mdi mdi-pencil-plus"></i> Adicionar Nova Observação
+                            </label>
+                            <textarea class="form-control" id="novaObservacao" rows="3" 
+                                      placeholder="Digite sua observação..."></textarea>
+                            <div class="text-end mt-2">
+                                <button type="button" class="btn btn-success btn-sm" onclick="salvarObservacao()">
+                                    <i class="mdi mdi-content-save"></i> Salvar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div> <!-- Fim modo visualização -->
+                
+                <!-- MODO EDIÇÃO (inicialmente oculto) -->
+                <div id="modo-edicao" style="display: none;">
+                    <form id="formEditarCandidato">
+                        <!-- Campos editáveis serão adicionados aqui via JavaScript -->
+                    </form>
                 </div>
                 
-                <!-- Nova Observação -->
-                <div>
-                    <label for="novaObservacao" class="form-label">
-                        <i class="mdi mdi-pencil-plus"></i> Adicionar Nova Observação
-                    </label>
-                    <textarea class="form-control observacoes-textarea" 
-                              id="novaObservacao" 
-                              rows="3"
-                              placeholder="Digite sua observação aqui (feedback de entrevista, pontos fortes, ressalvas, etc...)"></textarea>
-                    <div class="text-end mt-2">
-                        <button type="button" class="btn btn-success btn-sm" onclick="salvarObservacao()">
-                            <i class="mdi mdi-content-save"></i> Salvar Observação
-                        </button>
-                    </div>
-                </div>
             </div>
+            
+            <!-- Footer -->
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="mdi mdi-close"></i> Fechar
                 </button>
-            </div>
+                <button type="button" class="btn btn-success" id="btnSalvarEdicao" 
+                        onclick="salvarEdicaoCandidato()" style="display: none;">
+                    <i class="mdi mdi-content-save"></i> Salvar Alterações
+                </button>
             </div>
         </div>
     </div>
@@ -568,4 +1303,427 @@
 
 {% block extra_js %}
 <script src="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.js') }}?v=6"></script>
+<script>
+// ============================================================================
+// SISTEMA DE FILTROS E DENSIDADE DO KANBAN
+// ============================================================================
+
+// Variáveis globais
+let filtrosAtivos = {
+    colunas: new Set({{ candidatos_por_status.keys()|list|tojson }}),
+    scoreIA: '',
+    urgencia: '',
+    fonte: '',
+    busca: ''
+};
+
+let densidadeAtual = 'compact';
+
+// ============================================================================
+// INICIALIZAÇÃO
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎨 Inicializando Sistema de Filtros Kanban');
+    
+    // ========================================================================
+    // STICKY HEADER DA VAGA
+    // ========================================================================
+    inicializarStickyHeader();
+    
+    // Aplicar densidade padrão
+    aplicarDensidade('compact');
+    
+    // Calcular urgências
+    calcularUrgenciasCandidatos();
+    
+    // Adicionar quick actions
+    adicionarQuickActions();
+    
+    // Atualizar contadores iniciais
+    atualizarContadores();
+    
+    // Inicializar event listeners
+    inicializarEventListeners();
+    
+    // Aplicar filtros iniciais
+    aplicarFiltros();
+});
+
+// ============================================================================
+// STICKY HEADER - NOME DA VAGA GRUDA NO TOPO AO ROLAR
+// ============================================================================
+
+function inicializarStickyHeader() {
+    const vagaCard = document.querySelector('.vaga-info-card');
+    
+    if (!vagaCard) {
+        console.warn('⚠️ Card da vaga não encontrado');
+        return;
+    }
+    
+    // Posição inicial do card
+    const vagaCardOffsetTop = vagaCard.offsetTop;
+    const navbarHeight = 64; // 4rem = 64px
+    
+    // Criar placeholder para manter o espaço
+    const placeholder = document.createElement('div');
+    placeholder.className = 'vaga-info-placeholder';
+    vagaCard.parentNode.insertBefore(placeholder, vagaCard);
+    
+    // Listener de scroll
+    let ticking = false;
+    
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (scrollTop > vagaCardOffsetTop - navbarHeight) {
+                    // Ativar sticky
+                    if (!vagaCard.classList.contains('sticky')) {
+                        vagaCard.classList.add('sticky');
+                        placeholder.classList.add('active');
+                        placeholder.style.height = vagaCard.offsetHeight + 'px';
+                        console.log('📌 Sticky ativado');
+                    }
+                } else {
+                    // Desativar sticky
+                    if (vagaCard.classList.contains('sticky')) {
+                        vagaCard.classList.remove('sticky');
+                        placeholder.classList.remove('active');
+                        console.log('📌 Sticky desativado');
+                    }
+                }
+                
+                ticking = false;
+            });
+            
+            ticking = true;
+        }
+    });
+    
+    console.log('✅ Sticky header inicializado');
+}
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
+function inicializarEventListeners() {
+    // Filtros de visibilidade de colunas
+    document.querySelectorAll('.column-filter-checkbox input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const coluna = this.dataset.column;
+            if (this.checked) {
+                filtrosAtivos.colunas.add(coluna);
+            } else {
+                filtrosAtivos.colunas.delete(coluna);
+            }
+            aplicarFiltros();
+        });
+    });
+    
+    // Filtro de Score IA
+    const filterScoreIA = document.getElementById('filterScoreIA');
+    if (filterScoreIA) {
+        filterScoreIA.addEventListener('change', function() {
+            filtrosAtivos.scoreIA = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    // Filtro de Urgência
+    const filterUrgencia = document.getElementById('filterUrgencia');
+    if (filterUrgencia) {
+        filterUrgencia.addEventListener('change', function() {
+            filtrosAtivos.urgencia = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    // Filtro de Fonte
+    const filterFonte = document.getElementById('filterFonte');
+    if (filterFonte) {
+        filterFonte.addEventListener('change', function() {
+            filtrosAtivos.fonte = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    // Busca por nome
+    const searchCandidato = document.getElementById('searchCandidato');
+    if (searchCandidato) {
+        searchCandidato.addEventListener('input', function() {
+            filtrosAtivos.busca = this.value.toLowerCase();
+            aplicarFiltros();
+        });
+    }
+    
+    // Densidade
+    document.querySelectorAll('input[name="densidade"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            aplicarDensidade(this.value);
+        });
+    });
+}
+
+// ============================================================================
+// APLICAR FILTROS
+// ============================================================================
+
+function aplicarFiltros() {
+    console.log('🔍 Aplicando filtros:', filtrosAtivos);
+    
+    let candidatosVisiveis = 0;
+    let candidatosTotais = 0;
+    
+    // Filtrar colunas
+    document.querySelectorAll('.kanban-column').forEach(coluna => {
+        const status = coluna.querySelector('.kanban-column-title').textContent.trim();
+        
+        if (filtrosAtivos.colunas.has(status)) {
+            coluna.classList.remove('hidden');
+            coluna.classList.add('visible');
+        } else {
+            coluna.classList.add('hidden');
+            coluna.classList.remove('visible');
+            return; // Pula cards desta coluna
+        }
+        
+        // Filtrar cards dentro da coluna
+        const cards = coluna.querySelectorAll('.candidato-card');
+        let cardVisiveisColuna = 0;
+        
+        cards.forEach(card => {
+            candidatosTotais++;
+            
+            // Verificar todos os filtros
+            let mostrar = true;
+            
+            // Filtro de Score IA
+            if (filtrosAtivos.scoreIA) {
+                const scoreElement = card.querySelector('.ai-score-badge span');
+                if (filtrosAtivos.scoreIA === 'no-score') {
+                    mostrar = mostrar && !scoreElement;
+                } else if (scoreElement) {
+                    const score = parseInt(scoreElement.textContent);
+                    if (filtrosAtivos.scoreIA === 'high') {
+                        mostrar = mostrar && score > 80;
+                    } else if (filtrosAtivos.scoreIA === 'medium') {
+                        mostrar = mostrar && score >= 50 && score <= 80;
+                    } else if (filtrosAtivos.scoreIA === 'low') {
+                        mostrar = mostrar && score < 50;
+                    }
+                } else if (filtrosAtivos.scoreIA !== 'no-score') {
+                    mostrar = false;
+                }
+            }
+            
+            // Filtro de Urgência
+            if (filtrosAtivos.urgencia) {
+                const urgenciaBadge = card.querySelector('.candidato-urgencia-badge');
+                if (urgenciaBadge) {
+                    const urgencia = urgenciaBadge.dataset.urgencia;
+                    mostrar = mostrar && urgencia === filtrosAtivos.urgencia;
+                } else {
+                    mostrar = false;
+                }
+            }
+            
+            // Filtro de Fonte
+            if (filtrosAtivos.fonte) {
+                const fonteElement = card.querySelector('.candidato-card-fonte');
+                if (fonteElement) {
+                    const fonte = fonteElement.textContent.toLowerCase();
+                    mostrar = mostrar && fonte.includes(filtrosAtivos.fonte.toLowerCase());
+                } else {
+                    mostrar = false;
+                }
+            }
+            
+            // Busca por nome
+            if (filtrosAtivos.busca) {
+                const nome = card.querySelector('.candidato-card-nome').textContent.toLowerCase();
+                mostrar = mostrar && nome.includes(filtrosAtivos.busca);
+            }
+            
+            // Aplicar visibilidade
+            if (mostrar) {
+                card.classList.remove('filtered-hidden');
+                candidatosVisiveis++;
+                cardVisiveisColuna++;
+            } else {
+                card.classList.add('filtered-hidden');
+            }
+        });
+        
+        // Atualizar contador da coluna
+        const contador = coluna.querySelector('.kanban-column-count');
+        contador.textContent = cardVisiveisColuna;
+    });
+    
+    // Atualizar resumo
+    const candidatosVisiveisEl = document.getElementById('candidatosVisiveis');
+    const candidatosTotaisEl = document.getElementById('candidatosTotais');
+    if (candidatosVisiveisEl) candidatosVisiveisEl.textContent = candidatosVisiveis;
+    if (candidatosTotaisEl) candidatosTotaisEl.textContent = candidatosTotais;
+    
+    console.log(`✅ Filtros aplicados: ${candidatosVisiveis}/${candidatosTotais} candidatos visíveis`);
+}
+
+// ============================================================================
+// DENSIDADE DOS CARDS
+// ============================================================================
+
+function aplicarDensidade(densidade) {
+    console.log('📦 Aplicando densidade:', densidade);
+    
+    const kanbanContainer = document.querySelector('.kanban-container');
+    
+    // Remover classes antigas
+    kanbanContainer.classList.remove('density-compact', 'density-normal', 'density-comfortable');
+    
+    // Adicionar nova classe
+    kanbanContainer.classList.add(`density-${densidade}`);
+    
+    densidadeAtual = densidade;
+    
+    console.log('✅ Densidade aplicada:', densidade);
+}
+
+// ============================================================================
+// CALCULAR URGÊNCIAS
+// ============================================================================
+
+function calcularUrgenciasCandidatos() {
+    console.log('⏱️ Calculando urgências dos candidatos');
+    
+    document.querySelectorAll('.candidato-card').forEach(card => {
+        const dataInfo = card.querySelector('.candidato-card-info.show-in-compact span');
+        if (dataInfo) {
+            const dataTexto = dataInfo.textContent.trim();
+            if (dataTexto !== 'N/A') {
+                const [dia, mes, ano] = dataTexto.split('/');
+                const dataCandidatura = new Date(ano, mes - 1, dia);
+                const agora = new Date();
+                const diffMs = agora - dataCandidatura;
+                const diffHoras = diffMs / (1000 * 60 * 60);
+                const diffDias = diffHoras / 24;
+                
+                // Criar badge de urgência
+                const urgenciaBadge = document.createElement('div');
+                urgenciaBadge.className = 'candidato-urgencia-badge';
+                
+                let urgencia, texto;
+                
+                if (diffHoras < 24) {
+                    urgencia = '24h';
+                    texto = 'NOVO';
+                    urgenciaBadge.classList.add('urgente');
+                } else if (diffDias <= 3) {
+                    urgencia = '3d';
+                    texto = `${Math.floor(diffDias)}d`;
+                    urgenciaBadge.classList.add('atencao');
+                } else if (diffDias <= 7) {
+                    urgencia = '1w';
+                    texto = `${Math.floor(diffDias)}d`;
+                    urgenciaBadge.classList.add('normal');
+                } else {
+                    urgencia = 'older';
+                    texto = `${Math.floor(diffDias)}d`;
+                    urgenciaBadge.classList.add('normal');
+                }
+                
+                urgenciaBadge.dataset.urgencia = urgencia;
+                urgenciaBadge.innerHTML = `<i class="mdi mdi-clock-outline"></i> ${texto}`;
+                
+                // Inserir badge no card
+                card.style.position = 'relative';
+                card.insertBefore(urgenciaBadge, card.firstChild);
+            }
+        }
+    });
+    
+    console.log('✅ Urgências calculadas');
+}
+
+// ============================================================================
+// QUICK ACTIONS
+// ============================================================================
+
+function adicionarQuickActions() {
+    console.log('⚡ Adicionando Quick Actions');
+    
+    document.querySelectorAll('.candidato-card').forEach(card => {
+        const candidatoId = card.dataset.candidatoId;
+        
+        const quickActions = document.createElement('div');
+        quickActions.className = 'candidato-card-quick-actions';
+        quickActions.innerHTML = `
+            <div class="quick-action-btn btn-info-action" 
+                 onclick="verDetalhesCandidato('${candidatoId}'); event.stopPropagation();" 
+                 title="Ver Detalhes">
+                <i class="mdi mdi-eye"></i>
+            </div>
+        `;
+        
+        card.style.position = 'relative';
+        card.appendChild(quickActions);
+    });
+    
+    console.log('✅ Quick Actions adicionadas');
+}
+
+// ============================================================================
+// ATUALIZAR CONTADORES
+// ============================================================================
+
+function atualizarContadores() {
+    document.querySelectorAll('.kanban-column').forEach(coluna => {
+        const status = coluna.querySelector('.kanban-column-title').textContent.trim();
+        const statusId = status.toLowerCase().replace(/\\s+/g, '-');
+        const cards = coluna.querySelectorAll('.candidato-card:not(.filtered-hidden)');
+        const contador = document.getElementById(`count-${statusId}`);
+        if (contador) {
+            contador.textContent = cards.length;
+        }
+    });
+}
+
+// ============================================================================
+// LIMPAR FILTROS
+// ============================================================================
+
+function limparFiltrosKanban() {
+    console.log('🧹 Limpando filtros');
+    
+    // Resetar checkboxes de colunas
+    document.querySelectorAll('.column-filter-checkbox input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    filtrosAtivos.colunas = new Set({{ candidatos_por_status.keys()|list|tojson }});
+    
+    // Resetar selects
+    const filterScoreIA = document.getElementById('filterScoreIA');
+    const filterUrgencia = document.getElementById('filterUrgencia');
+    const filterFonte = document.getElementById('filterFonte');
+    const searchCandidato = document.getElementById('searchCandidato');
+    
+    if (filterScoreIA) filterScoreIA.value = '';
+    if (filterUrgencia) filterUrgencia.value = '';
+    if (filterFonte) filterFonte.value = '';
+    if (searchCandidato) searchCandidato.value = '';
+    
+    filtrosAtivos.scoreIA = '';
+    filtrosAtivos.urgencia = '';
+    filtrosAtivos.fonte = '';
+    filtrosAtivos.busca = '';
+    
+    // Reaplicar filtros
+    aplicarFiltros();
+    
+    console.log('✅ Filtros limpos');
+}
+</script>
 {% endblock %}

@@ -303,3 +303,215 @@ async function excluirDepartamento(deptoId) {
         bootstrap.Modal.getInstance(document.getElementById('modalExcluirDepto')).hide();
     }
 }
+
+// ========================================
+// FUNÇÕES - ACESSOS PORTAL CONTABILIDADE
+// ========================================
+
+let acessosContabilidadeCache = [];
+
+function inicializarGestaoAcessosContabilidade() {
+    try {
+        const script = document.getElementById('dadosAcessosContabilidade');
+        acessosContabilidadeCache = script ? JSON.parse(script.textContent || '[]') : [];
+    } catch (error) {
+        console.warn('Não foi possível carregar cache de acessos contabilidade', error);
+        acessosContabilidadeCache = [];
+    }
+}
+
+function obterModalAcesso() {
+    const modalEl = document.getElementById('modalAcessoContabilidade');
+    return modalEl ? new bootstrap.Modal(modalEl) : null;
+}
+
+function obterModalStatusAcesso() {
+    const modalEl = document.getElementById('modalStatusAcesso');
+    return modalEl ? new bootstrap.Modal(modalEl) : null;
+}
+
+function preencherFormularioAcesso(dados) {
+    document.getElementById('acessoId').value = dados?.id || '';
+    document.getElementById('nomeUsuarioAcesso').value = dados?.nome_usuario || '';
+    document.getElementById('descricaoAcesso').value = dados?.descricao || '';
+    document.getElementById('senhaAcesso').value = '';
+    document.getElementById('confirmacaoSenhaAcesso').value = '';
+    document.getElementById('statusAcesso').checked = dados?.is_active !== false;
+}
+
+function abrirModalNovoAcesso() {
+    document.getElementById('modalAcessoTitulo').textContent = 'Novo acesso';
+    preencherFormularioAcesso({ is_active: true });
+}
+
+function localizarAcessoCache(acessoId) {
+    return acessosContabilidadeCache.find((item) => item.id === acessoId);
+}
+
+function editarAcessoContabilidade(acessoId) {
+    const registro = localizarAcessoCache(acessoId);
+    if (!registro) {
+        alert('Não foi possível localizar este acesso.');
+        return;
+    }
+
+    document.getElementById('modalAcessoTitulo').textContent = 'Editar acesso';
+    preencherFormularioAcesso(registro);
+    const modal = obterModalAcesso();
+    if (modal) {
+        modal.show();
+    }
+}
+
+function validarSenhaCampos(senha, confirmacao) {
+    if (!senha && !confirmacao) {
+        return { valido: true, mensagem: '' };
+    }
+    if (senha.length > 0 && senha.length < 8) {
+        return { valido: false, mensagem: 'A senha deve ter pelo menos 8 caracteres.' };
+    }
+    if (senha !== confirmacao) {
+        return { valido: false, mensagem: 'As senhas informadas não conferem.' };
+    }
+    return { valido: true, mensagem: '' };
+}
+
+async function salvarAcessoContabilidade() {
+    const acessoId = document.getElementById('acessoId').value;
+    const nomeUsuario = document.getElementById('nomeUsuarioAcesso').value.trim();
+    const descricao = document.getElementById('descricaoAcesso').value.trim();
+    const senha = document.getElementById('senhaAcesso').value;
+    const confirmacaoSenha = document.getElementById('confirmacaoSenhaAcesso').value;
+    const isActive = document.getElementById('statusAcesso').checked;
+
+    if (!nomeUsuario) {
+        alert('Informe o nome de usuário.');
+        return;
+    }
+
+    if (!acessoId && senha.length < 8) {
+        alert('Para novos acessos, informe uma senha com pelo menos 8 caracteres.');
+        return;
+    }
+
+    const validacao = validarSenhaCampos(senha, confirmacaoSenha);
+    if (!validacao.valido) {
+        alert(validacao.mensagem);
+        return;
+    }
+
+    const payload = {
+        nome_usuario: nomeUsuario,
+        descricao: descricao,
+        is_active: isActive
+    };
+
+    if (senha) {
+        payload.senha = senha;
+    }
+
+    const url = acessoId
+        ? `/rh/estrutura/api/acessos-contabilidade/${acessoId}`
+        : '/rh/estrutura/api/acessos-contabilidade';
+    const method = acessoId ? 'PUT' : 'POST';
+
+    try {
+        const botao = document.getElementById('btnSalvarAcesso');
+        if (botao) {
+            botao.disabled = true;
+            botao.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+        }
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            alert(data.message || 'Não foi possível salvar o acesso.');
+            return;
+        }
+
+        alert(data.message || 'Acesso salvo com sucesso.');
+        location.reload();
+    } catch (error) {
+        console.error('Erro ao salvar acesso', error);
+        alert('Erro inesperado ao salvar o acesso.');
+    } finally {
+        const botao = document.getElementById('btnSalvarAcesso');
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = '<i class="mdi mdi-content-save"></i> Salvar';
+        }
+    }
+}
+
+function confirmarAlteracaoStatusAcesso(acessoId) {
+    const registro = localizarAcessoCache(acessoId);
+    if (!registro) {
+        alert('Acesso não encontrado.');
+        return;
+    }
+
+    const novoStatus = !registro.is_active;
+    document.getElementById('acessoStatusId').value = acessoId;
+    document.getElementById('novoStatusAcesso').value = novoStatus ? 'true' : 'false';
+
+    const texto = novoStatus
+        ? `Deseja reativar o acesso <strong>${registro.nome_usuario}</strong>?`
+        : `Deseja desativar o acesso <strong>${registro.nome_usuario}</strong>?`;
+    document.getElementById('textoStatusAcesso').innerHTML = texto;
+
+    const modal = obterModalStatusAcesso();
+    if (modal) {
+        modal.show();
+    }
+}
+
+async function atualizarStatusAcesso() {
+    const acessoId = document.getElementById('acessoStatusId').value;
+    const novoStatus = document.getElementById('novoStatusAcesso').value === 'true';
+
+    if (!acessoId) {
+        alert('Acesso não identificado.');
+        return;
+    }
+
+    try {
+        const botao = document.getElementById('btnConfirmarStatusAcesso');
+        if (botao) {
+            botao.disabled = true;
+            botao.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processando...';
+        }
+
+        const response = await fetch(`/rh/estrutura/api/acessos-contabilidade/${acessoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ is_active: novoStatus })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            alert(data.message || 'Não foi possível atualizar o status.');
+            return;
+        }
+
+        alert(data.message || 'Status atualizado com sucesso.');
+        location.reload();
+    } catch (error) {
+        console.error('Erro ao atualizar status', error);
+        alert('Erro inesperado ao atualizar o status.');
+    } finally {
+        const botao = document.getElementById('btnConfirmarStatusAcesso');
+        if (botao) {
+            botao.disabled = false;
+            botao.innerHTML = 'Confirmar';
+        }
+    }
+}

@@ -162,20 +162,27 @@ def aplicar_vaga(vaga_id):
         
         candidato_id = insert_response.data[0]['id']
         
-        # 5. Gerar URL assinada do currículo (válida por 1 hora)
-        curriculo_url_assinada = None
+        # 5. Gerar URL PÚBLICA PERMANENTE do currículo (sem expiração)
+        curriculo_url_publica = None
         if curriculo_path:
             try:
-                # Gera URL pública temporária (3600 segundos = 1 hora)
-                signed_response = supabase_admin.storage\
+                # Gera URL pública PERMANENTE (sem expiração)
+                curriculo_url_publica = supabase_admin.storage\
                     .from_('curriculos')\
-                    .create_signed_url(curriculo_path, 3600)
+                    .get_public_url(curriculo_path)
                 
-                curriculo_url_assinada = signed_response.get('signedURL')
-                print(f"✅ URL assinada gerada para {curriculo_path}")
+                print(f"✅ URL pública permanente gerada: {curriculo_url_publica}")
+                
+                # ATUALIZAR o candidato com a URL permanente
+                supabase_admin.table('rh_candidatos')\
+                    .update({'url_curriculo': curriculo_url_publica})\
+                    .eq('id', candidato_id)\
+                    .execute()
+                
+                print(f"✅ URL salva no banco para candidato {candidato_id}")
             
             except Exception as url_error:
-                print(f"⚠️  Erro ao gerar URL assinada: {str(url_error)}")
+                print(f"⚠️  Erro ao gerar URL pública: {str(url_error)}")
         
         # 6. Disparar webhook para n8n (processamento assíncrono com IA)
         if WEBHOOK_N8N_URL and curriculo_path:
@@ -184,7 +191,7 @@ def aplicar_vaga(vaga_id):
                     'candidato_id': candidato_id,
                     'vaga_id': str(vaga_id),
                     'curriculo_path': curriculo_path,
-                    'curriculo_url': curriculo_url_assinada,  # URL pronta para download
+                    'curriculo_url': curriculo_url_publica,  # URL PÚBLICA PERMANENTE
                     'email': email,
                     'nome_completo': nome_completo,
                     'telefone': telefone if telefone else None,
@@ -199,7 +206,7 @@ def aplicar_vaga(vaga_id):
                 
                 if webhook_response.status_code == 200:
                     print(f"✅ Webhook n8n disparado para candidato {candidato_id}")
-                    print(f"   URL assinada enviada: {curriculo_url_assinada[:50] if curriculo_url_assinada else 'N/A'}...")
+                    print(f"   URL pública enviada: {curriculo_url_publica[:80] if curriculo_url_publica else 'N/A'}...")
                     
                     # Atualizar status para 'Em Processamento'
                     supabase_admin.table('rh_candidatos')\
@@ -271,6 +278,38 @@ def atualizar_dados_ia(candidato_id):
         # Se a IA extraiu telefone ou outros dados que estavam vazios, atualizar também
         if extracted_data.get('telefone') and not data.get('telefone_original'):
             update_data['telefone'] = extracted_data['telefone']
+        
+        # NOVOS CAMPOS DEMOGRÁFICOS (extraídos pela IA)
+        if extracted_data.get('sexo'):
+            update_data['sexo'] = extracted_data['sexo']
+        
+        if extracted_data.get('data_nascimento'):
+            update_data['data_nascimento'] = extracted_data['data_nascimento']
+        
+        if extracted_data.get('estado_civil'):
+            update_data['estado_civil'] = extracted_data['estado_civil']
+        
+        if extracted_data.get('cidade'):
+            update_data['cidade'] = extracted_data['cidade']
+        
+        if extracted_data.get('estado'):
+            update_data['estado'] = extracted_data['estado']
+        
+        # Formação e Experiência (extraídos pela IA)
+        if extracted_data.get('formacao_academica'):
+            update_data['formacao_academica'] = extracted_data['formacao_academica']
+        
+        if extracted_data.get('curso_especifico'):
+            update_data['curso_especifico'] = extracted_data['curso_especifico']
+        
+        if extracted_data.get('area_objetivo'):
+            update_data['area_objetivo'] = extracted_data['area_objetivo']
+        
+        if 'trabalha_atualmente' in extracted_data:
+            update_data['trabalha_atualmente'] = extracted_data['trabalha_atualmente']
+        
+        if 'experiencia_na_area' in extracted_data:
+            update_data['experiencia_na_area'] = extracted_data['experiencia_na_area']
         
         # Atualizar registro
         response = supabase_admin.table('rh_candidatos')\
