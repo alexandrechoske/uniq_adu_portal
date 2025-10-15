@@ -4,6 +4,7 @@ from modules.auth.routes import login_required
 from extensions import supabase_admin
 import csv
 import io
+import json
 import re
 import os
 import zipfile
@@ -65,12 +66,24 @@ def api_processos_antigos():
 
 TABLE_COLUMNS = [
     'ref_unique','ref_importador','cnpj_importador','importador','modal','container','data_embarque',
-    'data_chegada','transit_time_real','urf_despacho','exportador_fornecedor',
-    'numero_di','data_registro','canal','data_desembaraco','mercadoria','status_processo',
-    'peso_bruto','valor_fob_real','valor_cif_real','data_abertura','status_macro','status_macro_sistema','data_fechamento','documentos'
+    'data_chegada','transit_time_real','pais_procedencia','urf_despacho','exportador_fornecedor',
+    'numero_di','data_registro','canal','data_desembaraco','mercadoria','data_abertura',
+    'status_sistema','status_timeline','url_bandeira','despesas_processo','documentos'
 ]
 
 DATE_FIELDS = [c for c in TABLE_COLUMNS if c.startswith('data_')]
+
+
+def serialize_cell_value(value):
+    """Padroniza valores para exportação textual."""
+    if value is None:
+        return ''
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value, ensure_ascii=False)
+        except Exception:
+            return str(value)
+    return value
 
 def parse_br_date(date_str):
     """Converte data em formato DD/MM/YYYY para datetime; retorna None se inválida."""
@@ -90,7 +103,8 @@ def parse_br_date(date_str):
 
 def build_base_query(user):
     """Constrói query base com segurança obrigatória por CNPJ do usuário."""
-    q = supabase_admin.table('importacoes_processos_aberta').select('*')
+    # Utiliza view consolidada com colunas atualizadas de status
+    q = supabase_admin.table('vw_importacoes_geral_export').select('*')
     
     # SEGURANÇA OBRIGATÓRIA: Sempre filtrar por CNPJs do usuário
     user_role = user.get('role', '')
@@ -172,7 +186,7 @@ def apply_query_filters(q, filters: dict, user: dict):
                 val = values[0]
             
         # Tratamento numérico
-        if col in ['transit_time_real','peso_bruto','valor_fob_real','valor_cif_real','firebird_di_codigo']:
+        if col in ['transit_time_real']:
             try:
                 float(val)  # valida
                 q = q.eq(col, val)
@@ -490,7 +504,7 @@ def export_csv():
         writer = csv.writer(output, delimiter=';')
         writer.writerow(TABLE_COLUMNS)
         for r in rows:
-            writer.writerow([r.get(col, '') if r.get(col) is not None else '' for col in TABLE_COLUMNS])
+            writer.writerow([serialize_cell_value(r.get(col)) for col in TABLE_COLUMNS])
         csv_data = output.getvalue()
         output.close()
         duration = (datetime.now() - started_at).total_seconds()
@@ -551,8 +565,7 @@ def export_excel():
         for row_idx, row_data in enumerate(rows, 2):
             for col_idx, col_name in enumerate(TABLE_COLUMNS, 1):
                 cell = ws.cell(row=row_idx, column=col_idx)
-                value = row_data.get(col_name)
-                cell.value = value if value is not None else ''
+                cell.value = serialize_cell_value(row_data.get(col_name))
         
         # Ajustar largura das colunas
         for col_idx in range(1, len(TABLE_COLUMNS) + 1):
@@ -601,9 +614,9 @@ def get_filter_options():
         categorical_fields = {
             'modal': {'limit': 10},
             'canal': {'limit': 10},
-            'status_macro': {'limit': 20},
-            'status_macro_sistema': {'limit': 30},
-            'status_processo': {'limit': 50},
+            'status_sistema': {'limit': 30},
+            'status_timeline': {'limit': 30},
+            'pais_procedencia': {'limit': 50},
             'urf_despacho': {'limit': 50},
             'mercadoria': {'limit': 100}
         }
