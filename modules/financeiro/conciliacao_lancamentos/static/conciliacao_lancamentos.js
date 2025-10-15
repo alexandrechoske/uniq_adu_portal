@@ -31,6 +31,7 @@ const AppState = {
     buscaSistema: '',
     buscaBanco: '',
     filtroBanco: '',
+    empresaSelecionada: 'todas',
     paginacaoSistema: { paginaAtual: 1, itensPorPagina: 100 },
     paginacaoBanco: { paginaAtual: 1, itensPorPagina: 100 }
 };
@@ -112,6 +113,12 @@ function obterPeriodoSistemaSelecionado() {
         inicio: dataInicio,
         fim: dataFim
     };
+}
+
+function obterEmpresaSelecionada() {
+    const checked = document.querySelector('input[name="empresa_filtro"]:checked');
+    const valor = checked ? checked.value : 'todas';
+    return valor || 'todas';
 }
 
 // ========================================
@@ -256,6 +263,8 @@ async function processarArquivos(e) {
     }
 
     const bancoSelecionado = document.getElementById('banco_origem').value;
+    const empresaSelecionada = obterEmpresaSelecionada();
+    AppState.empresaSelecionada = empresaSelecionada;
 
     const formData = new FormData();
     AppState.arquivosCarregados.forEach(file => {
@@ -264,6 +273,7 @@ async function processarArquivos(e) {
     formData.append('banco_origem', bancoSelecionado);
     formData.append('data_inicio_sistema', periodo.inicio);
     formData.append('data_fim_sistema', periodo.fim);
+    formData.append('empresa', empresaSelecionada);
     
     try {
         mostrarLoading('Carregando lançamentos do sistema...');
@@ -275,6 +285,10 @@ async function processarArquivos(e) {
 
         if (bancoSelecionado && bancoSelecionado !== 'auto') {
             params.append('banco', bancoSelecionado);
+        }
+
+        if (empresaSelecionada && empresaSelecionada !== 'todas') {
+            params.append('empresa', empresaSelecionada);
         }
 
         const sistemaResp = await fetch(`/financeiro/conciliacao-lancamentos/api/movimentos-sistema?${params.toString()}`);
@@ -437,6 +451,7 @@ function renderizarTabelaSistema() {
             item.descricao_original,
             item.ref_unique,
             item.ref_unique_norm,
+            item.empresa,
             formatarMoeda(item.valor),
             formatarData(item.data)
         ].join(' ').toLowerCase();
@@ -469,12 +484,19 @@ function renderizarTabelaSistema() {
     tbody.innerHTML = itensPagina.map(item => {
         const checked = AppState.sistemasSelecionados.has(item.id) ? 'checked' : '';
         const descricao = item.descricao || '-';
+        const descricaoDisplay = escapeHtml(descricao);
+    const empresaDisplay = escapeHtml(item.empresa || 'Sem empresa cadastrada');
         return `
         <tr>
             <td><input type="checkbox" class="check-sistema" data-id="${item.id}" ${checked}></td>
             <td>${formatarData(item.data)}</td>
-            <td class="text-truncate" style="max-width: 200px;" title="${descricao}">${descricao}</td>
-            <td><span class="badge bg-info">${item.ref_unique || '-'}</span></td>
+            <td style="max-width: 240px;">
+                <div class="d-flex flex-column">
+                    <span class="text-truncate" title="${descricaoDisplay}">${descricaoDisplay}</span>
+                    <small class="text-muted">${empresaDisplay}</small>
+                </div>
+            </td>
+            <td><span class="badge bg-info">${escapeHtml(item.ref_unique || '-')}</span></td>
             <td class="text-end"><strong>${formatarMoeda(item.valor)}</strong></td>
         </tr>`;
     }).join('');
@@ -1170,6 +1192,7 @@ function normalizarMovimentoSistema(item) {
     normalizado.codigo_referencia = item.codigo_referencia || normalizado.ref_unique || '';
     normalizado.valor = parseFloat(item.valor || 0);
     normalizado.status = (item.status || 'pendente').toLowerCase();
+    normalizado.empresa = item.empresa || item.empresa_nome || '';
 
     aplicarReferenciaExtraida(normalizado, [
         normalizado.ref_unique,
