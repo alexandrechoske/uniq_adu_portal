@@ -301,7 +301,6 @@
                 </div>
             </div>
             <div class="header-exchange-panel">
-                <span class="header-exchange-title">Cotações PTAX • Banco Central</span>
                 <div class="header-exchange-grid">
                     <div class="currency-pair">
                         <div class="currency-flag-wrapper">
@@ -326,6 +325,7 @@
             <div id="clock" class="text-right">
                 <p class="text-3xl font-bold text-white"></p>
                 <p class="text-base text-gray-400"></p>
+                <p id="last-update" class="text-xs text-gray-500 mt-1">Atualizado em --/--/---- --:--</p>
             </div>
         </header>
 
@@ -518,10 +518,11 @@
                 const processos = (payload.data?.processos || []).map(hydrateProcess);
                 const metaMensal = payload.data?.meta?.current_meta ?? 0;
                 const exchangeRates = payload.data?.exchange_rates ?? null;
-                return { processos, metaMensal, exchangeRates };
+                const generatedAt = payload.data?.generated_at ?? null;
+                return { processos, metaMensal, exchangeRates, generatedAt };
             } catch (error) {
                 console.error('[Dashboard Mapa] Erro ao carregar dados', error);
-                return { processos: [], metaMensal: 0, exchangeRates: null };
+                return { processos: [], metaMensal: 0, exchangeRates: null, generatedAt: null };
             }
         }
 
@@ -530,7 +531,7 @@
             const currentMonth = today.getMonth();
             const currentYear = today.getFullYear();
 
-            const { processos, metaMensal, exchangeRates } = await fetchDashboardData();
+            const { processos, metaMensal, exchangeRates, generatedAt } = await fetchDashboardData();
 
             const processosAtivos = processos.filter(p => (p.status_sistema || '').toUpperCase().trim() !== 'PROCESSO CONCLUIDO');
             const aguardandoChegadaCount = processosAtivos.filter(p => (p.status_sistema || '').toUpperCase().includes('AG. CHEGADA')).length;
@@ -562,6 +563,26 @@
             if (headerEurEl) {
                 headerEurEl.textContent = formatExchangeRate(exchangeRates?.euro);
             }
+
+            const lastUpdateEl = document.getElementById('last-update');
+            if (lastUpdateEl) {
+                const parsedGeneratedAt = generatedAt ? new Date(generatedAt) : null;
+                const hasValidGeneratedAt = parsedGeneratedAt && !Number.isNaN(parsedGeneratedAt.getTime());
+                const updateDate = hasValidGeneratedAt ? parsedGeneratedAt : today;
+                const formattedDate = updateDate.toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const formattedTime = updateDate.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                lastUpdateEl.textContent = `Atualizado em ${formattedDate} ${formattedTime}`;
+            }
+
+            const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;
+            setInterval(() => window.location.reload(), AUTO_REFRESH_INTERVAL);
 
             const processosMes = processos.filter(p => p.data_abertura && p.data_abertura.getMonth() === currentMonth && p.data_abertura.getFullYear() === currentYear);
             const registrosMes = processos.filter(p => p.data_registro && p.data_registro.getMonth() === currentMonth && p.data_registro.getFullYear() === currentYear);
