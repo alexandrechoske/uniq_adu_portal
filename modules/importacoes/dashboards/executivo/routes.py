@@ -451,9 +451,8 @@ def apply_filters(data):
                 return False
             
             if kpi_status == 'processos_abertos':
-                # CORREÇÃO: "Processos Abertos" agora representa TODOS os processos (1128)
+                # "Processos Abertos" representa TODOS os processos em andamento
                 # Não aplicar filtro - mostrar todos os registros
-                # (o card mostra total_processos para corresponder à tabela)
                 pass  # Não filtrar - manter todos os processos
             elif kpi_status == 'agd_embarque':
                 # Timeline 2
@@ -463,10 +462,14 @@ def apply_filters(data):
                 # Timeline 3
                 filtered_data = [item for item in filtered_data 
                                if get_timeline_number(item.get('status_timeline')) == 3]
-            elif kpi_status == 'agd_liberacao':
-                # Timeline 4
+            elif kpi_status == 'agd_registro':
+                # Timeline 4 (NOVO)
                 filtered_data = [item for item in filtered_data 
                                if get_timeline_number(item.get('status_timeline')) == 4]
+            elif kpi_status == 'agd_desembaraco':
+                # Timeline 5 (NOVO)
+                filtered_data = [item for item in filtered_data 
+                               if get_timeline_number(item.get('status_timeline')) == 5]
             elif kpi_status == 'agd_fechamento':
                 # Timeline 6
                 filtered_data = [item for item in filtered_data 
@@ -760,22 +763,31 @@ def dashboard_kpis():
             # Criar coluna numérica para facilitar comparações
             df['timeline_number'] = df['status_timeline'].apply(get_timeline_number)
             
-            # Calcular métricas baseadas no status_timeline - NOVA REGRA ATUALIZADA
-            # 2 - Agd Embarque, 3 - Agd Chegada, 4 - Agd Registro (Liberação), 6 - Finalizado (Fechamento)
-            agd_embarque = len(df[df['timeline_number'] == 2])      # 2 - Agd Embarque
-            agd_chegada = len(df[df['timeline_number'] == 3])       # 3 - Agd Chegada  
-            agd_liberacao = len(df[df['timeline_number'] == 4])     # 4 - Agd Registro (Liberação)
-            agd_fechamento = len(df[df['timeline_number'] == 6])    # 6 - Finalizado (Fechamento)
+            # NOVA REGRA: 6 KPIs baseados no status_timeline
+            # 1 - Processos Abertos (marco inicial, sempre preenchido)
+            # 2 - AG. EMBARQUE
+            # 3 - AG. CHEGADA
+            # 4 - AG. REGISTRO
+            # 5 - AG. DESEMBARAÇO
+            # 6 - AG. FECHAMENTO (apenas AG. FECHAMENTO, excluir PROCESSO CONCLUIDO)
             
-            print(f"[DEBUG_KPI] Status Timeline counts (REGRA PADRONIZADA):")
-            print(f"[DEBUG_KPI] 2 - Agd Embarque: {agd_embarque}")
-            print(f"[DEBUG_KPI] 3 - Agd Chegada: {agd_chegada}")
-            print(f"[DEBUG_KPI] 4 - Agd Registro/Liberação: {agd_liberacao}")
-            print(f"[DEBUG_KPI] 6 - Finalizado/Fechamento: {agd_fechamento}")
+            agd_embarque = len(df[df['timeline_number'] == 2])       # 2 - AG. EMBARQUE
+            agd_chegada = len(df[df['timeline_number'] == 3])        # 3 - AG. CHEGADA  
+            agd_registro = len(df[df['timeline_number'] == 4])       # 4 - AG. REGISTRO (NOVO)
+            agd_desembaraco = len(df[df['timeline_number'] == 5])    # 5 - AG. DESEMBARAÇO (NOVO)
+            agd_fechamento = len(df[df['timeline_number'] == 6])     # 6 - AG. FECHAMENTO
+            
+            print(f"[DEBUG_KPI] Status Timeline counts (NOVA ESTRUTURA):")
+            print(f"[DEBUG_KPI] 2 - AG. EMBARQUE: {agd_embarque}")
+            print(f"[DEBUG_KPI] 3 - AG. CHEGADA: {agd_chegada}")
+            print(f"[DEBUG_KPI] 4 - AG. REGISTRO: {agd_registro}")
+            print(f"[DEBUG_KPI] 5 - AG. DESEMBARAÇO: {agd_desembaraco}")
+            print(f"[DEBUG_KPI] 6 - AG. FECHAMENTO: {agd_fechamento}")
         else:
             agd_embarque = 0
             agd_chegada = 0
-            agd_liberacao = 0
+            agd_registro = 0
+            agd_desembaraco = 0
             agd_fechamento = 0
 
         # Chegando Este Mês/Semana: considerar TODAS as datas de chegada dentro do mês/semana (igual dashboard materiais)
@@ -814,32 +826,16 @@ def dashboard_kpis():
                     chegando_semana_custo += custo
 
         # Calcular processos abertos baseado no status_timeline
-        # REGRA PADRONIZADA CORRIGIDA:
-        # - Processos com N/A (timeline_number = None) = ABERTOS (em andamento sem classificação específica)
-        # - Processos com timeline 2, 3, 4 = ABERTOS (Agd Embarque, Chegada, Registro)
-        # - Processos com timeline >= 5 = FECHADOS (Desembaraçado, Finalizado)
-        processos_abertos = 0
-        processos_fechados = 0
+        # NOVA REGRA:
+        # - Processos Abertos = TODOS os processos nas etapas intermediárias (timeline 2-6)
+        # - Não incluir "PROCESSO CONCLUIDO" (já filtrado na view)
+        # - A view já exclui PROCESSO CONCLUIDO, então todos os registros são "abertos"
+        processos_abertos = total_processos  # Todos os da view são processos em andamento
+        processos_fechados = 0  # Não há processos concluídos na view
         
-        if 'status_timeline' in df.columns:
-            # Processos abertos: N/A (None) OU timeline 2-4
-            # N/A = processo em andamento sem status específico
-            processos_abertos = len(df[
-                (df['timeline_number'].isna()) |  # Incluir N/A
-                ((df['timeline_number'] >= 2) & (df['timeline_number'] <= 4))
-            ])
-            
-            # Processos fechados: timeline_number >= 5 (Desembaraçado, Finalizado)
-            processos_fechados = len(df[df['timeline_number'] >= 5])
-        else:
-            # Se não tiver coluna status_timeline, considerar todos como abertos
-            processos_abertos = total_processos
-            processos_fechados = 0
-
-        print(f"[DEBUG_KPI] REGRA PADRONIZADA CORRIGIDA:")
-        print(f"[DEBUG_KPI] - Processos Abertos (N/A ou timeline 2-4): {processos_abertos}")
-        print(f"[DEBUG_KPI] - Processos Fechados (timeline ≥ 5): {processos_fechados}")
-        print(f"[DEBUG_KPI] - Total: {processos_abertos + processos_fechados} (deve ser {total_processos})")
+        print(f"[DEBUG_KPI] NOVA REGRA:")
+        print(f"[DEBUG_KPI] - Processos Abertos (todos da view, exceto concluídos): {processos_abertos}")
+        print(f"[DEBUG_KPI] - Total: {total_processos}")
 
         kpis = {
             'total_processos': total_processos,
@@ -847,15 +843,15 @@ def dashboard_kpis():
             'processos_fechados': processos_fechados,
             'total_despesas': float(total_despesas),
             'ticket_medio': float(ticket_medio),
-            'agd_embarque': agd_embarque,           # NOVO NOME
-            'agd_chegada': agd_chegada,             # NOVO NOME
-            'agd_liberacao': agd_liberacao,         # NOVO NOME  
-            'agd_fechamento': agd_fechamento,       # NOVO NOME
+            'agd_embarque': agd_embarque,             # Timeline 2
+            'agd_chegada': agd_chegada,               # Timeline 3
+            'agd_registro': agd_registro,             # Timeline 4 (NOVO)
+            'agd_desembaraco': agd_desembaraco,       # Timeline 5 (NOVO)
+            'agd_fechamento': agd_fechamento,         # Timeline 6
             'chegando_mes': chegando_mes,
             'chegando_mes_custo': float(chegando_mes_custo),
             'chegando_semana': chegando_semana,
             'chegando_semana_custo': float(chegando_semana_custo)
-            # Removidos: transit_time_medio, processos_mes, processos_semana
         }
         
         print(f"[DEBUG_KPI] KPIs finais: {kpis}")
@@ -942,44 +938,54 @@ def dashboard_charts():
                 ]
             }
 
-        # Gráfico de Status do Processo - USANDO STATUS_TIMELINE PADRONIZADO
+        # Gráfico de Status do Processo - USANDO STATUS_TIMELINE (SEM NÚMEROS)
         status_chart = {'labels': [], 'data': []}
         try:
             if 'status_timeline' in df.columns:
-                print('[DEBUG_CHARTS] Usando coluna status_timeline para Status Chart (PADRONIZADO)')
-                # CORREÇÃO: INCLUIR N/A como categoria "Em Abertura" no gráfico
-                # Substituir N/A por "1 - Em Abertura" para exibição
+                print('[DEBUG_CHARTS] Usando coluna status_timeline para Status Chart')
+                # Criar coluna display removendo números da frente
                 df_status_display = df.copy()
-                df_status_display['status_display'] = df_status_display['status_timeline'].apply(
-                    lambda x: '1 - Em Abertura' if (pd.isna(x) or str(x).strip().upper() == 'N/A') else x
-                )
+                
+                def clean_status_label(status):
+                    """Remove número da frente do status_timeline (ex: '2 - AG. EMBARQUE' -> 'AG. EMBARQUE')"""
+                    if pd.isna(status) or str(status).strip().upper() == 'N/A':
+                        return 'PROCESSOS ABERTOS'  # Marco inicial
+                    
+                    status_str = str(status).strip()
+                    # Remover padrão "número -" do início
+                    if ' - ' in status_str:
+                        return status_str.split(' - ', 1)[1].strip()
+                    return status_str
+                
+                df_status_display['status_display'] = df_status_display['status_timeline'].apply(clean_status_label)
                 
                 status_counts = df_status_display['status_display'].value_counts()
                 
-                # Ordenar por número da timeline para manter ordem lógica
-                # Extrair número de cada status para ordenação
-                def extract_number(status_str):
-                    try:
-                        if pd.isna(status_str) or status_str == 'Sem Info':
-                            return 99
-                        parts = str(status_str).split('-')
-                        return int(parts[0].strip()) if parts else 99
-                    except:
-                        return 99
+                # Ordenar por ordem lógica (baseado no número original da timeline)
+                def get_timeline_order(label):
+                    """Determinar ordem de exibição baseado no label limpo"""
+                    order_map = {
+                        'PROCESSOS ABERTOS': 1,
+                        'AG. EMBARQUE': 2,
+                        'AG. CHEGADA': 3,
+                        'AG. REGISTRO': 4,
+                        'AG. DESEMBARAÇO': 5,
+                        'AG. FECHAMENTO': 6
+                    }
+                    return order_map.get(label, 99)
                 
-                sorted_index = sorted(status_counts.index, key=extract_number)
-                sorted_counts = [status_counts[idx] for idx in sorted_index]
+                sorted_labels = sorted(status_counts.index, key=get_timeline_order)
+                sorted_counts = [status_counts[label] for label in sorted_labels]
                 
                 status_chart = {
-                    'labels': sorted_index,
+                    'labels': sorted_labels,
                     'data': sorted_counts
                 }
                 
-                # VALIDAÇÃO: Verificar se o total do gráfico corresponde ao total de processos
                 total_chart = sum(sorted_counts)
-                print(f'[DEBUG_CHARTS] Status Timeline (incluindo N/A como "Em Abertura"): {sorted_index}')
+                print(f'[DEBUG_CHARTS] Status Timeline (sem números): {sorted_labels}')
                 print(f'[DEBUG_CHARTS] Contagens: {sorted_counts}')
-                print(f'[DEBUG_CHARTS] Total no gráfico: {total_chart} (deve ser igual a total_processos)')
+                print(f'[DEBUG_CHARTS] Total no gráfico: {total_chart}')
             elif 'status_macro_sistema' in df.columns:
                 print('[DEBUG_CHARTS] Usando coluna status_macro_sistema (fallback)')
                 status_counts = df['status_macro_sistema'].fillna('Sem Info').value_counts().head(10)

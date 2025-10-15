@@ -58,9 +58,9 @@
         </div>
     </div>
     
-    <!-- KPI Cards - Layout 5+3 -->
+    <!-- KPI Cards - Layout 6 cards superiores + 3 cards inferiores -->
     <div class="kpi-grid">
-        <!-- Card 1: Processos Abertos -->
+        <!-- Card 1: Processos Abertos (TOTAL GERAL) -->
         <div class="kpi-card kpi-info kpi-clickable" data-kpi-status="processos_abertos" title="Clique para ver todos os processos">
             <div class="kpi-icon">
                 <i class="mdi mdi-folder-open"></i>
@@ -93,59 +93,72 @@
             </div>
         </div>
         
-        <!-- Card 4: Agd Liberação -->
-        <div class="kpi-card kpi-info kpi-clickable" data-kpi-status="agd_liberacao" title="Clique para filtrar processos aguardando liberação">
+        <!-- Card 4: Agd Registro (NOVO) -->
+        <div class="kpi-card kpi-blue kpi-clickable" data-kpi-status="agd_registro" title="Clique para filtrar processos aguardando registro">
+            <div class="kpi-icon">
+                <i class="mdi mdi-file-document-edit"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Agd Registro</p>
+                <p class="kpi-value" id="kpi-agd-registro">-</p>
+            </div>
+        </div>
+        
+        <!-- Card 5: Agd Desembaraço (NOVO) -->
+        <div class="kpi-card kpi-warning kpi-clickable" data-kpi-status="agd_desembaraco" title="Clique para filtrar processos aguardando desembaraço">
             <div class="kpi-icon">
                 <i class="mdi mdi-shield-check"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.agd_liberacao') }}</p>
-                <p class="kpi-value" id="kpi-agd-liberacao">-</p>
+                <p class="kpi-label">Agd Desembaraço</p>
+                <p class="kpi-value" id="kpi-agd-desembaraco">-</p>
             </div>
         </div>
         
-        <!-- Card 5: Agd Fechamento -->
-        <div class="kpi-card kpi-success kpi-clickable" data-kpi-status="agd_fechamento" title="{{ t('importacoes.dashboard_executivo.click_filtrar_agd_fechamento') }}">
+        <!-- Card 6: Agd Fechamento -->
+        <div class="kpi-card kpi-success kpi-clickable" data-kpi-status="agd_fechamento" title="Clique para filtrar processos aguardando fechamento">
             <div class="kpi-icon">
                 <i class="mdi mdi-file-check"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.agd_fechamento') }}</p>
+                <p class="kpi-label">Agd Fechamento</p>
                 <p class="kpi-value" id="kpi-agd-fechamento">-</p>
             </div>
         </div>
         
-        <!-- Card 6: Chegando Esta Semana -->
-        <div class="kpi-card kpi-teal kpi-clickable" data-kpi-status="chegando_semana" title="{{ t('importacoes.dashboard_executivo.click_filtrar_chegando_semana') }}">
+        <!-- LINHA INFERIOR: 3 cards -->
+        
+        <!-- Card 7: Chegando Esta Semana -->
+        <div class="kpi-card kpi-teal kpi-clickable" data-kpi-status="chegando_semana" title="Clique para filtrar processos chegando esta semana">
             <div class="kpi-icon">
                 <i class="mdi mdi-calendar-week"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.chegando_esta_semana') }}</p>
+                <p class="kpi-label">Chegando Esta Semana</p>
                 <p class="kpi-value" id="kpi-chegando-semana">-</p>
                 <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
             </div>
         </div>
         
-        <!-- Card 7: Chegando Este Mês -->
-        <div class="kpi-card kpi-emerald kpi-clickable" data-kpi-status="chegando_mes" title="{{ t('importacoes.dashboard_executivo.click_filtrar_chegando_mes') }}">
+        <!-- Card 8: Chegando Este Mês -->
+        <div class="kpi-card kpi-emerald kpi-clickable" data-kpi-status="chegando_mes" title="Clique para filtrar processos chegando este mês">
             <div class="kpi-icon">
                 <i class="mdi mdi-calendar-month"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.chegando_este_mes') }}</p>
+                <p class="kpi-label">Chegando Este Mês</p>
                 <p class="kpi-value" id="kpi-chegando-mes">-</p>
                 <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
             </div>
         </div>
         
-        <!-- Card 8: Total Despesas -->
+        <!-- Card 9: Total Despesas -->
         <div class="kpi-card kpi-indigo">
             <div class="kpi-icon">
                 <i class="mdi mdi-currency-usd"></i>
             </div>
             <div class="kpi-content">
-                <p class="kpi-label">{{ t('importacoes.dashboard_executivo.total_despesas') }}</p>
+                <p class="kpi-label">Total Despesas</p>
                 <p class="kpi-value" id="kpi-total-despesas">-</p>
             </div>
         </div>
