@@ -115,6 +115,17 @@
     margin-bottom: 30px;
 }
 
+.empresa-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-top: 0.5rem;
+}
+
+.empresa-radio-group .form-check {
+    margin-bottom: 0;
+}
+
 .upload-zone {
     border: 3px dashed #dee2e6;
     border-radius: 12px;

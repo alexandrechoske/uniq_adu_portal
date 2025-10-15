@@ -161,8 +161,10 @@ class ConciliacaoService:
                 continue  # Pula se diferença de data muito grande
             
             # Critério 3: Valor (peso alto)
-            diff_valor_abs = abs(movimento_sistema.valor - mov_banco.valor)
-            diff_valor_perc = self.calculate_value_difference(movimento_sistema.valor, mov_banco.valor)
+            valor_sistema_abs = abs(movimento_sistema.valor)
+            valor_banco_abs = abs(mov_banco.valor)
+            diff_valor_abs = abs(valor_sistema_abs - valor_banco_abs)
+            diff_valor_perc = self.calculate_value_difference(valor_sistema_abs, valor_banco_abs)
             
             if diff_valor_abs <= self.tolerancia_valor:
                 criterios.append("valor_exato")
@@ -176,10 +178,12 @@ class ConciliacaoService:
             else:
                 continue  # Pula se diferença de valor muito grande
             
-            # Critério 4: Tipo de lançamento
-            if self.match_tipo_lancamento(movimento_sistema.tipo_lancamento, mov_banco.tipo):
-                criterios.append("tipo_compativel")
-                score += 10
+            # Critério 4: Tipo de lançamento (OBRIGATÓRIO - RECEITA com RECEITA, DESPESA com DESPESA)
+            if not self.match_tipo_lancamento(movimento_sistema.tipo_lancamento, mov_banco.tipo):
+                continue  # Pula se tipos incompatíveis (RECEITA vs DESPESA)
+            
+            criterios.append("tipo_compativel")
+            score += 10
             
             # Critério 5: Código de referência (bônus se disponível)
             if movimento_sistema.ref_unique and mov_banco.codigo_referencia:

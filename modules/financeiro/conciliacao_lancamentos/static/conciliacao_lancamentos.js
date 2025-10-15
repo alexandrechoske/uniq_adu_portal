@@ -31,15 +31,103 @@ const AppState = {
     buscaSistema: '',
     buscaBanco: '',
     filtroBanco: '',
+    empresaSelecionada: 'todas',
     paginacaoSistema: { paginaAtual: 1, itensPorPagina: 100 },
     paginacaoBanco: { paginaAtual: 1, itensPorPagina: 100 }
 };
+
+function obterCamposDatasSistema() {
+    return {
+        inicio: document.getElementById('data_inicio_sistema'),
+        fim: document.getElementById('data_fim_sistema')
+    };
+}
+
+function garantirDatasSistemaPreenchidas() {
+    const { inicio, fim } = obterCamposDatasSistema();
+    if (!inicio || !fim) {
+        return;
+    }
+
+    const periodoPadrao = calcularPeriodoSistema('mes_atual');
+
+    if (!inicio.value) {
+        inicio.value = periodoPadrao.inicio;
+    }
+
+    if (!fim.value) {
+        fim.value = periodoPadrao.fim;
+    }
+
+    fim.min = inicio.value || '';
+    inicio.max = fim.value || '';
+}
+
+function registrarRegrasDatasSistema() {
+    const { inicio, fim } = obterCamposDatasSistema();
+    if (!inicio || !fim) {
+        return;
+    }
+
+    inicio.addEventListener('change', () => {
+        if (fim.value && inicio.value && inicio.value > fim.value) {
+            fim.value = inicio.value;
+        }
+        fim.min = inicio.value || '';
+    });
+
+    fim.addEventListener('change', () => {
+        if (inicio.value && fim.value && fim.value < inicio.value) {
+            inicio.value = fim.value;
+        }
+        inicio.max = fim.value || '';
+    });
+}
+
+function obterPeriodoSistemaSelecionado() {
+    const { inicio, fim } = obterCamposDatasSistema();
+    const periodoPadrao = calcularPeriodoSistema('mes_atual');
+
+    if (!inicio || !fim) {
+        return periodoPadrao;
+    }
+
+    let dataInicio = inicio.value;
+    let dataFim = fim.value;
+
+    if (!dataInicio) {
+        dataInicio = periodoPadrao.inicio;
+        inicio.value = dataInicio;
+    }
+
+    if (!dataFim) {
+        dataFim = periodoPadrao.fim;
+        fim.value = dataFim;
+    }
+
+    if (new Date(dataInicio) > new Date(dataFim)) {
+        throw new Error('A data inicial não pode ser maior que a data final.');
+    }
+
+    return {
+        inicio: dataInicio,
+        fim: dataFim
+    };
+}
+
+function obterEmpresaSelecionada() {
+    const checked = document.querySelector('input[name="empresa_filtro"]:checked');
+    const valor = checked ? checked.value : 'todas';
+    return valor || 'todas';
+}
 
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Inicializando Conciliação V2');
+    garantirDatasSistemaPreenchidas();
+    registrarRegrasDatasSistema();
     inicializarEventos();
     inicializarDragAndDrop();
     inicializarOrdenacao();
@@ -165,16 +253,27 @@ async function processarArquivos(e) {
 
     prepararNovaSessaoProcessamento();
 
-    const periodoSelecionado = document.getElementById('periodo_sistema').value;
+    let periodo;
+    try {
+        periodo = obterPeriodoSistemaSelecionado();
+    } catch (erroPeriodo) {
+        console.warn('[CONCILIACAO] Período inválido:', erroPeriodo);
+        mostrarNotificacao(erroPeriodo.message || 'Informe um período válido para os lançamentos do sistema.', 'warning');
+        return;
+    }
+
     const bancoSelecionado = document.getElementById('banco_origem').value;
-    const periodo = calcularPeriodoSistema(periodoSelecionado);
+    const empresaSelecionada = obterEmpresaSelecionada();
+    AppState.empresaSelecionada = empresaSelecionada;
 
     const formData = new FormData();
     AppState.arquivosCarregados.forEach(file => {
         formData.append('arquivo_bancario', file);
     });
     formData.append('banco_origem', bancoSelecionado);
-    formData.append('periodo_sistema', periodoSelecionado);
+    formData.append('data_inicio_sistema', periodo.inicio);
+    formData.append('data_fim_sistema', periodo.fim);
+    formData.append('empresa', empresaSelecionada);
     
     try {
         mostrarLoading('Carregando lançamentos do sistema...');
@@ -186,6 +285,10 @@ async function processarArquivos(e) {
 
         if (bancoSelecionado && bancoSelecionado !== 'auto') {
             params.append('banco', bancoSelecionado);
+        }
+
+        if (empresaSelecionada && empresaSelecionada !== 'todas') {
+            params.append('empresa', empresaSelecionada);
         }
 
         const sistemaResp = await fetch(`/financeiro/conciliacao-lancamentos/api/movimentos-sistema?${params.toString()}`);
@@ -348,6 +451,7 @@ function renderizarTabelaSistema() {
             item.descricao_original,
             item.ref_unique,
             item.ref_unique_norm,
+            item.empresa,
             formatarMoeda(item.valor),
             formatarData(item.data)
         ].join(' ').toLowerCase();
@@ -380,12 +484,19 @@ function renderizarTabelaSistema() {
     tbody.innerHTML = itensPagina.map(item => {
         const checked = AppState.sistemasSelecionados.has(item.id) ? 'checked' : '';
         const descricao = item.descricao || '-';
+        const descricaoDisplay = escapeHtml(descricao);
+    const empresaDisplay = escapeHtml(item.empresa || 'Sem empresa cadastrada');
         return `
         <tr>
             <td><input type="checkbox" class="check-sistema" data-id="${item.id}" ${checked}></td>
             <td>${formatarData(item.data)}</td>
-            <td class="text-truncate" style="max-width: 200px;" title="${descricao}">${descricao}</td>
-            <td><span class="badge bg-info">${item.ref_unique || '-'}</span></td>
+            <td style="max-width: 240px;">
+                <div class="d-flex flex-column">
+                    <span class="text-truncate" title="${descricaoDisplay}">${descricaoDisplay}</span>
+                    <small class="text-muted">${empresaDisplay}</small>
+                </div>
+            </td>
+            <td><span class="badge bg-info">${escapeHtml(item.ref_unique || '-')}</span></td>
             <td class="text-end"><strong>${formatarMoeda(item.valor)}</strong></td>
         </tr>`;
     }).join('');
@@ -1081,6 +1192,7 @@ function normalizarMovimentoSistema(item) {
     normalizado.codigo_referencia = item.codigo_referencia || normalizado.ref_unique || '';
     normalizado.valor = parseFloat(item.valor || 0);
     normalizado.status = (item.status || 'pendente').toLowerCase();
+    normalizado.empresa = item.empresa || item.empresa_nome || '';
 
     aplicarReferenciaExtraida(normalizado, [
         normalizado.ref_unique,

@@ -75,19 +75,19 @@
             <div class="card-body">
                 <form id="uploadForm" enctype="multipart/form-data">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label class="form-label">Período dos Lançamentos do Sistema</label>
-                                <select id="periodo_sistema" class="form-select">
-                                    <option value="mes_atual" selected>📅 Mês Atual</option>
-                                    <option value="mes_anterior">📅 Mês Anterior</option>
-                                    <option value="ultimos_30_dias">📅 Últimos 30 Dias</option>
-                                    <option value="ultimos_15_dias">📅 Últimos 15 Dias</option>
-                                    <option value="ultimos_7_dias">📅 Últimos 7 Dias</option>
-                                </select>
+                                <label class="form-label">Data Inicial (Sistema)</label>
+                                <input type="date" id="data_inicio_sistema" class="form-control" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="form-label">Data Final (Sistema)</label>
+                                <input type="date" id="data_fim_sistema" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label class="form-label">Banco (opcional, auto-detectado)</label>
                                 <select id="banco_origem" class="form-select">
@@ -96,6 +96,27 @@
                                     <option value="santander">🏦 Santander</option>
                                     <option value="banco_brasil">🏦 Banco do Brasil</option>
                                 </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label class="form-label">Empresa dos Lançamentos</label>
+                                <div class="empresa-radio-group">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroTodas" value="todas" checked>
+                                        <label class="form-check-label" for="empresaFiltroTodas">Todas</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroUnique" value="Unique Consultoria">
+                                        <label class="form-check-label" for="empresaFiltroUnique">Unique Consultoria</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroUnique" value="Unique Soluções">
+                                        <label class="form-check-label" for="empresaFiltroUnique">Unique Soluções</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -370,32 +391,121 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted">Aplicamos as regras abaixo em sequência para aproximar os lançamentos do sistema e do banco. Assim, você sabe exatamente como encontramos (ou não) cada combinação.</p>
-                <div class="list-group">
+                <p class="text-muted">Aplicamos as regras abaixo em sequência para aproximar os lançamentos do sistema e do banco. O sistema garante que cada conciliação respeita critérios obrigatórios e atribui pontuação para priorizar os melhores matches.</p>
+                
+                <div class="alert alert-info mb-3">
+                    <h6 class="mb-2"><i class="mdi mdi-shield-check"></i> Critérios Obrigatórios (Bloqueiam conciliação se não atendidos)</h6>
+                    <ul class="mb-0">
+                        <li><strong>Mesmo Banco:</strong> Os lançamentos devem ser do mesmo banco (Itaú, Santander, Banco do Brasil, etc.)</li>
+                        <li><strong>Data Compatível:</strong> Data exata ou diferença de até 7 dias (quanto mais próximo, maior a pontuação)</li>
+                        <li><strong>Valor Compatível:</strong> Valor exato ou diferença de até 5% (quanto mais próximo, maior a pontuação)</li>
+                        <li><strong class="text-danger">Tipo Compatível:</strong> RECEITA só concilia com RECEITA (Crédito no banco) e DESPESA só concilia com DESPESA (Débito no banco)</li>
+                    </ul>
+                </div>
+
+                <h6 class="mb-2"><i class="mdi mdi-trophy"></i> Sistema de Pontuação</h6>
+                <div class="list-group mb-3">
                     <div class="list-group-item">
-                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-1-circle"></i> Chave completa: código + data + valor</h6>
-                        <p class="mb-0">Primeiro buscamos pares em que o <strong>código de referência (Ref. Unique)</strong>, a <strong>data</strong> e o <strong>valor</strong> são idênticos nos dois lados. Encontramos a mesma operação registrada nos dois lugares.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><strong>Score ≥ 80 pontos</strong></span>
+                            <span class="badge bg-success">CONCILIADO AUTOMÁTICO</span>
+                        </div>
+                        <small class="text-muted">Match de alta confiança - Conciliação automática aplicada</small>
                     </div>
                     <div class="list-group-item">
-                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-2-circle"></i> Data + valor + descrição parecida</h6>
-                        <p class="mb-0">Quando o código não existe em ambos, comparamos <strong>data</strong> e <strong>valor</strong> iguais e verificamos se as descrições compartilham palavras-chave relevantes (ex.: nome do imposto, fornecedor ou serviço).</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><strong>Score 60-79 pontos</strong></span>
+                            <span class="badge bg-warning">MATCH PARCIAL</span>
+                        </div>
+                        <small class="text-muted">Requer revisão manual - Possível match mas com divergências</small>
                     </div>
                     <div class="list-group-item">
-                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-3-circle"></i> Somente data + valor</h6>
-                        <p class="mb-0">Ainda sem coincidência, avaliamos pares com a mesma <strong>data</strong> e o mesmo <strong>valor</strong>. Esse nível gera mais atenção, pois pode haver lançamentos diferentes com valores iguais. O analista confirma se a associação faz sentido.</p>
-                    </div>
-                    <div class="list-group-item">
-                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-4-circle"></i> Valor igual e data aproximada</h6>
-                        <p class="mb-0">Como último passo automático avaliamos valores idênticos com diferença de até <strong>3 dias</strong> entre as datas e descrição semelhante. Útil quando o banco compensa em outro dia ou quando o sistema registrou um pagamento no D+1.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><strong>Score < 60 pontos</strong></span>
+                            <span class="badge bg-secondary">NÃO CONCILIADO</span>
+                        </div>
+                        <small class="text-muted">Match descartado - Diferenças significativas encontradas</small>
                     </div>
                 </div>
-                <hr>
-                <p class="mb-2"><strong>Importante:</strong></p>
-                <ul class="mb-0">
-                    <li>Os níveis acima são sempre executados nessa ordem, do mais preciso ao mais amplo.</li>
-                    <li>Quando encontramos mais de um possível par para a mesma regra, deixamos o lançamento pendente para revisão manual.</li>
-                    <li>Você pode revisar, desfazer ou refazer conciliações a qualquer momento pela aba <strong>Conciliados</strong>.</li>
-                </ul>
+
+                <h6 class="mb-2"><i class="mdi mdi-chart-line"></i> Como os pontos são atribuídos</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Critério</th>
+                                <th>Condição</th>
+                                <th class="text-end">Pontos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td rowspan="1"><strong>Banco</strong></td>
+                                <td>Mesmo banco (obrigatório)</td>
+                                <td class="text-end">+20</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="3"><strong>Data</strong></td>
+                                <td>Data exata</td>
+                                <td class="text-end">+30</td>
+                            </tr>
+                            <tr>
+                                <td>Diferença de 1 dia</td>
+                                <td class="text-end">+20</td>
+                            </tr>
+                            <tr>
+                                <td>Diferença de 2-7 dias</td>
+                                <td class="text-end">+10</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="3"><strong>Valor</strong></td>
+                                <td>Valor exato (tolerância R$ 0,01)</td>
+                                <td class="text-end">+30</td>
+                            </tr>
+                            <tr>
+                                <td>Diferença até 1%</td>
+                                <td class="text-end">+20</td>
+                            </tr>
+                            <tr>
+                                <td>Diferença de 1-5%</td>
+                                <td class="text-end">+10</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tipo Lançamento</strong></td>
+                                <td>Tipo compatível (obrigatório)</td>
+                                <td class="text-end">+10</td>
+                            </tr>
+                            <tr>
+                                <td rowspan="2"><strong>Código Referência</strong></td>
+                                <td>Código exato (ex: UN25/6908)</td>
+                                <td class="text-end">+20</td>
+                            </tr>
+                            <tr>
+                                <td>Código parcial (ex: UN256908 em "PIX UN25.6908")</td>
+                                <td class="text-end">+10</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Conta Bancária</strong></td>
+                                <td>Número da conta coincide</td>
+                                <td class="text-end">+5</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Descrição</strong></td>
+                                <td>Descrições similares (análise textual)</td>
+                                <td class="text-end">+5</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning mb-0">
+                    <h6 class="mb-2"><i class="mdi mdi-alert"></i> Exemplos Práticos</h6>
+                    <ul class="mb-0">
+                        <li><strong>✅ Concilia:</strong> Sistema tem DESPESA R$ 38.340,18 em 14/10/2025 (Itaú) com ref UN25/6908 → Banco tem DÉBITO R$ 38.340,18 em 14/10/2025 (Itaú) com "PIX UN25.6908" = Score 100+ pontos</li>
+                        <li><strong>❌ NÃO Concilia:</strong> Sistema tem RECEITA R$ 1.000,00 em 14/10/2025 → Banco tem DÉBITO R$ 1.000,00 em 14/10/2025 = Tipos incompatíveis (descartado)</li>
+                        <li><strong>⚠️ Revisão Manual:</strong> Sistema tem DESPESA R$ 500,00 em 10/10/2025 sem código → Banco tem DÉBITO R$ 502,50 em 11/10/2025 = Score ~65 pontos (parcial)</li>
+                    </ul>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendi</button>

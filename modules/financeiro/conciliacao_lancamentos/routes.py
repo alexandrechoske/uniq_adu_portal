@@ -1336,6 +1336,7 @@ def movimentos_fin_conciliacao():
         
         # Parâmetros de filtro
         banco_filtro = request.args.get('banco', 'todos')
+        empresa_filtro = request.args.get('empresa', 'todas')
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         
@@ -1408,6 +1409,7 @@ def movimentos_sistema():
         
         # Parâmetros de filtro
         banco_filtro = request.args.get('banco', 'todos')
+        empresa_filtro = request.args.get('empresa', 'todas')
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         
@@ -1417,14 +1419,20 @@ def movimentos_sistema():
             data_inicio = hoje.replace(day=1).strftime('%Y-%m-%d')
             data_fim = hoje.strftime('%Y-%m-%d')
         
-        logger.info(f"[CONCILIACAO] Filtros - Banco: {banco_filtro}, Data: {data_inicio} a {data_fim}")
+        logger.info(
+            "[CONCILIACAO] Filtros - Banco: %s, Empresa: %s, Data: %s a %s",
+            banco_filtro,
+            empresa_filtro,
+            data_inicio,
+            data_fim
+        )
 
         processador = ProcessadorBancos()
         
         # Construir query base
         query = supabase.table('fin_conciliacao_movimentos').select(
             'id, data_lancamento, nome_banco, numero_conta, tipo_lancamento, '
-            'valor, descricao, ref_unique, status'
+            'valor, descricao, ref_unique, status, empresa'
         )
         
         # Aplicar filtro de data
@@ -1433,6 +1441,8 @@ def movimentos_sistema():
         # Aplicar filtro de banco se especificado
         if banco_filtro and banco_filtro != 'todos':
             query = query.ilike('nome_banco', f'%{banco_filtro}%')
+        if empresa_filtro and empresa_filtro.lower() != 'todas':
+            query = query.ilike('empresa', f'%{empresa_filtro}%')
         
         # Executar query (sem limite para pegar todos os registros do período)
         response = query.order('data_lancamento', desc=True).execute()
@@ -1457,7 +1467,8 @@ def movimentos_sistema():
                     'descricao': item.get('descricao') or 'Sem descrição',
                     'ref_unique': item.get('ref_unique'),
                     'ref_unique_norm': ref_normalizada,
-                    'status': item.get('status', 'PENDENTE').lower()
+                    'status': item.get('status', 'PENDENTE').lower(),
+                    'empresa': item.get('empresa')
                 }
                 movimentos.append(movimento)
             
@@ -1472,6 +1483,7 @@ def movimentos_sistema():
             session['registros_sistema'] = len(movimentos)
             session['ultimo_carregamento_sistema'] = {
                 'banco': banco_filtro,
+                'empresa': empresa_filtro,
                 'data_inicio': data_inicio,
                 'data_fim': data_fim,
                 'total_registros': len(movimentos)
@@ -1485,6 +1497,7 @@ def movimentos_sistema():
                 'total': len(movimentos),
                 'filtros': {
                     'banco': banco_filtro,
+                    'empresa': empresa_filtro,
                     'data_inicio': data_inicio,
                     'data_fim': data_fim
                 }
@@ -1495,7 +1508,13 @@ def movimentos_sistema():
                 'success': True,
                 'data': [],
                 'total': 0,
-                'message': 'Nenhum movimento encontrado para o período'
+                'message': 'Nenhum movimento encontrado para o período',
+                'filtros': {
+                    'banco': banco_filtro,
+                    'empresa': empresa_filtro,
+                    'data_inicio': data_inicio,
+                    'data_fim': data_fim
+                }
             })
         
         logger.info(f"[CONCILIACAO] Período: {data_inicio} a {data_fim}")
@@ -1575,19 +1594,6 @@ def movimentos_sistema():
         logger.error(f"[CONCILIACAO] Erro na busca de movimentos: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
         
-        return jsonify({
-            'success': True,
-            'data': movimentos,
-            'total': len(movimentos),
-            'periodo': {
-                'data_inicio': data_inicio,
-                'data_fim': data_fim
-            }
-        })
-            
-    except Exception as e:
-        logger.error(f"[CONCILIACAO] Erro ao buscar movimentos: {str(e)}")
-        return jsonify({'success': False, 'error': f'Erro ao buscar movimentos: {str(e)}'})
 
 @conciliacao_lancamentos_bp.route('/api/limpar-sessao', methods=['POST'])
 def limpar_sessao():
