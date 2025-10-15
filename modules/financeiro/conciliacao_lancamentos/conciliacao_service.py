@@ -178,10 +178,12 @@ class ConciliacaoService:
             else:
                 continue  # Pula se diferença de valor muito grande
             
-            # Critério 4: Tipo de lançamento
-            if self.match_tipo_lancamento(movimento_sistema.tipo_lancamento, mov_banco.tipo):
-                criterios.append("tipo_compativel")
-                score += 10
+            # Critério 4: Tipo de lançamento (OBRIGATÓRIO - RECEITA com RECEITA, DESPESA com DESPESA)
+            if not self.match_tipo_lancamento(movimento_sistema.tipo_lancamento, mov_banco.tipo):
+                continue  # Pula se tipos incompatíveis (RECEITA vs DESPESA)
+            
+            criterios.append("tipo_compativel")
+            score += 10
             
             # Critério 5: Código de referência (bônus se disponível)
             if movimento_sistema.ref_unique and mov_banco.codigo_referencia:
