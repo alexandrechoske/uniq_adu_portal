@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, session, jsonify, r
 from config import Config
 import os
 import signal
-from extensions import init_supabase, supabase_admin
+import extensions
 from session_handler import init_session_handler
 from services.logging_middleware import logging_middleware
 
@@ -42,8 +42,10 @@ print("[DEBUG] ====================================\n")
 # Initialize extensions
 print("[DEBUG] Inicializando extensões...")
 try:
-    init_supabase(app)
+    extensions.supabase, extensions.supabase_admin = extensions.init_supabase(app)
     print("[DEBUG] Extensões inicializadas com sucesso")
+    print(f"[DEBUG] supabase type: {type(extensions.supabase)}")
+    print(f"[DEBUG] supabase_admin type: {type(extensions.supabase_admin)}")
 except Exception as e:
     print(f"[DEBUG] ERRO ao inicializar extensões: {str(e)}")
     raise
