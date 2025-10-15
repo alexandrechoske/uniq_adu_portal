@@ -1392,8 +1392,8 @@ def filter_options():
             ])
         
         options = {
-            'materiais': materiais[:50],  # Limitar a 50 itens para performance
-            'clientes': clientes[:50],
+            'materiais': materiais,  # Removida limitação - mostrar todos
+            'clientes': clientes,     # Removida limitação - mostrar todos
             'canais': canais,
             'modais': modais
         }
@@ -1769,9 +1769,9 @@ def bootstrap_dashboard():
         # Opções de filtro rápidas
         filter_options_payload = {}
         if 'mercadoria' in df.columns:
-            filter_options_payload['materiais'] = sorted(list({m for m in df['mercadoria'].dropna().head(50)}))
+            filter_options_payload['materiais'] = sorted(list({m for m in df['mercadoria'].dropna().unique()}))
         if 'importador' in df.columns:
-            filter_options_payload['clientes'] = sorted(list({m for m in df['importador'].dropna().head(50)}))
+            filter_options_payload['clientes'] = sorted(list({m for m in df['importador'].dropna().unique()}))
         if 'canal' in df.columns:
             filter_options_payload['canais'] = sorted(list({m for m in df['canal'].dropna()}))
         if 'modal' in df.columns:
