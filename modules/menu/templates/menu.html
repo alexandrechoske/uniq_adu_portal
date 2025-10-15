@@ -38,7 +38,7 @@
                 </button>
                 {% endif %}
                 
-                {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules %}
+                {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'ajuste_status' in accessible_modules %}
                 <button class="menu-tab" data-tab="ferramentas">
                     <i class="mdi mdi-tools"></i>
                     <span>{{ t('menu.ferramentas') }}</span>
@@ -85,13 +85,6 @@
                     </a>
                     {% endif %}
 
-                    {% if 'ajuste_status' in accessible_modules %}
-                    <a href="{{ url_for('ajuste_status.index') }}" class="module-card" data-module="ajuste_status">
-                        <div class="module-icon"><i class="mdi mdi-format-list-checks"></i></div>
-                        <h4 class="module-title">Ajuste de Status</h4>
-                        <p class="module-desc">Gerencie ajustes operacionais de processos internos.</p>
-                    </a>
-                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -170,7 +163,7 @@
             {% endif %}
 
             <!-- Tab: Ferramentas -->
-            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'analytics' in accessible_modules %}
+            {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'analytics' in accessible_modules or 'ajuste_status' in accessible_modules %}
             <div class="tab-content" data-content="ferramentas">
                 <div class="cards-grid">
                     {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules %}
@@ -213,6 +206,15 @@
                         <div class="module-icon"><i class="mdi mdi-robot"></i></div>
                         <h4 class="module-title">{{ t('modules.analytics_agente.title') }}</h4>
                         <p class="module-desc">{{ t('modules.analytics_agente.desc') }}</p>
+                    </a>
+                    {% endif %}
+
+                    {% if 'ajuste_status' in accessible_modules %}
+                    <a href="{{ url_for('ajuste_status.index') }}" class="module-card" data-module="ajuste_status">
+                        <span class="role-badge admin">ADMIN</span>
+                        <div class="module-icon"><i class="mdi mdi-format-list-checks"></i></div>
+                        <h4 class="module-title">Ajuste de Status</h4>
+                        <p class="module-desc">Gerencie ajustes operacionais de processos internos.</p>
                     </a>
                     {% endif %}
                 </div>

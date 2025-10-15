@@ -5,8 +5,6 @@ supabase: Client = None
 supabase_admin: Client = None
 
 def init_supabase(app):
-    global supabase, supabase_admin
-    
     print("\n[DEBUG] ===== Iniciando configuração do Supabase =====")
     
     # Check if required environment variables are set
@@ -49,10 +47,10 @@ def init_supabase(app):
         print(f"[DEBUG] Resposta do teste do cliente admin: {response}")
         print("[DEBUG] Cliente admin do Supabase criado e testado com sucesso")
         
+        print("[DEBUG] ===== Configuração do Supabase concluída =====\n")
+        return supabase, supabase_admin
     except Exception as e:
         print(f"\n[DEBUG] ERRO ao criar/testar clientes Supabase:")
         print(f"[DEBUG] Tipo do erro: {type(e)}")
         print(f"[DEBUG] Mensagem do erro: {str(e)}")
-        raise
-    
-    print("[DEBUG] ===== Configuração do Supabase concluída =====\n") 
+        raise 

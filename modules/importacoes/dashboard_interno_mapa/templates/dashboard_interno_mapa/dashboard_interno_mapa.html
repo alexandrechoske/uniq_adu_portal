@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unique Aduaneira - Dashboard de Operações</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #050608;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+        .dashboard-shell {
+            position: relative;
+        }
+        #globe-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .kpi-card, .chart-card, .glass-card {
+            background: rgba(10, 10, 10, 0.55);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+        }
+        .map-panel {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.55));
+            position: relative;
+            overflow: hidden;
+            min-height: 360px;
+        }
+        .map-surface-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.55));
+            pointer-events: none;
+        }
+        .map-overlay-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.5rem;
+        }
+        .map-overlay-top,
+        .map-overlay-bottom {
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .map-kpi-card,
+        .map-info-card {
+            background: rgba(8, 11, 19, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            pointer-events: auto;
+            box-shadow: 0 18px 45px rgba(5, 8, 12, 0.55);
+        }
+        .map-kpi-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #94a3b8;
+        }
+        .map-kpi-value {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+        .map-route-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.85rem;
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid transparent;
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+        .map-route-item.active {
+            border-color: rgba(56, 189, 248, 0.6);
+            background: rgba(8, 31, 49, 0.55);
+            box-shadow: 0 18px 40px rgba(56, 189, 248, 0.18);
+        }
+        .header-exchange-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .header-exchange-title {
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .header-exchange-grid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .currency-pair {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            padding: 0.5rem 0.9rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 9999px;
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
+        }
+        .currency-flag-wrapper {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
+        }
+        .currency-flag-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .currency-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #94a3b8;
+            margin-bottom: 0.1rem;
+        }
+        .currency-value {
+            font-size: 1.45rem;
+            font-weight: 600;
+            color: #f8fafc;
+            line-height: 1.1;
+        }
+        .map-route-flag {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.85);
+            box-shadow: 0 10px 20px rgba(2, 6, 23, 0.4);
+            overflow: hidden;
+        }
+        .map-route-flag img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .map-route-flag span {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            letter-spacing: 0.12em;
+        }
+        .kpi-title {
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: #9ca3af;
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        .kpi-value {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1;
+        }
+        .kpi-value-small {
+            font-size: 2rem;
+        }
+        .kpi-currency {
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #94a3b8;
+            margin-left: 0.5rem;
+        }
+        .channel-indicator {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        }
+        .channel-green { background-color: #22c55e; box-shadow: 0 0 12px rgba(34, 197, 94, 0.5); }
+        .channel-yellow { background-color: #facc15; box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
+        .channel-red { background-color: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+        
+        .hub-label {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            pointer-events: none;
+            transform: translate(-50%, -120%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .hub-label.visible {
+            opacity: 1;
+        }
+        .hub-label.origin {
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+        .hub-label.dest {
+            border-color: rgba(34, 211, 238, 0.5);
+        }
+        .route-info-label {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            padding: 10px 18px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            transform: translate(-50%, -120%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .route-info-label.visible {
+            opacity: 1;
+        }
+        .map-kpi-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            min-height: 120px;
+        }
+        .map-kpi-value {
+            margin-top: auto;
+        }
+        
+        .apexcharts-tooltip {
+            background: rgba(15, 23, 42, 0.85) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+        .map-legend {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+        .map-legend span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="dashboard-shell min-h-screen w-full p-4 md:p-8 flex flex-col gap-6">
+        <header class="flex flex-col gap-4 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-8">
+            <div class="flex items-center gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                <div>
+                    <h1 class="text-3xl font-bold text-white">Dashboard de Operações</h1>
+                    <p class="text-base text-gray-400">Unique Soluções Aduaneiras</p>
+                </div>
+            </div>
+            <div class="header-exchange-panel">
+                <span class="header-exchange-title">Cotações PTAX • Banco Central</span>
+                <div class="header-exchange-grid">
+                    <div class="currency-pair">
+                        <div class="currency-flag-wrapper">
+                            <img src="https://cdn-icons-png.flaticon.com/512/9729/9729337.png" alt="Estados Unidos" loading="lazy">
+                        </div>
+                        <div>
+                            <p class="currency-label">USD</p>
+                            <p id="header-usd-value" class="currency-value">R$ 0,00</p>
+                        </div>
+                    </div>
+                    <div class="currency-pair">
+                        <div class="currency-flag-wrapper">
+                            <img src="https://cdn-icons-png.flaticon.com/512/679/679984.png" alt="União Europeia" loading="lazy">
+                        </div>
+                        <div>
+                            <p class="currency-label">EUR</p>
+                            <p id="header-eur-value" class="currency-value">R$ 0,00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="clock" class="text-right">
+                <p class="text-3xl font-bold text-white"></p>
+                <p class="text-base text-gray-400"></p>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(420px,1fr)] gap-6 flex-1">
+            <section class="flex flex-col gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-6">
+                    <div class="chart-card glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Processos Abertos no Mês</h2>
+                            <span class="text-sm uppercase tracking-widest text-gray-400">Atualizado em tempo real</span>
+                        </div>
+                        <div id="main-chart" class="h-72"></div>
+                    </div>
+                    <div class="glass-card flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Meta Mensal</h2>
+                            <span class="text-xs uppercase tracking-widest text-gray-500">Objetivo do mês</span>
+                        </div>
+                        <div id="meta-chart" class="w-full h-56"></div>
+                        <div class="mt-6 space-y-3 text-base text-gray-400">
+                            <div class="flex justify-between"><span>Processos acumulados</span><span id="meta-total" class="font-semibold text-white text-lg">0</span></div>
+                            <div class="flex justify-between"><span>Meta definida</span><span id="meta-meta" class="text-lg">0 processos</span></div>
+                            <div class="flex justify-between"><span>Restante para meta</span><span id="meta-restante" class="text-lg">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Processos por Modal</h2>
+                            <span class="text-sm text-gray-400">Base mês corrente</span>
+                        </div>
+                        <div id="modal-list" class="space-y-3"></div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Canais (Mês)</h2>
+                            <span class="text-sm text-gray-400">Resultados por cor</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="channel-indicator channel-green"></div>
+                                    <span class="text-gray-400 text-sm">Verde</span>
+                                </div>
+                                <span id="kpi-canal-verde" class="font-bold text-white text-2xl">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="channel-indicator channel-yellow"></div>
+                                    <span class="text-gray-400 text-sm">Amarelo</span>
+                                </div>
+                                <span id="kpi-canal-amarelo" class="font-bold text-white text-2xl">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="channel-indicator channel-red"></div>
+                                    <span class="text-gray-400 text-sm">Vermelho</span>
+                                </div>
+                                <span id="kpi-canal-vermelho" class="font-bold text-white text-2xl">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Ranking Importadores</h2>
+                            <span class="text-sm text-gray-400">Top 5 por processos</span>
+                        </div>
+                        <div id="ranking-importadores" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="map-panel">
+                <div id="globe-container"></div>
+                <div class="map-surface-overlay"></div>
+                <div class="map-overlay-layer">
+                    <div class="map-overlay-top">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">Processos Abertos Hoje</p>
+                                <p id="map-kpi-abertos" class="map-kpi-value">0</p>
+                            </div>
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">DIs Registradas Hoje</p>
+                                <p id="map-kpi-dis" class="map-kpi-value">0</p>
+                            </div>
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">Desembaraços Hoje</p>
+                                <p id="map-kpi-desembaracos" class="map-kpi-value">0</p>
+                            </div>
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">Aguardando Chegada</p>
+                                <p id="map-kpi-ag-chegada" class="map-kpi-value">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="map-overlay-bottom">
+                        <div class="map-info-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-semibold text-white">Rotas em Destaque</h3>
+                                <span id="map-rotas-timestamp" class="text-xs uppercase tracking-wider text-gray-500">-</span>
+                            </div>
+                            <div id="rotas-destaque" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm text-gray-300"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="hub-labels" class="pointer-events-none absolute inset-0"></div>
+                <div class="map-legend">
+                    <span><span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span>Marítimo</span>
+                    <span><span class="inline-block w-3 h-3 rounded-full bg-amber-300"></span>Aéreo</span>
+                    <span><span class="inline-block w-3 h-3 rounded-full border border-white/50"></span>Hubs</span>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/dashboard-interno-mapa/api';
+
+        const modalPalette = {
+            'MARÍTIMA': { hex: '#38bdf8', three: 0x38bdf8 },
+            'AÉREA': { hex: '#fbbf24', three: 0xfbbf24 },
+            'TERRESTRE': { hex: '#4ade80', three: 0x4ade80 }
+        };
+
+        const modalIcons = {
+            'MARÍTIMA': '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-sky-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3 2 6 2 6-2 6-2"/><path d="M4 10V7a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v3"/><path d="M2 15s3 2 6 2 6-2 6-2"/><path d="M18 10l3 2-3 2-3-2z"/></svg>',
+            'AÉREA': '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 16l8-5-8-5v4l5 1-5 1z"/><path d="M22 12a8 8 0 0 1-8 8H9l-1.5 2"/><path d="M14 20l-1-7 7-3"/></svg>',
+            'TERRESTRE': '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17V6a1 1 0 0 1 1-1h11l4 4v8"/><path d="M13 6v4h5"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>'
+        };
+
+        function normalizeNumber(value) {
+            if (value === null || value === undefined || value === '') {
+                return 0;
+            }
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+            }
+            const stringValue = String(value).trim();
+            if (!stringValue) {
+                return 0;
+            }
+            if (stringValue.includes(',')) {
+                const sanitized = stringValue.replace(/\./g, '').replace(',', '.');
+                const parsedComma = parseFloat(sanitized);
+                return Number.isFinite(parsedComma) ? parsedComma : 0;
+            }
+            const parsed = parseFloat(stringValue);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function normalizeDate(value) {
+            if (!value) {
+                return null;
+            }
+            const padded = value.length === 10 ? `${value}T00:00:00` : value;
+            const date = new Date(padded);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function hydrateProcess(record) {
+            return {
+                ...record,
+                data_abertura: normalizeDate(record.data_abertura),
+                data_registro: normalizeDate(record.data_registro),
+                data_desembaraco: normalizeDate(record.data_desembaraco),
+                data_chegada: normalizeDate(record.data_chegada),
+                data_embarque: normalizeDate(record.data_embarque),
+                valor_cif_real: normalizeNumber(record.valor_cif_real),
+                peso_bruto: normalizeNumber(record.peso_bruto),
+                transit_time_real: record.transit_time_real !== null && record.transit_time_real !== undefined ? parseInt(record.transit_time_real, 10) : null,
+                modal: record.modal || 'MARÍTIMA'
+            };
+        }
+
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch(`${API_BASE}/processos`, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(`Status ${response.status}`);
+                }
+                const payload = await response.json();
+                if (!payload.success) {
+                    throw new Error(payload.message || 'Falha ao carregar dados do dashboard');
+                }
+                const processos = (payload.data?.processos || []).map(hydrateProcess);
+                const metaMensal = payload.data?.meta?.current_meta ?? 0;
+                const exchangeRates = payload.data?.exchange_rates ?? null;
+                return { processos, metaMensal, exchangeRates };
+            } catch (error) {
+                console.error('[Dashboard Mapa] Erro ao carregar dados', error);
+                return { processos: [], metaMensal: 0, exchangeRates: null };
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+
+            const { processos, metaMensal, exchangeRates } = await fetchDashboardData();
+
+            const processosAtivos = processos.filter(p => (p.status_sistema || '').toUpperCase().trim() !== 'PROCESSO CONCLUIDO');
+            const aguardandoChegadaCount = processosAtivos.filter(p => (p.status_sistema || '').toUpperCase().includes('AG. CHEGADA')).length;
+
+            const abertosHoje = processos.filter(p => p.data_abertura && p.data_abertura.getFullYear() === today.getFullYear() && p.data_abertura.getMonth() === today.getMonth() && p.data_abertura.getDate() === today.getDate()).length;
+            const disHoje = processos.filter(p => p.data_registro && p.data_registro.getFullYear() === today.getFullYear() && p.data_registro.getMonth() === today.getMonth() && p.data_registro.getDate() === today.getDate()).length;
+            const desembaracosHoje = processos.filter(p => p.data_desembaraco && p.data_desembaraco.getFullYear() === today.getFullYear() && p.data_desembaraco.getMonth() === today.getMonth() && p.data_desembaraco.getDate() === today.getDate()).length;
+
+            const mapKpiAbertosEl = document.getElementById('map-kpi-abertos');
+            const mapKpiDisEl = document.getElementById('map-kpi-dis');
+            const mapKpiDesembaracosEl = document.getElementById('map-kpi-desembaracos');
+            const mapKpiAgChegadaEl = document.getElementById('map-kpi-ag-chegada');
+            if (mapKpiAbertosEl) mapKpiAbertosEl.textContent = abertosHoje;
+            if (mapKpiDisEl) mapKpiDisEl.textContent = disHoje;
+            if (mapKpiDesembaracosEl) mapKpiDesembaracosEl.textContent = desembaracosHoje;
+            if (mapKpiAgChegadaEl) mapKpiAgChegadaEl.textContent = aguardandoChegadaCount;
+
+            const formatExchangeRate = value => {
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                }
+                return 'R$ 0,00';
+            };
+            const headerUsdEl = document.getElementById('header-usd-value');
+            const headerEurEl = document.getElementById('header-eur-value');
+            if (headerUsdEl) {
+                headerUsdEl.textContent = formatExchangeRate(exchangeRates?.dolar);
+            }
+            if (headerEurEl) {
+                headerEurEl.textContent = formatExchangeRate(exchangeRates?.euro);
+            }
+
+            const processosMes = processos.filter(p => p.data_abertura && p.data_abertura.getMonth() === currentMonth && p.data_abertura.getFullYear() === currentYear);
+            const registrosMes = processos.filter(p => p.data_registro && p.data_registro.getMonth() === currentMonth && p.data_registro.getFullYear() === currentYear);
+
+            const totalMes = processosMes.length;
+
+            document.getElementById('meta-total').textContent = totalMes;
+            document.getElementById('meta-meta').textContent = `${metaMensal} processos`;
+            const restanteMetaValor = metaMensal - totalMes;
+            const metaRestanteEl = document.getElementById('meta-restante');
+            if (restanteMetaValor > 0) {
+                metaRestanteEl.textContent = `${restanteMetaValor} processos`;
+            } else if (restanteMetaValor === 0) {
+                metaRestanteEl.textContent = 'Meta atingida';
+            } else {
+                metaRestanteEl.textContent = `Meta superada em ${Math.abs(restanteMetaValor)} processos`;
+            }
+            const canalVerde = registrosMes.filter(p => p.canal === 'Verde').length;
+            const canalAmarelo = registrosMes.filter(p => p.canal === 'Amarelo').length;
+            const canalVermelho = registrosMes.filter(p => p.canal === 'Vermelho').length;
+
+            document.getElementById('kpi-canal-verde').textContent = canalVerde;
+            document.getElementById('kpi-canal-amarelo').textContent = canalAmarelo;
+            document.getElementById('kpi-canal-vermelho').textContent = canalVermelho;
+
+            const modalCounts = processosMes.reduce((acc, process) => {
+                const modal = process.modal || 'MARÍTIMA';
+                acc[modal] = (acc[modal] || 0) + 1;
+                return acc;
+            }, {});
+            ['MARÍTIMA', 'AÉREA', 'TERRESTRE'].forEach(modal => {
+                if (!(modal in modalCounts)) {
+                    modalCounts[modal] = 0;
+                }
+            });
+            const totalModal = Object.values(modalCounts).reduce((a, b) => a + b, 0) || 1;
+            document.getElementById('modal-list').innerHTML = Object.entries(modalCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([modal, qty]) => {
+                    const percent = (qty / totalModal) * 100;
+                    const color = (modalPalette[modal] || modalPalette['MARÍTIMA']).hex;
+                    const icon = modalIcons[modal] || '';
+                    return `
+                        <div>
+                            <div class="flex items-center justify-between text-base">
+                                <span class="flex items-center gap-2 text-gray-300">${icon}<span class="font-medium">${modal}</span></span>
+                                <span class="font-bold text-white text-lg">${qty}</span>
+                            </div>
+                            <div class="w-full h-2.5 mt-2 rounded-full bg-slate-800 overflow-hidden">
+                                <div class="h-full transition-all duration-500" style="width:${percent.toFixed(1)}%; background:${color};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            const importadorStats = registrosMes.reduce((acc, process) => {
+                const key = process.importador || 'Não identificado';
+                if (!acc[key]) {
+                    acc[key] = { valor: 0, processos: 0 };
+                }
+                acc[key].valor += process.valor_cif_real || 0;
+                acc[key].processos += 1;
+                return acc;
+            }, {});
+            const ranking = Object.entries(importadorStats)
+                .sort((a, b) => {
+                    const diff = (b[1].processos || 0) - (a[1].processos || 0);
+                    if (diff !== 0) return diff;
+                    return (b[1].valor || 0) - (a[1].valor || 0);
+                })
+                .slice(0, 5);
+            const rankingContainer = document.getElementById('ranking-importadores');
+            if (rankingContainer) {
+                if (!ranking.length) {
+                    rankingContainer.innerHTML = '<p class="text-sm text-gray-500">Nenhum importador encontrado.</p>';
+                } else {
+                    rankingContainer.innerHTML = ranking.map(([importador, data], index) => `
+                        <div class="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-slate-900/40 px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-lg font-semibold text-sky-300">#${index + 1}</span>
+                                <span class="text-base font-semibold text-white leading-tight">${importador}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold text-white leading-none">${data.processos}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            const routeStats = processosAtivos.reduce((acc, process) => {
+                if (!process.pais_nome || !process.urf_despacho) return acc;
+                const key = `${process.pais_nome} → ${process.urf_despacho}`;
+                const originIso = process.pais_codigo ? process.pais_codigo.toUpperCase() : null;
+                if (!acc[key]) {
+                    acc[key] = {
+                        count: 0,
+                        valor: 0,
+                        modal: process.modal,
+                        url_bandeira: process.url_bandeira,
+                        originIso,
+                        originName: process.pais_nome,
+                        destName: process.urf_despacho
+                    };
+                }
+                acc[key].count += 1;
+                acc[key].valor += process.valor_cif_real || 0;
+                if (!acc[key].url_bandeira && process.url_bandeira) {
+                    acc[key].url_bandeira = process.url_bandeira;
+                }
+                if (!acc[key].originIso && originIso) {
+                    acc[key].originIso = originIso;
+                }
+                return acc;
+            }, {});
+            const rotasDestaque = Object.entries(routeStats)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 3);
+
+            const rotasContainer = document.getElementById('rotas-destaque');
+            const rotasResumoEl = document.getElementById('map-rotas-resumo');
+            const rotasTimestampEl = document.getElementById('map-rotas-timestamp');
+            const resumoTexto = rotasDestaque.length
+                ? `${rotasDestaque.length} rota${rotasDestaque.length > 1 ? 's' : ''} monitorada${rotasDestaque.length > 1 ? 's' : ''}`
+                : 'Nenhuma rota monitorada';
+            if (rotasResumoEl) {
+                rotasResumoEl.textContent = resumoTexto;
+            }
+            if (rotasTimestampEl) {
+                rotasTimestampEl.textContent = today.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            }
+            if (rotasContainer) {
+                if (!rotasDestaque.length) {
+                    rotasContainer.innerHTML = '<p class="text-sm text-gray-500">Nenhuma rota em destaque no momento.</p>';
+                } else {
+                    rotasContainer.innerHTML = rotasDestaque.map(([rota, data], index) => {
+                        const itemColor = (modalPalette[data.modal] || modalPalette['MARÍTIMA']).hex;
+                        const [originNameFull, destName] = rota.split('→').map(part => (part || '').trim());
+                        const originLabel = (data.originIso || originNameFull || '-').toUpperCase();
+                        const flagMarkup = data.url_bandeira
+                            ? `<div class="map-route-flag"><img src="${data.url_bandeira}" alt="Bandeira ${originLabel}" loading="lazy"></div>`
+                            : `<div class="map-route-flag"><span>${originLabel.slice(0, 2)}</span></div>`;
+                        return `
+                            <button class="map-route-item ${index === 0 ? 'active' : ''}" data-route-key="${rota}">
+                                <div class="flex items-center gap-4">
+                                    <span class="inline-block w-2 h-12 rounded-full" style="background:${itemColor};"></span>
+                                    ${flagMarkup}
+                                    <div class="flex flex-col gap-1">
+                                        <p class="text-sm font-semibold text-white">${originLabel} → ${destName}</p>
+                                        <p class="text-xs text-gray-400">${data.count} processos ativos • Modal ${data.modal || '-'}</p>
+                                    </div>
+                                </div>
+                            </button>
+                        `;
+                    }).join('');
+                }
+            }
+
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const chartData = Array(daysInMonth).fill(0);
+            processosMes.forEach(process => {
+                if (!process.data_abertura) return;
+                const day = process.data_abertura.getDate() - 1;
+                if (day >= 0 && day < chartData.length) {
+                    chartData[day]++;
+                }
+            });
+
+            const metaCompletion = metaMensal ? (totalMes / metaMensal) * 100 : 0;
+            const metaPercent = Math.round(metaCompletion);
+            const metaSeriesValue = Math.min(metaCompletion, 160);
+
+            const chartOptions = {
+                series: [{ name: 'Processos', data: chartData }],
+                chart: { type: 'bar', height: '100%', toolbar: { show: false }, foreColor: '#94a3b8' },
+                plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 6 } },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                xaxis: {
+                    categories: Array.from({ length: daysInMonth }, (_, i) => i + 1),
+                    labels: { style: { colors: '#94a3b8' } },
+                    axisBorder: { color: '#1f2937' },
+                    axisTicks: { color: '#1f2937' }
+                },
+                yaxis: { labels: { style: { colors: '#94a3b8' } } },
+                fill: { opacity: 1, type: 'gradient', gradient: { shadeIntensity: 0.6, opacityFrom: 0.9, opacityTo: 0.3, stops: [0, 100] } },
+                tooltip: { theme: 'dark' },
+                grid: { borderColor: '#1f2937', strokeDashArray: 5 },
+                colors: ['#38bdf8'],
+                annotations: metaMensal ? {
+                    yaxis: [{
+                        y: Math.round(metaMensal / daysInMonth),
+                        borderColor: '#facc15',
+                        label: {
+                            borderColor: '#facc15',
+                            style: { color: '#000', background: '#facc15' },
+                            text: 'Ritmo da meta'
+                        }
+                    }]
+                } : {}
+            };
+            const chart = new ApexCharts(document.querySelector('#main-chart'), chartOptions);
+            chart.render();
+
+            const metaChartOptions = {
+                series: [metaSeriesValue],
+                chart: { 
+                    type: 'radialBar', 
+                    height: 280,
+                    offsetY: -10
+                },
+                colors: ['#38bdf8'],
+                plotOptions: {
+                    radialBar: {
+                        startAngle: -90,
+                        endAngle: 90,
+                        hollow: { 
+                            size: '70%',
+                            margin: 0
+                        },
+                        track: { 
+                            background: 'rgba(148, 163, 184, 0.15)',
+                            strokeWidth: '100%',
+                            margin: 5
+                        },
+                        dataLabels: {
+                            name: { 
+                                show: true, 
+                                color: '#94a3b8', 
+                                fontSize: '14px', 
+                                offsetY: 25,
+                                text: 'Meta atingida' 
+                            },
+                            value: {
+                                show: true,
+                                fontSize: '36px',
+                                fontWeight: 'bold',
+                                color: '#ffffff',
+                                offsetY: -10,
+                                formatter: () => `${metaPercent}%`
+                            }
+                        }
+                    }
+                },
+                stroke: { lineCap: 'round' },
+                labels: ['Meta atingida']
+            };
+            const metaChart = new ApexCharts(document.querySelector('#meta-chart'), metaChartOptions);
+            metaChart.render();
+
+            function updateClock() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const dateString = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                document.querySelector('#clock p:first-child').textContent = timeString;
+                document.querySelector('#clock p:last-child').textContent = dateString;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            const cityCoords = {
+                // Portos e URFs brasileiros
+                'ITAJAÍ': [-26.90, -48.66],
+                'ITAJAI': [-26.90, -48.66],
+                'NAVEGANTES': [-26.89, -48.65],
+                'ITAPOA': [-26.11, -48.61],
+                'CLIF - ITAPOÁ': [-26.11, -48.61],
+                'JOINVILLE': [-26.30, -48.84],
+                'TECA - JOINVILLE': [-26.30, -48.84],
+                'PORTONAVE': [-26.87, -48.63],
+                'POLY': [-26.90, -48.65],
+                'PARANAGUA': [-25.52, -48.51],
+                'VIRACOPOS': [-23.01, -47.14],
+                'GUARULHOS': [-23.44, -46.47],
+                'FLORIANÓPOLIS': [-27.59, -48.55],
+                'MANAUS': [-3.12, -60.02],
+                'SANTOS': [-23.95, -46.33],
+                'FORTE LOGISTICA': [-26.08, -48.62],
+                'MOVECTA - ITAJAÍ': [-26.90, -48.66],
+                'MULTILOG - ITAJAI': [-26.90, -48.66],
+                'LOCALFRIO - ITAJAI': [-26.90, -48.66],
+                'LOCAL FRIO': [-26.90, -48.66],
+                'BARRA DO RIO - ITAJAI': [-26.90, -48.66],
+                'PACLOG': [-26.90, -48.66],
+                'CONFINS': [-19.63, -43.97],
+                'BETIM': [-19.97, -44.20],
+                'BELO HORIZONTE': [-19.92, -43.94],
+                'SAO FRANCISCO DO SUL': [-26.24, -48.63],
+                'SÃO PAULO': [-23.55, -46.63],
+                'CURITIBA': [-25.43, -49.27],
+                'SÃO LUIS (MARANHÃO)': [-2.53, -44.30],
+                'MULTILOG - SANTOS': [-23.95, -46.33],
+                'PORTO ALEGRE (POA)': [-30.03, -51.23],
+                'RIO DE JANEIRO': [-22.91, -43.17],
+                'MULTILOG - MOOCA': [-23.55, -46.60],
+                'RECIFE': [-8.05, -34.90],
+                'DEFINIR': [-26.90, -48.66],  // Default para Itajaí
+                
+                // Países por código ISO-2 (mais assertivo)
+                'CN': [35.86, 104.19],      // China
+                'US': [37.09, -95.71],      // Estados Unidos
+                'PL': [51.91, 19.14],       // Polônia
+                'DE': [51.16, 10.45],       // Alemanha
+                'SE': [60.12, 18.64],       // Suécia
+                'BE': [50.50, 4.47],        // Bélgica
+                'HK': [22.32, 114.17],      // Hong Kong
+                'JP': [36.20, 138.25],      // Japão
+                'CO': [4.57, -74.29],       // Colômbia
+                'CA': [56.13, -106.35],     // Canadá
+                'ES': [40.46, -3.75],       // Espanha
+                'KR': [35.91, 127.77],      // Coreia do Sul
+                'VN': [14.06, 108.28],      // Vietnã
+                'DK': [56.26, 9.51],        // Dinamarca
+                'IT': [41.87, 12.57],       // Itália
+                'FR': [46.23, 2.21],        // França
+                'GB': [55.38, -3.44],       // Reino Unido
+                'NL': [52.13, 5.29],        // Holanda
+                'IN': [20.59, 78.96],       // Índia
+                'TW': [23.70, 120.96],      // Taiwan
+                'TH': [15.87, 100.99],      // Tailândia
+                'MY': [4.21, 101.97],       // Malásia
+                'SG': [1.35, 103.82],       // Singapura
+                'AU': [-25.27, 133.77],     // Austrália
+                'MX': [23.63, -102.55],     // México
+                'AR': [-38.42, -63.62],     // Argentina
+                'CL': [-35.68, -71.54],     // Chile
+                'BR': [-14.24, -51.93],     // Brasil
+                'AT': [47.52, 14.55],       // Áustria
+                'GR': [39.07, 21.82],       // Grécia
+                'MM': [21.91, 95.96],       // Mianmar
+                'NZ': [-40.90, 174.89],     // Nova Zelândia
+                'PT': [39.40, -8.22],       // Portugal
+                'CH': [46.82, 8.23],        // Suíça
+                'IL': [31.05, 34.85],       // Israel
+                'TR': [38.96, 35.24],       // Turquia
+                'IE': [53.41, -8.24],       // Irlanda
+                'UY': [-32.52, -55.77],     // Uruguai
+                
+                // Manter nomes completos para compatibilidade (fallback)
+                'CHINA, REPUBLICA POPULAR': [35.86, 104.19],
+                'ESTADOS UNIDOS': [37.09, -95.71],
+                'POLONIA, REPUBLICA DA': [51.91, 19.14],
+                'ALEMANHA': [51.16, 10.45],
+                'SUECIA': [60.12, 18.64],
+                'BELGICA': [50.50, 4.47],
+                'HONG KONG': [22.32, 114.17],
+                'JAPAO': [36.20, 138.25],
+                'COLOMBIA': [4.57, -74.29],
+                'CANADA': [56.13, -106.35],
+                'ESPANHA': [40.46, -3.75],
+                'COREIA DO SUL': [35.91, 127.77],
+                'VIETNAN': [14.06, 108.28],
+                'DINAMARCA': [56.26, 9.51]
+            };
+
+            function latLonToVector3(lat, lon, radius) {
+                const phi = (90 - lat) * (Math.PI / 180);
+                const theta = (lon + 180) * (Math.PI / 180);
+                const x = -(radius * Math.sin(phi) * Math.cos(theta));
+                const y = radius * Math.cos(phi);
+                const z = radius * Math.sin(phi) * Math.sin(theta);
+                return new THREE.Vector3(x, y, z);
+            }
+
+            function getArc(startVec, endVec) {
+                const midPoint = new THREE.Vector3().addVectors(startVec, endVec).multiplyScalar(0.5);
+                const distance = startVec.distanceTo(endVec);
+                midPoint.normalize().multiplyScalar(2.2 + distance * 0.2);
+                return new THREE.QuadraticBezierCurve3(startVec, midPoint, endVec);
+            }
+
+            const hubMarkers = [];
+            const hubsCache = new Map();
+            const routeHubMap = new Map();
+
+            function ensureHub(name, type, process = null, routeKey = null) {
+                if (!name) return null;
+                const coords = cityCoords[name];
+                if (!coords) return null;
+
+                if (routeKey && !routeHubMap.has(routeKey)) {
+                    routeHubMap.set(routeKey, new Set());
+                }
+
+                if (hubsCache.has(name)) {
+                    const existingHub = hubsCache.get(name);
+                    if (process) {
+                        existingHub.processes.push(process);
+                    }
+                    if (routeKey) {
+                        existingHub.linkedRoutes.add(routeKey);
+                        if (!existingHub.processesByRoute[routeKey]) {
+                            existingHub.processesByRoute[routeKey] = [];
+                        }
+                        if (process) {
+                            existingHub.processesByRoute[routeKey].push(process);
+                        }
+                        routeHubMap.get(routeKey)?.add(name);
+                    }
+                    return existingHub;
+                }
+
+                const baseColor = type === 'origin' ? 0x38bdf8 : 0x22d3ee;
+                const hubGeometry = new THREE.SphereGeometry(0.045, 16, 16);
+                const hubMaterial = new THREE.MeshBasicMaterial({ color: baseColor });
+                const hub = new THREE.Mesh(hubGeometry, hubMaterial);
+                const position = latLonToVector3(coords[0], coords[1], 2.22);
+                hub.position.copy(position);
+                hub.visible = false;
+                globeGroup.add(hub);
+
+                const auraGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+                const auraMaterial = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0.25 });
+                const aura = new THREE.Mesh(auraGeometry, auraMaterial);
+                aura.visible = false;
+                hub.add(aura);
+
+                const hubData = {
+                    hub,
+                    aura,
+                    phase: Math.random() * Math.PI * 2,
+                    name,
+                    type,
+                    processes: process ? [process] : [],
+                    processesByRoute: {},
+                    linkedRoutes: new Set(routeKey ? [routeKey] : []),
+                    position
+                };
+
+                if (routeKey) {
+                    hubData.processesByRoute[routeKey] = process ? [process] : [];
+                    routeHubMap.get(routeKey)?.add(name);
+                }
+
+                hubsCache.set(name, hubData);
+                hubMarkers.push({ aura, phase: Math.random() * Math.PI * 2, hubData });
+                return hubData;
+            }
+
+            const createHubLabels = () => {
+                const labelsContainer = document.getElementById('hub-labels');
+                if (labelsContainer) {
+                    labelsContainer.innerHTML = '';
+                }
+            };
+
+            const mapContainer = document.getElementById('globe-container');
+            const getMapDimensions = () => {
+                if (!mapContainer) {
+                    return { width: 800, height: 600 };
+                }
+                const rect = mapContainer.getBoundingClientRect();
+                const width = rect.width || mapContainer.offsetWidth || 800;
+                const height = rect.height || mapContainer.offsetHeight || 600;
+                return { width, height };
+            };
+            const { width: initialWidth, height: initialHeight } = getMapDimensions();
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(56, initialWidth / initialHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(initialWidth, initialHeight);
+            if (mapContainer) {
+                mapContainer.innerHTML = '';
+                mapContainer.appendChild(renderer.domElement);
+            }
+
+            const resizeRenderer = () => {
+                const { width, height } = getMapDimensions();
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            };
+            window.addEventListener('resize', resizeRenderer);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
+            directionalLight.position.set(4, 3, 8);
+            scene.add(directionalLight);
+
+            const globeGroup = new THREE.Group();
+            scene.add(globeGroup);
+
+            const globeGeometry = new THREE.SphereGeometry(2.2, 72, 72);
+            const textureLoader = new THREE.TextureLoader();
+            const fallbackTexture = textureLoader.load('https://placehold.co/2048x1024/0a0a0a/1a1a1a.png?text=.');
+            const globeMaterial = new THREE.MeshStandardMaterial({
+                map: fallbackTexture,
+                roughness: 0.8,
+                metalness: 0.2,
+                transparent: true,
+                opacity: 0.72,
+                color: 0x1e293b
+            });
+
+            textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/land_ocean_ice_cloud_2048.jpg',
+                texture => { globeMaterial.map = texture; globeMaterial.needsUpdate = true; }
+            );
+
+            const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+            globeGroup.add(globe);
+
+            const atmosphereGeometry = new THREE.SphereGeometry(2.3, 72, 72);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+                    }
+                `,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide,
+                transparent: true
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            globeGroup.add(atmosphere);
+
+            camera.position.set(0, 0, 5.4);
+            const targetCameraPosition = new THREE.Vector3().copy(camera.position);
+            const targetCameraLookAt = new THREE.Vector3(0, 0, 0);
+            const targetGlobeRotation = { x: 0, y: 0 };
+
+            // Mapear rotas agregadas (top 3) com dados completos
+            const routeElements = rotasContainer
+                ? Array.from(rotasContainer.querySelectorAll('.map-route-item'))
+                : [];
+
+            const topRoutesDetailed = rotasDestaque.map(([rota, data]) => {
+                const [originName, destName] = rota.split('→').map(part => (part || '').trim());
+                const processosDaRota = processosAtivos.filter(p => `${p.pais_nome} → ${p.urf_despacho}` === rota);
+                const referencia = processosDaRota[0];
+                const originKey = referencia?.pais_codigo ? referencia.pais_codigo.toUpperCase() : null;
+                const destKey = referencia?.urf_despacho ? referencia.urf_despacho.toUpperCase() : null;
+                const originCoords = originKey ? cityCoords[originKey] : null;
+                const destCoords = destKey ? cityCoords[destKey] : null;
+                const displayOrigin = (data.originIso || originName || '-').toUpperCase();
+                const displayLabel = `${displayOrigin} → ${destName}`;
+
+                return {
+                    key: rota,
+                    modal: data.modal,
+                    valor: data.valor,
+                    count: data.count,
+                    processes: processosDaRota,
+                    originKey,
+                    destKey,
+                    originCoords,
+                    destCoords,
+                    originName,
+                    destName,
+                    displayLabel
+                };
+            }).filter(route => route.originCoords && route.destCoords);
+
+            // Acumular dados dos hubs com todos os processos da rota
+            topRoutesDetailed.forEach(route => {
+                route.processes.forEach(process => {
+                    const originKey = process.pais_codigo ? process.pais_codigo.toUpperCase() : null;
+                    const destKey = process.urf_despacho ? process.urf_despacho.toUpperCase() : null;
+                    if (originKey && cityCoords[originKey]) {
+                        ensureHub(originKey, 'origin', process, route.key);
+                    }
+                    if (destKey && cityCoords[destKey]) {
+                        ensureHub(destKey, 'dest', process, route.key);
+                    }
+                });
+            });
+
+            createHubLabels();
+
+            const updateHubMarkers = activeRouteKey => {
+                hubsCache.forEach((hubData, hubName) => {
+                    const isActive = !!activeRouteKey && routeHubMap.get(activeRouteKey)?.has(hubName);
+                    if (hubData.hub) hubData.hub.visible = isActive;
+                    if (hubData.aura) hubData.aura.visible = isActive;
+                });
+            };
+
+            const routeCurves = topRoutesDetailed.map((route, index) => {
+                const startVec = latLonToVector3(route.originCoords[0], route.originCoords[1], 2.22);
+                const endVec = latLonToVector3(route.destCoords[0], route.destCoords[1], 2.22);
+                const curve = getArc(startVec, endVec);
+                const points = curve.getPoints(160);
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const modalColor = (modalPalette[route.modal] || modalPalette['MARÍTIMA']).three;
+                const material = new THREE.LineBasicMaterial({ color: modalColor, transparent: true, opacity: 0.2 });
+                const line = new THREE.Line(geometry, material);
+                line.visible = false;
+                globeGroup.add(line);
+
+                const pulseGeometry = new THREE.SphereGeometry(0.032, 18, 18);
+                const pulseMaterial = new THREE.MeshBasicMaterial({ color: modalColor, transparent: true, opacity: 0 });
+                const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+                pulse.position.copy(points[0]);
+                pulse.visible = false;
+                globeGroup.add(pulse);
+
+                const labelPoint = curve.getPointAt(0.5);
+
+                return {
+                    key: route.key,
+                    curve,
+                    line,
+                    pulse,
+                    speed: 0.05 + Math.random() * 0.03,
+                    progress: Math.random(),
+                    startVec,
+                    endVec,
+                    labelPoint,
+                    domElement: routeElements[index] || null,
+                    data: route
+                };
+            });
+
+            const mapPanelElement = document.querySelector('.map-panel');
+            let routeInfoLabel = null;
+            if (mapPanelElement) {
+                routeInfoLabel = document.createElement('div');
+                routeInfoLabel.id = 'route-info-label';
+                routeInfoLabel.className = 'route-info-label';
+                routeInfoLabel.style.display = 'none';
+                mapPanelElement.appendChild(routeInfoLabel);
+            }
+
+            let activeRouteForLabel = null;
+
+            const showRouteInfoLabel = route => {
+                if (!routeInfoLabel) return;
+                if (!route) {
+                    routeInfoLabel.style.display = 'none';
+                    routeInfoLabel.classList.remove('visible');
+                    activeRouteForLabel = null;
+                    return;
+                }
+                const labelText = route.data?.displayLabel || route.key;
+                routeInfoLabel.innerHTML = `${labelText} • ${route.data.count} processo${route.data.count !== 1 ? 's' : ''}`;
+                routeInfoLabel.style.display = 'block';
+                routeInfoLabel.classList.remove('visible');
+                activeRouteForLabel = route;
+            };
+
+            const highlightDelay = 9000;
+            let highlightedIndex = -1;
+            let lastHighlightSwitch = performance.now();
+
+            const wrapAngleNear = (current, target) => {
+                const twoPi = Math.PI * 2;
+                let result = target;
+                while (result - current > Math.PI) {
+                    result -= twoPi;
+                }
+                while (result - current < -Math.PI) {
+                    result += twoPi;
+                }
+                return result;
+            };
+
+            const focusCameraOnRoute = route => {
+                const midpoint = new THREE.Vector3().addVectors(route.startVec, route.endVec).multiplyScalar(0.5);
+                const normalizedMid = midpoint.clone().normalize();
+                const distance = route.startVec.distanceTo(route.endVec);
+                const cameraDistance = Math.max(4.6, 3.2 + distance * 1.4);
+
+                targetCameraPosition.set(0, 0, cameraDistance);
+                targetCameraLookAt.set(0, 0, 0);
+
+                const clampedY = Math.max(-1, Math.min(1, normalizedMid.y));
+                const latitude = Math.asin(clampedY);
+                const longitude = Math.atan2(normalizedMid.x, normalizedMid.z);
+
+                const targetX = -latitude;
+                const targetY = longitude;
+
+                targetGlobeRotation.x = wrapAngleNear(globeGroup.rotation.x, targetX);
+                targetGlobeRotation.y = wrapAngleNear(globeGroup.rotation.y, targetY);
+            };
+
+            const highlightRoute = (index, manual = false) => {
+                if (!routeCurves.length) {
+                    updateHubMarkers(null);
+                    showRouteInfoLabel(null);
+                    return;
+                }
+                const normalized = ((index % routeCurves.length) + routeCurves.length) % routeCurves.length;
+                routeCurves.forEach((route, idx) => {
+                    const isActive = idx === normalized;
+                    route.line.visible = isActive;
+                    if (route.line.material) {
+                        route.line.material.opacity = isActive ? 0.75 : 0;
+                        route.line.material.needsUpdate = true;
+                    }
+                    if (route.pulse.material) {
+                        route.pulse.material.opacity = isActive ? 0.95 : 0;
+                        route.pulse.material.needsUpdate = true;
+                    }
+                    route.pulse.visible = isActive;
+                    if (route.domElement) {
+                        route.domElement.classList.toggle('active', isActive);
+                    }
+                });
+
+                focusCameraOnRoute(routeCurves[normalized]);
+                updateHubMarkers(routeCurves[normalized].key);
+                showRouteInfoLabel(routeCurves[normalized]);
+                highlightedIndex = normalized;
+                lastHighlightSwitch = performance.now();
+                if (manual) {
+                    lastHighlightSwitch = performance.now();
+                }
+            };
+
+            const advanceHighlight = () => {
+                if (!routeCurves.length) {
+                    return;
+                }
+                const nextIndex = highlightedIndex === -1 ? 0 : (highlightedIndex + 1) % routeCurves.length;
+                highlightRoute(nextIndex);
+            };
+
+            routeCurves.forEach((route, index) => {
+                if (route.domElement) {
+                    route.domElement.addEventListener('mouseenter', () => highlightRoute(index, true));
+                }
+            });
+
+            if (routeCurves.length) {
+                highlightRoute(0);
+            }
+
+            const clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const delta = clock.getDelta();
+                const elapsed = clock.elapsedTime;
+
+                routeCurves.forEach(route => {
+                    route.progress += route.speed * delta;
+                    if (route.progress > 1) route.progress -= 1;
+                    const point = route.curve.getPointAt(route.progress);
+                    route.pulse.position.copy(point);
+                });
+
+                hubMarkers.forEach(marker => {
+                    if (!marker.hubData || !marker.hubData.hub || !marker.hubData.hub.visible) {
+                        return;
+                    }
+                    const scale = 1 + 0.25 * Math.sin(elapsed * 1.6 + marker.phase);
+                    marker.aura.scale.set(scale, scale, scale);
+                    marker.aura.material.opacity = 0.16 + 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 1.6 + marker.phase));
+                });
+
+                if (routeInfoLabel) {
+                    if (activeRouteForLabel) {
+                        const labelPoint = activeRouteForLabel.labelPoint.clone();
+                        const projected = labelPoint.project(camera);
+                        const { width, height } = getMapDimensions();
+                        const x = (projected.x * 0.5 + 0.5) * width;
+                        const y = (-(projected.y) * 0.5 + 0.5) * height;
+                        const isVisible = projected.z < 1 && projected.z > -1;
+                        if (isVisible) {
+                            routeInfoLabel.style.left = `${x}px`;
+                            routeInfoLabel.style.top = `${y}px`;
+                            routeInfoLabel.classList.add('visible');
+                        } else {
+                            routeInfoLabel.classList.remove('visible');
+                        }
+                    } else {
+                        routeInfoLabel.classList.remove('visible');
+                    }
+                }
+
+                camera.position.lerp(targetCameraPosition, Math.min(delta * 1.8, 1));
+                camera.lookAt(targetCameraLookAt);
+                globeGroup.rotation.x = THREE.MathUtils.lerp(globeGroup.rotation.x, targetGlobeRotation.x, Math.min(delta * 2.2, 1));
+                globeGroup.rotation.y = THREE.MathUtils.lerp(globeGroup.rotation.y, targetGlobeRotation.y, Math.min(delta * 2.2, 1));
+
+                if (routeCurves.length && performance.now() - lastHighlightSwitch > highlightDelay) {
+                    advanceHighlight();
+                }
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        });
+    </script>
+</body>
+</html>

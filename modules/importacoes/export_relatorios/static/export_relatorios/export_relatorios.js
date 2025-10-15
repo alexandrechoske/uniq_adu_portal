@@ -274,6 +274,28 @@ document.addEventListener('DOMContentLoaded',()=>{
             td.innerHTML = '<span class="text-gray-400 text-xs">Sem documentos</span>';
           }
         }
+        else if(c === 'url_bandeira') {
+          if (val) {
+            const img = document.createElement('img');
+            img.src = val;
+            img.alt = 'Bandeira do país';
+            img.style.height = '24px';
+            img.style.width = 'auto';
+            img.style.borderRadius = '4px';
+            td.appendChild(img);
+          } else {
+            td.innerHTML = '<span class="text-gray-400 text-xs">Sem bandeira</span>';
+          }
+        }
+        else if(c === 'despesas_processo') {
+          const despesas = normalizeJsonList(val);
+          if (despesas.length > 0) {
+            td.innerHTML = `<span class="despesa-badge">${despesas.length} despesa${despesas.length > 1 ? 's' : ''}</span>`;
+            td.title = despesas.map(d => `${d.categoria_custo || 'Categoria'}: ${d.valor_custo || '-'} `).join('\n');
+          } else {
+            td.innerHTML = '<span class="text-gray-400 text-xs">Sem despesas</span>';
+          }
+        }
         // Formatação especial para diferentes tipos de dados
         else if(c.includes('valor') && val && !isNaN(val)) {
           val = parseFloat(val).toLocaleString('pt-BR', {
@@ -332,6 +354,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   function truncateText(text, maxLength) {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+  }
+
+  function normalizeJsonList(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
   }
 
   async function executarBusca(){
@@ -606,26 +641,26 @@ document.addEventListener('DOMContentLoaded',()=>{
         <input type="text" name="importador" placeholder="Nome da empresa" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
       
-      <!-- Status Macro (Dropdown dinâmico) -->
+      <!-- Status Sistema (Dropdown dinâmico) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Status Macro</label>
-        <select name="status_macro" id="select-status-macro" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Status Sistema</label>
+        <select name="status_sistema" id="select-status-sistema" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <option value="">Todos</option>
         </select>
       </div>
       
-      <!-- Status Macro Sistema (Dropdown dinâmico) -->
+      <!-- Status Timeline (Dropdown dinâmico) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Status Macro Sistema</label>
-        <select name="status_macro_sistema" id="select-status-macro-sistema" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Status Timeline</label>
+        <select name="status_timeline" id="select-status-timeline" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <option value="">Todos</option>
         </select>
       </div>
       
-      <!-- Status Processo (Dropdown dinâmico) -->
+      <!-- País de Procedência (Dropdown dinâmico) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Status Processo</label>
-        <select name="status_processo" id="select-status-processo" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <label class="block text-sm font-medium text-gray-700 mb-1">País de Procedência</label>
+        <select name="pais_procedencia" id="select-pais-procedencia" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           <option value="">Todos</option>
         </select>
       </div>
@@ -682,24 +717,11 @@ document.addEventListener('DOMContentLoaded',()=>{
         }
       }
       
-      // Popula Status Macro
-      if (data.status_macro && data.status_macro.values) {
-        const selectStatusMacro = document.getElementById('select-status-macro');
-        if (selectStatusMacro) {
-          data.status_macro.values.forEach(value => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            selectStatusMacro.appendChild(option);
-          });
-        }
-      }
-      
-      // Popula Status Macro Sistema
-      if (data.status_macro_sistema && data.status_macro_sistema.values) {
-        const selectStatusSistema = document.getElementById('select-status-macro-sistema');
+      // Popula Status Sistema
+      if (data.status_sistema && data.status_sistema.values) {
+        const selectStatusSistema = document.getElementById('select-status-sistema');
         if (selectStatusSistema) {
-          data.status_macro_sistema.values.forEach(value => {
+          data.status_sistema.values.forEach(value => {
             const option = document.createElement('option');
             option.value = value;
             option.textContent = value;
@@ -708,16 +730,36 @@ document.addEventListener('DOMContentLoaded',()=>{
         }
       }
       
-      // Popula Status Processo
-      if (data.status_processo && data.status_processo.values) {
-        const selectStatusProcesso = document.getElementById('select-status-processo');
-        if (selectStatusProcesso) {
-          data.status_processo.values.forEach(value => {
+      // Popula Status Timeline
+      if (data.status_timeline && data.status_timeline.values) {
+        const selectStatusTimeline = document.getElementById('select-status-timeline');
+        if (selectStatusTimeline) {
+          data.status_timeline.values.forEach(value => {
             const option = document.createElement('option');
             option.value = value;
             option.textContent = value;
-            selectStatusProcesso.appendChild(option);
+            selectStatusTimeline.appendChild(option);
           });
+        }
+      }
+      
+      // Popula País de Procedência
+      if (data.pais_procedencia && data.pais_procedencia.values) {
+        const selectPais = document.getElementById('select-pais-procedencia');
+        if (selectPais) {
+          data.pais_procedencia.values.forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            selectPais.appendChild(option);
+          });
+          
+          if (data.pais_procedencia.limited) {
+            const option = document.createElement('option');
+            option.disabled = true;
+            option.textContent = `... e mais ${data.pais_procedencia.count - data.pais_procedencia.values.length} opções`;
+            selectPais.appendChild(option);
+          }
         }
       }
       

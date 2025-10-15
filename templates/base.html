@@ -615,14 +615,14 @@
 </nav>
 {% endmacro %}
 
-<body{% if session.get('user', {}).get('id') %} class="logged-in" data-user-id="{{ session.get('user', {}).get('id') }}"{% endif %}>
+<body class="bg-gray-100">
     {% if session.get('user') %}
-    <!-- Barra de Navegação Superior -->
     <header class="top-navbar">
         <div class="navbar-content">
             <div class="navbar-left">
-                <!-- Menu hambúrguer para alternar a sidebar -->
-                <button id="sidebar-toggle" class="navbar-hamburger" type="button">
+                <button id="sidebar-toggle"
+                        class="navbar-hamburger flex items-center justify-center"
+                        aria-label="Alternar menu lateral">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
@@ -810,15 +810,6 @@
                     </a>
                     {% endif %}
 
-                    {% if 'ajuste_status' in accessible_modules %}
-                    <a href="{{ url_for('ajuste_status.index') }}"
-                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('ajuste_status.') %}active{% endif %}"
-                       title="Ajuste de Status">
-                        <i class="mdi mdi-format-list-checks"></i>
-                        <span class="sidebar-text">Ajuste de Status</span>
-                    </a>
-                    {% endif %}
-                    
                     <!-- Agente Unique removido conforme solicitação -->
                 </div>
                 {% endif %}
@@ -907,12 +898,12 @@
                 </div>
                 {% endif %}
                 
-                <!-- Seção Configurações -->
-                {% if 'usuarios' in accessible_modules or 'config' in accessible_modules %}
+                <!-- Seção Ferramentas -->
+                {% if 'usuarios' in accessible_modules or 'config' in accessible_modules or 'ajuste_status' in accessible_modules %}
                 <div class="sidebar-section">
                     <div class="sidebar-section-title">
-                        <i class="mdi mdi-cog text-sm"></i>
-                        <span>Configurações</span>
+                        <i class="mdi mdi-tools text-sm"></i>
+                        <span>Ferramentas</span>
                     </div>
                     
                     {% if 'usuarios' in accessible_modules %}
@@ -961,6 +952,15 @@
                        title="Analytics do Agente">
                         <i class="mdi mdi-robot"></i>
                         <span class="sidebar-text">Analytics do Agente</span>
+                    </a>
+                    {% endif %}
+
+                    {% if 'ajuste_status' in accessible_modules %}
+                    <a href="{{ url_for('ajuste_status.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('ajuste_status.') %}active{% endif %}"
+                       title="Ajuste de Status">
+                        <i class="mdi mdi-format-list-checks"></i>
+                        <span class="sidebar-text">Ajuste de Status</span>
                     </a>
                     {% endif %}
                 </div>
