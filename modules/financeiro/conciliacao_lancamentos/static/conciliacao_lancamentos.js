@@ -35,11 +35,92 @@ const AppState = {
     paginacaoBanco: { paginaAtual: 1, itensPorPagina: 100 }
 };
 
+function obterCamposDatasSistema() {
+    return {
+        inicio: document.getElementById('data_inicio_sistema'),
+        fim: document.getElementById('data_fim_sistema')
+    };
+}
+
+function garantirDatasSistemaPreenchidas() {
+    const { inicio, fim } = obterCamposDatasSistema();
+    if (!inicio || !fim) {
+        return;
+    }
+
+    const periodoPadrao = calcularPeriodoSistema('mes_atual');
+
+    if (!inicio.value) {
+        inicio.value = periodoPadrao.inicio;
+    }
+
+    if (!fim.value) {
+        fim.value = periodoPadrao.fim;
+    }
+
+    fim.min = inicio.value || '';
+    inicio.max = fim.value || '';
+}
+
+function registrarRegrasDatasSistema() {
+    const { inicio, fim } = obterCamposDatasSistema();
+    if (!inicio || !fim) {
+        return;
+    }
+
+    inicio.addEventListener('change', () => {
+        if (fim.value && inicio.value && inicio.value > fim.value) {
+            fim.value = inicio.value;
+        }
+        fim.min = inicio.value || '';
+    });
+
+    fim.addEventListener('change', () => {
+        if (inicio.value && fim.value && fim.value < inicio.value) {
+            inicio.value = fim.value;
+        }
+        inicio.max = fim.value || '';
+    });
+}
+
+function obterPeriodoSistemaSelecionado() {
+    const { inicio, fim } = obterCamposDatasSistema();
+    const periodoPadrao = calcularPeriodoSistema('mes_atual');
+
+    if (!inicio || !fim) {
+        return periodoPadrao;
+    }
+
+    let dataInicio = inicio.value;
+    let dataFim = fim.value;
+
+    if (!dataInicio) {
+        dataInicio = periodoPadrao.inicio;
+        inicio.value = dataInicio;
+    }
+
+    if (!dataFim) {
+        dataFim = periodoPadrao.fim;
+        fim.value = dataFim;
+    }
+
+    if (new Date(dataInicio) > new Date(dataFim)) {
+        throw new Error('A data inicial não pode ser maior que a data final.');
+    }
+
+    return {
+        inicio: dataInicio,
+        fim: dataFim
+    };
+}
+
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Inicializando Conciliação V2');
+    garantirDatasSistemaPreenchidas();
+    registrarRegrasDatasSistema();
     inicializarEventos();
     inicializarDragAndDrop();
     inicializarOrdenacao();
@@ -165,16 +246,24 @@ async function processarArquivos(e) {
 
     prepararNovaSessaoProcessamento();
 
-    const periodoSelecionado = document.getElementById('periodo_sistema').value;
+    let periodo;
+    try {
+        periodo = obterPeriodoSistemaSelecionado();
+    } catch (erroPeriodo) {
+        console.warn('[CONCILIACAO] Período inválido:', erroPeriodo);
+        mostrarNotificacao(erroPeriodo.message || 'Informe um período válido para os lançamentos do sistema.', 'warning');
+        return;
+    }
+
     const bancoSelecionado = document.getElementById('banco_origem').value;
-    const periodo = calcularPeriodoSistema(periodoSelecionado);
 
     const formData = new FormData();
     AppState.arquivosCarregados.forEach(file => {
         formData.append('arquivo_bancario', file);
     });
     formData.append('banco_origem', bancoSelecionado);
-    formData.append('periodo_sistema', periodoSelecionado);
+    formData.append('data_inicio_sistema', periodo.inicio);
+    formData.append('data_fim_sistema', periodo.fim);
     
     try {
         mostrarLoading('Carregando lançamentos do sistema...');

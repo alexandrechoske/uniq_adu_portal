@@ -161,8 +161,10 @@ class ConciliacaoService:
                 continue  # Pula se diferença de data muito grande
             
             # Critério 3: Valor (peso alto)
-            diff_valor_abs = abs(movimento_sistema.valor - mov_banco.valor)
-            diff_valor_perc = self.calculate_value_difference(movimento_sistema.valor, mov_banco.valor)
+            valor_sistema_abs = abs(movimento_sistema.valor)
+            valor_banco_abs = abs(mov_banco.valor)
+            diff_valor_abs = abs(valor_sistema_abs - valor_banco_abs)
+            diff_valor_perc = self.calculate_value_difference(valor_sistema_abs, valor_banco_abs)
             
             if diff_valor_abs <= self.tolerancia_valor:
                 criterios.append("valor_exato")

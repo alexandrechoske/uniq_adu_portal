@@ -75,19 +75,19 @@
             <div class="card-body">
                 <form id="uploadForm" enctype="multipart/form-data">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label class="form-label">Período dos Lançamentos do Sistema</label>
-                                <select id="periodo_sistema" class="form-select">
-                                    <option value="mes_atual" selected>📅 Mês Atual</option>
-                                    <option value="mes_anterior">📅 Mês Anterior</option>
-                                    <option value="ultimos_30_dias">📅 Últimos 30 Dias</option>
-                                    <option value="ultimos_15_dias">📅 Últimos 15 Dias</option>
-                                    <option value="ultimos_7_dias">📅 Últimos 7 Dias</option>
-                                </select>
+                                <label class="form-label">Data Inicial (Sistema)</label>
+                                <input type="date" id="data_inicio_sistema" class="form-control" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="form-label">Data Final (Sistema)</label>
+                                <input type="date" id="data_fim_sistema" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label class="form-label">Banco (opcional, auto-detectado)</label>
                                 <select id="banco_origem" class="form-select">
