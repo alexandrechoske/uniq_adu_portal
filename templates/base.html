@@ -809,6 +809,15 @@
                         <span class="sidebar-text">Exportação de Relatórios</span>
                     </a>
                     {% endif %}
+
+                    {% if 'ajuste_status' in accessible_modules %}
+                    <a href="{{ url_for('ajuste_status.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('ajuste_status.') %}active{% endif %}"
+                       title="Ajuste de Status">
+                        <i class="mdi mdi-format-list-checks"></i>
+                        <span class="sidebar-text">Ajuste de Status</span>
+                    </a>
+                    {% endif %}
                     
                     <!-- Agente Unique removido conforme solicitação -->
                 </div>

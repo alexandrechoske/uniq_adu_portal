@@ -25,6 +25,7 @@ class PerfilAccessService:
         'documentos': 'conferencia',  # Conferência Documental 
         'relatorio': 'export_relatorios',  # Exportação de Relatórios
         'agente': 'agente',  # Agente UniQ
+    'ajuste_status': 'ajuste_status',  # Ajuste de Status das Importações
         
         # Páginas do módulo Financeiro (fin)
         'fin_dashboard_executivo': 'fin_dashboard_executivo',  # Dashboard Executivo Financeiro
@@ -66,7 +67,7 @@ class PerfilAccessService:
         if user_role == 'admin' and user_perfil_principal == 'master_admin':
             accessible_modules = [
                 'dashboard', 'importacoes', 'financeiro', 'relatorios', 
-                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh', 'analytics',
+                'usuarios', 'agente', 'conferencia', 'materiais', 'config', 'rh', 'analytics', 'ajuste_status',
                 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
                 'fin_dashboard_executivo', 'fluxo_de_caixa', 'despesas_anual', 'faturamento_anual',
                 'rh_dashboard', 'rh_colaboradores', 'rh_estrutura_cargos', 'rh_estrutura_departamentos', 
@@ -84,7 +85,7 @@ class PerfilAccessService:
                 # Admin Operacional - módulos operacionais: Importação, Consultoria, Exportação + gestão de usuários + configurações + Analytics
                 accessible_modules.update([
                     'importacoes', 'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 
-                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'usuarios', 'config', 'analytics',
+                    'export_relatorios', 'relatorios', 'conferencia', 'agente', 'ajuste_status', 'usuarios', 'config', 'analytics',
                     'analytics_portal', 'analytics_agente',  # Analytics disponíveis para todos os admins
                     # Future modules ready for implementation:
                     'consultoria', 'exportacao'
@@ -182,6 +183,9 @@ class PerfilAccessService:
                         elif pagina_codigo == 'agente':
                             accessible_modules.add('agente')
                             print(f"[ACCESS_SERVICE] Adicionado módulo geral: agente")
+                        elif pagina_codigo == 'ajuste_status':
+                            accessible_modules.add('ajuste_status')
+                            print(f"[ACCESS_SERVICE] Adicionado módulo geral: ajuste_status")
             
             accessible_modules = list(accessible_modules)
             print(f"[ACCESS_SERVICE] Basic Users ({user_perfil_principal}) - módulos acessíveis finais: {accessible_modules}")
@@ -241,6 +245,8 @@ class PerfilAccessService:
                                         print(f"[ACCESS_SERVICE] Adicionado módulo geral: dashboard_operacional (contexto: importação)")
                                 elif pagina_codigo == 'dashboard_resumido':
                                     accessible_modules.add('dash_importacoes_resumido')
+                                elif pagina_codigo == 'ajuste_status':
+                                    accessible_modules.add('ajuste_status')
                     break
             
             if found_in_database:
@@ -309,6 +315,7 @@ class PerfilAccessService:
                 operational_modules = [
                     'importacoes', 'dashboard_executivo', 'dash_importacoes_resumido', 'export_relatorios', 'relatorios',
                     'conferencia', 'agente',  # Existing importacao modules
+                    'ajuste_status',
                     'consultoria', 'con',  # Future consultoria modules 
                     'exportacao', 'exp',  # Future exportacao modules
                     'config',  # Configuration module for system setup

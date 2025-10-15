@@ -24,6 +24,10 @@
             ], 'financeiro') }}
         </div>
         <div class="actions-right">
+            <button class="btn btn-outline-info" type="button" data-bs-toggle="modal" data-bs-target="#modalLogicaConciliacao">
+                <i class="mdi mdi-information-variant"></i>
+                Como conciliamos?
+            </button>
             <button id="btnLimparSessao" class="btn btn-secondary" style="display: none;">
                 <i class="mdi mdi-refresh"></i>
                 Nova Sessão
@@ -355,5 +359,48 @@
 
     </div>
 
+</div>
+
+<!-- Modal: Lógica de Conciliação -->
+<div class="modal fade" id="modalLogicaConciliacao" tabindex="-1" aria-labelledby="modalLogicaConciliacaoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLogicaConciliacaoLabel"><i class="mdi mdi-file-compare"></i> Entenda a nossa lógica de conciliação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Aplicamos as regras abaixo em sequência para aproximar os lançamentos do sistema e do banco. Assim, você sabe exatamente como encontramos (ou não) cada combinação.</p>
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-1-circle"></i> Chave completa: código + data + valor</h6>
+                        <p class="mb-0">Primeiro buscamos pares em que o <strong>código de referência (Ref. Unique)</strong>, a <strong>data</strong> e o <strong>valor</strong> são idênticos nos dois lados. Encontramos a mesma operação registrada nos dois lugares.</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-2-circle"></i> Data + valor + descrição parecida</h6>
+                        <p class="mb-0">Quando o código não existe em ambos, comparamos <strong>data</strong> e <strong>valor</strong> iguais e verificamos se as descrições compartilham palavras-chave relevantes (ex.: nome do imposto, fornecedor ou serviço).</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-3-circle"></i> Somente data + valor</h6>
+                        <p class="mb-0">Ainda sem coincidência, avaliamos pares com a mesma <strong>data</strong> e o mesmo <strong>valor</strong>. Esse nível gera mais atenção, pois pode haver lançamentos diferentes com valores iguais. O analista confirma se a associação faz sentido.</p>
+                    </div>
+                    <div class="list-group-item">
+                        <h6 class="mb-1 text-primary"><i class="mdi mdi-numeric-4-circle"></i> Valor igual e data aproximada</h6>
+                        <p class="mb-0">Como último passo automático avaliamos valores idênticos com diferença de até <strong>3 dias</strong> entre as datas e descrição semelhante. Útil quando o banco compensa em outro dia ou quando o sistema registrou um pagamento no D+1.</p>
+                    </div>
+                </div>
+                <hr>
+                <p class="mb-2"><strong>Importante:</strong></p>
+                <ul class="mb-0">
+                    <li>Os níveis acima são sempre executados nessa ordem, do mais preciso ao mais amplo.</li>
+                    <li>Quando encontramos mais de um possível par para a mesma regra, deixamos o lançamento pendente para revisão manual.</li>
+                    <li>Você pode revisar, desfazer ou refazer conciliações a qualquer momento pela aba <strong>Conciliados</strong>.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

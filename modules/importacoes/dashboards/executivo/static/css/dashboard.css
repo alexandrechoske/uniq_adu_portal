@@ -153,10 +153,10 @@ canvas {
     transform: translateY(-1px);
 }
 
-/* KPI Grid - Layout 5+3 conforme solicitado */
+/* KPI Grid - Layout 6+3 conforme solicitado */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     grid-template-rows: repeat(2, auto);
     gap: 1rem;
     margin-bottom: 2rem;
@@ -178,28 +178,29 @@ canvas {
     border-radius: 8px;
 }
 
-/* Primeira linha: cards 1-5 (Processos Abertos, Agd Embarque, Agd Chegada, Agd Liberação, Agd Fechamento) */
+/* Primeira linha: cards 1-6 (Processos Abertos, Agd Embarque, Agd Chegada, Agd Registro, Agd Desembaraço, Agd Fechamento) */
 .kpi-grid .kpi-card:nth-child(1),
 .kpi-grid .kpi-card:nth-child(2),
 .kpi-grid .kpi-card:nth-child(3),
 .kpi-grid .kpi-card:nth-child(4),
-.kpi-grid .kpi-card:nth-child(5) {
+.kpi-grid .kpi-card:nth-child(5),
+.kpi-grid .kpi-card:nth-child(6) {
     grid-column: span 1;
     grid-row: 1;
 }
 
-/* Segunda linha: cards 6-8 centralizados (Chegando Esta Semana, Chegando Este Mês, Total Despesas) */
-.kpi-grid .kpi-card:nth-child(6) {
+/* Segunda linha: cards 7-9 centralizados (Chegando Esta Semana, Chegando Este Mês, Total Despesas) */
+.kpi-grid .kpi-card:nth-child(7) {
     grid-column: 2 / span 1;  /* Coluna 2 */
     grid-row: 2;
 }
 
-.kpi-grid .kpi-card:nth-child(7) {
+.kpi-grid .kpi-card:nth-child(8) {
     grid-column: 3 / span 1;  /* Coluna 3 */
     grid-row: 2;
 }
 
-.kpi-grid .kpi-card:nth-child(8) {
+.kpi-grid .kpi-card:nth-child(9) {
     grid-column: 4 / span 1;  /* Coluna 4 */
     grid-row: 2;
 }
@@ -230,35 +231,20 @@ canvas {
         grid-row: 1;
     }
     
-    /* Segunda linha: cards 4-5 */
-    .kpi-grid .kpi-card:nth-child(4) {
-        grid-column: 1;
+    /* Segunda linha: cards 4-6 */
+    .kpi-grid .kpi-card:nth-child(4),
+    .kpi-grid .kpi-card:nth-child(5),
+    .kpi-grid .kpi-card:nth-child(6) {
+        grid-column: span 1;
         grid-row: 2;
     }
     
-    .kpi-grid .kpi-card:nth-child(5) {
-        grid-column: 2;
-        grid-row: 2;
-    }
-    
-    /* Terceira linha: cards 6-8 */
-    .kpi-grid .kpi-card:nth-child(6),
+    /* Terceira linha: cards 7-9 */
     .kpi-grid .kpi-card:nth-child(7),
-    .kpi-grid .kpi-card:nth-child(8) {
+    .kpi-grid .kpi-card:nth-child(8),
+    .kpi-grid .kpi-card:nth-child(9) {
         grid-column: span 1;
         grid-row: 3;
-    }
-    
-    .kpi-grid .kpi-card:nth-child(6) {
-        grid-column: 1;
-    }
-    
-    .kpi-grid .kpi-card:nth-child(7) {
-        grid-column: 2;
-    }
-    
-    .kpi-grid .kpi-card:nth-child(8) {
-        grid-column: 3;
     }
 }
 
