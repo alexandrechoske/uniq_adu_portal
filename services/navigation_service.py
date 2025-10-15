@@ -21,8 +21,8 @@ def get_module_context(request_endpoint):
     
     # Módulo Importações
     if any(x in request_endpoint for x in [
-        'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
-        'conferencia', 'materiais', 'importacoes.'
+    'dashboard_executivo', 'dashboard_operacional', 'dash_importacoes_resumido', 'export_relatorios',
+    'conferencia', 'materiais', 'ajuste_status', 'importacoes.'
     ]):
         return 'importacoes'
     
@@ -108,6 +108,13 @@ def get_sidebar_navigation(current_module, user_role='guest'):
                     'icon': 'mdi-file-export',
                     'url': 'export_relatorios.index',
                     'active_endpoints': ['export_relatorios.index']
+                },
+                {
+                    'title': 'Ajuste de Status',
+                    'icon': 'mdi-format-list-checks',
+                    'url': 'ajuste_status.index',
+                    'active_endpoints': ['ajuste_status.index'],
+                    'roles': ['admin', 'interno_unique']
                 },
                 {
                     'title': 'Conferência Documental',

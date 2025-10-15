@@ -273,17 +273,17 @@ window.updateDashboardKPIs = function(kpis) {
     try {
         if (!kpis || typeof kpis !== 'object') return;
         const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        // CORREÇÃO: Mostrar total_processos (1128) ao invés de processos_abertos (1101)
-        // para corresponder ao total da tabela
-        setText('kpi-processos-abertos', formatNumber(kpis.total_processos || 0));
+        // Processos Abertos = total geral (todos da view)
+        setText('kpi-processos-abertos', formatNumber(kpis.processos_abertos || 0));
         setText('kpi-chegando-mes', formatNumber(kpis.chegando_mes || 0));
         setText('kpi-chegando-mes-custo', formatCurrencyCompact(kpis.chegando_mes_custo || 0));
         setText('kpi-chegando-semana', formatNumber(kpis.chegando_semana || 0));
         setText('kpi-chegando-semana-custo', formatCurrencyCompact(kpis.chegando_semana_custo || 0));
-        setText('kpi-agd-embarque', formatNumber(kpis.agd_embarque || 0));        // NOVO NOME
-        setText('kpi-agd-chegada', formatNumber(kpis.agd_chegada || 0));          // NOVO NOME
-        setText('kpi-agd-liberacao', formatNumber(kpis.agd_liberacao || 0));      // NOVO NOME
-        setText('kpi-agd-fechamento', formatNumber(kpis.agd_fechamento || 0));    // NOVO NOME
+        setText('kpi-agd-embarque', formatNumber(kpis.agd_embarque || 0));
+        setText('kpi-agd-chegada', formatNumber(kpis.agd_chegada || 0));
+        setText('kpi-agd-registro', formatNumber(kpis.agd_registro || 0));         // NOVO
+        setText('kpi-agd-desembaraco', formatNumber(kpis.agd_desembaraco || 0));   // NOVO
+        setText('kpi-agd-fechamento', formatNumber(kpis.agd_fechamento || 0));
         setText('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas || 0));
     } finally {
         try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('kpi-loading'); } catch (_) {}
