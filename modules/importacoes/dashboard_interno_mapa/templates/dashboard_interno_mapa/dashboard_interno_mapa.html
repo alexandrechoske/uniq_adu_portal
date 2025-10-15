@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unique Aduaneira - Dashboard de Operações</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #050608;
+            color: #e0e0e0;
+            overflow: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+        #globe-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .kpi-card, .chart-card {
+            background: rgba(10, 10, 10, 0.55);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+        }
+        .kpi-title {
+            font-size: 0.9rem;
+            font-weight: 300;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+        .kpi-value {
+            font-size: 2.3rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1;
+        }
+        .kpi-value-small {
+            font-size: 1.6rem;
+        }
+        .kpi-currency {
+            font-size: 1.1rem;
+            font-weight: 300;
+            color: #94a3b8;
+            margin-left: 0.5rem;
+        }
+        .channel-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .channel-green { background-color: #22c55e; }
+        .channel-yellow { background-color: #facc15; }
+        .channel-red { background-color: #ef4444; }
+        .apexcharts-tooltip {
+            background: rgba(15, 23, 42, 0.85) !important;
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+        .dashboard-shell header,
+        .dashboard-shell main,
+        .dashboard-shell aside,
+        .globe-legend {
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        body.globe-focus #globe-container {
+            filter: saturate(1.25) brightness(1.15);
+        }
+        body.globe-focus .dashboard-shell header,
+        body.globe-focus .dashboard-shell main,
+        body.globe-focus .dashboard-shell aside,
+        body.globe-focus .globe-legend {
+            opacity: 0;
+            transform: translateY(18px);
+            pointer-events: none;
+        }
+        #globe-focus-overlay {
+            opacity: 0;
+        }
+        body.globe-focus #globe-focus-overlay {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="globe-container"></div>
+    <div class="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/80 via-black/40 to-transparent"></div>
+
+    <div class="dashboard-shell relative min-h-screen w-full p-4 md:p-8 flex flex-col gap-6 z-10">
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Dashboard de Operações</h1>
+                    <p class="text-sm text-gray-400">Unique Soluções Aduaneiras</p>
+                </div>
+            </div>
+            <div id="clock" class="text-right">
+                <p class="text-2xl font-bold text-white"></p>
+                <p class="text-sm text-gray-400"></p>
+            </div>
+        </header>
+
+        <main class="flex flex-col lg:flex-row gap-4 xl:gap-6 flex-grow">
+            <section class="flex-1 grid grid-cols-12 gap-4 xl:gap-6 auto-rows-[minmax(140px,_auto)]">
+                <div class="kpi-card col-span-12 sm:col-span-6 xl:col-span-4 flex flex-col justify-center">
+                    <p class="kpi-title">Processos Abertos Hoje</p>
+                    <p id="kpi-abertos-hoje" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card col-span-12 sm:col-span-6 xl:col-span-4 flex flex-col justify-center">
+                    <p class="kpi-title">DIs Registradas Hoje</p>
+                    <p id="kpi-dis-hoje" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card col-span-12 sm:col-span-6 xl:col-span-4 flex flex-col justify-center">
+                    <p class="kpi-title">Desembaraços Hoje</p>
+                    <p id="kpi-desembaracos-hoje" class="kpi-value">0</p>
+                </div>
+
+                <div class="chart-card col-span-12 xl:col-span-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-white">Processos Abertos no Mês</h2>
+                        <span class="text-xs uppercase tracking-widest text-gray-400">Atualizado em tempo real</span>
+                    </div>
+                    <div id="main-chart" class="h-64"></div>
+                </div>
+
+                <div class="chart-card col-span-12 xl:col-span-4 flex flex-col">
+                    <h2 class="text-lg font-semibold text-white mb-4">Meta Mensal</h2>
+                    <div id="meta-chart" class="w-full h-48"></div>
+                    <div class="mt-6 space-y-2 text-sm text-gray-400">
+                        <div class="flex justify-between"><span>Processos acumulados</span><span id="meta-total" class="font-semibold text-white">0</span></div>
+                        <div class="flex justify-between"><span>Meta definida</span><span id="meta-meta">0 processos</span></div>
+                        <div class="flex justify-between"><span>Restante para meta</span><span id="meta-restante">0</span></div>
+                        <div class="flex justify-between"><span>Valor CIF (mês)</span><span id="kpi-cif-mes" class="font-semibold text-white">R$ 0</span></div>
+                        <div class="flex justify-between"><span>Peso bruto (mês)</span><span id="kpi-peso-mes" class="font-semibold text-white">0 kg</span></div>
+                    </div>
+                </div>
+
+                <div class="kpi-card col-span-12 lg:col-span-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-white">Processos por Modal</h2>
+                        <span class="text-xs text-gray-400">Base mês corrente</span>
+                    </div>
+                    <div id="modal-list" class="space-y-3"></div>
+                </div>
+
+                <div class="kpi-card col-span-12 lg:col-span-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-white">Status Operacional</h2>
+                        <span class="text-xs text-gray-400">Processos ativos</span>
+                    </div>
+                    <div id="status-list" class="space-y-3"></div>
+                </div>
+
+                <div class="kpi-card col-span-12">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-white">Ranking Importadores</h2>
+                        <span class="text-xs text-gray-400">Top 5 por valor CIF</span>
+                    </div>
+                    <div id="ranking-importadores" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <aside class="w-full lg:w-80 xl:w-96 flex flex-col gap-4 xl:gap-6">
+                <div class="kpi-card">
+                    <p class="kpi-title">Câmbio</p>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-400">Dólar comercial</p>
+                            <div class="flex items-baseline gap-2">
+                                <p id="kpi-usd" class="kpi-value kpi-value-small">R$ 5,45</p>
+                                <span id="usd-variation" class="text-xs font-semibold text-emerald-400">+0,00%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-400 text-right">Euro comercial</p>
+                            <div class="flex items-baseline gap-2 justify-end">
+                                <p id="kpi-eur" class="kpi-value kpi-value-small">R$ 6,12</p>
+                                <span id="eur-variation" class="text-xs font-semibold text-emerald-400">+0,00%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <p class="kpi-title">Operação em Andamento</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-gray-400">Ativos</p>
+                            <p id="kpi-ativos" class="kpi-value kpi-value-small">0</p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-gray-400">Aguardando chegada</p>
+                            <p id="kpi-ag-chegada" class="kpi-value kpi-value-small">0</p>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <p class="text-xs uppercase tracking-wider text-gray-400">Tempo médio de trânsito</p>
+                        <p id="leadtime-value" class="kpi-value kpi-value-small">0 dias</p>
+                        <p class="text-[10px] text-gray-500 mt-1">Considera processos com data de chegada registrada</p>
+                    </div>
+                    <div class="mt-6">
+                        <p class="text-xs uppercase tracking-wider text-gray-400 mb-2">Próximos eventos</p>
+                        <div id="aguardando-list" class="space-y-2 text-sm text-gray-300"></div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <p class="kpi-title">Canais (Mês)</p>
+                    <div class="flex items-center mt-2">
+                        <div class="channel-indicator channel-green"></div>
+                        <span class="mr-auto text-gray-300">Verde</span>
+                        <span id="kpi-canal-verde" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="flex items-center mt-2">
+                        <div class="channel-indicator channel-yellow"></div>
+                        <span class="mr-auto text-gray-300">Amarelo</span>
+                        <span id="kpi-canal-amarelo" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="flex items-center mt-2">
+                        <div class="channel-indicator channel-red"></div>
+                        <span class="mr-auto text-gray-300">Vermelho</span>
+                        <span id="kpi-canal-vermelho" class="font-bold text-lg">0</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="kpi-title">Rotas em Destaque</p>
+                        <span class="text-xs text-gray-400">Processos ativos</span>
+                    </div>
+                    <div id="rotas-destaque" class="space-y-3 text-sm text-gray-300"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <div id="globe-focus-overlay" class="pointer-events-none fixed inset-0 z-40 flex flex-col items-center justify-center text-center text-slate-100 opacity-0 transition-all duration-700 ease-in-out transform translate-y-8">
+        <div class="overlay-card w-full max-w-4xl px-10 py-8 bg-black/65 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_30px_120px_rgba(15,23,42,0.6)] space-y-6">
+            <div class="space-y-2">
+                <p class="text-xs uppercase tracking-[0.4em] text-sky-300">Operações em destaque</p>
+                <h2 id="overlay-title" class="text-3xl md:text-4xl font-semibold text-white">-</h2>
+                <p id="overlay-subtitle" class="text-base md:text-lg text-slate-200">-</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-slate-400">Processos ativos</p>
+                    <p id="overlay-ativos" class="text-3xl font-semibold text-white">0</p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-slate-400">Aguardando chegada</p>
+                    <p id="overlay-aguardando" class="text-3xl font-semibold text-white">0</p>
+                </div>
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-slate-400">Valor CIF mês</p>
+                    <p id="overlay-cif" class="text-3xl font-semibold text-white">R$ 0</p>
+                </div>
+            </div>
+            <div class="text-left">
+                <p class="text-xs uppercase tracking-[0.3em] text-slate-400 mb-2">Fluxos prioritários</p>
+                <div id="overlay-routes-list" class="space-y-2 text-sm md:text-base text-slate-100"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="globe-legend hidden md:flex items-center gap-4 text-xs text-gray-400 absolute bottom-6 left-6 z-20 transition-opacity duration-600">
+        <div class="flex items-center gap-2">
+            <span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span>
+            <span>Modal marítimo</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="inline-block w-3 h-3 rounded-full bg-amber-300"></span>
+            <span>Modal aéreo</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="inline-block w-3 h-3 rounded-full border border-white/50"></span>
+            <span>Portos e hubs estratégicos</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/dashboard-interno-mapa/api';
+
+        const modalPalette = {
+            'MARÍTIMA': { hex: '#38bdf8', three: 0x38bdf8 },
+            'AÉREA': { hex: '#fbbf24', three: 0xfbbf24 },
+            'TERRESTRE': { hex: '#4ade80', three: 0x4ade80 }
+        };
+
+        const modalIcons = {
+            'MARÍTIMA': '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-sky-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3 2 6 2 6-2 6-2"/><path d="M4 10V7a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v3"/><path d="M2 15s3 2 6 2 6-2 6-2"/><path d="M18 10l3 2-3 2-3-2z"/></svg>',
+            'AÉREA': '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 16l8-5-8-5v4l5 1-5 1z"/><path d="M22 12a8 8 0 0 1-8 8H9l-1.5 2"/><path d="M14 20l-1-7 7-3"/></svg>',
+            'TERRESTRE': '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17V6a1 1 0 0 1 1-1h11l4 4v8"/><path d="M13 6v4h5"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>'
+        };
+
+        function normalizeNumber(value) {
+            if (value === null || value === undefined || value === '') {
+                return 0;
+            }
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+            }
+            const stringValue = String(value).trim();
+            if (!stringValue) {
+                return 0;
+            }
+            if (stringValue.includes(',')) {
+                const sanitized = stringValue.replace(/\./g, '').replace(',', '.');
+                const parsedComma = parseFloat(sanitized);
+                return Number.isFinite(parsedComma) ? parsedComma : 0;
+            }
+            const parsed = parseFloat(stringValue);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function normalizeDate(value) {
+            if (!value) {
+                return null;
+            }
+            const padded = value.length === 10 ? `${value}T00:00:00` : value;
+            const date = new Date(padded);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function hydrateProcess(record) {
+            return {
+                ...record,
+                data_abertura: normalizeDate(record.data_abertura),
+                data_registro: normalizeDate(record.data_registro),
+                data_desembaraco: normalizeDate(record.data_desembaraco),
+                data_chegada: normalizeDate(record.data_chegada),
+                data_embarque: normalizeDate(record.data_embarque),
+                valor_cif_real: normalizeNumber(record.valor_cif_real),
+                peso_bruto: normalizeNumber(record.peso_bruto),
+                transit_time_real: record.transit_time_real !== null && record.transit_time_real !== undefined ? parseInt(record.transit_time_real, 10) : null,
+                modal: record.modal || 'MARÍTIMA'
+            };
+        }
+
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch(`${API_BASE}/processos`, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(`Status ${response.status}`);
+                }
+                const payload = await response.json();
+                if (!payload.success) {
+                    throw new Error(payload.message || 'Falha ao carregar dados do dashboard');
+                }
+                const processos = (payload.data?.processos || []).map(hydrateProcess);
+                const metaMensal = payload.data?.meta?.current_meta ?? 0;
+                return { processos, metaMensal };
+            } catch (error) {
+                console.error('[Dashboard Mapa] Erro ao carregar dados', error);
+                return { processos: [], metaMensal: 0 };
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+
+            const { processos, metaMensal } = await fetchDashboardData();
+
+            const abertosHoje = processos.filter(p => p.data_abertura && p.data_abertura.getFullYear() === today.getFullYear() && p.data_abertura.getMonth() === today.getMonth() && p.data_abertura.getDate() === today.getDate()).length;
+            const disHoje = processos.filter(p => p.data_registro && p.data_registro.getFullYear() === today.getFullYear() && p.data_registro.getMonth() === today.getMonth() && p.data_registro.getDate() === today.getDate()).length;
+            const desembaracosHoje = processos.filter(p => p.data_desembaraco && p.data_desembaraco.getFullYear() === today.getFullYear() && p.data_desembaraco.getMonth() === today.getMonth() && p.data_desembaraco.getDate() === today.getDate()).length;
+
+            document.getElementById('kpi-abertos-hoje').textContent = abertosHoje;
+            document.getElementById('kpi-dis-hoje').textContent = disHoje;
+            document.getElementById('kpi-desembaracos-hoje').textContent = desembaracosHoje;
+
+            const processosAtivos = processos.filter(p => (p.status_sistema || '').toUpperCase().trim() !== 'PROCESSO CONCLUIDO');
+            const processosAtivosCount = processosAtivos.length;
+            const aguardandoChegadaCount = processosAtivos.filter(p => (p.status_sistema || '').toUpperCase().includes('AG. CHEGADA')).length;
+
+            document.getElementById('kpi-ativos').textContent = processosAtivosCount;
+            document.getElementById('kpi-ag-chegada').textContent = aguardandoChegadaCount;
+
+            const processosMes = processos.filter(p => p.data_abertura && p.data_abertura.getMonth() === currentMonth && p.data_abertura.getFullYear() === currentYear);
+            const registrosMes = processos.filter(p => p.data_registro && p.data_registro.getMonth() === currentMonth && p.data_registro.getFullYear() === currentYear);
+
+            const totalMes = processosMes.length;
+            const cifMes = registrosMes.reduce((sum, p) => sum + (p.valor_cif_real || 0), 0);
+            const pesoMes = registrosMes.reduce((sum, p) => sum + (p.peso_bruto || 0), 0);
+
+            document.getElementById('meta-total').textContent = totalMes;
+            document.getElementById('meta-meta').textContent = `${metaMensal} processos`;
+            const restanteMetaValor = metaMensal - totalMes;
+            const metaRestanteEl = document.getElementById('meta-restante');
+            if (restanteMetaValor > 0) {
+                metaRestanteEl.textContent = `${restanteMetaValor} processos`;
+            } else if (restanteMetaValor === 0) {
+                metaRestanteEl.textContent = 'Meta atingida';
+            } else {
+                metaRestanteEl.textContent = `Meta superada em ${Math.abs(restanteMetaValor)} processos`;
+            }
+            document.getElementById('kpi-cif-mes').textContent = cifMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('kpi-peso-mes').textContent = `${pesoMes.toLocaleString('pt-BR')} kg`;
+
+            const canalVerde = registrosMes.filter(p => p.canal === 'Verde').length;
+            const canalAmarelo = registrosMes.filter(p => p.canal === 'Amarelo').length;
+            const canalVermelho = registrosMes.filter(p => p.canal === 'Vermelho').length;
+
+            document.getElementById('kpi-canal-verde').textContent = canalVerde;
+            document.getElementById('kpi-canal-amarelo').textContent = canalAmarelo;
+            document.getElementById('kpi-canal-vermelho').textContent = canalVermelho;
+
+            const aguardandoList = [
+                { label: 'Aguardando embarque', value: processosAtivos.filter(p => (p.status_sistema || '').toUpperCase() === 'AG. EMBARQUE').length },
+                { label: 'Em trânsito', value: processosAtivos.filter(p => (p.status_sistema || '').toUpperCase() === 'EM TRANSITO').length },
+                { label: 'Aguardando chegada', value: aguardandoChegadaCount }
+            ];
+            document.getElementById('aguardando-list').innerHTML = aguardandoList.map(item => `
+                <div class="flex items-center justify-between">
+                    <span>${item.label}</span>
+                    <span class="font-semibold text-white">${item.value}</span>
+                </div>`).join('');
+
+            const transitTimes = processos.filter(p => typeof p.transit_time_real === 'number' && p.transit_time_real > 0);
+            const leadtimeMedio = transitTimes.length
+                ? transitTimes.reduce((sum, p) => sum + p.transit_time_real, 0) / transitTimes.length
+                : 0;
+            document.getElementById('leadtime-value').textContent = `${leadtimeMedio.toFixed(1)} dias`;
+
+            const modalCounts = processosMes.reduce((acc, process) => {
+                const modal = process.modal || 'MARÍTIMA';
+                acc[modal] = (acc[modal] || 0) + 1;
+                return acc;
+            }, {});
+            ['MARÍTIMA', 'AÉREA', 'TERRESTRE'].forEach(modal => {
+                if (!(modal in modalCounts)) {
+                    modalCounts[modal] = 0;
+                }
+            });
+            const totalModal = Object.values(modalCounts).reduce((a, b) => a + b, 0) || 1;
+            document.getElementById('modal-list').innerHTML = Object.entries(modalCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([modal, qty]) => {
+                    const percent = (qty / totalModal) * 100;
+                    const color = (modalPalette[modal] || modalPalette['MARÍTIMA']).hex;
+                    const icon = modalIcons[modal] || '';
+                    return `
+                        <div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="flex items-center gap-2 text-gray-300">${icon}<span>${modal}</span></span>
+                                <span class="font-semibold text-white">${qty}</span>
+                            </div>
+                            <div class="w-full h-2 mt-2 rounded-full bg-slate-800 overflow-hidden">
+                                <div class="h-full" style="width:${percent.toFixed(1)}%; background:${color};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            const statusCounts = processosAtivos.reduce((acc, process) => {
+                const status = process.status_sistema || 'Sem status';
+                acc[status] = (acc[status] || 0) + 1;
+                return acc;
+            }, {});
+            const totalStatus = Object.values(statusCounts).reduce((a, b) => a + b, 0) || 1;
+            const statusColors = {
+                'PROCESSO CONCLUIDO': '#22c55e',
+                'AG. CHEGADA': '#38bdf8',
+                'DECLARAÇÃO REGISTRADA': '#f97316',
+                'AG. EMBARQUE': '#14b8a6',
+                'EM TRANSITO': '#facc15'
+            };
+            document.getElementById('status-list').innerHTML = Object.entries(statusCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([status, qty]) => {
+                    const percent = (qty / totalStatus) * 100;
+                    const barColor = statusColors[status] || '#3b82f6';
+                    return `
+                        <div>
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-300">${status}</span>
+                                <span class="font-semibold text-white">${qty}</span>
+                            </div>
+                            <div class="w-full h-2 mt-2 rounded-full bg-slate-800 overflow-hidden">
+                                <div class="h-full" style="width:${percent.toFixed(1)}%; background:${barColor};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            const importadorStats = registrosMes.reduce((acc, process) => {
+                const key = process.importador || 'Não identificado';
+                if (!acc[key]) {
+                    acc[key] = { valor: 0, processos: 0 };
+                }
+                acc[key].valor += process.valor_cif_real || 0;
+                acc[key].processos += 1;
+                return acc;
+            }, {});
+            const ranking = Object.entries(importadorStats)
+                .sort((a, b) => b[1].valor - a[1].valor)
+                .slice(0, 5);
+            document.getElementById('ranking-importadores').innerHTML = ranking.map(([importador, data], index) => `
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-500 w-6">#${index + 1}</span>
+                    <span class="flex-1 text-gray-200">${importador}</span>
+                    <span class="text-xs text-gray-500 mr-4">${data.processos} proc.</span>
+                    <span class="font-semibold text-white">${(data.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                </div>
+            `).join('');
+
+            const formatCurrency = value => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            const routeStats = processosAtivos.reduce((acc, process) => {
+                if (!process.pais_nome || !process.urf_despacho) return acc;
+                const key = `${process.pais_nome} → ${process.urf_despacho}`;
+                if (!acc[key]) {
+                    acc[key] = { count: 0, valor: 0, modal: process.modal, url_bandeira: process.url_bandeira };
+                }
+                acc[key].count += 1;
+                acc[key].valor += process.valor_cif_real || 0;
+                return acc;
+            }, {});
+            const rotasDestaque = Object.entries(routeStats)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 5);
+            document.getElementById('rotas-destaque').innerHTML = rotasDestaque.map(([rota, data]) => {
+                const itemColor = (modalPalette[data.modal] || modalPalette['MARÍTIMA']).hex;
+                const flagHtml = data.url_bandeira ? `<img src="${data.url_bandeira}" alt="Bandeira" class="w-6 h-4 rounded-sm border border-white/20">` : '';
+                return `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-2 h-8 rounded-full" style="background:${itemColor};"></span>
+                            <span class="flex items-center gap-2">${flagHtml}${rota}</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500">${data.count} cargas</p>
+                            <p class="font-semibold text-white">${formatCurrency(data.valor)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const overlayAtivosEl = document.getElementById('overlay-ativos');
+            const overlayAguardandoEl = document.getElementById('overlay-aguardando');
+            const overlayCifEl = document.getElementById('overlay-cif');
+            const overlayTitleEl = document.getElementById('overlay-title');
+            const overlaySubtitleEl = document.getElementById('overlay-subtitle');
+            const overlayRoutesListEl = document.getElementById('overlay-routes-list');
+
+            if (overlayAtivosEl) {
+                overlayAtivosEl.textContent = processosAtivosCount;
+            }
+            if (overlayAguardandoEl) {
+                overlayAguardandoEl.textContent = aguardandoChegadaCount;
+            }
+            if (overlayCifEl) {
+                overlayCifEl.textContent = formatCurrency(cifMes);
+            }
+
+            const overlayRoutesData = rotasDestaque.length
+                ? rotasDestaque
+                : [['Operações globais', { count: processosAtivosCount, valor: cifMes, modal: 'MARÍTIMA', url_bandeira: null }]];
+
+            if (overlayRoutesListEl) {
+                overlayRoutesListEl.innerHTML = overlayRoutesData.slice(0, 3).map(([rota, data]) => {
+                    const itemColor = (modalPalette[data.modal] || modalPalette['MARÍTIMA']).hex;
+                    return `
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:${itemColor};"></span>${rota}</span>
+                            <span class="text-xs text-slate-300">${data.count} processos · ${formatCurrency(data.valor)}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            let overlayRouteIndex = 0;
+
+            function renderOverlayHighlight(index) {
+                if (!overlayRoutesData.length || !overlayTitleEl || !overlaySubtitleEl) {
+                    return;
+                }
+                const normalizedIndex = ((index % overlayRoutesData.length) + overlayRoutesData.length) % overlayRoutesData.length;
+                const [rota, data] = overlayRoutesData[normalizedIndex];
+                overlayTitleEl.textContent = rota;
+                overlaySubtitleEl.textContent = `${data.count} processos ativos · ${formatCurrency(data.valor)} em CIF`;
+                if (viewMode === 'globe') {
+                    focusRouteByKey(rota);
+                }
+            }
+
+            renderOverlayHighlight(overlayRouteIndex);
+
+            function advanceOverlayHighlight() {
+                if (!overlayRoutesData.length) {
+                    return;
+                }
+                overlayRouteIndex = (overlayRouteIndex + 1) % overlayRoutesData.length;
+                renderOverlayHighlight(overlayRouteIndex);
+            }
+
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const chartData = Array(daysInMonth).fill(0);
+            processosMes.forEach(process => {
+                if (!process.data_abertura) return;
+                const day = process.data_abertura.getDate() - 1;
+                if (day >= 0 && day < chartData.length) {
+                    chartData[day]++;
+                }
+            });
+
+            const metaCompletion = metaMensal ? (totalMes / metaMensal) * 100 : 0;
+            const metaPercent = Math.round(metaCompletion);
+            const metaSeriesValue = Math.min(metaCompletion, 160);
+
+            const chartOptions = {
+                series: [{ name: 'Processos', data: chartData }],
+                chart: { type: 'bar', height: '100%', toolbar: { show: false }, foreColor: '#94a3b8' },
+                plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 6 } },
+                dataLabels: { enabled: false },
+                stroke: { show: true, width: 2, colors: ['transparent'] },
+                xaxis: {
+                    categories: Array.from({ length: daysInMonth }, (_, i) => i + 1),
+                    labels: { style: { colors: '#94a3b8' } },
+                    axisBorder: { color: '#1f2937' },
+                    axisTicks: { color: '#1f2937' }
+                },
+                yaxis: { labels: { style: { colors: '#94a3b8' } } },
+                fill: { opacity: 1, type: 'gradient', gradient: { shadeIntensity: 0.6, opacityFrom: 0.9, opacityTo: 0.3, stops: [0, 100] } },
+                tooltip: { theme: 'dark' },
+                grid: { borderColor: '#1f2937', strokeDashArray: 5 },
+                colors: ['#38bdf8'],
+                annotations: metaMensal ? {
+                    yaxis: [{
+                        y: Math.round(metaMensal / daysInMonth),
+                        borderColor: '#facc15',
+                        label: {
+                            borderColor: '#facc15',
+                            style: { color: '#000', background: '#facc15' },
+                            text: 'Ritmo da meta'
+                        }
+                    }]
+                } : {}
+            };
+            const chart = new ApexCharts(document.querySelector('#main-chart'), chartOptions);
+            chart.render();
+
+            const metaChartOptions = {
+                series: [metaSeriesValue],
+                chart: { type: 'radialBar', height: '100%', sparkline: { enabled: true } },
+                colors: ['#38bdf8'],
+                plotOptions: {
+                    radialBar: {
+                        hollow: { size: '65%' },
+                        track: { background: 'rgba(148, 163, 184, 0.15)' },
+                        dataLabels: {
+                            name: { show: true, color: '#94a3b8', fontSize: '13px', offsetY: 18, text: 'Meta atingida' },
+                            value: {
+                                show: true,
+                                fontSize: '32px',
+                                color: '#ffffff',
+                                formatter: () => `${metaPercent}%`
+                            }
+                        }
+                    }
+                },
+                stroke: { lineCap: 'round' },
+                labels: ['Meta atingida']
+            };
+            const metaChart = new ApexCharts(document.querySelector('#meta-chart'), metaChartOptions);
+            metaChart.render();
+
+            function updateClock() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const dateString = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                document.querySelector('#clock p:first-child').textContent = timeString;
+                document.querySelector('#clock p:last-child').textContent = dateString;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.USDBRL) {
+                        document.getElementById('kpi-usd').textContent = parseFloat(data.USDBRL.bid).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                        const usdVar = parseFloat(data.USDBRL.pctChange || 0);
+                        document.getElementById('usd-variation').textContent = `${usdVar > 0 ? '+' : ''}${usdVar.toFixed(2)}%`;
+                        document.getElementById('usd-variation').className = `text-xs font-semibold ${usdVar >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+                    }
+                    if (data.EURBRL) {
+                        document.getElementById('kpi-eur').textContent = parseFloat(data.EURBRL.bid).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                        const eurVar = parseFloat(data.EURBRL.pctChange || 0);
+                        document.getElementById('eur-variation').textContent = `${eurVar > 0 ? '+' : ''}${eurVar.toFixed(2)}%`;
+                        document.getElementById('eur-variation').className = `text-xs font-semibold ${eurVar >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('usd-variation').textContent = '+0,00%';
+                    document.getElementById('eur-variation').textContent = '+0,00%';
+                });
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
+            document.getElementById('globe-container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
+            directionalLight.position.set(4, 3, 8);
+            scene.add(directionalLight);
+
+            const globeGroup = new THREE.Group();
+            scene.add(globeGroup);
+
+            const globeGeometry = new THREE.SphereGeometry(2.2, 72, 72);
+            const textureLoader = new THREE.TextureLoader();
+            const fallbackTexture = textureLoader.load('https://placehold.co/2048x1024/0a0a0a/1a1a1a.png?text=.');
+            const globeMaterial = new THREE.MeshStandardMaterial({
+                map: fallbackTexture,
+                roughness: 0.8,
+                metalness: 0.2,
+                transparent: true,
+                opacity: 0.7,
+                color: 0x1e293b
+            });
+
+            textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/land_ocean_ice_cloud_2048.jpg',
+                texture => { globeMaterial.map = texture; globeMaterial.needsUpdate = true; }
+            );
+
+            const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+            globeGroup.add(globe);
+
+            const atmosphereGeometry = new THREE.SphereGeometry(2.3, 72, 72);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+                    }
+                `,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide,
+                transparent: true
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            globeGroup.add(atmosphere);
+
+            camera.position.set(0, 0, 5.2);
+
+            const cityCoords = {
+                'ITAJAÍ': [-26.90, -48.66],
+                'NAVEGANTES': [-26.89, -48.65],
+                'ITAPOA': [-26.11, -48.61],
+                'CLIF - ITAPOÁ': [-26.11, -48.61],
+                'JOINVILLE': [-26.30, -48.84],
+                'PORTONAVE': [-26.87, -48.63],
+                'POLY': [-26.90, -48.65],
+                'PARANAGUA': [-25.52, -48.51],
+                'VIRACOPOS': [-23.01, -47.14],
+                'GUARULHOS': [-23.44, -46.47],
+                'FLORIANÓPOLIS': [-27.59, -48.55],
+                'MANAUS': [-3.12, -60.02],
+                'SANTOS': [-23.95, -46.33],
+                'FORTE LOGISTICA': [-26.08, -48.62],
+                'CHINA, REPUBLICA POPULAR': [35.86, 104.19],
+                'ESTADOS UNIDOS': [37.09, -95.71],
+                'POLONIA, REPUBLICA DA': [51.91, 19.14],
+                'ALEMANHA': [51.16, 10.45],
+                'SUECIA': [60.12, 18.64],
+                'BELGICA': [50.50, 4.47],
+                'HONG KONG': [22.32, 114.17],
+                'JAPAO': [36.20, 138.25],
+                'COLOMBIA': [4.57, -74.29],
+                'CANADA': [56.13, -106.35],
+                'ESPANHA': [40.46, -3.75],
+                'COREIA DO SUL': [35.91, 127.77],
+                'VIETNAN': [14.06, 108.28],
+                'DINAMARCA': [56.26, 9.51]
+            };
+
+            function latLonToVector3(lat, lon, radius) {
+                const phi = (90 - lat) * (Math.PI / 180);
+                const theta = (lon + 180) * (Math.PI / 180);
+                const x = -(radius * Math.sin(phi) * Math.cos(theta));
+                const y = radius * Math.cos(phi);
+                const z = radius * Math.sin(phi) * Math.sin(theta);
+                return new THREE.Vector3(x, y, z);
+            }
+
+            function getArc(startVec, endVec) {
+                const midPoint = new THREE.Vector3().addVectors(startVec, endVec).multiplyScalar(0.5);
+                const distance = startVec.distanceTo(endVec);
+                midPoint.normalize().multiplyScalar(2.2 + distance * 0.2);
+                return new THREE.QuadraticBezierCurve3(startVec, midPoint, endVec);
+            }
+
+            const hubMarkers = [];
+            const hubsCache = new Map();
+
+            function ensureHub(name, type) {
+                if (hubsCache.has(name)) return;
+                const coords = cityCoords[name];
+                if (!coords) return;
+                const baseColor = type === 'origin' ? 0x38bdf8 : 0x22d3ee;
+                const hubGeometry = new THREE.SphereGeometry(0.045, 16, 16);
+                const hubMaterial = new THREE.MeshBasicMaterial({ color: baseColor });
+                const hub = new THREE.Mesh(hubGeometry, hubMaterial);
+                const position = latLonToVector3(coords[0], coords[1], 2.22);
+                hub.position.copy(position);
+                globeGroup.add(hub);
+
+                const auraGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+                const auraMaterial = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0.25 });
+                const aura = new THREE.Mesh(auraGeometry, auraMaterial);
+                hub.add(aura);
+
+                hubsCache.set(name, { hub, aura, phase: Math.random() * Math.PI * 2 });
+                hubMarkers.push({ aura, phase: Math.random() * Math.PI * 2 });
+            }
+
+            const routeCurves = [];
+            const activeRoutes = processosAtivos
+                .map(process => {
+                    const originKey = process.pais_nome ? process.pais_nome.toUpperCase() : null;
+                    const destKey = process.urf_despacho ? process.urf_despacho.toUpperCase() : null;
+                    if (!originKey || !destKey) {
+                        return null;
+                    }
+                    if (!cityCoords[originKey] || !cityCoords[destKey]) {
+                        return null;
+                    }
+                    return { originKey, destKey, process };
+                })
+                .filter(Boolean)
+                .slice(0, 160);
+
+            activeRoutes.forEach(({ originKey, destKey, process }) => {
+                const startCoords = cityCoords[originKey];
+                const endCoords = cityCoords[destKey];
+                if (!startCoords || !endCoords) return;
+
+                ensureHub(originKey, 'origin');
+                ensureHub(destKey, 'dest');
+
+                const startVec = latLonToVector3(startCoords[0], startCoords[1], 2.22);
+                const endVec = latLonToVector3(endCoords[0], endCoords[1], 2.22);
+                const curve = getArc(startVec, endVec);
+                const points = curve.getPoints(120);
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const modalColor = (modalPalette[process.modal] || modalPalette['MARÍTIMA']).three;
+                const material = new THREE.LineBasicMaterial({ color: modalColor, transparent: true, opacity: 0.35 });
+                const line = new THREE.Line(geometry, material);
+                line.visible = true;
+                globeGroup.add(line);
+
+                const pulseGeometry = new THREE.SphereGeometry(0.025, 12, 12);
+                const pulseMaterial = new THREE.MeshBasicMaterial({ color: modalColor, transparent: true, opacity: 0.9 });
+                const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+                pulse.position.copy(points[0]);
+                pulse.visible = false;
+                globeGroup.add(pulse);
+
+                const routeKey = `${process.pais_nome} → ${process.urf_despacho}`;
+                routeCurves.push({ key: routeKey, curve, line, pulse, speed: 0.0006 + Math.random() * 0.0004, progress: Math.random(), modal: process.modal });
+            });
+
+            let viewMode = 'dashboard';
+            let viewCycleTimer = null;
+            let overlayHighlightTimer = null;
+            let cameraTransition = null;
+            let currentRotationSpeed = 0.08;
+            const rotationSpeeds = { dashboard: 0.08, globe: 0 };
+            const targetOrientation = { x: 0, y: 0 };
+            let alignToRoute = false;
+
+            function focusRouteByKey(routeKey) {
+                if (!routeKey) {
+                    alignToRoute = false;
+                    routeCurves.forEach(route => {
+                        route.line.visible = true;
+                        route.pulse.visible = false;
+                        if (route.line.material) {
+                            route.line.material.opacity = 0.35;
+                            route.line.material.needsUpdate = true;
+                        }
+                    });
+                    return;
+                }
+
+                let hasMatch = false;
+                routeCurves.forEach(route => {
+                    const isMatch = route.key === routeKey;
+                    route.line.visible = isMatch;
+                    route.pulse.visible = isMatch;
+                    if (route.line.material) {
+                        route.line.material.opacity = isMatch ? 0.6 : 0.15;
+                        route.line.material.needsUpdate = true;
+                    }
+                    if (isMatch) {
+                        route.pulse.material.opacity = 0.95;
+                        hasMatch = true;
+                    } else {
+                        route.pulse.material.opacity = 0;
+                    }
+                });
+
+                if (!hasMatch) {
+                    alignToRoute = false;
+                    routeCurves.forEach(route => {
+                        route.line.visible = true;
+                        route.pulse.visible = false;
+                        if (route.line.material) {
+                            route.line.material.opacity = 0.35;
+                            route.line.material.needsUpdate = true;
+                        }
+                    });
+                    return;
+                }
+
+                const [originLabel, destinationLabel] = routeKey.split('→').map(part => part && part.trim());
+                const originCoords = originLabel ? cityCoords[originLabel.toUpperCase()] : null;
+                const destinationCoords = destinationLabel ? cityCoords[destinationLabel.toUpperCase()] : null;
+
+                if (!originCoords || !destinationCoords) {
+                    alignToRoute = false;
+                    return;
+                }
+
+                const startVec = latLonToVector3(originCoords[0], originCoords[1], 1).normalize();
+                const endVec = latLonToVector3(destinationCoords[0], destinationCoords[1], 1).normalize();
+                const midpoint = new THREE.Vector3().addVectors(startVec, endVec).normalize();
+                targetOrientation.y = Math.atan2(midpoint.x, midpoint.z);
+                targetOrientation.x = -Math.asin(midpoint.y);
+                alignToRoute = true;
+            }
+
+            function startCameraTransition(targetZ) {
+                if (!camera) {
+                    return;
+                }
+                cameraTransition = {
+                    start: performance.now(),
+                    from: camera.position.z,
+                    to: targetZ,
+                    duration: 2000
+                };
+            }
+
+            function setViewMode(mode) {
+                if (viewMode === mode) {
+                    return;
+                }
+                viewMode = mode;
+
+                if (mode === 'globe') {
+                    document.body.classList.add('globe-focus');
+                    startCameraTransition(3.8);
+                    currentRotationSpeed = rotationSpeeds.globe;
+                    overlayRouteIndex = 0;
+                    renderOverlayHighlight(overlayRouteIndex);
+                    if (overlayHighlightTimer) {
+                        clearInterval(overlayHighlightTimer);
+                    }
+                    overlayHighlightTimer = setInterval(() => advanceOverlayHighlight(), 5000);
+                } else {
+                    document.body.classList.remove('globe-focus');
+                    startCameraTransition(5.2);
+                    currentRotationSpeed = rotationSpeeds.dashboard;
+                    alignToRoute = false;
+                    if (overlayHighlightTimer) {
+                        clearInterval(overlayHighlightTimer);
+                        overlayHighlightTimer = null;
+                    }
+                    routeCurves.forEach(route => {
+                        route.line.visible = true;
+                        if (route.line.material) {
+                            route.line.material.opacity = 0.35;
+                            route.line.material.needsUpdate = true;
+                        }
+                        route.pulse.visible = false;
+                    });
+                    globeGroup.rotation.x = THREE.MathUtils.degToRad(0);
+                }
+            }
+
+            const clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const delta = clock.getDelta();
+                const elapsed = clock.elapsedTime;
+
+                if (currentRotationSpeed !== 0) {
+                    globeGroup.rotation.y += delta * currentRotationSpeed;
+                }
+
+                routeCurves.forEach(route => {
+                    route.progress += route.speed;
+                    if (route.progress > 1) route.progress = 0;
+                    const point = route.curve.getPointAt(route.progress);
+                    route.pulse.position.copy(point);
+                });
+
+                hubMarkers.forEach(marker => {
+                    const scale = 1 + 0.25 * Math.sin(elapsed * 1.4 + marker.phase);
+                    marker.aura.scale.set(scale, scale, scale);
+                    marker.aura.material.opacity = 0.18 + 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 1.4 + marker.phase));
+                });
+
+                if (alignToRoute) {
+                    const lerp = Math.min(delta * 2.5, 1);
+                    globeGroup.rotation.x = THREE.MathUtils.lerp(globeGroup.rotation.x, targetOrientation.x, lerp);
+                    globeGroup.rotation.y = THREE.MathUtils.lerp(globeGroup.rotation.y, targetOrientation.y, lerp);
+                    if (Math.abs(globeGroup.rotation.x - targetOrientation.x) < 0.001 && Math.abs(globeGroup.rotation.y - targetOrientation.y) < 0.001) {
+                        alignToRoute = false;
+                    }
+                }
+
+                if (cameraTransition) {
+                    const now = performance.now();
+                    const progress = Math.min((now - cameraTransition.start) / cameraTransition.duration, 1);
+                    const eased = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                    camera.position.z = cameraTransition.from + (cameraTransition.to - cameraTransition.from) * eased;
+                    if (progress >= 1) {
+                        cameraTransition = null;
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            viewCycleTimer = setInterval(() => {
+                const nextMode = viewMode === 'dashboard' ? 'globe' : 'dashboard';
+                setViewMode(nextMode);
+            }, 20000);
+
+            setTimeout(() => setViewMode('globe'), 9000);
+        });
+    </script>
+</body>
+</html>
