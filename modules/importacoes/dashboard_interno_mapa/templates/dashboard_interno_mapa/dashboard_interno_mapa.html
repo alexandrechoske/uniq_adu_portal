@@ -13,20 +13,21 @@
             font-family: 'Poppins', sans-serif;
             background-color: #050608;
             color: #e0e0e0;
-            overflow: hidden;
-            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
             min-height: 100vh;
         }
+        .dashboard-shell {
+            position: relative;
+        }
         #globe-container {
-            position: fixed;
-            top: 0;
-            left: 0;
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
-            z-index: 0;
             pointer-events: none;
         }
-        .kpi-card, .chart-card {
+        .kpi-card, .chart-card, .glass-card {
             background: rgba(10, 10, 10, 0.55);
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -34,262 +35,413 @@
             padding: 1.5rem;
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
         }
+        .map-panel {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12), rgba(15, 23, 42, 0.55));
+            position: relative;
+            overflow: hidden;
+            min-height: 360px;
+        }
+        .map-surface-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.55));
+            pointer-events: none;
+        }
+        .map-overlay-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.5rem;
+        }
+        .map-overlay-top,
+        .map-overlay-bottom {
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .map-kpi-card,
+        .map-info-card {
+            background: rgba(8, 11, 19, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            pointer-events: auto;
+            box-shadow: 0 18px 45px rgba(5, 8, 12, 0.55);
+        }
+        .map-kpi-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #94a3b8;
+        }
+        .map-kpi-value {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+        .map-route-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.85rem 1rem;
+            border-radius: 0.85rem;
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid transparent;
+            transition: border-color 0.3s ease, background 0.3s ease;
+        }
+        .map-route-item.active {
+            border-color: rgba(56, 189, 248, 0.6);
+            background: rgba(8, 31, 49, 0.55);
+            box-shadow: 0 18px 40px rgba(56, 189, 248, 0.18);
+        }
+        .header-exchange-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .header-exchange-title {
+            font-size: 0.7rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .header-exchange-grid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+        }
+        .currency-pair {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            padding: 0.5rem 0.9rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 9999px;
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
+        }
+        .currency-flag-wrapper {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
+        }
+        .currency-flag-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .currency-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #94a3b8;
+            margin-bottom: 0.1rem;
+        }
+        .currency-value {
+            font-size: 1.45rem;
+            font-weight: 600;
+            color: #f8fafc;
+            line-height: 1.1;
+        }
+        .map-route-flag {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.85);
+            box-shadow: 0 10px 20px rgba(2, 6, 23, 0.4);
+            overflow: hidden;
+        }
+        .map-route-flag img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .map-route-flag span {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            letter-spacing: 0.12em;
+        }
         .kpi-title {
-            font-size: 0.9rem;
-            font-weight: 300;
+            font-size: 1.1rem;
+            font-weight: 400;
             color: #9ca3af;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            letter-spacing: 0.05em;
         }
         .kpi-value {
-            font-size: 2.3rem;
+            font-size: 3rem;
             font-weight: 700;
             color: #ffffff;
             line-height: 1;
         }
         .kpi-value-small {
-            font-size: 1.6rem;
+            font-size: 2rem;
         }
         .kpi-currency {
-            font-size: 1.1rem;
-            font-weight: 300;
+            font-size: 1.3rem;
+            font-weight: 400;
             color: #94a3b8;
             margin-left: 0.5rem;
         }
         .channel-indicator {
-            width: 12px;
-            height: 12px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            margin-right: 8px;
+            margin-right: 10px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
         }
-        .channel-green { background-color: #22c55e; }
-        .channel-yellow { background-color: #facc15; }
-        .channel-red { background-color: #ef4444; }
+        .channel-green { background-color: #22c55e; box-shadow: 0 0 12px rgba(34, 197, 94, 0.5); }
+        .channel-yellow { background-color: #facc15; box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
+        .channel-red { background-color: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+        
+        .hub-label {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            pointer-events: none;
+            transform: translate(-50%, -120%);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .hub-label.visible {
+            opacity: 1;
+        }
+        .hub-label.origin {
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+        .hub-label.dest {
+            border-color: rgba(34, 211, 238, 0.5);
+        }
+        .route-info-label {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            padding: 10px 18px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            transform: translate(-50%, -120%);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .route-info-label.visible {
+            opacity: 1;
+        }
+        .map-kpi-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            min-height: 120px;
+        }
+        .map-kpi-value {
+            margin-top: auto;
+        }
+        
         .apexcharts-tooltip {
             background: rgba(15, 23, 42, 0.85) !important;
             color: #e2e8f0 !important;
             border: 1px solid rgba(148, 163, 184, 0.2) !important;
         }
-        .dashboard-shell header,
-        .dashboard-shell main,
-        .dashboard-shell aside,
-        .globe-legend {
-            transition: opacity 0.8s ease, transform 0.8s ease;
-        }
-        body.globe-focus #globe-container {
-            filter: saturate(1.25) brightness(1.15);
-        }
-        body.globe-focus .dashboard-shell header,
-        body.globe-focus .dashboard-shell main,
-        body.globe-focus .dashboard-shell aside,
-        body.globe-focus .globe-legend {
-            opacity: 0;
-            transform: translateY(18px);
+        .map-legend {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
             pointer-events: none;
         }
-        #globe-focus-overlay {
-            opacity: 0;
-        }
-        body.globe-focus #globe-focus-overlay {
-            opacity: 1;
-            transform: translateY(0);
+        .map-legend span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
     </style>
 </head>
 <body class="antialiased">
 
-    <div id="globe-container"></div>
-    <div class="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/80 via-black/40 to-transparent"></div>
-
-    <div class="dashboard-shell relative min-h-screen w-full p-4 md:p-8 flex flex-col gap-6 z-10">
-        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="dashboard-shell min-h-screen w-full p-4 md:p-8 flex flex-col gap-6">
+        <header class="flex flex-col gap-4 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-8">
             <div class="flex items-center gap-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                 <div>
-                    <h1 class="text-2xl font-bold text-white">Dashboard de Operações</h1>
-                    <p class="text-sm text-gray-400">Unique Soluções Aduaneiras</p>
+                    <h1 class="text-3xl font-bold text-white">Dashboard de Operações</h1>
+                    <p class="text-base text-gray-400">Unique Soluções Aduaneiras</p>
+                </div>
+            </div>
+            <div class="header-exchange-panel">
+                <span class="header-exchange-title">Cotações PTAX • Banco Central</span>
+                <div class="header-exchange-grid">
+                    <div class="currency-pair">
+                        <div class="currency-flag-wrapper">
+                            <img src="https://cdn-icons-png.flaticon.com/512/9729/9729337.png" alt="Estados Unidos" loading="lazy">
+                        </div>
+                        <div>
+                            <p class="currency-label">USD</p>
+                            <p id="header-usd-value" class="currency-value">R$ 0,00</p>
+                        </div>
+                    </div>
+                    <div class="currency-pair">
+                        <div class="currency-flag-wrapper">
+                            <img src="https://cdn-icons-png.flaticon.com/512/679/679984.png" alt="União Europeia" loading="lazy">
+                        </div>
+                        <div>
+                            <p class="currency-label">EUR</p>
+                            <p id="header-eur-value" class="currency-value">R$ 0,00</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="clock" class="text-right">
-                <p class="text-2xl font-bold text-white"></p>
-                <p class="text-sm text-gray-400"></p>
+                <p class="text-3xl font-bold text-white"></p>
+                <p class="text-base text-gray-400"></p>
             </div>
         </header>
 
-        <main class="flex flex-col lg:flex-row gap-4 xl:gap-6 flex-grow">
-            <section class="flex-1 grid grid-cols-12 gap-4 xl:gap-6 auto-rows-[minmax(140px,_auto)]">
-                <div class="kpi-card col-span-12 sm:col-span-6 xl:col-span-4 flex flex-col justify-center">
-                    <p class="kpi-title">Processos Abertos Hoje</p>
-                    <p id="kpi-abertos-hoje" class="kpi-value">0</p>
-                </div>
-                <div class="kpi-card col-span-12 sm:col-span-6 xl:col-span-4 flex flex-col justify-center">
-                    <p class="kpi-title">DIs Registradas Hoje</p>
-                    <p id="kpi-dis-hoje" class="kpi-value">0</p>
-                </div>
-                <div class="kpi-card col-span-12 sm:col-span-6 xl:col-span-4 flex flex-col justify-center">
-                    <p class="kpi-title">Desembaraços Hoje</p>
-                    <p id="kpi-desembaracos-hoje" class="kpi-value">0</p>
-                </div>
-
-                <div class="chart-card col-span-12 xl:col-span-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-white">Processos Abertos no Mês</h2>
-                        <span class="text-xs uppercase tracking-widest text-gray-400">Atualizado em tempo real</span>
+        <main class="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(420px,1fr)] gap-6 flex-1">
+            <section class="flex flex-col gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-6">
+                    <div class="chart-card glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Processos Abertos no Mês</h2>
+                            <span class="text-sm uppercase tracking-widest text-gray-400">Atualizado em tempo real</span>
+                        </div>
+                        <div id="main-chart" class="h-72"></div>
                     </div>
-                    <div id="main-chart" class="h-64"></div>
-                </div>
-
-                <div class="chart-card col-span-12 xl:col-span-4 flex flex-col">
-                    <h2 class="text-lg font-semibold text-white mb-4">Meta Mensal</h2>
-                    <div id="meta-chart" class="w-full h-48"></div>
-                    <div class="mt-6 space-y-2 text-sm text-gray-400">
-                        <div class="flex justify-between"><span>Processos acumulados</span><span id="meta-total" class="font-semibold text-white">0</span></div>
-                        <div class="flex justify-between"><span>Meta definida</span><span id="meta-meta">0 processos</span></div>
-                        <div class="flex justify-between"><span>Restante para meta</span><span id="meta-restante">0</span></div>
-                        <div class="flex justify-between"><span>Valor CIF (mês)</span><span id="kpi-cif-mes" class="font-semibold text-white">R$ 0</span></div>
-                        <div class="flex justify-between"><span>Peso bruto (mês)</span><span id="kpi-peso-mes" class="font-semibold text-white">0 kg</span></div>
+                    <div class="glass-card flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Meta Mensal</h2>
+                            <span class="text-xs uppercase tracking-widest text-gray-500">Objetivo do mês</span>
+                        </div>
+                        <div id="meta-chart" class="w-full h-56"></div>
+                        <div class="mt-6 space-y-3 text-base text-gray-400">
+                            <div class="flex justify-between"><span>Processos acumulados</span><span id="meta-total" class="font-semibold text-white text-lg">0</span></div>
+                            <div class="flex justify-between"><span>Meta definida</span><span id="meta-meta" class="text-lg">0 processos</span></div>
+                            <div class="flex justify-between"><span>Restante para meta</span><span id="meta-restante" class="text-lg">0</span></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="kpi-card col-span-12 lg:col-span-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-white">Processos por Modal</h2>
-                        <span class="text-xs text-gray-400">Base mês corrente</span>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Processos por Modal</h2>
+                            <span class="text-sm text-gray-400">Base mês corrente</span>
+                        </div>
+                        <div id="modal-list" class="space-y-3"></div>
                     </div>
-                    <div id="modal-list" class="space-y-3"></div>
-                </div>
-
-                <div class="kpi-card col-span-12 lg:col-span-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-white">Status Operacional</h2>
-                        <span class="text-xs text-gray-400">Processos ativos</span>
+                    <div class="glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Canais (Mês)</h2>
+                            <span class="text-sm text-gray-400">Resultados por cor</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="channel-indicator channel-green"></div>
+                                    <span class="text-gray-400 text-sm">Verde</span>
+                                </div>
+                                <span id="kpi-canal-verde" class="font-bold text-white text-2xl">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="channel-indicator channel-yellow"></div>
+                                    <span class="text-gray-400 text-sm">Amarelo</span>
+                                </div>
+                                <span id="kpi-canal-amarelo" class="font-bold text-white text-2xl">0</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="channel-indicator channel-red"></div>
+                                    <span class="text-gray-400 text-sm">Vermelho</span>
+                                </div>
+                                <span id="kpi-canal-vermelho" class="font-bold text-white text-2xl">0</span>
+                            </div>
+                        </div>
                     </div>
-                    <div id="status-list" class="space-y-3"></div>
-                </div>
-
-                <div class="kpi-card col-span-12">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-white">Ranking Importadores</h2>
-                        <span class="text-xs text-gray-400">Top 5 por valor CIF</span>
+                    <div class="glass-card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">Ranking Importadores</h2>
+                            <span class="text-sm text-gray-400">Top 5 por processos</span>
+                        </div>
+                        <div id="ranking-importadores" class="space-y-3"></div>
                     </div>
-                    <div id="ranking-importadores" class="space-y-3"></div>
                 </div>
             </section>
 
-            <aside class="w-full lg:w-80 xl:w-96 flex flex-col gap-4 xl:gap-6">
-                <div class="kpi-card">
-                    <p class="kpi-title">Câmbio</p>
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-400">Dólar comercial</p>
-                            <div class="flex items-baseline gap-2">
-                                <p id="kpi-usd" class="kpi-value kpi-value-small">R$ 5,45</p>
-                                <span id="usd-variation" class="text-xs font-semibold text-emerald-400">+0,00%</span>
+            <aside class="map-panel">
+                <div id="globe-container"></div>
+                <div class="map-surface-overlay"></div>
+                <div class="map-overlay-layer">
+                    <div class="map-overlay-top">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">Processos Abertos Hoje</p>
+                                <p id="map-kpi-abertos" class="map-kpi-value">0</p>
+                            </div>
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">DIs Registradas Hoje</p>
+                                <p id="map-kpi-dis" class="map-kpi-value">0</p>
+                            </div>
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">Desembaraços Hoje</p>
+                                <p id="map-kpi-desembaracos" class="map-kpi-value">0</p>
+                            </div>
+                            <div class="map-kpi-card">
+                                <p class="map-kpi-label">Aguardando Chegada</p>
+                                <p id="map-kpi-ag-chegada" class="map-kpi-value">0</p>
                             </div>
                         </div>
-                        <div>
-                            <p class="text-sm text-gray-400 text-right">Euro comercial</p>
-                            <div class="flex items-baseline gap-2 justify-end">
-                                <p id="kpi-eur" class="kpi-value kpi-value-small">R$ 6,12</p>
-                                <span id="eur-variation" class="text-xs font-semibold text-emerald-400">+0,00%</span>
+                    </div>
+                    <div class="map-overlay-bottom">
+                        <div class="map-info-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-semibold text-white">Rotas em Destaque</h3>
+                                <span id="map-rotas-timestamp" class="text-xs uppercase tracking-wider text-gray-500">-</span>
                             </div>
+                            <div id="rotas-destaque" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm text-gray-300"></div>
                         </div>
                     </div>
                 </div>
-
-                <div class="kpi-card">
-                    <p class="kpi-title">Operação em Andamento</p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-xs uppercase tracking-wider text-gray-400">Ativos</p>
-                            <p id="kpi-ativos" class="kpi-value kpi-value-small">0</p>
-                        </div>
-                        <div>
-                            <p class="text-xs uppercase tracking-wider text-gray-400">Aguardando chegada</p>
-                            <p id="kpi-ag-chegada" class="kpi-value kpi-value-small">0</p>
-                        </div>
-                    </div>
-                    <div class="mt-6">
-                        <p class="text-xs uppercase tracking-wider text-gray-400">Tempo médio de trânsito</p>
-                        <p id="leadtime-value" class="kpi-value kpi-value-small">0 dias</p>
-                        <p class="text-[10px] text-gray-500 mt-1">Considera processos com data de chegada registrada</p>
-                    </div>
-                    <div class="mt-6">
-                        <p class="text-xs uppercase tracking-wider text-gray-400 mb-2">Próximos eventos</p>
-                        <div id="aguardando-list" class="space-y-2 text-sm text-gray-300"></div>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <p class="kpi-title">Canais (Mês)</p>
-                    <div class="flex items-center mt-2">
-                        <div class="channel-indicator channel-green"></div>
-                        <span class="mr-auto text-gray-300">Verde</span>
-                        <span id="kpi-canal-verde" class="font-bold text-lg">0</span>
-                    </div>
-                    <div class="flex items-center mt-2">
-                        <div class="channel-indicator channel-yellow"></div>
-                        <span class="mr-auto text-gray-300">Amarelo</span>
-                        <span id="kpi-canal-amarelo" class="font-bold text-lg">0</span>
-                    </div>
-                    <div class="flex items-center mt-2">
-                        <div class="channel-indicator channel-red"></div>
-                        <span class="mr-auto text-gray-300">Vermelho</span>
-                        <span id="kpi-canal-vermelho" class="font-bold text-lg">0</span>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="kpi-title">Rotas em Destaque</p>
-                        <span class="text-xs text-gray-400">Processos ativos</span>
-                    </div>
-                    <div id="rotas-destaque" class="space-y-3 text-sm text-gray-300"></div>
+                <div id="hub-labels" class="pointer-events-none absolute inset-0"></div>
+                <div class="map-legend">
+                    <span><span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span>Marítimo</span>
+                    <span><span class="inline-block w-3 h-3 rounded-full bg-amber-300"></span>Aéreo</span>
+                    <span><span class="inline-block w-3 h-3 rounded-full border border-white/50"></span>Hubs</span>
                 </div>
             </aside>
         </main>
-    </div>
-
-    <div id="globe-focus-overlay" class="pointer-events-none fixed inset-0 z-40 flex flex-col items-center justify-center text-center text-slate-100 opacity-0 transition-all duration-700 ease-in-out transform translate-y-8">
-        <div class="overlay-card w-full max-w-4xl px-10 py-8 bg-black/65 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_30px_120px_rgba(15,23,42,0.6)] space-y-6">
-            <div class="space-y-2">
-                <p class="text-xs uppercase tracking-[0.4em] text-sky-300">Operações em destaque</p>
-                <h2 id="overlay-title" class="text-3xl md:text-4xl font-semibold text-white">-</h2>
-                <p id="overlay-subtitle" class="text-base md:text-lg text-slate-200">-</p>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
-                <div>
-                    <p class="text-xs uppercase tracking-widest text-slate-400">Processos ativos</p>
-                    <p id="overlay-ativos" class="text-3xl font-semibold text-white">0</p>
-                </div>
-                <div>
-                    <p class="text-xs uppercase tracking-widest text-slate-400">Aguardando chegada</p>
-                    <p id="overlay-aguardando" class="text-3xl font-semibold text-white">0</p>
-                </div>
-                <div>
-                    <p class="text-xs uppercase tracking-widest text-slate-400">Valor CIF mês</p>
-                    <p id="overlay-cif" class="text-3xl font-semibold text-white">R$ 0</p>
-                </div>
-            </div>
-            <div class="text-left">
-                <p class="text-xs uppercase tracking-[0.3em] text-slate-400 mb-2">Fluxos prioritários</p>
-                <div id="overlay-routes-list" class="space-y-2 text-sm md:text-base text-slate-100"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="globe-legend hidden md:flex items-center gap-4 text-xs text-gray-400 absolute bottom-6 left-6 z-20 transition-opacity duration-600">
-        <div class="flex items-center gap-2">
-            <span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span>
-            <span>Modal marítimo</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <span class="inline-block w-3 h-3 rounded-full bg-amber-300"></span>
-            <span>Modal aéreo</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <span class="inline-block w-3 h-3 rounded-full border border-white/50"></span>
-            <span>Portos e hubs estratégicos</span>
-        </div>
     </div>
 
     <script>
@@ -365,10 +517,11 @@
                 }
                 const processos = (payload.data?.processos || []).map(hydrateProcess);
                 const metaMensal = payload.data?.meta?.current_meta ?? 0;
-                return { processos, metaMensal };
+                const exchangeRates = payload.data?.exchange_rates ?? null;
+                return { processos, metaMensal, exchangeRates };
             } catch (error) {
                 console.error('[Dashboard Mapa] Erro ao carregar dados', error);
-                return { processos: [], metaMensal: 0 };
+                return { processos: [], metaMensal: 0, exchangeRates: null };
             }
         }
 
@@ -377,29 +530,43 @@
             const currentMonth = today.getMonth();
             const currentYear = today.getFullYear();
 
-            const { processos, metaMensal } = await fetchDashboardData();
+            const { processos, metaMensal, exchangeRates } = await fetchDashboardData();
+
+            const processosAtivos = processos.filter(p => (p.status_sistema || '').toUpperCase().trim() !== 'PROCESSO CONCLUIDO');
+            const aguardandoChegadaCount = processosAtivos.filter(p => (p.status_sistema || '').toUpperCase().includes('AG. CHEGADA')).length;
 
             const abertosHoje = processos.filter(p => p.data_abertura && p.data_abertura.getFullYear() === today.getFullYear() && p.data_abertura.getMonth() === today.getMonth() && p.data_abertura.getDate() === today.getDate()).length;
             const disHoje = processos.filter(p => p.data_registro && p.data_registro.getFullYear() === today.getFullYear() && p.data_registro.getMonth() === today.getMonth() && p.data_registro.getDate() === today.getDate()).length;
             const desembaracosHoje = processos.filter(p => p.data_desembaraco && p.data_desembaraco.getFullYear() === today.getFullYear() && p.data_desembaraco.getMonth() === today.getMonth() && p.data_desembaraco.getDate() === today.getDate()).length;
 
-            document.getElementById('kpi-abertos-hoje').textContent = abertosHoje;
-            document.getElementById('kpi-dis-hoje').textContent = disHoje;
-            document.getElementById('kpi-desembaracos-hoje').textContent = desembaracosHoje;
+            const mapKpiAbertosEl = document.getElementById('map-kpi-abertos');
+            const mapKpiDisEl = document.getElementById('map-kpi-dis');
+            const mapKpiDesembaracosEl = document.getElementById('map-kpi-desembaracos');
+            const mapKpiAgChegadaEl = document.getElementById('map-kpi-ag-chegada');
+            if (mapKpiAbertosEl) mapKpiAbertosEl.textContent = abertosHoje;
+            if (mapKpiDisEl) mapKpiDisEl.textContent = disHoje;
+            if (mapKpiDesembaracosEl) mapKpiDesembaracosEl.textContent = desembaracosHoje;
+            if (mapKpiAgChegadaEl) mapKpiAgChegadaEl.textContent = aguardandoChegadaCount;
 
-            const processosAtivos = processos.filter(p => (p.status_sistema || '').toUpperCase().trim() !== 'PROCESSO CONCLUIDO');
-            const processosAtivosCount = processosAtivos.length;
-            const aguardandoChegadaCount = processosAtivos.filter(p => (p.status_sistema || '').toUpperCase().includes('AG. CHEGADA')).length;
-
-            document.getElementById('kpi-ativos').textContent = processosAtivosCount;
-            document.getElementById('kpi-ag-chegada').textContent = aguardandoChegadaCount;
+            const formatExchangeRate = value => {
+                if (typeof value === 'number' && Number.isFinite(value)) {
+                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                }
+                return 'R$ 0,00';
+            };
+            const headerUsdEl = document.getElementById('header-usd-value');
+            const headerEurEl = document.getElementById('header-eur-value');
+            if (headerUsdEl) {
+                headerUsdEl.textContent = formatExchangeRate(exchangeRates?.dolar);
+            }
+            if (headerEurEl) {
+                headerEurEl.textContent = formatExchangeRate(exchangeRates?.euro);
+            }
 
             const processosMes = processos.filter(p => p.data_abertura && p.data_abertura.getMonth() === currentMonth && p.data_abertura.getFullYear() === currentYear);
             const registrosMes = processos.filter(p => p.data_registro && p.data_registro.getMonth() === currentMonth && p.data_registro.getFullYear() === currentYear);
 
             const totalMes = processosMes.length;
-            const cifMes = registrosMes.reduce((sum, p) => sum + (p.valor_cif_real || 0), 0);
-            const pesoMes = registrosMes.reduce((sum, p) => sum + (p.peso_bruto || 0), 0);
 
             document.getElementById('meta-total').textContent = totalMes;
             document.getElementById('meta-meta').textContent = `${metaMensal} processos`;
@@ -412,9 +579,6 @@
             } else {
                 metaRestanteEl.textContent = `Meta superada em ${Math.abs(restanteMetaValor)} processos`;
             }
-            document.getElementById('kpi-cif-mes').textContent = cifMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('kpi-peso-mes').textContent = `${pesoMes.toLocaleString('pt-BR')} kg`;
-
             const canalVerde = registrosMes.filter(p => p.canal === 'Verde').length;
             const canalAmarelo = registrosMes.filter(p => p.canal === 'Amarelo').length;
             const canalVermelho = registrosMes.filter(p => p.canal === 'Vermelho').length;
@@ -422,23 +586,6 @@
             document.getElementById('kpi-canal-verde').textContent = canalVerde;
             document.getElementById('kpi-canal-amarelo').textContent = canalAmarelo;
             document.getElementById('kpi-canal-vermelho').textContent = canalVermelho;
-
-            const aguardandoList = [
-                { label: 'Aguardando embarque', value: processosAtivos.filter(p => (p.status_sistema || '').toUpperCase() === 'AG. EMBARQUE').length },
-                { label: 'Em trânsito', value: processosAtivos.filter(p => (p.status_sistema || '').toUpperCase() === 'EM TRANSITO').length },
-                { label: 'Aguardando chegada', value: aguardandoChegadaCount }
-            ];
-            document.getElementById('aguardando-list').innerHTML = aguardandoList.map(item => `
-                <div class="flex items-center justify-between">
-                    <span>${item.label}</span>
-                    <span class="font-semibold text-white">${item.value}</span>
-                </div>`).join('');
-
-            const transitTimes = processos.filter(p => typeof p.transit_time_real === 'number' && p.transit_time_real > 0);
-            const leadtimeMedio = transitTimes.length
-                ? transitTimes.reduce((sum, p) => sum + p.transit_time_real, 0) / transitTimes.length
-                : 0;
-            document.getElementById('leadtime-value').textContent = `${leadtimeMedio.toFixed(1)} dias`;
 
             const modalCounts = processosMes.reduce((acc, process) => {
                 const modal = process.modal || 'MARÍTIMA';
@@ -459,43 +606,12 @@
                     const icon = modalIcons[modal] || '';
                     return `
                         <div>
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="flex items-center gap-2 text-gray-300">${icon}<span>${modal}</span></span>
-                                <span class="font-semibold text-white">${qty}</span>
+                            <div class="flex items-center justify-between text-base">
+                                <span class="flex items-center gap-2 text-gray-300">${icon}<span class="font-medium">${modal}</span></span>
+                                <span class="font-bold text-white text-lg">${qty}</span>
                             </div>
-                            <div class="w-full h-2 mt-2 rounded-full bg-slate-800 overflow-hidden">
-                                <div class="h-full" style="width:${percent.toFixed(1)}%; background:${color};"></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            const statusCounts = processosAtivos.reduce((acc, process) => {
-                const status = process.status_sistema || 'Sem status';
-                acc[status] = (acc[status] || 0) + 1;
-                return acc;
-            }, {});
-            const totalStatus = Object.values(statusCounts).reduce((a, b) => a + b, 0) || 1;
-            const statusColors = {
-                'PROCESSO CONCLUIDO': '#22c55e',
-                'AG. CHEGADA': '#38bdf8',
-                'DECLARAÇÃO REGISTRADA': '#f97316',
-                'AG. EMBARQUE': '#14b8a6',
-                'EM TRANSITO': '#facc15'
-            };
-            document.getElementById('status-list').innerHTML = Object.entries(statusCounts)
-                .sort((a, b) => b[1] - a[1])
-                .map(([status, qty]) => {
-                    const percent = (qty / totalStatus) * 100;
-                    const barColor = statusColors[status] || '#3b82f6';
-                    return `
-                        <div>
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-300">${status}</span>
-                                <span class="font-semibold text-white">${qty}</span>
-                            </div>
-                            <div class="w-full h-2 mt-2 rounded-full bg-slate-800 overflow-hidden">
-                                <div class="h-full" style="width:${percent.toFixed(1)}%; background:${barColor};"></div>
+                            <div class="w-full h-2.5 mt-2 rounded-full bg-slate-800 overflow-hidden">
+                                <div class="h-full transition-all duration-500" style="width:${percent.toFixed(1)}%; background:${color};"></div>
                             </div>
                         </div>
                     `;
@@ -511,105 +627,97 @@
                 return acc;
             }, {});
             const ranking = Object.entries(importadorStats)
-                .sort((a, b) => b[1].valor - a[1].valor)
+                .sort((a, b) => {
+                    const diff = (b[1].processos || 0) - (a[1].processos || 0);
+                    if (diff !== 0) return diff;
+                    return (b[1].valor || 0) - (a[1].valor || 0);
+                })
                 .slice(0, 5);
-            document.getElementById('ranking-importadores').innerHTML = ranking.map(([importador, data], index) => `
-                <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-500 w-6">#${index + 1}</span>
-                    <span class="flex-1 text-gray-200">${importador}</span>
-                    <span class="text-xs text-gray-500 mr-4">${data.processos} proc.</span>
-                    <span class="font-semibold text-white">${(data.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                </div>
-            `).join('');
-
-            const formatCurrency = value => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const rankingContainer = document.getElementById('ranking-importadores');
+            if (rankingContainer) {
+                if (!ranking.length) {
+                    rankingContainer.innerHTML = '<p class="text-sm text-gray-500">Nenhum importador encontrado.</p>';
+                } else {
+                    rankingContainer.innerHTML = ranking.map(([importador, data], index) => `
+                        <div class="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-slate-900/40 px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-lg font-semibold text-sky-300">#${index + 1}</span>
+                                <span class="text-base font-semibold text-white leading-tight">${importador}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold text-white leading-none">${data.processos}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
 
             const routeStats = processosAtivos.reduce((acc, process) => {
                 if (!process.pais_nome || !process.urf_despacho) return acc;
                 const key = `${process.pais_nome} → ${process.urf_despacho}`;
+                const originIso = process.pais_codigo ? process.pais_codigo.toUpperCase() : null;
                 if (!acc[key]) {
-                    acc[key] = { count: 0, valor: 0, modal: process.modal, url_bandeira: process.url_bandeira };
+                    acc[key] = {
+                        count: 0,
+                        valor: 0,
+                        modal: process.modal,
+                        url_bandeira: process.url_bandeira,
+                        originIso,
+                        originName: process.pais_nome,
+                        destName: process.urf_despacho
+                    };
                 }
                 acc[key].count += 1;
                 acc[key].valor += process.valor_cif_real || 0;
+                if (!acc[key].url_bandeira && process.url_bandeira) {
+                    acc[key].url_bandeira = process.url_bandeira;
+                }
+                if (!acc[key].originIso && originIso) {
+                    acc[key].originIso = originIso;
+                }
                 return acc;
             }, {});
             const rotasDestaque = Object.entries(routeStats)
                 .sort((a, b) => b[1].count - a[1].count)
-                .slice(0, 5);
-            document.getElementById('rotas-destaque').innerHTML = rotasDestaque.map(([rota, data]) => {
-                const itemColor = (modalPalette[data.modal] || modalPalette['MARÍTIMA']).hex;
-                const flagHtml = data.url_bandeira ? `<img src="${data.url_bandeira}" alt="Bandeira" class="w-6 h-4 rounded-sm border border-white/20">` : '';
-                return `
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                            <span class="inline-block w-2 h-8 rounded-full" style="background:${itemColor};"></span>
-                            <span class="flex items-center gap-2">${flagHtml}${rota}</span>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-gray-500">${data.count} cargas</p>
-                            <p class="font-semibold text-white">${formatCurrency(data.valor)}</p>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                .slice(0, 3);
 
-            const overlayAtivosEl = document.getElementById('overlay-ativos');
-            const overlayAguardandoEl = document.getElementById('overlay-aguardando');
-            const overlayCifEl = document.getElementById('overlay-cif');
-            const overlayTitleEl = document.getElementById('overlay-title');
-            const overlaySubtitleEl = document.getElementById('overlay-subtitle');
-            const overlayRoutesListEl = document.getElementById('overlay-routes-list');
-
-            if (overlayAtivosEl) {
-                overlayAtivosEl.textContent = processosAtivosCount;
+            const rotasContainer = document.getElementById('rotas-destaque');
+            const rotasResumoEl = document.getElementById('map-rotas-resumo');
+            const rotasTimestampEl = document.getElementById('map-rotas-timestamp');
+            const resumoTexto = rotasDestaque.length
+                ? `${rotasDestaque.length} rota${rotasDestaque.length > 1 ? 's' : ''} monitorada${rotasDestaque.length > 1 ? 's' : ''}`
+                : 'Nenhuma rota monitorada';
+            if (rotasResumoEl) {
+                rotasResumoEl.textContent = resumoTexto;
             }
-            if (overlayAguardandoEl) {
-                overlayAguardandoEl.textContent = aguardandoChegadaCount;
+            if (rotasTimestampEl) {
+                rotasTimestampEl.textContent = today.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             }
-            if (overlayCifEl) {
-                overlayCifEl.textContent = formatCurrency(cifMes);
-            }
-
-            const overlayRoutesData = rotasDestaque.length
-                ? rotasDestaque
-                : [['Operações globais', { count: processosAtivosCount, valor: cifMes, modal: 'MARÍTIMA', url_bandeira: null }]];
-
-            if (overlayRoutesListEl) {
-                overlayRoutesListEl.innerHTML = overlayRoutesData.slice(0, 3).map(([rota, data]) => {
-                    const itemColor = (modalPalette[data.modal] || modalPalette['MARÍTIMA']).hex;
-                    return `
-                        <div class="flex items-center justify-between">
-                            <span class="flex items-center gap-2"><span class="inline-block w-2 h-2 rounded-full" style="background:${itemColor};"></span>${rota}</span>
-                            <span class="text-xs text-slate-300">${data.count} processos · ${formatCurrency(data.valor)}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            let overlayRouteIndex = 0;
-
-            function renderOverlayHighlight(index) {
-                if (!overlayRoutesData.length || !overlayTitleEl || !overlaySubtitleEl) {
-                    return;
+            if (rotasContainer) {
+                if (!rotasDestaque.length) {
+                    rotasContainer.innerHTML = '<p class="text-sm text-gray-500">Nenhuma rota em destaque no momento.</p>';
+                } else {
+                    rotasContainer.innerHTML = rotasDestaque.map(([rota, data], index) => {
+                        const itemColor = (modalPalette[data.modal] || modalPalette['MARÍTIMA']).hex;
+                        const [originNameFull, destName] = rota.split('→').map(part => (part || '').trim());
+                        const originLabel = (data.originIso || originNameFull || '-').toUpperCase();
+                        const flagMarkup = data.url_bandeira
+                            ? `<div class="map-route-flag"><img src="${data.url_bandeira}" alt="Bandeira ${originLabel}" loading="lazy"></div>`
+                            : `<div class="map-route-flag"><span>${originLabel.slice(0, 2)}</span></div>`;
+                        return `
+                            <button class="map-route-item ${index === 0 ? 'active' : ''}" data-route-key="${rota}">
+                                <div class="flex items-center gap-4">
+                                    <span class="inline-block w-2 h-12 rounded-full" style="background:${itemColor};"></span>
+                                    ${flagMarkup}
+                                    <div class="flex flex-col gap-1">
+                                        <p class="text-sm font-semibold text-white">${originLabel} → ${destName}</p>
+                                        <p class="text-xs text-gray-400">${data.count} processos ativos • Modal ${data.modal || '-'}</p>
+                                    </div>
+                                </div>
+                            </button>
+                        `;
+                    }).join('');
                 }
-                const normalizedIndex = ((index % overlayRoutesData.length) + overlayRoutesData.length) % overlayRoutesData.length;
-                const [rota, data] = overlayRoutesData[normalizedIndex];
-                overlayTitleEl.textContent = rota;
-                overlaySubtitleEl.textContent = `${data.count} processos ativos · ${formatCurrency(data.valor)} em CIF`;
-                if (viewMode === 'globe') {
-                    focusRouteByKey(rota);
-                }
-            }
-
-            renderOverlayHighlight(overlayRouteIndex);
-
-            function advanceOverlayHighlight() {
-                if (!overlayRoutesData.length) {
-                    return;
-                }
-                overlayRouteIndex = (overlayRouteIndex + 1) % overlayRoutesData.length;
-                renderOverlayHighlight(overlayRouteIndex);
             }
 
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -660,18 +768,39 @@
 
             const metaChartOptions = {
                 series: [metaSeriesValue],
-                chart: { type: 'radialBar', height: '100%', sparkline: { enabled: true } },
+                chart: { 
+                    type: 'radialBar', 
+                    height: 280,
+                    offsetY: -10
+                },
                 colors: ['#38bdf8'],
                 plotOptions: {
                     radialBar: {
-                        hollow: { size: '65%' },
-                        track: { background: 'rgba(148, 163, 184, 0.15)' },
+                        startAngle: -90,
+                        endAngle: 90,
+                        hollow: { 
+                            size: '70%',
+                            margin: 0
+                        },
+                        track: { 
+                            background: 'rgba(148, 163, 184, 0.15)',
+                            strokeWidth: '100%',
+                            margin: 5
+                        },
                         dataLabels: {
-                            name: { show: true, color: '#94a3b8', fontSize: '13px', offsetY: 18, text: 'Meta atingida' },
+                            name: { 
+                                show: true, 
+                                color: '#94a3b8', 
+                                fontSize: '14px', 
+                                offsetY: 25,
+                                text: 'Meta atingida' 
+                            },
                             value: {
                                 show: true,
-                                fontSize: '32px',
+                                fontSize: '36px',
+                                fontWeight: 'bold',
                                 color: '#ffffff',
+                                offsetY: -10,
                                 formatter: () => `${metaPercent}%`
                             }
                         }
@@ -693,94 +822,15 @@
             updateClock();
             setInterval(updateClock, 1000);
 
-            fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.USDBRL) {
-                        document.getElementById('kpi-usd').textContent = parseFloat(data.USDBRL.bid).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                        const usdVar = parseFloat(data.USDBRL.pctChange || 0);
-                        document.getElementById('usd-variation').textContent = `${usdVar > 0 ? '+' : ''}${usdVar.toFixed(2)}%`;
-                        document.getElementById('usd-variation').className = `text-xs font-semibold ${usdVar >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-                    }
-                    if (data.EURBRL) {
-                        document.getElementById('kpi-eur').textContent = parseFloat(data.EURBRL.bid).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                        const eurVar = parseFloat(data.EURBRL.pctChange || 0);
-                        document.getElementById('eur-variation').textContent = `${eurVar > 0 ? '+' : ''}${eurVar.toFixed(2)}%`;
-                        document.getElementById('eur-variation').className = `text-xs font-semibold ${eurVar >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-                    }
-                })
-                .catch(() => {
-                    document.getElementById('usd-variation').textContent = '+0,00%';
-                    document.getElementById('eur-variation').textContent = '+0,00%';
-                });
-
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-            document.getElementById('globe-container').appendChild(renderer.domElement);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
-            directionalLight.position.set(4, 3, 8);
-            scene.add(directionalLight);
-
-            const globeGroup = new THREE.Group();
-            scene.add(globeGroup);
-
-            const globeGeometry = new THREE.SphereGeometry(2.2, 72, 72);
-            const textureLoader = new THREE.TextureLoader();
-            const fallbackTexture = textureLoader.load('https://placehold.co/2048x1024/0a0a0a/1a1a1a.png?text=.');
-            const globeMaterial = new THREE.MeshStandardMaterial({
-                map: fallbackTexture,
-                roughness: 0.8,
-                metalness: 0.2,
-                transparent: true,
-                opacity: 0.7,
-                color: 0x1e293b
-            });
-
-            textureLoader.load(
-                'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/land_ocean_ice_cloud_2048.jpg',
-                texture => { globeMaterial.map = texture; globeMaterial.needsUpdate = true; }
-            );
-
-            const globe = new THREE.Mesh(globeGeometry, globeMaterial);
-            globeGroup.add(globe);
-
-            const atmosphereGeometry = new THREE.SphereGeometry(2.3, 72, 72);
-            const atmosphereMaterial = new THREE.ShaderMaterial({
-                vertexShader: `
-                    varying vec3 vNormal;
-                    void main() {
-                        vNormal = normalize(normalMatrix * normal);
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    varying vec3 vNormal;
-                    void main() {
-                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
-                    }
-                `,
-                blending: THREE.AdditiveBlending,
-                side: THREE.BackSide,
-                transparent: true
-            });
-            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-            globeGroup.add(atmosphere);
-
-            camera.position.set(0, 0, 5.2);
-
             const cityCoords = {
+                // Portos e URFs brasileiros
                 'ITAJAÍ': [-26.90, -48.66],
+                'ITAJAI': [-26.90, -48.66],
                 'NAVEGANTES': [-26.89, -48.65],
                 'ITAPOA': [-26.11, -48.61],
                 'CLIF - ITAPOÁ': [-26.11, -48.61],
                 'JOINVILLE': [-26.30, -48.84],
+                'TECA - JOINVILLE': [-26.30, -48.84],
                 'PORTONAVE': [-26.87, -48.63],
                 'POLY': [-26.90, -48.65],
                 'PARANAGUA': [-25.52, -48.51],
@@ -790,6 +840,67 @@
                 'MANAUS': [-3.12, -60.02],
                 'SANTOS': [-23.95, -46.33],
                 'FORTE LOGISTICA': [-26.08, -48.62],
+                'MOVECTA - ITAJAÍ': [-26.90, -48.66],
+                'MULTILOG - ITAJAI': [-26.90, -48.66],
+                'LOCALFRIO - ITAJAI': [-26.90, -48.66],
+                'LOCAL FRIO': [-26.90, -48.66],
+                'BARRA DO RIO - ITAJAI': [-26.90, -48.66],
+                'PACLOG': [-26.90, -48.66],
+                'CONFINS': [-19.63, -43.97],
+                'BETIM': [-19.97, -44.20],
+                'BELO HORIZONTE': [-19.92, -43.94],
+                'SAO FRANCISCO DO SUL': [-26.24, -48.63],
+                'SÃO PAULO': [-23.55, -46.63],
+                'CURITIBA': [-25.43, -49.27],
+                'SÃO LUIS (MARANHÃO)': [-2.53, -44.30],
+                'MULTILOG - SANTOS': [-23.95, -46.33],
+                'PORTO ALEGRE (POA)': [-30.03, -51.23],
+                'RIO DE JANEIRO': [-22.91, -43.17],
+                'MULTILOG - MOOCA': [-23.55, -46.60],
+                'RECIFE': [-8.05, -34.90],
+                'DEFINIR': [-26.90, -48.66],  // Default para Itajaí
+                
+                // Países por código ISO-2 (mais assertivo)
+                'CN': [35.86, 104.19],      // China
+                'US': [37.09, -95.71],      // Estados Unidos
+                'PL': [51.91, 19.14],       // Polônia
+                'DE': [51.16, 10.45],       // Alemanha
+                'SE': [60.12, 18.64],       // Suécia
+                'BE': [50.50, 4.47],        // Bélgica
+                'HK': [22.32, 114.17],      // Hong Kong
+                'JP': [36.20, 138.25],      // Japão
+                'CO': [4.57, -74.29],       // Colômbia
+                'CA': [56.13, -106.35],     // Canadá
+                'ES': [40.46, -3.75],       // Espanha
+                'KR': [35.91, 127.77],      // Coreia do Sul
+                'VN': [14.06, 108.28],      // Vietnã
+                'DK': [56.26, 9.51],        // Dinamarca
+                'IT': [41.87, 12.57],       // Itália
+                'FR': [46.23, 2.21],        // França
+                'GB': [55.38, -3.44],       // Reino Unido
+                'NL': [52.13, 5.29],        // Holanda
+                'IN': [20.59, 78.96],       // Índia
+                'TW': [23.70, 120.96],      // Taiwan
+                'TH': [15.87, 100.99],      // Tailândia
+                'MY': [4.21, 101.97],       // Malásia
+                'SG': [1.35, 103.82],       // Singapura
+                'AU': [-25.27, 133.77],     // Austrália
+                'MX': [23.63, -102.55],     // México
+                'AR': [-38.42, -63.62],     // Argentina
+                'CL': [-35.68, -71.54],     // Chile
+                'BR': [-14.24, -51.93],     // Brasil
+                'AT': [47.52, 14.55],       // Áustria
+                'GR': [39.07, 21.82],       // Grécia
+                'MM': [21.91, 95.96],       // Mianmar
+                'NZ': [-40.90, 174.89],     // Nova Zelândia
+                'PT': [39.40, -8.22],       // Portugal
+                'CH': [46.82, 8.23],        // Suíça
+                'IL': [31.05, 34.85],       // Israel
+                'TR': [38.96, 35.24],       // Turquia
+                'IE': [53.41, -8.24],       // Irlanda
+                'UY': [-32.52, -55.77],     // Uruguai
+                
+                // Manter nomes completos para compatibilidade (fallback)
                 'CHINA, REPUBLICA POPULAR': [35.86, 104.19],
                 'ESTADOS UNIDOS': [37.09, -95.71],
                 'POLONIA, REPUBLICA DA': [51.91, 19.14],
@@ -824,191 +935,371 @@
 
             const hubMarkers = [];
             const hubsCache = new Map();
+            const routeHubMap = new Map();
 
-            function ensureHub(name, type) {
-                if (hubsCache.has(name)) return;
+            function ensureHub(name, type, process = null, routeKey = null) {
+                if (!name) return null;
                 const coords = cityCoords[name];
-                if (!coords) return;
+                if (!coords) return null;
+
+                if (routeKey && !routeHubMap.has(routeKey)) {
+                    routeHubMap.set(routeKey, new Set());
+                }
+
+                if (hubsCache.has(name)) {
+                    const existingHub = hubsCache.get(name);
+                    if (process) {
+                        existingHub.processes.push(process);
+                    }
+                    if (routeKey) {
+                        existingHub.linkedRoutes.add(routeKey);
+                        if (!existingHub.processesByRoute[routeKey]) {
+                            existingHub.processesByRoute[routeKey] = [];
+                        }
+                        if (process) {
+                            existingHub.processesByRoute[routeKey].push(process);
+                        }
+                        routeHubMap.get(routeKey)?.add(name);
+                    }
+                    return existingHub;
+                }
+
                 const baseColor = type === 'origin' ? 0x38bdf8 : 0x22d3ee;
                 const hubGeometry = new THREE.SphereGeometry(0.045, 16, 16);
                 const hubMaterial = new THREE.MeshBasicMaterial({ color: baseColor });
                 const hub = new THREE.Mesh(hubGeometry, hubMaterial);
                 const position = latLonToVector3(coords[0], coords[1], 2.22);
                 hub.position.copy(position);
+                hub.visible = false;
                 globeGroup.add(hub);
 
                 const auraGeometry = new THREE.SphereGeometry(0.06, 16, 16);
                 const auraMaterial = new THREE.MeshBasicMaterial({ color: baseColor, transparent: true, opacity: 0.25 });
                 const aura = new THREE.Mesh(auraGeometry, auraMaterial);
+                aura.visible = false;
                 hub.add(aura);
 
-                hubsCache.set(name, { hub, aura, phase: Math.random() * Math.PI * 2 });
-                hubMarkers.push({ aura, phase: Math.random() * Math.PI * 2 });
+                const hubData = {
+                    hub,
+                    aura,
+                    phase: Math.random() * Math.PI * 2,
+                    name,
+                    type,
+                    processes: process ? [process] : [],
+                    processesByRoute: {},
+                    linkedRoutes: new Set(routeKey ? [routeKey] : []),
+                    position
+                };
+
+                if (routeKey) {
+                    hubData.processesByRoute[routeKey] = process ? [process] : [];
+                    routeHubMap.get(routeKey)?.add(name);
+                }
+
+                hubsCache.set(name, hubData);
+                hubMarkers.push({ aura, phase: Math.random() * Math.PI * 2, hubData });
+                return hubData;
             }
 
-            const routeCurves = [];
-            const activeRoutes = processosAtivos
-                .map(process => {
-                    const originKey = process.pais_nome ? process.pais_nome.toUpperCase() : null;
+            const createHubLabels = () => {
+                const labelsContainer = document.getElementById('hub-labels');
+                if (labelsContainer) {
+                    labelsContainer.innerHTML = '';
+                }
+            };
+
+            const mapContainer = document.getElementById('globe-container');
+            const getMapDimensions = () => {
+                if (!mapContainer) {
+                    return { width: 800, height: 600 };
+                }
+                const rect = mapContainer.getBoundingClientRect();
+                const width = rect.width || mapContainer.offsetWidth || 800;
+                const height = rect.height || mapContainer.offsetHeight || 600;
+                return { width, height };
+            };
+            const { width: initialWidth, height: initialHeight } = getMapDimensions();
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(56, initialWidth / initialHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(initialWidth, initialHeight);
+            if (mapContainer) {
+                mapContainer.innerHTML = '';
+                mapContainer.appendChild(renderer.domElement);
+            }
+
+            const resizeRenderer = () => {
+                const { width, height } = getMapDimensions();
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            };
+            window.addEventListener('resize', resizeRenderer);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.1);
+            directionalLight.position.set(4, 3, 8);
+            scene.add(directionalLight);
+
+            const globeGroup = new THREE.Group();
+            scene.add(globeGroup);
+
+            const globeGeometry = new THREE.SphereGeometry(2.2, 72, 72);
+            const textureLoader = new THREE.TextureLoader();
+            const fallbackTexture = textureLoader.load('https://placehold.co/2048x1024/0a0a0a/1a1a1a.png?text=.');
+            const globeMaterial = new THREE.MeshStandardMaterial({
+                map: fallbackTexture,
+                roughness: 0.8,
+                metalness: 0.2,
+                transparent: true,
+                opacity: 0.72,
+                color: 0x1e293b
+            });
+
+            textureLoader.load(
+                'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/land_ocean_ice_cloud_2048.jpg',
+                texture => { globeMaterial.map = texture; globeMaterial.needsUpdate = true; }
+            );
+
+            const globe = new THREE.Mesh(globeGeometry, globeMaterial);
+            globeGroup.add(globe);
+
+            const atmosphereGeometry = new THREE.SphereGeometry(2.3, 72, 72);
+            const atmosphereMaterial = new THREE.ShaderMaterial({
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        gl_FragColor = vec4(0.3, 0.6, 1.0, 1.0) * intensity;
+                    }
+                `,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide,
+                transparent: true
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            globeGroup.add(atmosphere);
+
+            camera.position.set(0, 0, 5.4);
+            const targetCameraPosition = new THREE.Vector3().copy(camera.position);
+            const targetCameraLookAt = new THREE.Vector3(0, 0, 0);
+            const targetGlobeRotation = { x: 0, y: 0 };
+
+            // Mapear rotas agregadas (top 3) com dados completos
+            const routeElements = rotasContainer
+                ? Array.from(rotasContainer.querySelectorAll('.map-route-item'))
+                : [];
+
+            const topRoutesDetailed = rotasDestaque.map(([rota, data]) => {
+                const [originName, destName] = rota.split('→').map(part => (part || '').trim());
+                const processosDaRota = processosAtivos.filter(p => `${p.pais_nome} → ${p.urf_despacho}` === rota);
+                const referencia = processosDaRota[0];
+                const originKey = referencia?.pais_codigo ? referencia.pais_codigo.toUpperCase() : null;
+                const destKey = referencia?.urf_despacho ? referencia.urf_despacho.toUpperCase() : null;
+                const originCoords = originKey ? cityCoords[originKey] : null;
+                const destCoords = destKey ? cityCoords[destKey] : null;
+                const displayOrigin = (data.originIso || originName || '-').toUpperCase();
+                const displayLabel = `${displayOrigin} → ${destName}`;
+
+                return {
+                    key: rota,
+                    modal: data.modal,
+                    valor: data.valor,
+                    count: data.count,
+                    processes: processosDaRota,
+                    originKey,
+                    destKey,
+                    originCoords,
+                    destCoords,
+                    originName,
+                    destName,
+                    displayLabel
+                };
+            }).filter(route => route.originCoords && route.destCoords);
+
+            // Acumular dados dos hubs com todos os processos da rota
+            topRoutesDetailed.forEach(route => {
+                route.processes.forEach(process => {
+                    const originKey = process.pais_codigo ? process.pais_codigo.toUpperCase() : null;
                     const destKey = process.urf_despacho ? process.urf_despacho.toUpperCase() : null;
-                    if (!originKey || !destKey) {
-                        return null;
+                    if (originKey && cityCoords[originKey]) {
+                        ensureHub(originKey, 'origin', process, route.key);
                     }
-                    if (!cityCoords[originKey] || !cityCoords[destKey]) {
-                        return null;
+                    if (destKey && cityCoords[destKey]) {
+                        ensureHub(destKey, 'dest', process, route.key);
                     }
-                    return { originKey, destKey, process };
-                })
-                .filter(Boolean)
-                .slice(0, 160);
+                });
+            });
 
-            activeRoutes.forEach(({ originKey, destKey, process }) => {
-                const startCoords = cityCoords[originKey];
-                const endCoords = cityCoords[destKey];
-                if (!startCoords || !endCoords) return;
+            createHubLabels();
 
-                ensureHub(originKey, 'origin');
-                ensureHub(destKey, 'dest');
+            const updateHubMarkers = activeRouteKey => {
+                hubsCache.forEach((hubData, hubName) => {
+                    const isActive = !!activeRouteKey && routeHubMap.get(activeRouteKey)?.has(hubName);
+                    if (hubData.hub) hubData.hub.visible = isActive;
+                    if (hubData.aura) hubData.aura.visible = isActive;
+                });
+            };
 
-                const startVec = latLonToVector3(startCoords[0], startCoords[1], 2.22);
-                const endVec = latLonToVector3(endCoords[0], endCoords[1], 2.22);
+            const routeCurves = topRoutesDetailed.map((route, index) => {
+                const startVec = latLonToVector3(route.originCoords[0], route.originCoords[1], 2.22);
+                const endVec = latLonToVector3(route.destCoords[0], route.destCoords[1], 2.22);
                 const curve = getArc(startVec, endVec);
-                const points = curve.getPoints(120);
+                const points = curve.getPoints(160);
                 const geometry = new THREE.BufferGeometry().setFromPoints(points);
-                const modalColor = (modalPalette[process.modal] || modalPalette['MARÍTIMA']).three;
-                const material = new THREE.LineBasicMaterial({ color: modalColor, transparent: true, opacity: 0.35 });
+                const modalColor = (modalPalette[route.modal] || modalPalette['MARÍTIMA']).three;
+                const material = new THREE.LineBasicMaterial({ color: modalColor, transparent: true, opacity: 0.2 });
                 const line = new THREE.Line(geometry, material);
-                line.visible = true;
+                line.visible = false;
                 globeGroup.add(line);
 
-                const pulseGeometry = new THREE.SphereGeometry(0.025, 12, 12);
-                const pulseMaterial = new THREE.MeshBasicMaterial({ color: modalColor, transparent: true, opacity: 0.9 });
+                const pulseGeometry = new THREE.SphereGeometry(0.032, 18, 18);
+                const pulseMaterial = new THREE.MeshBasicMaterial({ color: modalColor, transparent: true, opacity: 0 });
                 const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
                 pulse.position.copy(points[0]);
                 pulse.visible = false;
                 globeGroup.add(pulse);
 
-                const routeKey = `${process.pais_nome} → ${process.urf_despacho}`;
-                routeCurves.push({ key: routeKey, curve, line, pulse, speed: 0.0006 + Math.random() * 0.0004, progress: Math.random(), modal: process.modal });
+                const labelPoint = curve.getPointAt(0.5);
+
+                return {
+                    key: route.key,
+                    curve,
+                    line,
+                    pulse,
+                    speed: 0.05 + Math.random() * 0.03,
+                    progress: Math.random(),
+                    startVec,
+                    endVec,
+                    labelPoint,
+                    domElement: routeElements[index] || null,
+                    data: route
+                };
             });
 
-            let viewMode = 'dashboard';
-            let viewCycleTimer = null;
-            let overlayHighlightTimer = null;
-            let cameraTransition = null;
-            let currentRotationSpeed = 0.08;
-            const rotationSpeeds = { dashboard: 0.08, globe: 0 };
-            const targetOrientation = { x: 0, y: 0 };
-            let alignToRoute = false;
+            const mapPanelElement = document.querySelector('.map-panel');
+            let routeInfoLabel = null;
+            if (mapPanelElement) {
+                routeInfoLabel = document.createElement('div');
+                routeInfoLabel.id = 'route-info-label';
+                routeInfoLabel.className = 'route-info-label';
+                routeInfoLabel.style.display = 'none';
+                mapPanelElement.appendChild(routeInfoLabel);
+            }
 
-            function focusRouteByKey(routeKey) {
-                if (!routeKey) {
-                    alignToRoute = false;
-                    routeCurves.forEach(route => {
-                        route.line.visible = true;
-                        route.pulse.visible = false;
-                        if (route.line.material) {
-                            route.line.material.opacity = 0.35;
-                            route.line.material.needsUpdate = true;
-                        }
-                    });
+            let activeRouteForLabel = null;
+
+            const showRouteInfoLabel = route => {
+                if (!routeInfoLabel) return;
+                if (!route) {
+                    routeInfoLabel.style.display = 'none';
+                    routeInfoLabel.classList.remove('visible');
+                    activeRouteForLabel = null;
                     return;
                 }
+                const labelText = route.data?.displayLabel || route.key;
+                routeInfoLabel.innerHTML = `${labelText} • ${route.data.count} processo${route.data.count !== 1 ? 's' : ''}`;
+                routeInfoLabel.style.display = 'block';
+                routeInfoLabel.classList.remove('visible');
+                activeRouteForLabel = route;
+            };
 
-                let hasMatch = false;
-                routeCurves.forEach(route => {
-                    const isMatch = route.key === routeKey;
-                    route.line.visible = isMatch;
-                    route.pulse.visible = isMatch;
+            const highlightDelay = 9000;
+            let highlightedIndex = -1;
+            let lastHighlightSwitch = performance.now();
+
+            const wrapAngleNear = (current, target) => {
+                const twoPi = Math.PI * 2;
+                let result = target;
+                while (result - current > Math.PI) {
+                    result -= twoPi;
+                }
+                while (result - current < -Math.PI) {
+                    result += twoPi;
+                }
+                return result;
+            };
+
+            const focusCameraOnRoute = route => {
+                const midpoint = new THREE.Vector3().addVectors(route.startVec, route.endVec).multiplyScalar(0.5);
+                const normalizedMid = midpoint.clone().normalize();
+                const distance = route.startVec.distanceTo(route.endVec);
+                const cameraDistance = Math.max(4.6, 3.2 + distance * 1.4);
+
+                targetCameraPosition.set(0, 0, cameraDistance);
+                targetCameraLookAt.set(0, 0, 0);
+
+                const clampedY = Math.max(-1, Math.min(1, normalizedMid.y));
+                const latitude = Math.asin(clampedY);
+                const longitude = Math.atan2(normalizedMid.x, normalizedMid.z);
+
+                const targetX = -latitude;
+                const targetY = longitude;
+
+                targetGlobeRotation.x = wrapAngleNear(globeGroup.rotation.x, targetX);
+                targetGlobeRotation.y = wrapAngleNear(globeGroup.rotation.y, targetY);
+            };
+
+            const highlightRoute = (index, manual = false) => {
+                if (!routeCurves.length) {
+                    updateHubMarkers(null);
+                    showRouteInfoLabel(null);
+                    return;
+                }
+                const normalized = ((index % routeCurves.length) + routeCurves.length) % routeCurves.length;
+                routeCurves.forEach((route, idx) => {
+                    const isActive = idx === normalized;
+                    route.line.visible = isActive;
                     if (route.line.material) {
-                        route.line.material.opacity = isMatch ? 0.6 : 0.15;
+                        route.line.material.opacity = isActive ? 0.75 : 0;
                         route.line.material.needsUpdate = true;
                     }
-                    if (isMatch) {
-                        route.pulse.material.opacity = 0.95;
-                        hasMatch = true;
-                    } else {
-                        route.pulse.material.opacity = 0;
+                    if (route.pulse.material) {
+                        route.pulse.material.opacity = isActive ? 0.95 : 0;
+                        route.pulse.material.needsUpdate = true;
+                    }
+                    route.pulse.visible = isActive;
+                    if (route.domElement) {
+                        route.domElement.classList.toggle('active', isActive);
                     }
                 });
 
-                if (!hasMatch) {
-                    alignToRoute = false;
-                    routeCurves.forEach(route => {
-                        route.line.visible = true;
-                        route.pulse.visible = false;
-                        if (route.line.material) {
-                            route.line.material.opacity = 0.35;
-                            route.line.material.needsUpdate = true;
-                        }
-                    });
+                focusCameraOnRoute(routeCurves[normalized]);
+                updateHubMarkers(routeCurves[normalized].key);
+                showRouteInfoLabel(routeCurves[normalized]);
+                highlightedIndex = normalized;
+                lastHighlightSwitch = performance.now();
+                if (manual) {
+                    lastHighlightSwitch = performance.now();
+                }
+            };
+
+            const advanceHighlight = () => {
+                if (!routeCurves.length) {
                     return;
                 }
+                const nextIndex = highlightedIndex === -1 ? 0 : (highlightedIndex + 1) % routeCurves.length;
+                highlightRoute(nextIndex);
+            };
 
-                const [originLabel, destinationLabel] = routeKey.split('→').map(part => part && part.trim());
-                const originCoords = originLabel ? cityCoords[originLabel.toUpperCase()] : null;
-                const destinationCoords = destinationLabel ? cityCoords[destinationLabel.toUpperCase()] : null;
-
-                if (!originCoords || !destinationCoords) {
-                    alignToRoute = false;
-                    return;
+            routeCurves.forEach((route, index) => {
+                if (route.domElement) {
+                    route.domElement.addEventListener('mouseenter', () => highlightRoute(index, true));
                 }
+            });
 
-                const startVec = latLonToVector3(originCoords[0], originCoords[1], 1).normalize();
-                const endVec = latLonToVector3(destinationCoords[0], destinationCoords[1], 1).normalize();
-                const midpoint = new THREE.Vector3().addVectors(startVec, endVec).normalize();
-                targetOrientation.y = Math.atan2(midpoint.x, midpoint.z);
-                targetOrientation.x = -Math.asin(midpoint.y);
-                alignToRoute = true;
-            }
-
-            function startCameraTransition(targetZ) {
-                if (!camera) {
-                    return;
-                }
-                cameraTransition = {
-                    start: performance.now(),
-                    from: camera.position.z,
-                    to: targetZ,
-                    duration: 2000
-                };
-            }
-
-            function setViewMode(mode) {
-                if (viewMode === mode) {
-                    return;
-                }
-                viewMode = mode;
-
-                if (mode === 'globe') {
-                    document.body.classList.add('globe-focus');
-                    startCameraTransition(3.8);
-                    currentRotationSpeed = rotationSpeeds.globe;
-                    overlayRouteIndex = 0;
-                    renderOverlayHighlight(overlayRouteIndex);
-                    if (overlayHighlightTimer) {
-                        clearInterval(overlayHighlightTimer);
-                    }
-                    overlayHighlightTimer = setInterval(() => advanceOverlayHighlight(), 5000);
-                } else {
-                    document.body.classList.remove('globe-focus');
-                    startCameraTransition(5.2);
-                    currentRotationSpeed = rotationSpeeds.dashboard;
-                    alignToRoute = false;
-                    if (overlayHighlightTimer) {
-                        clearInterval(overlayHighlightTimer);
-                        overlayHighlightTimer = null;
-                    }
-                    routeCurves.forEach(route => {
-                        route.line.visible = true;
-                        if (route.line.material) {
-                            route.line.material.opacity = 0.35;
-                            route.line.material.needsUpdate = true;
-                        }
-                        route.pulse.visible = false;
-                    });
-                    globeGroup.rotation.x = THREE.MathUtils.degToRad(0);
-                }
+            if (routeCurves.length) {
+                highlightRoute(0);
             }
 
             const clock = new THREE.Clock();
@@ -1018,58 +1309,54 @@
                 const delta = clock.getDelta();
                 const elapsed = clock.elapsedTime;
 
-                if (currentRotationSpeed !== 0) {
-                    globeGroup.rotation.y += delta * currentRotationSpeed;
-                }
-
                 routeCurves.forEach(route => {
-                    route.progress += route.speed;
-                    if (route.progress > 1) route.progress = 0;
+                    route.progress += route.speed * delta;
+                    if (route.progress > 1) route.progress -= 1;
                     const point = route.curve.getPointAt(route.progress);
                     route.pulse.position.copy(point);
                 });
 
                 hubMarkers.forEach(marker => {
-                    const scale = 1 + 0.25 * Math.sin(elapsed * 1.4 + marker.phase);
+                    if (!marker.hubData || !marker.hubData.hub || !marker.hubData.hub.visible) {
+                        return;
+                    }
+                    const scale = 1 + 0.25 * Math.sin(elapsed * 1.6 + marker.phase);
                     marker.aura.scale.set(scale, scale, scale);
-                    marker.aura.material.opacity = 0.18 + 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 1.4 + marker.phase));
+                    marker.aura.material.opacity = 0.16 + 0.12 * (0.5 + 0.5 * Math.sin(elapsed * 1.6 + marker.phase));
                 });
 
-                if (alignToRoute) {
-                    const lerp = Math.min(delta * 2.5, 1);
-                    globeGroup.rotation.x = THREE.MathUtils.lerp(globeGroup.rotation.x, targetOrientation.x, lerp);
-                    globeGroup.rotation.y = THREE.MathUtils.lerp(globeGroup.rotation.y, targetOrientation.y, lerp);
-                    if (Math.abs(globeGroup.rotation.x - targetOrientation.x) < 0.001 && Math.abs(globeGroup.rotation.y - targetOrientation.y) < 0.001) {
-                        alignToRoute = false;
+                if (routeInfoLabel) {
+                    if (activeRouteForLabel) {
+                        const labelPoint = activeRouteForLabel.labelPoint.clone();
+                        const projected = labelPoint.project(camera);
+                        const { width, height } = getMapDimensions();
+                        const x = (projected.x * 0.5 + 0.5) * width;
+                        const y = (-(projected.y) * 0.5 + 0.5) * height;
+                        const isVisible = projected.z < 1 && projected.z > -1;
+                        if (isVisible) {
+                            routeInfoLabel.style.left = `${x}px`;
+                            routeInfoLabel.style.top = `${y}px`;
+                            routeInfoLabel.classList.add('visible');
+                        } else {
+                            routeInfoLabel.classList.remove('visible');
+                        }
+                    } else {
+                        routeInfoLabel.classList.remove('visible');
                     }
                 }
 
-                if (cameraTransition) {
-                    const now = performance.now();
-                    const progress = Math.min((now - cameraTransition.start) / cameraTransition.duration, 1);
-                    const eased = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-                    camera.position.z = cameraTransition.from + (cameraTransition.to - cameraTransition.from) * eased;
-                    if (progress >= 1) {
-                        cameraTransition = null;
-                    }
+                camera.position.lerp(targetCameraPosition, Math.min(delta * 1.8, 1));
+                camera.lookAt(targetCameraLookAt);
+                globeGroup.rotation.x = THREE.MathUtils.lerp(globeGroup.rotation.x, targetGlobeRotation.x, Math.min(delta * 2.2, 1));
+                globeGroup.rotation.y = THREE.MathUtils.lerp(globeGroup.rotation.y, targetGlobeRotation.y, Math.min(delta * 2.2, 1));
+
+                if (routeCurves.length && performance.now() - lastHighlightSwitch > highlightDelay) {
+                    advanceHighlight();
                 }
 
                 renderer.render(scene, camera);
             }
             animate();
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            viewCycleTimer = setInterval(() => {
-                const nextMode = viewMode === 'dashboard' ? 'globe' : 'dashboard';
-                setViewMode(nextMode);
-            }, 20000);
-
-            setTimeout(() => setViewMode('globe'), 9000);
         });
     </script>
 </body>

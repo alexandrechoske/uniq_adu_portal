@@ -11,6 +11,23 @@ from extensions import supabase_admin
 from routes.auth import login_required, role_required
 from services.data_cache import data_cache
 
+
+def _get_exchange_rates_safe() -> Dict[str, Optional[float]]:
+    try:
+        from modules.importacoes.dashboards.resumido.routes import (  # pylint: disable=import-outside-toplevel
+            get_exchange_rates,
+        )
+
+        rates = get_exchange_rates()
+        if isinstance(rates, dict):
+            return {
+                "dolar": rates.get("dolar"),
+                "euro": rates.get("euro"),
+            }
+    except Exception as exc:  # pragma: no cover - resiliente a falhas externas
+        logger.warning("[DASH MAPA] Falha ao obter câmbio PTAX: %s", exc)
+    return {"dolar": None, "euro": None}
+
 logger = logging.getLogger(__name__)
 
 
@@ -157,7 +174,6 @@ def _normalize_record(record: Dict[str, Any]) -> Dict[str, Any]:
         "status_timeline": record.get("status_timeline"),
         "url_bandeira": record.get("url_bandeira"),
         "despesas_processo": despesas,
-        "valor_cif_real": _safe_float(record.get("valor_cif_real")),
     }
 
 
@@ -169,49 +185,59 @@ def _load_processes(
 ):
     cached_session = session.get(SESSION_CACHE_KEY) if use_session else None
     if cached_session:
-        logger.debug("[DASH MAPA] Cache de sessão encontrado (%s registros)", len(cached_session))
+        logger.info("[DASH MAPA] Cache de sessão encontrado (%s registros)", len(cached_session))
         return cached_session
 
     cached_service = None
     if user_id:
         cached_service = data_cache.get_cache(user_id, CACHE_DATA_TYPE)
         if cached_service:
-            logger.debug("[DASH MAPA] Cache do serviço encontrado (%s registros)", len(cached_service))
+            logger.info("[DASH MAPA] Cache do serviço encontrado (%s registros)", len(cached_service))
             if use_session:
                 session[SESSION_CACHE_KEY] = cached_service
             return cached_service
 
-    logger.debug("[DASH MAPA] Buscando dados no Supabase - role=%s", user_role)
+    logger.info("[DASH MAPA] Buscando dados no Supabase - role=%s, companies=%s", user_role, user_companies)
     try:
         query = supabase_admin.table("vw_importacoes_6_meses_abertos_dash").select(
             "id, ref_unique, ref_importador, cnpj_importador, importador, modal, container, "
             "data_embarque, data_chegada, transit_time_real, pais_procedencia, urf_despacho, "
             "exportador_fornecedor, numero_di, data_registro, canal, peso_bruto, data_desembaraco, "
             "mercadoria, data_abertura, data_fechamento, status_sistema, status_timeline, url_bandeira, "
-            "despesas_processo, valor_cif_real"
+            "despesas_processo"
         )
 
         if user_role == "cliente_unique":
             if not user_companies:
                 logger.info("[DASH MAPA] Cliente sem empresas vinculadas")
                 return []
+            logger.info("[DASH MAPA] Aplicando filtro de empresas para cliente: %s", user_companies)
             query = query.in_("cnpj_importador", user_companies)
         elif user_role == "interno_unique" and user_companies:
+            logger.info("[DASH MAPA] Aplicando filtro de empresas para interno: %s", user_companies)
             query = query.in_("cnpj_importador", user_companies)
+        else:
+            logger.info("[DASH MAPA] SEM filtro de empresas (acesso total)")
 
+        logger.info("[DASH MAPA] Executando query no Supabase...")
         response = query.order("data_abertura", desc=True).limit(3000).execute()
         records = response.data or []
+        logger.info("[DASH MAPA] Query retornou %s registros brutos", len(records))
+        
+        if records:
+            logger.info("[DASH MAPA] Exemplo de registro: %s", records[0])
+        
         normalized = [_normalize_record(item) for item in records]
+        logger.info("[DASH MAPA] %s registros normalizados", len(normalized))
 
         if use_session:
             session[SESSION_CACHE_KEY] = normalized
         if user_id:
             data_cache.set_cache(user_id, CACHE_DATA_TYPE, normalized)
 
-        logger.debug("[DASH MAPA] %s registros carregados da view", len(normalized))
         return normalized
     except Exception as exc:  # pragma: no cover - proteção extra
-        logger.error("[DASH MAPA] Erro ao carregar dados: %s", exc)
+        logger.error("[DASH MAPA] Erro ao carregar dados: %s", exc, exc_info=True)
         return []
 
 
@@ -274,6 +300,7 @@ def api_processos():
         use_session=context.get("use_session", False),
     )
     meta = _load_meta(hoje.year, hoje.month)
+    exchange_rates = _get_exchange_rates_safe()
 
     return jsonify(
         {
@@ -281,6 +308,7 @@ def api_processos():
             "data": {
                 "processos": processos,
                 "meta": meta,
+                "exchange_rates": exchange_rates,
                 "generated_at": datetime.utcnow().isoformat() + "Z",
             },
         }
