@@ -79,10 +79,16 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
             print('[DASHBOARD_EXECUTIVO] (Helper) Nenhum dado retornado da view')
             data_cache.set_cache(user_id, 'dashboard_v2_data', [])
             return []
+        
+        # Enriquecer com despesas
         enriched = enrich_data_with_despesas_view(raw)
-        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched)
+        
+        # Enriquecer com dados de armazenagem Kingspan (se aplicável)
+        enriched_with_armazenagem = enrich_data_with_armazenagem_kingspan(enriched, user_data)
+        
+        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_with_armazenagem)
         session['dashboard_v2_loaded'] = True
-        return enriched
+        return enriched_with_armazenagem
 
 def calculate_custo_from_despesas_processo(despesas_processo):
     """
@@ -163,6 +169,125 @@ def calculate_custo_from_vw_despesas(ref_unique):
     except Exception as e:
         print(f"[DESPESAS_VIEW] Erro ao consultar despesas para {ref_unique}: {str(e)}")
         return 0.0
+
+def enrich_data_with_armazenagem_kingspan(data, user_data):
+    """
+    Enriquecer dados dos processos com informações de armazenagem Kingspan
+    Adiciona campos para usuários que têm acesso ao cliente Kingspan
+    ACESSO: Clientes Kingspan (visualizar) e Internos (editar)
+    OTIMIZAÇÃO: Uma única consulta batch para todos os ref_unique
+    """
+    try:
+        # Verificar se usuário tem acesso a dados Kingspan
+        from modules.importacoes.dashboards.executivo.api_armazenagem import is_kingspan_user
+        
+        tem_acesso, kingspan_cnpjs, can_edit = is_kingspan_user(user_data)
+        
+        if not tem_acesso:
+            # Usuário não tem acesso - retornar dados sem enriquecimento
+            print(f"[ARMAZENAGEM] Usuário não tem acesso aos dados Kingspan")
+            # Adicionar flag indicando que não tem acesso
+            for item in data:
+                item['has_kingspan_access'] = False
+                item['can_edit_armazenagem'] = False
+            return data
+        
+        print(f"[ARMAZENAGEM] Enriquecendo {len(data)} processos com dados de armazenagem Kingspan...")
+        print(f"[ARMAZENAGEM] CNPJs Kingspan do usuário: {kingspan_cnpjs}")
+        print(f"[ARMAZENAGEM] Permissão de edição: {can_edit}")
+        
+        # Filtrar apenas processos Kingspan
+        kingspan_ref_uniques = []
+        for item in data:
+            if item.get('cnpj_importador') in kingspan_cnpjs:
+                kingspan_ref_uniques.append(item.get('ref_unique'))
+        
+        print(f"[ARMAZENAGEM] {len(kingspan_ref_uniques)} processos Kingspan encontrados")
+        
+        # Buscar dados de armazenagem em batch
+        armazenagem_map = {}
+        if kingspan_ref_uniques:
+            try:
+                # Consultar em lotes de 1000 para evitar limite de query
+                batch_size = 1000
+                for i in range(0, len(kingspan_ref_uniques), batch_size):
+                    batch = kingspan_ref_uniques[i:i + batch_size]
+                    print(f"[ARMAZENAGEM] Processando lote {i//batch_size + 1}: {len(batch)} registros")
+                    
+                    query = supabase_admin.table('importacoes_processos_armazenagem')\
+                        .select('*')\
+                        .in_('ref_unique', batch)
+                    result = query.execute()
+                    
+                    if result.data:
+                        for armazenagem in result.data:
+                            ref_unique = armazenagem.get('ref_unique')
+                            if ref_unique:
+                                # Converter datas ISO para DD/MM/YYYY
+                                for date_field in ['data_desova', 'limite_primeiro_periodo', 'limite_segundo_periodo']:
+                                    if armazenagem.get(date_field):
+                                        try:
+                                            date_obj = datetime.fromisoformat(armazenagem[date_field].replace('Z', '+00:00'))
+                                            armazenagem[date_field] = date_obj.strftime('%d/%m/%Y')
+                                        except:
+                                            pass
+                                
+                                armazenagem_map[ref_unique] = armazenagem
+                
+                print(f"[ARMAZENAGEM] Encontrados dados de armazenagem para {len(armazenagem_map)} processos")
+                
+            except Exception as e:
+                print(f"[ARMAZENAGEM] Erro na consulta batch: {str(e)}")
+                armazenagem_map = {}
+        
+        # Enriquecer dados originais
+        enriched_data = []
+        total_enriquecidos = 0
+        
+        for item in data:
+            enriched_item = item.copy()
+            ref_unique = item.get('ref_unique')
+            cnpj_importador = item.get('cnpj_importador')
+            
+            # Adicionar flags de acesso
+            enriched_item['has_kingspan_access'] = tem_acesso
+            enriched_item['can_edit_armazenagem'] = can_edit  # NOVO: flag de edição
+            
+            # Se for processo Kingspan, adicionar dados de armazenagem
+            if cnpj_importador in kingspan_cnpjs:
+                enriched_item['is_kingspan'] = True
+                
+                if ref_unique in armazenagem_map:
+                    armazenagem = armazenagem_map[ref_unique]
+                    enriched_item['armazenagem_data'] = {
+                        'data_desova': armazenagem.get('data_desova'),
+                        'limite_primeiro_periodo': armazenagem.get('limite_primeiro_periodo'),
+                        'limite_segundo_periodo': armazenagem.get('limite_segundo_periodo'),
+                        'dias_extras_armazenagem': armazenagem.get('dias_extras_armazenagem'),
+                        'valor_despesas_extras': armazenagem.get('valor_despesas_extras')
+                    }
+                    enriched_item['has_armazenagem_data'] = True
+                    total_enriquecidos += 1
+                else:
+                    enriched_item['armazenagem_data'] = None
+                    enriched_item['has_armazenagem_data'] = False
+            else:
+                enriched_item['is_kingspan'] = False
+                enriched_item['armazenagem_data'] = None
+                enriched_item['has_armazenagem_data'] = False
+            
+            enriched_data.append(enriched_item)
+        
+        print(f"[ARMAZENAGEM] Enriquecimento concluído: {total_enriquecidos}/{len(kingspan_ref_uniques)} processos Kingspan com dados de armazenagem")
+        print(f"[ARMAZENAGEM] Permissão de edição: {can_edit}")
+        return enriched_data
+        
+    except Exception as e:
+        print(f"[ARMAZENAGEM] Erro no enriquecimento: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Retornar dados originais em caso de erro
+        return data
 
 def enrich_data_with_despesas_view(data):
     """

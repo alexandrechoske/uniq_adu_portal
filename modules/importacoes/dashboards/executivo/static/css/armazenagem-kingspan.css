@@ -1,0 +1,454 @@
+/* =====================================================
+   ÍCONE DE ARMAZENAGEM NA TABELA (COLUNA DE AÇÕES)
+   ===================================================== */
+
+/* Botão de bagagem ao lado do olho */
+.table-action-btn .mdi-bag-suitcase,
+.table-action-btn .mdi-bag-suitcase-outline {
+    font-size: 18px;
+}
+
+/* Bagagem preenchida (tem dados) - cor azul */
+.table-action-btn .mdi-bag-suitcase {
+    color: #4a90e2;
+}
+
+/* Bagagem vazia (sem dados) - cor cinza */
+.table-action-btn .mdi-bag-suitcase-outline {
+    color: #9e9e9e;
+}
+
+/* Hover nos botões de bagagem */
+.table-action-btn:hover .mdi-bag-suitcase {
+    color: #2e6bb8;
+}
+
+.table-action-btn:hover .mdi-bag-suitcase-outline {
+    color: #667eea;
+}
+
+/* =====================================================
+   MODAL DE ARMAZENAGEM KINGSPAN
+   ===================================================== */
+
+.armazenagem-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.armazenagem-modal-overlay.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.armazenagem-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease-out;
+}
+
+.armazenagem-modal-header {
+    padding: 24px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.armazenagem-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.armazenagem-modal-header i {
+    font-size: 24px;
+}
+
+.armazenagem-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.armazenagem-modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+.armazenagem-modal-body {
+    padding: 24px;
+}
+
+.armazenagem-info-box {
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.armazenagem-info-box h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.armazenagem-info-box p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.armazenagem-info-box .ref-unique {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.armazenagem-form-group {
+    margin-bottom: 20px;
+}
+
+.armazenagem-form-group label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.armazenagem-form-group label i {
+    margin-right: 6px;
+    color: #667eea;
+}
+
+.armazenagem-form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s;
+    box-sizing: border-box;
+}
+
+.armazenagem-form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.armazenagem-form-group input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.armazenagem-form-group small {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #999;
+}
+
+.armazenagem-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.armazenagem-modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+.armazenagem-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.armazenagem-btn i {
+    font-size: 16px;
+}
+
+.armazenagem-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.armazenagem-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.armazenagem-btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.armazenagem-btn-secondary {
+    background: white;
+    color: #666;
+    border: 2px solid #e0e0e0;
+}
+
+.armazenagem-btn-secondary:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+}
+
+.armazenagem-btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.armazenagem-btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+/* Badge de status na coluna da tabela */
+.armazenagem-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.armazenagem-status-badge.filled {
+    background: #d4edda;
+    color: #155724;
+}
+
+.armazenagem-status-badge.empty {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.armazenagem-status-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.armazenagem-status-badge i {
+    font-size: 14px;
+}
+
+/* Botão de ação na tabela */
+.armazenagem-action-btn {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.armazenagem-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.armazenagem-action-btn i {
+    font-size: 14px;
+}
+
+/* Loading spinner */
+.armazenagem-loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.armazenagem-loading.active {
+    display: block;
+}
+
+.armazenagem-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+/* Mensagens de erro */
+.armazenagem-error-message {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.armazenagem-error-message.active {
+    display: block;
+}
+
+.armazenagem-error-message i {
+    margin-right: 8px;
+}
+
+/* Mensagens de sucesso */
+.armazenagem-success-message {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.armazenagem-success-message.active {
+    display: block;
+}
+
+.armazenagem-success-message i {
+    margin-right: 8px;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .armazenagem-modal {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .armazenagem-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .armazenagem-modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    .armazenagem-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Tooltip para campos */
+.armazenagem-tooltip {
+    position: relative;
+    display: inline-block;
+    margin-left: 6px;
+    color: #999;
+    cursor: help;
+}
+
+.armazenagem-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.armazenagem-tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #333;
+    z-index: 1000;
+}

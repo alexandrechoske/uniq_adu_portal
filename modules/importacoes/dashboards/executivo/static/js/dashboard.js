@@ -856,12 +856,28 @@ function initializeEnhancedTable() {
             statusDisplay = operation.status_processo || operation.status || 'Sem Info';
         }
         
+        // Verificar se é processo Kingspan (nome contém "KING")
+        const isKingspan = operation.importador && operation.importador.toUpperCase().includes('KING');
+        
+        // Botão de Ações com ícone de bagagem para Kingspan
+        let actionsButtons = `
+            <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
+                <i class="mdi mdi-eye-outline"></i>
+            </button>
+        `;
+        
+        // Adicionar botão de armazenagem se for Kingspan E usuário tiver acesso
+        if (isKingspan && window.hasKingspanAccess && typeof window.ArmazenagemKingspan !== 'undefined') {
+            const hasArmazenagemData = operation.has_armazenagem_data || false;
+            actionsButtons += `
+            <button class="table-action-btn" onclick="openArmazenagemModal(${globalIndex})" title="${hasArmazenagemData ? 'Editar armazenagem' : 'Cadastrar armazenagem'}">
+                <i class="mdi mdi-bag-suitcase${hasArmazenagemData ? '' : '-outline'}"></i>
+            </button>
+            `;
+        }
+        
         return `
-            <td>
-                <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
-                    <i class="mdi mdi-eye-outline"></i>
-                </button>
-            </td>
+            <td>${actionsButtons}</td>
             <td><strong>${operation.ref_importador || '-'}</strong></td>
             <td>${operation.importador || '-'}</td>
             <td>${formatDate(operation.data_abertura)}</td>
@@ -3860,3 +3876,36 @@ function getCountryCode(countryName) {
     const normalizedName = countryName.toString().toUpperCase().trim();
     return COUNTRY_MAPPING[normalizedName] || null;
 }
+
+/**
+ * Open armazenagem modal for Kingspan process
+ * Função global para abrir o modal de armazenagem
+ */
+function openArmazenagemModal(operationIndex) {
+    console.log('[ARMAZENAGEM] Abrindo modal para índice:', operationIndex);
+    
+    // Validation checks
+    if (!window.currentOperations) {
+        console.error('[ARMAZENAGEM] Array global de operações não encontrado');
+        return;
+    }
+    
+    if (operationIndex === -1 || !window.currentOperations[operationIndex]) {
+        console.error('[ARMAZENAGEM] Operação não encontrada no índice:', operationIndex);
+        return;
+    }
+    
+    const operation = window.currentOperations[operationIndex];
+    console.log('[ARMAZENAGEM] Dados da operação:', operation);
+    console.log('[ARMAZENAGEM] ref_unique:', operation.ref_unique);
+    
+    // Chamar função do módulo ArmazenagemKingspan
+    if (typeof window.ArmazenagemKingspan !== 'undefined' && typeof window.ArmazenagemKingspan.openModal === 'function') {
+        window.ArmazenagemKingspan.openModal(operation.ref_unique, operation);
+    } else {
+        console.error('[ARMAZENAGEM] Módulo ArmazenagemKingspan não encontrado');
+    }
+}
+
+// Expor função globalmente
+window.openArmazenagemModal = openArmazenagemModal;
