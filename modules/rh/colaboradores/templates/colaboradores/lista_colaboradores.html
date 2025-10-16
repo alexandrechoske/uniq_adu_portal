@@ -319,17 +319,50 @@
                             <textarea class="form-control" id="beneficiosDescricao" rows="2" placeholder="Ex: Atualização do pacote de benefícios" required></textarea>
                         </div>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0"><i class="mdi mdi-format-list-bulleted"></i> Benefícios</h6>
-                        <button type="button" class="btn btn-outline-success btn-sm" id="btnAdicionarBeneficioLinha">
-                            <i class="mdi mdi-plus"></i> Adicionar Benefício
-                        </button>
+                    <div class="mb-4">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="mdi mdi-cash-plus me-1"></i> Remuneração Adicional
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioAjudaCusto">Ajuda de Custo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioAjudaCusto" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioAuxilioCreche">Auxílio Creche</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioAuxilioCreche" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Informe os valores pagos mensalmente como remuneração adicional.</small>
                     </div>
 
-                    <div id="beneficiosLista" class="beneficios-lista"></div>
+                    <div class="mb-2">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="mdi mdi-wallet-outline me-1"></i> Benefícios Padrão
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioValeAlimentacao">Vale Alimentação / Refeição</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioValeAlimentacao" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioValeTransporte">Vale Transporte</label>
+                                <input type="text" class="form-control" id="beneficioValeTransporte" placeholder="Ex: Sim ou 180,00">
+                                <small class="text-muted">Digite "Sim" quando o benefício for concedido sem desconto.</small>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="alert alert-warning mt-3 mb-0" id="beneficiosAviso" style="display: none;"></div>
+                    <div class="alert alert-warning mt-4 mb-0" id="beneficiosAviso" style="display: none;"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>

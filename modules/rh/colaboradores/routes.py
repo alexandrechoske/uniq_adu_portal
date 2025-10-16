@@ -7,13 +7,17 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 from extensions import supabase_admin
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
-from datetime import datetime, date
-from copy import deepcopy
-import json
+from datetime import datetime, date, timezone
 import os
-import re
-import unicodedata
 
+from modules.rh.colaboradores.benefits_utils import (
+    BENEFICIOS_CATALOGO,
+    build_beneficios_view,
+    format_currency_br,
+    has_beneficios,
+    normalize_beneficios,
+    normalize_decimal,
+)
 from services.event_notification_service import EventNotificationService
 
 # Criar blueprint
@@ -78,6 +82,41 @@ def _ensure_date(value):
     return None
 
 
+def _ensure_datetime(value):
+    """Converte diferentes formatos para objeto datetime."""
+    if not value:
+        return None
+
+    dt = None
+
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+
+        candidate = candidate.replace('Z', '+00:00')
+
+        for fmt in ('%Y-%m-%dT%H:%M:%S.%f%z', '%Y-%m-%dT%H:%M:%S%z', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+            try:
+                dt = datetime.strptime(candidate, fmt)
+                break
+            except ValueError:
+                continue
+
+        if dt is None:
+            try:
+                dt = datetime.fromisoformat(candidate)
+            except ValueError:
+                return None
+
+    if dt and dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    return dt
+
+
 def _calculate_age(birth_date):
     """Calcula idade em anos completos."""
     reference = _ensure_date(birth_date)
@@ -92,138 +131,36 @@ def _calculate_age(birth_date):
 
 
 def _format_currency_br(value):
-    """Formata número como moeda brasileira."""
-    if value in (None, ''):
-        return '-'
+    return format_currency_br(value)
 
-    try:
-        amount = float(value)
-    except (ValueError, TypeError):
-        return '-'
 
-    formatted = f"{amount:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-    return f'R$ {formatted}'
+def _normalizar_valor_decimal(valor):
+    return normalize_decimal(valor)
+
+
+def _format_time_br(value):
+    referencia = _ensure_datetime(value)
+    if not referencia:
+        return None
+    return referencia.strftime('%H:%M')
 
 
 def _parse_beneficios_payload(payload, prefix='beneficio_'):
-    """Extrai valores numéricos de benefícios a partir do payload recebido."""
     if not isinstance(payload, dict):
-        return {}
+        return normalize_beneficios({})
 
-    beneficios = {}
+    flat = {}
     for key, value in payload.items():
-        if not key.startswith(prefix):
-            continue
+        if key.startswith(prefix):
+            slug = key[len(prefix):]
+            flat[slug] = value
 
-        nome_beneficio = key[len(prefix):]
-        valor_normalizado = _normalizar_valor_decimal(value)
-        if valor_normalizado is not None and valor_normalizado > 0:
-            beneficios[nome_beneficio] = valor_normalizado
-
-    return beneficios
+    return normalize_beneficios(flat)
 
 
 def _coletar_beneficios_anteriores(historico):
-    """Obtém benefícios do último histórico garantindo retorno em dict."""
-    if not historico:
-        return {}
-
-    beneficios = historico.get('beneficios_jsonb')
-    if not beneficios:
-        return {}
-
-    if isinstance(beneficios, dict):
-        return deepcopy(beneficios)
-
-    if isinstance(beneficios, str):
-        try:
-            parsed = json.loads(beneficios)
-            return parsed if isinstance(parsed, dict) else {}
-        except json.JSONDecodeError:
-            return {}
-
-    return {}
-
-
-def _beneficio_label(chave):
-    if not chave:
-        return '-'
-
-    chave_normalizada = str(chave).strip()
-    for item in BENEFICIOS_CATALOGO:
-        if item['slug'] == chave_normalizada:
-            return item['label']
-
-    return chave_normalizada.replace('_', ' ').title()
-
-
-def _slugify_beneficio(nome):
-    if not nome:
-        return None
-
-    texto = unicodedata.normalize('NFKD', str(nome)).encode('ascii', 'ignore').decode('ascii')
-    texto = texto.lower()
-    texto = re.sub(r'[^a-z0-9]+', '_', texto)
-    texto = texto.strip('_')
-    return texto or None
-
-
-def _formatar_beneficios_para_view(beneficios_dict):
-    if not isinstance(beneficios_dict, dict):
-        return [], 0.0
-
-    lista = []
-    total = 0.0
-
-    for chave, valor in beneficios_dict.items():
-        valor_float = _normalizar_valor_decimal(valor)
-        if valor_float is None:
-            continue
-
-        lista.append({
-            'chave': chave,
-            'label': _beneficio_label(chave),
-            'valor': valor_float,
-            'valor_formatado': _format_currency_br(valor_float)
-        })
-        total += valor_float
-
-    lista.sort(key=lambda item: item['label'])
-    return lista, total
-
-
-def _normalizar_beneficios_genericos(payload):
-    if not payload:
-        return {}
-
-    itens = []
-
-    if isinstance(payload, dict):
-        itens = payload.items()
-    elif isinstance(payload, list):
-        for item in payload:
-            if not isinstance(item, dict):
-                continue
-            nome = item.get('slug') or item.get('tipo') or item.get('codigo') or item.get('nome') or item.get('beneficio')
-            valor = item.get('valor')
-            itens.append((nome, valor))
-    else:
-        return {}
-
-    beneficios = {}
-
-    for nome, valor in itens:
-        slug = _slugify_beneficio(nome)
-        if not slug:
-            continue
-
-        valor_normalizado = _normalizar_valor_decimal(valor)
-        if valor_normalizado is None:
-            continue
-
-        beneficios[slug] = valor_normalizado
-
-    return beneficios
+    beneficios = historico.get('beneficios_jsonb') if historico else None
+    return normalize_beneficios(beneficios)
 
 
 def format_date_br(value):
@@ -460,6 +397,7 @@ def editar_colaborador(colaborador_id):
             .select('*')\
             .eq('colaborador_id', colaborador_id)\
             .order('data_evento', desc=True)\
+            .order('created_at', desc=True)\
             .limit(1)\
             .execute()
         
@@ -479,6 +417,17 @@ def editar_colaborador(colaborador_id):
             dependente['idade'] = _calculate_age(data_nascimento_dt)
             dependentes.append(dependente)
 
+        contatos_emergencia = []
+        contatos_response = supabase_admin.table('rh_colaborador_contatos_emergencia')\
+            .select('*')\
+            .eq('colaborador_id', colaborador_id)\
+            .order('nome_contato')\
+            .execute()
+
+        for contato in contatos_response.data or []:
+            contato['telefone_contato'] = (contato.get('telefone_contato') or '').strip()
+            contatos_emergencia.append(contato)
+
         info_atual = None
         try:
             rpc_response = supabase_admin.rpc(
@@ -494,18 +443,25 @@ def editar_colaborador(colaborador_id):
         base_evento = ultimo_historico or _buscar_ultimo_historico(colaborador_id)
         if base_evento:
             beneficios_dict = _coletar_beneficios_anteriores(base_evento)
-            beneficios_lista, beneficios_total = _formatar_beneficios_para_view(beneficios_dict)
+            beneficios_view = build_beneficios_view(beneficios_dict)
             salario_atual = _normalizar_valor_decimal(base_evento.get('salario_mensal'))
             salario_formatado = _format_currency_br(salario_atual) if salario_atual is not None else None
+            total_remuneracao = (salario_atual or 0.0) + beneficios_view['total_geral']
 
             info_atual = info_atual or {}
             info_atual.update({
                 'salario_mensal': salario_atual,
                 'salario_formatado': salario_formatado,
                 'beneficios_jsonb': beneficios_dict,
-                'beneficios_lista': beneficios_lista,
-                'beneficios_total': beneficios_total,
-                'beneficios_total_formatado': _format_currency_br(beneficios_total) if beneficios_total is not None else None
+                'beneficios_view': beneficios_view,
+                'beneficios_total': beneficios_view['total_geral'],
+                'beneficios_total_formatado': beneficios_view['total_geral_formatado'],
+                'remuneracao_adicional_total': beneficios_view['remuneracao_adicional']['total'],
+                'remuneracao_adicional_total_formatado': beneficios_view['remuneracao_adicional']['total_formatado'],
+                'beneficios_padrao_total': beneficios_view['beneficios_padrao']['total'],
+                'beneficios_padrao_total_formatado': beneficios_view['beneficios_padrao']['total_formatado'],
+                'total_remuneracao': total_remuneracao,
+                'total_remuneracao_formatado': _format_currency_br(total_remuneracao) if total_remuneracao else 'R$ 0,00'
             })
         
         return render_template(
@@ -520,6 +476,7 @@ def editar_colaborador(colaborador_id):
             gestores=colaboradores.data if colaboradores.data else [],
             info_atual=info_atual,
             dependentes=dependentes,
+            contatos_emergencia=contatos_emergencia,
             beneficios_catalogo=BENEFICIOS_CATALOGO,
             is_editing=True
         )
@@ -558,55 +515,64 @@ def visualizar_colaborador(colaborador_id):
             .select('*, cargo:rh_cargos(nome_cargo), departamento:rh_departamentos(nome_departamento), empresa:rh_empresas(razao_social)')\
             .eq('colaborador_id', colaborador_id)\
             .order('data_evento', desc=True)\
+            .order('created_at', desc=True)\
             .execute()
 
         historico_data = historico.data if historico.data else []
+        historico_data.sort(
+            key=lambda evento: (
+                _ensure_date(evento.get('data_evento')) or date.min,
+                _ensure_datetime(evento.get('created_at')) or datetime.min,
+                str(evento.get('id') or '')
+            ),
+            reverse=True
+        )
         for evento in historico_data:
             status_atual = (evento.get('status_contabilidade') or '').strip()
             evento['status_contabilidade'] = status_atual or 'Pendente'
             evento['data_evento_br'] = format_date_br(evento.get('data_evento'))
+            evento['hora_evento_br'] = _format_time_br(evento.get('created_at'))
 
             beneficios_dict = _coletar_beneficios_anteriores(evento)
-            beneficios_lista = []
-            beneficios_total = 0.0
-
-            for chave, valor in beneficios_dict.items():
-                valor_float = _normalizar_valor_decimal(valor)
-                if valor_float is None:
-                    continue
-                beneficios_lista.append({
-                    'chave': chave,
-                    'label': chave.replace('_', ' ').title(),
-                    'valor': valor_float,
-                    'valor_formatado': _format_currency_br(valor_float)
-                })
-                beneficios_total += valor_float
+            beneficios_view = build_beneficios_view(beneficios_dict)
 
             salario_atual = _normalizar_valor_decimal(evento.get('salario_mensal')) or 0.0
             evento['salario_formatado'] = _format_currency_br(salario_atual) if salario_atual else None
-            evento['beneficios_lista'] = beneficios_lista
-            evento['total_remuneracao'] = salario_atual + beneficios_total if (salario_atual or beneficios_lista) else None
-            evento['total_remuneracao_formatado'] = _format_currency_br(evento['total_remuneracao']) if evento['total_remuneracao'] else None
+            evento['beneficios_view'] = beneficios_view
+            evento['beneficios_total'] = beneficios_view['total_geral']
+            evento['beneficios_total_formatado'] = beneficios_view['total_geral_formatado']
+
+            total_remuneracao = salario_atual + beneficios_view['total_geral']
+            evento['total_remuneracao'] = total_remuneracao if (salario_atual or beneficios_view['has_beneficios']) else None
+            evento['total_remuneracao_formatado'] = (
+                _format_currency_br(total_remuneracao)
+                if evento['total_remuneracao'] is not None
+                else None
+            )
 
         ultimo_evento = historico_data[0] if historico_data else _buscar_ultimo_historico(colaborador_id)
         info_atual = None
 
         if ultimo_evento:
             beneficios_dict = _coletar_beneficios_anteriores(ultimo_evento)
-            beneficios_lista, beneficios_total = _formatar_beneficios_para_view(beneficios_dict)
+            beneficios_view = build_beneficios_view(beneficios_dict)
             salario_atual = _normalizar_valor_decimal(ultimo_evento.get('salario_mensal'))
             salario_para_total = salario_atual if salario_atual is not None else 0.0
-            total_remuneracao = salario_para_total + beneficios_total
+            total_remuneracao = salario_para_total + beneficios_view['total_geral']
 
             info_atual = {
                 'salario_mensal': salario_atual,
                 'salario_formatado': _format_currency_br(salario_atual) if salario_atual is not None else None,
                 'beneficios_jsonb': beneficios_dict,
-                'beneficios_lista': beneficios_lista,
-                'beneficios_total': beneficios_total,
-                'beneficios_total_formatado': _format_currency_br(beneficios_total) if beneficios_total is not None else None,
+                'beneficios_view': beneficios_view,
+                'beneficios_total': beneficios_view['total_geral'],
+                'beneficios_total_formatado': beneficios_view['total_geral_formatado'],
+                'remuneracao_adicional_total': beneficios_view['remuneracao_adicional']['total'],
+                'remuneracao_adicional_total_formatado': beneficios_view['remuneracao_adicional']['total_formatado'],
+                'beneficios_padrao_total': beneficios_view['beneficios_padrao']['total'],
+                'beneficios_padrao_total_formatado': beneficios_view['beneficios_padrao']['total_formatado'],
                 'total_remuneracao': total_remuneracao,
-                'total_remuneracao_formatado': _format_currency_br(total_remuneracao) if total_remuneracao is not None else None,
+                'total_remuneracao_formatado': _format_currency_br(total_remuneracao) if total_remuneracao is not None else 'R$ 0,00',
                 'data_evento': ultimo_evento.get('data_evento')
             }
         
@@ -717,6 +683,16 @@ def api_get_colaborador(colaborador_id):
             ).execute()
             if rpc_response.data:
                 info_atual = rpc_response.data[0]
+                beneficios_atual = normalize_beneficios(info_atual.get('beneficios_jsonb'))
+                info_atual['beneficios_jsonb'] = beneficios_atual
+                beneficios_view = build_beneficios_view(beneficios_atual)
+                info_atual['beneficios_view'] = beneficios_view
+                info_atual['beneficios_total'] = beneficios_view['total_geral']
+                info_atual['beneficios_total_formatado'] = beneficios_view['total_geral_formatado']
+                info_atual['remuneracao_adicional_total'] = beneficios_view['remuneracao_adicional']['total']
+                info_atual['remuneracao_adicional_total_formatado'] = beneficios_view['remuneracao_adicional']['total_formatado']
+                info_atual['beneficios_padrao_total'] = beneficios_view['beneficios_padrao']['total']
+                info_atual['beneficios_padrao_total_formatado'] = beneficios_view['beneficios_padrao']['total_formatado']
         except Exception as exc:
             print(f"[AVISO] Falha ao obter dados atuais do colaborador via RPC: {exc}")
 
@@ -814,7 +790,7 @@ def api_create_colaborador():
             historico_data['salario_mensal'] = salario_inicial
 
         beneficios_iniciais = _parse_beneficios_payload(data)
-        if beneficios_iniciais:
+        if has_beneficios(beneficios_iniciais):
             historico_data['beneficios_jsonb'] = beneficios_iniciais
         
         # Inserir no histórico
@@ -959,6 +935,7 @@ def _buscar_ultimo_historico(colaborador_id):
         .select('*')\
         .eq('colaborador_id', colaborador_id)\
         .order('data_evento', desc=True)\
+        .order('created_at', desc=True)\
         .limit(1)\
         .execute()
     if response.data:
@@ -1009,23 +986,6 @@ def _montar_dados_adicionais_historico(historico, mapeamentos):
             dados[destino] = valor
     return dados
 
-
-def _normalizar_valor_decimal(valor):
-    if valor in (None, ''):
-        return None
-    if isinstance(valor, (int, float)):
-        return float(valor)
-    try:
-        valor_str = str(valor)
-        valor_str = valor_str.replace('R$', '').replace(' ', '')
-        valor_str = valor_str.replace('.', '').replace(',', '.')
-        if valor_str == '':
-            return None
-        return float(valor_str)
-    except (ValueError, TypeError):
-        return None
-
-
 @colaboradores_bp.route('/api/colaboradores/<colaborador_id>/promover', methods=['POST'])
 @perfil_or_bypass_required('rh', 'colaboradores')
 def api_promover_colaborador(colaborador_id):
@@ -1075,11 +1035,11 @@ def api_promover_colaborador(colaborador_id):
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
         beneficios_novos = _parse_beneficios_payload(payload)
-        if beneficios_novos:
+        if has_beneficios(beneficios_novos):
             historico_data['beneficios_jsonb'] = beneficios_novos
         else:
             beneficios_atuais = _coletar_beneficios_anteriores(ultimo_historico)
-            if beneficios_atuais:
+            if has_beneficios(beneficios_atuais):
                 historico_data['beneficios_jsonb'] = beneficios_atuais
 
         _registrar_evento_historico(historico_data)
@@ -1137,11 +1097,11 @@ def api_reajustar_salario(colaborador_id):
             historico_data['dados_adicionais_jsonb'] = dados_adicionais
 
         beneficios_novos = _parse_beneficios_payload(payload)
-        if beneficios_novos:
+        if has_beneficios(beneficios_novos):
             historico_data['beneficios_jsonb'] = beneficios_novos
         else:
             beneficios_atuais = _coletar_beneficios_anteriores(ultimo_historico)
-            if beneficios_atuais:
+            if has_beneficios(beneficios_atuais):
                 historico_data['beneficios_jsonb'] = beneficios_atuais
 
         _registrar_evento_historico(historico_data)
@@ -1159,7 +1119,7 @@ def api_alterar_beneficios(colaborador_id):
         payload = request.get_json() or {}
         data_evento = payload.get('data_evento')
         descricao = (payload.get('descricao') or '').strip()
-        beneficios_payload = payload.get('beneficios')
+        beneficios_payload = payload.get('beneficios') or {}
 
         if not data_evento or not descricao:
             return jsonify({'error': 'Informe a data e o motivo da alteração.'}), 400
@@ -1172,9 +1132,9 @@ def api_alterar_beneficios(colaborador_id):
         if not ultimo_historico:
             return jsonify({'error': 'Ainda não há histórico para este colaborador.'}), 400
 
-        beneficios_normalizados = _normalizar_beneficios_genericos(beneficios_payload)
-        if not beneficios_normalizados:
-            return jsonify({'error': 'Informe ao menos um benefício válido com valor numérico.'}), 400
+        beneficios_normalizados = normalize_beneficios(beneficios_payload)
+        if not has_beneficios(beneficios_normalizados):
+            return jsonify({'error': 'Informe ao menos um benefício válido.'}), 400
 
         beneficios_anteriores = _coletar_beneficios_anteriores(ultimo_historico)
 
@@ -1192,18 +1152,21 @@ def api_alterar_beneficios(colaborador_id):
             ['cargo_id', 'departamento_id', 'gestor_id', 'empresa_id', 'tipo_contrato', 'modelo_trabalho', 'salario_mensal']
         )
 
-        if beneficios_anteriores:
+        beneficios_anteriores_formatados = None
+        if has_beneficios(beneficios_anteriores):
             historico_data['dados_adicionais_jsonb'] = {
                 'beneficios_anteriores': beneficios_anteriores
             }
+            beneficios_anteriores_formatados = beneficios_anteriores
 
         evento = _registrar_evento_historico(historico_data)
         if not evento:
             return jsonify({'error': 'Não foi possível registrar o evento de alteração de benefícios.'}), 500
 
-        beneficios_lista, beneficios_total = _formatar_beneficios_para_view(beneficios_normalizados)
+        beneficios_view = build_beneficios_view(beneficios_normalizados)
         salario_atual = _normalizar_valor_decimal(historico_data.get('salario_mensal'))
         salario_para_total = salario_atual if salario_atual is not None else 0.0
+        beneficios_total = beneficios_view.get('total_geral', 0.0) or 0.0
         total_remuneracao = salario_para_total + beneficios_total
 
         return jsonify({
@@ -1213,10 +1176,14 @@ def api_alterar_beneficios(colaborador_id):
                 'data_evento': evento.get('data_evento'),
                 'tipo_evento': evento.get('tipo_evento'),
                 'descricao_e_motivos': evento.get('descricao_e_motivos'),
-                'beneficios_lista': beneficios_lista,
-                'beneficios_total_formatado': _format_currency_br(beneficios_total) if beneficios_total is not None else None,
-                'salario_formatado': _format_currency_br(salario_atual) if salario_atual is not None else None,
-                'total_remuneracao_formatado': _format_currency_br(total_remuneracao)
+                'beneficios_jsonb': beneficios_normalizados,
+                'beneficios': beneficios_view,
+                'beneficios_anteriores': beneficios_anteriores_formatados,
+                'totais': {
+                    'beneficios_formatado': beneficios_view.get('total_geral_formatado'),
+                    'salario_formatado': _format_currency_br(salario_atual) if salario_atual is not None else None,
+                    'total_remuneracao_formatado': _format_currency_br(total_remuneracao)
+                }
             }
         }), 201
 
