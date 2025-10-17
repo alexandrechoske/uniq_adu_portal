@@ -2,10 +2,18 @@
    ÍCONE DE ARMAZENAGEM NA TABELA (COLUNA DE AÇÕES)
    ===================================================== */
 
-/* Botão de bagagem ao lado do olho */
-.table-action-btn .mdi-bag-suitcase,
-.table-action-btn .mdi-bag-suitcase-outline {
-    font-size: 18px;
+/* Padronizar tamanho de TODOS os ícones na tabela de ações */
+.table-action-btn i {
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Cor padrão dos ícones */
+.table-action-btn .mdi-eye-outline {
+    color: #6b7280;
 }
 
 /* Bagagem preenchida (tem dados) - cor azul */
@@ -18,7 +26,11 @@
     color: #9e9e9e;
 }
 
-/* Hover nos botões de bagagem */
+/* Hover nos ícones */
+.table-action-btn:hover .mdi-eye-outline {
+    color: #2563eb;
+}
+
 .table-action-btn:hover .mdi-bag-suitcase {
     color: #2e6bb8;
 }
@@ -32,63 +44,78 @@
    ===================================================== */
 
 .armazenagem-modal-overlay {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     z-index: 10000;
-    animation: fadeIn 0.3s ease-in-out;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease-in-out;
 }
 
 .armazenagem-modal-overlay.active {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    opacity: 1;
+    visibility: visible;
 }
 
 .armazenagem-modal {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     width: 90%;
-    max-width: 700px;
+    max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
-    animation: slideIn 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95) translateY(20px);
+    transition: all 0.3s ease-out;
+}
+
+.armazenagem-modal-overlay.active .armazenagem-modal {
+    transform: scale(1) translateY(0);
 }
 
 .armazenagem-modal-header {
-    padding: 24px;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px 12px 0 0;
+    background: #f9fafb;
+    border-radius: 8px 8px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .armazenagem-modal-header h3 {
     margin: 0;
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 600;
+    color: #111827;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0.75rem;
 }
 
 .armazenagem-modal-header i {
-    font-size: 24px;
+    font-size: 20px;
+    color: #6b7280;
 }
 
 .armazenagem-modal-close {
     background: none;
     border: none;
-    color: white;
-    font-size: 28px;
+    color: #6b7280;
+    font-size: 24px;
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -96,226 +123,237 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .armazenagem-modal-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: rotate(90deg);
+    background: #e5e7eb;
+    color: #111827;
 }
 
 .armazenagem-modal-body {
-    padding: 24px;
+    padding: 2rem;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .armazenagem-info-box {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    padding: 16px;
-    border-radius: 8px;
-    margin-bottom: 24px;
+    background: #f3f4f6;
+    border-left: 3px solid #6b7280;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
 }
 
 .armazenagem-info-box h4 {
-    margin: 0 0 8px 0;
-    font-size: 16px;
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
     font-weight: 600;
-    color: #333;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
 
 .armazenagem-info-box p {
     margin: 0;
-    font-size: 14px;
-    color: #666;
+    font-size: 0.875rem;
+    color: #6b7280;
 }
 
 .armazenagem-info-box .ref-unique {
     font-family: 'Courier New', monospace;
-    font-weight: bold;
-    color: #667eea;
+    font-weight: 600;
+    color: #111827;
 }
 
 .armazenagem-form-group {
-    margin-bottom: 20px;
+    margin-bottom: 1.5rem;
 }
 
 .armazenagem-form-group label {
     display: block;
     font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-    font-size: 14px;
+    color: #111827;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
 }
 
 .armazenagem-form-group label i {
-    margin-right: 6px;
-    color: #667eea;
+    margin-right: 0.375rem;
+    color: #6b7280;
+    font-size: 0.875rem;
 }
 
 .armazenagem-form-group input {
     width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 14px;
-    transition: all 0.3s;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
     box-sizing: border-box;
+    color: #111827;
+}
+
+.armazenagem-form-group input::placeholder {
+    color: #9ca3af;
 }
 
 .armazenagem-form-group input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .armazenagem-form-group input:disabled {
-    background-color: #f5f5f5;
+    background-color: #f9fafb;
+    color: #9ca3af;
     cursor: not-allowed;
 }
 
 .armazenagem-form-group small {
     display: block;
-    margin-top: 6px;
-    font-size: 12px;
-    color: #999;
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
 }
 
 .armazenagem-form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 1rem;
 }
 
 .armazenagem-modal-footer {
-    padding: 20px 24px;
-    border-top: 1px solid #e0e0e0;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e5e7eb;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
-    gap: 12px;
-    background: #f8f9fa;
-    border-radius: 0 0 12px 12px;
+    gap: 0.75rem;
+    background: #f9fafb;
+    border-radius: 0 0 8px 8px;
 }
 
 .armazenagem-btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
+    transition: all 0.2s ease;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .armazenagem-btn i {
-    font-size: 16px;
+    font-size: 0.875rem;
 }
 
 .armazenagem-btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #3b82f6;
     color: white;
+    border-color: #3b82f6;
 }
 
 .armazenagem-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background: #2563eb;
+    border-color: #2563eb;
 }
 
 .armazenagem-btn-primary:disabled {
-    background: #ccc;
+    background: #d1d5db;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    border-color: #d1d5db;
 }
 
 .armazenagem-btn-secondary {
-    background: white;
-    color: #666;
-    border: 2px solid #e0e0e0;
+    background: #e5e7eb;
+    color: #374151;
+    border-color: #e5e7eb;
 }
 
 .armazenagem-btn-secondary:hover {
-    background: #f5f5f5;
-    border-color: #ccc;
+    background: #d1d5db;
+    border-color: #d1d5db;
 }
 
 .armazenagem-btn-danger {
-    background: #dc3545;
+    background: #ef4444;
     color: white;
+    border-color: #ef4444;
 }
 
 .armazenagem-btn-danger:hover {
-    background: #c82333;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    background: #dc2626;
+    border-color: #dc2626;
 }
 
 /* Badge de status na coluna da tabela */
 .armazenagem-status-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .armazenagem-status-badge.filled {
-    background: #d4edda;
-    color: #155724;
+    background: #d1fae5;
+    color: #065f46;
 }
 
 .armazenagem-status-badge.empty {
-    background: #fff3cd;
-    color: #856404;
+    background: #fef3c7;
+    color: #92400e;
 }
 
 .armazenagem-status-badge:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: opacity 0.9;
 }
 
 .armazenagem-status-badge i {
-    font-size: 14px;
+    font-size: 0.75rem;
 }
 
 /* Botão de ação na tabela */
 .armazenagem-action-btn {
-    padding: 8px 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 0.5rem 0.75rem;
+    background: #3b82f6;
     color: white;
-    border: none;
+    border: 1px solid #3b82f6;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
 }
 
 .armazenagem-action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    background: #2563eb;
+    border-color: #2563eb;
 }
 
 .armazenagem-action-btn i {
-    font-size: 14px;
+    font-size: 0.75rem;
 }
 
 /* Loading spinner */
 .armazenagem-loading {
     display: none;
     text-align: center;
-    padding: 20px;
+    padding: 1.25rem;
 }
 
 .armazenagem-loading.active {
@@ -323,23 +361,23 @@
 }
 
 .armazenagem-spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #3b82f6;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 2.5rem;
+    height: 2.5rem;
     animation: spin 1s linear infinite;
     margin: 0 auto;
 }
 
 /* Mensagens de erro */
 .armazenagem-error-message {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #7f1d1d;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.25rem;
     display: none;
 }
 
@@ -348,17 +386,17 @@
 }
 
 .armazenagem-error-message i {
-    margin-right: 8px;
+    margin-right: 0.5rem;
 }
 
 /* Mensagens de sucesso */
 .armazenagem-success-message {
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.25rem;
     display: none;
 }
 
@@ -367,7 +405,7 @@
 }
 
 .armazenagem-success-message i {
-    margin-right: 8px;
+    margin-right: 0.5rem;
 }
 
 /* Animações */

@@ -209,6 +209,11 @@
     justify-content: center;
     min-width: 2rem;
     height: 2rem;
+    margin-right: 0.5rem;
+}
+
+.table-action-btn:last-child {
+    margin-right: 0;
 }
 
 .table-action-btn:hover {
