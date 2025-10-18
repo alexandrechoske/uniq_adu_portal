@@ -177,6 +177,13 @@
     opacity: 1;
 }
 
+.enhanced-data-table th.has-column-controls.sortable::after,
+.enhanced-data-table th.has-column-controls.sorted-asc::after,
+.enhanced-data-table th.has-column-controls.sorted-desc::after {
+    content: '';
+    display: none;
+}
+
 /* Table Body */
 .enhanced-data-table tbody tr {
     border-bottom: 1px solid #f3f4f6;

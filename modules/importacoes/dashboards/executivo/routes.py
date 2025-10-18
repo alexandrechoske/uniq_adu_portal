@@ -10,6 +10,7 @@ import numpy as np
 import unicodedata
 import re
 import json
+from decimal import Decimal, InvalidOperation
 from services.data_cache import DataCacheService
 from services.retry_utils import run_with_retries
 from threading import Lock
@@ -85,10 +86,11 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
         
         # Enriquecer com dados de armazenagem Kingspan (se aplicável)
         enriched_with_armazenagem = enrich_data_with_armazenagem_kingspan(enriched, user_data)
+        enriched_with_produtos = enrich_data_with_produtos_detalhados(enriched_with_armazenagem)
         
-        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_with_armazenagem)
+        data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_with_produtos)
         session['dashboard_v2_loaded'] = True
-        return enriched_with_armazenagem
+        return enriched_with_produtos
 
 def calculate_custo_from_despesas_processo(despesas_processo):
     """
@@ -206,6 +208,10 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
         
         # Buscar dados de armazenagem em batch
         armazenagem_map = {}
+        armazenagem_tables = [
+            'importacoes_processos_armazenagem_kingspan',
+            'importacoes_processos_armazenagem'
+        ]
         if kingspan_ref_uniques:
             try:
                 # Consultar em lotes de 1000 para evitar limite de query
@@ -213,13 +219,30 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
                 for i in range(0, len(kingspan_ref_uniques), batch_size):
                     batch = kingspan_ref_uniques[i:i + batch_size]
                     print(f"[ARMAZENAGEM] Processando lote {i//batch_size + 1}: {len(batch)} registros")
-                    
-                    query = supabase_admin.table('importacoes_processos_armazenagem')\
-                        .select('*')\
-                        .in_('ref_unique', batch)
-                    result = query.execute()
-                    
-                    if result.data:
+                    table_used = None
+                    result = None
+
+                    for table_name in armazenagem_tables:
+                        try:
+                            query = supabase_admin.table(table_name)\
+                                .select('*')\
+                                .in_('ref_unique', batch)
+                            result_try = query.execute()
+                            # Supabase retorna dict com "data"
+                            if result_try and getattr(result_try, 'data', None):
+                                result = result_try
+                                table_used = table_name
+                                break
+                        except Exception as inner_exc:
+                            print(f"[ARMAZENAGEM] Falha ao consultar tabela {table_name}: {inner_exc}")
+                            continue
+
+                    if table_used:
+                        print(f"[ARMAZENAGEM] Dados obtidos da tabela {table_used}")
+                    else:
+                        print('[ARMAZENAGEM] Nenhuma tabela de armazenagem retornou dados para este lote')
+
+                    if result and result.data:
                         for armazenagem in result.data:
                             ref_unique = armazenagem.get('ref_unique')
                             if ref_unique:
@@ -229,8 +252,8 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
                                         try:
                                             date_obj = datetime.fromisoformat(armazenagem[date_field].replace('Z', '+00:00'))
                                             armazenagem[date_field] = date_obj.strftime('%d/%m/%Y')
-                                        except:
-                                            pass
+                                        except Exception as parse_error:
+                                            print(f"[ARMAZENAGEM] Erro ao converter data {date_field}: {parse_error}")
                                 
                                 armazenagem_map[ref_unique] = armazenagem
                 
@@ -287,6 +310,136 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
         import traceback
         traceback.print_exc()
         # Retornar dados originais em caso de erro
+        return data
+
+def enrich_data_with_produtos_detalhados(data):
+    """Anexa produtos detalhados a cada processo usando a tabela importacoes_produtos_detalhados."""
+    try:
+        if not data:
+            return data
+
+        def _to_number(raw_value):
+            """Converter strings numéricas variadas para float, preservando zeros."""
+            if raw_value is None or raw_value == '':
+                return None
+            if isinstance(raw_value, (int, float)):
+                return float(raw_value)
+            value_str = str(raw_value).strip()
+            if not value_str:
+                return None
+            normalized = value_str
+            if ',' in normalized and '.' in normalized:
+                normalized = normalized.replace('.', '').replace(',', '.')
+            elif ',' in normalized:
+                normalized = normalized.replace(',', '.')
+            try:
+                return float(Decimal(normalized))
+            except (InvalidOperation, ValueError):
+                try:
+                    return float(normalized)
+                except (ValueError, TypeError):
+                    return None
+
+        def _build_produto_entry(raw_produto):
+            if not isinstance(raw_produto, dict):
+                return {}
+
+            quantidade_raw = raw_produto.get('quantidade') or raw_produto.get('quantidade_declarada') or raw_produto.get('qtd')
+            valor_unitario_raw = (
+                raw_produto.get('valor_unitario') or
+                raw_produto.get('valor_unit') or
+                raw_produto.get('valor_unitario_moeda') or
+                raw_produto.get('valor_unitario_reais')
+            )
+
+            return {
+                'id': raw_produto.get('id'),
+                'ref_unique': raw_produto.get('ref_unique') or raw_produto.get('refUnique'),
+                'ncm': raw_produto.get('ncm') or raw_produto.get('ncm_sh'),
+                'descricao': raw_produto.get('descricao') or raw_produto.get('descricao_produto') or raw_produto.get('descricao_adicao'),
+                'descricao_produto': raw_produto.get('descricao') or raw_produto.get('descricao_produto') or raw_produto.get('descricao_adicao'),
+                'unidade_medida': raw_produto.get('unidade_medida') or raw_produto.get('unidade'),
+                'quantidade': _to_number(quantidade_raw),
+                'quantidade_original': quantidade_raw,
+                'valor_unitario': _to_number(valor_unitario_raw),
+                'valor_unitario_original': valor_unitario_raw
+            }
+
+        ref_uniques = [item.get('ref_unique') for item in data if item.get('ref_unique')]
+        if not ref_uniques:
+            return data
+
+        seen_refs = set()
+        unique_refs = []
+        for ref in ref_uniques:
+            if not ref:
+                continue
+            ref_key = str(ref).strip()
+            if ref_key and ref_key not in seen_refs:
+                seen_refs.add(ref_key)
+                unique_refs.append(ref_key)
+
+        if not unique_refs:
+            return data
+
+        produtos_map = {}
+        batch_size = 500
+        for index in range(0, len(unique_refs), batch_size):
+            batch = unique_refs[index:index + batch_size]
+            try:
+                query = supabase_admin.table('importacoes_produtos_detalhados') \
+                    .select('id, ref_unique, ncm, quantidade, unidade_medida, valor_unitario, descricao') \
+                    .in_('ref_unique', batch)
+                result = query.execute()
+            except Exception as batch_error:
+                print(f"[PRODUTOS_DETALHADOS] Erro na consulta batch {index // batch_size + 1}: {batch_error}")
+                continue
+
+            if not result or not getattr(result, 'data', None):
+                continue
+
+            for produto in result.data:
+                ref_unique = produto.get('ref_unique')
+                if not ref_unique:
+                    continue
+                entry = _build_produto_entry(produto)
+                produtos_map.setdefault(ref_unique, []).append(entry)
+
+        for produtos_list in produtos_map.values():
+            produtos_list.sort(key=lambda item: (
+                item.get('ncm') or '',
+                item.get('descricao') or ''
+            ))
+
+        enriched_data = []
+        total_aplicados = 0
+
+        for item in data:
+            enriched_item = item.copy()
+            ref_unique = enriched_item.get('ref_unique')
+            produtos = produtos_map.get(ref_unique)
+
+            if produtos is not None:
+                enriched_item['produtos_processo'] = produtos
+                enriched_item['has_produtos_detalhados'] = True
+                total_aplicados += 1
+            else:
+                existing = enriched_item.get('produtos_processo')
+                if isinstance(existing, list):
+                    enriched_item['produtos_processo'] = [_build_produto_entry(prod) for prod in existing]
+                else:
+                    enriched_item['produtos_processo'] = []
+                enriched_item.setdefault('has_produtos_detalhados', False)
+
+            enriched_data.append(enriched_item)
+
+        print(f"[PRODUTOS_DETALHADOS] Produtos detalhados aplicados em {total_aplicados} processos")
+        return enriched_data
+
+    except Exception as e:
+        print(f"[PRODUTOS_DETALHADOS] Erro no enriquecimento: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return data
 
 def enrich_data_with_despesas_view(data):
@@ -1601,6 +1754,8 @@ def force_refresh_dashboard():
         # 4. Enriquecer dados com custos da view vw_despesas_6_meses (VERSÃO OTIMIZADA)
         print("[DASHBOARD_EXECUTIVO] Force refresh - Enriquecendo dados com custos (versão otimizada)...")
         enriched_data = enrich_data_with_despesas_view(result.data)
+        enriched_data = enrich_data_with_armazenagem_kingspan(enriched_data, user_data)
+        enriched_data = enrich_data_with_produtos_detalhados(enriched_data)
         
         # 5. Armazenar dados frescos ENRIQUECIDOS no cache
         data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_data)

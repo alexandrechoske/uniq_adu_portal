@@ -192,10 +192,18 @@ class EnhancedDataTable {
                 return;
             }
 
+            if (header.dataset.sortHandlerAttached === 'true') {
+                return;
+            }
+
             header.classList.add('sortable');
             header.dataset.column = index;
+            header.dataset.sortHandlerAttached = 'true';
 
-            header.addEventListener('click', () => {
+            header.addEventListener('click', (event) => {
+                if (event.target.closest('.column-filter-icon')) {
+                    return;
+                }
                 this.handleSort(index, header);
             });
         });
@@ -263,6 +271,11 @@ class EnhancedDataTable {
         // Remove previous sort indicators
         this.table.querySelectorAll('thead th').forEach(th => {
             th.classList.remove('sorted-asc', 'sorted-desc');
+            const indicator = th.querySelector('.column-sort-indicator');
+            if (indicator) {
+                indicator.classList.remove('active');
+                indicator.innerHTML = '';
+            }
         });
 
         // Determine sort direction
@@ -276,6 +289,13 @@ class EnhancedDataTable {
 
         // Add sort indicator
         headerElement.classList.add(this.sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        const indicator = headerElement.querySelector('.column-sort-indicator');
+        if (indicator) {
+            indicator.classList.add('active');
+            indicator.innerHTML = this.sortDirection === 'asc'
+                ? '<i class="mdi mdi-arrow-up"></i>'
+                : '<i class="mdi mdi-arrow-down"></i>';
+        }
 
         this.sortData();
         this.render();

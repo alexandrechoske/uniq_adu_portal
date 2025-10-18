@@ -184,7 +184,8 @@ function escapeHtml(value) {
 function summarizeProdutos(operation, maxItems = 3) {
     if (!operation || !Array.isArray(operation.produtos_processo) || operation.produtos_processo.length === 0) {
         return {
-            text: '-'
+            text: '-',
+            entries: []
         };
     }
 
@@ -230,7 +231,8 @@ function summarizeProdutos(operation, maxItems = 3) {
 
     if (!entries.length) {
         return {
-            text: '-'
+            text: '-',
+            entries: []
         };
     }
 
@@ -239,7 +241,8 @@ function summarizeProdutos(operation, maxItems = 3) {
 
     return {
         text: `${displayEntries.join(', ')}${suffix}`.trim(),
-        tooltip: entries.join('\n')
+        tooltip: entries.join('\n'),
+        entries
     };
 }
 
@@ -1191,7 +1194,12 @@ function initializeEnhancedTable() {
         const canalValue = operation.canal || operation.canal_parametrizado || '-';
         const canalContent = getCanalIndicator(canalValue);
 
-        const produtosResumo = summarizeProdutos(operation);
+        const produtosResumo = operation.__produtos_summary || summarizeProdutos(operation);
+        if (!operation.__produtos_summary) {
+            operation.__produtos_summary = produtosResumo;
+            operation.__produtos_entries = produtosResumo.entries;
+            operation.__produtos_tooltip = produtosResumo.tooltip;
+        }
         const despesasResumo = summarizeDespesas(expenseData, operation);
 
         const cells = visibleColumns.map(column => {
@@ -1257,12 +1265,13 @@ function initializeEnhancedTable() {
                 case 'mercadoria':
                     return `<td>${operation.mercadoria || '-'}</td>`;
                 case 'produtos': {
-                    const text = escapeHtml(produtosResumo.text || '-');
                     const tooltip = produtosResumo.tooltip
                         ? escapeHtml(produtosResumo.tooltip).replace(/\n/g, '&#10;')
                         : '';
                     const tooltipAttr = tooltip ? ` title="${tooltip}"` : '';
-                    return `<td${tooltipAttr}>${text || '-'}</td>`;
+                    const chipsMarkup = createChipListMarkup(produtosResumo.entries, { maxVisible: 4 });
+                    const text = escapeHtml(produtosResumo.text || '-');
+                    return `<td${tooltipAttr}>${chipsMarkup || text || '-'}</td>`;
                 }
                 case 'container': {
                     const containerValues = Array.isArray(operation.__container_values)
@@ -2106,6 +2115,11 @@ function updateRecentOperationsTable(operations) {
         const containerValues = extractContainerValues(operation);
         operation.__container_values = containerValues;
         operation.__container_sort = containerValues.join(' | ');
+
+        const produtosSummary = summarizeProdutos(operation);
+        operation.__produtos_summary = produtosSummary;
+        operation.__produtos_entries = produtosSummary.entries;
+        operation.__produtos_tooltip = produtosSummary.tooltip;
     });
 
     // Store operations data globally for modal access FIRST

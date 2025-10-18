@@ -231,6 +231,10 @@
     letter-spacing: 0.025em;
 }
 
+.produtos-table th.descricao-header {
+    width: 36%;
+}
+
 .produtos-table tbody tr {
     border-bottom: 1px solid #e5e7eb;
     transition: background 0.2s ease;
@@ -260,6 +264,23 @@
     text-align: right;
     font-weight: 600;
     color: #059669;
+}
+
+.produtos-table td.descricao-cell {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: #4b5563;
+    max-width: 26rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.produtos-table td.descricao-cell .descricao-text {
+    line-clamp: 4;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* =====================================================

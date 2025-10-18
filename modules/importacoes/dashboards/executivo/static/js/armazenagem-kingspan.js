@@ -145,6 +145,147 @@ const ArmazenagemKingspan = {
         
         console.log('[ARMAZENAGEM] Event listeners configurados');
     },
+
+    // Helpers de formatação e sanitização utilizados pelo modal
+    escapeHtml(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    },
+
+    parseToNumber(value) {
+        if (value === null || value === undefined) {
+            return null;
+        }
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : null;
+        }
+        if (typeof value !== 'string') {
+            return null;
+        }
+
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        let normalized = trimmed.replace(/\s+/g, '');
+        if (normalized.includes(',') && normalized.includes('.')) {
+            normalized = normalized.replace(/\./g, '').replace(',', '.');
+        } else if (normalized.includes(',')) {
+            normalized = normalized.replace(',', '.');
+        }
+
+        const numberValue = Number(normalized);
+        return Number.isNaN(numberValue) ? null : numberValue;
+    },
+
+    formatDecimal(value, options = {}) {
+        const numberValue = typeof value === 'number' ? value : this.parseToNumber(value);
+        if (numberValue === null || Number.isNaN(numberValue)) {
+            return '-';
+        }
+
+        const formatter = new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 5,
+            ...options
+        });
+
+        return formatter.format(numberValue);
+    },
+
+    formatQuantidade(value) {
+        const numeric = this.parseToNumber(value);
+        if (numeric === null) {
+            return '-';
+        }
+
+        const options = Math.abs(numeric) >= 1
+            ? { minimumFractionDigits: 0, maximumFractionDigits: 2 }
+            : { minimumFractionDigits: 0, maximumFractionDigits: 5 };
+
+        return this.formatDecimal(numeric, options);
+    },
+
+    formatValorUnitario(value) {
+        const numeric = this.parseToNumber(value);
+        if (numeric === null) {
+            return '0,00';
+        }
+
+        const options = Math.abs(numeric) >= 1
+            ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+            : { minimumFractionDigits: 2, maximumFractionDigits: 5 };
+
+        return this.formatDecimal(numeric, options);
+    },
+
+    extractNumeroProduto(produto, campos) {
+        if (!produto || typeof produto !== 'object') {
+            return null;
+        }
+
+        for (const campo of campos) {
+            if (Object.prototype.hasOwnProperty.call(produto, campo)) {
+                const valor = produto[campo];
+                const numeric = this.parseToNumber(valor);
+                if (numeric !== null) {
+                    return numeric;
+                }
+            }
+        }
+
+        return null;
+    },
+
+    normalizeDescricao(value) {
+        if (!value) {
+            return '';
+        }
+
+        let text = String(value).trim();
+        if (!text) {
+            return '';
+        }
+
+        if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+            text = text.slice(1, -1);
+        }
+
+        text = text
+            .replace(/\r?\n+/g, ' ')
+            .replace(/\"/g, '"')
+            .replace(/""/g, '"')
+            .replace(/\s+/g, ' ');
+
+        return text.trim();
+    },
+
+    getDescricaoInfo(produto) {
+        const rawDescricao = produto && (produto.descricao || produto.descricao_produto || produto.descricao_adicao);
+        const normalized = this.normalizeDescricao(rawDescricao);
+
+        if (!normalized) {
+            return {
+                text: '-',
+                html: '-'
+            };
+        }
+
+        const escaped = this.escapeHtml(normalized).replace(/\n/g, '<br>');
+
+        return {
+            text: normalized,
+            html: escaped
+        };
+    },
     
     /**
      * Abrir modal de edição
@@ -665,23 +806,47 @@ const ArmazenagemKingspan = {
                         <th>Quantidade</th>
                         <th>Unidade</th>
                         <th style="text-align: right;">Valor Unitário</th>
+                        <th class="descricao-header">Descrição</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
         
         produtos.forEach(produto => {
-            const ncm = produto.ncm || '-';
-            const quantidade = produto.quantidade ? parseFloat(produto.quantidade).toFixed(4) : '0.0000';
-            const unidade = produto.unidade_medida || '-';
-            const valorUnitario = produto.valor_unitario ? parseFloat(produto.valor_unitario).toFixed(5) : '0.00000';
-            
+            const ncm = produto.ncm || produto.ncm_sh || '-';
+            const unidade = produto.unidade_medida || produto.unidade || '-';
+
+            const quantidadeValor = this.extractNumeroProduto(produto, [
+                'quantidade',
+                'quantidade_original',
+                'quantidade_declarada',
+                'qtd'
+            ]);
+            const quantidadeDisplay = quantidadeValor !== null
+                ? this.formatQuantidade(quantidadeValor)
+                : '-';
+
+            const valorUnitarioValor = this.extractNumeroProduto(produto, [
+                'valor_unitario',
+                'valor_unitario_original',
+                'valor_unit',
+                'valor_unitario_moeda',
+                'valor_unitario_reais'
+            ]);
+            const valorUnitarioDisplay = this.formatValorUnitario(valorUnitarioValor);
+
+            const descricaoInfo = this.getDescricaoInfo(produto);
+            const descricaoTitle = descricaoInfo.text && descricaoInfo.text !== '-' ? this.escapeHtml(descricaoInfo.text) : '';
+
             tableHTML += `
                 <tr>
-                    <td class="ncm-cell">${ncm}</td>
-                    <td class="quantidade-cell">${quantidade}</td>
-                    <td>${unidade}</td>
-                    <td class="valor-cell">R$ ${valorUnitario}</td>
+                    <td class="ncm-cell">${this.escapeHtml(ncm || '-')}</td>
+                    <td class="quantidade-cell" data-valor="${quantidadeValor ?? ''}">${quantidadeDisplay}</td>
+                    <td>${this.escapeHtml(unidade || '-')}</td>
+                    <td class="valor-cell" data-valor="${valorUnitarioValor ?? ''}">R$ ${valorUnitarioDisplay}</td>
+                    <td class="descricao-cell"${descricaoTitle ? ` title="${descricaoTitle}"` : ''}>
+                        <div class="descricao-text">${descricaoInfo.html}</div>
+                    </td>
                 </tr>
             `;
         });

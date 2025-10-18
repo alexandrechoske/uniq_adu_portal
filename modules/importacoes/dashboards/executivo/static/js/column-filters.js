@@ -37,21 +37,32 @@
             const headerText = header.textContent.trim();
             
             // Criar estrutura do header com filtro
+            header.classList.add('has-column-controls');
+
             const headerContent = document.createElement('div');
             headerContent.className = 'column-header-content';
-            headerContent.innerHTML = `
-                <span class="column-header-text">${headerText}</span>
-                <i class="mdi mdi-filter-outline column-filter-icon" 
-                   data-column="${columnName}" 
-                   data-column-index="${index}"
-                   title="Filtrar ${headerText}"></i>
-            `;
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'column-header-text';
+            textSpan.textContent = headerText;
+
+            const sortIndicator = document.createElement('span');
+            sortIndicator.className = 'column-sort-indicator';
+
+            const filterIcon = document.createElement('i');
+            filterIcon.className = 'mdi mdi-filter-outline column-filter-icon';
+            filterIcon.dataset.column = columnName;
+            filterIcon.dataset.columnIndex = String(index);
+            filterIcon.title = `Filtrar ${headerText}`;
             
             header.innerHTML = '';
             header.appendChild(headerContent);
             
+            headerContent.appendChild(textSpan);
+            headerContent.appendChild(sortIndicator);
+            headerContent.appendChild(filterIcon);
+
             // Evento de clique no ícone de filtro
-            const filterIcon = headerContent.querySelector('.column-filter-icon');
             filterIcon.addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleFilterDropdown(columnName, index, header, headerText);
@@ -429,6 +440,10 @@
     }
 
     function summarizeProdutosForFilter(operation) {
+        if (Array.isArray(operation?.__produtos_entries) && operation.__produtos_entries.length) {
+            return [...operation.__produtos_entries];
+        }
+
         if (!operation || !Array.isArray(operation.produtos_processo) || !operation.produtos_processo.length) {
             return [];
         }
