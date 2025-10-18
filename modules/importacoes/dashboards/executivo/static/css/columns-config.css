@@ -183,7 +183,8 @@
     border-radius: 10px;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
-    transition: border-color 0.2s ease, background 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    cursor: grab;
 }
 
 .column-item:hover {
@@ -194,6 +195,34 @@
 .column-item.fixed {
     opacity: 0.65;
     cursor: not-allowed;
+}
+
+.column-item.dragging {
+    opacity: 0.6;
+    border-color: #94a3b8;
+    background: #e2e8f0;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    cursor: grabbing;
+}
+
+.column-item-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+    cursor: grab;
+}
+
+.column-item-handle i {
+    font-size: 1.1rem;
+}
+
+.column-item.fixed .column-item-handle {
+    cursor: not-allowed;
+    color: #cbd5f5;
 }
 
 .column-item input[type="checkbox"] {
@@ -215,6 +244,11 @@
     font-size: 0.9rem;
     color: #111827;
     font-weight: 500;
+}
+
+.columns-category-body.drag-over {
+    background: rgba(37, 99, 235, 0.08);
+    border-radius: 10px;
 }
 
 .column-item-label .mdi-lock {

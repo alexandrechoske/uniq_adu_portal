@@ -293,21 +293,10 @@ const ArmazenagemKingspan = {
             
             // Mudar texto do botão cancelar para "Fechar"
             (document.getElementById('armazenagem-btn-cancel').innerHTML = '<i class="mdi mdi-close"></i> Fechar');
+
+            // Remover avisos antigos (compatibilidade)
+            document.querySelectorAll('.armazenagem-readonly-warning').forEach(el => el.remove());
             
-            // Adicionar aviso de read-only
-            if (!document.querySelector('.armazenagem-readonly-warning')) {
-                document.querySelector('.armazenagem-modal-body').insertAdjacentHTML('afterbegin', `
-                    <div class="armazenagem-info-box armazenagem-readonly-warning" style="background: #fff3cd; border-left-color: #ffc107;">
-                        <h4 style="color: #856404;">
-                            <i class="mdi mdi-eye"></i> Modo Somente Leitura
-                        </h4>
-                        <p style="color: #856404;">
-                            Você pode visualizar os dados, mas não tem permissão para editá-los.
-                            Somente analistas internos e administradores podem modificar estas informações.
-                        </p>
-                    </div>
-                `);
-            }
         } else {
             console.log('[ARMAZENAGEM] Modo edição ativado');
             

@@ -49,6 +49,10 @@
             </div>
         </div>
         <div class="actions-right">
+            <button id="open-filters" class="btn btn-light" type="button">
+                <i class="mdi mdi-filter"></i>
+                {{ t('importacoes.dashboard_operacional.filtros') }}
+            </button>
             <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
                 {{ t('importacoes.dashboard_operacional.limpar_filtros') }}
@@ -284,10 +288,6 @@
                            placeholder="{{ t('importacoes.dashboard_executivo.buscar_processo') }}">
                 </div>
                 <div class="enhanced-control-buttons">
-                    <button id="open-filters" class="btn btn-light" type="button">
-                        <i class="mdi mdi-filter"></i>
-                        {{ t('importacoes.dashboard_operacional.filtros') }}
-                    </button>
                     <button id="open-columns-config" class="btn btn-light" type="button">
                         <i class="mdi mdi-cog-outline"></i>
                         Configurar Colunas

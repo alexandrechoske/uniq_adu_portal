@@ -398,6 +398,35 @@ canvas {
     height: 100% !important;
 }
 
+/* Chip list for comma separated values */
+.data-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.data-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid rgba(3, 105, 161, 0.18);
+    white-space: nowrap;
+}
+
+.data-chip-more {
+    background: #f3f4f6;
+    color: #4b5563;
+    border-color: rgba(107, 114, 128, 0.25);
+}
+
 /* Table Section */
 .table-section {
     background: white;

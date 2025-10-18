@@ -29,46 +29,46 @@ const DASH_COLORS = {
 const DASHBOARD_COLUMNS_STORAGE_KEY_DEFAULT = 'dashboard_exec_columns_config';
 const AVAILABLE_COLUMNS = [
     // Grupo: Identificação
-    { id: 'acoes', label: 'Ações', visible: true, fixed: true, showInConfig: false, sortable: false, category: 'Identificação', order: 0 },
-    { id: 'ref_importador', label: 'Ref. Importador', visible: true, fixed: false, category: 'Identificação', order: 1 },
-    { id: 'importador', label: 'Importador', visible: true, fixed: false, category: 'Identificação', order: 2 },
+    { id: 'acoes', label: 'Ações', visible: true, fixed: true, showInConfig: false, sortable: false, sortField: 'acoes', category: 'Identificação', order: 0 },
+    { id: 'ref_importador', label: 'Ref. Importador', visible: true, fixed: false, sortField: 'ref_importador', category: 'Identificação', order: 1 },
+    { id: 'importador', label: 'Importador', visible: true, fixed: false, sortField: 'importador', category: 'Identificação', order: 2 },
 
     // Grupo: Informações Principais
-    { id: 'data_abertura', label: 'Data Abertura', visible: true, fixed: false, category: 'Informações Principais', order: 3 },
-    { id: 'exportador', label: 'Exportador / Fornecedor', visible: true, fixed: false, category: 'Informações Principais', order: 4 },
-    { id: 'modal', label: 'Modal', visible: true, fixed: false, category: 'Informações Principais', order: 5 },
-    { id: 'status', label: 'Status', visible: true, fixed: false, category: 'Informações Principais', order: 6 },
+    { id: 'data_abertura', label: 'Data Abertura', visible: true, fixed: false, sortField: 'data_abertura', category: 'Informações Principais', order: 3 },
+    { id: 'exportador', label: 'Exportador / Fornecedor', visible: true, fixed: false, sortField: 'exportador_fornecedor', category: 'Informações Principais', order: 4 },
+    { id: 'modal', label: 'Modal', visible: true, fixed: false, sortField: 'modal', category: 'Informações Principais', order: 5 },
+    { id: 'status', label: 'Status', visible: true, fixed: false, sortField: 'status_sistema', category: 'Informações Principais', order: 6 },
 
     // Grupo: Informações Financeiras
-    { id: 'custos', label: 'Custos', visible: true, fixed: false, category: 'Informações Financeiras', order: 7 },
-    { id: 'despesas', label: 'Despesas Detalhadas', visible: false, fixed: false, sortable: false, category: 'Informações Financeiras', order: 21 },
+    { id: 'custos', label: 'Custos', visible: true, fixed: false, sortField: 'custo_total', category: 'Informações Financeiras', order: 7 },
+    { id: 'despesas', label: 'Despesas Detalhadas', visible: false, fixed: false, sortable: false, sortField: 'despesas', category: 'Informações Financeiras', order: 21 },
 
     // Grupo: Datas e Prazos
-    { id: 'data_chegada', label: 'Data Chegada', visible: true, fixed: false, category: 'Datas e Prazos', order: 8 },
-    { id: 'data_embarque', label: 'Data Embarque', visible: false, fixed: false, category: 'Datas e Prazos', order: 9 },
-    { id: 'transit_time', label: 'Transit Time', visible: false, fixed: false, category: 'Datas e Prazos', order: 10 },
-    { id: 'data_registro', label: 'Data Registro', visible: false, fixed: false, category: 'Datas e Prazos', order: 11 },
+    { id: 'data_chegada', label: 'Data Chegada', visible: true, fixed: false, sortField: 'data_chegada', category: 'Datas e Prazos', order: 8 },
+    { id: 'data_embarque', label: 'Data Embarque', visible: false, fixed: false, sortField: 'data_embarque', category: 'Datas e Prazos', order: 9 },
+    { id: 'transit_time', label: 'Transit Time', visible: false, fixed: false, sortField: 'transit_time', category: 'Datas e Prazos', order: 10 },
+    { id: 'data_registro', label: 'Data Registro', visible: false, fixed: false, sortField: 'data_registro', category: 'Datas e Prazos', order: 11 },
 
     // Grupo: Carga e Mercadoria
-    { id: 'mercadoria', label: 'Mercadoria', visible: true, fixed: false, category: 'Carga e Mercadoria', order: 12 },
-    { id: 'container', label: 'Container', visible: false, fixed: false, category: 'Carga e Mercadoria', order: 13 },
-    { id: 'peso_bruto', label: 'Peso Bruto', visible: false, fixed: false, category: 'Carga e Mercadoria', order: 14 },
-    { id: 'produtos', label: 'Produtos', visible: false, fixed: false, sortable: false, category: 'Carga e Mercadoria', order: 20 },
+    { id: 'mercadoria', label: 'Mercadoria', visible: true, fixed: false, sortField: 'mercadoria', category: 'Carga e Mercadoria', order: 12 },
+    { id: 'container', label: 'Container', visible: false, fixed: false, sortField: '__container_sort', category: 'Carga e Mercadoria', order: 13 },
+    { id: 'peso_bruto', label: 'Peso Bruto', visible: false, fixed: false, sortField: 'peso_bruto', category: 'Carga e Mercadoria', order: 14 },
+    { id: 'produtos', label: 'Produtos', visible: false, fixed: false, sortable: false, sortField: 'produtos', category: 'Carga e Mercadoria', order: 20 },
 
     // Grupo: Despacho Aduaneiro
-    { id: 'urf', label: 'URF', visible: true, fixed: false, category: 'Despacho Aduaneiro', order: 15 },
-    { id: 'numero_di', label: 'Número DI', visible: false, fixed: false, category: 'Despacho Aduaneiro', order: 16 },
-    { id: 'canal', label: 'Canal', visible: false, fixed: false, category: 'Despacho Aduaneiro', order: 17 },
+    { id: 'urf', label: 'URF', visible: true, fixed: false, sortField: 'urf_despacho_normalizado', category: 'Despacho Aduaneiro', order: 15 },
+    { id: 'numero_di', label: 'Número DI', visible: false, fixed: false, sortField: 'numero_di', category: 'Despacho Aduaneiro', order: 16 },
+    { id: 'canal', label: 'Canal', visible: false, fixed: false, sortField: 'canal', category: 'Despacho Aduaneiro', order: 17 },
 
     // Grupo: Informações Complementares
-    { id: 'pais', label: 'País', visible: false, fixed: false, category: 'Informações Complementares', order: 18 },
+    { id: 'pais', label: 'País', visible: false, fixed: false, sortField: 'pais', category: 'Informações Complementares', order: 18 },
 
     // Grupo: Armazenagem
-    { id: 'data_desova', label: 'Data Desova (ETB)', visible: false, fixed: false, category: 'Armazenagem', order: 22 },
-    { id: 'limite_primeiro_periodo', label: 'Limite 1º Período', visible: false, fixed: false, category: 'Armazenagem', order: 23 },
-    { id: 'limite_segundo_periodo', label: 'Limite 2º Período', visible: false, fixed: false, category: 'Armazenagem', order: 24 },
-    { id: 'dias_extras_armazenagem', label: 'Dias Extras Armazenagem', visible: false, fixed: false, category: 'Armazenagem', order: 25 },
-    { id: 'valor_despesas_extras', label: 'Desp. Extras Armazenagem', visible: false, fixed: false, sortable: false, category: 'Armazenagem', order: 26 }
+    { id: 'data_desova', label: 'Data Desova (ETB)', visible: false, fixed: false, sortable: false, sortField: 'data_desova', category: 'Armazenagem', order: 22 },
+    { id: 'limite_primeiro_periodo', label: 'Limite 1º Período', visible: false, fixed: false, sortable: false, sortField: 'limite_primeiro_periodo', category: 'Armazenagem', order: 23 },
+    { id: 'limite_segundo_periodo', label: 'Limite 2º Período', visible: false, fixed: false, sortable: false, sortField: 'limite_segundo_periodo', category: 'Armazenagem', order: 24 },
+    { id: 'dias_extras_armazenagem', label: 'Dias Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'dias_extras_armazenagem', category: 'Armazenagem', order: 25 },
+    { id: 'valor_despesas_extras', label: 'Desp. Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'valor_despesas_extras', category: 'Armazenagem', order: 26 }
 ];
 
 let cachedColumnsConfig = null;
@@ -331,6 +331,64 @@ function getArmazenagemDisplay(operation, field) {
     }
 
     return formatDate(value);
+}
+
+function extractContainerValues(operation) {
+    if (!operation) {
+        return [];
+    }
+
+    const rawValue = operation.container || operation.numero_container || operation.conteiner || operation.conteineres;
+
+    if (Array.isArray(rawValue)) {
+        return rawValue
+            .map(item => (item == null ? '' : String(item).trim()))
+            .filter(Boolean);
+    }
+
+    if (!rawValue || typeof rawValue !== 'string') {
+        return [];
+    }
+
+    return rawValue
+        .split(/[,;|\n]+/)
+        .map(item => item.trim())
+        .filter(Boolean);
+}
+
+function createChipListMarkup(values, options = {}) {
+    const settings = {
+        maxVisible: 6,
+        ...options
+    };
+
+    if (!Array.isArray(values) || !values.length) {
+        return null;
+    }
+
+    const normalized = values
+        .map(value => (value == null ? '' : String(value).trim()))
+        .filter(Boolean);
+
+    if (!normalized.length) {
+        return null;
+    }
+
+    const visibleValues = normalized.slice(0, settings.maxVisible);
+    const overflow = normalized.length - visibleValues.length;
+
+    const chips = visibleValues.map(value => {
+        const display = value.length > 18 ? `${value.slice(0, 18)}…` : value;
+        return `<span class="data-chip" title="${escapeHtml(value)}">${escapeHtml(display)}</span>`;
+    });
+
+    if (overflow > 0) {
+        chips.push(`
+            <span class="data-chip data-chip-more" title="${overflow} item${overflow === 1 ? '' : 's'} adicionais">+${overflow}</span>
+        `);
+    }
+
+    return `<div class="data-chip-list">${chips.join('')}</div>`;
 }
 
 
@@ -1207,8 +1265,11 @@ function initializeEnhancedTable() {
                     return `<td${tooltipAttr}>${text || '-'}</td>`;
                 }
                 case 'container': {
-                    const containerValue = operation.container || operation.numero_container || operation.conteiner || '-';
-                    return `<td>${containerValue || '-'}</td>`;
+                    const containerValues = Array.isArray(operation.__container_values)
+                        ? operation.__container_values
+                        : extractContainerValues(operation);
+                    const chipsMarkup = createChipListMarkup(containerValues);
+                    return `<td>${chipsMarkup || '-'}</td>`;
                 }
                 case 'peso_bruto': {
                     const peso = operation.peso_bruto || operation.peso_bruto_kg || operation.peso_bruto_total;
@@ -1983,10 +2044,15 @@ function adjustTableHeadersAndColumns() {
         const th = document.createElement('th');
         th.textContent = column.label;
 
+        const sortKey = column.sortField || column.id;
         const isSortable = column.sortable !== false && column.id !== 'acoes';
+
+        th.dataset.sort = sortKey;
+        th.dataset.columnId = column.id;
+        th.dataset.sortable = isSortable ? 'true' : 'false';
+
         if (isSortable) {
             th.classList.add('sortable');
-            th.dataset.sortField = column.sortField || column.id;
         }
 
         headerRow.appendChild(th);
@@ -1994,6 +2060,14 @@ function adjustTableHeadersAndColumns() {
 
     if (recentOperationsTable) {
         recentOperationsTable.visibleColumns = visibleColumns.map(col => col.id);
+        recentOperationsTable.config.columns = visibleColumns.map(col => ({
+            id: col.id,
+            key: col.sortField || col.id
+        }));
+        recentOperationsTable.sortColumn = null;
+        if (typeof recentOperationsTable.setupTableHeaders === 'function') {
+            recentOperationsTable.setupTableHeaders();
+        }
     }
 }
 
@@ -2026,6 +2100,12 @@ function updateRecentOperationsTable(operations) {
         if (!dateB) return -1;
         
         return dateB - dateA; // Descending order (newest first)
+    });
+
+    sortedOperations.forEach(operation => {
+        const containerValues = extractContainerValues(operation);
+        operation.__container_values = containerValues;
+        operation.__container_sort = containerValues.join(' | ');
     });
 
     // Store operations data globally for modal access FIRST

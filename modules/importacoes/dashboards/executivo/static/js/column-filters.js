@@ -6,6 +6,11 @@
 (function() {
     'use strict';
 
+    const CURRENCY_FORMATTER = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+
     // Estado dos filtros ativos
     const activeFilters = {};
     let allTableData = [];
@@ -267,14 +272,22 @@
         
         // Buscar valores do array global completo (todos os 1,128+ registros)
         window.currentOperations.forEach(operation => {
-            let value = getColumnValueFromOperation(operation, columnName, columnIndex);
-            
-            // Tratar valores vazios
-            if (value === '' || value === '-' || value === null || value === undefined) {
-                value = '(Vazio)';
+            const rawValue = getColumnValueFromOperation(operation, columnName);
+            const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+
+            if (!values.length) {
+                values.push('');
             }
-            
-            valueCounts[value] = (valueCounts[value] || 0) + 1;
+
+            values.forEach(entry => {
+                let value = entry;
+
+                if (value === '' || value === '-' || value === null || value === undefined) {
+                    value = '(Vazio)';
+                }
+
+                valueCounts[value] = (valueCounts[value] || 0) + 1;
+            });
         });
         
         console.log(`[COLUMN_FILTERS] ${Object.keys(valueCounts).length} valores únicos encontrados:`, Object.keys(valueCounts));
@@ -301,51 +314,206 @@
      * Extrair valor da coluna do objeto operation
      * Lógica especial para colunas com ícones (ex: modal)
      */
-    function getColumnValueFromOperation(operation, columnName, columnIndex) {
-        // Mapeamento de colunas (data-sort do HTML → campo do objeto)
+    function getColumnValueFromOperation(operation, columnName) {
+        if (!operation || !columnName) {
+            return '';
+        }
+
+        const normalizedColumn = columnName.trim();
+
+        switch (normalizedColumn) {
+            case 'modal':
+                return normalizeModalValue(operation.modal);
+            case 'container':
+                return extractContainerValues(operation);
+            case 'transit_time':
+                return operation.transit_time ?? operation.transit_time_real ?? '';
+            case 'peso_bruto':
+                return getPesoBrutoValue(operation);
+            case 'data_registro':
+                return operation.data_registro || operation.data_registro_di || '';
+            case 'numero_di':
+                return operation.numero_di || operation.numero_declaracao || '';
+            case 'canal':
+                return operation.canal || operation.canal_parametrizado || '';
+            case 'pais':
+                return operation.pais || operation.pais_procedencia_normalizado || operation.pais_procedencia || '';
+            case 'produtos':
+                return summarizeProdutosForFilter(operation);
+            case 'despesas':
+                return summarizeDespesasForFilter(operation);
+            case 'data_desova':
+            case 'limite_primeiro_periodo':
+            case 'limite_segundo_periodo':
+            case 'dias_extras_armazenagem':
+            case 'valor_despesas_extras':
+                return getArmazenagemFieldValue(operation, normalizedColumn);
+            default:
+                break;
+        }
+
         const columnMap = {
             'ref_unique': 'ref_unique',
             'ref_importador': 'ref_importador',
             'importador': 'importador',
             'data_abertura': 'data_abertura',
             'exportador_fornecedor': 'exportador_fornecedor',
-            'modal': 'modal', // Coluna especial com ícones
-            'status': 'status_sistema', // ⚠️ HTML usa 'status' mas campo é 'status_sistema'
+            'status': 'status_sistema',
             'status_sistema': 'status_sistema',
             'custo_total': 'custo_total',
             'data_chegada': 'data_chegada',
-            'material': 'mercadoria', // ⚠️ HTML usa 'material' mas campo é 'mercadoria'
+            'material': 'mercadoria',
             'mercadoria': 'mercadoria',
-            'urf_despacho': 'urf_despacho_normalizado', // ⚠️ HTML usa 'urf_despacho' mas campo é normalizado
+            'urf_despacho': 'urf_despacho_normalizado',
             'urf_despacho_normalizado': 'urf_despacho_normalizado'
         };
-        
-        const fieldName = columnMap[columnName] || columnName;
-        let value = operation[fieldName];
-        
-        console.log(`[COLUMN_FILTERS] Coluna: ${columnName}, Campo: ${fieldName}, Valor:`, value);
-        
-        // LÓGICA ESPECIAL PARA COLUNA MODAL (que usa ícones)
-        if (columnName === 'modal' && value) {
-            // Normalizar o valor do modal para exibição consistente
-            value = String(value).toUpperCase().trim();
-            
-            // Remover acentos e normalizar
-            if (value.includes('MARÍTIMA') || value.includes('MARITIMA')) {
-                value = 'MARÍTIMO';
-            } else if (value.includes('AÉREA') || value.includes('AEREA')) {
-                value = 'AÉREO';
-            } else if (value.includes('RODOVIÁRIA') || value.includes('RODOVIARIA')) {
-                value = 'RODOVIÁRIO';
-            } else if (value.includes('FERROVIÁRIA') || value.includes('FERROVIARIA')) {
-                value = 'FERROVIÁRIO';
-            } else if (value.includes('POSTAL') || value.includes('CORREIO')) {
-                value = 'POSTAL';
-            } else if (value.includes('COURIER') || value.includes('EXPRESS')) {
-                value = 'COURIER';
-            }
+
+        const fieldName = columnMap[normalizedColumn] || normalizedColumn;
+        return operation[fieldName];
+    }
+
+    function normalizeModalValue(rawModal) {
+        if (!rawModal) {
+            return '';
         }
-        
+
+        const value = String(rawModal).toUpperCase().trim();
+
+        if (value.includes('MARÍTIMA') || value.includes('MARITIMA')) {
+            return 'MARÍTIMO';
+        }
+        if (value.includes('AÉREA') || value.includes('AEREA')) {
+            return 'AÉREO';
+        }
+        if (value.includes('RODOVIÁRIA') || value.includes('RODOVIARIA')) {
+            return 'RODOVIÁRIO';
+        }
+        if (value.includes('FERROVIÁRIA') || value.includes('FERROVIARIA')) {
+            return 'FERROVIÁRIO';
+        }
+        if (value.includes('POSTAL') || value.includes('CORREIO')) {
+            return 'POSTAL';
+        }
+        if (value.includes('COURIER') || value.includes('EXPRESS')) {
+            return 'COURIER';
+        }
+
+        return value;
+    }
+
+    function extractContainerValues(operation) {
+        if (Array.isArray(operation?.__container_values)) {
+            return operation.__container_values;
+        }
+
+        const rawValue = operation.container || operation.numero_container || operation.conteiner || operation.conteineres;
+
+        if (Array.isArray(rawValue)) {
+            return rawValue
+                .map(item => (item == null ? '' : String(item).trim()))
+                .filter(Boolean);
+        }
+
+        if (typeof rawValue !== 'string') {
+            return [];
+        }
+
+        return rawValue
+            .split(/[,;|\n]+/)
+            .map(value => value.trim())
+            .filter(Boolean);
+    }
+
+    function getPesoBrutoValue(operation) {
+        return operation.peso_bruto || operation.peso_bruto_kg || operation.peso_bruto_total || '';
+    }
+
+    function summarizeProdutosForFilter(operation) {
+        if (!operation || !Array.isArray(operation.produtos_processo) || !operation.produtos_processo.length) {
+            return [];
+        }
+
+        return operation.produtos_processo
+            .map(produto => {
+                if (!produto || typeof produto !== 'object') {
+                    return '';
+                }
+
+                const descricao = (produto.descricao || produto.descricao_produto || produto.descricao_adicao || '').toString().trim();
+                const ncm = (produto.ncm || produto.ncm_sh || '').toString().trim();
+
+                if (descricao) {
+                    return descricao;
+                }
+
+                if (ncm) {
+                    return `NCM ${ncm}`;
+                }
+
+                return '';
+            })
+            .filter(Boolean);
+    }
+
+    function summarizeDespesasForFilter(operation) {
+        const totals = {};
+
+        if (Array.isArray(operation?.despesas_processo)) {
+            operation.despesas_processo.forEach(item => {
+                if (!item) {
+                    return;
+                }
+
+                const categoria = (item.categoria || item.tipo || '').toString().trim() || 'Outros';
+                const valor = parseFloat(item.valor_total || item.valor || item.total);
+
+                if (Number.isFinite(valor) && valor !== 0) {
+                    totals[categoria] = (totals[categoria] || 0) + valor;
+                }
+            });
+        }
+
+        return Object.entries(totals)
+            .filter(([, total]) => Number.isFinite(total) && total !== 0)
+            .map(([categoria, total]) => {
+                const formatter = typeof window.formatCurrency === 'function'
+                    ? window.formatCurrency
+                    : (value) => CURRENCY_FORMATTER.format(value);
+                return `${categoria}: ${formatter(total)}`;
+            });
+    }
+
+    function getArmazenagemFieldValue(operation, field) {
+        const data = operation?.armazenagem_data;
+        if (!data || typeof data !== 'object') {
+            return '';
+        }
+
+        const value = data[field];
+
+        if (value === null || value === undefined || value === '' || value === '-') {
+            return '';
+        }
+
+        if (field === 'dias_extras_armazenagem') {
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric) || numeric === 0) {
+                return '';
+            }
+            return `${numeric} ${numeric === 1 ? 'dia' : 'dias'}`;
+        }
+
+        if (field === 'valor_despesas_extras') {
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric) || numeric === 0) {
+                return '';
+            }
+            const formatter = typeof window.formatCurrency === 'function'
+                ? window.formatCurrency
+                : (val) => CURRENCY_FORMATTER.format(val);
+            return formatter(numeric);
+        }
+
         return value;
     }
     

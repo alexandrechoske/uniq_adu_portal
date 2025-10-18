@@ -183,8 +183,14 @@ class EnhancedDataTable {
     setupSortableHeaders() {
         const headers = this.table.querySelectorAll('thead th');
         headers.forEach((header, index) => {
-            // Skip action columns
-            if (header.textContent.trim().toLowerCase() === 'ações') return;
+            const headerText = header.textContent.trim().toLowerCase();
+            const isSortable = header.dataset.sortable !== 'false' && headerText !== 'ações';
+
+            if (!isSortable) {
+                header.classList.remove('sortable', 'sorted-asc', 'sorted-desc');
+                header.removeAttribute('data-column');
+                return;
+            }
 
             header.classList.add('sortable');
             header.dataset.column = index;
