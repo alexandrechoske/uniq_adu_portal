@@ -30,11 +30,52 @@
             </p>
         </div>
     </div>
+    </div>
 </div>
-<div class="dashboard-container" style="opacity: 0.3; pointer-events: none;">
+<div class="dashboard-container dashboard-loading" id="dashboard-container" style="opacity: 0.3; pointer-events: none;">
 {% else %}
-<div class="dashboard-container">
+<div class="dashboard-container dashboard-loading" id="dashboard-container">
 {% endif %}
+    <div id="dashboard-skeleton" class="dashboard-skeleton" aria-hidden="false">
+        <div class="skeleton-section skeleton-kpi-grid">
+            {% for _ in range(9) %}
+            <div class="skeleton-kpi-card">
+                <span class="skeleton-line skeleton-line-xs"></span>
+                <span class="skeleton-line skeleton-line-lg"></span>
+                <span class="skeleton-line skeleton-line-sm"></span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="skeleton-section skeleton-chart-grid">
+            {% for _ in range(3) %}
+            <div class="skeleton-chart-card">
+                <span class="skeleton-line skeleton-line-sm"></span>
+                <div class="skeleton-chart-area"></div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="skeleton-section skeleton-chart-grid secondary">
+            {% for _ in range(2) %}
+            <div class="skeleton-chart-card">
+                <span class="skeleton-line skeleton-line-sm"></span>
+                <div class="skeleton-chart-area"></div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="skeleton-section skeleton-table-section">
+            <span class="skeleton-line skeleton-line-sm"></span>
+            <div class="skeleton-table">
+                {% for _ in range(6) %}
+                <div class="skeleton-table-row">
+                    {% for _ in range(6) %}
+                    <span class="skeleton-line skeleton-line-xs"></span>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div id="dashboard-main-content" class="dashboard-main-content" aria-hidden="true">
     <!-- Actions Bar with Breadcrumb -->
     <div class="actions-bar module-header-importacoes">
         <div class="actions-left">

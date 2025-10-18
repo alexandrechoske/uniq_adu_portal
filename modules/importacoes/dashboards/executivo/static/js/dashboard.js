@@ -441,6 +441,26 @@ let dashboardState = {
     isInitialized: false
 };
 
+function setDashboardLoadingState(isLoading) {
+    const container = document.getElementById('dashboard-container');
+    if (!container) {
+        return;
+    }
+
+    const skeleton = document.getElementById('dashboard-skeleton');
+    const mainContent = document.getElementById('dashboard-main-content');
+
+    container.classList.toggle('dashboard-loading', Boolean(isLoading));
+
+    if (skeleton) {
+        skeleton.setAttribute('aria-hidden', (!isLoading).toString());
+    }
+
+    if (mainContent) {
+        mainContent.setAttribute('aria-hidden', Boolean(isLoading).toString());
+    }
+}
+
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
@@ -1088,6 +1108,7 @@ async function initializeDashboard() {
     
     try {
         dashboardState.isLoading = true;
+        setDashboardLoadingState(true);
         
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento do dashboard...');
         
@@ -1513,6 +1534,7 @@ async function loadInitialData() {
  * Load initial data with intelligent caching and retry mechanism
  */
 async function loadInitialDataWithCache() {
+    setDashboardLoadingState(true);
     try {
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento com cache...');
         
@@ -1527,6 +1549,8 @@ async function loadInitialDataWithCache() {
         
         // Tentar recuperação usando cache como último recurso
         await attemptCacheRecovery();
+    } finally {
+        setDashboardLoadingState(false);
     }
 }
 
